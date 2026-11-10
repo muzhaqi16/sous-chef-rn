@@ -855,9 +855,13 @@ i18n:check` (also a pre-push hook) fails on drift between locale files.
 
 ### Type-level gates
 
-Three projects own the tree — `tsconfig.json` (app), `__tests__/tsconfig.json`
-(the root test tree) and `e2e/tsconfig.json` — and `npm run typecheck` runs all
-three. ESLint reaches them through `parserOptions.projectService`, which resolves
+Two projects own the tree — `tsconfig.json` (the app and its tests) and
+`e2e/tsconfig.json`, apart because Detox's globals clash with Jest's — and
+`npm run typecheck` runs both, plus `tsconfig.core.json`. The tests stay in the
+app's project: a project of their own holds a second copy of `src`, and ESLint's
+single-run mode builds one Program per `tsconfig.json` with nothing shared
+(typescript-eslint#13109), which ran CI's lint out of heap.
+ESLint reaches them through `parserOptions.projectService`, which resolves
 each file against the project that owns it rather than a named one. That matters
 because a type-aware rule guards with `if (!services?.program) return {}`: a file
 no project claims reports nothing, which reads exactly like a clean file.
