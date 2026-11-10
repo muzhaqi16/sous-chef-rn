@@ -4880,11 +4880,11 @@ type DietaryProfile {
   """The profile's unique identifier"""
   id: ID!
   """
-  The longest cooking time the user wants, in minutes; 60 by default, null once cleared
+  The longest cooking time the user wants, in minutes; null when the user set no limit
   """
   maxCookTimeMinutes: Int
   """
-  The longest preparation time the user wants, in minutes; 45 by default, null once cleared
+  The longest preparation time the user wants, in minutes; null when the user set no limit
   """
   maxPrepTimeMinutes: Int
   """Meals a day the user plans for; 3 by default"""
@@ -21088,11 +21088,11 @@ input UpdateDietaryProfileInput {
   """
   favoriteIngredients: [String!]
   """
-  The longest cooking time the user wants, in minutes: a non-negative integer, 60 by default. Null clears it
+  The longest cooking time the user wants, in minutes: a non-negative integer. Null clears it: no limit
   """
   maxCookTimeMinutes: Int
   """
-  The longest preparation time the user wants, in minutes: a non-negative integer, 45 by default. Null clears it
+  The longest preparation time the user wants, in minutes: a non-negative integer. Null clears it: no limit
   """
   maxPrepTimeMinutes: Int
   """
