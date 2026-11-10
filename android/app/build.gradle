@@ -62,7 +62,8 @@ android {
         applicationId "dev.souschef.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 211
+        // A Play build passes the code Play assigns (-PversionCode); a local build keeps 211.
+        versionCode((project.findProperty('versionCode') ?: 211) as Integer)
         versionName "4.10.0"
         testBuildType System.getProperty('testBuildType', 'debug')
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

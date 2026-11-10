@@ -1,0 +1,5 @@
+source 'https://rubygems.org'
+
+# fastlane's own Gemfile, apart from the root one CocoaPods uses: the two never
+# constrain each other's resolution or Ruby floor. CI installs it frozen.
+gem 'fastlane', '~> 2.241'

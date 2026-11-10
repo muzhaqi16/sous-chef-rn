@@ -62,6 +62,7 @@ describe('which Android builds wait on the check', () => {
   it.each([
     ['prod-v4.9.0', true],
     ['playstore-v4.9.0', true],
+    ['main', true],
     ['dev-v4.9.0', false],
     ['stg-v4.9.0', false],
   ])('a push of %s: %s', (tag, runs) => {
@@ -86,7 +87,9 @@ describe('a build behind the check', () => {
     ['build-github-hosted', android],
     ['build_with_signing', ios],
   ])('%s waits on it', (name, workflow) => {
-    expect(jobOf(workflow, name)).toContain('needs: release-check');
+    expect(jobOf(workflow, name)).toMatch(
+      /^ {4}needs: (?:release-check|\[[^\]\n]*\brelease-check\b[^\]\n]*\])$/m,
+    );
   });
 
   it.each(['build-self-hosted', 'build-github-hosted'])(
