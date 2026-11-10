@@ -9,6 +9,11 @@ import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import { SectionHeaderRow } from '#components/molecules/SectionHeaderRow';
 import { RestrictionsNote } from '#features/recipes/ui/RestrictionsNote';
 import { StatCard } from '#features/today/components/StatCard';
+import { GettingStartedCard } from '#features/today/components/GettingStartedCard';
+import {
+  useGettingStarted,
+  type GettingStartedItem,
+} from '#features/today/hooks/useGettingStarted';
 import { ItemCard } from '#components/organisms/ItemCard';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { ItemCardSkeleton } from '#components/molecules/ItemCardSkeleton';
@@ -169,6 +174,25 @@ export const TodayMain: React.FC = () => {
       };
 
   const { counts, meals, mealsState, suggestions, shopping } = overview;
+  const gettingStarted = useGettingStarted({
+    pantryItemCount: counts?.total ?? null,
+  });
+  const startItem = (item: GettingStartedItem) => {
+    switch (item) {
+      case 'stock':
+        addPantryItem();
+        break;
+      case 'shop':
+        toShoppingListMain();
+        break;
+      case 'cook':
+        toRecipeMain();
+        break;
+      case 'plan':
+        toMealPlanMain();
+        break;
+    }
+  };
 
   return (
     <Screen
@@ -197,7 +221,14 @@ export const TodayMain: React.FC = () => {
       testID={todayTestIDs.screen}
     >
       <View style={styles.sections}>
-        {counts ? (
+        {/* While it shows, the card takes the tiles' place. */}
+        {gettingStarted.card ? (
+          <GettingStartedCard
+            {...gettingStarted.card}
+            onStart={startItem}
+            onHide={gettingStarted.hide}
+          />
+        ) : counts ? (
           <View style={styles.stats}>
             <StatCard
               count={counts.expired}

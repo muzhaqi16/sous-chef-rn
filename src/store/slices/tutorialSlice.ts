@@ -39,6 +39,12 @@ export interface TutorialState {
   markFeatureHintShown: (key: string) => void;
   incrementLoginCount: (userId: string) => void;
   recordUnpromptedTip: (userId: string, at: number) => void;
+  /** Getting started items seen done; they stay done on this device. */
+  markGettingStartedDone: (userId: string, items: string[]) => void;
+  /** The user hid the card; Replay tips brings it back. */
+  hideGettingStarted: (userId: string) => void;
+  /** Every item done and acknowledged: the card does not come back. */
+  retireGettingStarted: (userId: string) => void;
   /**
    * One account's tours and tips, shown again: its hints, its unasked-tip
    * clock, and its Getting started card unless every item is done. Other
@@ -78,6 +84,41 @@ export const createTutorialSlice: StateCreator<
   recordUnpromptedTip: (userId, at) => {
     set(state => {
       state.lastUnpromptedTipAt[userId] = at;
+    });
+  },
+
+  markGettingStartedDone: (userId, items) => {
+    set(state => {
+      const card = (state.gettingStarted[userId] ??= {
+        hidden: false,
+        done: [],
+        retired: false,
+      });
+      for (const item of items) {
+        if (!card.done.includes(item)) card.done.push(item);
+      }
+    });
+  },
+
+  hideGettingStarted: userId => {
+    set(state => {
+      const card = (state.gettingStarted[userId] ??= {
+        hidden: false,
+        done: [],
+        retired: false,
+      });
+      card.hidden = true;
+    });
+  },
+
+  retireGettingStarted: userId => {
+    set(state => {
+      const card = (state.gettingStarted[userId] ??= {
+        hidden: false,
+        done: [],
+        retired: false,
+      });
+      card.retired = true;
     });
   },
 

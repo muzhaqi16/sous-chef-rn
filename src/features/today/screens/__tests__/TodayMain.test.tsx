@@ -15,6 +15,7 @@ import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
 import { todayTestIDs } from '#features/today/testIDs';
 import { useTodayOverview } from '../useTodayOverview';
+import { useGettingStarted } from '#features/today/hooks/useGettingStarted';
 import { TodayMain } from '../TodayMain';
 
 const mockNavigation = {
@@ -43,6 +44,9 @@ jest.mock('../useTodayOverview', () => ({
     '../useTodayOverview',
   ),
   useTodayOverview: jest.fn(),
+}));
+jest.mock('#features/today/hooks/useGettingStarted', () => ({
+  useGettingStarted: jest.fn(() => ({ card: null, hide: jest.fn() })),
 }));
 jest.mock('#/context/TabBarActionsContext', () => ({
   useTabBarState: () => ({ isOverlayOpen: false }),
@@ -107,7 +111,7 @@ const overviewOf = (overrides: Partial<Overview> = {}): Overview => ({
   state: 'ready',
   needsHousehold: false,
   retry: jest.fn(),
-  counts: { expired: 6, expiring: 3, lowStock: 0 },
+  counts: { expired: 6, expiring: 3, lowStock: 0, total: 9 },
   meals: [],
   mealsState: 'ready',
   retryMeals: jest.fn(),
@@ -232,6 +236,36 @@ describe('status counts', () => {
     fireEvent.press(screen.getByTestId(todayTestIDs.statCard('lowStock')));
 
     expect(mockNavigation.toFilteredPantryItems).not.toHaveBeenCalled();
+  });
+});
+
+describe('Getting started', () => {
+  const card = {
+    items: [
+      { id: 'stock' as const, done: true },
+      { id: 'shop' as const, done: false },
+      { id: 'cook' as const, done: false },
+      { id: 'plan' as const, done: false },
+    ],
+    doneCount: 1,
+    allDone: false,
+  };
+
+  it('A new account: the card is first under the home’s name, in place of the tiles', () => {
+    jest.mocked(useGettingStarted).mockReturnValue({ card, hide: jest.fn() });
+    renderToday();
+
+    expect(screen.getByTestId(todayTestIDs.gettingStarted)).toBeTruthy();
+    expect(screen.queryByTestId(todayTestIDs.statCard('expired'))).toBeNull();
+  });
+
+  it('opens the List tab for "Shop from your list"', () => {
+    jest.mocked(useGettingStarted).mockReturnValue({ card, hide: jest.fn() });
+    renderToday();
+
+    fireEvent.press(screen.getByTestId(todayTestIDs.gettingStartedStart));
+
+    expect(mockNavigation.toShoppingListMain).toHaveBeenCalledTimes(1);
   });
 });
 

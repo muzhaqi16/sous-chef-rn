@@ -1,0 +1,21 @@
+# What the Getting started card reads from the account: anything cooked, on
+# any device, and whether the home has a meal planned.
+query GettingStarted($homeId: ID!) {
+  me {
+    id
+    cookingStats {
+      totalRecipesCooked
+    }
+  }
+  mealPlans(homeId: $homeId, first: 10) {
+    edges {
+      node {
+        version
+        id
+        mealPlanItemsConnection(first: 1) {
+          totalCount
+        }
+      }
+    }
+  }
+}

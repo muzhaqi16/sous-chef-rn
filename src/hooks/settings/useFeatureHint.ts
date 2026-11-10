@@ -13,6 +13,9 @@ export const suppressFeatureHintsForE2E = (): void => {
   suppressedForE2E = true;
 };
 
+/** Under Detox: tips and the Getting started card stay out of the way. */
+export const featureHintsSuppressed = (): boolean => suppressedForE2E;
+
 /** Per account: each account on a device sees each hint once. */
 export const hasFeatureHintBeenShown = (
   featureId: string,

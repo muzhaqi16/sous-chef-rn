@@ -15,4 +15,8 @@ export const todayTestIDs = {
   restrictionsNote: 'today-restrictions-note',
   shoppingRow: 'today-shopping-row',
   firstRun: 'today-first-run',
+  gettingStarted: 'today-getting-started',
+  gettingStartedHide: 'today-getting-started-hide',
+  gettingStartedStart: 'today-getting-started-start',
+  gettingStartedItem: (item: string) => `today-getting-started-${item}`,
 };

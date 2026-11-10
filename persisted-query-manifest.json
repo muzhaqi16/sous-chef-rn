@@ -801,6 +801,12 @@
       "body": "query GetUserSettings {\n  me {\n    id\n    settings {\n      id\n      theme\n      compactMode\n      showTutorials\n      shareUsageData\n      shareWithPartners\n      personalizedAds\n      preferredUnitSystem\n      deviceUnitSystem\n      language\n      timezone\n      preferredCurrency\n      storeMode\n      budgetAndPrices\n      createdAt\n      updatedAt\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
+      "id": "aa2c96c185a244e973ad6004f6afedda37ec6b0b03227a2998367d51e197d2d3",
+      "name": "GettingStarted",
+      "type": "query",
+      "body": "query GettingStarted($homeId: ID!) {\n  me {\n    id\n    cookingStats {\n      totalRecipesCooked\n      __typename\n    }\n    __typename\n  }\n  mealPlans(homeId: $homeId, first: 10) {\n    edges {\n      node {\n        version\n        id\n        mealPlanItemsConnection(first: 1) {\n          totalCount\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+    },
+    {
       "id": "ae87c8c7fd609e7f2a073c9323fe30df2d8283e942ae93cea5c19b4382ed0198",
       "name": "HeldStacks",
       "type": "query",

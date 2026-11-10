@@ -12,6 +12,17 @@
     "tutorialHouseholdSubtitle": "Passa da una casa all'altra o gestisci le impostazioni della casa",
     "tutorialYourHomeTitle": "La tua casa",
     "tutorialYourHomeSubtitle": "Tocca per rinominarla o invitare le persone con cui fai la spesa",
-    "householdFallback": "La tua casa"
+    "householdFallback": "La tua casa",
+    "gettingStarted": {
+      "title": "Per iniziare",
+      "progress": "{{done}} di {{total}} fatti",
+      "hide": "Nascondi Per iniziare",
+      "start": "Inizia",
+      "stock": "Riempi la dispensa",
+      "shop": "Fai la spesa con la lista",
+      "cook": "Cucina con la dispensa",
+      "allDoneTitle": "Le basi sono fatte",
+      "allDoneBody": "Tutto il resto è a un tocco da qui."
+    }
   }
 }

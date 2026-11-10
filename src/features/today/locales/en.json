@@ -12,6 +12,17 @@
     "tutorialHouseholdSubtitle": "Switch between homes or manage home settings",
     "tutorialYourHomeTitle": "Your home",
     "tutorialYourHomeSubtitle": "Tap to rename it or invite the people you shop with",
-    "householdFallback": "Your Home"
+    "householdFallback": "Your Home",
+    "gettingStarted": {
+      "title": "Getting started",
+      "progress": "{{done}} of {{total}} done",
+      "hide": "Hide Getting started",
+      "start": "Start",
+      "stock": "Stock your pantry",
+      "shop": "Shop from your list",
+      "cook": "Cook from your pantry",
+      "allDoneTitle": "That’s the basics covered",
+      "allDoneBody": "Everything else is a tap away from here."
+    }
   }
 }

@@ -167,6 +167,8 @@ export function useTodayOverview() {
           expired: stats.expiredCount,
           expiring: stats.expiringCount,
           lowStock: stats.lowStockCount,
+          /** Everything the pantry holds. */
+          total: stats.totalItems,
         }
       : null,
     /** `empty` is the first run: no household, or one with nothing in it yet. */

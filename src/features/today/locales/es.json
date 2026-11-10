@@ -12,6 +12,17 @@
     "tutorialHouseholdSubtitle": "Cambia entre hogares o gestiona la configuración del hogar",
     "tutorialYourHomeTitle": "Tu hogar",
     "tutorialYourHomeSubtitle": "Toca para cambiarle el nombre o invitar a las personas con las que compras",
-    "householdFallback": "Tu hogar"
+    "householdFallback": "Tu hogar",
+    "gettingStarted": {
+      "title": "Primeros pasos",
+      "progress": "{{done}} de {{total}} hechos",
+      "hide": "Ocultar Primeros pasos",
+      "start": "Empezar",
+      "stock": "Llena tu despensa",
+      "shop": "Compra con tu lista",
+      "cook": "Cocina con tu despensa",
+      "allDoneTitle": "Ya tienes lo básico",
+      "allDoneBody": "Todo lo demás está a un toque de aquí."
+    }
   }
 }
