@@ -24,8 +24,21 @@ import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
 
 // RN's Pressable, which Unistyles binds to the ShadowTree; `withUnistyles` over
 // RNGH's drops proxy values in a `({pressed}) => [...]` style. For gesture
-// composition, import RNGH's at the call site.
-export const Pressable = RNPressable;
+// composition, import RNGH's at the call site. A press target is a button to
+// VoiceOver and TalkBack unless the caller names another role.
+export const Pressable = ({
+  accessibilityRole,
+  role,
+  ...props
+}: React.ComponentProps<typeof RNPressable>) => (
+  <RNPressable
+    {...props}
+    role={role}
+    accessibilityRole={
+      accessibilityRole ?? (!role && props.onPress ? 'button' : undefined)
+    }
+  />
+);
 
 // Import Modal from here. RN's mounts its children only while visible, so they
 // sit in `CurrentThemeScope`.
