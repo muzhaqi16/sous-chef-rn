@@ -386,7 +386,7 @@ describe('QuantityEditSheet', () => {
       fireEvent.changeText(screen.getByTestId('quantity-edit-input'), '0.5');
       await user.press(screen.getByTestId('header-action-0'));
 
-      expect(defaultProps.onSave).toHaveBeenCalledWith('0.5', 'cups', 'unit-1');
+      expect(defaultProps.onSave).toHaveBeenCalledWith('0.5', 'unit-1');
     });
   });
 
@@ -395,7 +395,7 @@ describe('QuantityEditSheet', () => {
     renderWithInit();
     await user.press(screen.getByTestId('quantity-edit-increment'));
     await user.press(screen.getByTestId('header-action-0'));
-    expect(defaultProps.onSave).toHaveBeenCalledWith('3', 'cups', 'unit-1');
+    expect(defaultProps.onSave).toHaveBeenCalledWith('3', 'unit-1');
   });
 
   it('saves a quantity typed but not yet blurred', async () => {
@@ -405,7 +405,7 @@ describe('QuantityEditSheet', () => {
     fireEvent.changeText(screen.getByTestId('quantity-edit-input'), '1.5');
     // No blur: the header action is pressed straight from the open keyboard.
     await user.press(screen.getByTestId('header-action-0'));
-    expect(defaultProps.onSave).toHaveBeenCalledWith('1.5', 'cups', 'unit-1');
+    expect(defaultProps.onSave).toHaveBeenCalledWith('1.5', 'unit-1');
   });
 
   it('saves a mixed-number quantity', async () => {
@@ -414,7 +414,7 @@ describe('QuantityEditSheet', () => {
     await user.press(screen.getByTestId('quantity-edit-value'));
     fireEvent.changeText(screen.getByTestId('quantity-edit-input'), '2 1/3');
     await user.press(screen.getByTestId('header-action-0'));
-    expect(defaultProps.onSave).toHaveBeenCalledWith('2 1/3', 'cups', 'unit-1');
+    expect(defaultProps.onSave).toHaveBeenCalledWith('2 1/3', 'unit-1');
   });
 
   it('offers a keyboard that can type a fraction', async () => {
