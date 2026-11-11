@@ -1,609 +1,504 @@
-'use no memo';
-
 import React from 'react';
-import { act, fireEvent, render } from '@testing-library/react-native';
-import { kitTestIDs } from '#components/testIDs';
+import {
+  act,
+  fireEvent,
+  screen,
+  userEvent,
+  within,
+} from '@testing-library/react-native';
+import {
+  inputOf,
+  recordMock,
+  renderWithApollo,
+  type MockDataFor,
+} from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
+import { homesData } from '#/test-utils/fixtures/homeFixtures';
+import { useStore } from '#store';
+import { resetSessionScopedStores } from '#store/sessionScopedStores';
+import { t } from '#/i18n';
+import { alertService } from '#/services/alertService';
+import {
+  ErrorCode,
+  ErrorDisposition,
+  MembershipRole,
+  ShareLinkTargetType,
+} from '#/graphql/generated/schemaTypes';
+import {
+  CreateHomeDocument,
+  GetHomesDocument,
+  InviteToHomeDocument,
+  JoinHomeByCodeDocument,
+  ResolveShareLinkDocument,
+} from '#operations/home/home.generated';
+import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
+import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { SubScreen } from '#components/templates/SubScreen';
+import { HomeCard } from '#features/home/components/HomeCard';
+import { CreateHomeForm } from '#features/home/components/CreateHomeForm';
+import { InviteUserModal } from '#features/home/components/InviteUserModal';
 import { homeTestIDs } from '#features/home/testIDs';
 import { HomeManagement } from '../HomeManagement';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#hooks/performance/useScreenTransition');
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
-jest.mock('#features/home/hooks/useHomeManagement', () => ({
-  useHomeManagement: jest.fn(() => ({
-    homes: [
-      {
-        id: 'home-1',
-        name: 'My Home',
-        members: [{ user: { id: 'user-1' }, role: 'OWNER' }],
-        myMembership: { canManageHome: true },
-      },
-    ],
-    remoteDefaultHomeId: 'home-1',
-    loading: false,
-    hasResult: true,
-    creating: false,
-    joiningByCode: false,
-    loadingPreview: false,
-    previewHome: null,
-    createHome: jest.fn(),
-    deleteHome: jest.fn(),
-    setDefaultHome: jest.fn(),
-    inviteUserToHome: jest.fn(),
-    joinHomeByCode: jest.fn(),
-    previewHomeByCode: jest.fn(),
-    stats: { totalHomes: 1, totalMembers: 1, totalPantries: 1 },
-    refetch: jest.fn().mockResolvedValue({}),
-  })),
-}));
+let log = operationLog();
 
-jest.mock('#features/home/screens/useInviteUserModal', () => ({
-  useInviteUserModal: jest.fn(() => ({
-    show: jest.fn(),
-    InviteModalComponent: null,
-  })),
-}));
-
-jest.mock('#features/home/utils/homePermissions', () => ({
-  getInvitableRoles: jest.fn(() => ['MEMBER']),
-  canInviteToHome: jest.fn(() => true),
-}));
-
-jest.mock('#components/organisms/Header', () => ({
-  Header: ({
-    title,
-    rightActions,
-  }: {
-    title?: string;
-    rightActions?: { testID?: string; onPress: () => void }[];
-  }) => {
-    const { Pressable, Text, View } = require('react-native');
-    return (
-      <View>
-        <Text>{title}</Text>
-        {rightActions?.map(action => (
-          <Pressable
-            key={action.testID}
-            testID={action.testID}
-            onPress={action.onPress}
-          />
-        ))}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/molecules/BaseInput/BaseInput', () => ({
-  BaseInput: () => null,
-}));
-
-jest.mock('#components/molecules/Button', () => ({
-  Button: () => null,
-}));
-
-jest.mock('#features/home/components/HomeStats', () => ({
-  HomeStats: () => null,
-}));
-
-// Captures the form's props so a test can submit what the form validated.
-interface CreateFormProps {
-  onSubmit: (values: { name: string; allowJoinCode: boolean }) => Promise<void>;
-}
-const mockCreateFormProps: CreateFormProps[] = [];
-jest.mock('#features/home/components/CreateHomeForm', () => ({
-  CreateHomeForm: (props: CreateFormProps) => {
-    mockCreateFormProps.push(props);
-    const { View } = require('react-native');
-    return <View testID="create-home-form" />;
-  },
-}));
-
-// Captures every render's props so tests can assert the gating computed by the
-// screen (the card itself is presentation-only here).
-const mockHomeCardProps: Array<{
-  homeId?: string;
-  canDelete?: boolean;
-  canInvite?: boolean;
+interface Held {
+  id: string;
+  name: string;
   isDefault?: boolean;
-  isHighlighted?: boolean;
-  onSetDefault?: (homeId: string) => void | Promise<void>;
-}> = [];
-jest.mock('#features/home/components/HomeCard', () => ({
-  HomeCard: (props: {
-    homeId?: string;
-    canDelete?: boolean;
-    canInvite?: boolean;
-    isDefault?: boolean;
-    isHighlighted?: boolean;
-    onSetDefault?: (homeId: string) => void | Promise<void>;
-  }) => {
-    mockHomeCardProps.push(props);
-    return props.homeId;
-  },
-}));
+  role?: MembershipRole;
+  canInviteOthers?: boolean;
+}
 
-jest.mock('#/services/errorService');
+const KITCHEN: Held = { id: 'home-1', name: 'Kitchen', isDefault: true };
+const CABIN: Held = { id: 'home-2', name: 'Cabin' };
 
-jest.mock('#/styles/commonStyles', () => ({
-  commonStyles: {
-    container: {},
-    cardWithShadow: {},
-  },
-}));
-
-/** The `useHomeManagement` surface this screen reads, in one place. */
-const baseHookReturn = {
-  homes: [],
-  remoteDefaultHomeId: null as string | null,
-  loading: false,
-  hasResult: true,
-  creating: false,
-  joiningByCode: false,
-  loadingPreview: false,
-  previewHome: null,
-  createHome: jest.fn(),
-  deleteHome: jest.fn(),
-  setDefaultHome: jest.fn(),
-  inviteUserToHome: jest.fn(),
-  joinHomeByCode: jest.fn(),
-  previewHomeByCode: jest.fn(),
-  stats: { totalHomes: 0, totalMembers: 0, totalPantries: 0 },
-  refetch: jest.fn().mockResolvedValue({}),
+/** The homes read, the person holding the role stated in each (owner by default). */
+const homesRead = (homes: Held[]): MockDataFor<typeof GetHomesDocument> => {
+  const data = homesData(homes);
+  return {
+    ...data,
+    homes: {
+      ...data.homes,
+      edges: data.homes.edges.map(edge => {
+        const held = homes.find(home => home.id === edge.node.id);
+        return {
+          ...edge,
+          node: {
+            ...edge.node,
+            myMembership: {
+              ...edge.node.myMembership,
+              role: held?.role ?? MembershipRole.Owner,
+              canInviteOthers: held?.canInviteOthers ?? true,
+            },
+          },
+        };
+      }),
+    },
+  };
 };
 
-const mockHook = (overrides: Record<string, unknown>) => {
-  const { useHomeManagement } = jest.requireMock(
-    '#features/home/hooks/useHomeManagement',
+async function openHomes({
+  homes = [KITCHEN, CABIN],
+  readFails = false,
+  answers = [],
+}: {
+  homes?: Held[];
+  readFails?: boolean;
+  answers?: ReturnType<typeof recordMock>[];
+} = {}) {
+  renderWithApollo(<HomeManagement />, {
+    links: [log.link],
+    operationMocks: [
+      ...answers.map(answer => answer.mock),
+      ...(readFails
+        ? [
+            recordMock(GetHomesDocument, {
+              error: new Error('Network request failed'),
+              maxUsageCount: 1,
+            }).mock,
+          ]
+        : []),
+      recordMock(GetHomesDocument, { data: homesRead(homes) }).mock,
+    ],
+  });
+  await log.landed(GetHomesDocument);
+}
+
+const cardOf = (homeId: string) => {
+  const card = screen
+    .UNSAFE_getAllByType(HomeCard)
+    .find(each => each.props.homeId === homeId);
+  if (!card) throw new Error(`no card for ${homeId}`);
+  return card;
+};
+
+const idOf = (vars: Record<string, unknown>) => {
+  const { id } = inputOf(vars);
+  if (typeof id !== 'string') throw new Error('sent with no id');
+  return id;
+};
+
+const created = () =>
+  recordMock(CreateHomeDocument, {
+    dataFor: (vars): MockDataFor<typeof CreateHomeDocument> => ({
+      createHome: {
+        __typename: 'CreateHomePayload',
+        home: { __typename: 'Home', id: idOf(vars), isDefault: false },
+      },
+    }),
+  });
+
+const pantryCreated = () =>
+  recordMock(CreatePantryDocument, {
+    dataFor: (vars): MockDataFor<typeof CreatePantryDocument> => ({
+      createPantry: {
+        __typename: 'CreatePantryPayload',
+        pantry: { __typename: 'Pantry', id: idOf(vars) },
+      },
+    }),
+  });
+
+const openForm = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.press(screen.getByTestId(homeTestIDs.managementAddButton));
+};
+
+const joinMode = async (user: ReturnType<typeof userEvent.setup>) => {
+  await openForm(user);
+  await user.press(screen.getByText(t('homeManagement.modeJoin')));
+  return screen.getByPlaceholderText(t('labels.enterJoinCode'));
+};
+
+const unverified = () => {
+  useStore.setState({
+    user: {
+      id: 'user-1',
+      email: 'cook@example.com',
+      emailVerified: false,
+      onBoarded: true,
+    },
+  });
+};
+
+const askedToVerify = () =>
+  expect(alertService.alert).toHaveBeenCalledWith(
+    t('auth.verifyToCollaborateTitle'),
+    t('auth.verifyToCollaborateMessage'),
+    expect.any(Array),
   );
-  useHomeManagement.mockReturnValue({ ...baseHookReturn, ...overrides });
-};
 
-describe('HomeManagement', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockHomeCardProps.length = 0;
-    mockCreateFormProps.length = 0;
+beforeEach(() => {
+  jest.clearAllMocks();
+  log = operationLog();
+  resetSessionScopedStores();
+  useStore.setState({
+    user: {
+      id: 'user-1',
+      email: 'cook@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    selectedHomeId: null,
+    selectedPantryId: null,
+    isOnline: true,
+    apiReachable: true,
+  });
+});
+
+describe('the homes', () => {
+  it('say they could not be read, and are read again', async () => {
+    await openHomes({ readFails: true });
+
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+    await log.landed(GetHomesDocument, 2);
+
+    expect(screen.getByText('Kitchen')).toBeTruthy();
   });
 
-  it('renders the home management screen', () => {
-    const tree = render(<HomeManagement />);
-    expect(tree.toJSON()).toBeTruthy();
+  it('list the server default first, marked Default', async () => {
+    await openHomes({
+      homes: [
+        { ...KITCHEN, isDefault: false },
+        { ...CABIN, isDefault: true },
+      ],
+    });
+
+    expect(
+      screen.UNSAFE_getAllByType(HomeCard).map(card => card.props.homeId),
+    ).toEqual([CABIN.id, KITCHEN.id]);
+    expect(
+      within(cardOf(CABIN.id)).getByText(t('homeManagement.cardDefault')),
+    ).toBeTruthy();
+    expect(
+      within(cardOf(KITCHEN.id)).queryByText(t('homeManagement.cardDefault')),
+    ).not.toBeOnTheScreen();
   });
 
-  it('shows loading state when initial loading', () => {
-    const { useHomeManagement } = jest.requireMock(
-      '#features/home/hooks/useHomeManagement',
+  it('open a home pressed', async () => {
+    await openHomes();
+
+    await userEvent.setup().press(screen.getByText('Cabin'));
+
+    expect(mockNav.toHomeDetail).toHaveBeenCalledWith({ homeId: CABIN.id });
+  });
+
+  it('offer delete to the owner alone, and invite to whoever may', async () => {
+    await openHomes({
+      homes: [
+        KITCHEN,
+        { ...CABIN, role: MembershipRole.Admin },
+        {
+          id: 'home-3',
+          name: 'Loft',
+          role: MembershipRole.Member,
+          canInviteOthers: false,
+        },
+      ],
+    });
+
+    expect(
+      within(cardOf(KITCHEN.id)).getByText(t('labels.delete')),
+    ).toBeTruthy();
+    expect(
+      within(cardOf(CABIN.id)).queryByText(t('labels.delete')),
+    ).not.toBeOnTheScreen();
+    expect(
+      within(cardOf(CABIN.id)).getByText(t('homeManagement.cardInvite')),
+    ).toBeTruthy();
+    expect(
+      within(cardOf('home-3')).queryByText(t('homeManagement.cardInvite')),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('read again on a pull', async () => {
+    await openHomes();
+
+    act(() => {
+      screen.UNSAFE_getByType(SubScreen).props.refresh.onRefresh();
+    });
+
+    await log.requested(GetHomesDocument, 2);
+  });
+});
+
+describe('an invite', () => {
+  it('goes out with the role picked', async () => {
+    const invite = recordMock(InviteToHomeDocument, { held: true });
+    await openHomes({ answers: [invite] });
+
+    await userEvent
+      .setup()
+      .press(
+        within(cardOf(CABIN.id)).getByText(t('homeManagement.cardInvite')),
+      );
+    const modal = screen.UNSAFE_getByType(InviteUserModal);
+    expect(modal.props.visible).toBe(true);
+    act(() => {
+      void modal.props.onSubmit('sam@example.com', MembershipRole.Admin);
+    });
+    await log.requested(InviteToHomeDocument);
+
+    expect(inputOf(invite.fired[0] ?? {})).toEqual({
+      homeId: CABIN.id,
+      email: 'sam@example.com',
+      role: MembershipRole.Admin,
+    });
+  });
+
+  it('asks for a verified email first', async () => {
+    unverified();
+    await openHomes();
+
+    await userEvent
+      .setup()
+      .press(
+        within(cardOf(CABIN.id)).getByText(t('homeManagement.cardInvite')),
+      );
+
+    askedToVerify();
+    expect(screen.UNSAFE_getByType(InviteUserModal).props.visible).toBe(false);
+  });
+});
+
+describe('a new home', () => {
+  it('is created as named, and the form closes', async () => {
+    const create = created();
+    await openHomes({ answers: [create, pantryCreated()] });
+    const user = userEvent.setup();
+
+    await openForm(user);
+    await user.type(
+      screen.getByTestId(homeTestIDs.createHomeNameInput),
+      'Loft',
     );
-    useHomeManagement.mockReturnValue({
-      homes: [],
-      defaultHomeId: null,
-      loading: true,
-      hasResult: false,
-      creating: false,
-      joiningByCode: false,
-      loadingPreview: false,
-      previewHome: null,
-      createHome: jest.fn(),
-      deleteHome: jest.fn(),
-      setDefaultHome: jest.fn(),
-      inviteUserToHome: jest.fn(),
-      joinHomeByCode: jest.fn(),
-      previewHomeByCode: jest.fn(),
-      stats: { totalHomes: 0, totalMembers: 0, totalPantries: 0 },
-      refetch: jest.fn(),
-    });
+    await user.press(screen.getByTestId(homeTestIDs.createHomeSubmitButton));
+    await log.landed(CreateHomeDocument);
+    await log.landed(CreatePantryDocument);
+    await act(async () => undefined);
 
-    const { getByTestId } = render(<HomeManagement />);
-    expect(getByTestId(kitTestIDs.stateLoading)).toBeTruthy();
-  });
-
-  it('shows the error state when the first read settles with no answer', () => {
-    mockHook({ loading: false, hasResult: false });
-
-    const { getByTestId, queryByText } = render(<HomeManagement />);
-
-    expect(getByTestId(kitTestIDs.stateError)).toBeTruthy();
-    expect(queryByText('My Home')).toBeNull();
-  });
-
-  // Creating and joining are local-first, so an unanswered first read must
-  // not hide the form they live in.
-  it('opens the create form offline with nothing cached', () => {
-    mockHook({ loading: false, hasResult: false });
-
-    const { getByTestId } = render(<HomeManagement />);
-    fireEvent.press(getByTestId(homeTestIDs.managementAddButton));
-
-    expect(getByTestId('create-home-form')).toBeTruthy();
-  });
-
-  it('creates the home the form submits and closes the form', async () => {
-    const createHome = jest.fn().mockResolvedValue({ id: 'home-new' });
-    mockHook({ loading: false, hasResult: true, createHome });
-
-    const { getByTestId, queryByTestId } = render(<HomeManagement />);
-    fireEvent.press(getByTestId(homeTestIDs.managementAddButton));
-    await act(async () => {
-      await mockCreateFormProps
-        .at(-1)
-        ?.onSubmit({ name: 'Shtëpia e Re', allowJoinCode: true });
-    });
-
-    expect(createHome).toHaveBeenCalledWith({
-      name: 'Shtëpia e Re',
+    expect(inputOf(create.fired[0] ?? {})).toMatchObject({
+      name: 'Loft',
       allowJoinCode: true,
     });
-    expect(queryByTestId('create-home-form')).toBeNull();
+    expect(
+      screen.queryByTestId(homeTestIDs.createHomeNameInput),
+    ).not.toBeOnTheScreen();
   });
 
-  it('keeps preserved homes on screen when a refetch fails', () => {
-    mockHook({
-      homes: [{ id: 'home-1', name: 'My Home', myMembership: {} }],
-      loading: false,
-      hasResult: true,
-    });
-
-    const { queryByTestId } = render(<HomeManagement />);
-
-    expect(queryByTestId(kitTestIDs.stateError)).toBeNull();
-    expect(mockHomeCardProps.at(-1)?.homeId).toBe('home-1');
-  });
-
-  it('renders homes list when homes exist', () => {
-    const tree = render(<HomeManagement />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it('renders with empty homes list', () => {
-    const { useHomeManagement } = jest.requireMock(
-      '#features/home/hooks/useHomeManagement',
-    );
-    useHomeManagement.mockReturnValue({
-      homes: [],
-      defaultHomeId: null,
-      loading: false,
-      hasResult: true,
-      creating: false,
-      joiningByCode: false,
-      loadingPreview: false,
-      previewHome: null,
-      createHome: jest.fn(),
-      deleteHome: jest.fn(),
-      setDefaultHome: jest.fn(),
-      inviteUserToHome: jest.fn(),
-      joinHomeByCode: jest.fn(),
-      previewHomeByCode: jest.fn(),
-      stats: { totalHomes: 0, totalMembers: 0, totalPantries: 0 },
-      refetch: jest.fn(),
-    });
-
-    const tree = render(<HomeManagement />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it('renders multiple homes sorted with default first', () => {
-    const { useHomeManagement } = jest.requireMock(
-      '#features/home/hooks/useHomeManagement',
-    );
-    useHomeManagement.mockReturnValue({
-      homes: [
-        {
-          id: 'home-2',
-          name: 'Vacation',
-          members: [{ user: { id: 'user-1' }, role: 'MEMBER' }],
-          myMembership: { canManageHome: false },
-        },
-        {
-          id: 'home-1',
-          name: 'My Home',
-          members: [{ user: { id: 'user-1' }, role: 'OWNER' }],
-          myMembership: { canManageHome: true },
-        },
+  it('keeps the form open when it is refused', async () => {
+    await openHomes({
+      answers: [
+        recordMock(CreateHomeDocument, {
+          data: {
+            createHome: {
+              __typename: 'ValidationError',
+              code: ErrorCode.ValidationFailed,
+              disposition: ErrorDisposition.Fail,
+              message: 'No',
+              field: 'input.name',
+            },
+          },
+        }),
       ],
-      remoteDefaultHomeId: 'home-1',
-      loading: false,
-      hasResult: true,
-      creating: false,
-      joiningByCode: false,
-      loadingPreview: false,
-      previewHome: null,
-      createHome: jest.fn(),
-      deleteHome: jest.fn(),
-      setDefaultHome: jest.fn(),
-      inviteUserToHome: jest.fn(),
-      joinHomeByCode: jest.fn(),
-      previewHomeByCode: jest.fn(),
-      stats: { totalHomes: 2, totalMembers: 2, totalPantries: 2 },
-      refetch: jest.fn(),
     });
+    const user = userEvent.setup();
 
-    const tree = render(<HomeManagement />);
-    expect(tree.toJSON()).toBeTruthy();
+    await openForm(user);
+    await user.type(
+      screen.getByTestId(homeTestIDs.createHomeNameInput),
+      'Loft',
+    );
+    await user.press(screen.getByTestId(homeTestIDs.createHomeSubmitButton));
+    await log.landed(CreateHomeDocument);
+    await act(async () => undefined);
+
+    expect(alertService.alert).toHaveBeenCalled();
+    expect(screen.getByTestId(homeTestIDs.createHomeNameInput)).toBeTruthy();
   });
 
-  it('renders while creating a home', () => {
-    const { useHomeManagement } = jest.requireMock(
-      '#features/home/hooks/useHomeManagement',
-    );
-    useHomeManagement.mockReturnValue({
-      homes: [
-        {
-          id: 'home-1',
-          name: 'My Home',
-          members: [{ user: { id: 'user-1' }, role: 'OWNER' }],
-          myMembership: { canManageHome: true },
+  it('offers no join code to an unverified email', async () => {
+    unverified();
+    await openHomes();
+
+    await openForm(userEvent.setup());
+
+    expect(
+      screen.UNSAFE_getByType(CreateHomeForm).props.joinCodeAvailable,
+    ).toBe(false);
+  });
+
+  it('can be started when the homes could not be read', async () => {
+    await openHomes({ readFails: true });
+
+    await openForm(userEvent.setup());
+
+    expect(screen.getByTestId(homeTestIDs.createHomeNameInput)).toBeTruthy();
+  });
+
+  it('starts again in create mode after a cancel', async () => {
+    await openHomes();
+    const user = userEvent.setup();
+
+    await joinMode(user);
+    await user.press(screen.getByText(t('labels.cancel')));
+    await openForm(user);
+
+    expect(screen.getByTestId(homeTestIDs.createHomeNameInput)).toBeTruthy();
+  });
+});
+
+describe('joining by code', () => {
+  it('previews a code once it is long enough, joins it, and closes the form', async () => {
+    const preview = recordMock(ResolveShareLinkDocument, {
+      data: {
+        resolveShareLink: {
+          targetType: ShareLinkTargetType.HomeJoin,
+          homeId: 'home-9',
+          name: 'Loft',
+          memberCount: 3,
         },
-      ],
-      remoteDefaultHomeId: 'home-1',
-      loading: false,
-      hasResult: true,
-      creating: true,
-      joiningByCode: false,
-      loadingPreview: false,
-      previewHome: null,
-      createHome: jest.fn(),
-      deleteHome: jest.fn(),
-      setDefaultHome: jest.fn(),
-      inviteUserToHome: jest.fn(),
-      joinHomeByCode: jest.fn(),
-      previewHomeByCode: jest.fn(),
-      stats: { totalHomes: 1, totalMembers: 1, totalPantries: 1 },
-      refetch: jest.fn(),
+      },
     });
-
-    const tree = render(<HomeManagement />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it('renders while joining by code', () => {
-    const { useHomeManagement } = jest.requireMock(
-      '#features/home/hooks/useHomeManagement',
-    );
-    useHomeManagement.mockReturnValue({
-      homes: [],
-      defaultHomeId: null,
-      loading: false,
-      hasResult: true,
-      creating: false,
-      joiningByCode: true,
-      loadingPreview: false,
-      previewHome: null,
-      createHome: jest.fn(),
-      deleteHome: jest.fn(),
-      setDefaultHome: jest.fn(),
-      inviteUserToHome: jest.fn(),
-      joinHomeByCode: jest.fn(),
-      previewHomeByCode: jest.fn(),
-      stats: { totalHomes: 0, totalMembers: 0, totalPantries: 0 },
-      refetch: jest.fn(),
-    });
-
-    const tree = render(<HomeManagement />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it('renders with preview home visible', () => {
-    const { useHomeManagement } = jest.requireMock(
-      '#features/home/hooks/useHomeManagement',
-    );
-    useHomeManagement.mockReturnValue({
-      homes: [],
-      defaultHomeId: null,
-      loading: false,
-      hasResult: true,
-      creating: false,
-      joiningByCode: false,
-      loadingPreview: false,
-      previewHome: { id: 'preview-1', name: 'Preview Home', memberCount: 3 },
-      createHome: jest.fn(),
-      deleteHome: jest.fn(),
-      setDefaultHome: jest.fn(),
-      inviteUserToHome: jest.fn(),
-      joinHomeByCode: jest.fn(),
-      previewHomeByCode: jest.fn(),
-      stats: { totalHomes: 0, totalMembers: 0, totalPantries: 0 },
-      refetch: jest.fn(),
-    });
-
-    const tree = render(<HomeManagement />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it('renders with loading preview', () => {
-    const { useHomeManagement } = jest.requireMock(
-      '#features/home/hooks/useHomeManagement',
-    );
-    useHomeManagement.mockReturnValue({
-      homes: [],
-      defaultHomeId: null,
-      loading: false,
-      hasResult: true,
-      creating: false,
-      joiningByCode: false,
-      loadingPreview: true,
-      previewHome: null,
-      createHome: jest.fn(),
-      deleteHome: jest.fn(),
-      setDefaultHome: jest.fn(),
-      inviteUserToHome: jest.fn(),
-      joinHomeByCode: jest.fn(),
-      previewHomeByCode: jest.fn(),
-      stats: { totalHomes: 0, totalMembers: 0, totalPantries: 0 },
-      refetch: jest.fn(),
-    });
-
-    const tree = render(<HomeManagement />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it('renders with home where user cannot manage', () => {
-    const { useHomeManagement } = jest.requireMock(
-      '#features/home/hooks/useHomeManagement',
-    );
-    useHomeManagement.mockReturnValue({
-      homes: [
-        {
-          id: 'home-1',
-          name: 'Shared Home',
-          members: [
-            { user: { id: 'user-1' }, role: 'GUEST' },
-            { user: { id: 'user-2' }, role: 'OWNER' },
-          ],
-          myMembership: { canManageHome: false },
+    const join = recordMock(JoinHomeByCodeDocument, {
+      data: {
+        joinHomeByCode: {
+          __typename: 'JoinHomeByCodePayload',
+          membership: {
+            __typename: 'Membership',
+            id: 'member-9',
+            homeId: 'home-9',
+          },
         },
+      },
+    });
+    await openHomes({ answers: [preview, join] });
+    const user = userEvent.setup();
+    const code = await joinMode(user);
+
+    fireEvent.changeText(code, 'ABC');
+    fireEvent(code, 'blur');
+    expect(preview.fired).toEqual([]);
+    fireEvent.changeText(code, 'ABCD');
+    fireEvent(code, 'blur');
+    await log.landed(ResolveShareLinkDocument);
+    expect(screen.getByText('Loft')).toBeTruthy();
+
+    await user.press(screen.getByText(t('homeManagement.join')));
+    await log.landed(JoinHomeByCodeDocument);
+    await act(async () => undefined);
+
+    expect(inputOf(join.fired[0] ?? {})).toEqual({ joinCode: 'ABCD' });
+    expect(
+      screen.queryByPlaceholderText(t('labels.enterJoinCode')),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('asks for a verified email first', async () => {
+    unverified();
+    const join = recordMock(JoinHomeByCodeDocument, { held: true });
+    await openHomes({ answers: [join] });
+    const user = userEvent.setup();
+
+    fireEvent.changeText(await joinMode(user), 'ABCD');
+    await user.press(screen.getByText(t('homeManagement.join')));
+
+    askedToVerify();
+    expect(join.fired).toEqual([]);
+  });
+});
+
+describe('making a home the default', () => {
+  it('highlights it once the change stands', async () => {
+    await openHomes({
+      answers: [
+        recordMock(MarkHomeAsDefaultDocument, {
+          data: {
+            markHomeAsDefault: { __typename: 'MarkHomeAsDefaultPayload' },
+          },
+        }),
       ],
-      defaultHomeId: null,
-      loading: false,
-      hasResult: true,
-      creating: false,
-      joiningByCode: false,
-      loadingPreview: false,
-      previewHome: null,
-      createHome: jest.fn(),
-      deleteHome: jest.fn(),
-      setDefaultHome: jest.fn(),
-      inviteUserToHome: jest.fn(),
-      joinHomeByCode: jest.fn(),
-      previewHomeByCode: jest.fn(),
-      stats: { totalHomes: 1, totalMembers: 2, totalPantries: 0 },
-      refetch: jest.fn(),
     });
 
-    const tree = render(<HomeManagement />);
-    expect(tree.toJSON()).toBeTruthy();
+    await userEvent
+      .setup()
+      .press(within(cardOf(CABIN.id)).getByText(t('labels.setDefault')));
+    await log.landed(MarkHomeAsDefaultDocument);
+    await act(async () => undefined);
+
+    expect(cardOf(CABIN.id).props.isHighlighted).toBe(true);
   });
 
-  // deleteHome is @requireAccess(Home, OWNER) server-side. ADMINs hold
-  // canManageHome by default, so gating Delete on that flag showed them an
-  // affordance that could only return FORBIDDEN.
-  describe('Delete gating follows the OWNER role', () => {
-    const baseReturn = {
-      ...baseHookReturn,
-      stats: { totalHomes: 1, totalMembers: 1, totalPantries: 0 },
-    };
-
-    const homeWithMembership = (membership: {
-      role: string;
-      canManageHome: boolean;
-    }) => ({
-      id: 'home-1',
-      name: 'Gated Home',
-      members: [{ user: { id: 'user-1' }, role: membership.role }],
-      myMembership: membership,
+  it('does not highlight one refused, and says so', async () => {
+    await openHomes({
+      answers: [
+        recordMock(MarkHomeAsDefaultDocument, {
+          data: {
+            markHomeAsDefault: {
+              __typename: 'NotFoundError',
+              code: ErrorCode.NotFound,
+              disposition: ErrorDisposition.Fail,
+              message: 'Gone',
+              resource: 'Home',
+              resourceId: CABIN.id,
+            },
+          },
+        }),
+      ],
     });
 
-    it('ADMIN with canManageHome does NOT see Delete', () => {
-      const { useHomeManagement } = jest.requireMock(
-        '#features/home/hooks/useHomeManagement',
-      );
-      useHomeManagement.mockReturnValue({
-        ...baseReturn,
-        homes: [homeWithMembership({ role: 'ADMIN', canManageHome: true })],
-      });
+    await userEvent
+      .setup()
+      .press(within(cardOf(CABIN.id)).getByText(t('labels.setDefault')));
+    await log.landed(MarkHomeAsDefaultDocument);
+    await act(async () => undefined);
 
-      render(<HomeManagement />);
-      expect(mockHomeCardProps.at(-1)?.canDelete).toBe(false);
-    });
-
-    it('OWNER sees Delete', () => {
-      const { useHomeManagement } = jest.requireMock(
-        '#features/home/hooks/useHomeManagement',
-      );
-      useHomeManagement.mockReturnValue({
-        ...baseReturn,
-        homes: [homeWithMembership({ role: 'OWNER', canManageHome: true })],
-      });
-
-      render(<HomeManagement />);
-      expect(mockHomeCardProps.at(-1)?.canDelete).toBe(true);
-    });
-  });
-
-  describe('the Default chip', () => {
-    // The chip claims the ACCOUNT's default home, which the device-local
-    // selection is allowed to differ from.
-    const twoHomes = [
-      { id: 'home-1', name: 'First', myMembership: { canManageHome: true } },
-      { id: 'home-2', name: 'Second', myMembership: { canManageHome: true } },
-    ];
-
-    it('follows the server default', () => {
-      mockHook({
-        homes: twoHomes,
-        remoteDefaultHomeId: 'home-2',
-      });
-
-      render(<HomeManagement />);
-
-      const byId = new Map(mockHomeCardProps.map(p => [p.homeId, p.isDefault]));
-      expect(byId.get('home-2')).toBe(true);
-      expect(byId.get('home-1')).toBe(false);
-    });
-
-    it('sorts the server default first', () => {
-      mockHook({
-        homes: twoHomes,
-        remoteDefaultHomeId: 'home-2',
-      });
-
-      render(<HomeManagement />);
-
-      expect(mockHomeCardProps[0]?.homeId).toBe('home-2');
-    });
-  });
-
-  describe('setting the default home', () => {
-    const twoHomes = [
-      { id: 'home-1', name: 'First', myMembership: { canManageHome: true } },
-      { id: 'home-2', name: 'Second', myMembership: { canManageHome: true } },
-    ];
-
-    it('does not highlight a home whose switch was refused', async () => {
-      // A refusal rolls the chip back, so highlighting anyway leaves the two
-      // pointing at different homes.
-      const setDefaultHome = jest.fn().mockResolvedValue(false);
-      mockHook({
-        homes: twoHomes,
-        remoteDefaultHomeId: 'home-1',
-        setDefaultHome,
-      });
-
-      render(<HomeManagement />);
-
-      const onSetDefault = mockHomeCardProps.find(
-        p => p.homeId === 'home-2',
-      )?.onSetDefault;
-
-      await act(async () => {
-        await onSetDefault?.('home-2');
-      });
-
-      expect(setDefaultHome).toHaveBeenCalledWith('home-2');
-      expect(mockHomeCardProps.some(p => p.isHighlighted)).toBe(false);
-    });
-
-    it('highlights a home whose switch stood', async () => {
-      const setDefaultHome = jest.fn().mockResolvedValue(true);
-      mockHook({
-        homes: twoHomes,
-        remoteDefaultHomeId: 'home-1',
-        setDefaultHome,
-      });
-
-      render(<HomeManagement />);
-
-      const onSetDefault = mockHomeCardProps.find(
-        p => p.homeId === 'home-2',
-      )?.onSetDefault;
-
-      await act(async () => {
-        await onSetDefault?.('home-2');
-      });
-
-      expect(
-        mockHomeCardProps.some(p => p.homeId === 'home-2' && p.isHighlighted),
-      ).toBe(true);
-    });
+    expect(alertService.alert).toHaveBeenCalled();
+    expect(cardOf(CABIN.id).props.isHighlighted).toBe(false);
   });
 });

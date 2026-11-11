@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import type { RootState } from '#store/index';
+import { useStore } from '#store';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
@@ -13,43 +13,6 @@ import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
 import type { GetHomesQuery } from '#operations/home/home.generated';
 import { useHomeSelection } from '../useHomeSelection';
 import { useDefaultHomeSyncStore } from '#features/home/store/useDefaultHomeSyncStore';
-
-const mockStoreState = {
-  selectedHomeId: null as string | null,
-  selectedPantryId: null as string | null,
-  setSelectedHomeId: jest.fn(),
-  setSelectedPantryId: jest.fn(),
-  setHomeAndPantry: jest.fn(),
-  setIsHomeSelectionReady: jest.fn(),
-};
-
-// `setDefaultHome` snapshots the selection from the live store, not from its
-// render closure — see the rollback comment there.
-jest.mock('#store', () => ({
-  useStore: {
-    getState: () => mockStoreState,
-  },
-  // Read when a failed write is reported, to skip a known outage.
-  storeApi: {
-    getState: () => ({ isOnline: true, apiReachable: true }),
-  },
-}));
-
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: <T>(selector: (state: RootState) => T): T =>
-    selector(mockStoreState as Partial<RootState> as RootState),
-  useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
-  useSelectedPantryId: jest.fn(() => mockStoreState.selectedPantryId),
-  useSetSelectedPantryId: jest.fn(() => mockStoreState.setSelectedPantryId),
-  useHomeState: jest.fn(() => ({
-    selectedHomeId: mockStoreState.selectedHomeId,
-    setSelectedHomeId: mockStoreState.setSelectedHomeId,
-  })),
-  useSetHomeAndPantry: jest.fn(() => mockStoreState.setHomeAndPantry),
-  useSetIsHomeSelectionReady: jest.fn(
-    () => mockStoreState.setIsHomeSelectionReady,
-  ),
-}));
 
 jest.mock('#/services/errorService');
 
@@ -141,10 +104,26 @@ const createHomes = () => [
   }),
 ];
 
+/** Puts the selection where a test starts it. */
+const selected = (homeId: string | null, pantryId: string | null = null) => {
+  useStore.setState({
+    selectedHomeId: homeId,
+    selectedPantryId: pantryId,
+    isHomeSelectionReady: true,
+  });
+};
+
+/** The selection as the store holds it. */
+const selection = () => {
+  const { selectedHomeId, selectedPantryId, isHomeSelectionReady } =
+    useStore.getState();
+  return { selectedHomeId, selectedPantryId, isHomeSelectionReady };
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
-  mockStoreState.selectedHomeId = null;
-  mockStoreState.selectedPantryId = null;
+  useStore.setState({ isOnline: true, apiReachable: true });
+  selected(null);
   useDefaultHomeSyncStore.getState().clearPending();
 });
 
@@ -206,7 +185,7 @@ function setDefaultErrorMock() {
 describe('useHomeSelection', () => {
   describe('setDefaultHome', () => {
     it('returns true early when home is already default both locally and remotely', async () => {
-      mockStoreState.selectedHomeId = 'home-1';
+      selected('home-1');
       const m = setDefaultMock();
 
       const { result } = renderHookWithApollo(
@@ -231,7 +210,7 @@ describe('useHomeSelection', () => {
       // `remoteDefaultHomeId` is derived from the field the local write sets,
       // so without the pending marker a queued-then-dropped write leaves the
       // retry skipping as "already done".
-      mockStoreState.selectedHomeId = 'home-1';
+      selected('home-1');
       useDefaultHomeSyncStore.getState().markPending('home-1');
       const m = setDefaultMock();
 
@@ -303,13 +282,11 @@ describe('useHomeSelection', () => {
       expect(alertService.alert).not.toHaveBeenCalled();
       // No local record, so no pantry hint — the server's `defaultPantry` is
       // what lands the selection.
-      expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
-        'brand-new-home',
-        null,
-      );
-      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
-        'pantry-9',
-      );
+      expect(selection()).toEqual({
+        selectedHomeId: 'brand-new-home',
+        selectedPantryId: 'pantry-9',
+        isHomeSelectionReady: true,
+      });
     });
 
     it('pre-selects the default pantry from pantriesConnection', async () => {
@@ -367,10 +344,10 @@ describe('useHomeSelection', () => {
         await result.current.setDefaultHome('home-2');
       });
 
-      expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
-        'home-2',
-        'pantry-b',
-      );
+      expect(selection()).toMatchObject({
+        selectedHomeId: 'home-2',
+        selectedPantryId: 'pantry-b',
+      });
     });
 
     it('keeps the selection when the write is queued offline', async () => {
@@ -378,8 +355,7 @@ describe('useHomeSelection', () => {
       // resolves with no payload and no error. That is not a refusal: the
       // change is already in the cache permanently and replays on reconnect,
       // so reverting it here would snap the user's choice back for no reason.
-      mockStoreState.selectedHomeId = 'home-1';
-      mockStoreState.selectedPantryId = 'pantry-1';
+      selected('home-1', 'pantry-1');
 
       const { result } = renderHookWithApollo(
         () =>
@@ -398,21 +374,18 @@ describe('useHomeSelection', () => {
       expect(success!).toBe(true);
       expect(alertService.alert).not.toHaveBeenCalled();
       // Never rolled back to the previous home.
-      expect(mockStoreState.setHomeAndPantry).not.toHaveBeenCalledWith(
-        'home-1',
-        'pantry-1',
-      );
-      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenLastCalledWith(
-        true,
-      );
+      expect(selection()).toEqual({
+        selectedHomeId: 'home-2',
+        selectedPantryId: 'pantry-3',
+        isHomeSelectionReady: true,
+      });
     });
 
     it('re-points the pantry to the new home when the write is queued offline', async () => {
       // Switching home must move the pantry with it. Left behind, the pantry
       // screen reads the previous home's pantry and every write made from it
       // is parented to the wrong home.
-      mockStoreState.selectedHomeId = 'home-1';
-      mockStoreState.selectedPantryId = 'pantry-1';
+      selected('home-1', 'pantry-1');
 
       const { result } = renderHookWithApollo(
         () =>
@@ -428,15 +401,14 @@ describe('useHomeSelection', () => {
       });
 
       // home-2's default pantry, not home-1's.
-      expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
-        'home-2',
-        'pantry-3',
-      );
+      expect(selection()).toMatchObject({
+        selectedHomeId: 'home-2',
+        selectedPantryId: 'pantry-3',
+      });
     });
 
     it('calls mutation and updates state on success', async () => {
-      mockStoreState.selectedHomeId = 'home-1';
-      mockStoreState.selectedPantryId = 'pantry-1';
+      selected('home-1', 'pantry-1');
       const m = setDefaultMock('pantry-3');
 
       const { result } = renderHookWithApollo(
@@ -448,27 +420,28 @@ describe('useHomeSelection', () => {
         { operationMocks: [m.mock] },
       );
 
+      // Closed while the switch is out, so no read fires on the outgoing id.
+      const readiness: boolean[] = [];
+      const stop = useStore.subscribe(state => {
+        readiness.push(state.isHomeSelectionReady);
+      });
       let success: boolean;
       await act(async () => {
         success = await result.current.setDefaultHome('home-2');
       });
+      stop();
 
       expect(success!).toBe(true);
-      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(
-        false,
-      );
-      expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
-        'home-2',
-        'pantry-3',
-      );
-      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
-        'pantry-3',
-      );
+      expect(readiness).toContain(false);
+      expect(selection()).toEqual({
+        selectedHomeId: 'home-2',
+        selectedPantryId: 'pantry-3',
+        isHomeSelectionReady: true,
+      });
     });
 
     it('rolls back on mutation failure', async () => {
-      mockStoreState.selectedHomeId = 'home-1';
-      mockStoreState.selectedPantryId = 'pantry-1';
+      selected('home-1', 'pantry-1');
 
       const { result } = renderHookWithApollo(
         () =>
@@ -485,15 +458,15 @@ describe('useHomeSelection', () => {
       });
 
       expect(success!).toBe(false);
-      expect(mockStoreState.setHomeAndPantry).toHaveBeenCalledWith(
-        'home-1',
-        'pantry-1',
-      );
+      expect(selection()).toEqual({
+        selectedHomeId: 'home-1',
+        selectedPantryId: 'pantry-1',
+        isHomeSelectionReady: true,
+      });
     });
 
     it('rolls back and says why when the server refuses', async () => {
-      mockStoreState.selectedHomeId = 'home-1';
-      mockStoreState.selectedPantryId = 'pantry-1';
+      selected('home-1', 'pantry-1');
       const m = setDefaultFailureMock();
 
       const { result } = renderHookWithApollo(
@@ -511,6 +484,10 @@ describe('useHomeSelection', () => {
       });
 
       expect(success!).toBe(false);
+      expect(selection()).toMatchObject({
+        selectedHomeId: 'home-1',
+        selectedPantryId: 'pantry-1',
+      });
       // A resolved error member doesn't throw, so it must be surfaced here
       // rather than swallowed. Its CODE selects the copy — never its message.
       expect(alertService.alert).toHaveBeenCalledTimes(1);
@@ -540,11 +517,14 @@ describe('useHomeSelection', () => {
       }),
     );
 
-    expect(result.current.setSelectedHomeId).toBe(
-      mockStoreState.setSelectedHomeId,
-    );
-    expect(result.current.setSelectedPantryId).toBe(
-      mockStoreState.setSelectedPantryId,
-    );
+    act(() => {
+      result.current.setSelectedHomeId('home-2');
+      result.current.setSelectedPantryId('pantry-3');
+    });
+
+    expect(selection()).toMatchObject({
+      selectedHomeId: 'home-2',
+      selectedPantryId: 'pantry-3',
+    });
   });
 });
