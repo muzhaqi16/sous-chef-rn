@@ -33,7 +33,15 @@ import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { Text as AppText } from '#components/atoms/Text';
+import {
+  HomePantries_HomeFragmentDoc,
+  type HomePantries_HomeFragment,
+} from '#features/home/utils/homePantries.generated';
+import type { Unmasked } from '@apollo/client/masking';
 import { PantrySettings } from '../PantrySettings';
+
+type HomeEdge =
+  Unmasked<HomePantries_HomeFragment>['pantriesConnection']['edges'][number];
 
 // The day stays fixed: the hook's midnight timer re-arms itself.
 jest.mock('#hooks/app/useToday', () => ({
@@ -52,14 +60,6 @@ jest.mock('#features/pantry/hooks/usePantryPermissions');
 const mockNav = jest
   .requireMock('#hooks/navigation/useAppNavigation')
   .useAppNavigation();
-
-const HOME = gql`
-  fragment PantrySettingsTestHome on Home {
-    pantries {
-      id
-    }
-  }
-`;
 
 const PANTRY = gql`
   fragment PantrySettingsTestPantry on Pantry {
@@ -96,25 +96,34 @@ const answered = (document: DocumentNode, nth = 1) =>
     await log.answered(document, nth);
   });
 
+/** The home's pantries, as the app reads them. */
 function seedHome(cache: InMemoryCache, pantryIds: string[]) {
   seedFragment(cache, {
-    fragment: HOME,
+    fragment: HomePantries_HomeFragmentDoc,
     data: {
       __typename: 'Home',
       id: 'h1',
-      pantries: pantryIds.map(id => ({ __typename: 'Pantry', id })),
+      pantriesConnection: {
+        __typename: 'PantryConnection',
+        edges: pantryIds.map(
+          (id): HomeEdge => ({
+            __typename: 'PantryEdge',
+            node: { __typename: 'Pantry', id, isDefault: false },
+          }),
+        ),
+      },
     },
   });
 }
 
 const homePantries = (cache: InMemoryCache) =>
   cache
-    .readFragment<{ pantries: { id: string }[] }>({
+    .readFragment({
       id: 'Home:h1',
-      fragment: HOME,
+      fragment: HomePantries_HomeFragmentDoc,
       optimistic: true,
     })
-    ?.pantries.map(({ id }) => id);
+    ?.pantriesConnection.edges.map(({ node }) => node.id);
 
 const pantryRow = (cache: InMemoryCache, id: string) =>
   cache.readFragment<{
