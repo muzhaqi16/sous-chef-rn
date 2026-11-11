@@ -9395,6 +9395,20 @@ type Mutation {
   Sets isOpened=true and openedAt to current time on the targeted batch.
   """
   openPantryItemBatch(input: OpenPantryItemBatchInput!): OpenPantryItemBatchResult!
+  """
+  Record a household's answers about stacks of one pantry it was asked to
+  check (Pantry.stockToConfirm). Every entry that applies confirms its stack
+  now. STILL_HAVE changes nothing else and advances no version. SOME_LEFT and
+  USED_UP correct the stack to the count found, as adjustPantryItemQuantity
+  does, with the reason "Stock check": counted neither as consumption nor as
+  waste. THREW_OUT records everything held as waste. A stack holding nothing
+  records the confirmation alone. An entry naming a stack that is not an
+  active stack of the pantry, or carrying a field its answer does not take,
+  fails on its own; the entries that apply commit together, computed from the
+  stacks as they are now, and a replay applies nothing twice. Each changed
+  stack is published to pantry subscribers after the check commits.
+  """
+  recordPantryStockCheck(input: RecordPantryStockCheckInput!): RecordPantryStockCheckResult!
   """Record a price observation for historical tracking"""
   recordPriceObservation(input: RecordPriceObservationInput!): RecordPriceObservationResult!
   """
@@ -10636,7 +10650,7 @@ type Pantry {
   """
   The stacks most worth a "still have it?" check for the caller's date:
   active stacks that hold stock and are LOW or MEDIUM, LOW first, then the
-  longest unconfirmed, then by id.
+  longest unconfirmed, then by id. Answer them with recordPantryStockCheck.
   Bounded field: limit defaults to 20 and is clamped server-side to a
   maximum of 50.
   """
@@ -11646,6 +11660,38 @@ type PantryStats {
   valueCurrency: Currency
 }
 
+"""One answer about one stack in recordPantryStockCheck"""
+input PantryStockCheckEntryInput {
+  answer: StockCheckAnswer!
+  """The stack the answer is about: an active stack of the request's pantry"""
+  pantryItemId: ID!
+  """
+  SOME_LEFT only, and required there: what is left, zero or more, in the stack's tracking unit
+  """
+  quantity: Float
+  """THREW_OUT only: why it was thrown out"""
+  wasteReason: WasteReason
+}
+
+"""One entry's outcome in recordPantryStockCheck"""
+type PantryStockCheckResult {
+  """The entry's answer, as sent"""
+  answer: StockCheckAnswer!
+  """Why the entry failed; set exactly when success is false"""
+  failure: BatchElementFailure
+  """
+  The stack as it stands after the check; null when the entry failed, or on
+  a replay when the stack has been deleted since
+  """
+  pantryItem: PantryItem
+  """The entry's stack, as sent"""
+  pantryItemId: ID!
+  """
+  Whether the check applied to the stack; a replay answers what the first send did
+  """
+  success: Boolean!
+}
+
 """
 How sure the API is that a pantry stack still holds what it records, for the
 caller's calendar date. Every surface that judges stock gives the same level
@@ -11653,9 +11699,9 @@ and reasons for the same stack and date.
 """
 type PantryStockConfidence {
   """
-  The later of the stack's creation and the latest ledger entry on it that
-  was not undone (an arrival, a use, waste or a correction). Editing the
-  stack's other fields does not confirm it.
+  The latest of the stack's creation, a ledger entry on it that was not
+  undone (an arrival, a use, waste or a correction), and a stock-check answer
+  about it. Editing the stack's other fields does not confirm it.
   """
   lastConfirmedAt: DateTime!
   level: StockConfidence!
@@ -15109,6 +15155,39 @@ type RecipeSuggestionEdge {
   usedIngredients: [RecipeIngredient!]!
 }
 
+input RecordPantryStockCheckInput {
+  """1 to 50 answers, each about a different stack"""
+  entries: [PantryStockCheckEntryInput!]!
+  """
+  A client-minted CUID2 for this check: a replay with the same key writes
+  nothing and answers with converged true, so the check is recorded at most once
+  """
+  idempotencyKey: ID
+  """
+  The pantry the stacks belong to; the caller must be able to edit its items
+  """
+  pantryId: ID!
+}
+
+type RecordPantryStockCheckPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
+  """The pantry the stacks belong to"""
+  pantry: Pantry!
+  """One result per entry, in request order"""
+  results: [PantryStockCheckResult!]!
+}
+
+"""
+Result of RecordPantryStockCheck. Select on RecordPantryStockCheckPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RecordPantryStockCheckResult = ConflictError | ForbiddenError | NotFoundError | RecordPantryStockCheckPayload | ValidationError
+
 """Input for recording a price observation (historical tracking)"""
 input RecordPriceObservationInput {
   """The price's currency; the user's own when omitted"""
@@ -17278,6 +17357,18 @@ jar.
 type StockBreakdown {
   fullPackages: Int!
   partialPackages: [PartialPackage!]!
+}
+
+"""A member's answer about a pantry stack they were asked to check"""
+enum StockCheckAnswer {
+  """Some is left: corrects the stack to the stated quantity"""
+  SOME_LEFT
+  """The stack holds what it records; confirms it and changes nothing"""
+  STILL_HAVE
+  """It was thrown out: records everything held as waste"""
+  THREW_OUT
+  """None is left: corrects the stack to zero"""
+  USED_UP
 }
 
 """How sure the API is that a pantry stack still holds what it records"""
