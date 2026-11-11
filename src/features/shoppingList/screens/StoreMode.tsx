@@ -87,14 +87,16 @@ const StoreModeBody: React.FC<{
           inCart ? undefined : { left: [moveToAisle(id)] }
         }
         onTogglePurchase={(id, opts) => {
-          // A long-press records what the line cost; the cart has nothing to record.
+          // A long-press records what the line cost; a cart row, bought,
+          // opens its detail instead.
           if (opts?.withDetails) {
-            if (!inCart) openPurchaseAmount(id);
+            openPurchaseAmount(id);
             return;
           }
           void actions.toggleLine(id);
         }}
-        onQuantityPress={inCart ? undefined : openQuantityEdit}
+        // A cart row's badge, bought, disables itself.
+        onQuantityPress={openQuantityEdit}
         onEndReached={inCart ? actions.loadMoreCart : undefined}
         ListFooterComponent={
           <PaginationFooter
