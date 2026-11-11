@@ -136,7 +136,7 @@ const StoreModeBody: React.FC<{
 export const StoreMode: React.FC<StoreModeProps> = ({ route }) => {
   const { listId } = route.params;
   const { t } = useTranslation();
-  const { goBack, toListSettings, toBarcode } = useAppNavigation();
+  const { goBack, toBarcode } = useAppNavigation();
   useKeepAwake();
 
   const storeMode = useStoreMode(listId);
@@ -187,7 +187,6 @@ export const StoreMode: React.FC<StoreModeProps> = ({ route }) => {
           recordPurchase={actions.recordPurchase}
           searchQuery=""
           onSearchQueryClear={noop}
-          onNavigateToListSettings={() => toListSettings({ listId })}
         >
           <StoreModeBody listId={listId} storeMode={storeMode} />
         </ShoppingListModalsProvider>

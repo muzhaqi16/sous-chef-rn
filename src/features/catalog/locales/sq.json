@@ -86,9 +86,6 @@
       "favorites": "Të preferuarat e tua",
       "popular": "Popullore"
     },
-    "noListTitle": "Asnjë listë e zgjedhur",
-    "noListBody": "Zgjidh ose krijo më parë një listë blerjesh.",
-    "createList": "Krijo listë",
     "searchPlaceholder": "Kërko një artikull...",
     "added": "U shtua {{name}}",
     "emptyTitle": "Ende asnjë sugjerim",
