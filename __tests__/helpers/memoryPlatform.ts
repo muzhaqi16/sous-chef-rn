@@ -179,7 +179,12 @@ export function createMemoryPlatform(): PlatformServices {
     environment: { NODE_ENV: 'test' },
     keyValueStore: createMemoryKeyValueStore(),
     secureStore: createMemorySecureStore(),
-    platformInfo: { os: 'ios', appVersion: '1.0.0', isEmulator: false },
+    platformInfo: {
+      os: 'ios',
+      appVersion: '1.0.0',
+      isEmulator: false,
+      isTablet: false,
+    },
     appLifecycle: createMemoryAppLifecycle(),
     connectivity: createMemoryConnectivity(),
     appearance: { applyTheme: () => {}, apply: () => {} },

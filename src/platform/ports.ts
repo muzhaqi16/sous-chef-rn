@@ -101,6 +101,8 @@ export interface PlatformInfo {
   /** The installed build's version, which the server's client-version gate reads. */
   appVersion: string;
   isEmulator: boolean;
+  /** A tablet rather than a phone; false on the web. */
+  isTablet: boolean;
 }
 
 /** `unknown` is the state before the first report, which is not "away". */
