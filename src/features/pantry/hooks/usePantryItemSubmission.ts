@@ -131,6 +131,7 @@ export function usePantryItemSubmission({
     const local = {
       unitId,
       expiresOn: expiresOn ?? null,
+      storageLocationId: selectedStorageLocationId,
       location:
         !selectedStorageLocationId && storageLocation.trim()
           ? storageLocation.trim()

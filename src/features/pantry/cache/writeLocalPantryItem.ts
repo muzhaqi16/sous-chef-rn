@@ -26,6 +26,8 @@ export interface LocalPantryItem {
   unitId?: string | null;
   storageState?: StorageState | null;
   expiresOn?: string | null;
+  /** A picked location, shown as the pantry holds it. */
+  storageLocationId?: string | null;
   /** A free-text location's name. */
   location?: string | null;
   minQuantity?: number | null;
@@ -101,7 +103,9 @@ export function writeLocalPantryItem(
         portionsPerTrackingUnit: row.portions.perPackage,
         remainingPortions: quantity * row.portions.perPackage,
       }),
-      storageLocation: row.location
+      storageLocation: row.storageLocationId
+        ? { __typename: 'StorageLocation', id: row.storageLocationId }
+        : row.location
         ? {
             __typename: 'StorageLocation',
             id: `optimistic-loc-${id}`,
