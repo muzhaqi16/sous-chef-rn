@@ -45,8 +45,6 @@ export function usePantryItemSubmission({
     costPerUnit,
     acquisitionMethod,
   }: AddPantryItemFormData) => {
-    if (!pantryId) return;
-
     // No validation here. The sheet's yup schema owns it and reports on the
     // field; `handleSubmit` only reaches this on a valid form. `quantity` is
     // therefore known to parse.
@@ -129,13 +127,9 @@ export function usePantryItemSubmission({
 
     // What the row shows until the server answers, beyond what `input` states.
     const local = {
-      unitId,
       expiresOn: expiresOn ?? null,
       storageLocationId: selectedStorageLocationId,
-      location:
-        !selectedStorageLocationId && storageLocation.trim()
-          ? storageLocation.trim()
-          : null,
+      location: storageLocation.trim() || null,
       minQuantity: minQuantity ? parseDecimalInput(minQuantity) : null,
       restockQuantity: restockQuantity
         ? parseDecimalInput(restockQuantity)
