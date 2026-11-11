@@ -44,6 +44,9 @@ const evaluate = (
     inputs: { build_type: buildType, environment },
   });
 
+/** Any version: what reads a tag judges its shape, never its number. */
+const VERSION = '1.2.3';
+
 const MAIN = 'refs/heads/main';
 
 describe('a version code is asked of Play', () => {
@@ -91,11 +94,7 @@ describe('a version code is asked of Play', () => {
       },
       false,
     ],
-    [
-      'a store tag',
-      { event: 'push', ref: 'refs/tags/playstore-v4.10.0' },
-      false,
-    ],
+    ['a prod tag', { event: 'push', ref: `refs/tags/prod-v${VERSION}` }, false],
   ])('for %s: %s', (_, run, asks) => {
     expect(evaluate(condition, run)).toBe(asks);
   });
@@ -107,9 +106,28 @@ describe('a version code is asked of Play', () => {
 
     expect(evaluate(group, { event: 'push', ref: MAIN })).toBe('play-main');
     expect(
-      evaluate(group, { event: 'push', ref: 'refs/tags/dev-v1.0.0' }),
+      evaluate(group, { event: 'push', ref: `refs/tags/dev-v${VERSION}` }),
     ).toBe('42');
     expect(build).toMatch(/^ {2}cancel-in-progress: false$/m);
+  });
+});
+
+describe('a store tag pushed by hand', () => {
+  const [, push = ''] = /^on:\n {2}push:\n([\s\S]*?)^ {2}\S/m.exec(build) ?? [];
+  const tagGlobs = [...push.matchAll(/^ {6}- '([^']+)'$/gm)].map(
+    ([, glob = '']) => glob,
+  );
+  const starts = (glob: string, tag: string): boolean =>
+    new RegExp(`^${glob.replace(/\*/g, '.*')}$`).test(tag);
+
+  it('is read from the push trigger', () => {
+    expect(tagGlobs).toContain('prod-v*');
+  });
+
+  it('starts no build: only a promotion writes it', () => {
+    expect(
+      tagGlobs.filter(glob => starts(glob, `playstore-v${VERSION}`)),
+    ).toEqual([]);
   });
 });
 
@@ -125,7 +143,7 @@ describe('a promotion', () => {
   it.each([
     [MAIN, true],
     ['refs/heads/feature', false],
-    ['refs/tags/playstore-v4.10.0', false],
+    [`refs/tags/playstore-v${VERSION}`, false],
   ])('dispatched on %s runs: %s', (ref, runs) => {
     expect(
       evaluate(lineIf(jobOf(promote, 'promote')), {

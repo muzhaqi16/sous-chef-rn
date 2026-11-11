@@ -69,7 +69,6 @@
     "tag:dev": "node scripts/create-tag.mjs dev",
     "tag:stg": "node scripts/create-tag.mjs stg",
     "tag:prod": "node scripts/create-tag.mjs prod",
-    "tag:playstore": "node scripts/create-tag.mjs playstore",
     "tag:android:prod": "node scripts/create-tag.mjs prod --android-only",
     "tag:ios": "node scripts/create-tag.mjs prod --ios-only",
     "bundle:ios": "npx react-native bundle --entry-file index.js --bundle-output output.js --platform ios --sourcemap-output output.js.map --dev false --minify true",

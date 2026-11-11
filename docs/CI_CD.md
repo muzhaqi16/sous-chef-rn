@@ -210,20 +210,19 @@ gh workflow run e2e-nightly.yml
 **Triggers:**
 
 - Push to `main`: a Play bundle for the internal track (see **Play distribution** below)
-- Push tags: `dev-v*`, `stg-v*`, `prod-v*`, `playstore-v*`
+- Push tags: `dev-v*`, `stg-v*`, `prod-v*`. A `playstore-v*` tag starts no build: only a promotion writes it.
 - Manual workflow dispatch (choose environment + build type)
 
 **Runner:** Self-hosted Linux (ubuntu)
 
 **Environment:** Resolved from tag prefix or manual input
 
-| Ref            | Environment | Build output                               |
-| -------------- | ----------- | ------------------------------------------ |
-| `main`         | prod        | AAB, uploaded to Play's internal track     |
-| `dev-v*`       | dev         | APK                                        |
-| `stg-v*`       | stg         | APK (staging variant)                      |
-| `prod-v*`      | prod        | APK                                        |
-| `playstore-v*` | prod        | AAB (Play Store bundle), archived in MinIO |
+| Ref       | Environment | Build output                           |
+| --------- | ----------- | -------------------------------------- |
+| `main`    | prod        | AAB, uploaded to Play's internal track |
+| `dev-v*`  | dev         | APK                                    |
+| `stg-v*`  | stg         | APK (staging variant)                  |
+| `prod-v*` | prod        | APK                                    |
 
 **Pipeline steps:**
 
@@ -247,21 +246,19 @@ gh workflow run e2e-nightly.yml
 npm run tag:dev                # Dev APK
 npm run tag:stg                # Staging APK
 npm run tag:android:prod       # Production APK (Android only, skips the iOS tag)
-npm run tag:playstore          # Play Store AAB
 
 # Or using git tags manually
 git tag dev-v1.2.0 && git push origin dev-v1.2.0
 git tag stg-v1.2.0 && git push origin stg-v1.2.0
 git tag prod-v1.2.0 && git push origin prod-v1.2.0
-git tag playstore-v1.2.0 && git push origin playstore-v1.2.0
 
 # Or trigger manually via Actions tab:
 # Actions → Build Android → Run workflow → Choose environment + build type
-# A playstore build from a branch tags its commit playstore-v{version}, moving
-# that tag if it exists, so the API can find it. A non-store tag is refused.
+# A prod playstore build dispatched on main goes to the internal track, as a
+# merge does; from another branch it only builds. A non-store tag is refused.
 ```
 
-**A release is held to production.** A job before the build, `.github/actions/release-check`, runs on `prod-v*` and `playstore-v*` tags and on a hand-dispatched prod or playstore build, and on every iOS build; `dev-v*` and `stg-v*` skip it and still build. `api-schema-check` reads `/health` ten times, fetches the schema published for each hash, and validates `persisted-query-manifest.json` against each. The job then compiles the app against each, since the check can't see variables. Anything it can't establish fails it, and a failure stops the build. It needs this repo's Actions read access on the `api-schema` package. Up to half the `/health` reads may fail, as a draining replica answers 503. `tsc` narrows a client ahead of production and doesn't close it: it flags an unknown input field only in a fresh object literal.
+**A release is held to production.** A job before the build, `.github/actions/release-check`, runs on every push to `main`, on `prod-v*` tags and on a hand-dispatched prod or playstore build, and on every iOS build; `dev-v*` and `stg-v*` skip it and still build. `api-schema-check` reads `/health` ten times, fetches the schema published for each hash, and validates `persisted-query-manifest.json` against each. The job then compiles the app against each, since the check can't see variables. Anything it can't establish fails it, and a failure stops the build. It needs this repo's Actions read access on the `api-schema` package. Up to half the `/health` reads may fail, as a draining replica answers 503. `tsc` narrows a client ahead of production and doesn't close it: it flags an unknown input field only in a fresh object literal.
 
 **Store tags are read by the API.** On every push, the API's CI validates `persisted-query-manifest.json` and checks each variable's input types against `src/graphql/generated/schema.graphql` at every `playstore-vX.Y.Z`, `ios-vX.Y.Z`, `prod-vX.Y.Z` and bare `vX.Y.Z` tag at or above the client floor. So a store tag keeps that exact name, both files stay committed at those paths, and a tag missing either fails the API's CI. Both build workflows refuse anything else: a bundle from a branch is invisible to that check, and a suffixed tag such as `playstore-v1.2.0-rc1` is no store version. `check:manifest`, held by `persistedManifestIsCurrent.test.ts`, keeps the manifest matching the `.graphql` sources. A build from `main` gets its store tag only when it is promoted to production, so the tag always names the commit production runs.
 
@@ -381,11 +378,10 @@ The tag scripts read the version from `package.json`, create annotated git tags,
 # Both platforms (prod only — iOS is prod-only)
 npm run tag:prod          # Creates prod-v{version} (Android) + ios-v{version} (iOS)
 
-# Android only — dev, stg and playstore have no iOS equivalent, so these
-# already produce an Android-only tag
+# Android only — dev and stg have no iOS equivalent, so these already
+# produce an Android-only tag
 npm run tag:dev           # Creates dev-v{version}
 npm run tag:stg           # Creates stg-v{version}
-npm run tag:playstore     # Creates playstore-v{version}
 
 # prod is the only prefix that tags both platforms
 npm run tag:prod          # Creates prod-v{version} + ios-v{version}
@@ -398,11 +394,12 @@ npm run tag:ios           # Creates ios-v{version} (always prod)
 | `npm run tag:dev`          | `dev-v{version}`                     | Android dev build          |
 | `npm run tag:stg`          | `stg-v{version}`                     | Android staging build      |
 | `npm run tag:prod`         | `prod-v{version}` + `ios-v{version}` | Android prod + iOS prod    |
-| `npm run tag:playstore`    | `playstore-v{version}`               | Android Play Store AAB     |
 | `npm run tag:android:prod` | `prod-v{version}`                    | Android prod only (no iOS) |
 | `npm run tag:ios`          | `ios-v{version}`                     | iOS prod only              |
 
 If a tag already exists locally or on the remote, the script will prompt for confirmation before deleting and recreating it.
+
+There is no Play Store tag script: `playstore-v{version}` is written only by **Promote Android**, on the commit it promotes (see **Play distribution**).
 
 ### Using git tags manually
 
@@ -411,7 +408,6 @@ If a tag already exists locally or on the remote, the script will prompt for con
 git tag dev-v1.2.0 && git push origin dev-v1.2.0        # Dev APK
 git tag stg-v1.2.0 && git push origin stg-v1.2.0        # Staging APK
 git tag prod-v1.2.0 && git push origin prod-v1.2.0      # Production APK
-git tag playstore-v1.2.0 && git push origin playstore-v1.2.0  # Play Store AAB
 
 # iOS
 git tag ios-v1.2.0 && git push origin ios-v1.2.0        # App Store

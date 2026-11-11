@@ -58,13 +58,15 @@ const checkRunsOn = ({
     startsWith: (text: string, prefix: string) => text.startsWith(prefix),
   });
 
+/** Any version: what reads a tag judges its shape, never its number. */
+const VERSION = '1.2.3';
+
 describe('which Android builds wait on the check', () => {
   it.each([
-    ['prod-v4.9.0', true],
-    ['playstore-v4.9.0', true],
+    [`prod-v${VERSION}`, true],
     ['main', true],
-    ['dev-v4.9.0', false],
-    ['stg-v4.9.0', false],
+    [`dev-v${VERSION}`, false],
+    [`stg-v${VERSION}`, false],
   ])('a push of %s: %s', (tag, runs) => {
     expect(checkRunsOn({ event: 'push', tag })).toBe(runs);
   });

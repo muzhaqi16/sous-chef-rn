@@ -607,10 +607,12 @@ Tags drive the release pipelines:
 npm run tag:dev
 npm run tag:stg
 npm run tag:prod
-npm run tag:playstore
 npm run tag:android:prod   # Android only
 npm run tag:ios            # iOS only
 ```
+
+Play builds need no tag: every merge to `main` reaches the internal track, and
+**Promote Android** releases one to production.
 
 Pipelines, environments, and secrets: [`CI_CD.md`](CI_CD.md) and
 [`github-actions-environments.md`](github-actions-environments.md).

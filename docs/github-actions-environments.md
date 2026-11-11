@@ -63,7 +63,7 @@ prod environment: PROD_KEYSTORE_BASE64 (overrides for production)
 | ----------- | ----------------- | ------------------------------ | ------------------------------------ |
 | `dev`       | build-android.yml | `dev-v*` tags                  | Development testing                  |
 | `stg`       | build-android.yml | `stg-v*` tags                  | Pre-production QA                    |
-| `prod`      | build-android.yml | `prod-v*`, `playstore-v*` tags | Production releases (Android)        |
+| `prod`      | build-android.yml | `prod-v*` tags, merges to main | Production releases (Android)        |
 | `prod`      | build-ios.yml     | `v*`, `ios-v*` tags            | Production releases (iOS, App Store) |
 
 ### What Each Environment Contains
@@ -320,8 +320,7 @@ git tag stg-v1.2.0 && git push origin stg-v1.2.0
 # Android: Production APK → uses 'prod' environment
 git tag prod-v1.2.0 && git push origin prod-v1.2.0
 
-# Android: Play Store AAB → uses 'prod' environment
-git tag playstore-v1.2.0 && git push origin playstore-v1.2.0
+# Android: Play Store AAB → a merge to main; no tag
 
 # iOS: App Store → uses 'prod' environment
 git tag ios-v1.2.0 && git push origin ios-v1.2.0
