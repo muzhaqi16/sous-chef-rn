@@ -263,14 +263,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     }
   };
 
-  // The save mutation find-or-creates the location by name, so record the typed
-  // name and clear the selected id. Creating it eagerly instead would orphan a
-  // location whenever the user cancels the edit.
-  const handleAddNewLocation = (name: string) => {
-    setValue('location', name, { shouldDirty: true });
-    setSelectedLocationId(null);
-  };
-
   const handleUnitSelected = (
     unitId: string | null,
     unitName: string | null,
@@ -477,7 +469,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
             }}
             storageLocations={storageLocations}
             onStorageLocationSelected={handleStorageLocationSelect}
-            onAddNewLocation={handleAddNewLocation}
           />
         )}
 

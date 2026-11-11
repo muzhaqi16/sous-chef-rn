@@ -22,7 +22,6 @@ interface StorageLocationAutocompleteFieldProps {
     locationId: string | null,
     location: StorageLocationOption | null,
   ) => void;
-  onAddNewLocation?: (name: string) => void;
 }
 
 export const StorageLocationAutocompleteField: React.FC<
@@ -38,7 +37,6 @@ export const StorageLocationAutocompleteField: React.FC<
   testID,
   storageLocations = [],
   onStorageLocationSelected,
-  onAddNewLocation,
 }) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,7 +74,6 @@ export const StorageLocationAutocompleteField: React.FC<
     onChangeText(searchTerm);
     setSearchTerm('');
     onStorageLocationSelected?.(null, null);
-    onAddNewLocation?.(searchTerm);
   };
 
   const renderItem = (item: StorageLocationOption) => (

@@ -190,12 +190,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     }
   };
 
-  // Handle add new storage location
-  const handleAddNewLocation = (name: string) => {
-    setStorageLocation(name);
-    setSelectedStorageLocationId(null);
-  };
-
   // Handle page change
   const handlePageChange = (index: number) => {
     setCurrentPage(index);
@@ -292,7 +286,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           setStorageLocation={setStorageLocation}
           storageLocations={storageLocations}
           handleStorageLocationSelected={handleStorageLocationSelected}
-          handleAddNewLocation={handleAddNewLocation}
           condition={condition}
           setCondition={setCondition}
           tags={tags}
