@@ -1,571 +1,455 @@
-import { gql } from '@apollo/client';
 import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { alertService } from '#/services/alertService';
 import {
   recordMock,
   renderHookWithApollo,
-  seedCache,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
-import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
-import { drained, drainTimers } from '#/test-utils/drainTimers';
+import { operationLog } from '#/test-utils/operationLog';
+import { t } from '#/i18n';
+import { todayKey } from '#/utils/dateUtils';
 import {
+  ErrorCode,
+  ItemCondition,
   StorageState,
   StorageType,
-  UnitType,
 } from '#/graphql/generated/schemaTypes';
+import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { UseUpdatePantryItem_PantryItemFragmentDoc } from '../useUpdatePantryItem.generated';
+import {
+  UseUpdatePantryItem_PantryItemFragmentDoc,
+  type UseUpdatePantryItem_PantryItemFragment,
+} from '../useUpdatePantryItem.generated';
 import type { DirtyFieldFlags, FormDataInput } from '../types';
 import { useUpdatePantryItem } from '../useUpdatePantryItem';
-import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
-jest.mock('#/services/errorService');
+const STACK = 'stack-1';
+const SHOWN = {
+  fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
+  fragmentName: 'useUpdatePantryItem_pantryItem',
+} as const;
 
-jest.mock('../utils', () => ({
-  buildDirtyUpdateInput: jest.fn(
-    (data: FormDataInput, dirtyFields: DirtyFieldFlags) => {
-      const input: Record<string, unknown> = {};
-      if (dirtyFields.itemName) input.itemName = data.itemName;
-      if (dirtyFields.notes) input.storageNotes = data.notes;
-      if (dirtyFields.brand) input.brand = { name: data.brand };
-      if (dirtyFields.location) input.storage = { location: null };
-      if (dirtyFields.netWeight) {
-        input.netWeight = {
-          netWeight: Number(data.netWeight),
-          netWeightUnitId: data.netWeightUnitId,
-        };
-      }
-      return input;
+/** Milk sized in grams, as its detail holds it. */
+function heldStack(version = 3) {
+  const cache = makeCache();
+  seedFragment(cache, {
+    ...SHOWN,
+    id: `PantryItem:${STACK}`,
+    data: {
+      __typename: 'PantryItem',
+      id: STACK,
+      version,
+      itemName: 'Milk',
+      storageState: StorageState.Ambient,
+      condition: ItemCondition.Good,
+      expiresOn: '2026-11-20',
+      tags: ['dairy'],
+      minQuantity: 1,
+      restockQuantity: 4,
+      storageNotes: 'Top shelf',
+      netWeight: 1360.78,
+      netWeightUnit: { __typename: 'Unit', id: 'unit-g' },
+      storageLocation: {
+        __typename: 'StorageLocation',
+        id: 'loc-fridge',
+        name: 'Fridge',
+      },
+      brand: { __typename: 'Brand', id: 'brand-old', name: 'Acme' },
     },
-  ),
-  stateToCountKey: jest.fn(() => 'ambient'),
-}));
+  });
+  return cache;
+}
 
-// Hook reads currentItem from the cache via cache.readFragment, so tests
-// must seed the cache with a matching entity. The optimistic response is
-// then computed from the cached values plus the dirty-field updates.
-const buildPantryItem = (overrides: Record<string, unknown> = {}) => ({
-  __typename: 'PantryItem',
-  id: 'item-1',
-  pantryId: 'pantry-1',
-  itemId: null,
-  itemName: 'Milk',
-  quantity: 5,
-  heldQuantity: 5,
-  stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 5 },
-  displayAmount: {
-    __typename: 'DisplayAmount',
-    quantity: 5,
-    localizedSymbol: 'g',
-    fraction: null,
-    unit: asAbbreviation({ __typename: 'Unit', id: 'unit-1', symbol: 'g' }),
-  },
-  version: 1,
-  updatedAt: '2025-01-01',
-  storageState: 'PANTRY',
-  condition: 'GOOD',
-  expiresOn: null,
-  lowStockAlert: false,
-  isLowStock: false,
-  minQuantity: null,
-  lastUsedAt: null,
-  netWeight: null,
-  remainingNetWeight: null,
-  activeBatchCount: 0,
-  earliestBatchExpiresOn: null,
-  restockQuantity: null,
-  storageNotes: null,
-  tags: [],
-  item: null,
-  unit: asAbbreviation({
-    __typename: 'Unit',
-    id: 'unit-1',
-    name: 'Gram',
-    symbol: 'g',
-    type: UnitType.Weight,
-    displayAsFraction: false,
-  }),
-  netWeightUnit: null,
-  storageLocation: null,
-  packageBreakdown: null,
-  quantityBreakdown: null,
-  brand: null,
-  ...overrides,
-});
-
-const seedItem = () => seedCache([buildPantryItem()]);
-
-const createFormData = (
-  overrides: Partial<FormDataInput> = {},
-): FormDataInput => ({
+/** The form as it opens on that stack. */
+const FORM: FormDataInput = {
   itemName: 'Milk',
   storageState: StorageState.Ambient,
-  location: '',
-  notes: 'Fresh milk',
-  unit: 'kg',
-  ...overrides,
-});
+  location: 'Fridge',
+  notes: 'Top shelf',
+  unit: 'g',
+};
 
-beforeEach(() => {
-  jest.useFakeTimers();
-});
+const shown = (cache: ReturnType<typeof makeCache>) =>
+  cache.readFragment({
+    ...SHOWN,
+    id: `PantryItem:${STACK}`,
+    optimistic: true,
+  });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+/** Resolves once the stack, as the cache shows it, is named `name` again. */
+async function namedAgain(cache: ReturnType<typeof makeCache>, name: string) {
+  let subscription: { unsubscribe: () => void } | undefined;
+  await new Promise<void>(resolve => {
+    subscription = cache
+      .watchFragment({ ...SHOWN, from: `PantryItem:${STACK}` })
+      .subscribe(({ data }) => {
+        if (data?.itemName === name) resolve();
+      });
+  });
+  subscription?.unsubscribe();
+}
+
+let log = operationLog();
+
+interface Edit {
+  input?: Partial<FormDataInput>;
+  dirty: DirtyFieldFlags;
+  locationId?: string | null;
+  brandId?: string | null;
+  storageLocation?: { id: string; name: string; type: StorageType };
+}
+
+function renderUpdate(
+  cache: ReturnType<typeof makeCache>,
+  answers: ReturnType<typeof recordMock>[] = [],
+  refetch?: () => void,
+) {
+  const { result } = renderHookWithApollo(
+    () => useUpdatePantryItem({ refetch }),
+    {
+      cache,
+      links: [log.link],
+      operationMocks: answers.map(answer => answer.mock),
+    },
+  );
+  const save = ({
+    input = {},
+    dirty,
+    locationId = null,
+    brandId = null,
+    storageLocation,
+  }: Edit) =>
+    result.current.updatePantryItemFields({
+      itemId: STACK,
+      input: { ...FORM, ...input },
+      dirtyFields: dirty,
+      selectedLocationId: locationId,
+      selectedBrandId: brandId,
+      selectedStorageLocation: storageLocation,
+    });
+  /** Saves and waits for the outcome, as the form does. */
+  const saved = async (edit: Edit) => {
+    let stands: boolean | undefined;
+    await act(async () => {
+      stands = await save(edit);
+    });
+    return stands;
+  };
+  return { save, saved };
+}
+
+const queued = () =>
+  recordMock(UpdatePantryItemDocument, { data: { updatePantryItem: null } });
+const held = () =>
+  recordMock(UpdatePantryItemDocument, {
+    data: { updatePantryItem: null },
+    held: true,
+  });
+const refused = (field: string | null, code = ErrorCode.ValidationFailed) =>
+  recordMock(UpdatePantryItemDocument, {
+    data: {
+      updatePantryItem: {
+        __typename: 'ValidationError',
+        code,
+        message: 'The server’s own words',
+        field,
+      },
+    },
+  });
 
 beforeEach(() => {
   jest.clearAllMocks();
+  log = operationLog();
 });
 
-describe('useUpdatePantryItem', () => {
-  it('returns updatePantryItemFields function', () => {
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache: seedItem(),
-    });
-
-    expect(typeof result.current.updatePantryItemFields).toBe('function');
-  });
-
-  it('resolves true once the write is queued', async () => {
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache: seedItem(),
-      operationMocks: [
-        {
-          request: { query: UpdatePantryItemDocument, variables: () => true },
-          result: { data: { updatePantryItem: null } },
+describe('what shows before the server answers', () => {
+  it.each<{
+    what: string;
+    edit: Edit;
+    shows: Partial<UseUpdatePantryItem_PantryItemFragment>;
+  }>([
+    {
+      what: 'a new name',
+      edit: { input: { itemName: 'Oat milk' }, dirty: { itemName: true } },
+      shows: { itemName: 'Oat milk' },
+    },
+    {
+      what: 'a storage state',
+      edit: {
+        input: { storageState: StorageState.Frozen },
+        dirty: { storageState: true },
+      },
+      shows: { storageState: StorageState.Frozen },
+    },
+    {
+      what: 'a condition',
+      edit: {
+        input: { condition: ItemCondition.Fair },
+        dirty: { condition: true },
+      },
+      shows: { condition: ItemCondition.Fair },
+    },
+    {
+      what: 'an expiry, as a day',
+      edit: {
+        input: { expirationDate: new Date(2026, 11, 24, 18, 30) },
+        dirty: { expirationDate: true },
+      },
+      shows: { expiresOn: '2026-12-24' },
+    },
+    {
+      what: 'a cleared expiry',
+      edit: { dirty: { expirationDate: true } },
+      shows: { expiresOn: null },
+    },
+    {
+      what: 'tags',
+      edit: { input: { tags: ['dairy', 'oat'] }, dirty: { tags: true } },
+      shows: { tags: ['dairy', 'oat'] },
+    },
+    {
+      what: 'a low-stock threshold',
+      edit: { input: { minQuantity: '2.5' }, dirty: { minQuantity: true } },
+      shows: { minQuantity: 2.5 },
+    },
+    {
+      what: 'a restock amount',
+      edit: {
+        input: { restockQuantity: '6' },
+        dirty: { restockQuantity: true },
+      },
+      shows: { restockQuantity: 6 },
+    },
+    {
+      what: 'notes',
+      edit: { input: { notes: 'Door' }, dirty: { notes: true } },
+      shows: { storageNotes: 'Door' },
+    },
+    {
+      what: 'a typed location',
+      edit: { input: { location: ' Garage ' }, dirty: { location: true } },
+      shows: {
+        storageLocation: {
+          __typename: 'StorageLocation',
+          id: expect.any(String),
+          version: expect.any(Number),
+          name: 'Garage',
+          type: StorageType.Custom,
         },
-      ],
+      },
+    },
+    {
+      what: 'no location for one of spaces',
+      edit: { input: { location: '  ' }, dirty: { location: true } },
+      shows: { storageLocation: null },
+    },
+    {
+      what: 'a picked location, under its own id',
+      edit: {
+        input: { location: 'Chest freezer' },
+        dirty: { location: true },
+        locationId: 'loc-2',
+        storageLocation: {
+          id: 'loc-2',
+          name: 'Chest freezer',
+          type: StorageType.Freezer,
+        },
+      },
+      shows: {
+        storageLocation: {
+          __typename: 'StorageLocation',
+          id: 'loc-2',
+          version: expect.any(Number),
+          name: 'Chest freezer',
+          type: StorageType.Freezer,
+        },
+      },
+    },
+    {
+      what: 'a typed brand',
+      edit: { input: { brand: ' Sunrise ' }, dirty: { brand: true } },
+      shows: {
+        brand: {
+          __typename: 'Brand',
+          id: expect.any(String),
+          version: expect.any(Number),
+          name: 'Sunrise',
+        },
+      },
+    },
+    {
+      what: 'a picked brand, under its own id',
+      edit: {
+        input: { brand: 'Sunrise' },
+        dirty: { brand: true },
+        brandId: 'brand-1',
+      },
+      shows: {
+        brand: {
+          __typename: 'Brand',
+          id: 'brand-1',
+          version: expect.any(Number),
+          name: 'Sunrise',
+        },
+      },
+    },
+    {
+      what: 'no brand for one of spaces',
+      edit: { input: { brand: '  ' }, dirty: { brand: true } },
+      shows: { brand: null },
+    },
+    {
+      what: 'a size typed in the stack’s own unit',
+      edit: {
+        input: { netWeight: '1000', netWeightUnitId: 'unit-g' },
+        dirty: { netWeight: true },
+      },
+      shows: { netWeight: 1000 },
+    },
+    // 2.5 against the stack's grams would read "2.5 g" until the server
+    // re-expresses every batch in pounds.
+    {
+      what: 'nothing new for a size typed in another unit',
+      edit: {
+        input: { netWeight: '2.5', netWeightUnitId: 'unit-lb' },
+        dirty: { netWeight: true },
+      },
+      shows: { netWeight: 1360.78 },
+    },
+  ])('shows $what', async ({ edit, shows }) => {
+    const cache = heldStack();
+    const { save } = renderUpdate(cache, [held()]);
+
+    await act(async () => {
+      void save(edit);
     });
 
-    const stands = await drained(() =>
-      result.current.updatePantryItemFields({
-        itemId: 'item-1',
-        input: createFormData(),
-        dirtyFields: { itemName: true },
-        selectedLocationId: null,
-        selectedBrandId: null,
-      }),
-    );
-
-    expect(stands).toBe(true);
+    expect(shown(cache)).toMatchObject(shows);
   });
+});
 
-  it("edits a stack known only from its list row, at that row's version", async () => {
+describe('what is sent', () => {
+  // A stack a list holds can be edited with nothing read first.
+  it('only the change, at the version the device holds', async () => {
     const cache = makeCache();
     seedFragment(cache, {
       fragment: PantryItem_ListedFragmentDoc,
       fragmentName: 'pantryItem_listed',
-      data: { __typename: 'PantryItem', id: 'item-1', version: 7 },
+      data: { __typename: 'PantryItem', id: STACK, version: 7 },
     });
-    const update = recordMock(UpdatePantryItemDocument, {
-      data: { updatePantryItem: null },
+    const update = queued();
+    const { saved } = renderUpdate(cache, [update]);
+
+    await saved({ input: { itemName: 'Oat milk' }, dirty: { itemName: true } });
+
+    expect(update.fired[0]).toMatchObject({ today: todayKey() });
+    expect(update.fired[0]?.input).toEqual({
+      id: STACK,
+      version: 7,
+      itemName: 'Oat milk',
+      idempotencyKey: expect.any(String),
     });
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache,
-      operationMocks: [update.mock],
+  });
+
+  it('a picked location and brand by their ids', async () => {
+    const update = queued();
+    const { saved } = renderUpdate(heldStack(), [update]);
+
+    await saved({
+      input: { location: 'Chest freezer', brand: 'Sunrise' },
+      dirty: { location: true, brand: true },
+      locationId: 'loc-2',
+      brandId: 'brand-1',
     });
 
-    const stands = await drained(() =>
-      result.current.updatePantryItemFields({
-        itemId: 'item-1',
-        input: createFormData(),
-        dirtyFields: { itemName: true },
-        selectedLocationId: null,
-        selectedBrandId: null,
-      }),
-    );
-
-    expect(stands).toBe(true);
     expect(update.fired[0]).toMatchObject({
-      input: { id: 'item-1', version: 7 },
+      input: {
+        storage: { location: { id: 'loc-2' } },
+        brand: { id: 'brand-1' },
+      },
     });
   });
 
-  it('says so when the device holds no such stack, rather than saving nothing', async () => {
-    const alert = jest
-      .spyOn(alertService, 'alert')
-      .mockImplementation(() => {});
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache: makeCache(),
-    });
+  it('nothing for an edit that changes nothing, which stands', async () => {
+    const update = queued();
+    const { saved } = renderUpdate(heldStack(), [update]);
 
-    const stands = await drained(() =>
-      result.current.updatePantryItemFields({
-        itemId: 'not-held',
-        input: createFormData(),
-        dirtyFields: { itemName: true },
-        selectedLocationId: null,
-        selectedBrandId: null,
-      }),
-    );
-
-    expect(stands).toBe(false);
-    expect(alert).toHaveBeenCalledTimes(1);
-    alert.mockRestore();
+    expect(await saved({ dirty: {} })).toBe(true);
+    expect(update.fired).toEqual([]);
   });
 
-  it('resolves false when the server refuses the write', async () => {
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache: seedItem(),
-      operationMocks: [
-        {
-          request: { query: UpdatePantryItemDocument, variables: () => true },
-          result: {
-            data: {
-              updatePantryItem: {
-                __typename: 'ValidationError',
-                code: 'VALIDATION_FAILED',
-                message: 'Name is invalid',
-                field: 'itemName',
-              },
-            },
-          },
-        },
-      ],
-    });
+  it('stands once it is queued', async () => {
+    const { saved } = renderUpdate(heldStack(), [queued()]);
 
-    const stands = await drained(() =>
-      result.current.updatePantryItemFields({
-        itemId: 'item-1',
-        input: createFormData(),
-        dirtyFields: { itemName: true },
-        selectedLocationId: null,
-        selectedBrandId: null,
+    expect(
+      await saved({
+        input: { itemName: 'Oat milk' },
+        dirty: { itemName: true },
       }),
-    );
-
-    expect(stands).toBe(false);
-  });
-
-  it('resolves true without a mutation when no fields are dirty', async () => {
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache: seedItem(),
-    });
-
-    const stands = await drained(() =>
-      result.current.updatePantryItemFields({
-        itemId: 'item-1',
-        input: createFormData(),
-        dirtyFields: {},
-        selectedLocationId: null,
-        selectedBrandId: null,
-      }),
-    );
-
-    expect(stands).toBe(true);
-    // Early return — buildDirtyUpdateInput returns {} so the mutation never fires.
-    const { buildDirtyUpdateInput } = jest.requireMock('../utils');
-    expect(buildDirtyUpdateInput.mock.results[0]?.value).toEqual({});
+    ).toBe(true);
   });
 });
 
-describe('useUpdatePantryItem — a package size typed in another unit', () => {
-  const queued = {
-    request: { query: UpdatePantryItemDocument, variables: () => true },
-    result: { data: { updatePantryItem: null } },
-  };
-  const readNetWeight = (cache: ReturnType<typeof seedCache>) =>
-    cache.readFragment<{ netWeight: number | null }>({
-      optimistic: true,
-      id: cache.identify({ __typename: 'PantryItem', id: 'item-1' }),
-      fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
-      fragmentName: 'useUpdatePantryItem_pantryItem',
-    })?.netWeight;
-
-  const saveSize = async (netWeight: string, netWeightUnitId: string) => {
-    const cache = seedCache([
-      buildPantryItem({
-        netWeight: 1360.78,
-        netWeightUnit: asAbbreviation({
-          __typename: 'Unit',
-          id: 'unit-g',
-          name: 'gram',
-          symbol: 'g',
-        }),
-      }),
-    ]);
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache,
-      operationMocks: [queued],
-    });
-    await drained(() =>
-      result.current.updatePantryItemFields({
-        itemId: 'item-1',
-        input: createFormData({ netWeight, netWeightUnitId }),
-        dirtyFields: { netWeight: true },
-        selectedLocationId: null,
-        selectedBrandId: null,
-      }),
-    );
-    return readNetWeight(cache);
-  };
-
-  // 2.5 written against the stack's grams would read "2.5 g" until the server
-  // re-expresses the batches in pounds.
-  it('writes nothing ahead of the server for a size in pounds on a gram stack', async () => {
-    expect(await saveSize('2.5', 'unit-lb')).toBe(1360.78);
-  });
-
-  it('writes a size in the stack’s own unit at once', async () => {
-    expect(await saveSize('1000', 'unit-g')).toBe(1000);
-  });
-});
-
-describe('useUpdatePantryItem — what shows at once', () => {
-  const SHOWN = gql`
-    fragment ShownProbe on PantryItem {
-      id
-      brand {
-        version
-        id
-        name
-      }
-      consumeUnit {
-        id
-        symbol
-      }
-      storageLocation {
-        id
-        name
-        type
-      }
-    }
-  `;
-
-  async function shownWhilePending(
-    input: Partial<FormDataInput>,
-    dirtyFields: DirtyFieldFlags,
-    picks: { selectedBrandId?: string } = {},
-  ) {
-    const cache = seedItem();
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache,
-      operationMocks: [
-        {
-          request: { query: UpdatePantryItemDocument, variables: () => true },
-          result: { data: { updatePantryItem: null } },
-        },
-      ],
-    });
-    let shown: unknown = null;
+describe('a refusal', () => {
+  /** Saves a rename the server refuses, and lets the stack snap back. */
+  async function refusedRename(answer: ReturnType<typeof recordMock>) {
+    const cache = heldStack();
+    const { save } = renderUpdate(cache, [answer]);
+    let stands: boolean | undefined;
     await act(async () => {
-      void result.current.updatePantryItemFields({
-        itemId: 'item-1',
-        input: createFormData(input),
-        dirtyFields,
-        selectedLocationId: null,
-        selectedBrandId: picks.selectedBrandId ?? null,
+      const back = namedAgain(cache, 'Milk');
+      stands = await save({
+        input: { itemName: 'Oat milk' },
+        dirty: { itemName: true },
       });
-      shown = cache.readFragment({
-        id: cache.identify({ __typename: 'PantryItem', id: 'item-1' }),
-        fragment: SHOWN,
-        optimistic: true,
-        returnPartialData: true,
-      });
+      await back;
     });
-    return shown;
+    return stands;
   }
 
-  it('shows a picked brand', async () => {
-    const shown = await shownWhilePending(
-      { brand: 'Sunrise' },
-      { brand: true },
-      { selectedBrandId: 'brand-1' },
+  // The server's `message` is English only, so the field it names picks the
+  // app's own sentence.
+  it.each([
+    ['the name', 'itemName', t('errors.field.itemName')],
+    ['the unit', 'unit', t('errors.field.unit')],
+    ['a field it has no words for', 'shelfLife', t('errors.updateItemFailed')],
+  ])(
+    'puts the stack back and says why, in the app’s words, naming %s',
+    async (_naming, field, says) => {
+      expect(await refusedRename(refused(field))).toBe(false);
+
+      expect(alertService.alert).toHaveBeenCalledWith(t('labels.error'), says);
+    },
+  );
+
+  it('offers to refresh a stack changed elsewhere', async () => {
+    const refetch = jest.fn();
+    const alert = jest.spyOn(alertService, 'alert');
+    const { saved } = renderUpdate(
+      heldStack(),
+      [refused(null, ErrorCode.VersionConflict)],
+      refetch,
     );
 
-    expect(shown).toMatchObject({
-      brand: { id: 'brand-1', name: 'Sunrise', version: 0 },
-    });
-  });
+    await saved({ input: { itemName: 'Oat milk' }, dirty: { itemName: true } });
 
-  it('shows a typed brand and clears an emptied one', async () => {
-    expect(
-      await shownWhilePending({ brand: 'Sunrise' }, { brand: true }),
-    ).toMatchObject({ brand: { name: 'Sunrise' } });
-    expect(
-      await shownWhilePending({ brand: ' ' }, { brand: true }),
-    ).toMatchObject({ brand: null });
-  });
-
-  it('shows a typed location and clears an emptied one', async () => {
-    expect(
-      await shownWhilePending({ location: 'Garage' }, { location: true }),
-    ).toMatchObject({
-      storageLocation: { name: 'Garage', type: StorageType.Custom },
-    });
-    expect(
-      await shownWhilePending({ location: '' }, { location: true }),
-    ).toMatchObject({ storageLocation: null });
+    const [, , buttons] = alert.mock.calls[0] ?? [];
+    buttons?.find(button => button.text === t('labels.refresh'))?.onPress?.();
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
 
-describe('useUpdatePantryItem — local-first cache behavior', () => {
-  const readItemName = (cache: ReturnType<typeof seedCache>) =>
-    cache.readFragment<{ itemName: string }>({
-      optimistic: true,
-      id: cache.identify({ __typename: 'PantryItem', id: 'item-1' }),
-      fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
-      fragmentName: 'useUpdatePantryItem_pantryItem',
-    })?.itemName;
+it('says so when the device holds no such stack, rather than saving nothing', async () => {
+  const update = queued();
+  const { saved } = renderUpdate(makeCache(), [update]);
 
-  const fireRename = (
-    result: { current: ReturnType<typeof useUpdatePantryItem> },
-    itemName: string,
-  ) => {
-    void result.current.updatePantryItemFields({
-      itemId: 'item-1',
-      input: createFormData({ itemName }),
-      dirtyFields: { itemName: true },
-      selectedLocationId: null,
-      selectedBrandId: null,
-    });
-  };
-
-  it('writes the update to the cache PERMANENTLY before the mutation settles, and a queued (null) result keeps it', async () => {
-    const cache = seedItem();
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache,
-      operationMocks: [
-        {
-          request: {
-            query: UpdatePantryItemDocument,
-            variables: () => true,
-          },
-          // The offline queue completes an intercepted mutation with each
-          // top-level field null — the classifier reads that as 'queued'.
-          result: { data: { updatePantryItem: null } },
-        },
-      ],
-    });
-
-    await act(async () => {
-      fireRename(result, 'Oat Milk');
-      // Synchronous permanent write — visible before the mutation settles.
-      expect(readItemName(cache)).toBe('Oat Milk');
-    });
-
-    // Queued result keeps the write (no rollback).
-    expect(readItemName(cache)).toBe('Oat Milk');
-  });
-
-  it('restores the pre-edit snapshot when the server rejects the update', async () => {
-    const cache = seedItem();
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache,
-      operationMocks: [
-        {
-          request: {
-            query: UpdatePantryItemDocument,
-            variables: () => true,
-          },
-          result: {
-            data: {
-              updatePantryItem: {
-                __typename: 'ValidationError',
-                code: 'VALIDATION_FAILED',
-                message: 'Name is invalid',
-                field: 'itemName',
-              },
-            },
-          },
-        },
-      ],
-    });
-
-    await act(async () => {
-      fireRename(result, 'Bad Name');
-      expect(readItemName(cache)).toBe('Bad Name');
-    });
-
-    await drainTimers();
-    expect(readItemName(cache)).toBe('Milk');
-    // A refused union payload resolves as data, so the mutation's onError
-    // never fires — the hook has to tell the user itself. The refusal names a
-    // field, so its own sentence is what gets shown.
-    // The app's copy for `field: 'itemName'`, not the server's "Name is
-    // invalid" — the server has no locale to render that in.
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Enter a name for this item.',
-    );
-  });
-
-  it('falls back to the generic copy for an unattributed refusal', async () => {
-    const cache = seedItem();
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache,
-      operationMocks: [
-        {
-          request: {
-            query: UpdatePantryItemDocument,
-            variables: () => true,
-          },
-          result: {
-            data: {
-              updatePantryItem: {
-                __typename: 'ValidationError',
-                code: 'VALIDATION_FAILED',
-                message: 'Something was invalid',
-                field: null,
-              },
-            },
-          },
-        },
-      ],
-    });
-
-    await act(async () => {
-      fireRename(result, 'Bad Name');
-    });
-
-    await drainTimers();
-    expect(readItemName(cache)).toBe('Milk');
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Failed to update item',
-    );
-  });
-
-  it('tells the user which input the server refused (the unit)', async () => {
-    // `unit` only relabels the unit in use; a different one is refused on
-    // `field: "unit"`. The edit must snap back AND say which input was refused —
-    // in the app's own words, because `message` is English only.
-    const cache = seedItem();
-    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
-      cache,
-      operationMocks: [
-        {
-          request: {
-            query: UpdatePantryItemDocument,
-            variables: () => true,
-          },
-          result: {
-            data: {
-              updatePantryItem: {
-                __typename: 'ValidationError',
-                code: 'VALIDATION_FAILED',
-                message:
-                  "A pantry item's unit changes through changePantryItemUnit.",
-                field: 'unit',
-              },
-            },
-          },
-        },
-      ],
-    });
-
-    await act(async () => {
-      fireRename(result, 'Milk (cans)');
-    });
-
-    await drainTimers();
-    expect(readItemName(cache)).toBe('Milk');
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      "This item's unit changes through the Unit field, which shows what happens to its stock before saving.",
-    );
-  });
+  expect(
+    await saved({ input: { itemName: 'Oat milk' }, dirty: { itemName: true } }),
+  ).toBe(false);
+  expect(alertService.alert).toHaveBeenCalledWith(
+    t('labels.error'),
+    t('itemForm.updateFailed'),
+  );
+  expect(update.fired).toEqual([]);
 });

@@ -1,551 +1,475 @@
 'use no memo';
 
-import { todayKey } from '#/utils/dateUtils';
 import React from 'react';
-import { makeCache } from '#/apollo/cache';
-import type { InMemoryCache } from '@apollo/client';
-import { screen, userEvent } from '@testing-library/react-native';
+import { gql, type InMemoryCache } from '@apollo/client';
+import type { DocumentNode } from 'graphql';
 import {
+  act,
+  fireEvent,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
+import {
+  type MockDataFor,
   recordMock,
   renderWithApollo,
   seedFragment,
-  seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { drainTimers } from '#/test-utils/drainTimers';
-import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
-import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
-import { PantryItemForEditDocument } from '../usePantryItemFormData.generated';
-import { pantryTestIDs } from '#features/pantry/testIDs';
-import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
-import { homeDetailNode } from '#/test-utils/fixtures/homeFixtures';
-import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
-import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
-import { PantryItemForm } from '../PantryItemForm';
-import { PantryItemForm_PantryItemFragmentDoc } from '../PantryItemForm.generated';
-import {
-  UnitSystem,
-  UnitType,
-  type StorageState,
-} from '#/graphql/generated/schemaTypes';
+import { operationLog } from '#/test-utils/operationLog';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
-import type { QueryDataFor } from '#/test-utils/apolloMockProvider';
-import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 import {
   asAbbreviation,
   readingAsAbbreviation,
 } from '#/test-utils/fixtures/unitLabels';
+import { useStore } from '#store';
+import { t } from '#/i18n';
+import { fromDateKey } from '#/utils/dateUtils';
+import { formatMonthDayYear } from '#/utils/formatters/date';
+import { localizeNumericHint } from '#/utils/formatters/number';
+import {
+  ItemCondition,
+  StorageState,
+  StorageType,
+  UnitSystem,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
+import { FieldRendererProvider } from '#components/molecules/fieldRenderers';
+import { kitTestIDs } from '#components/testIDs';
+import { catalogFieldRenderers } from '#features/catalog/ui/catalogFieldRenderers';
+import { catalogTestIDs } from '#features/catalog/testIDs';
+import {
+  PAGES,
+  PAGE_LABEL_KEYS,
+  type PageName,
+} from '#features/catalog/ui/AddItemForm/fields';
+import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
+import {
+  GetPantryDocument,
+  UpdatePantryItemDocument,
+  UpdatePantryItemQuantityDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
+import { PreviewPantryItemUnitChangeDocument } from '#features/pantry/hooks/usePantryUnitChange.generated';
+import { conditionLabelKey } from '#features/pantry/utils/itemEnumLabels';
+import { pantryTestIDs } from '#features/pantry/testIDs';
+import {
+  GetUnitBySymbolDocument,
+  SearchUnitsDocument,
+} from '#operations/item/unit.generated';
+import { PantryItemForm_PantryItemFragmentDoc } from '../PantryItemForm.generated';
+import { PantryItemForEditDocument } from '../usePantryItemFormData.generated';
+import { PantryItemForm } from '../PantryItemForm';
 
-// Its midnight timer re-arms itself, so a mounted watch never drains.
+// The day stays fixed: the hook's midnight timer re-arms itself.
 jest.mock('#hooks/app/useToday', () => ({
   useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
 }));
-
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn(() => null),
-  useSelectedPantryId: jest.fn(() => 'p1'),
-  useSelectedHomeId: jest.fn(() => 'h1'),
-}));
-
-const mockIsOffline = jest.fn(() => false);
-jest.mock('#hooks/app/useIsApiUnavailable', () => ({
-  useIsApiUnavailable: () => mockIsOffline(),
-}));
-
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#components/atoms/Icon', () => ({
-  Icon: () => null,
-}));
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
-jest.mock('#/styles/commonStyles', () => ({
-  commonStyles: {
-    container: { flex: 1 },
-    center: { justifyContent: 'center', alignItems: 'center' },
-    scrollContent: {},
-    padding: {},
-  },
-}));
+type Stack = NonNullable<
+  NonNullable<MockDataFor<typeof PantryItemForEditDocument>['pantryItem']>
+>;
 
-// Mutation hooks: behaviour covered by usePantryItemFormSubmit.test.ts.
-jest.mock('#features/pantry/hooks/mutations/useUpdatePantryItem', () => ({
-  useUpdatePantryItem: jest.fn(() => ({ updatePantryItemFields: jest.fn() })),
-}));
-jest.mock(
-  '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity',
-  () => ({
-    useUpdatePantryItemQuantity: jest.fn(() => ({ updateQuantity: jest.fn() })),
-  }),
-);
-jest.mock('#features/catalog/hooks/useResolveUnit', () => ({
-  useResolveUnit: jest.fn(() => ({ resolveUnitId: jest.fn() })),
-}));
-
-jest.mock('#features/pantry/hooks/mutations/types', () => ({
-  emptyUnitSelection: { id: null, name: null, symbol: null, type: null },
-}));
-
-jest.mock('#/utils/fractionUtils', () => ({
-  parseFractionalInput: jest.fn((input: string) => parseFloat(input) || 0),
-}));
-
-// Form sub-sections — exercised via their own focused tests.
-jest.mock('#components/atoms/FormInput', () => ({
-  FormInput: ({
-    label,
-    placeholder,
-    value,
-    onChangeText,
-    error,
-  }: {
-    label?: string;
-    placeholder?: string;
-    value?: string;
-    onChangeText?: (text: string) => void;
-    error?: string;
-  }) => {
-    const { TextInput, Text, View } = require('react-native');
-    return (
-      <View>
-        {label ? <Text>{label}</Text> : null}
-        <TextInput
-          placeholder={placeholder}
-          value={value}
-          onChangeText={onChangeText}
-        />
-        {error ? <Text>{error}</Text> : null}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
-  UnitAutocompleteField: ({
-    label,
-    value,
-    onChangeText,
-    onUnitSelected,
-    error,
-    testID,
-  }: {
-    label?: string;
-    value?: string;
-    testID?: string;
-    onChangeText?: (text: string) => void;
-    onUnitSelected?: (
-      unitId: string | null,
-      unitName: string | null,
-      unitType?: UnitType | null,
-      unitSymbol?: string | null,
-    ) => void;
-    error?: string;
-  }) => {
-    const { Text, View, Pressable } = require('react-native');
-    const { UnitType: UnitTypes } = require('#/graphql/generated/schemaTypes');
-    return (
-      <View testID="unit-autocomplete">
-        {label ? <Text>{label}</Text> : null}
-        <Text>{`unit:${value ?? ''}`}</Text>
-        <Pressable
-          testID={testID ? `${testID}-pick` : 'pick-unit'}
-          onPress={() => {
-            // The real field's onSelect order: the symbol first, then the id.
-            onChangeText?.('lb');
-            onUnitSelected?.('unit-lb', 'Pound', UnitTypes.Weight, 'lb');
-          }}
-        >
-          <Text>Pick lb</Text>
-        </Pressable>
-        {error ? <Text>{error}</Text> : null}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/organisms/Header', () => ({
-  Header: ({
-    title,
-    rightActions,
-  }: {
-    title?: string;
-    rightActions?: Array<{ testID?: string }>;
-  }) => {
-    const { Text, View } = require('react-native');
-    return (
-      <View testID="header">
-        <Text>{title}</Text>
-        {rightActions?.map(action => (
-          <View key={action.testID} testID={action.testID} />
-        ))}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/molecules/PageIndicator/PageIndicator', () => ({
-  PageIndicator: ({
-    pages,
-    onPagePress,
-  }: {
-    pages: { label: string }[];
-    onPagePress: (index: number) => void;
-  }) => {
-    const { Text, View, Pressable } = require('react-native');
-    return (
-      <View testID="page-indicator">
-        {pages.map((p, i) => (
-          <Pressable key={p.label} onPress={() => onPagePress(i)}>
-            <Text>{p.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/molecules/CollapsibleSection', () => ({
-  CollapsibleSection: ({
-    children,
-    title,
-  }: {
-    children?: React.ReactNode;
-    title?: string;
-  }) => {
-    const { Text, View } = require('react-native');
-    return (
-      <View>
-        <Text>{title}</Text>
-        {children}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/molecules/DynamicFormFields', () => ({
-  DynamicFormFields: ({
-    fields,
-  }: {
-    fields: { name: string; label: string }[];
-  }) => {
-    const { Text, View } = require('react-native');
-    return (
-      <View>
-        {fields.map(f => (
-          <Text key={f.name}>{f.label}</Text>
-        ))}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/atoms/FieldRow', () => ({
-  FieldRow: ({ children }: { children?: React.ReactNode }) => {
-    const { View } = require('react-native');
-    return <View>{children}</View>;
-  },
-}));
-
-// Subscribes to a field the way the real section's `Controller`s do, so a
-// form reset reaches a component other than the form.
-jest.mock('../ItemInformationSection', () => ({
-  ItemInformationSection: ({
-    control,
-  }: React.ComponentProps<
-    typeof import('../ItemInformationSection').ItemInformationSection
-  >) => {
-    const { Text, View } = require('react-native');
-    const { useWatch } = require('react-hook-form');
-    const itemName = useWatch({ control, name: 'itemName' });
-    return (
-      <View testID="item-information-section">
-        <Text>Item Information</Text>
-        <Text>{`name:${itemName}`}</Text>
-      </View>
-    );
-  },
-}));
-
-jest.mock('../QuantitySection', () => ({
-  QuantitySection: ({
-    testID,
-    control,
-  }: React.ComponentProps<
-    typeof import('../QuantitySection').QuantitySection
-  >) => {
-    const { Text, View } = require('react-native');
-    const { useWatch } = require('react-hook-form');
-    const [quantityInput, minQuantity, restockQuantity] = useWatch({
-      control,
-      name: ['quantityInput', 'minQuantity', 'restockQuantity'],
-    });
-    return (
-      <View testID={testID || 'quantity-section'}>
-        <Text>Quantity</Text>
-        <Text>{`seeded:${quantityInput}|${minQuantity}|${restockQuantity}`}</Text>
-      </View>
-    );
-  },
-}));
-
-jest.mock('../StorageDetailsSection', () => ({
-  StorageDetailsSection: ({
-    storageState,
-    onStorageLocationSelected,
-  }: {
-    storageState: StorageState;
-    onStorageLocationSelected?: (
-      locationId: string | null,
-      location: StorageLocationOption | null,
-    ) => void;
-  }) => {
-    const { Text, View, Pressable } = require('react-native');
-    const {
-      StorageState: StorageStates,
-      StorageType,
-    } = require('#/graphql/generated/schemaTypes');
-    return (
-      <View testID="storage-details-section">
-        <Text>Storage Details</Text>
-        <Text testID="storage-state">{storageState}</Text>
-        <Pressable
-          testID="pick-frozen-location"
-          onPress={() =>
-            onStorageLocationSelected?.('loc-freezer', {
-              id: 'loc-freezer',
-              name: 'Freezer',
-              type: StorageType.Freezer,
-              isDefault: false,
-              temperature: StorageStates.Frozen,
-            })
-          }
-        >
-          <Text>Pick freezer</Text>
-        </Pressable>
-      </View>
-    );
-  },
-}));
-
-beforeEach(() => {
-  jest.useFakeTimers();
+const KILOGRAM = asAbbreviation({
+  __typename: 'Unit',
+  id: 'unit-kg',
+  name: 'kilogram',
+  symbol: 'kg',
+  type: UnitType.Weight,
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+/** Units the device holds, as a fresh preload left them. */
+const HELD_UNITS = [
+  { ...KILOGRAM, localizedNameForms: { one: 'kilogram', other: 'kilograms' } },
+  {
+    ...asAbbreviation({
+      id: 'unit-lb',
+      name: 'pound',
+      symbol: 'lb',
+      type: UnitType.Weight,
+    }),
+    localizedNameForms: { one: 'pound', other: 'pounds' },
+  },
+];
 
-beforeEach(() => {
-  jest.clearAllMocks();
-});
+type SearchedUnit = NonNullable<
+  MockDataFor<typeof SearchUnitsDocument>['searchUnits']
+>[number];
 
-/**
- * Build a cache pre-populated with the upstream queries the form fires:
- *   - GetHome (selected home with at least one pantry)
- *   - GetPantry (storage locations etc.)
- *   - GetPantryItem (only for edit mode)
- *
- * Matches the production document selections so writeQuery doesn't drop
- * fields silently.
- */
-function buildCache(opts: {
-  itemId?: string;
-  itemFixture?: Parameters<typeof pantryItemData>[0];
-}): InMemoryCache {
-  const cache = makeCache();
-
-  seedQuery(cache, {
-    query: GetHomeDocument,
-    variables: { homeId: 'h1' },
-    data: {
-      __typename: 'Query',
-      home: homeDetailNode({
-        id: 'h1',
-        pantries: [{ id: 'p1', name: 'Main', isDefault: true }],
-      }),
+/** What the unit search finds: the held pound, and a stick the device lacks. */
+const SEARCHED: SearchedUnit[] = [
+  {
+    ...asAbbreviation({
+      __typename: 'Unit',
+      id: 'unit-lb',
+      name: 'pound',
+      symbol: 'lb',
+      type: UnitType.Weight,
+    }),
+    localizedNameForms: {
+      __typename: 'PluralForms',
+      one: 'pound',
+      other: 'pounds',
     },
-  });
-
-  seedQuery(cache, {
-    query: GetPantryDocument,
-    variables: {
-      id: 'p1',
-      itemsFirst: 50,
-      storageLocationsFirst: 20,
-      today: todayKey(),
+  },
+  {
+    ...asAbbreviation({
+      __typename: 'Unit',
+      id: 'unit-stick',
+      name: 'stick',
+      symbol: 'stick',
+      type: UnitType.Count,
+    }),
+    localizedNameForms: {
+      __typename: 'PluralForms',
+      one: 'stick',
+      other: 'sticks',
     },
-    data: pantryData({ id: 'p1' }),
-  });
+  },
+];
 
-  if (opts.itemId) {
-    seedQuery(cache, {
-      query: PantryItemForEditDocument,
-      variables: { id: opts.itemId },
-      data: pantryItemData({
-        id: opts.itemId,
-        ...(opts.itemFixture ?? {}),
-      }),
-    });
+const searchable = (
+  query: unknown,
+): MockDataFor<typeof SearchUnitsDocument> => ({
+  searchUnits: SEARCHED.filter(
+    unit => typeof query === 'string' && !!unit.name?.startsWith(query),
+  ),
+});
+
+/** 5 kg of flour, sized by nothing: the stack most tests edit. */
+const flour: Stack = {
+  id: 'item-1',
+  itemName: 'Flour',
+  quantity: 5,
+  unit: KILOGRAM,
+  displayUnit: null,
+  netWeight: null,
+  netWeightUnit: null,
+  packageSize: null,
+  storageState: StorageState.Ambient,
+};
+
+const SAVED = gql`
+  fragment PantryItemFormTestSaved on PantryItem {
+    quantity
+    storageState
+    tags
+    storageLocation {
+      id
+      name
+    }
   }
+`;
 
+/** The stack as the cache holds it, the pending write included. */
+const saved = (cache: InMemoryCache) =>
+  cache.readFragment<{
+    quantity: number;
+    storageState: StorageState;
+    tags: string[];
+    storageLocation: { id: string; name: string } | null;
+  }>({ id: 'PantryItem:item-1', fragment: SAVED, optimistic: true });
+
+let log = operationLog();
+
+/** Waits for the operation's nth answer, then lets what it started render. */
+const answered = (document: DocumentNode, nth = 1) =>
+  act(async () => {
+    await log.answered(document, nth);
+  });
+
+interface Render {
+  /** The stack the edit read answers with. */
+  stack?: Stack;
+  /** Answers that take precedence over the reads every open makes. */
+  answers?: ReturnType<typeof recordMock>[];
+  cache?: InMemoryCache;
+  system?: UnitSystem;
+  onSuccess?: () => void;
+}
+
+/** The form as the edit screen mounts it, with the app's named fields. */
+function renderForm({
+  stack = flour,
+  answers = [],
+  cache = makeCache(),
+  system = UnitSystem.Metric,
+  onSuccess,
+}: Render = {}) {
+  writeUnitSystemSettings(cache, system, system);
+  renderWithApollo(
+    <FieldRendererProvider renderers={catalogFieldRenderers}>
+      <PantryItemForm itemId="item-1" onSuccess={onSuccess} />
+    </FieldRendererProvider>,
+    {
+      cache,
+      links: [log.link],
+      operationMocks: [
+        ...answers.map(answer => answer.mock),
+        recordMock(PantryItemForEditDocument, { data: { pantryItem: stack } })
+          .mock,
+        recordMock(GetHomeDocument, { data: { home: { id: 'h1' } } }).mock,
+        recordMock(GetPantryDocument, {
+          data: {
+            pantry: {
+              id: 'p1',
+              storageLocationsConnection: {
+                edges: [
+                  {
+                    node: {
+                      __typename: 'StorageLocation',
+                      id: 'loc-freezer',
+                      name: 'Freezer',
+                      type: StorageType.Freezer,
+                      temperature: StorageState.Frozen,
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        }).mock,
+        recordMock(SearchUnitsDocument, {
+          dataFor: ({ query }) => searchable(query),
+        }).mock,
+      ],
+    },
+  );
   return cache;
 }
 
-describe('PantryItemForm — sections', () => {
-  // There is no `add` mode any more. It was a second create path nothing could
-  // reach: `PantryItem` registers with `linking: null` and both callers of
-  // `toPantryItem` pass an itemId, so the form only ever opened on an existing
-  // item. Adding goes through `AddToPantrySheet` -> `AddDetailsSheet`.
-  it('renders the item information section by default (Basics tab)', async () => {
-    renderWithApollo(<PantryItemForm itemId="item-1" />, {
-      cache: buildCache({ itemId: 'item-1' }),
-    });
-    await drainTimers();
-    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
-    expect(screen.getByText('Item Information')).toBeTruthy();
+/** The form once its stack and its pantry's locations are read. */
+async function openForm(options: Render = {}) {
+  const cache = renderForm(options);
+  await answered(PantryItemForEditDocument);
+  await answered(GetPantryDocument);
+  return cache;
+}
+
+const goTo = (page: PageName) =>
+  fireEvent.press(
+    screen.getByTestId(kitTestIDs.pageIndicator(PAGES.indexOf(page))),
+  );
+
+const field = (placeholder: string) => screen.getByPlaceholderText(placeholder);
+
+const saveButton = () => screen.getByTestId(pantryTestIDs.editItemSubmitButton);
+
+const chip = (label: string, selected: boolean) =>
+  screen.getByRole('button', { name: label, selected });
+
+/**
+ * The search is sent from the render its debounce schedules, and `act` holds
+ * renders while awaited: the request is awaited outside it, the answer inside.
+ */
+async function searchAnswered() {
+  await log.requested(SearchUnitsDocument);
+  await answered(SearchUnitsDocument);
+}
+
+/** A save the server accepts, once released. */
+const heldUpdate = () =>
+  recordMock(UpdatePantryItemDocument, {
+    held: true,
+    data: {
+      updatePantryItem: {
+        __typename: 'UpdatePantryItemPayload',
+        pantryItem: { id: 'item-1' },
+      },
+    },
   });
 
-  it('switches to Inventory tab and shows the quantity section', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<PantryItemForm itemId="item-1" />, {
-      cache: buildCache({ itemId: 'item-1' }),
-    });
-    await drainTimers();
-    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
-    await user.press(screen.getByText('Inventory'));
-    expect(screen.getByText('Quantity')).toBeTruthy();
-  });
+/** Types a location and picks the pantry's freezer from the picker. */
+function pickFreezer() {
+  goTo('Storage');
+  fireEvent.changeText(field(t('itemForm.locationPlaceholder')), 'Fre');
+  fireEvent.press(screen.getByText('Freezer'));
+}
 
-  it('switches to Storage tab and shows the storage details section', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<PantryItemForm itemId="item-1" />, {
-      cache: buildCache({ itemId: 'item-1' }),
-    });
-    await drainTimers();
-    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
-    await user.press(screen.getByText('Storage'));
-    expect(screen.getByText('Storage Details')).toBeTruthy();
-  });
-
-  it("seeds the storage state from a picked location's temperature", async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<PantryItemForm itemId="item-1" />, {
-      cache: buildCache({ itemId: 'item-1' }),
-    });
-    await drainTimers();
-    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
-    await user.press(screen.getByText('Storage'));
-    expect(screen.getByTestId('storage-state')).toHaveTextContent(
-      'REFRIGERATED',
-    );
-
-    await user.press(screen.getByTestId('pick-frozen-location'));
-
-    expect(screen.getByTestId('storage-state')).toHaveTextContent('FROZEN');
+beforeEach(() => {
+  jest.clearAllMocks();
+  log = operationLog();
+  useStore.setState({
+    selectedHomeId: 'h1',
+    selectedPantryId: 'p1',
+    isOnline: true,
+    apiReachable: true,
+    cachedUnits: HELD_UNITS,
+    lastUnitsFetchedAt: Date.now(),
   });
 });
 
-describe('PantryItemForm — edit mode', () => {
-  it('renders the edit-mode title once the item loads', async () => {
-    renderWithApollo(<PantryItemForm itemId="item-1" />, {
-      cache: buildCache({
-        itemId: 'item-1',
-        itemFixture: { itemName: 'Flour' },
-      }),
+describe('opening the form', () => {
+  it('waits on the stack with no Save, never calling it missing', async () => {
+    const read = recordMock(PantryItemForEditDocument, {
+      data: { pantryItem: flour },
+      held: true,
     });
-    await drainTimers();
-    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
+    renderForm({ answers: [read] });
+    await act(async () => {
+      await log.requested(PantryItemForEditDocument);
+    });
+
+    expect(screen.queryByText(t('errors.itemNotFound'))).toBeNull();
+    expect(saveButton()).toBeDisabled();
+
+    read.release();
+    await answered(PantryItemForEditDocument);
+    expect(field(t('itemForm.placeholderItemName'))).toHaveDisplayValue(
+      'Flour',
+    );
   });
 
-  it('shows the edit modal testID when item exists', async () => {
-    renderWithApollo(<PantryItemForm itemId="item-1" />, {
-      cache: buildCache({ itemId: 'item-1' }),
-    });
-    await drainTimers();
-    expect(screen.getByTestId('edit-pantry-item-modal')).toBeTruthy();
-  });
-
-  it('shows "Item not found", still closable, when the item query returns null', async () => {
-    renderWithApollo(<PantryItemForm itemId="missing" />, {
-      cache: buildCache({}),
-      operationMocks: [
-        recordMock(PantryItemForEditDocument, {
-          data: { __typename: 'Query', pantryItem: null },
-        }).mock,
+  it('says a stack the server no longer has is not found, closable but with no Save', async () => {
+    await openForm({
+      answers: [
+        recordMock(PantryItemForEditDocument, { data: { pantryItem: null } }),
       ],
     });
-    await drainTimers();
-    expect(screen.getByText('Item not found')).toBeTruthy();
-    // The form's header — and so its close control — stays up.
-    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
+
+    expect(screen.getByText(t('errors.itemNotFound'))).toBeTruthy();
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByTestId(kitTestIDs.headerCloseButton)).toBeTruthy();
+  });
+
+  it('closes by going back', async () => {
+    await openForm();
+
+    // Each picker's sheet renders inline in Jest, with its own close; the
+    // screen's comes first.
+    fireEvent.press(screen.getAllByTestId(kitTestIDs.headerCloseButton)[0]!);
+
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 
   describe('offline', () => {
     const noServer = () =>
       recordMock(PantryItemForEditDocument, {
         error: new Error('This is not available offline yet'),
-      }).mock;
+      });
 
-    beforeEach(() => mockIsOffline.mockReturnValue(true));
-    afterEach(() => mockIsOffline.mockReturnValue(false));
+    beforeEach(() => useStore.setState({ apiReachable: false }));
 
     it('opens a listed row on what the list holds, with Save', async () => {
-      const cache = buildCache({});
+      const cache = makeCache();
       seedFragment(cache, {
         fragment: PantryItem_ListedFragmentDoc,
         fragmentName: 'pantryItem_listed',
         data: { __typename: 'PantryItem', id: 'item-1', itemName: 'Flour' },
       });
 
-      renderWithApollo(<PantryItemForm itemId="item-1" />, {
-        cache,
-        operationMocks: [noServer()],
-      });
-      await drainTimers();
+      await openForm({ cache, answers: [noServer()] });
 
-      expect(screen.getByText('name:Flour')).toBeTruthy();
-      expect(
-        screen.getByTestId(pantryTestIDs.editItemSubmitButton),
-      ).toBeTruthy();
+      expect(field(t('itemForm.placeholderItemName'))).toHaveDisplayValue(
+        'Flour',
+      );
+      expect(saveButton()).toBeEnabled();
     });
 
     it('says a stack the device does not hold is not available, with no Save', async () => {
-      renderWithApollo(<PantryItemForm itemId="not-held" />, {
-        cache: buildCache({}),
-        operationMocks: [noServer()],
-      });
-      await drainTimers();
+      await openForm({ answers: [noServer()] });
 
-      expect(screen.getByTestId('state-offline')).toBeTruthy();
-      expect(screen.queryByText('Item not found')).toBeNull();
+      expect(screen.getByTestId(kitTestIDs.stateOffline)).toBeTruthy();
+      expect(screen.queryByText(t('errors.itemNotFound'))).toBeNull();
       expect(
         screen.queryByTestId(pantryTestIDs.editItemSubmitButton),
       ).toBeNull();
     });
   });
+});
 
-  // The form's fields are cached before the query is: it renders at once, then
-  // the server's answer re-seeds it. Re-seeding during render updated every
-  // mounted field subscriber mid-render, which React refuses.
-  it('re-seeds from a late server answer without updating a field mid-render', async () => {
-    const cache = buildCache({});
+describe('the stack the form opens on', () => {
+  it('names it and its brand', async () => {
+    await openForm({ stack: { ...flour, brand: { name: 'Acme' } } });
+
+    expect(field(t('itemForm.placeholderItemName'))).toHaveDisplayValue(
+      'Flour',
+    );
+    expect(field(t('itemForm.placeholderBrand'))).toHaveDisplayValue('Acme');
+  });
+
+  // The quantity takes a cooking fraction; the decimal-pad fields have no `/`.
+  it('states its amounts as each field reads them', async () => {
+    await openForm({
+      stack: {
+        ...flour,
+        quantity: 1.33333334,
+        minQuantity: 0.33333334,
+        restockQuantity: 177.4412,
+      },
+    });
+    goTo('Inventory');
+
+    expect(
+      screen.getByTestId(pantryTestIDs.editItemQuantityInput),
+    ).toHaveDisplayValue('1 1/3');
+    expect(field(t('labels.eG2'))).toHaveDisplayValue('0.333');
+    expect(field(t('labels.eG6'))).toHaveDisplayValue('177.441');
+    expect(
+      screen.getByTestId(pantryTestIDs.editItemUnitPicker),
+    ).toHaveDisplayValue('kg');
+  });
+
+  it('shows where and how it is kept, and when it expires', async () => {
+    await openForm({
+      stack: {
+        ...flour,
+        storageState: StorageState.Frozen,
+        condition: ItemCondition.Fair,
+        storageLocation: { name: 'Chest freezer' },
+        expiresOn: '2026-12-01',
+        storageNotes: 'Double-bagged',
+      },
+    });
+    goTo('Storage');
+
+    expect(chip(t('storageState.FROZEN'), true)).toBeTruthy();
+    expect(chip(t(conditionLabelKey(ItemCondition.Fair)), true)).toBeTruthy();
+    expect(field(t('itemForm.locationPlaceholder'))).toHaveDisplayValue(
+      'Chest freezer',
+    );
+    expect(
+      screen.getByText(formatMonthDayYear(fromDateKey('2026-12-01'))),
+    ).toBeTruthy();
+    expect(field(t('labels.anyAdditionalNotes'))).toHaveDisplayValue(
+      'Double-bagged',
+    );
+  });
+
+  // The cache holds the fields before the read answers. Re-seeding during render
+  // updated every mounted field mid-render, which React refuses.
+  it('re-seeds from a late answer, keeping what the user typed', async () => {
+    const cache = makeCache();
     seedFragment(cache, {
       fragment: PantryItemForm_PantryItemFragmentDoc,
       fragmentName: 'PantryItemForm_pantryItem',
-      data: pantryItemData({ id: 'item-1', itemName: 'Flour' }).pantryItem,
+      data: { ...flour, brand: { name: 'Acme' } },
     });
-    const answer = recordMock(PantryItemForEditDocument, {
-      data: { pantryItem: { id: 'item-1', itemName: 'Bread flour' } },
+    const read = recordMock(PantryItemForEditDocument, {
+      data: {
+        pantryItem: {
+          ...flour,
+          itemName: 'Bread flour',
+          brand: { name: 'Bakers' },
+        },
+      },
       held: true,
     });
-    renderWithApollo(<PantryItemForm itemId="item-1" />, {
-      cache,
-      operationMocks: [answer.mock],
-    });
+    renderForm({ cache, answers: [read] });
+    fireEvent.changeText(field(t('itemForm.placeholderItemName')), 'Rye flour');
 
-    await drainTimers();
-    expect(screen.getByText('name:Flour')).toBeTruthy();
-    answer.release();
-    await drainTimers();
-    expect(screen.getByText('name:Bread flour')).toBeTruthy();
+    read.release();
+    await answered(PantryItemForEditDocument);
+
+    expect(field(t('itemForm.placeholderItemName'))).toHaveDisplayValue(
+      'Rye flour',
+    );
+    expect(field(t('itemForm.placeholderBrand'))).toHaveDisplayValue('Bakers');
     const renderPhaseUpdates = jest
       .mocked(console.error)
       .mock.calls.filter(([message]) =>
@@ -553,98 +477,11 @@ describe('PantryItemForm — edit mode', () => {
       );
     expect(renderPhaseUpdates).toEqual([]);
   });
-
-  // The first open from the pantry list: the row is cached, the form's fields
-  // are not, so the item arrives only once the query answers.
-  it('renders the item once the query fills a cache that missed on mount', async () => {
-    renderWithApollo(<PantryItemForm itemId="item-1" />, {
-      cache: buildCache({}),
-      operationMocks: [
-        recordMock(PantryItemForEditDocument, {
-          data: { pantryItem: { id: 'item-1' } },
-        }).mock,
-      ],
-    });
-    await drainTimers();
-    expect(screen.getByText('Item Information')).toBeTruthy();
-    expect(screen.queryByText('Item not found')).toBeNull();
-  });
-
-  it('renders the Inventory tab with quantity section in edit mode', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<PantryItemForm itemId="item-1" />, {
-      cache: buildCache({ itemId: 'item-1' }),
-    });
-    await drainTimers();
-    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
-    await user.press(screen.getByText('Inventory'));
-    expect(screen.getByText('Quantity')).toBeTruthy();
-  });
-});
-
-describe('PantryItemForm — quantity seeds', () => {
-  it('seeds the fraction field with a cooking fraction and the decimal-pad fields rounded to three decimals', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<PantryItemForm itemId="item-1" />, {
-      cache: buildCache({
-        itemId: 'item-1',
-        itemFixture: {
-          quantity: 1.33333334,
-          minQuantity: 0.33333334,
-          restockQuantity: 177.4412,
-        },
-      }),
-    });
-    await drainTimers();
-    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
-    await user.press(screen.getByText('Inventory'));
-    expect(screen.getByText('seeded:1 1/3|0.333|177.441')).toBeTruthy();
-  });
-});
-
-describe('PantryItemForm — page navigation', () => {
-  it('renders all four pages on the PageIndicator', async () => {
-    renderWithApollo(<PantryItemForm itemId="item-1" />, {
-      cache: buildCache({ itemId: 'item-1' }),
-    });
-    await drainTimers();
-    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
-    expect(screen.getByText('Basics')).toBeTruthy();
-    expect(screen.getByText('Product')).toBeTruthy();
-    expect(screen.getByText('Storage')).toBeTruthy();
-    expect(screen.getByText('Inventory')).toBeTruthy();
-  });
-});
-
-describe('PantryItemForm — net weight', () => {
-  it('clears the unit refusal once a unit is picked', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<PantryItemForm itemId="item-1" />, {
-      cache: buildCache({ itemId: 'item-1' }),
-    });
-    await drainTimers();
-    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
-    await user.press(screen.getByText('Product'));
-
-    await user.type(screen.getByPlaceholderText('e.g., 14.5'), '1');
-    await drainTimers();
-    expect(
-      screen.getByText('Please select a unit for the net weight.'),
-    ).toBeTruthy();
-
-    await user.press(screen.getByTestId('pick-unit'));
-    expect(
-      screen.queryByText('Please select a unit for the net weight.'),
-    ).toBeNull();
-  });
 });
 
 // The size opens as the detail reads it, so what is saved is what was typed.
-describe('PantryItemForm — package size in the user’s units', () => {
-  type Stack = NonNullable<
-    QueryDataFor<typeof PantryItemForEditDocument>['pantryItem']
-  >;
-  type Reading = NonNullable<Stack['packageSize']>['metric'];
+describe('the package size, in the user’s units', () => {
+  type Reading = NonNullable<NonNullable<Stack['packageSize']>['metric']>;
 
   const reading = (value: number, id: string, symbol: string): Reading =>
     readingAsAbbreviation({
@@ -656,59 +493,235 @@ describe('PantryItemForm — package size in the user’s units', () => {
       type: UnitType.Weight,
     });
 
-  // A 3 LB honey whose size the stack stores as 1360.78 g.
-  const renderHoney = (system: UnitSystem, trackingUnitId?: string) => {
-    const cache = buildCache({});
-    const data = pantryItemData({ id: 'item-1' });
-    const stack = data.pantryItem;
-    if (!stack) throw new Error('fixture has no item');
-    stack.netWeight = 1360.78;
-    stack.netWeightUnit = asAbbreviation({
+  // A 3 lb honey whose size the stack stores as 1360.78 g.
+  const honey = (trackingUnitId = 'unit-jar'): Stack => ({
+    ...flour,
+    unit: { ...KILOGRAM, id: trackingUnitId },
+    netWeight: 1360.78,
+    netWeightUnit: asAbbreviation({
       __typename: 'Unit',
       id: 'unit-g',
       name: 'gram',
       symbol: 'g',
-    });
-    stack.packageSize = {
+    }),
+    packageSize: {
       __typename: 'Measure',
       value: 1360.78,
       unitId: 'unit-g',
       metric: reading(1.36, 'unit-kg', 'kg'),
       imperial: reading(3, 'unit-lb', 'lb'),
-    };
-    if (trackingUnitId) stack.unit = { ...stack.unit, id: trackingUnitId };
-    seedQuery(cache, {
-      query: PantryItemForEditDocument,
-      variables: { id: 'item-1' },
-      data,
-    });
-    writeUnitSystemSettings(cache, system, system);
-    renderWithApollo(<PantryItemForm itemId="item-1" />, { cache });
-  };
-
-  const openProduct = async () => {
-    const user = userEvent.setup();
-    await drainTimers();
-    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
-    await user.press(screen.getByText('Product'));
-  };
-
-  it.each([
-    [UnitSystem.Imperial, '3', 'lb'],
-    [UnitSystem.Metric, '1.36', 'kg'],
-  ])('opens a %s user on %s %s', async (system, value, unit) => {
-    renderHoney(system);
-    await openProduct();
-    expect(screen.getByPlaceholderText('e.g., 14.5').props.value).toBe(value);
-    expect(screen.getByText(`unit:${unit}`)).toBeTruthy();
+    },
   });
 
+  it.each([
+    { system: UnitSystem.Imperial, value: '3', unit: 'lb' },
+    { system: UnitSystem.Metric, value: '1.36', unit: 'kg' },
+  ])(
+    'opens a $system user on $value $unit',
+    async ({ system, value, unit }) => {
+      await openForm({ stack: honey(), system });
+      goTo('Product');
+
+      expect(field(localizeNumericHint(t('labels.eG145')))).toHaveDisplayValue(
+        value,
+      );
+      expect(field(t('labels.ozGMl'))).toHaveDisplayValue(unit);
+    },
+  );
+
   it('opens on the stored figure where the reading is the tracking unit', async () => {
-    renderHoney(UnitSystem.Imperial, 'unit-lb');
-    await openProduct();
-    expect(screen.getByPlaceholderText('e.g., 14.5').props.value).toBe(
+    await openForm({ stack: honey('unit-lb'), system: UnitSystem.Imperial });
+    goTo('Product');
+
+    expect(field(localizeNumericHint(t('labels.eG145')))).toHaveDisplayValue(
       '1360.78',
     );
-    expect(screen.getByText('unit:g')).toBeTruthy();
+    expect(field(t('labels.ozGMl'))).toHaveDisplayValue('g');
+  });
+});
+
+describe('where it is kept', () => {
+  it("takes a picked location's temperature", async () => {
+    await openForm();
+
+    pickFreezer();
+
+    expect(chip(t('storageState.FROZEN'), true)).toBeTruthy();
+  });
+
+  it('saves a picked location as that location', async () => {
+    const update = heldUpdate();
+    const cache = await openForm({ answers: [update] });
+    pickFreezer();
+
+    fireEvent.press(saveButton());
+    await log.requested(UpdatePantryItemDocument);
+
+    expect(saved(cache)?.storageLocation).toEqual({
+      __typename: 'StorageLocation',
+      id: 'loc-freezer',
+      name: 'Freezer',
+    });
+  });
+
+  it('saves a picked storage state', async () => {
+    const update = heldUpdate();
+    const cache = await openForm({ answers: [update] });
+    goTo('Storage');
+
+    fireEvent.press(chip(t('storageState.FROZEN'), false));
+    fireEvent.press(saveButton());
+    await log.requested(UpdatePantryItemDocument);
+
+    expect(saved(cache)?.storageState).toBe(StorageState.Frozen);
+  });
+});
+
+describe('saving', () => {
+  it('holds Save while the save is in flight, and reports success once it lands', async () => {
+    const onSuccess = jest.fn();
+    const update = heldUpdate();
+    await openForm({ answers: [update], onSuccess });
+    fireEvent.changeText(field(t('itemForm.placeholderItemName')), 'Rye flour');
+
+    fireEvent.press(saveButton());
+    await log.requested(UpdatePantryItemDocument);
+
+    expect(saveButton()).toBeDisabled();
+    expect(onSuccess).not.toHaveBeenCalled();
+
+    update.release();
+    await answered(UpdatePantryItemDocument);
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(saveButton()).toBeEnabled();
+  });
+
+  it('keeps tags under More options, and saves them as a list', async () => {
+    const update = heldUpdate();
+    const cache = await openForm({
+      stack: { ...flour, tags: [] },
+      answers: [update],
+    });
+    goTo('Inventory');
+
+    fireEvent.press(
+      screen.getByRole('button', { name: t('labels.moreOptions') }),
+    );
+    const tags = field(t('itemForm.tagsPlaceholder'));
+    fireEvent.changeText(tags, ' baking , gluten ');
+    fireEvent(tags, 'blur');
+    fireEvent.press(saveButton());
+    await log.requested(UpdatePantryItemDocument);
+
+    expect(saved(cache)?.tags).toEqual(['baking', 'gluten']);
+  });
+});
+
+describe('the quantity', () => {
+  it('reports unreadable text on the field, and saves a corrected amount', async () => {
+    const update = recordMock(UpdatePantryItemQuantityDocument, {
+      held: true,
+      data: {
+        updatePantryItemQuantity: {
+          __typename: 'UpdatePantryItemQuantityPayload',
+          pantryItem: { id: 'item-1' },
+        },
+      },
+    });
+    const cache = await openForm({ answers: [update] });
+    goTo('Inventory');
+    const quantity = screen.getByTestId(pantryTestIDs.editItemQuantityInput);
+    const user = userEvent.setup();
+
+    await user.clear(quantity);
+    await user.type(quantity, 'abc');
+    expect(screen.getByText(t('errors.invalidQuantity'))).toBeTruthy();
+
+    await user.clear(quantity);
+    await user.type(quantity, '2');
+    expect(screen.queryByText(t('errors.invalidQuantity'))).toBeNull();
+
+    fireEvent.press(saveButton());
+    await log.requested(UpdatePantryItemQuantityDocument);
+    expect(saved(cache)?.quantity).toBe(2);
+  });
+
+  // The device does not hold a stick, so only the pick says which unit it is.
+  it('previews a change to the unit picked from the search', async () => {
+    const preview = recordMock(PreviewPantryItemUnitChangeDocument, {
+      held: true,
+    });
+    await openForm({ answers: [preview] });
+    goTo('Inventory');
+
+    fireEvent.changeText(
+      screen.getByTestId(pantryTestIDs.editItemUnitPicker),
+      'stick',
+    );
+    await searchAnswered();
+    fireEvent.press(
+      screen.getByTestId(
+        catalogTestIDs.suggestion(pantryTestIDs.editItemUnitPicker, 0),
+      ),
+    );
+    fireEvent.press(saveButton());
+    await act(async () => {
+      await log.requested(PreviewPantryItemUnitChangeDocument);
+    });
+
+    expect(preview.fired).toContainEqual({
+      input: expect.objectContaining({
+        pantryItemId: 'item-1',
+        unitId: 'unit-stick',
+      }),
+    });
+  });
+});
+
+describe('the net weight', () => {
+  it('asks for the unit of a typed weight until one is picked', async () => {
+    await openForm();
+    goTo('Product');
+
+    await userEvent
+      .setup()
+      .type(field(localizeNumericHint(t('labels.eG145'))), '1');
+    expect(
+      screen.getByText(t('labels.pleaseSelectAUnitForTheNetWeight')),
+    ).toBeTruthy();
+
+    fireEvent.changeText(field(t('labels.ozGMl')), 'pou');
+    await searchAnswered();
+    fireEvent.press(screen.getByText('pound'));
+
+    expect(
+      screen.queryByText(t('labels.pleaseSelectAUnitForTheNetWeight')),
+    ).toBeNull();
+  });
+
+  it('reports a unit the API does not know on its field, from any page', async () => {
+    await openForm({
+      answers: [
+        recordMock(GetUnitBySymbolDocument, { data: { unitBySymbol: null } }),
+      ],
+    });
+    goTo('Product');
+    fireEvent.changeText(field(localizeNumericHint(t('labels.eG145'))), '2');
+    fireEvent.changeText(field(t('labels.ozGMl')), 'blorp');
+    await searchAnswered();
+    goTo('Basics');
+
+    fireEvent.press(saveButton());
+    await answered(GetUnitBySymbolDocument);
+
+    expect(
+      screen.getByRole('tab', {
+        name: t(PAGE_LABEL_KEYS.Product),
+        selected: true,
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(t('itemForm.unknownUnit', { unit: 'blorp' })),
+    ).toBeTruthy();
   });
 });

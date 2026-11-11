@@ -1,21 +1,32 @@
-import { gql } from '@apollo/client';
+import type { Unmasked } from '@apollo/client/masking';
 import { makeCache } from '#/apollo/cache';
 import { PendingWrites } from '#/apollo/pendingWrites/pendingWrites';
 import { readFenceOf } from '#/apollo/pendingWrites/readFence';
 import type { PendingWrite } from '#/apollo/pendingWrites/types';
+import type { EntityFieldsInputs } from '#/apollo/pendingWrites/entityFields';
 import {
   completeSeed,
   seedFragment,
   seedQuery,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { drainTimers } from '#/test-utils/drainTimers';
+import {
+  pantryData,
+  type PantryItemFixture,
+} from '#/test-utils/fixtures/pantryFixtures';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { errorService } from '#/services/errorService';
 import {
   BatchStatus,
   ItemCondition,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
-import type { EntityFieldsInputs } from '#/apollo/pendingWrites/entityFields';
+import {
+  HomePantries_HomeFragmentDoc,
+  type HomePantries_HomeFragment,
+} from '#features/home/utils/homePantries.generated';
+import { LocalRefs_UnitFragmentDoc } from '#features/catalog/cache/localRefs.generated';
+import { UseWastePantryItemBatch_PantryItemFragmentDoc } from '#features/pantry/hooks/mutations/useWastePantryItemBatch.generated';
 import {
   ConvertExpiredToWasteDocument,
   CreatePantryDocument,
@@ -23,10 +34,12 @@ import {
   CreatePantryItemUsageDocument,
   DeletePantryDocument,
   DeletePantryItemDocument,
+  GetPantryDocument,
   GetPantryItemBatchesDocument,
   RestockPantryItemDocument,
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
+  type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import {
   addStock,
@@ -48,154 +61,195 @@ import {
   type SetStockInputs,
 } from '../localWrites';
 
+type Cache = ReturnType<typeof makeCache>;
+type HomeEdge =
+  Unmasked<HomePantries_HomeFragment>['pantriesConnection']['edges'][number];
+type Row = NonNullable<
+  Unmasked<GetPantryQuery>['pantry']
+>['itemsConnection']['edges'][number]['node'];
+
 const NOW = '2026-10-30T10:00:00.000Z';
-
-const STOCK = gql`
-  fragment LocalWritesStock on PantryItem {
-    quantity
-    heldQuantity
-    activeBatchCount
-    condition
-    version
-  }
-`;
-
-const PANTRY = gql`
-  query LocalWritesPantry {
-    pantry(id: "pantry-1") {
-      id
-      stats {
-        totalItems
-      }
-      itemsConnection(filters: {}, orderBy: {}) {
-        totalCount
-        edges {
-          node {
-            id
-          }
-        }
-      }
-    }
-  }
-`;
-
-type Pantry = {
-  pantry: {
-    stats: { totalItems: number };
-    itemsConnection: { edges: { node: { id: string } }[] };
-  };
+const TODAY = '2026-10-30';
+const PANTRY_ID = 'pantry-1';
+const PANTRY_READ = {
+  id: PANTRY_ID,
+  itemsFirst: 50,
+  storageLocationsFirst: 20,
+  today: TODAY,
+};
+const TABLE = {
+  CreatePantryItem: createItem,
+  UpdatePantryItemQuantity: setStock,
+  DeletePantryItem: removeItem,
+  CreatePantryItemUsage: drawStock,
+  RestockPantryItem: addStock,
+  ConvertExpiredToWaste: discardExpired,
+  UpdatePantryItem: updatePantryRow,
+  CreatePantry: createPantry,
+  DeletePantry: removePantry,
 };
 
-function setup() {
-  const cache = makeCache();
-  seedQuery(cache, {
-    query: PANTRY,
-    data: {
-      pantry: {
-        __typename: 'Pantry',
-        id: 'pantry-1',
-        stats: { __typename: 'PantryStats', totalItems: 1 },
-        itemsConnection: {
-          __typename: 'PantryItemConnection',
-          totalCount: 1,
-          edges: [
-            {
-              __typename: 'PantryItemEdge',
-              node: { __typename: 'PantryItem', id: 'held' },
-            },
-          ],
-        },
-      },
-    },
+const unitOf = (id: string, type: UnitType): Row['unit'] =>
+  asAbbreviation({
+    __typename: 'Unit',
+    id,
+    name: id,
+    symbol: id,
+    type,
+    displayAsFraction: false,
+    commonFractions: null,
   });
-  seedFragment(cache, {
-    fragment: STOCK,
-    data: {
-      __typename: 'PantryItem',
-      id: 'held',
-      quantity: 10,
-      heldQuantity: 10,
-      activeBatchCount: 1,
-      condition: ItemCondition.Good,
-      version: 3,
-    },
+
+/** What a stack holds, counted as the server counts its whole packages. */
+const held = (
+  count: number,
+  wholePackages = Math.floor(count),
+): Pick<Row, 'quantity' | 'heldQuantity' | 'stockBreakdown'> => ({
+  quantity: Math.ceil(count),
+  heldQuantity: count,
+  stockBreakdown: { __typename: 'StockBreakdown', fullPackages: wholePackages },
+});
+
+/** The pantry's read: ten of `held`, then `items`, with `held` shaped by `over`. */
+function pantryRead(over: Partial<Row>, items: PantryItemFixture[]) {
+  const data = pantryData({
+    id: PANTRY_ID,
+    items: [{ id: 'held', itemName: 'Milk', quantity: 10 }, ...items],
   });
-  const table = {
-    CreatePantryItem: createItem,
-    UpdatePantryItemQuantity: setStock,
-    DeletePantryItem: removeItem,
-    CreatePantryItemUsage: drawStock,
-    RestockPantryItem: addStock,
-    ConvertExpiredToWaste: discardExpired,
-    UpdatePantryItem: updatePantryRow,
-  };
-  return { cache, writes: new PendingWrites(cache, table), table };
+  const [first, ...rest] = data.pantry!.itemsConnection.edges;
+  data.pantry!.itemsConnection.edges = [
+    { ...first!, node: { ...first!.node, ...over } },
+    ...rest,
+  ];
+  return data;
 }
 
-type Setup = ReturnType<typeof setup>;
+/** The pantry as its screen holds it. */
+function stocked(over: Partial<Row> = {}, items: PantryItemFixture[] = []) {
+  const cache = makeCache();
+  seedQuery(cache, {
+    query: GetPantryDocument,
+    variables: PANTRY_READ,
+    data: pantryRead(over, items),
+  });
+  return { cache, writes: new PendingWrites(cache, TABLE) };
+}
+type Device = ReturnType<typeof stocked>;
 
-const shown = ({ cache }: Setup, optimistic = true) => {
-  const pantry = cache.readQuery<Pantry>({ query: PANTRY, optimistic })?.pantry;
+/** A read of the pantry lands, with `held` shaped by `over`. */
+const serverReads = ({ cache }: Device, over: Partial<Row>) =>
+  seedQuery(cache, {
+    query: GetPantryDocument,
+    variables: PANTRY_READ,
+    data: pantryRead(over, []),
+  });
+
+/**
+ * A restock's answer naming `id`. Its stack's units are the stack's own: a
+ * placeholder id would start a unit the pantry's read finds incomplete.
+ */
+const restocked = (id: string, extra: Record<string, unknown> = {}) => ({
+  restockPantryItem: {
+    __typename: 'RestockPantryItemPayload',
+    storageLocation: null,
+    ...extra,
+    pantryItemUsage: {
+      id: 'usage-1',
+      pantryItem: {
+        id,
+        version: 2,
+        displayAmount: { unit: { id: 'unit-piece' } },
+        portionUnit: null,
+        netWeightUnit: null,
+        packageBreakdown: null,
+        quantityBreakdown: null,
+      },
+    },
+  },
+});
+
+const pantryOf = ({ cache }: Device, optimistic = true) =>
+  cache.readQuery({
+    query: GetPantryDocument,
+    variables: PANTRY_READ,
+    optimistic,
+  })?.pantry;
+
+const listed = (device: Device, optimistic = true) => {
+  const pantry = pantryOf(device, optimistic);
   return {
     ids: pantry?.itemsConnection.edges.map(({ node }) => node.id),
     total: pantry?.stats.totalItems,
   };
 };
 
-const stock = ({ cache }: Setup, optimistic = true) =>
-  cache.readFragment<{
-    quantity: number;
-    heldQuantity: number;
-    activeBatchCount: number;
-    condition: ItemCondition;
-    version: number;
-  }>({ id: 'PantryItem:held', fragment: STOCK, optimistic });
+const rowOf = (device: Device, optimistic = true, id = 'held') =>
+  pantryOf(device, optimistic)?.itemsConnection.edges.find(
+    ({ node }) => node.id === id,
+  )?.node;
 
-const create = ({ writes }: Setup, id: string) => {
-  const inputs: CreateItemInputs = {
-    row: { pantryId: 'pantry-1', itemName: 'Milk', quantity: 2 },
-    now: NOW,
-  };
-  return writes.begin(
+const create = ({ writes }: Device, id: string) =>
+  writes.begin(
     CreatePantryItemDocument,
-    { input: { id, pantryId: 'pantry-1' } },
-    inputs,
+    { input: { id, pantryId: PANTRY_ID } },
+    {
+      row: { pantryId: PANTRY_ID, itemName: 'Oats', quantity: 2 },
+      now: NOW,
+    } satisfies CreateItemInputs,
   );
-};
 
-const use = ({ writes }: Setup, amount: number) => {
-  const inputs: DrawStockInputs = { delta: -amount, now: NOW };
-  return writes.begin(
-    CreatePantryItemUsageDocument,
+const use = (
+  { writes }: Device,
+  inputs: Partial<DrawStockInputs>,
+  pantryItemId = 'held',
+) =>
+  writes.begin(CreatePantryItemUsageDocument, { input: { pantryItemId } }, {
+    delta: null,
+    now: NOW,
+    ...inputs,
+  } satisfies DrawStockInputs);
+
+const restock = ({ writes }: Device, delta: number | null, id = 'held') =>
+  writes.begin(RestockPantryItemDocument, { input: { id } }, {
+    delta,
+    now: NOW,
+    pantryId: PANTRY_ID,
+  } satisfies AddStockInputs);
+
+const setTo = (
+  { writes }: Device,
+  inputs: Omit<SetStockInputs, 'now'>,
+  id = 'held',
+) =>
+  writes.begin(
+    UpdatePantryItemQuantityDocument,
+    { input: { pantryItemId: id } },
+    { now: NOW, ...inputs } satisfies SetStockInputs,
+  );
+
+const remove = ({ writes }: Device, id: string) =>
+  writes.begin(DeletePantryItemDocument, { input: { id } }, {
+    pantryId: PANTRY_ID,
+  } satisfies RemoveItemInputs);
+
+const discard = ({ writes }: Device, whole: boolean) =>
+  writes.begin(
+    ConvertExpiredToWasteDocument,
     { input: { pantryItemId: 'held' } },
-    inputs,
+    { whole, now: NOW } satisfies DiscardExpiredInputs,
   );
-};
-
-const restock = ({ writes }: Setup, delta: number | null) => {
-  const inputs: AddStockInputs = { delta, now: NOW, pantryId: 'pantry-1' };
-  return writes.begin(
-    RestockPantryItemDocument,
-    { input: { id: 'held' } },
-    inputs,
-  );
-};
-
-const remove = ({ writes }: Setup, id: string) => {
-  const inputs: RemoveItemInputs = { pantryId: 'pantry-1' };
-  return writes.begin(DeletePantryItemDocument, { input: { id } }, inputs);
-};
 
 /**
- * The server answers with a read still in flight: Apollo writes the answer to
- * the root, then the write waits. The result lets the read land.
+ * The server answers: Apollo writes the answer to the root, then the write
+ * commits. With a read in flight it waits for the read; the result lets it land.
  */
-function answeredWithReadInFlight(
-  { cache, writes }: Setup,
+function answer(
+  { cache, writes }: Device,
   { id, document, variables }: PendingWrite,
   data: Record<string, unknown>,
+  { readInFlight = false } = {},
 ): () => void {
-  const land = readFenceOf(cache).begin();
+  const land = readInFlight ? readFenceOf(cache).begin() : () => undefined;
   const stated = completeSeed(document, variables, data);
   seedQuery(cache, {
     id: 'ROOT_MUTATION',
@@ -208,630 +262,514 @@ function answeredWithReadInFlight(
   return land;
 }
 
+/** Resolves once the pantry, as the server's data holds it, lists `ids`. */
+async function rootLists(device: Device, ids: string[]) {
+  let stop: (() => void) | undefined;
+  await new Promise<void>(resolve => {
+    stop = device.cache.watch({
+      query: GetPantryDocument,
+      variables: PANTRY_READ,
+      optimistic: false,
+      immediate: true,
+      callback: () => {
+        const shown = listed(device, false).ids;
+        if (JSON.stringify(shown) === JSON.stringify(ids)) resolve();
+      },
+    });
+  });
+  stop?.();
+}
+
 describe('creating a stack', () => {
   it('shows it and counts it once, however often it is rebuilt', () => {
-    const pantry = setup();
+    const device = stocked();
 
-    create(pantry, 'minted');
-    pantry.writes.rebuild();
-    pantry.writes.rebuild();
+    create(device, 'minted');
+    device.writes.rebuild();
+    device.writes.rebuild();
 
-    expect(shown(pantry)).toEqual({ ids: ['minted', 'held'], total: 2 });
+    expect(listed(device)).toEqual({ ids: ['minted', 'held'], total: 2 });
+    expect(listed(device, false)).toEqual({ ids: ['held'], total: 1 });
   });
 
-  it('leaves the server data as it was', () => {
-    const pantry = setup();
+  it('goes without a trace when refused', () => {
+    const device = stocked();
 
-    create(pantry, 'minted');
+    device.writes.drop(create(device, 'minted').id);
 
-    expect(shown(pantry, false)).toEqual({ ids: ['held'], total: 1 });
-    expect(pantry.cache.extract()).not.toHaveProperty(['PantryItem:minted']);
-  });
-
-  it('goes without a trace when it is refused', () => {
-    const pantry = setup();
-
-    pantry.writes.drop(create(pantry, 'minted').id);
-
-    expect(shown(pantry)).toEqual({ ids: ['held'], total: 1 });
-    expect(pantry.cache.extract(true)).not.toHaveProperty([
+    expect(listed(device)).toEqual({ ids: ['held'], total: 1 });
+    expect(device.cache.extract(true)).not.toHaveProperty([
       'PantryItem:minted',
     ]);
   });
 
   it('lists the row the server kept, counted by its answer', () => {
-    const pantry = setup();
-    const { id } = create(pantry, 'minted');
-    // Apollo writes the answer's row before the write commits.
-    seedFragment(pantry.cache, {
-      fragment: STOCK,
-      data: { __typename: 'PantryItem', id: 'minted', version: 1 },
-    });
+    const device = stocked();
 
-    pantry.writes.confirm(id, {
+    answer(device, create(device, 'minted'), {
       createPantryItem: {
         __typename: 'CreatePantryItemPayload',
-        pantryItem: { __typename: 'PantryItem', id: 'minted' },
-        pantry: { id: 'pantry-1', stats: { totalItems: 2 } },
+        pantryItem: { id: 'minted', version: 1 },
+        pantry: { id: PANTRY_ID, stats: { totalItems: 2 } },
       },
     });
-    pantry.writes.rebuild();
 
-    expect(shown(pantry, false).ids).toEqual(['minted', 'held']);
-    expect(shown(pantry, false).total).toBe(1);
+    expect(listed(device, false)).toEqual({
+      ids: ['minted', 'held'],
+      total: 2,
+    });
   });
 
   it('leaves one stack when the server joined it to a held one', () => {
-    const pantry = setup();
-    const { id } = create(pantry, 'minted');
+    const device = stocked();
 
-    pantry.writes.confirm(id, {
+    answer(device, create(device, 'minted'), {
       createPantryItem: {
         __typename: 'CreatePantryItemPayload',
-        pantryItem: { __typename: 'PantryItem', id: 'held' },
+        pantryItem: { id: 'held', version: 1 },
       },
     });
-    pantry.writes.rebuild();
 
-    expect(shown(pantry).ids).toEqual(['held']);
-    expect(pantry.cache.extract(true)).not.toHaveProperty([
+    expect(listed(device).ids).toEqual(['held']);
+    expect(device.cache.extract(true)).not.toHaveProperty([
       'PantryItem:minted',
     ]);
   });
 });
 
-describe('stock changes', () => {
-  it('reads two uses as two, through a restart', () => {
-    const pantry = setup();
-    const first = use(pantry, 2);
-    const second = use(pantry, 3);
-    expect(stock(pantry)).toMatchObject({ quantity: 5, heldQuantity: 5 });
+describe('setting an amount', () => {
+  it('sets it over whatever the server holds, with the net weight left', () => {
+    const device = stocked();
 
-    const restarted = new PendingWrites(pantry.cache, pantry.table);
-    pantry.writes.clear();
-    expect(stock(pantry)).toMatchObject({ quantity: 10, heldQuantity: 10 });
+    setTo(device, { held: 7, remainingNetWeight: 3.5 });
+    serverReads(device, held(12));
+    device.writes.rebuild();
 
-    // The queue stores each write as JSON.
-    restarted.restore(JSON.parse(JSON.stringify([first, second])));
-
-    expect(stock(pantry)).toMatchObject({ quantity: 5, heldQuantity: 5 });
-    expect(stock(pantry, false)).toMatchObject({ quantity: 10 });
-  });
-
-  it('moves nothing for an amount only the server can convert', () => {
-    const pantry = setup();
-    const inputs: DrawStockInputs = { delta: null, now: NOW };
-
-    pantry.writes.begin(
-      CreatePantryItemUsageDocument,
-      { input: { pantryItemId: 'held' } },
-      inputs,
-    );
-
-    expect(stock(pantry)).toMatchObject({ quantity: 10 });
-  });
-
-  it('puts the stock back when a use is refused', () => {
-    const pantry = setup();
-
-    pantry.writes.drop(use(pantry, 2).id);
-
-    expect(stock(pantry)).toMatchObject({ quantity: 10, heldQuantity: 10 });
-  });
-
-  it('counts a restock as a batch of its own', () => {
-    const pantry = setup();
-
-    restock(pantry, 4);
-    pantry.writes.rebuild();
-
-    expect(stock(pantry)).toMatchObject({
-      quantity: 14,
-      heldQuantity: 14,
-      activeBatchCount: 2,
+    expect(rowOf(device)).toMatchObject({
+      quantity: 7,
+      heldQuantity: 7,
+      remainingNetWeight: 3.5,
     });
   });
 
-  it('sets an amount over whatever the server holds', () => {
-    const pantry = setup();
-    const inputs: SetStockInputs = { held: 7, now: NOW };
+  it('shows it as it was given, in the unit the stack shows in', () => {
+    const device = stocked();
 
-    pantry.writes.begin(
-      UpdatePantryItemQuantityDocument,
-      { input: { pantryItemId: 'held' } },
-      inputs,
-    );
-    seedFragment(pantry.cache, {
-      fragment: STOCK,
-      data: { __typename: 'PantryItem', id: 'held', quantity: 12 },
-    });
-    pantry.writes.rebuild();
-
-    expect(stock(pantry)).toMatchObject({ quantity: 7, heldQuantity: 7 });
-  });
-
-  it('adds nothing on top of an answer a read holds back', () => {
-    const pantry = setup();
-    const write = use(pantry, 2);
-
-    answeredWithReadInFlight(pantry, write, {
-      createPantryItemUsage: {
-        __typename: 'CreatePantryItemUsagePayload',
-        pantryItemUsage: {
-          id: 'usage-1',
-          pantryItem: { id: 'held', quantity: 8, heldQuantity: 8 },
-        },
+    setTo(device, {
+      held: 12,
+      shown: {
+        __typename: 'DisplayAmount',
+        quantity: 1,
+        localizedSymbol: 'doz',
+        fraction: null,
+        unit: asAbbreviation({
+          __typename: 'Unit',
+          id: 'unit-doz',
+          symbol: 'doz',
+        }),
       },
     });
 
-    expect(stock(pantry)).toMatchObject({ quantity: 8, heldQuantity: 8 });
+    expect(rowOf(device)?.displayAmount).toMatchObject({
+      quantity: 1,
+      unit: { id: 'unit-doz' },
+    });
   });
 
-  it('lands on the survivor of a merged stack, and the merged row goes', async () => {
-    jest.useFakeTimers();
-    const pantry = setup();
-    const write = use(pantry, 2);
+  it('moves nothing, and breaks nothing, for a figure only the server can convert', () => {
+    const device = stocked();
+    const reported = jest.spyOn(errorService, 'reportError');
 
-    pantry.writes.confirm(write.id, {
-      createPantryItemUsage: {
-        __typename: 'CreatePantryItemUsagePayload',
-        pantry: { id: 'pantry-1' },
-        pantryItemUsage: {
-          pantryItem: { __typename: 'PantryItem', id: 'survivor' },
-        },
-      },
-    });
-    seedFragment(pantry.cache, {
-      fragment: STOCK,
-      data: { __typename: 'PantryItem', id: 'survivor', version: 1 },
-    });
-    await drainTimers();
-    jest.useRealTimers();
+    setTo(device, {});
 
-    expect(pantry.cache.extract()).not.toHaveProperty(['PantryItem:held']);
+    expect(rowOf(device)).toMatchObject({ quantity: 10, heldQuantity: 10 });
+    expect(reported).not.toHaveBeenCalled();
+    reported.mockRestore();
+  });
+
+  it('writes nothing for a stack the device does not hold', () => {
+    const device = stocked();
+
+    setTo(device, { held: 7 }, 'ghost');
+
+    expect(device.cache.extract(true)).not.toHaveProperty(['PantryItem:ghost']);
   });
 });
 
-describe('what a stack reads after a use', () => {
-  const INSIDE = gql`
-    fragment LocalWritesInside on PantryItem {
-      quantity
-      heldQuantity
-      netWeight
-      remainingNetWeight
-      netWeightUnit {
-        id
-        symbol
-        type
-        displayAsFraction
-        localizedSymbolForms {
-          one
-          other
-        }
-      }
-      portionsPerTrackingUnit
-      remainingPortions
-      portionUnit {
-        id
-        symbol
-        type
-        displayAsFraction
-        localizedSymbolForms {
-          one
-          other
-        }
-      }
-      unit {
-        id
-        symbol
-        type
-        displayAsFraction
-        commonFractions
-        localizedSymbolForms {
-          one
-          other
-        }
-      }
-      displayAmount {
-        quantity
-      }
-      stockBreakdown {
-        fullPackages
-      }
-      amountLeft {
-        value
-        unitId
-        metric {
-          value
-          symbol
-        }
-        imperial {
-          value
-          symbol
-        }
-      }
-      consumeUnit {
-        id
-      }
-    }
-  `;
-  const UNIT = gql`
-    fragment LocalWritesUnit on Unit {
-      id
-      symbol
-      type
-      displayAsFraction
-      localizedSymbolForms {
-        one
-        other
-      }
-    }
-  `;
-  type Read = {
-    remainingPortions: number | null;
-    remainingNetWeight: number | null;
-    consumeUnit: { id: string } | null;
-    stockBreakdown: { fullPackages: number };
-    amountLeft: {
-      value: number;
-      unitId: string;
-      imperial: { symbol: string };
-    };
-  };
-
-  const unit = (id: string, type: UnitType) => ({
-    __typename: 'Unit',
-    id,
-    symbol: id,
-    type,
-    displayAsFraction: false,
-    localizedSymbolForms: { __typename: 'PluralForms', one: id, other: id },
-  });
-
-  function stack(fields: Record<string, unknown>) {
-    const pantry = setup();
-    seedFragment(pantry.cache, {
-      fragment: UNIT,
-      data: unit('oz', UnitType.Weight),
-    });
-    seedFragment(pantry.cache, {
-      fragment: INSIDE,
-      data: {
-        __typename: 'PantryItem',
-        id: 'held',
-        consumeUnit: null,
-        netWeight: null,
-        remainingNetWeight: null,
-        netWeightUnit: null,
-        portionsPerTrackingUnit: null,
-        remainingPortions: null,
-        portionUnit: null,
-        // As the server counts them: the whole part of every batch.
-        stockBreakdown: {
-          __typename: 'StockBreakdown',
-          fullPackages: Math.floor(Number(fields.heldQuantity ?? 0)),
-        },
-        ...fields,
-      },
-    });
-    return pantry;
-  }
-
-  const CASE = {
-    unit: { ...unit('case', UnitType.Count), commonFractions: null },
-    portionUnit: unit('can', UnitType.Count),
+describe('a use', () => {
+  const CASE: Partial<Row> = {
+    unit: unitOf('case', UnitType.Count),
+    portionUnit: unitOf('can', UnitType.Count),
+    portionUnitId: 'can',
     portionsPerTrackingUnit: 10,
   };
-  const oneCase = () =>
-    stack({ ...CASE, quantity: 1, heldQuantity: 1, remainingPortions: 10 });
-  const BAG = {
-    unit: { ...unit('bag', UnitType.Count), commonFractions: null },
-    netWeightUnit: unit('lb', UnitType.Weight),
+  const BAG: Partial<Row> = {
+    unit: unitOf('bag', UnitType.Count),
+    netWeightUnit: unitOf('lb', UnitType.Weight),
     netWeight: 5,
   };
-  const oneBag = () =>
-    stack({ ...BAG, quantity: 1, heldQuantity: 1, remainingNetWeight: 5 });
+  const oneCase = () => stocked({ ...CASE, ...held(1), remainingPortions: 10 });
+  const oneBag = () => stocked({ ...BAG, ...held(1), remainingNetWeight: 5 });
 
-  const read = ({ cache }: Setup, optimistic = true) =>
-    cache.readFragment<Read>({
-      id: 'PantryItem:held',
-      fragment: INSIDE,
-      optimistic,
-    });
+  it('moves the stock it names, and two read as two through a restart', () => {
+    const device = stocked();
+    const writes = [use(device, { delta: -2 }), use(device, { delta: -3 })];
+    expect(rowOf(device)).toMatchObject({ quantity: 5, heldQuantity: 5 });
 
-  const drawn = (
-    { writes }: Setup,
-    amount: number,
-    unitId: string,
-    extra: Partial<DrawStockInputs> = {},
-  ) => {
-    const inputs: DrawStockInputs = {
-      delta: null,
-      stated: { amount, unitId },
-      now: NOW,
-      ...extra,
-    };
-    return writes.begin(
-      CreatePantryItemUsageDocument,
-      { input: { pantryItemId: 'held' } },
-      inputs,
-    );
-  };
-
-  it('reads 9 cans at once when a can is used, offline included', () => {
-    const pantry = oneCase();
-
-    drawn(pantry, 1, 'can');
-
-    expect(read(pantry)).toMatchObject({
-      remainingPortions: 9,
-      amountLeft: { value: 9, unitId: 'can', imperial: { symbol: 'can' } },
-    });
-  });
-
-  it('reads 4 lb at once when a pound is used from a 5 lb bag', () => {
-    const pantry = oneBag();
-
-    drawn(pantry, 1, 'lb');
-
-    expect(read(pantry)).toMatchObject({
-      remainingNetWeight: 4,
-      amountLeft: { value: 4, unitId: 'lb' },
-    });
-  });
-
-  it('leaves the row for a unit only the server can convert', () => {
-    const pantry = oneBag();
-    const before = read(pantry)?.amountLeft;
-
-    drawn(pantry, 4, 'oz');
-
-    expect(read(pantry)).toMatchObject({
-      remainingNetWeight: 5,
-      amountLeft: before,
-    });
-  });
-
-  it('waits for the server on a net weight when the stack reads portions', () => {
-    const pantry = stack({
-      ...CASE,
-      ...BAG,
-      unit: CASE.unit,
-      quantity: 1,
-      heldQuantity: 1,
-      remainingPortions: 10,
-      remainingNetWeight: 75,
-    });
-    const before = read(pantry)?.amountLeft;
-
-    drawn(pantry, 1, 'lb');
-
-    expect(read(pantry)?.amountLeft).toStrictEqual(before);
-  });
-
-  it('holds the use as a layer: the root stays, and a refusal drops it', () => {
-    const pantry = oneCase();
-    const before = read(pantry, false);
-
-    const write = drawn(pantry, 1, 'can');
-    expect(read(pantry, false)).toStrictEqual(before);
-
-    pantry.writes.drop(write.id);
-    expect(read(pantry)).toStrictEqual(before);
-  });
-
-  it('adds two uses up, through a restart', () => {
-    const pantry = oneCase();
-    const writes = [drawn(pantry, 1, 'can'), drawn(pantry, 2, 'can')];
-    expect(read(pantry)?.amountLeft.value).toBe(7);
-
-    const restarted = new PendingWrites(pantry.cache, pantry.table);
-    pantry.writes.clear();
+    const restarted = new PendingWrites(device.cache, TABLE);
+    device.writes.clear();
+    expect(rowOf(device)).toMatchObject({ quantity: 10 });
+    // The queue stores each write as JSON.
     restarted.restore(JSON.parse(JSON.stringify(writes)));
 
-    expect(read(pantry)?.amountLeft.value).toBe(7);
+    expect(rowOf(device)).toMatchObject({ quantity: 5, heldQuantity: 5 });
+    expect(rowOf(device, false)).toMatchObject({ quantity: 10 });
   });
 
-  it('takes what a whole package holds with it', () => {
-    const pantry = stack({
-      ...CASE,
-      quantity: 2,
-      heldQuantity: 1.9,
-      remainingPortions: 19,
+  it('is a layer: the server data stays, and a refusal puts the stock back', () => {
+    const device = stocked();
+
+    const write = use(device, { delta: -2 });
+    expect(rowOf(device, false)).toMatchObject({ quantity: 10 });
+    device.writes.drop(write.id);
+
+    expect(rowOf(device)).toMatchObject({ quantity: 10, heldQuantity: 10 });
+  });
+
+  it.each<[string, () => Device, Partial<DrawStockInputs>, Partial<Row>]>([
+    [
+      '9 cans when a can is used, offline included',
+      oneCase,
+      { stated: { amount: 1, unitId: 'can' } },
+      {
+        remainingPortions: 9,
+        amountLeft: expect.objectContaining({
+          value: 9,
+          unitId: 'can',
+          imperial: expect.objectContaining({ symbol: 'can' }),
+        }),
+      },
+    ],
+    [
+      '4 lb when a pound is used from a 5 lb bag',
+      oneBag,
+      { stated: { amount: 1, unitId: 'lb' } },
+      {
+        remainingNetWeight: 4,
+        amountLeft: expect.objectContaining({ value: 4, unitId: 'lb' }),
+      },
+    ],
+    [
+      '9 cans when a whole case of 1.9 goes',
+      () => stocked({ ...CASE, ...held(1.9, 1), remainingPortions: 19 }),
+      { delta: -1 },
+      {
+        remainingPortions: 9,
+        amountLeft: expect.objectContaining({ value: 9, unitId: 'can' }),
+      },
+    ],
+    // 0.7 and 0.8 of a bag: half a bag drawn leaves a bag's worth in two.
+    [
+      'two part-used bags by what is in them',
+      () => stocked({ ...BAG, ...held(1.5, 0), remainingNetWeight: 7.5 }),
+      { delta: -0.5 },
+      {
+        stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 0 },
+        amountLeft: expect.objectContaining({ value: 5, unitId: 'lb' }),
+      },
+    ],
+    [
+      'whole bags as bags after a whole one goes',
+      () => stocked({ ...BAG, ...held(2), remainingNetWeight: 10 }),
+      { delta: -1 },
+      { amountLeft: expect.objectContaining({ value: 1, unitId: 'bag' }) },
+    ],
+    [
+      'part of a box of nothing stated as a fraction',
+      () => stocked({ unit: unitOf('box', UnitType.Count), ...held(1) }),
+      { delta: -0.5 },
+      { amountLeft: expect.objectContaining({ value: 0.5, unitId: 'box' }) },
+    ],
+  ])('reads %s', (_case, start, inputs, reads) => {
+    const device = start();
+
+    use(device, inputs);
+
+    expect(rowOf(device)).toMatchObject(reads);
+  });
+
+  it.each<[string, () => Device, Partial<DrawStockInputs>]>([
+    [
+      'a unit only the server can convert',
+      oneBag,
+      { stated: { amount: 4, unitId: 'oz' } },
+    ],
+    [
+      'a net weight on a stack that reads portions',
+      () =>
+        stocked({
+          ...CASE,
+          ...BAG,
+          unit: CASE.unit,
+          ...held(1),
+          remainingPortions: 10,
+          remainingNetWeight: 75,
+        }),
+      { stated: { amount: 1, unitId: 'lb' } },
+    ],
+    ['an amount only the server can convert', stocked, {}],
+  ])('leaves the row for %s', (_case, start, inputs) => {
+    const device = start();
+    const before = rowOf(device)?.amountLeft;
+
+    use(device, inputs);
+
+    expect(rowOf(device)?.amountLeft).toStrictEqual(before);
+  });
+
+  it('remembers the unit it states, and waste leaves it alone', () => {
+    const used = oneBag();
+    const wasted = oneBag();
+    // The ounce, as the device holds a unit it was shown.
+    seedFragment(used.cache, {
+      fragment: LocalRefs_UnitFragmentDoc,
+      data: { __typename: 'Unit', id: 'oz', name: 'ounce', symbol: 'oz' },
     });
 
-    pantry.writes.begin(
-      CreatePantryItemUsageDocument,
-      { input: { pantryItemId: 'held' } },
-      { delta: -1, now: NOW } satisfies DrawStockInputs,
+    use(used, { stated: { amount: 4, unitId: 'oz' }, usedUnitId: 'oz' });
+    use(wasted, { stated: { amount: 1, unitId: 'lb' }, usedUnitId: null });
+
+    expect(rowOf(used)?.consumeUnit).toMatchObject({ id: 'oz' });
+    expect(rowOf(used, false)?.consumeUnit).toBeNull();
+    expect(rowOf(wasted)?.consumeUnit).toBeNull();
+  });
+
+  it('adds nothing on top of an answer a read holds back', () => {
+    const device = stocked();
+
+    answer(
+      device,
+      use(device, { delta: -2 }),
+      {
+        createPantryItemUsage: {
+          __typename: 'CreatePantryItemUsagePayload',
+          pantryItemUsage: {
+            id: 'usage-1',
+            pantryItem: {
+              id: 'held',
+              version: 2,
+              quantity: 8,
+              heldQuantity: 8,
+            },
+          },
+        },
+      },
+      { readInFlight: true },
     );
 
-    expect(read(pantry)).toMatchObject({
-      remainingPortions: 9,
-      amountLeft: { value: 9, unitId: 'can' },
+    expect(rowOf(device)).toMatchObject({ quantity: 8, heldQuantity: 8 });
+  });
+});
+
+describe('a restock', () => {
+  it('adds its stock as a batch of its own', () => {
+    const device = stocked();
+
+    restock(device, 4);
+
+    expect(rowOf(device)).toMatchObject({
+      quantity: 14,
+      heldQuantity: 14,
+      activeBatchCount: 1,
     });
   });
 
-  it('reads 19 cans after a case joins 9 cans', () => {
-    const pantry = stack({
-      ...CASE,
+  it('reads 19 cans after a case joins 9', () => {
+    const device = stocked({
+      unit: unitOf('case', UnitType.Count),
+      portionUnit: unitOf('can', UnitType.Count),
+      portionUnitId: 'can',
+      portionsPerTrackingUnit: 10,
       quantity: 1,
       heldQuantity: 0.9,
       remainingPortions: 9,
     });
 
-    restock(pantry, 1);
+    restock(device, 1);
 
-    expect(read(pantry)?.amountLeft).toMatchObject({
+    expect(rowOf(device)?.amountLeft).toMatchObject({
       value: 19,
       unitId: 'can',
     });
   });
 
-  it('reads two part-used bags by what is in them when a use leaves a whole count', () => {
-    // 0.7 and 0.8 of a bag: half a bag drawn from the first leaves one bag's
-    // worth across two opened bags.
-    const pantry = stack({
-      ...BAG,
-      quantity: 2,
-      heldQuantity: 1.5,
-      remainingNetWeight: 7.5,
-      stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 0 },
-    });
-
-    pantry.writes.begin(
-      CreatePantryItemUsageDocument,
-      { input: { pantryItemId: 'held' } },
-      { delta: -0.5, now: NOW } satisfies DrawStockInputs,
-    );
-
-    expect(read(pantry)).toMatchObject({
-      stockBreakdown: { fullPackages: 0 },
-      amountLeft: { value: 5, unitId: 'lb' },
-    });
-  });
-
   it('keeps a restocked bag whole beside a whole one', () => {
-    const pantry = oneBag();
+    const device = stocked({
+      unit: unitOf('bag', UnitType.Count),
+      netWeightUnit: unitOf('lb', UnitType.Weight),
+      netWeight: 5,
+      ...held(1),
+      remainingNetWeight: 5,
+    });
 
-    restock(pantry, 1);
+    restock(device, 1);
 
-    expect(read(pantry)).toMatchObject({
+    expect(rowOf(device)).toMatchObject({
       stockBreakdown: { fullPackages: 2 },
       amountLeft: { value: 2, unitId: 'bag' },
     });
   });
 
-  it('reads whole packages as packages after a whole one is used', () => {
-    const pantry = stack({
-      ...BAG,
-      quantity: 2,
-      heldQuantity: 2,
-      remainingNetWeight: 10,
+  // Held from the expiring view: the list does not show an empty stack.
+  it('lists an answered stack the pantry’s list did not hold', () => {
+    const device = stocked();
+    seedQuery(device.cache, {
+      query: GetPantryDocument,
+      variables: { ...PANTRY_READ, itemsFilter: { expiringSoon: true } },
+      data: pantryData({ id: PANTRY_ID, items: [{ id: 'emptied' }] }),
     });
 
-    pantry.writes.begin(
-      CreatePantryItemUsageDocument,
-      { input: { pantryItemId: 'held' } },
-      { delta: -1, now: NOW } satisfies DrawStockInputs,
-    );
+    answer(device, restock(device, 1, 'emptied'), restocked('emptied'));
 
-    expect(read(pantry)?.amountLeft).toMatchObject({ value: 1, unitId: 'bag' });
+    expect(listed(device, false).ids).toContain('emptied');
   });
+});
 
-  it('reads part of a box of nothing stated as a fraction', () => {
-    const pantry = stack({
-      unit: { ...unit('box', UnitType.Count), commonFractions: null },
-      quantity: 1,
-      heldQuantity: 1,
+describe('a write the server landed on the survivor of a merge', () => {
+  const merged = { id: PANTRY_ID, stats: { totalItems: 1 } };
+
+  it.each<[string, (device: Device) => PendingWrite, Record<string, unknown>]>([
+    [
+      'a use',
+      device => use(device, { delta: -2 }),
+      {
+        createPantryItemUsage: {
+          __typename: 'CreatePantryItemUsagePayload',
+          pantry: merged,
+          pantryItemUsage: {
+            id: 'usage-1',
+            pantryItem: { id: 'survivor', version: 2 },
+          },
+        },
+      },
+    ],
+    [
+      'a restock',
+      device => restock(device, 1),
+      restocked('survivor', { pantry: merged }),
+    ],
+  ])(
+    'lists the survivor alone, counted by the answer, for %s',
+    (_write, write, data) => {
+      const device = stocked({}, [{ id: 'survivor' }]);
+
+      answer(device, write(device), data);
+
+      expect(listed(device, false)).toEqual({ ids: ['survivor'], total: 1 });
+      expect(device.cache.extract()).not.toHaveProperty(['PantryItem:held']);
+    },
+  );
+
+  // Held from the expiring view: another device's stack the list never showed.
+  it('lists a survivor the list did not hold', () => {
+    const device = stocked();
+    seedQuery(device.cache, {
+      query: GetPantryDocument,
+      variables: { ...PANTRY_READ, itemsFilter: { expiringSoon: true } },
+      data: pantryData({ id: PANTRY_ID, items: [{ id: 'survivor' }] }),
     });
 
-    pantry.writes.begin(
-      CreatePantryItemUsageDocument,
-      { input: { pantryItemId: 'held' } },
-      { delta: -0.5, now: NOW } satisfies DrawStockInputs,
-    );
-
-    expect(read(pantry)?.amountLeft).toMatchObject({
-      value: 0.5,
-      unitId: 'box',
+    answer(device, use(device, { delta: -2 }), {
+      createPantryItemUsage: {
+        __typename: 'CreatePantryItemUsagePayload',
+        pantry: merged,
+        pantryItemUsage: {
+          id: 'usage-1',
+          pantryItem: { id: 'survivor', version: 2 },
+        },
+      },
     });
-  });
 
-  it('remembers the unit a use states', () => {
-    const pantry = oneBag();
-
-    drawn(pantry, 4, 'oz', { usedUnitId: 'oz' });
-
-    expect(read(pantry)?.consumeUnit).toMatchObject({ id: 'oz' });
-    expect(read(pantry, false)?.consumeUnit).toBeNull();
-  });
-
-  it('leaves the unit alone for waste', () => {
-    const pantry = oneBag();
-
-    drawn(pantry, 1, 'lb', { usedUnitId: null });
-
-    expect(read(pantry)?.consumeUnit).toBeNull();
+    expect(listed(device, false).ids).toEqual(['survivor']);
   });
 });
 
 describe('removing a stack', () => {
   it('hides it and counts it out once, however often it is rebuilt', () => {
-    const pantry = setup();
+    const device = stocked();
 
-    remove(pantry, 'held');
-    pantry.writes.rebuild();
+    remove(device, 'held');
+    device.writes.rebuild();
 
-    expect(shown(pantry)).toEqual({ ids: [], total: 0 });
-    expect(shown(pantry, false)).toEqual({ ids: ['held'], total: 1 });
+    expect(listed(device)).toEqual({ ids: [], total: 0 });
+    expect(listed(device, false)).toEqual({ ids: ['held'], total: 1 });
   });
 
   it('brings it back when refused', () => {
-    const pantry = setup();
+    const device = stocked();
 
-    pantry.writes.drop(remove(pantry, 'held').id);
+    device.writes.drop(remove(device, 'held').id);
 
-    expect(shown(pantry)).toEqual({ ids: ['held'], total: 1 });
-    expect(stock(pantry)).toMatchObject({ quantity: 10 });
+    expect(listed(device)).toEqual({ ids: ['held'], total: 1 });
   });
 
-  it('leaves no row behind the answer that names it', () => {
-    const pantry = setup();
-    const { id } = remove(pantry, 'held');
+  it('leaves no row behind the answer that names it, counted by the answer', () => {
+    const device = stocked({}, [{ id: 'other' }]);
 
-    pantry.writes.confirm(id, {
+    answer(device, remove(device, 'held'), {
       deletePantryItem: {
         __typename: 'DeletePantryItemPayload',
         pantryItem: { id: 'held' },
+        pantry: { id: PANTRY_ID, stats: { totalItems: 1 } },
       },
     });
-    pantry.writes.rebuild();
 
-    expect(shown(pantry, false)).toEqual({ ids: [], total: 0 });
-    expect(pantry.cache.extract()).not.toHaveProperty(['PantryItem:held']);
+    expect(listed(device, false)).toEqual({ ids: ['other'], total: 1 });
+    expect(device.cache.extract()).not.toHaveProperty(['PantryItem:held']);
   });
 
   it('counts nothing for a row a realtime event already took', () => {
-    const pantry = setup();
-    const { id } = remove(pantry, 'gone');
+    const device = stocked();
 
-    pantry.writes.confirm(id, {
+    answer(device, remove(device, 'gone'), {
       deletePantryItem: {
         __typename: 'DeletePantryItemPayload',
         converged: true,
         pantryItem: null,
       },
     });
-    pantry.writes.rebuild();
 
-    expect(shown(pantry, false)).toEqual({ ids: ['held'], total: 1 });
+    expect(listed(device, false)).toEqual({ ids: ['held'], total: 1 });
   });
 
   it('counts it out once while a read holds the answer', async () => {
-    jest.useFakeTimers();
-    const pantry = setup();
-    const land = answeredWithReadInFlight(pantry, remove(pantry, 'held'), {
-      deletePantryItem: {
-        __typename: 'DeletePantryItemPayload',
-        pantryItem: { id: 'held' },
-        pantry: { id: 'pantry-1', stats: { totalItems: 0 } },
+    const device = stocked();
+    const land = answer(
+      device,
+      remove(device, 'held'),
+      {
+        deletePantryItem: {
+          __typename: 'DeletePantryItemPayload',
+          pantryItem: { id: 'held' },
+          pantry: { id: PANTRY_ID, stats: { totalItems: 0 } },
+        },
       },
-    });
-    expect(shown(pantry)).toEqual({ ids: [], total: 0 });
+      { readInFlight: true },
+    );
+    expect(listed(device)).toEqual({ ids: [], total: 0 });
 
     land();
-    await drainTimers();
-    jest.useRealTimers();
+    await rootLists(device, []);
 
-    expect(shown(pantry, false)).toEqual({ ids: [], total: 0 });
+    expect(listed(device, false)).toEqual({ ids: [], total: 0 });
   });
 });
 
 describe('dating a stack', () => {
   /** The detail's batch page: one batch held, one used up. */
-  const withBatches = (pantry: Setup) => {
-    seedQuery(pantry.cache, {
+  function withBatches() {
+    const device = stocked();
+    seedQuery(device.cache, {
       query: GetPantryItemBatchesDocument,
       variables: { pantryItemId: 'held' },
       data: {
@@ -864,10 +802,10 @@ describe('dating a stack', () => {
         },
       },
     });
-    return pantry;
-  };
+    return device;
+  }
 
-  const batches = ({ cache }: Setup, optimistic = true) =>
+  const batches = ({ cache }: Device, optimistic = true) =>
     cache
       .readQuery({
         query: GetPantryItemBatchesDocument,
@@ -880,103 +818,133 @@ describe('dating a stack', () => {
         expiresAtIsManual: node.expiresAtIsManual,
       }));
 
-  const date = ({ writes }: Setup, expiresOn: string | null) => {
-    const inputs: EntityFieldsInputs = {
-      entity: { __typename: 'PantryItem', id: 'held' },
-      fields: { expiresOn },
-    };
-    return writes.begin(
+  const update = (
+    { writes }: Device,
+    fields: { expiresOn?: string | null; tags?: string[] },
+  ) =>
+    writes.begin(
       UpdatePantryItemDocument,
-      { input: { id: 'held', version: 3, expiresOn }, today: '2026-10-30' },
-      inputs,
+      { input: { id: 'held', version: 1, ...fields }, today: TODAY },
+      {
+        entity: { __typename: 'PantryItem', id: 'held' },
+        fields,
+      } satisfies EntityFieldsInputs,
     );
-  };
 
-  it('moves every active batch to the typed date at once', () => {
-    const pantry = withBatches(setup());
+  /** The server's page, without the used-up batch, and the active one as `expiresOn`. */
+  const restatedPage = (
+    expiresOn: string | null,
+  ): NonNullable<
+    MockDataFor<
+      typeof GetPantryItemBatchesDocument
+    >['pantryItemBatchesConnection']
+  > => ({
+    __typename: 'PantryItemBatchConnection',
+    totalCount: 1,
+    pageInfo: { __typename: 'PageInfo', hasNextPage: false },
+    edges: [
+      {
+        __typename: 'PantryItemBatchEdge',
+        node: {
+          __typename: 'PantryItemBatch',
+          id: 'active',
+          status: BatchStatus.Active,
+          expiresOn,
+          expiresAtIsManual: true,
+        },
+      },
+    ],
+  });
 
-    date(pantry, '2027-01-15');
+  it('shows the date, and moves every active batch to it, at once', () => {
+    const device = withBatches();
+    // What a batch write answers of its stack, the list's own figures among it.
+    const EARLIEST = {
+      fragment: UseWastePantryItemBatch_PantryItemFragmentDoc,
+      id: 'PantryItem:held',
+    };
+    seedFragment(device.cache, {
+      ...EARLIEST,
+      data: {
+        __typename: 'PantryItem',
+        id: 'held',
+        earliestBatchExpiresOn: '2026-10-01',
+        displayAmount: { unit: { id: 'unit-piece' } },
+      },
+    });
 
-    expect(batches(pantry)).toEqual([
+    update(device, { expiresOn: '2027-01-15' });
+
+    expect(rowOf(device)?.expiresOn).toBe('2027-01-15');
+    expect(
+      device.cache.readFragment({ ...EARLIEST, optimistic: true })
+        ?.earliestBatchExpiresOn,
+    ).toBe('2027-01-15');
+    expect(batches(device)).toEqual([
       { id: 'active', expiresOn: '2027-01-15', expiresAtIsManual: true },
       { id: 'used', expiresOn: '2026-09-01', expiresAtIsManual: false },
     ]);
   });
 
+  // Only the commit's write of the page can drop the used-up batch.
   it('clears them, and the answer restates the batch page', () => {
-    const pantry = withBatches(setup());
-    const write = date(pantry, null);
-    expect(batches(pantry)?.[0]?.expiresOn).toBeNull();
+    const device = withBatches();
+    const write = update(device, { expiresOn: null });
+    expect(batches(device)?.[0]?.expiresOn).toBeNull();
 
-    // The server's page, without the used-up batch: only the commit's write
-    // of the page can drop it.
-    const answer: MockDataFor<typeof UpdatePantryItemDocument> = {
+    answer(device, write, {
       updatePantryItem: {
         __typename: 'UpdatePantryItemPayload',
-        pantryItem: { __typename: 'PantryItem', id: 'held' },
-        batchesConnection: {
-          __typename: 'PantryItemBatchConnection',
-          totalCount: 1,
-          pageInfo: { __typename: 'PageInfo', hasNextPage: false },
-          edges: [
-            {
-              __typename: 'PantryItemBatchEdge',
-              node: {
-                __typename: 'PantryItemBatch',
-                id: 'active',
-                status: BatchStatus.Active,
-                expiresOn: null,
-                expiresAtIsManual: true,
-              },
-            },
-          ],
-        },
+        pantryItem: { id: 'held', version: 2 },
+        batchesConnection: restatedPage(null),
       },
-    };
-    const stated = completeSeed(
-      UpdatePantryItemDocument,
-      write.variables,
-      answer,
-    );
-    pantry.writes.confirm(write.id, stated);
+    } satisfies MockDataFor<typeof UpdatePantryItemDocument>);
 
-    expect(batches(pantry, false)).toEqual([
+    expect(batches(device, false)).toEqual([
       { id: 'active', expiresOn: null, expiresAtIsManual: true },
     ]);
   });
 
   it('leaves the batches alone when the date is not edited', () => {
-    const pantry = withBatches(setup());
+    const device = withBatches();
 
-    pantry.writes.begin(
-      UpdatePantryItemDocument,
-      { input: { id: 'held', version: 3, tags: ['x'] }, today: '2026-10-30' },
-      {
-        entity: { __typename: 'PantryItem', id: 'held' },
-        fields: { tags: ['x'] },
-      } satisfies EntityFieldsInputs,
-    );
+    update(device, { tags: ['x'] });
 
-    expect(batches(pantry)?.[0]?.expiresOn).toBe('2026-10-01');
+    expect(batches(device)?.[0]?.expiresOn).toBe('2026-10-01');
+  });
+
+  it('drops the batch page a restock makes stale', () => {
+    const device = withBatches();
+
+    answer(device, restock(device, 1), restocked('held'));
+
+    expect(batches(device, false)).toBeUndefined();
+  });
+
+  it('takes the batch page a discard restates', () => {
+    const device = withBatches();
+
+    answer(device, discard(device, false), {
+      convertExpiredToWaste: {
+        __typename: 'ConvertExpiredToWastePayload',
+        pantryItem: { id: 'held', version: 2 },
+        batchesConnection: restatedPage('2026-10-01'),
+      },
+    });
+
+    expect(batches(device, false)).toEqual([
+      { id: 'active', expiresOn: '2026-10-01', expiresAtIsManual: true },
+    ]);
   });
 });
 
 describe('discarding what expired', () => {
-  const discard = ({ writes }: Setup, whole: boolean) => {
-    const inputs: DiscardExpiredInputs = { whole, now: NOW };
-    return writes.begin(
-      ConvertExpiredToWasteDocument,
-      { input: { pantryItemId: 'held' } },
-      inputs,
-    );
-  };
-
   it('empties a stack with no batches until the server answers', () => {
-    const pantry = setup();
+    const device = stocked();
 
-    discard(pantry, true);
+    discard(device, true);
 
-    expect(stock(pantry)).toMatchObject({
+    expect(rowOf(device)).toMatchObject({
       quantity: 0,
       heldQuantity: 0,
       condition: ItemCondition.Spoiled,
@@ -984,19 +952,19 @@ describe('discarding what expired', () => {
   });
 
   it('leaves a batched stack for the server to recompute', () => {
-    const pantry = setup();
+    const device = stocked();
 
-    discard(pantry, false);
+    discard(device, false);
 
-    expect(stock(pantry)).toMatchObject({ quantity: 10 });
+    expect(rowOf(device)).toMatchObject({ quantity: 10 });
   });
 
   it('puts an emptied stack back when refused', () => {
-    const pantry = setup();
+    const device = stocked();
 
-    pantry.writes.drop(discard(pantry, true).id);
+    device.writes.drop(discard(device, true).id);
 
-    expect(stock(pantry)).toMatchObject({
+    expect(rowOf(device)).toMatchObject({
       quantity: 10,
       condition: ItemCondition.Good,
     });
@@ -1004,54 +972,50 @@ describe('discarding what expired', () => {
 });
 
 describe('a pantry', () => {
-  const HOME = gql`
-    fragment LocalWritesHome on Home {
-      pantries {
-        id
-      }
-    }
-  `;
-
-  const HOME_PANTRY = gql`
-    fragment LocalWritesHomePantry on Pantry {
-      name
-    }
-  `;
-
-  function seededHome() {
+  /** Homes as the app reads their pantries; home-1 holds one. */
+  function homes() {
     const cache = makeCache();
-    seedFragment(cache, {
-      fragment: HOME,
-      data: {
-        __typename: 'Home',
-        id: 'home-1',
-        pantries: [{ __typename: 'Pantry', id: 'held-pantry' }],
-      },
-    });
-    return {
-      cache,
-      writes: new PendingWrites(cache, {
-        CreatePantry: createPantry,
-        DeletePantry: removePantry,
-      }),
-    };
+    for (const [id, pantries] of [
+      ['home-1', ['held-pantry']],
+      ['home-2', []],
+    ] as const) {
+      seedFragment(cache, {
+        fragment: HomePantries_HomeFragmentDoc,
+        data: {
+          __typename: 'Home',
+          id,
+          pantriesConnection: {
+            __typename: 'PantryConnection',
+            edges: pantries.map(
+              (pantryId): HomeEdge => ({
+                __typename: 'PantryEdge',
+                node: { __typename: 'Pantry', id: pantryId, isDefault: false },
+              }),
+            ),
+          },
+        },
+      });
+    }
+    return { cache, writes: new PendingWrites(cache, TABLE) };
   }
 
-  type Home = ReturnType<typeof seededHome>;
-
-  const pantries = ({ cache }: Home, optimistic = true) =>
+  const pantriesOf = (
+    { cache }: { cache: Cache },
+    home = 'home-1',
+    optimistic = true,
+  ) =>
     cache
-      .readFragment<{ pantries: { id: string }[] }>({
-        id: 'Home:home-1',
-        fragment: HOME,
+      .readFragment({
+        fragment: HomePantries_HomeFragmentDoc,
+        id: `Home:${home}`,
         optimistic,
       })
-      ?.pantries.map(({ id }) => id);
+      ?.pantriesConnection.edges.map(({ node }) => node.id);
 
-  const make = ({ writes }: Home) => {
+  const make = ({ writes }: ReturnType<typeof homes>) => {
     const inputs: CreatePantryInputs = {
       pantry: { id: 'minted', homeId: 'home-1', name: 'Garage' },
-      today: '2026-10-30',
+      today: TODAY,
     };
     return writes.begin(
       CreatePantryDocument,
@@ -1060,62 +1024,74 @@ describe('a pantry', () => {
     );
   };
 
-  const drop = ({ writes }: Home) => {
-    const inputs: RemovePantryInputs = { homeId: 'home-1' };
-    return writes.begin(
-      DeletePantryDocument,
-      { input: { id: 'held-pantry' } },
-      inputs,
-    );
-  };
+  const drop = ({ writes }: ReturnType<typeof homes>) =>
+    writes.begin(DeletePantryDocument, { input: { id: 'held-pantry' } }, {
+      homeId: 'home-1',
+    } satisfies RemovePantryInputs);
 
-  it('shows a new pantry under its home, however often it is rebuilt', () => {
-    const home = seededHome();
+  it('shows a new one under its home, however often it is rebuilt', () => {
+    const device = homes();
 
-    make(home);
-    home.writes.rebuild();
+    make(device);
+    device.writes.rebuild();
 
-    expect(pantries(home)).toEqual(['held-pantry', 'minted']);
-    expect(pantries(home, false)).toEqual(['held-pantry']);
+    expect(pantriesOf(device)).toEqual(['held-pantry', 'minted']);
+    expect(pantriesOf(device, 'home-1', false)).toEqual(['held-pantry']);
   });
 
-  it('leaves nothing of a refused pantry', () => {
-    const home = seededHome();
+  it('leaves nothing of a refused one', () => {
+    const device = homes();
 
-    home.writes.drop(make(home).id);
+    device.writes.drop(make(device).id);
 
-    expect(pantries(home)).toEqual(['held-pantry']);
-    expect(home.cache.extract(true)['Pantry:minted']).toBeUndefined();
+    expect(pantriesOf(device)).toEqual(['held-pantry']);
+    expect(device.cache.extract(true)).not.toHaveProperty(['Pantry:minted']);
   });
 
-  it('lists an answered pantry in the server data', () => {
-    const home = seededHome();
-    const { id } = make(home);
-    // Apollo writes the answer's row before the write commits.
-    seedFragment(home.cache, {
-      fragment: HOME_PANTRY,
-      data: { __typename: 'Pantry', id: 'minted', name: 'Garage' },
-    });
-
-    home.writes.confirm(id, {
+  it('lists an answered one under the home the server names', () => {
+    const device = homes();
+    const write = make(device);
+    const stated = completeSeed(write.document, write.variables, {
       createPantry: {
         __typename: 'CreatePantryPayload',
-        pantry: { id: 'minted', homeId: 'home-1' },
+        pantry: { id: 'minted', version: 1, homeId: 'home-2' },
       },
     });
-    home.writes.rebuild();
+    seedQuery(device.cache, {
+      id: 'ROOT_MUTATION',
+      query: write.document,
+      variables: write.variables,
+      data: stated,
+    });
 
-    expect(pantries(home, false)).toEqual(['held-pantry', 'minted']);
+    device.writes.confirm(write.id, stated);
+    device.writes.rebuild();
+
+    expect(pantriesOf(device, 'home-2', false)).toEqual(['minted']);
   });
 
-  it('hides a deleted pantry, and brings it back when refused', () => {
-    const home = seededHome();
+  it('hides a deleted one, and brings it back when refused', () => {
+    const device = homes();
 
-    const { id } = drop(home);
-    expect(pantries(home)).toEqual([]);
-    expect(pantries(home, false)).toEqual(['held-pantry']);
+    const { id } = drop(device);
+    expect(pantriesOf(device)).toEqual([]);
+    expect(pantriesOf(device, 'home-1', false)).toEqual(['held-pantry']);
 
-    home.writes.drop(id);
-    expect(pantries(home)).toEqual(['held-pantry']);
+    device.writes.drop(id);
+    expect(pantriesOf(device)).toEqual(['held-pantry']);
+  });
+
+  it('takes an answered deletion out of the server data', () => {
+    const device = homes();
+
+    device.writes.confirm(drop(device).id, {
+      deletePantry: {
+        __typename: 'DeletePantryPayload',
+        pantryId: 'held-pantry',
+      },
+    });
+    device.writes.rebuild();
+
+    expect(pantriesOf(device, 'home-1', false)).toEqual([]);
   });
 });

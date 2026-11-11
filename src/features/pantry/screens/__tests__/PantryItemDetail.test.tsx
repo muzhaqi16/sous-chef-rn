@@ -1,236 +1,86 @@
 'use no memo';
 
 import React from 'react';
-import { t } from '#/i18n';
+import { GraphQLError, type DocumentNode } from 'graphql';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
-import { kitTestIDs } from '#components/testIDs';
-import { catalogTestIDs } from '#features/catalog/testIDs';
-import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import type {
-  MockDataFor,
-  QueryDataFor,
-} from '#/test-utils/apolloMockProvider';
+import type { ApolloClient, InMemoryCache } from '@apollo/client';
 import {
+  type MockDataFor,
+  type MockFor,
+  type QueryDataFor,
   recordMock,
   renderWithApollo,
   seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
-import { pantryTestIDs } from '#features/pantry/testIDs';
-import { drainTimers } from '#/test-utils/drainTimers';
-import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
-import { GetPantryItemDocument } from '../usePantryItemDetailData.generated';
-import {
-  BatchStatus,
-  EntryImageSource,
-  ExternalSource,
-  ItemImageStatus,
-  UnitSystem,
-  UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { GetUserSettingsDocument } from '#operations/auth/user.generated';
-import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
-import type { ItemRecipeSuggestion } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
-import type { DataState } from '#hooks/data/useDataState';
+import { operationLog } from '#/test-utils/operationLog';
+import { homesData } from '#/test-utils/fixtures/homeFixtures';
 import {
   pantryItemData,
   type PantryItemFixture,
-} from '../../../../../__tests__/helpers/fixtures/pantryItemFixtures';
-
-type ItemPhotoFixture = NonNullable<PantryItemFixture['photos']>[number];
-import { PantryItemDetail } from '../PantryItemDetail';
-import { toDateKey, todayKey } from '#/utils/dateUtils';
+} from '#/test-utils/fixtures/pantryItemFixtures';
+import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import {
   asAbbreviation,
   readingAsAbbreviation,
 } from '#/test-utils/fixtures/unitLabels';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { useStore } from '#store';
+import { t } from '#/i18n';
+import { toDateKey, todayKey } from '#/utils/dateUtils';
+import {
+  BatchStatus,
+  EntryImageSource,
+  ErrorCode,
+  ExternalSource,
+  ItemCondition,
+  ItemImageStatus,
+  MembershipRole,
+  UnitSystem,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
+import { kitTestIDs } from '#components/testIDs';
+import { catalogTestIDs } from '#features/catalog/testIDs';
+import { GetUserSettingsDocument } from '#operations/auth/user.generated';
+import { GetHomesDocument } from '#operations/home/home.generated';
+import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
+import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
+import { CatalogRecipesForItemDocument } from '#features/pantry/hooks/useRecipeSuggestionsForItem.generated';
+import { pantryTestIDs } from '#features/pantry/testIDs';
+import { GetPantryItemDocument } from '../usePantryItemDetailData.generated';
+import { PantryItemDetail } from '../PantryItemDetail';
 
-// Its midnight timer re-arms itself, so a mounted watch never drains.
+// The day stays fixed: the hook's midnight timer re-arms itself.
 jest.mock('#hooks/app/useToday', () => ({
   useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
 }));
-
-// The cost rows' own on/off cases live in PantryDetailInfo's suite.
-jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
-  useBudgetAndPricesEnabled: jest.fn(() => true),
-}));
-
-// Recipe-suggestions hook is its own concern (covered by
-// useRecipeSuggestionsForItem.test). Mock it so this integration test
-// doesn't need its query's mocks too.
-const mockSuggestedRecipes: ItemRecipeSuggestion[] = [];
-let mockRecipesState: DataState = 'empty';
-const mockRetryRecipes = jest.fn();
-jest.mock('#features/pantry/hooks/useRecipeSuggestionsForItem', () => ({
-  useRecipeSuggestionsForItem: () => ({
-    suggestedRecipes: mockSuggestedRecipes,
-    loadingRecipes: false,
-    recipesState: mockRecipesState,
-    retryRecipes: mockRetryRecipes,
-  }),
-}));
-
-/** A header action, in the bar or in the "more" menu it overflowed into. */
-const headerAction = (testID: string) => {
-  const more = screen.queryByTestId(kitTestIDs.headerMoreButton);
-  if (more) fireEvent.press(more);
-  return screen.queryByTestId(testID);
-};
-
-// Action handlers are covered by usePantryItemDetailActions.test. Mock to
-// expose stable refs for the screen's headerActions wiring.
-jest.mock('#features/pantry/hooks/usePantryItemDetailActions', () => ({
-  usePantryItemDetailActions: () => ({
-    addToListStatus: 'idle',
-    adjustModalVisible: false,
-    setAdjustModalVisible: jest.fn(),
-    correctingBatchId: null,
-    setCorrectingBatchId: jest.fn(),
-    handleDelete: jest.fn(),
-    handleAddToShoppingList: jest.fn(),
-    handleDiscardExpired: jest.fn(),
-    handleConfirmAdjust: jest.fn(),
-    handleCorrectPackageSize: jest.fn(),
-  }),
-}));
-
-const mockToRecipeDetail = jest.fn();
-const mockReplaceWithPantryItemDetail = jest.fn();
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: () => ({
-    goBack: jest.fn(),
-    navigateTo: { pantryItem: jest.fn(), nutritionScreen: jest.fn() },
-    navigate: jest.fn(),
-    toRecipeDetail: mockToRecipeDetail,
-    replaceWithPantryItemDetail: mockReplaceWithPantryItemDetail,
-  }),
-}));
-
-const FULL_PERMISSIONS = {
-  canAddItems: true,
-  canEditItems: true,
-  canRemoveItems: true,
-};
-const mockPermissions = { ...FULL_PERMISSIONS };
-jest.mock('#features/pantry/hooks/usePantryPermissions', () => ({
-  usePantryPermissions: () => mockPermissions,
-}));
-
-jest.mock('#hooks/performance/useScreenTransition', () => ({
-  useScreenTransition: jest.fn(),
-}));
-
-jest.mock('#store/useAppStore', () => ({
-  useSelectedShoppingListId: jest.fn(() => 'sl-1'),
-  useSelectedPantryId: jest.fn(() => 'p1'),
-  useSelectedHomeId: jest.fn(() => 'home-1'),
-  // The screen classifies its own data state via useDataState ->
-  // useOfflineAwareError -> useIsApiUnavailable, which calls
-  // useAppStore(selector). Online by default; individual tests override.
-  useAppStore: jest.fn((selector: (s: unknown) => unknown) =>
-    selector({ isOnline: true, isApiUnavailable: false }),
-  ),
-}));
-
-jest.mock('#components/organisms/Header', () => ({
-  Header: ({ rightActions }: { rightActions?: HeaderAction[] }) => {
-    const { View } = require('react-native');
-    return (
-      <View testID="header">
-        {(rightActions ?? []).map((a, i) => (
-          <View key={i} testID={a.testID} />
-        ))}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#features/catalog/ui/ItemPhotoCarousel', () => ({
-  ItemPhotoCarousel: () => null,
-}));
-
-jest.mock('#features/pantry/components/modals/AdjustQuantityModal', () => ({
-  AdjustQuantityModal: () => null,
-}));
-
-jest.mock('#features/pantry/components/modals/CorrectPackageSizeModal', () => ({
-  CorrectPackageSizeModal: () => null,
-}));
-
-jest.mock('#components/atoms/SousChefLoader', () => ({
-  SousChefLoader: () => null,
-}));
-
-// The offline predicate `useDataState` consults. Mocked at the hook rather than
-// the slice so the test does not depend on networkSlice internals.
-const mockIsOffline = jest.fn(() => false);
-jest.mock('#hooks/app/useIsApiUnavailable', () => ({
-  useIsApiUnavailable: () => mockIsOffline(),
-}));
-
-beforeEach(() => {
-  jest.useFakeTimers();
-});
-
-afterEach(() => {
-  jest.useRealTimers();
-});
-
-beforeEach(() => {
-  jest.clearAllMocks();
-  Object.assign(mockPermissions, FULL_PERMISSIONS);
-  mockSuggestedRecipes.length = 0;
-  mockRecipesState = 'empty';
-  mockIsOffline.mockReturnValue(false);
-});
-
-const route = { params: { itemId: 'pi1' } };
-
-function itemMock(fixture: PantryItemFixture = {}) {
-  return recordMock(GetPantryItemDocument, {
-    data: pantryItemData(fixture),
-  }).mock;
-}
-
-/**
- * The batch query the screen fires alongside the item. Its costs are what the
- * detail header shows: a restock adds a batch and the server recomputes only
- * `PantryItem.quantity`, leaving the item's own cost fields on the first stock.
- */
-function batchesMock(
-  batches: Array<{
-    id: string;
-    quantity: number;
-    costPerUnit: number | null;
-    totalCost?: number | null;
-    createdAt?: string;
-  }>,
-) {
-  const data: MockDataFor<typeof GetPantryItemBatchesDocument> = {
-    pantryItemBatchesConnection: {
-      __typename: 'PantryItemBatchConnection',
-      edges: batches.map((b, index) => ({
-        __typename: 'PantryItemBatchEdge',
-        node: {
-          __typename: 'PantryItemBatch',
-          id: b.id,
-          batchNumber: index + 1,
-          quantity: b.quantity,
-          status: BatchStatus.Active,
-          costPerUnit: b.costPerUnit,
-          totalCost: b.totalCost ?? null,
-          createdAt: b.createdAt ?? '2026-08-01T00:00:00Z',
-        },
-      })),
-    },
+jest.mock('#hooks/navigation/useAppNavigation');
+// Navigation is the boundary: with no navigator, the screen is focused while
+// mounted.
+jest.mock('@react-navigation/native', () => {
+  const { useEffect: useMountEffect } = jest.requireActual('react');
+  return {
+    ...jest.requireActual('@react-navigation/native'),
+    useFocusEffect: (effect: () => undefined | (() => void)) =>
+      useMountEffect(effect, [effect]),
   };
-  return recordMock(GetPantryItemBatchesDocument, {
-    data,
-  }).mock;
-}
+});
 
-const fullItem: PantryItemFixture = {
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
+
+type ItemPhotoFixture = NonNullable<PantryItemFixture['photos']>[number];
+type PackageSize = NonNullable<
+  NonNullable<
+    QueryDataFor<typeof GetPantryItemDocument>['pantryItem']
+  >['packageSize']
+>;
+
+const milk: PantryItemFixture = {
+  id: 'pi1',
   itemName: 'Milk',
   quantity: 2,
   storageState: 'REFRIGERATED',
@@ -240,463 +90,321 @@ const fullItem: PantryItemFixture = {
   tags: ['organic', 'dairy'],
 };
 
-describe('PantryItemDetail (integration)', () => {
-  describe('cost after a restock', () => {
-    // The server now values the REMAINING stock: 5 @ $0.59 plus 3 @ $1.00 is
-    // $5.95 over 8 units. The screen renders those, and reads the batches only
-    // to decide the labels.
-    const restocked: PantryItemFixture = {
-      ...fullItem,
-      quantity: 8,
-      costPerUnit: 0.74,
-      totalCost: 5.95,
-    };
+const day = (offset: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + offset);
+  return toDateKey(date);
+};
 
-    it('labels the server rate as an average and names the last purchase', async () => {
-      renderWithApollo(<PantryItemDetail route={route} />, {
-        operationMocks: [
-          itemMock(restocked),
-          batchesMock([
-            { id: 'b1', quantity: 5, costPerUnit: 0.59, totalCost: 2.95 },
-            {
-              id: 'b2',
-              quantity: 3,
-              costPerUnit: 1,
-              totalCost: 3,
-              createdAt: '2026-08-31T00:00:00Z',
-            },
-          ]),
-        ],
-      });
+/** What the member may do in the home: an owner may do everything. */
+interface Membership {
+  role: MembershipRole;
+  canEditPantry?: boolean;
+  canAddItems?: boolean;
+  canRemoveItems?: boolean;
+}
+const OWNER: Membership = { role: MembershipRole.Owner };
+const EDITS_NOT_REMOVES: Membership = {
+  role: MembershipRole.Member,
+  canEditPantry: true,
+  canAddItems: true,
+  canRemoveItems: false,
+};
+const VIEWER: Membership = {
+  role: MembershipRole.Member,
+  canEditPantry: false,
+  canAddItems: false,
+  canRemoveItems: false,
+};
 
-      await drainTimers();
-      expect(screen.getByText('Avg Cost/Unit')).toBeTruthy();
-      expect(screen.getByText('$0.74')).toBeTruthy();
-      expect(screen.getByText('Stock value')).toBeTruthy();
-      expect(screen.getByText('$5.95')).toBeTruthy();
-      expect(screen.getByText('Last purchase')).toBeTruthy();
-    });
+function homesWith(
+  membership: Membership,
+): MockDataFor<typeof GetHomesDocument> {
+  const data = homesData([{ id: 'home-1', pantries: [{ id: 'p1' }] }]);
+  return {
+    ...data,
+    homes: {
+      ...data.homes,
+      edges: data.homes.edges.map(edge => ({
+        ...edge,
+        node: {
+          ...edge.node,
+          myMembership: {
+            __typename: 'Membership',
+            id: 'm-home-1',
+            canEditPantry: true,
+            canAddItems: true,
+            canRemoveItems: true,
+            ...membership,
+          },
+        },
+      })),
+    },
+  };
+}
 
-    it('leaves a single-batch item reading plainly', async () => {
-      renderWithApollo(<PantryItemDetail route={route} />, {
-        operationMocks: [
-          itemMock({
-            ...fullItem,
-            quantity: 5,
-            costPerUnit: 0.59,
-            totalCost: 2.95,
-          }),
-          batchesMock([
-            { id: 'b1', quantity: 5, costPerUnit: 0.59, totalCost: 2.95 },
-          ]),
-        ],
-      });
+const batchesAnswer = (
+  batches: Array<{
+    id: string;
+    quantity: number;
+    costPerUnit: number | null;
+    totalCost?: number | null;
+    createdAt?: string;
+  }>,
+): MockDataFor<typeof GetPantryItemBatchesDocument> => ({
+  pantryItemBatchesConnection: {
+    __typename: 'PantryItemBatchConnection',
+    edges: batches.map((b, index) => ({
+      __typename: 'PantryItemBatchEdge',
+      node: {
+        __typename: 'PantryItemBatch',
+        id: b.id,
+        batchNumber: index + 1,
+        quantity: b.quantity,
+        status: BatchStatus.Active,
+        costPerUnit: b.costPerUnit,
+        totalCost: b.totalCost ?? null,
+        createdAt: b.createdAt ?? '2026-08-01T00:00:00Z',
+        expiresOn: null,
+        netWeight: null,
+      },
+    })),
+  },
+});
 
-      await drainTimers();
-      expect(screen.getByText('Cost/Unit')).toBeTruthy();
-      expect(screen.getByText('$0.59')).toBeTruthy();
-      expect(screen.getByText('$2.95')).toBeTruthy();
-      expect(screen.queryByText('Avg Cost/Unit')).toBeNull();
-    });
+const noSuggestions: MockDataFor<typeof CatalogRecipesForItemDocument> = {
+  catalogRecipesByIngredients: { edges: [] },
+};
 
-    it('hides a rate diluted by stock with no recorded cost', async () => {
-      renderWithApollo(<PantryItemDetail route={route} />, {
-        operationMocks: [
-          // The server spread $2.95 of known cost over all 8 units.
-          itemMock({
-            ...fullItem,
-            quantity: 8,
-            costPerUnit: 0.37,
-            totalCost: 2.95,
-          }),
-          batchesMock([
-            { id: 'paid', quantity: 5, costPerUnit: 0.59, totalCost: 2.95 },
-            { id: 'gifted', quantity: 3, costPerUnit: null },
-          ]),
-        ],
-      });
+let log = operationLog();
 
-      await drainTimers();
-      expect(screen.getByText('Stock value')).toBeTruthy();
-      expect(screen.queryByText('Cost/Unit')).toBeNull();
-      expect(screen.queryByText('$0.37')).toBeNull();
-    });
-
-    it('omits both money rows when nothing left has a known cost', async () => {
-      renderWithApollo(<PantryItemDetail route={route} />, {
-        operationMocks: [
-          itemMock({ ...fullItem, costPerUnit: null, totalCost: null }),
-          batchesMock([{ id: 'b1', quantity: 5, costPerUnit: null }]),
-        ],
-      });
-
-      await drainTimers();
-      expect(screen.getAllByText('Milk')).toBeTruthy();
-      expect(screen.queryByText('Cost/Unit')).toBeNull();
-      expect(screen.queryByText('Stock value')).toBeNull();
-      expect(screen.queryByText('$0.00')).toBeNull();
-    });
+/** Waits for the operation's nth answer, then lets what it started render. */
+const answered = (document: DocumentNode, nth = 1) =>
+  act(async () => {
+    await log.answered(document, nth);
   });
 
-  it('renders the item name', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-  });
+interface Open {
+  /** The stack the read answers with. */
+  item?: PantryItemFixture;
+  itemId?: string;
+  membership?: Membership;
+  system?: UnitSystem;
+  cache?: InMemoryCache;
+  /** Answers that take precedence over the ones every visit gets. */
+  answers?: Array<Pick<ReturnType<typeof recordMock>, 'mock'>>;
+}
 
-  it('renders a fractional quantity as a cooking fraction', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [
-        itemMock({
-          ...fullItem,
-          quantity: 1.25,
-          unitSymbol: 'cup',
-          unitDisplayAsFraction: true,
-        }),
-      ],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('1 1/4 cup')).toHaveLength(3);
-  });
+/** The detail as the pantry opens it, over the homes the app has read. */
+function renderDetail({
+  item = milk,
+  itemId = 'pi1',
+  membership = OWNER,
+  system = UnitSystem.Metric,
+  cache = makeCache(),
+  answers = [],
+}: Open = {}) {
+  seedQuery(cache, { query: GetHomesDocument, data: homesWith(membership) });
+  writeUnitSystemSettings(cache, system, system);
+  return renderWithApollo(<PantryItemDetail route={{ params: { itemId } }} />, {
+    cache,
+    links: [log.link],
+    operationMocks: [
+      ...answers.map(answer => answer.mock),
+      recordMock(GetPantryItemDocument, { data: pantryItemData(item) }).mock,
+      recordMock(GetPantryItemBatchesDocument, { data: batchesAnswer([]) })
+        .mock,
+      recordMock(CatalogRecipesForItemDocument, { data: noSuggestions }).mock,
+      recordMock(MyFeatureFlagsDocument, { data: { myFeatureFlags: [] } }).mock,
+    ],
+  }).client;
+}
 
-  it('keeps decimals, rounded to three places, for a unit that opts out of fractions', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock({ ...fullItem, quantity: 177.4412 })],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('177.441 L')).toHaveLength(3);
-  });
+/** The detail once its stack has been read. */
+async function openDetail(options: Open = {}) {
+  const client = renderDetail(options);
+  await answered(GetPantryItemDocument);
+  return client;
+}
 
-  it('shows the category and storage state', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
+/**
+ * Resolves once the cache's watchers read the user's system as `system`. A
+ * cache write reaches a watching query a task later (`scheduleNotify`), and the
+ * screen's watcher, older than this one, is told first.
+ */
+async function settingsRead(client: ApolloClient, system: UnitSystem) {
+  const watch = client.watchQuery({
+    query: GetUserSettingsDocument,
+    fetchPolicy: 'cache-only',
+  });
+  let subscription: { unsubscribe: () => void } | undefined;
+  await new Promise<void>(resolve => {
+    subscription = watch.subscribe(({ data }) => {
+      if (data?.me?.settings?.preferredUnitSystem === system) resolve();
     });
-    await drainTimers();
+  });
+  subscription?.unsubscribe();
+}
+
+/** A header action, in the bar or in the "more" menu it overflowed into. */
+const headerAction = (testID: string) => {
+  const more = screen.queryByTestId(kitTestIDs.headerMoreButton);
+  if (more) fireEvent.press(more);
+  return screen.queryByTestId(testID);
+};
+
+/**
+ * Runs a header action. One in the "more" menu runs once the menu's sheet has
+ * closed; the gorhom stand-in never closes, so its dismissal is delivered.
+ */
+const pressHeaderAction = (testID: string) => {
+  const action = headerAction(testID);
+  if (!action) throw new Error(`no header action ${testID}`);
+  fireEvent.press(action);
+  fireEvent(action, 'dismiss');
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  log = operationLog();
+  useStore.setState({
+    user: {
+      id: 'user-1',
+      email: 'member@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    selectedHomeId: 'home-1',
+    selectedPantryId: 'p1',
+    selectedShoppingListId: 'sl-1',
+    isHomeSelectionReady: true,
+    isOnline: true,
+    apiReachable: true,
+    budgetAndPrices: true,
+  });
+});
+
+// The in-flight mark is module state: a failed test must not leave one behind.
+afterEach(() => unconfirmedCreates.confirm('pi1'));
+
+describe('what the stack is', () => {
+  it('names it, with its brand, category, place, notes and tags', async () => {
+    await openDetail();
+
+    expect(screen.getAllByText('Milk').length).toBeGreaterThan(0);
+    expect(screen.getByText('Organic Valley')).toBeTruthy();
     expect(screen.getByText(/Dairy/)).toBeTruthy();
     expect(screen.getByText(/Fridge/)).toBeTruthy();
-  });
-
-  it('shows brand info row', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-    await drainTimers();
-    expect(screen.getByText('Organic Valley')).toBeTruthy();
-  });
-
-  it('shows notes section', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-    await drainTimers();
     expect(screen.getByText('Keep cold')).toBeTruthy();
-  });
-
-  it('shows tags section', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-    await drainTimers();
     expect(screen.getByText('organic')).toBeTruthy();
-    expect(screen.getByText('dairy')).toBeTruthy();
   });
 
-  it('shows recipes section heading', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-    await drainTimers();
-    expect(screen.getByText('Recipes to try')).toBeTruthy();
-  });
-
-  it('says the suggestions could not be read, never that there are none', async () => {
-    mockRecipesState = 'error';
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-    await drainTimers();
-
-    expect(
-      screen.queryByText(t('pantryItemDetail.noRecipeSuggestions')),
-    ).toBeNull();
-    // The screen stands: only the section reports it.
-    expect(screen.getByText('Recipes to try')).toBeTruthy();
-    fireEvent.press(screen.getByText(t('labels.tryAgain')));
-    expect(mockRetryRecipes).toHaveBeenCalledTimes(1);
-  });
-
-  it('opens a suggested catalog recipe with what its card shows', async () => {
-    mockSuggestedRecipes.push({
-      __typename: 'CatalogRecipeHit',
-      provider: ExternalSource.Spoonacular,
-      providerRecipeId: '42',
-      name: 'Tomato soup',
-      imageUrl: 'https://img.example.com/42.jpg',
-      totalTimeMinutes: 20,
-      servings: 4,
-    });
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-
-    await drainTimers();
-    fireEvent.press(screen.getByText('Tomato soup'));
-
-    expect(mockToRecipeDetail).toHaveBeenCalledWith({
-      catalog: {
-        provider: ExternalSource.Spoonacular,
-        externalId: '42',
-        name: 'Tomato soup',
-        imageUrl: 'https://img.example.com/42.jpg',
+  it('reads a fractional amount as a cooking fraction', async () => {
+    await openDetail({
+      item: {
+        ...milk,
+        quantity: 1.25,
+        unitSymbol: 'cup',
+        unitDisplayAsFraction: true,
       },
     });
+
+    expect(screen.getAllByText('1 1/4 cup').length).toBeGreaterThan(0);
   });
 
-  // The server's EXPIRED flag can be a day late east of UTC; the date decides.
-  it("offers discard once the batches' expiry date has passed, flag or not", async () => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [
-        itemMock({
-          ...fullItem,
-          expiresOn: toDateKey(yesterday),
-          earliestBatchExpiresOn: toDateKey(yesterday),
-        }),
-      ],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    expect(headerAction('pantry-item-discard-button')).toBeTruthy();
+  it('keeps decimals, to three places, for a unit that opts out of fractions', async () => {
+    await openDetail({ item: { ...milk, quantity: 177.4412 } });
+
+    expect(screen.getAllByText('177.441 L').length).toBeGreaterThan(0);
   });
+});
 
-  it('does not offer discard on the expiry date itself', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [
-        itemMock({
-          ...fullItem,
-          expiresOn: todayKey(),
-          earliestBatchExpiresOn: todayKey(),
-        }),
-      ],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    expect(screen.queryByTestId('pantry-item-discard-button')).toBeNull();
-  });
-
-  // An edit moves only the item's date; the server would find no expired batch.
-  it('does not offer discard for an item date its batches do not share', async () => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [
-        itemMock({ ...fullItem, expiresOn: toDateKey(yesterday) }),
-      ],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    expect(screen.queryByTestId('pantry-item-discard-button')).toBeNull();
-  });
-
-  // The API gates delete and discard on `canRemoveItems`, which a member lacks
-  // by default: offering them to one who may only edit ends in a refusal.
-  it('offers edit but neither delete nor discard to a member who may not remove', async () => {
-    Object.assign(mockPermissions, { canRemoveItems: false });
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [
-        itemMock({
-          ...fullItem,
-          expiresOn: toDateKey(yesterday),
-          earliestBatchExpiresOn: toDateKey(yesterday),
-        }),
-      ],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    expect(headerAction('pantry-item-edit-button')).toBeTruthy();
-    expect(screen.getByTestId('pantry-item-adjust-button')).toBeTruthy();
-    expect(screen.queryByTestId('pantry-item-delete-button')).toBeNull();
-    expect(screen.queryByTestId('pantry-item-discard-button')).toBeNull();
-  });
-
-  it('renders header action buttons when permissions are granted', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    // Add to list and adjust stay in the bar; the rest open from "more".
-    expect(screen.getByTestId('pantry-item-add-to-list-button')).toBeTruthy();
-    expect(screen.getByTestId('pantry-item-adjust-button')).toBeTruthy();
-    expect(headerAction('pantry-item-edit-button')).toBeTruthy();
-    expect(headerAction('pantry-item-delete-button')).toBeTruthy();
-  });
-
-  it("offers to report a public catalog item's photo", async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [
-        itemMock({
-          ...fullItem,
-          canSuggest: true,
-          imageUrl: 'https://cdn.test/milk.jpg',
-        }),
-      ],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    expect(headerAction('pantry-item-report-photo-button')).toBeTruthy();
-  });
-
-  // The household's own upload is nobody else's to review.
-  it("offers no photo report over the household's own upload", async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [
-        itemMock({
-          ...fullItem,
-          canSuggest: true,
-          imageUrl: 'https://cdn.test/milk.jpg',
-          image: {
-            __typename: 'EntryImage',
-            url: 'https://signed.test/own.jpg',
-            source: EntryImageSource.Household,
-            catalogImageId: null,
-          },
-        }),
-      ],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    expect(headerAction('pantry-item-report-photo-button')).toBeNull();
-  });
-
-  it('offers the household a photo of its own to a member who can edit', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    expect(headerAction('entry-photo-change-button')).toBeTruthy();
-  });
-
-  it('offers no photo change to a member who cannot edit', async () => {
-    Object.assign(mockPermissions, { canEditItems: false });
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    expect(headerAction('entry-photo-change-button')).toBeNull();
-  });
-
-  describe('picking one of the item photos', () => {
-    const photo = (id: string): ItemPhotoFixture => ({
-      __typename: 'ItemPhoto',
-      id,
-      url: `https://cdn.test/${id}.jpg`,
-      perspective: null,
-      isPrimary: false,
-      status: ItemImageStatus.Approved,
-      credit: null,
-      variants: [],
-    });
-    const pickOffered = async (fixture: Partial<typeof fullItem>) => {
-      renderWithApollo(<PantryItemDetail route={route} />, {
-        operationMocks: [itemMock({ ...fullItem, ...fixture })],
-      });
-      await drainTimers();
-      expect(screen.getAllByText('Milk')).toBeTruthy();
-      const change = headerAction(catalogTestIDs.entryPhotoChangeButton);
-      if (change) fireEvent.press(change);
-      await drainTimers();
-      expect(screen.getByTestId(catalogTestIDs.entryPhotoSheet)).toBeTruthy();
-      return screen.queryByTestId(catalogTestIDs.entryPhotoPickItemPhoto);
-    };
-
-    it('is offered while there is a photo other than the one in use', async () => {
-      expect(
-        await pickOffered({
-          photos: [photo('front'), photo('back')],
-          image: {
-            __typename: 'EntryImage',
-            url: 'https://cdn.test/front.jpg',
-            source: EntryImageSource.Household,
-            catalogImageId: 'front',
-          },
-        }),
-      ).toBeTruthy();
-    });
-
-    // The viewer offers "Use this photo" on every photo but the one in use.
-    it('is not offered when the only photo is already in use', async () => {
-      expect(
-        await pickOffered({
-          photos: [photo('front')],
-          image: {
-            __typename: 'EntryImage',
-            url: 'https://cdn.test/front.jpg',
-            source: EntryImageSource.Household,
-            catalogImageId: 'front',
-          },
-        }),
-      ).toBeNull();
-    });
-  });
-
-  it('offers "Not this item?" to a member who can edit', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    expect(headerAction('pantry-item-relink-button')).toBeTruthy();
-  });
-
-  it('offers no "Not this item?" to a member who cannot edit', async () => {
-    Object.assign(mockPermissions, { canEditItems: false });
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    expect(headerAction('pantry-item-relink-button')).toBeNull();
-  });
-
-  it('offers no photo report on an item with no photo', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock({ ...fullItem, canSuggest: true })],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    expect(headerAction('pantry-item-report-photo-button')).toBeNull();
-  });
-
-  it('shows the offline state, not a spinner, on an offline cache miss', async () => {
-    // The screen read only `data` from useQuery and rendered a bare loader
-    // whenever `item` was falsy, so offline it span forever with no error and
-    // no retry. `loading` and `error` were never consulted.
-    mockIsOffline.mockReturnValue(true);
-
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [
+describe('the states it can be in', () => {
+  it('shows the screen, not the stack, while it is read', () => {
+    renderDetail({
+      answers: [
         recordMock(GetPantryItemDocument, {
-          error: new Error('offline: no cached data'),
-        }).mock,
+          data: pantryItemData(milk),
+          held: true,
+        }),
       ],
     });
 
-    await drainTimers();
-    expect(screen.getByTestId('state-offline')).toBeTruthy();
-    expect(screen.queryByTestId('state-loading')).toBeNull();
+    expect(screen.getByTestId(pantryTestIDs.itemDetail)).toBeTruthy();
+    expect(screen.queryByText('Milk')).toBeNull();
   });
 
-  describe('a row never opened on this device, offline', () => {
-    const openHeldRow = async () => {
-      mockIsOffline.mockReturnValue(true);
+  it('says a stack the server holds nothing for is gone, not that it failed', async () => {
+    await openDetail({
+      answers: [
+        recordMock(GetPantryItemDocument, { data: { pantryItem: null } }),
+      ],
+    });
+
+    expect(screen.getByTestId(pantryTestIDs.itemRemoved)).toBeTruthy();
+    expect(screen.queryByTestId(kitTestIDs.stateError)).toBeNull();
+  });
+
+  // A refusal, not a failed load: retrying cannot show it.
+  it('says a stack the viewer may no longer see is hidden, with no retry', async () => {
+    const refused: MockFor<typeof GetPantryItemDocument> = {
+      request: { query: GetPantryItemDocument, variables: () => true },
+      result: {
+        errors: [
+          new GraphQLError('Not a member', {
+            extensions: { code: ErrorCode.Forbidden },
+          }),
+        ],
+      },
+    };
+    await openDetail({ answers: [{ mock: refused }] });
+
+    expect(screen.getByTestId(pantryTestIDs.itemHidden)).toBeTruthy();
+    expect(screen.queryByTestId(kitTestIDs.stateError)).toBeNull();
+  });
+
+  // Its read is held back until the create lands: the server has no row yet.
+  it('waits on a stack still being created, then opens it', async () => {
+    unconfirmedCreates.mark('pi1');
+    renderDetail();
+
+    expect(screen.getByTestId(kitTestIDs.stateLoading)).toBeTruthy();
+
+    act(() => unconfirmedCreates.confirm('pi1'));
+    await answered(GetPantryItemDocument);
+    expect(screen.getAllByText('Milk').length).toBeGreaterThan(0);
+  });
+
+  it('shows the survivor in place of a stack merged into it', async () => {
+    await openDetail({ itemId: 'pi-merged' });
+
+    expect(mockNav.replaceWithPantryItemDetail).toHaveBeenCalledWith({
+      itemId: 'pi1',
+    });
+  });
+
+  it('stays put when the answer is the stack it asked for', async () => {
+    await openDetail();
+
+    expect(mockNav.replaceWithPantryItemDetail).not.toHaveBeenCalled();
+  });
+
+  describe('offline', () => {
+    const noServer = () =>
+      recordMock(GetPantryItemDocument, {
+        error: new Error('offline: no cached data'),
+      });
+
+    beforeEach(() => useStore.setState({ apiReachable: false }));
+
+    it('says a stack the device does not hold needs a connection, never spinning', async () => {
+      await openDetail({ answers: [noServer()] });
+
+      expect(screen.getByTestId(kitTestIDs.stateOffline)).toBeTruthy();
+    });
+
+    /** A row the list holds, never opened on this device. */
+    const heldRow = () => {
       const cache = makeCache();
       seedFragment(cache, {
         fragment: PantryItem_ListedFragmentDoc,
@@ -709,369 +417,524 @@ describe('PantryItemDetail (integration)', () => {
           storageLocation: { id: 'loc-1', name: 'Fridge door' },
         },
       });
-      renderWithApollo(<PantryItemDetail route={route} />, {
-        cache,
-        operationMocks: [
-          recordMock(GetPantryItemDocument, {
-            error: new Error('offline: no cached data'),
-          }).mock,
-        ],
-      });
-      await drainTimers();
+      return cache;
     };
 
-    it('shows the name, location and expiry, and says the rest needs a connection', async () => {
-      await openHeldRow();
+    it('shows what the list holds of a row, and says the rest needs a connection', async () => {
+      await openDetail({ cache: heldRow(), answers: [noServer()] });
 
-      expect(screen.getAllByText('Oat milk')).toBeTruthy();
+      expect(screen.getAllByText('Oat milk').length).toBeGreaterThan(0);
       expect(screen.getByText('Fridge door')).toBeTruthy();
-      expect(screen.getByText('No expiry')).toBeTruthy();
       expect(screen.getByTestId(pantryTestIDs.itemPartial)).toBeTruthy();
-      expect(screen.queryByTestId('state-offline')).toBeNull();
     });
-
-    it('offers Edit to someone who may edit, and not to anyone else', async () => {
-      await openHeldRow();
-      expect(headerAction(pantryTestIDs.itemEditButton)).toBeTruthy();
-    });
-
-    it('offers no Edit to a viewer', async () => {
-      mockPermissions.canEditItems = false;
-      await openHeldRow();
-      expect(headerAction(pantryTestIDs.itemEditButton)).toBeNull();
-    });
-  });
-
-  it('says a stack the server holds nothing for is gone, not that it failed to load', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [
-        recordMock(GetPantryItemDocument, { data: { pantryItem: null } }).mock,
-      ],
-    });
-
-    await drainTimers();
-    expect(screen.getByTestId('pantry-item-removed')).toBeTruthy();
-    expect(
-      screen.getByText('This item is no longer in your pantry'),
-    ).toBeTruthy();
-    expect(screen.getByText('Go Back')).toBeTruthy();
-    expect(screen.queryByTestId('state-error')).toBeNull();
-    expect(screen.queryByTestId('state-loading')).toBeNull();
-  });
-
-  it('renders loader before the query resolves', () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [
-        recordMock(GetPantryItemDocument, {
-          data: pantryItemData(fullItem),
-          held: true,
-        }).mock,
-      ],
-    });
-    expect(screen.getByTestId('pantry-item-detail')).toBeTruthy();
-    expect(screen.queryByText('Milk')).toBeNull();
-  });
-
-  it("renders the item's nutritionFacts in the nutrition section", async () => {
-    // Read as nested `{ amount, unit }` objects, the flat `Item.nutritions`
-    // Json yields no amount, and the section never renders.
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [
-        itemMock({
-          ...fullItem,
-          nutritionFacts: {
-            __typename: 'NutritionFacts',
-            id: 'nf1',
-            calories: 64,
-            totalFat: 3.6,
-            saturatedFat: 2.3,
-            transFat: null,
-            cholesterol: 12,
-            sodium: 44,
-            totalCarbs: 4.8,
-            dietaryFiber: null,
-            totalSugars: 5.1,
-            addedSugars: null,
-            protein: 3.3,
-            vitaminD: 1.3,
-            calcium: 120,
-            iron: null,
-            potassium: 150,
-            servingSize: 100,
-            servingUnit: 'ml',
-          },
-        }),
-      ],
-    });
-    await drainTimers();
-    expect(screen.getByText('Nutrition')).toBeTruthy();
-    expect(screen.getByText('64')).toBeTruthy();
-    expect(screen.getByText('3.3')).toBeTruthy();
-    expect(screen.getByText('4.8')).toBeTruthy();
-    expect(screen.getByText('3.6')).toBeTruthy();
-    expect(screen.getByText('Per 100 ml')).toBeTruthy();
-  });
-
-  // USM-3: a stack merged into another answers as the survivor, which takes
-  // this screen's place.
-  it('shows the survivor in place of a stack merged into it', async () => {
-    renderWithApollo(
-      <PantryItemDetail route={{ params: { itemId: 'pi-merged' } }} />,
-      { operationMocks: [itemMock(fullItem)] },
-    );
-
-    await drainTimers();
-    expect(mockReplaceWithPantryItemDetail).toHaveBeenCalledWith({
-      itemId: 'pi1',
-    });
-  });
-
-  it('stays put when the answer is the stack it asked for', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    expect(mockReplaceWithPantryItemDetail).not.toHaveBeenCalled();
-  });
-
-  // A product whose record states none reads its concept's values: titled as
-  // typical, and making no health claim for the product.
-  it("titles a concept's values as typical, with no highlights", async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [
-        itemMock({
-          ...fullItem,
-          nutritionFacts: {
-            __typename: 'NutritionFacts',
-            id: 'nf-concept',
-            calories: 334,
-            totalFat: 1.1,
-            saturatedFat: null,
-            transFat: null,
-            cholesterol: null,
-            sodium: null,
-            totalCarbs: 70,
-            dietaryFiber: null,
-            totalSugars: null,
-            addedSugars: null,
-            protein: 10.3,
-            vitaminD: null,
-            calcium: null,
-            iron: null,
-            potassium: null,
-            servingSize: 100,
-            servingUnit: 'g',
-          },
-          typicalOf: 'flour',
-        }),
-      ],
-    });
-    await drainTimers();
-    expect(
-      screen.getByText(t('labels.typicalFor', { concept: 'flour' })),
-    ).toBeTruthy();
-    expect(screen.getByText('334')).toBeTruthy();
-    expect(screen.queryByText('Nutrition')).toBeNull();
-    expect(screen.queryByText(t('recipes.healthGoal.HIGH_PROTEIN'))).toBeNull();
-    expect(screen.queryByText(t('nutritionHighlights.lowFat'))).toBeNull();
-  });
-
-  it('hides nutrition section when item has no nutrition data', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [itemMock(fullItem)],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-    expect(screen.queryByText('Nutrition')).toBeNull();
-  });
-
-  it('omits storage location text when item has none', async () => {
-    renderWithApollo(<PantryItemDetail route={route} />, {
-      operationMocks: [
-        itemMock({
-          ...fullItem,
-          storageLocationName: null,
-        }),
-      ],
-    });
-    await drainTimers();
-    expect(screen.getAllByText('Milk')).toBeTruthy();
-  });
-
-  // The weights read in the user's unit system by the API's own readings,
-  // whatever unit the stack stores them in.
-  describe('weights in the user\u2019s unit system', () => {
-    type PackageSizeData = NonNullable<
-      NonNullable<
-        QueryDataFor<typeof GetPantryItemDocument>['pantryItem']
-      >['packageSize']
-    >;
-    interface ReadingUnit {
-      id: string;
-      symbol: string;
-      type: UnitType;
-    }
-
-    const unit = (
-      id: string,
-      symbol: string,
-      type = UnitType.Weight,
-    ): ReadingUnit => ({ id, symbol, type });
-    const read = ([value, { id, symbol, type }]: [
-      number,
-      ReadingUnit,
-    ]): PackageSizeData['metric'] =>
-      readingAsAbbreviation({
-        __typename: 'MeasureReading',
-        value,
-        unitId: id,
-        symbol,
-        displayAsFraction: false,
-        type,
-      });
-    const g = unit('unit-g', 'g');
-    const oz = unit('unit-oz', 'oz');
-    const kg = unit('unit-kg', 'kg');
-    const lb = unit('unit-lb', 'lb');
-
-    const measure = (
-      value: number,
-      stored: ReadingUnit,
-      metric: [number, ReadingUnit],
-      imperial: [number, ReadingUnit],
-    ): PackageSizeData => ({
-      __typename: 'Measure',
-      value,
-      unitId: stored.id,
-      metric: read(metric),
-      imperial: read(imperial),
-    });
-
-    /** A stack whose package size is stored as `value` `stored`. */
-    const weighed = (value: number, stored: ReadingUnit) => {
-      const data = pantryItemData(fullItem);
-      const item = data.pantryItem;
-      if (!item) throw new Error('fixture has no item');
-      item.netWeight = value;
-      item.netWeightUnit = asAbbreviation({
-        __typename: 'Unit',
-        id: stored.id,
-        name: stored.symbol,
-        symbol: stored.symbol,
-      });
-      item.packageSize = measure(value, stored, [1.36, kg], [3, lb]);
-      return recordMock(GetPantryItemDocument, { data }).mock;
-    };
-
-    const settings = (preferredUnitSystem: UnitSystem) =>
-      recordMock(GetUserSettingsDocument, {
-        data: {
-          me: {
-            __typename: 'User',
-            id: 'user-1',
-            settings: {
-              __typename: 'UserSettings',
-              id: 'settings-1',
-              preferredUnitSystem,
-              deviceUnitSystem: UnitSystem.Imperial,
-            },
-          },
-        },
-      }).mock;
 
     it.each([
-      ['grams', 1360.78, g],
-      ['ounces', 48, oz],
+      { who: 'someone who may edit', membership: OWNER, offered: true },
+      { who: 'a viewer', membership: VIEWER, offered: false },
     ])(
-      'reads a package size stored in %s as pounds on an imperial device',
-      async (_label, value, stored) => {
-        renderWithApollo(<PantryItemDetail route={route} />, {
-          operationMocks: [weighed(value, stored), settings(UnitSystem.System)],
+      'offers Edit on a held row to $who: $offered',
+      async ({ membership, offered }) => {
+        await openDetail({
+          cache: heldRow(),
+          membership,
+          answers: [noServer()],
         });
-        await drainTimers();
-        expect(screen.getByText('3 lb')).toBeTruthy();
+
+        expect(headerAction(pantryTestIDs.itemEditButton) !== null).toBe(
+          offered,
+        );
       },
     );
+  });
+});
 
-    it('reads it in kilograms for a metric user', async () => {
-      renderWithApollo(<PantryItemDetail route={route} />, {
-        operationMocks: [weighed(1360.78, g), settings(UnitSystem.Metric)],
-      });
-      await drainTimers();
-      expect(screen.getByText('1.36 kg')).toBeTruthy();
+describe('what a member may do', () => {
+  it('offers an owner every action', async () => {
+    await openDetail();
+
+    expect(headerAction(pantryTestIDs.itemAddToListButton)).toBeTruthy();
+    expect(headerAction(pantryTestIDs.itemAdjustButton)).toBeTruthy();
+    expect(headerAction(pantryTestIDs.itemEditButton)).toBeTruthy();
+    expect(headerAction(catalogTestIDs.entryPhotoChangeButton)).toBeTruthy();
+    expect(headerAction(pantryTestIDs.itemRelinkButton)).toBeTruthy();
+    expect(headerAction(pantryTestIDs.itemDeleteButton)).toBeTruthy();
+  });
+
+  // The API gates delete and discard on `canRemoveItems`.
+  it('offers edit but neither delete nor discard to a member who may not remove', async () => {
+    await openDetail({
+      membership: EDITS_NOT_REMOVES,
+      item: { ...milk, expiresOn: day(-1), earliestBatchExpiresOn: day(-1) },
     });
 
-    it('follows a change of setting at once, with no request for it', async () => {
-      const cache = makeCache();
-      writeUnitSystemSettings(cache, UnitSystem.Imperial, UnitSystem.Imperial);
-      renderWithApollo(<PantryItemDetail route={route} />, {
-        cache,
-        operationMocks: [weighed(1360.78, g)],
+    expect(headerAction(pantryTestIDs.itemEditButton)).toBeTruthy();
+    expect(headerAction(pantryTestIDs.itemDeleteButton)).toBeNull();
+    expect(headerAction(pantryTestIDs.itemDiscardButton)).toBeNull();
+  });
+
+  it('offers a viewer no change to the stack', async () => {
+    await openDetail({ membership: VIEWER });
+
+    expect(headerAction(pantryTestIDs.itemAddToListButton)).toBeNull();
+    expect(headerAction(pantryTestIDs.itemEditButton)).toBeNull();
+    expect(headerAction(catalogTestIDs.entryPhotoChangeButton)).toBeNull();
+    expect(headerAction(pantryTestIDs.itemRelinkButton)).toBeNull();
+    expect(headerAction(pantryTestIDs.itemDeleteButton)).toBeNull();
+  });
+
+  it('opens the edit form from Edit', async () => {
+    await openDetail();
+
+    pressHeaderAction(pantryTestIDs.itemEditButton);
+
+    expect(mockNav.toPantryItem).toHaveBeenCalledWith({ itemId: 'pi1' });
+  });
+});
+
+// The server's EXPIRED flag can be a day late east of UTC; the date decides.
+describe('discarding what has expired', () => {
+  it.each([
+    {
+      why: "the batches' date has passed",
+      item: { ...milk, expiresOn: day(-1), earliestBatchExpiresOn: day(-1) },
+      offered: true,
+    },
+    {
+      why: 'the server flags it expired',
+      item: { ...milk, condition: ItemCondition.Expired },
+      offered: true,
+    },
+    {
+      why: 'it expires today',
+      item: {
+        ...milk,
+        expiresOn: todayKey(),
+        earliestBatchExpiresOn: todayKey(),
+      },
+      offered: false,
+    },
+    {
+      // An edit moves only the item's date; the server finds no expired batch.
+      why: 'only the item date, not its batches, has passed',
+      item: { ...milk, expiresOn: day(-1) },
+      offered: false,
+    },
+    {
+      why: 'nothing is left of it',
+      item: { ...milk, quantity: 0, condition: ItemCondition.Expired },
+      offered: false,
+    },
+  ])('is offered when $why: $offered', async ({ item, offered }) => {
+    await openDetail({ item });
+
+    expect(headerAction(pantryTestIDs.itemDiscardButton) !== null).toBe(
+      offered,
+    );
+  });
+
+  it('is offered when an active batch is past its date', async () => {
+    const batches = recordMock(GetPantryItemBatchesDocument, {
+      data: {
+        pantryItemBatchesConnection: {
+          edges: [
+            {
+              node: {
+                __typename: 'PantryItemBatch',
+                id: 'b1',
+                status: BatchStatus.Active,
+                expiresOn: day(-2),
+              },
+            },
+          ],
+        },
+      },
+    });
+    await openDetail({ answers: [batches] });
+    await answered(GetPantryItemBatchesDocument);
+
+    expect(headerAction(pantryTestIDs.itemDiscardButton)).toBeTruthy();
+  });
+});
+
+describe('recipes to try', () => {
+  it('opens a suggestion with what its card shows', async () => {
+    const suggestions = recordMock(CatalogRecipesForItemDocument, {
+      data: {
+        catalogRecipesByIngredients: {
+          edges: [
+            {
+              node: {
+                __typename: 'CatalogRecipeHit',
+                provider: ExternalSource.Spoonacular,
+                providerRecipeId: '42',
+                name: 'Tomato soup',
+                imageUrl: 'https://img.example.com/42.jpg',
+              },
+            },
+          ],
+        },
+      },
+    });
+    await openDetail({ answers: [suggestions] });
+    await answered(CatalogRecipesForItemDocument);
+
+    fireEvent.press(screen.getByText('Tomato soup'));
+
+    expect(mockNav.toRecipeDetail).toHaveBeenCalledWith({
+      catalog: {
+        provider: ExternalSource.Spoonacular,
+        externalId: '42',
+        name: 'Tomato soup',
+        imageUrl: 'https://img.example.com/42.jpg',
+      },
+    });
+  });
+
+  it('says the suggestions could not be read, never that there are none', async () => {
+    await openDetail({
+      answers: [
+        recordMock(CatalogRecipesForItemDocument, { error: new Error('500') }),
+      ],
+    });
+    await answered(CatalogRecipesForItemDocument);
+
+    expect(
+      screen.queryByText(t('pantryItemDetail.noRecipeSuggestions')),
+    ).toBeNull();
+    expect(screen.getByText(t('labels.tryAgain'))).toBeTruthy();
+  });
+});
+
+describe('nutrition', () => {
+  type Facts = NonNullable<PantryItemFixture['nutritionFacts']>;
+  const facts = (id: string): Facts => ({
+    __typename: 'NutritionFacts',
+    id,
+    calories: 64,
+    totalFat: 3.6,
+    saturatedFat: null,
+    transFat: null,
+    cholesterol: null,
+    sodium: null,
+    totalCarbs: 4.8,
+    dietaryFiber: null,
+    totalSugars: null,
+    addedSugars: null,
+    protein: 3.3,
+    vitaminD: null,
+    calcium: null,
+    iron: null,
+    potassium: null,
+    servingSize: 100,
+    servingUnit: 'ml',
+  });
+
+  it("shows the stack's own facts as its nutrition", async () => {
+    await openDetail({
+      item: { ...milk, nutritionFacts: facts('nf1') },
+    });
+
+    expect(screen.getByText(t('pantryItemDetail.nutrition'))).toBeTruthy();
+    expect(screen.getByText('64')).toBeTruthy();
+  });
+
+  it("titles a concept's values as typical", async () => {
+    await openDetail({
+      item: {
+        ...milk,
+        nutritionFacts: facts('nf-concept'),
+        typicalOf: 'milk',
+      },
+    });
+
+    expect(
+      screen.getByText(t('labels.typicalFor', { concept: 'milk' })),
+    ).toBeTruthy();
+    expect(screen.queryByText(t('pantryItemDetail.nutrition'))).toBeNull();
+  });
+});
+
+describe('photos', () => {
+  const photo = (id: string): ItemPhotoFixture => ({
+    __typename: 'ItemPhoto',
+    id,
+    url: `https://cdn.test/${id}.jpg`,
+    perspective: null,
+    isPrimary: false,
+    status: ItemImageStatus.Approved,
+    credit: null,
+    variants: [],
+  });
+  const inUse = (
+    catalogImageId: string,
+  ): NonNullable<PantryItemFixture['image']> => ({
+    __typename: 'EntryImage',
+    url: `https://cdn.test/${catalogImageId}.jpg`,
+    source: EntryImageSource.Household,
+    catalogImageId,
+  });
+
+  it("offers to report a public catalog item's photo", async () => {
+    await openDetail({
+      item: {
+        ...milk,
+        canSuggest: true,
+        imageUrl: 'https://cdn.test/milk.jpg',
+      },
+    });
+
+    expect(headerAction(pantryTestIDs.itemReportPhotoButton)).toBeTruthy();
+  });
+
+  // The household's own upload is nobody else's to review.
+  it("offers no report over the household's own upload", async () => {
+    await openDetail({
+      item: {
+        ...milk,
+        canSuggest: true,
+        imageUrl: 'https://cdn.test/milk.jpg',
+        image: { ...inUse('own'), catalogImageId: null },
+      },
+    });
+
+    expect(headerAction(pantryTestIDs.itemReportPhotoButton)).toBeNull();
+  });
+
+  it('offers no report on an item with no photo', async () => {
+    await openDetail({ item: { ...milk, canSuggest: true } });
+
+    expect(headerAction(pantryTestIDs.itemReportPhotoButton)).toBeNull();
+  });
+
+  /** Opens the photo sheet; whether it offers one of the item's own photos. */
+  const pickOffered = async (item: PantryItemFixture) => {
+    await openDetail({ item });
+    fireEvent.press(headerAction(catalogTestIDs.entryPhotoChangeButton)!);
+    expect(screen.getByTestId(catalogTestIDs.entryPhotoSheet)).toBeTruthy();
+    return (
+      screen.queryByTestId(catalogTestIDs.entryPhotoPickItemPhoto) !== null
+    );
+  };
+
+  it('offers an item photo while one other than the one in use exists', async () => {
+    expect(
+      await pickOffered({
+        ...milk,
+        photos: [photo('front'), photo('back')],
+        image: inUse('front'),
+      }),
+    ).toBe(true);
+  });
+
+  it('offers no item photo when the only one is in use', async () => {
+    expect(
+      await pickOffered({
+        ...milk,
+        photos: [photo('front')],
+        image: inUse('front'),
+      }),
+    ).toBe(false);
+  });
+});
+
+// The server values the REMAINING stock; the batches only decide the labels.
+describe('what the stock cost', () => {
+  const costed = async (
+    item: PantryItemFixture,
+    batches: Parameters<typeof batchesAnswer>[0],
+  ) => {
+    await openDetail({
+      item,
+      answers: [
+        recordMock(GetPantryItemBatchesDocument, {
+          data: batchesAnswer(batches),
+        }),
+      ],
+    });
+    await answered(GetPantryItemBatchesDocument);
+  };
+
+  it('labels a restocked rate as an average, and names the last purchase', async () => {
+    await costed({ ...milk, quantity: 8, costPerUnit: 0.74, totalCost: 5.95 }, [
+      { id: 'b1', quantity: 5, costPerUnit: 0.59, totalCost: 2.95 },
+      {
+        id: 'b2',
+        quantity: 3,
+        costPerUnit: 1,
+        totalCost: 3,
+        createdAt: '2026-08-31T00:00:00Z',
+      },
+    ]);
+
+    expect(screen.getByText('Avg Cost/Unit')).toBeTruthy();
+    expect(screen.getByText('$0.74')).toBeTruthy();
+    expect(screen.getByText('$5.95')).toBeTruthy();
+    expect(screen.getByText('Last purchase')).toBeTruthy();
+  });
+
+  it('reads a single purchase plainly', async () => {
+    await costed({ ...milk, quantity: 5, costPerUnit: 0.59, totalCost: 2.95 }, [
+      { id: 'b1', quantity: 5, costPerUnit: 0.59, totalCost: 2.95 },
+    ]);
+
+    expect(screen.getByText('Cost/Unit')).toBeTruthy();
+    expect(screen.queryByText('Avg Cost/Unit')).toBeNull();
+  });
+
+  it('hides a rate diluted by stock with no recorded cost', async () => {
+    await costed({ ...milk, quantity: 8, costPerUnit: 0.37, totalCost: 2.95 }, [
+      { id: 'paid', quantity: 5, costPerUnit: 0.59, totalCost: 2.95 },
+      { id: 'gifted', quantity: 3, costPerUnit: null },
+    ]);
+
+    expect(screen.getByText('Stock value')).toBeTruthy();
+    expect(screen.queryByText('$0.37')).toBeNull();
+  });
+
+  it('shows no money rows when nothing left has a known cost', async () => {
+    await costed({ ...milk, costPerUnit: null, totalCost: null }, [
+      { id: 'b1', quantity: 5, costPerUnit: null },
+    ]);
+
+    expect(screen.queryByText('Cost/Unit')).toBeNull();
+    expect(screen.queryByText('Stock value')).toBeNull();
+  });
+});
+
+// The weights read in the user's system by the API's own readings, whatever
+// unit the stack stores them in.
+describe('weights in the user’s unit system', () => {
+  interface ReadingUnit {
+    id: string;
+    symbol: string;
+  }
+  const g = { id: 'unit-g', symbol: 'g' };
+  const oz = { id: 'unit-oz', symbol: 'oz' };
+  const kg = { id: 'unit-kg', symbol: 'kg' };
+  const lb = { id: 'unit-lb', symbol: 'lb' };
+
+  const read = (value: number, { id, symbol }: ReadingUnit) =>
+    readingAsAbbreviation({
+      __typename: 'MeasureReading',
+      value,
+      unitId: id,
+      symbol,
+      displayAsFraction: false,
+      type: UnitType.Weight,
+    });
+
+  const measure = (
+    value: number,
+    stored: ReadingUnit,
+    metric: [number, ReadingUnit],
+    imperial: [number, ReadingUnit],
+  ): PackageSize => ({
+    __typename: 'Measure',
+    value,
+    unitId: stored.id,
+    metric: read(...metric),
+    imperial: read(...imperial),
+  });
+
+  /** The stack's read, its package size stored as `value` `stored`. */
+  const weighed = (
+    value: number,
+    stored: ReadingUnit,
+    metric: [number, ReadingUnit],
+    imperial: [number, ReadingUnit],
+  ) => {
+    const data = pantryItemData(milk);
+    const item = data.pantryItem;
+    if (!item) throw new Error('fixture has no item');
+    item.netWeight = value;
+    item.netWeightUnit = asAbbreviation({
+      __typename: 'Unit',
+      id: stored.id,
+      name: stored.symbol,
+      symbol: stored.symbol,
+    });
+    item.packageSize = measure(value, stored, metric, imperial);
+    return recordMock(GetPantryItemDocument, { data });
+  };
+
+  it.each([
+    { stored: 'grams', value: 1360.78, unit: g },
+    { stored: 'ounces', value: 48, unit: oz },
+  ])(
+    'reads a size stored in $stored as pounds for an imperial user',
+    async ({ value, unit }) => {
+      await openDetail({
+        system: UnitSystem.Imperial,
+        answers: [weighed(value, unit, [1.36, kg], [3, lb])],
       });
-      await drainTimers();
+
       expect(screen.getByText('3 lb')).toBeTruthy();
+    },
+  );
 
-      act(() => {
-        cache.modify({
-          id: 'UserSettings:settings-1',
-          fields: { preferredUnitSystem: () => UnitSystem.Metric },
-        });
-      });
-
-      await drainTimers();
-      expect(screen.getByText('1.36 kg')).toBeTruthy();
+  it('reads it in kilograms for a metric user', async () => {
+    await openDetail({
+      system: UnitSystem.Metric,
+      answers: [weighed(1360.78, g, [1.36, kg], [3, lb])],
     });
 
-    it('reads what it holds as the row does, not in stored grams', async () => {
-      const data = pantryItemData({
-        ...fullItem,
-        quantity: 907.18,
-        heldQuantity: 907.18,
-        unitSymbol: 'g',
-        unitName: 'gram',
-      });
-      const item = data.pantryItem;
-      if (!item) throw new Error('fixture has no item');
-      item.amountLeft = measure(907.18, g, [907.18, g], [2, lb]);
-      item.amountLeft.unitId = item.unit.id;
-      renderWithApollo(<PantryItemDetail route={route} />, {
-        operationMocks: [
-          recordMock(GetPantryItemDocument, { data }).mock,
-          settings(UnitSystem.Imperial),
-        ],
-      });
-      await drainTimers();
-      expect(screen.getAllByText('2 lb').length).toBeGreaterThan(0);
-      expect(screen.queryByText('907.18 g')).toBeNull();
+    expect(screen.getByText('1.36 kg')).toBeTruthy();
+  });
+
+  it('follows a change of setting at once, with no request for it', async () => {
+    const client = await openDetail({
+      system: UnitSystem.Imperial,
+      answers: [weighed(1360.78, g, [1.36, kg], [3, lb])],
+    });
+    expect(screen.getByText('3 lb')).toBeTruthy();
+
+    await act(async () => {
+      const changed = settingsRead(client, UnitSystem.Metric);
+      writeUnitSystemSettings(
+        client.cache,
+        UnitSystem.Metric,
+        UnitSystem.Metric,
+      );
+      await changed;
     });
 
-    // A "6.35 oz (180 g)" can: the API reads each system in the label's own
-    // figure, and the screen shows it as read, never a rounded 6.3 oz.
-    it.each([
-      [UnitSystem.Imperial, '6.35 oz'],
-      [UnitSystem.Metric, '180 g'],
-    ])('reads a declared can in %s as its label does', async (system, text) => {
-      const data = pantryItemData(fullItem);
-      const item = data.pantryItem;
-      if (!item) throw new Error('fixture has no item');
-      item.netWeight = 180;
-      item.netWeightUnit = asAbbreviation({
-        __typename: 'Unit',
-        id: g.id,
-        name: g.symbol,
-        symbol: g.symbol,
+    expect(screen.getByText('1.36 kg')).toBeTruthy();
+  });
+
+  // A "6.35 oz (180 g)" can reads each system in the label's own figure.
+  it.each([
+    { system: UnitSystem.Imperial, text: '6.35 oz' },
+    { system: UnitSystem.Metric, text: '180 g' },
+  ])(
+    'reads a declared can in $system as its label does',
+    async ({ system, text }) => {
+      await openDetail({
+        system,
+        answers: [weighed(180, g, [180, g], [6.35, oz])],
       });
-      item.packageSize = measure(180, g, [180, g], [6.35, oz]);
-      renderWithApollo(<PantryItemDetail route={route} />, {
-        operationMocks: [
-          recordMock(GetPantryItemDocument, { data }).mock,
-          settings(system),
-        ],
-      });
-      await drainTimers();
+
       expect(screen.getByText(text)).toBeTruthy();
+    },
+  );
+
+  it('reads what it holds in the user’s system, not in stored grams', async () => {
+    const data = pantryItemData({
+      ...milk,
+      quantity: 907.18,
+      heldQuantity: 907.18,
+      unitSymbol: 'g',
+      unitName: 'gram',
     });
+    const item = data.pantryItem;
+    if (!item) throw new Error('fixture has no item');
+    item.amountLeft = measure(907.18, g, [907.18, g], [2, lb]);
+    item.amountLeft.unitId = item.unit.id;
+    await openDetail({
+      system: UnitSystem.Imperial,
+      answers: [recordMock(GetPantryItemDocument, { data })],
+    });
+
+    expect(screen.getAllByText('2 lb').length).toBeGreaterThan(0);
+    expect(screen.queryByText('907.18 g')).toBeNull();
   });
 });

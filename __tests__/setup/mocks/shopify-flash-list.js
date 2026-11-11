@@ -18,7 +18,8 @@ jest.mock('@shopify/flash-list', () => {
   // without it, anything gated on first-content-layout (skeleton overlays)
   // never releases in tests.
   // The ref offers FlashList's own API over FlatList's: every FlatList member
-  // as it is, plus `scrollToTop`, which FlashList has and FlatList lacks.
+  // as it is, plus what FlashList has and FlatList lacks: `scrollToTop`, and
+  // `prepareForLayoutAnimationRender`, a no-op where nothing recycles.
   const FlashListMock = ({
     renderScrollComponent,
     onCommitLayoutEffect,
@@ -34,6 +35,9 @@ jest.mock('@shopify/flash-list', () => {
           {
             get: (_, key) => {
               const list = listRef.current;
+              if (key === 'prepareForLayoutAnimationRender') {
+                return () => undefined;
+              }
               if (key === 'scrollToTop') {
                 return (params = {}) =>
                   list?.scrollToOffset({

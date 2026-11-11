@@ -49,6 +49,8 @@ jest.mock('@shopify/react-native-skia', () => {
     PaintStyle: { Fill: 0, Stroke: 1 },
     StrokeCap: { Butt: 0, Round: 1, Square: 2 },
     useFont: jest.fn(() => null),
+    // A system font, as `useFont` reports one not yet loaded.
+    matchFont: jest.fn(() => null),
     useValue: jest.fn(() => ({ current: 0 })),
     createPicture: jest.fn(cb => {
       cb(makeCanvas());

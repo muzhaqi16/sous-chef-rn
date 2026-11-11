@@ -1,636 +1,503 @@
 'use no memo';
 
 import React from 'react';
-import { screen, fireEvent } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { drainTimers } from '#/test-utils/drainTimers';
-import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import { FilteredPantryItems } from '../FilteredPantryItems';
-import { pantryTestIDs } from '#features/pantry/testIDs';
+import type { DocumentNode } from 'graphql';
+import { act, fireEvent, screen } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
+import {
+  type MockDataFor,
+  recordMock,
+  renderWithApollo,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
+import { homesData } from '#/test-utils/fixtures/homeFixtures';
+import { isRecord } from '#/utils/isRecord';
+import { useStore } from '#store';
+import { t } from '#/i18n';
 import { toDateKey, todayKey } from '#/utils/dateUtils';
+import { EXPIRING_SOON_DAYS } from '#domain/expiry';
+import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
+import { kitTestIDs } from '#components/testIDs';
+import { GetHomesDocument } from '#operations/home/home.generated';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
+import {
+  GetShoppingListDetailsDocument,
+  GetShoppingListsLiteDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { pantryTestIDs } from '#features/pantry/testIDs';
+import {
+  FilteredPantryItems,
+  type FilteredPantryItemsMode,
+} from '../FilteredPantryItems';
 
-// Its repeating diagnostics timer never drains: 0 is the hook's own off switch.
-jest.mock('#hooks/performance/useFlashListPerformance', () => {
-  const actual = jest.requireActual(
-    '#hooks/performance/useFlashListPerformance',
-  );
-  return {
-    ...actual,
-    useFlashListPerformance: (list: unknown, options: object) =>
-      actual.useFlashListPerformance(list, { ...options, reportInterval: 0 }),
-  };
-});
-
-// Its midnight timer re-arms itself, so a mounted watch never drains.
+// The day stays fixed: the hook's midnight timer re-arms itself.
 jest.mock('#hooks/app/useToday', () => ({
   useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
 }));
-
-// Structural shape consumed by the screen via the mocked `usePantryManagement`.
-type MockPantryItem = {
-  id: string;
-  /** The CATALOG item id — deliberately unlike `id`, which is the PantryItem. */
-  itemId: string;
-  itemName: string;
-  quantity: number;
-  heldQuantity: number;
-  displayAmount: { quantity: number; unit: { symbol: string } };
-  unit: { symbol: string } | null;
-  isLowStock: boolean;
-  expiresOn?: string;
-};
-
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: jest.fn(),
-}));
-
 jest.mock('#hooks/navigation/useAppNavigation');
-
-jest.mock('#hooks/ui/useTutorialSequence', () => ({
-  useTutorialSequence: () => ({
-    isActive: false,
-    currentStep: null,
-    advance: jest.fn(),
-    skipAll: jest.fn(),
-  }),
-}));
-
-jest.mock(
-  '#components/organisms/SpotlightCoachMark/SpotlightCoachMark',
-  () => ({
-    SpotlightCoachMark: () => null,
-  }),
-);
-
-// The cart is gated on the SELECTED SHOPPING LIST's permission, not the
-// pantry's — it writes to that list.
-jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
-  useShoppingListDetails: () => ({ shoppingList: { id: 'list-1' } }),
-}));
-let mockListCanAddItems = true;
-let mockListResolved = true;
-jest.mock('#features/shoppingList/hooks/useShoppingListPermissions', () => ({
-  useShoppingListPermissions: () => ({
-    canAddItems: mockListCanAddItems,
-    canRemoveItems: true,
-    canEditItems: true,
-    canMarkPurchased: true,
-    resolved: mockListResolved,
-  }),
-}));
-
-let mockSelectedListId: string | null = 'list-1';
-jest.mock('#store/useAppStore', () => {
-  const actual = jest.requireActual('#store/useAppStore');
+// Navigation is the boundary: with no navigator, the screen is focused while
+// mounted.
+jest.mock('@react-navigation/native', () => {
+  const { useEffect: useMountEffect } = jest.requireActual('react');
   return {
-    ...actual,
-    useSelectedShoppingListId: () => mockSelectedListId,
+    ...jest.requireActual('@react-navigation/native'),
+    useFocusEffect: (effect: () => undefined | (() => void)) =>
+      useMountEffect(effect, [effect]),
   };
 });
 
-type AddToList = (
-  itemId: string,
-  display: { itemName: string; unitId?: string },
-) => Promise<string>;
-const mockAddToList = jest.fn<ReturnType<AddToList>, Parameters<AddToList>>(
-  () => Promise.resolve('ok'),
-);
-jest.mock('#features/pantry/hooks/useAddPantryItemToShoppingList', () => ({
-  useAddPantryItemToShoppingList: () => ({ addToList: mockAddToList }),
-}));
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
-jest.mock('#features/pantry/hooks/useCurrentPantry', () => ({
-  useCurrentPantry: () => ({
-    pantry: { id: 'p1' },
-    selectedHomeId: 'h1',
-  }),
-}));
+type PantryAnswer = MockDataFor<typeof GetPantryDocument>;
+type Row = NonNullable<
+  NonNullable<
+    NonNullable<NonNullable<PantryAnswer['pantry']>['itemsConnection']>['edges']
+  >[number]['node']
+>;
 
-// The sheet needs a bottom-sheet host and navigation context this render has
-// no use for; the recipe screen's test stubs it the same way.
-jest.mock('#features/shoppingList/ui/ShoppingListPickerSheet', () => ({
-  ShoppingListPickerSheet: () => null,
-}));
+const day = (offset: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + offset);
+  return toDateKey(date);
+};
 
-jest.mock('#features/shoppingList/hooks/useShoppingListsLite', () => ({
-  useShoppingListsLite: () => ({ lists: [], loading: false }),
-}));
-
-const mockOpenForAll = jest.fn();
-const mockOpenForRow = jest.fn();
-jest.mock('#features/pantry/hooks/useLowStockListPicker', () => ({
-  useLowStockListPicker: () => ({
-    pickerVisible: false,
-    busy: false,
-    openForAll: mockOpenForAll,
-    openForRow: mockOpenForRow,
-    handleListSelected: jest.fn(),
-    handleCreateListAndAdd: jest.fn(),
-    dismissPicker: jest.fn(),
-  }),
-}));
-
-const mockLowStockItems = [
-  {
-    id: 'ls1',
-    itemId: 'catalog-ls1',
-    itemName: 'Eggs',
-    quantity: 2,
-    heldQuantity: 2,
-    unit: { symbol: 'pcs' },
-    displayAmount: { quantity: 2, unit: { symbol: 'pcs' } },
-    isLowStock: true,
-  },
-  {
-    id: 'ls2',
-    itemId: 'catalog-ls2',
-    itemName: 'Butter',
-    quantity: 1,
-    heldQuantity: 1,
-    unit: { symbol: 'stk' },
-    displayAmount: { quantity: 1, unit: { symbol: 'stk' } },
-    isLowStock: true,
-  },
-];
-
-const now = new Date();
-const tomorrow = new Date(now);
-tomorrow.setDate(tomorrow.getDate() + 1);
-const in3Days = new Date(now);
-in3Days.setDate(in3Days.getDate() + 3);
-
-const sixDaysAgo = new Date(now);
-sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
-
-const mockExpiringItems = [
-  {
-    id: 'ex1',
-    itemId: 'catalog-ex1',
-    itemName: 'Milk',
-    quantity: 1,
-    heldQuantity: 1,
-    unit: { symbol: 'gal' },
-    displayAmount: { quantity: 1, unit: { symbol: 'gal' } },
-    isLowStock: false,
-    expiresOn: toDateKey(tomorrow),
-  },
-  {
-    id: 'ex2',
-    itemId: 'catalog-ex2',
-    itemName: 'Yogurt',
-    quantity: 2,
-    heldQuantity: 2,
-    unit: { symbol: 'cups' },
-    displayAmount: { quantity: 2, unit: { symbol: 'cups' } },
-    isLowStock: false,
-    expiresOn: toDateKey(in3Days),
-  },
-];
-
-const mockExpiredItems = [
-  {
-    id: 'exp1',
-    itemId: 'catalog-exp1',
-    itemName: 'Salmon',
-    quantity: 1,
-    heldQuantity: 1,
-    unit: { symbol: 'steak' },
-    displayAmount: { quantity: 1, unit: { symbol: 'steak' } },
-    isLowStock: false,
-    expiresOn: toDateKey(sixDaysAgo),
-  },
-];
-
-let mockAllItems: MockPantryItem[] = mockLowStockItems;
-let mockLoading = false;
-let mockError: Error | undefined;
-let mockHasResult = true;
-let mockHasMore = false;
-const mockLoadMore = jest.fn();
-const mockIsOffline = jest.fn(() => false);
-jest.mock('#hooks/app/useIsApiUnavailable', () => ({
-  useIsApiUnavailable: () => mockIsOffline(),
-}));
-
-const mockUsePantryManagement = jest.fn();
-jest.mock('#features/pantry/hooks/usePantryManagement', () => ({
-  usePantryManagement: (...args: unknown[]) => {
-    mockUsePantryManagement(...args);
-    return {
-      state: {
-        items: mockAllItems,
-        loading: mockLoading,
-        error: mockError,
-        // A response arrived — separates an empty result from a fetch that
-        // never answered, which must not render the same way.
-        hasResult: mockHasResult,
-        hasMore: mockHasMore,
-        isLoadingMore: false,
-      },
-      actions: {
-        refetch: jest.fn(() => Promise.resolve()),
-        loadMore: mockLoadMore,
-      },
-    };
-  },
-}));
-
-// The screen owns WHICH items it lists, their order and the cart; how an item
-// reads is the pantry row's, which `PantryItemCard.test.tsx` covers.
-jest.mock('#features/pantry/components/PantryItemCard', () => ({
-  PantryItemCard: ({
-    pantryItemId,
-    accessory,
-  }: {
-    pantryItemId: string;
-    accessory?: React.ReactNode;
-  }) => {
-    const { View, Text } = require('react-native');
-    const item = mockAllItems.find(row => row.id === pantryItemId);
-    return (
-      <View testID={`pantry-row-${pantryItemId}`}>
-        <Text>{item?.itemName}</Text>
-        {accessory}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/organisms/Header', () => ({
-  Header: ({
-    title,
-    rightActions,
-  }: {
-    title?: string;
-    rightActions?: HeaderAction[];
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID="header">
-        <Text>{title}</Text>
-        {rightActions?.map((a, i) => (
-          <View key={i} testID={a.testID} />
-        ))}
-      </View>
-    );
-  },
-}));
-jest.mock('#components/organisms/SwipeableItem/SwipeableItem', () => ({
-  SwipeableItem: ({
-    children,
-    onPress,
-  }: {
-    children?: React.ReactNode;
-    onPress?: () => void;
-  }) => {
-    const { Pressable } = require('react-native');
-    return <Pressable onPress={onPress}>{children}</Pressable>;
-  },
-}));
-jest.mock('#/styles/commonStyles', () => ({
-  commonStyles: {
-    container: {},
-    card: {},
-    rowSpaceBetween: {},
-    center: {},
-    body: {},
-    caption: {},
-  },
-}));
-
-const makeRoute = (
-  mode?: 'lowStock' | 'expiring' | 'expired',
-): React.ComponentProps<typeof FilteredPantryItems>['route'] => ({
-  params: mode ? { mode } : undefined,
+/** A stocked, undated row; its catalog item's id is unlike its own. */
+const row = (id: string, itemName: string, state: Row = {}): Row => ({
+  __typename: 'PantryItem',
+  id,
+  itemId: `catalog-${id}`,
+  itemName,
+  quantity: 1,
+  isLowStock: false,
+  expiresOn: null,
+  ...state,
 });
+
+const eggs = row('eggs', 'Eggs', { isLowStock: true });
+const rice = row('rice', 'Rice');
+const soup = row('soup', 'Soup', { expiresOn: day(0) });
+const milk = row('milk', 'Milk', { expiresOn: day(1) });
+const yogurt = row('yogurt', 'Yogurt', { expiresOn: day(EXPIRING_SOON_DAYS) });
+const salmon = row('salmon', 'Salmon', { expiresOn: day(-6) });
+const emptyJam = row('jam', 'Jam', { quantity: 0, expiresOn: day(1) });
+
+/** What the server answers each view with; `expiringSoon` has no lower bound. */
+const SERVED = {
+  lowStock: [eggs],
+  expiringSoon: [yogurt, salmon, emptyJam, milk, soup],
+  all: [eggs, rice, soup, milk, yogurt, salmon, emptyJam],
+};
+
+const pantryPage = (rows: Row[], hasNextPage = false): PantryAnswer => ({
+  pantry: {
+    id: 'p1',
+    itemsConnection: {
+      edges: rows.map(node => ({ node })),
+      pageInfo: { hasNextPage, endCursor: hasNextPage ? 'page-1' : null },
+    },
+  },
+});
+
+/** The server: each view's rows, one page unless a second is asked for. */
+function pantryServer({
+  morePages = false,
+  nextPage = [rice],
+}: { morePages?: boolean; nextPage?: Row[] } = {}) {
+  return recordMock(GetPantryDocument, {
+    dataFor: vars => {
+      if (vars.itemsCursor) return pantryPage(nextPage);
+      const filter = isRecord(vars.itemsFilter) ? vars.itemsFilter : {};
+      const rows = filter.lowStock
+        ? SERVED.lowStock
+        : filter.expiringSoon
+        ? SERVED.expiringSoon
+        : SERVED.all;
+      return pantryPage(rows, morePages);
+    },
+  });
+}
+
+/**
+ * A list of the home, where the user holds `role`. Both list reads select the
+ * home's membership, so both state it, as the server would.
+ */
+const homeList = (
+  id: string,
+  name: string,
+  role: MembershipRole,
+): NonNullable<
+  MockDataFor<typeof GetShoppingListDetailsDocument>['shoppingList']
+> => ({
+  __typename: 'ShoppingList',
+  id,
+  name,
+  homeId: 'h1',
+  home: {
+    __typename: 'Home',
+    id: 'h1',
+    myMembership: { __typename: 'Membership', id: 'm-h1', role },
+  },
+  ownerships: [],
+});
+
+const addLands = () =>
+  recordMock(AddItemToShoppingListFromFilteredPantryDocument, {
+    data: {
+      addItemsToShoppingList: {
+        __typename: 'AddItemsToShoppingListPayload',
+        results: [{ index: 0, success: true, failure: null }],
+      },
+    },
+  });
+
+let log = operationLog();
+
+/** Waits for the operation's nth answer, then lets what it started render. */
+const answered = (document: DocumentNode, nth = 1) =>
+  act(async () => {
+    await log.answered(document, nth);
+  });
+
+interface Render {
+  mode?: FilteredPantryItemsMode;
+  /** The user's role in the home the chosen list belongs to. */
+  role?: MembershipRole;
+  /** Answers that take precedence over the ones every visit gets. */
+  answers?: ReturnType<typeof recordMock>[];
+  pantry?: ReturnType<typeof recordMock>;
+}
+
+/** The screen as the pantry opens it, over homes the app has already read. */
+function renderScreen({
+  mode,
+  role = MembershipRole.Member,
+  answers = [],
+  pantry = pantryServer(),
+}: Render = {}) {
+  const cache = makeCache();
+  seedQuery(cache, {
+    query: GetHomesDocument,
+    data: homesData([{ id: 'h1', pantries: [{ id: 'p1' }] }]),
+  });
+  renderWithApollo(
+    <FilteredPantryItems route={{ params: mode ? { mode } : undefined }} />,
+    {
+      cache,
+      links: [log.link],
+      operationMocks: [
+        ...answers.map(answer => answer.mock),
+        pantry.mock,
+        recordMock(GetShoppingListDetailsDocument, {
+          data: { shoppingList: homeList('list-1', 'Groceries', role) },
+        }).mock,
+        recordMock(GetShoppingListsLiteDocument, {
+          data: {
+            shoppingLists: {
+              edges: [
+                { node: homeList('list-1', 'Groceries', role) },
+                { node: homeList('list-2', 'Weekend', role) },
+              ],
+            },
+          },
+        }).mock,
+        addLands().mock,
+      ],
+    },
+  );
+}
+
+/** The screen once its view has been read. */
+async function openScreen(options: Render = {}) {
+  renderScreen(options);
+  await answered(GetPantryDocument);
+}
+
+const names = () =>
+  screen
+    .getAllByText(/^(Eggs|Rice|Soup|Milk|Yogurt|Salmon|Jam)$/)
+    .map(node => node.props.children);
+
+const addLabel = () => t('labels.addToShoppingList');
+const headerCart = () => screen.getByTestId(pantryTestIDs.addAllLowStockButton);
+/** The carts on the rows, not the header's. */
+const rowCarts = () =>
+  screen
+    .queryAllByLabelText(addLabel())
+    .filter(cart => cart.props.testID !== pantryTestIDs.addAllLowStockButton);
 
 beforeEach(() => {
-  jest.useFakeTimers();
+  jest.clearAllMocks();
+  log = operationLog();
+  useStore.setState({
+    user: {
+      id: 'user-1',
+      email: 'member@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    selectedHomeId: 'h1',
+    selectedPantryId: 'p1',
+    isHomeSelectionReady: true,
+    selectedShoppingListId: 'list-1',
+    isOnline: true,
+    apiReachable: true,
+  });
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+describe('which rows each view lists', () => {
+  it('opens on low stock when no view is named', async () => {
+    await openScreen();
 
-describe('FilteredPantryItems', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockAllItems = mockLowStockItems;
-    mockLoading = false;
-    mockError = undefined;
-    mockHasResult = true;
+    expect(screen.getByText(t('filteredPantry.lowStockTitle'))).toBeTruthy();
   });
 
-  // Cart visibility has ONE rule: a known permission refusal. A per-mode flag
-  // beside it would hide the cart on the screens where a re-buy is most likely
-  // — something expiring today — so there is none, and this pins that.
+  // What the badge counts, not the `lowStockAlert` notification opt-in.
+  it('asks the server for low stock as the badge counts it', async () => {
+    const pantry = pantryServer();
+    await openScreen({ mode: 'lowStock', pantry });
+
+    expect(pantry.fired).toContainEqual(
+      expect.objectContaining({ itemsFilter: { lowStock: true } }),
+    );
+    expect(names()).toEqual(['Eggs']);
+  });
+
+  it('lists the stocked rows due within the window, from the superset the server sends', async () => {
+    const pantry = pantryServer();
+    await openScreen({ mode: 'expiring', pantry });
+
+    expect(pantry.fired).toContainEqual(
+      expect.objectContaining({
+        itemsFilter: { expiringSoon: true, today: todayKey() },
+      }),
+    );
+    expect(names().sort()).toEqual(['Milk', 'Soup', 'Yogurt']);
+  });
+
+  it('lists what expires soonest first', async () => {
+    await openScreen({ mode: 'expiring' });
+
+    expect(names()).toEqual(['Soup', 'Milk', 'Yogurt']);
+  });
+
+  it('lists as expired only what is past its date', async () => {
+    await openScreen({ mode: 'expired' });
+
+    expect(names()).toEqual(['Salmon']);
+  });
+
+  it('pages through the whole view online', async () => {
+    const pantry = pantryServer({ morePages: true, nextPage: [milk] });
+    renderScreen({ mode: 'expiring', pantry });
+    await answered(GetPantryDocument, 2);
+
+    expect(pantry.fired).toContainEqual(
+      expect.objectContaining({ itemsCursor: 'page-1' }),
+    );
+  });
+
+  it('says all is stocked when the server finds nothing low', async () => {
+    await openScreen({
+      mode: 'lowStock',
+      pantry: recordMock(GetPantryDocument, { data: pantryPage([]) }),
+    });
+
+    expect(screen.getByText(t('filteredPantry.lowStockEmpty'))).toBeTruthy();
+  });
+
+  it('shows the row skeleton while the view is read', () => {
+    renderScreen({
+      pantry: recordMock(GetPantryDocument, {
+        data: pantryPage([eggs]),
+        held: true,
+      }),
+    });
+
+    expect(screen.getByTestId(pantryTestIDs.loading)).toBeTruthy();
+  });
+
+  // "All items are above minimum stock levels" is good news the app has no
+  // evidence for when the read failed.
+  it('offers a retry, not good news, when the read fails', async () => {
+    await openScreen({
+      pantry: recordMock(GetPantryDocument, { error: new Error('500') }),
+    });
+
+    expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    expect(screen.queryByText(t('filteredPantry.lowStockEmpty'))).toBeNull();
+  });
+
   describe('offline', () => {
-    beforeEach(() => mockIsOffline.mockReturnValue(true));
-    afterEach(() => {
-      mockIsOffline.mockReturnValue(false);
-      mockHasMore = false;
+    beforeEach(() => useStore.setState({ apiReachable: false }));
+
+    it('narrows the rows the pantry holds, asking for no view', async () => {
+      const pantry = pantryServer();
+      await openScreen({ mode: 'lowStock', pantry });
+
+      expect(pantry.fired.every(vars => vars.itemsFilter == null)).toBe(true);
+      expect(names()).toEqual(['Eggs']);
     });
 
-    it('narrows the rows the pantry holds, asking for no filtered view', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-
-      expect(mockUsePantryManagement).toHaveBeenLastCalledWith(
-        'p1',
-        expect.objectContaining({ filters: null }),
-      );
-      expect(screen.getAllByTestId(/pantry-row/).length).toBeGreaterThan(0);
-    });
-
-    it('says there may be more, and stops paging, when the pantry holds only part', () => {
-      mockHasMore = true;
-      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+    it('says there may be more, and pages no further', async () => {
+      const pantry = pantryServer({ morePages: true });
+      await openScreen({ mode: 'lowStock', pantry });
 
       expect(screen.getByTestId(pantryTestIDs.filteredPartial)).toBeTruthy();
-      expect(mockLoadMore).not.toHaveBeenCalled();
+      expect(pantry.fired).not.toContainEqual(
+        expect.objectContaining({ itemsCursor: 'page-1' }),
+      );
     });
 
-    it('claims nothing about stock when no held row matches and there may be more', () => {
-      mockHasMore = true;
-      mockAllItems = [];
-      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+    it('claims nothing about stock when no held row matches and there may be more', async () => {
+      await openScreen({
+        mode: 'lowStock',
+        pantry: recordMock(GetPantryDocument, {
+          data: pantryPage([rice], true),
+        }),
+      });
 
-      expect(screen.getByTestId('state-offline')).toBeTruthy();
-      expect(
-        screen.queryByText('All items are above minimum stock levels'),
-      ).toBeNull();
+      expect(screen.getByTestId(kitTestIDs.stateOffline)).toBeTruthy();
+      expect(screen.queryByText(t('filteredPantry.lowStockEmpty'))).toBeNull();
     });
   });
+});
 
-  it('keeps asking for the filtered view online, and pages through it', () => {
-    mockHasMore = true;
-    renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-    mockHasMore = false;
+describe('a row', () => {
+  it('opens its detail', async () => {
+    await openScreen();
 
-    expect(mockUsePantryManagement).toHaveBeenLastCalledWith(
-      'p1',
-      expect.objectContaining({ filters: { lowStock: true } }),
+    fireEvent.press(screen.getByText('Eggs'));
+
+    expect(mockNav.toPantryItemDetail).toHaveBeenCalledWith({
+      itemId: 'eggs',
+    });
+  });
+});
+
+describe('the cart', () => {
+  it.each<FilteredPantryItemsMode>(['lowStock', 'expiring', 'expired'])(
+    'is offered on every row in %s',
+    async mode => {
+      await openScreen({ mode });
+
+      expect(rowCarts()).toHaveLength(names().length);
+      expect(headerCart()).toBeTruthy();
+    },
+  );
+
+  // `item: { itemId }` is resolved as a catalog item: the row's own id is
+  // refused, for every user, every time.
+  it('adds a row to the chosen list as its catalog item', async () => {
+    const add = addLands();
+    await openScreen({ answers: [add] });
+
+    fireEvent.press(rowCarts()[0]!);
+    await answered(AddItemToShoppingListFromFilteredPantryDocument);
+
+    expect(add.fired).toEqual([
+      {
+        input: {
+          shoppingListId: 'list-1',
+          items: [
+            expect.objectContaining({ item: { itemId: 'catalog-eggs' } }),
+          ],
+        },
+      },
+    ]);
+  });
+
+  it('asks which list to add to when none is chosen', async () => {
+    useStore.setState({ selectedShoppingListId: null });
+    const add = addLands();
+    await openScreen({ answers: [add] });
+    await answered(GetShoppingListsLiteDocument);
+
+    fireEvent.press(rowCarts()[0]!);
+    fireEvent.press(screen.getByText('Weekend'));
+    await answered(AddItemToShoppingListFromFilteredPantryDocument);
+
+    expect(add.fired).toEqual([
+      {
+        input: expect.objectContaining({ shoppingListId: 'list-2' }),
+      },
+    ]);
+  });
+
+  it('says so when the list refuses the add', async () => {
+    await openScreen({
+      answers: [
+        recordMock(AddItemToShoppingListFromFilteredPantryDocument, {
+          data: {
+            addItemsToShoppingList: {
+              __typename: 'ForbiddenError',
+              code: ErrorCode.Forbidden,
+              message: 'Not yours',
+            },
+          },
+        }),
+      ],
+    });
+
+    fireEvent.press(rowCarts()[0]!);
+    await answered(AddItemToShoppingListFromFilteredPantryDocument);
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('filteredPantry.addToShoppingFailed'),
     );
-    expect(mockLoadMore).toHaveBeenCalled();
   });
 
-  describe('the cart is offered in every mode', () => {
-    const MODES = [
-      ['lowStock', () => mockLowStockItems],
-      ['expiring', () => mockExpiringItems],
-      ['expired', () => mockExpiredItems],
-    ] as const;
+  it('is withheld from a guest of the chosen list', async () => {
+    await openScreen({ role: MembershipRole.Guest });
+    await answered(GetShoppingListDetailsDocument);
+    await answered(GetShoppingListsLiteDocument);
 
-    it.each(MODES)('%s offers the cart', (mode, rows) => {
-      mockAllItems = rows();
-      renderWithApollo(<FilteredPantryItems route={makeRoute(mode)} />);
-      expect(
-        screen.queryAllByLabelText('Add to shopping list').length,
-      ).toBeGreaterThan(0);
-    });
-
-    it.each(MODES)('%s withholds the cart on a known refusal', (mode, rows) => {
-      mockAllItems = rows();
-      mockListCanAddItems = false;
-      try {
-        renderWithApollo(<FilteredPantryItems route={makeRoute(mode)} />);
-        expect(screen.queryAllByLabelText('Add to shopping list')).toEqual([]);
-      } finally {
-        mockListCanAddItems = true;
-      }
-    });
+    expect(screen.queryByLabelText(addLabel())).not.toBeOnTheScreen();
   });
 
-  describe('lowStock mode', () => {
-    it('renders the title', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-      expect(screen.getByText('Low Stock Items')).toBeTruthy();
-    });
+  // Unknown is not a refusal: the cart is what asks which list.
+  it('is offered while the list’s permission is still being read', async () => {
+    const details = recordMock(GetShoppingListDetailsDocument, { held: true });
+    await openScreen({ answers: [details] });
 
-    it('shows add-all button in header', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-      expect(screen.getByTestId('add-all-low-stock')).toBeTruthy();
-    });
-
-    it('offers no cart when the user may not add to the selected list', () => {
-      // Gating on the PANTRY's permission offered a viewer of the list a
-      // control the server refuses every time.
-      mockListCanAddItems = false;
-      try {
-        renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-        expect(screen.queryAllByLabelText('Add to shopping list')).toEqual([]);
-      } finally {
-        mockListCanAddItems = true;
-      }
-    });
-
-    // No list chosen is not a refusal — it is not an answer. Withholding the
-    // cart there removes the only affordance that can say which list to pick,
-    // and the screen's own prompt for that becomes unreachable.
-    it('still offers the cart when no shopping list has been chosen', () => {
-      mockSelectedListId = null;
-      mockListResolved = false;
-      mockListCanAddItems = false;
-      try {
-        renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-
-        expect(
-          screen.queryAllByLabelText('Add to shopping list').length,
-        ).toBeGreaterThan(0);
-      } finally {
-        mockSelectedListId = 'list-1';
-        mockListResolved = true;
-        mockListCanAddItems = true;
-      }
-    });
-
-    it('sends the CATALOG item id to the shopping list, not the row id', async () => {
-      // `item: { itemId }` is an @oneOf ItemRefInput the server resolves as a
-      // catalog Item. Sending the PantryItem's own id is refused every time,
-      // for every user — a control that never works rather than one that
-      // sometimes fails.
-      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-
-      fireEvent.press(screen.getAllByLabelText('Add to shopping list')[0]!);
-
-      await drainTimers();
-      expect(mockAddToList).toHaveBeenCalled();
-      // The fixtures give every row a catalog id unlike its own, so passing
-      // the row id through is visible rather than coincidentally equal. The
-      // list id leads: a row adds to the list already selected.
-      const [sentListId, sentId] = mockAddToList.mock.calls[0]!;
-      expect(sentListId).toBe('list-1');
-      expect(sentId).toBe(`catalog-${mockLowStockItems[0]!.id}`);
-      expect(sentId).not.toBe(mockLowStockItems[0]!.id);
-    });
-
-    it('renders low stock item names', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-      expect(screen.getByText('Eggs')).toBeTruthy();
-      expect(screen.getByText('Butter')).toBeTruthy();
-    });
-
-    it('shows empty state when all items are stocked', () => {
-      mockAllItems = [];
-      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-      expect(
-        screen.getByText('All items are above minimum stock levels'),
-      ).toBeTruthy();
-    });
-
-    it('renders the row skeleton during loading', () => {
-      mockLoading = true;
-      mockAllItems = [];
-      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-      expect(screen.getByText('Low Stock Items')).toBeTruthy();
-      expect(screen.getByTestId(pantryTestIDs.loading)).toBeTruthy();
-    });
-
-    describe('a failed fetch is not good news', () => {
-      // The empty copy here congratulates: "All items are above minimum stock
-      // levels". Showing it when the request failed reports something the app
-      // has no evidence for, and gives no way to try again.
-      it('shows a retry, not the all-stocked message, when the fetch failed', () => {
-        mockAllItems = [];
-        mockHasResult = false;
-        mockError = new Error('500');
-        renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-
-        expect(
-          screen.queryByText('All items are above minimum stock levels'),
-        ).toBeNull();
-        expect(screen.getByTestId('state-error')).toBeTruthy();
-        expect(screen.getByText('Try again')).toBeTruthy();
-      });
-
-      it('still shows the all-stocked message when the fetch succeeded', () => {
-        mockAllItems = [];
-        renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-
-        expect(
-          screen.getByText('All items are above minimum stock levels'),
-        ).toBeTruthy();
-        expect(screen.queryByTestId('state-error')).toBeNull();
-      });
-    });
-
-    it('defaults to lowStock mode when no params', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute()} />);
-      expect(screen.getByText('Low Stock Items')).toBeTruthy();
-    });
+    expect(rowCarts()).toHaveLength(1);
   });
 
-  describe('expiring mode', () => {
-    beforeEach(() => {
-      mockAllItems = mockExpiringItems;
-    });
+  it('adds from the header every row the view shows, and no other', async () => {
+    useStore.setState({ selectedShoppingListId: null });
+    const add = addLands();
+    await openScreen({ mode: 'expiring', answers: [add] });
+    await answered(GetShoppingListsLiteDocument);
 
-    it('renders the title', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
-      expect(screen.getByText('Expiring Items')).toBeTruthy();
-    });
+    fireEvent.press(headerCart());
+    fireEvent.press(screen.getByText('Weekend'));
+    await answered(AddItemToShoppingListFromFilteredPantryDocument, 3);
 
-    // Something expiring today is the most likely re-buy on the screen; the
-    // per-mode flag that hid this had no stated reason.
-    it('shows the add-all button in header', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
-      expect(screen.getByTestId('add-all-low-stock')).not.toBeNull();
-    });
-
-    it('renders expiring item names', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
-      expect(screen.getByText('Milk')).toBeTruthy();
-      expect(screen.getByText('Yogurt')).toBeTruthy();
-    });
-
-    it('lists the soonest to expire first, each as the pantry row', () => {
-      mockAllItems = [...mockExpiringItems].reverse();
-      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
-      const rows = screen
-        .getAllByTestId(/^pantry-row-/)
-        .map(row => row.props.testID);
-      expect(rows).toEqual(['pantry-row-ex1', 'pantry-row-ex2']);
-    });
-
-    it('shows empty state when no items are expiring', () => {
-      mockAllItems = [];
-      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
-      expect(screen.getByText('No items are expiring soon')).toBeTruthy();
-    });
-
-    it('excludes already-expired items', () => {
-      mockAllItems = mockExpiredItems;
-      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
-      expect(screen.queryByText('Salmon')).toBeNull();
-      expect(screen.getByText('No items are expiring soon')).toBeTruthy();
-    });
+    const added = add.fired.flatMap(vars =>
+      isRecord(vars.input) && Array.isArray(vars.input.items)
+        ? vars.input.items.map((item: unknown) =>
+            isRecord(item) && isRecord(item.item) ? item.item.itemId : null,
+          )
+        : [],
+    );
+    expect(added).toEqual(['catalog-soup', 'catalog-milk', 'catalog-yogurt']);
   });
 
-  describe('server-side narrowing', () => {
-    // Load-bearing: `itemsConnection` caps cached edges at 100 while
-    // `pageInfo.hasNextPage` reports the last FETCHED page, so above 100 items a
-    // client-only filter runs over a subset that claims to be complete and
-    // silently reports "none". The expiry modes must narrow on the server.
-    beforeEach(() => {
-      mockUsePantryManagement.mockClear();
-    });
+  it('names a new list after the view', async () => {
+    await openScreen({ mode: 'lowStock' });
 
-    it('asks the server for expiring items rather than filtering the whole pantry', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
-      expect(mockUsePantryManagement).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          filters: { expiringSoon: true, today: todayKey() },
-        }),
-      );
-    });
+    fireEvent.press(headerCart());
+    fireEvent.press(screen.getByText(t('shoppingListPicker.newList')));
 
-    it('asks the server for the same superset in expired mode', () => {
-      // `expiringSoon` has no lower bound server-side, so it returns
-      // already-expired items too; the client predicate splits the two.
-      renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
-      expect(mockUsePantryManagement).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({
-          filters: { expiringSoon: true, today: todayKey() },
-        }),
-      );
-    });
-
-    it('narrows low stock server-side, matching the badge definition', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
-      expect(mockUsePantryManagement).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ filters: { lowStock: true } }),
-      );
-    });
-  });
-
-  describe('expired mode', () => {
-    beforeEach(() => {
-      mockAllItems = mockExpiredItems;
-    });
-
-    it('renders the title', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
-      expect(screen.getByText('Expired Items')).toBeTruthy();
-    });
-
-    it('renders expired item names', () => {
-      renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
-      expect(screen.getByText('Salmon')).toBeTruthy();
-    });
-
-    it('excludes items that are only expiring soon', () => {
-      mockAllItems = mockExpiringItems;
-      renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
-      expect(screen.queryByText('Milk')).toBeNull();
-      expect(screen.getByText('No expired items')).toBeTruthy();
-    });
-
-    it('shows empty state when nothing is expired', () => {
-      mockAllItems = [];
-      renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
-      expect(screen.getByText('No expired items')).toBeTruthy();
-    });
+    expect(
+      screen.getByPlaceholderText(
+        t('shoppingListPicker.newListNamePlaceholder'),
+      ),
+    ).toHaveDisplayValue(t('filteredPantry.lowStockTitle'));
   });
 });

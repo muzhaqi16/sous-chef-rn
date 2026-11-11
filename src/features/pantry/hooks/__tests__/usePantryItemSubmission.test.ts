@@ -1,600 +1,366 @@
-'use no memo';
-
 import { act } from '@testing-library/react-native';
-import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
-  inputOf,
   recordMock,
   renderHookWithApollo,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { operationLog } from '#/test-utils/operationLog';
+import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
+import { useStore } from '#store';
+import { t } from '#/i18n';
+import { todayKey } from '#/utils/dateUtils';
 import {
   AcquisitionMethod,
   ErrorCode,
+  ItemCondition,
   StorageState,
+  StorageType,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import {
+  CreatePantryItemDocument,
+  GetPantryDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import { addPantryItemDefaults } from '#features/pantry/components/modals/AddToPantrySheet/addPantryItemFormConfig';
-import { usePantryItemSubmission } from '../usePantryItemSubmission';
 import type { AddPantryItemFormData } from '#features/pantry/types';
-import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+import { usePantryItemSubmission } from '../usePantryItemSubmission';
 
-jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
-  useBudgetAndPricesEnabled: jest.fn(() => true),
-}));
+const PANTRY_ID = 'pantry-1';
+const PANTRY_READ = {
+  id: PANTRY_ID,
+  itemsFirst: 50,
+  storageLocationsFirst: 20,
+  today: todayKey(),
+};
 
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
-  createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
-  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
-  safeEvict: jest.fn(),
-}));
-
-jest.mock('#/utils/fractionUtils', () => ({
-  parseFractionalInput: jest.fn((input: string) => {
-    const num = parseFloat(input);
-    return isNaN(num) ? null : num;
-  }),
-}));
-
-const mockOnSuccess = jest.fn();
-
-const defaultValues: AddPantryItemFormData = {
+/** Two of milk in a picked unit: the form as the sheet hands it over valid. */
+const form = (
+  over: Partial<AddPantryItemFormData> = {},
+): AddPantryItemFormData => ({
   ...addPantryItemDefaults('Milk'),
   quantityInput: '2',
   unit: 'cups',
-  unitId: 'unit-1',
-  storageState: StorageState.Refrigerated,
+  unitId: 'unit-cup',
+  ...over,
+});
+
+/** The pantry as its screen holds it, with one location to pick. */
+function pantryHolding() {
+  const cache = makeCache();
+  seedQuery(cache, {
+    query: GetPantryDocument,
+    variables: PANTRY_READ,
+    data: pantryData({
+      id: PANTRY_ID,
+      storageLocations: [
+        { id: 'loc-1', name: 'Chest freezer', type: StorageType.Freezer },
+      ],
+    }),
+  });
+  return cache;
+}
+
+const addedRow = (cache: ReturnType<typeof makeCache>) => {
+  const [row] =
+    cache.readQuery({
+      query: GetPantryDocument,
+      variables: PANTRY_READ,
+      optimistic: true,
+    })?.pantry?.itemsConnection.edges ?? [];
+  if (!row) throw new Error('the add published no row');
+  return row.node;
 };
 
-/** The hook as the sheet drives it: the form's values reach `handleConfirm`. */
-function useSubmission(
-  overrides: Partial<AddPantryItemFormData> & { pantryId?: string },
-) {
-  const { pantryId, ...values } = { pantryId: 'pantry-1', ...overrides };
-  const submission = usePantryItemSubmission({
-    pantryId,
-    onSuccess: mockOnSuccess,
+const created = (held = false) =>
+  recordMock(CreatePantryItemDocument, {
+    data: {
+      createPantryItem: {
+        __typename: 'CreatePantryItemPayload',
+        pantryItem: { id: 'pi-new', version: 1 },
+      },
+    },
+    held,
   });
-  return {
-    loading: submission.loading,
-    handleConfirm: () =>
-      submission.handleConfirm({ ...defaultValues, ...values }),
-  };
+
+let log = operationLog();
+let onSuccess = jest.fn();
+
+function renderSubmission(
+  answers: ReturnType<typeof recordMock>[],
+  {
+    cache = pantryHolding(),
+    pantryId = PANTRY_ID,
+  }: { cache?: ReturnType<typeof makeCache>; pantryId?: string | null } = {},
+) {
+  const { result } = renderHookWithApollo(
+    () =>
+      usePantryItemSubmission({ pantryId: pantryId ?? undefined, onSuccess }),
+    { cache, links: [log.link], operationMocks: answers.map(a => a.mock) },
+  );
+  /** Submits the form and waits for the add to settle. */
+  const confirm = (values: AddPantryItemFormData) =>
+    act(async () => {
+      await result.current.handleConfirm(values);
+    });
+  return { cache, confirm, result };
+}
+
+/** What a submitted form sends as the create's input. */
+async function sent(values: AddPantryItemFormData) {
+  const create = created();
+  await renderSubmission([create]).confirm(values);
+  return create.fired[0]?.input;
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
+  log = operationLog();
+  onSuccess = jest.fn();
+  useStore.setState({ budgetAndPrices: true });
 });
 
-function createMock(success = true) {
-  if (success) {
-    return recordMock(CreatePantryItemDocument, {
-      data: {
-        createPantryItem: {
-          __typename: 'CreatePantryItemPayload',
-          pantryItem: {
-            __typename: 'PantryItem',
-            id: 'new-1',
-            pantryId: 'pantry-1',
-            itemName: 'Milk',
-            quantity: 1,
-            storageState: StorageState.Ambient,
-            expiresOn: null,
-            minQuantity: null,
-            netWeight: null,
-            item: null,
-            unit: null,
-            storageLocation: null,
-          },
-          pantry: {
-            __typename: 'Pantry',
-            id: 'pantry-1',
-            stats: { __typename: 'PantryStats' },
-          },
-        },
+describe('what is sent', () => {
+  it.each<[string, Partial<AddPantryItemFormData>, Record<string, unknown>]>([
+    [
+      'the amount, in the unit picked, for the pantry, today',
+      { quantityInput: '1 1/2' },
+      {
+        pantryId: PANTRY_ID,
+        quantity: 1.5,
+        unit: { id: 'unit-cup' },
+        today: todayKey(),
       },
-    });
-  }
-  return recordMock(CreatePantryItemDocument, {
-    data: {
-      createPantryItem: {
-        __typename: 'ValidationError',
-        code: ErrorCode.ValidationFailed,
-        field: 'itemName',
-      },
-    },
-  });
-}
-
-function createErrorMock() {
-  return recordMock(CreatePantryItemDocument, {
-    error: new Error('Network error'),
-  });
-}
-
-/**
- * Validation is NOT here. It moved to `addPantryItemSchema`, which reports on
- * the field instead of through an alert, and `handleSubmit` gates this hook on
- * it — so `handleConfirm` only ever runs against a valid form. The rules are
- * covered in `addPantryItemFormConfig.test.ts`.
- */
-describe('usePantryItemSubmission', () => {
-  it('returns handleConfirm and loading', () => {
-    const { result } = renderHookWithApollo(() => useSubmission({}));
-
-    expect(typeof result.current.handleConfirm).toBe('function');
-    expect(result.current.loading).toBe(false);
-  });
-
-  it('does nothing when pantryId is undefined', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () => useSubmission({ pantryId: undefined }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(m.fired).toEqual([]);
-  });
-
-  it('calls createPantryItem with correct input on success', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(() => useSubmission({}), {
-      operationMocks: [m.mock],
-    });
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(m.fired).toContainEqual({
-      today: expect.any(String),
-      input: expect.objectContaining({
-        pantryId: 'pantry-1',
-        quantity: 2,
-        item: { inline: expect.objectContaining({ name: 'Milk' }) },
-      }),
-    });
-    expect(mockOnSuccess).toHaveBeenCalled();
-  });
-
-  it('includes tags when provided', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () => useSubmission({ tags: 'dairy, organic' }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(m.fired).toContainEqual({
-      today: expect.any(String),
-      input: expect.objectContaining({
-        tags: ['dairy', 'organic'],
-      }),
-    });
-  });
-
-  it('includes thresholds when minQuantity provided', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () =>
-        useSubmission({
-          minQuantity: '1',
-          restockQuantity: '5',
-        }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(m.fired).toContainEqual({
-      today: expect.any(String),
-      input: expect.objectContaining({
-        thresholds: { minQuantity: 1, restockQuantity: 5 },
-      }),
-    });
-  });
-
-  it('shows error alert when mutation fails', async () => {
-    const { result } = renderHookWithApollo(() => useSubmission({}), {
-      operationMocks: [createErrorMock().mock],
-    });
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Failed to add item',
-    );
-  });
-
-  it('includes expiration date when set', async () => {
-    const date = new Date(2025, 5, 15);
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () => useSubmission({ expirationDate: date }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    // The picked LOCAL day, whatever the device's offset from UTC.
-    expect(m.fired).toContainEqual({
-      today: expect.any(String),
-      input: expect.objectContaining({
-        expiresOn: '2025-06-15',
-      }),
-    });
-  });
-
-  it('includes brand when provided', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () => useSubmission({ brand: 'Organic Valley' }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(m.fired).toContainEqual({
-      today: expect.any(String),
-      input: expect.objectContaining({
+    ],
+    ['a unit typed by its name', { unitId: null }, { unit: { name: 'cups' } }],
+    ['no unit for none', { unit: '', unitId: null }, { unit: undefined }],
+    [
+      'the item by its trimmed name, brand and category',
+      { itemName: ' Milk ', brand: ' Organic Valley ', category: 'Dairy' },
+      {
         item: {
-          inline: expect.objectContaining({ brand: 'Organic Valley' }),
+          inline: {
+            name: 'Milk',
+            brand: 'Organic Valley',
+            category: { name: 'Dairy' },
+          },
         },
-      }),
-    });
-  });
-
-  it('includes storage location when selectedStorageLocationId is set', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () =>
-        useSubmission({
-          selectedStorageLocationId: 'loc-1',
-        }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(m.fired).toContainEqual({
-      today: expect.any(String),
-      input: expect.objectContaining({
-        storage: expect.objectContaining({ location: { id: 'loc-1' } }),
-      }),
-    });
-  });
-
-  it('includes storageLocation name when no selectedStorageLocationId', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () =>
-        useSubmission({
-          storageLocation: 'Top Shelf',
-        }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(m.fired).toContainEqual({
-      today: expect.any(String),
-      input: expect.objectContaining({
-        storage: expect.objectContaining({
-          location: { name: 'Top Shelf' },
-        }),
-      }),
-    });
-  });
-
-  it('includes storageNotes when provided', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () =>
-        useSubmission({
-          storageNotes: 'Keep cool',
-        }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(m.fired).toContainEqual({
-      today: expect.any(String),
-      input: expect.objectContaining({
-        storage: expect.objectContaining({ storageNotes: 'Keep cool' }),
-      }),
-    });
-  });
-
-  it('states a count inside as what the package is used by', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () =>
-        useSubmission({
-          unit: 'case',
-          unitId: 'unit-case',
-          unitType: UnitType.Count,
-          sizeInput: '10',
-          sizeUnitDisplay: 'can',
-          sizeUnitId: 'unit-can',
-          sizeUnitType: UnitType.Count,
-        }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(m.fired).toContainEqual({
-      today: expect.any(String),
-      input: expect.objectContaining({
+      },
+    ],
+    [
+      'no brand for one of spaces',
+      { brand: '  ' },
+      { item: { inline: { brand: undefined } } },
+    ],
+    [
+      'how it is kept',
+      { storageState: StorageState.Frozen, condition: ItemCondition.Fair },
+      {
+        storage: {
+          storageState: StorageState.Frozen,
+          condition: ItemCondition.Fair,
+        },
+      },
+    ],
+    [
+      'a picked location by its id',
+      { selectedStorageLocationId: 'loc-1', storageLocation: 'Chest freezer' },
+      { storage: { location: { id: 'loc-1' } } },
+    ],
+    [
+      'a typed location by its name',
+      { storageLocation: 'Top shelf' },
+      { storage: { location: { name: 'Top shelf' } } },
+    ],
+    [
+      'trimmed notes',
+      { storageNotes: ' Keep cool ' },
+      { storage: { storageNotes: 'Keep cool' } },
+    ],
+    [
+      'the expiry picked, as that day',
+      { expirationDate: new Date(2026, 5, 15, 23, 30) },
+      { expiresOn: '2026-06-15' },
+    ],
+    [
+      'each tag once trimmed, and no empty one',
+      { tags: ' dairy, organic ,, ' },
+      { tags: ['dairy', 'organic'] },
+    ],
+    [
+      'both thresholds',
+      { minQuantity: '1', restockQuantity: '5' },
+      { thresholds: { minQuantity: 1, restockQuantity: 5 } },
+    ],
+    [
+      'a restock amount alone',
+      { restockQuantity: '5' },
+      { thresholds: { minQuantity: undefined, restockQuantity: 5 } },
+    ],
+    [
+      'a measure inside a package as its size',
+      { sizeInput: '500', sizeUnitId: 'unit-g', sizeUnitType: UnitType.Weight },
+      { netWeight: { netWeight: 500, netWeightUnitId: 'unit-g' } },
+    ],
+    [
+      'a count inside a package as what it is used by',
+      {
+        unitId: 'unit-case',
+        unitType: UnitType.Count,
+        sizeInput: '10',
+        sizeUnitId: 'unit-can',
+        sizeUnitType: UnitType.Count,
+      },
+      {
+        netWeight: undefined,
         measurementProfile: {
           portionUnitId: 'unit-can',
           portionsPerTrackingUnit: 10,
         },
-      }),
+      },
+    ],
+    [
+      'nothing inside an amount in a measure',
+      {
+        unitType: UnitType.Weight,
+        sizeInput: '5',
+        sizeUnitId: 'unit-lb',
+        sizeUnitType: UnitType.Weight,
+      },
+      { netWeight: undefined, measurementProfile: undefined },
+    ],
+  ])('%s', async (_what, over, input) => {
+    expect(await sent(form(over))).toMatchObject(input);
+  });
+});
+
+describe('what was paid', () => {
+  it.each<[string, boolean, Partial<AddPantryItemFormData>]>([
+    ['a plain add', true, {}],
+    ['a cost of nothing', true, { costPerUnit: '0' }],
+    ['a cost with prices off', false, { costPerUnit: '4.99' }],
+  ])('is not stated for %s', async (_what, prices, over) => {
+    useStore.setState({ budgetAndPrices: prices });
+
+    expect(await sent(form(over))).toMatchObject({ purchase: undefined });
+  });
+
+  it.each<[string, boolean, Partial<AddPantryItemFormData>, object]>([
+    [
+      'the cost typed, with prices on',
+      true,
+      { costPerUnit: '4.99' },
+      { costPerUnit: 4.99, acquisitionMethod: AcquisitionMethod.Purchased },
+    ],
+    [
+      'only the store picked, with prices off',
+      false,
+      { costPerUnit: '4.99', storeId: 'store-1' },
+      { storeId: 'store-1', acquisitionMethod: AcquisitionMethod.Purchased },
+    ],
+    [
+      'how it came, when not bought',
+      true,
+      { acquisitionMethod: AcquisitionMethod.Gifted },
+      { acquisitionMethod: AcquisitionMethod.Gifted },
+    ],
+  ])('states %s', async (_what, prices, over, purchase) => {
+    useStore.setState({ budgetAndPrices: prices });
+
+    expect(await sent(form(over))).toEqual(
+      expect.objectContaining({ purchase }),
+    );
+  });
+});
+
+describe('the row, before the server answers', () => {
+  it('shows what the form states beyond the input', async () => {
+    const { cache, result } = renderSubmission([created(true)]);
+
+    await act(async () => {
+      void result.current.handleConfirm(
+        form({
+          expirationDate: new Date(2026, 5, 15),
+          storageNotes: ' Keep cool ',
+          tags: 'dairy, organic',
+          minQuantity: '1',
+          restockQuantity: '5',
+        }),
+      );
+      await log.requested(CreatePantryItemDocument);
+    });
+
+    expect(addedRow(cache)).toMatchObject({
+      unit: { id: 'unit-cup' },
+      expiresOn: '2026-06-15',
+      storageNotes: 'Keep cool',
+      tags: ['dairy', 'organic'],
+      minQuantity: 1,
+      restockQuantity: 5,
     });
   });
 
-  it('shows an error alert when the create fails', async () => {
-    const { result } = renderHookWithApollo(() => useSubmission({}), {
-      operationMocks: [createErrorMock().mock],
-    });
+  it.each([
+    [
+      'a picked location as the pantry holds it',
+      { selectedStorageLocationId: 'loc-1', storageLocation: 'Chest freezer' },
+      { id: 'loc-1', name: 'Chest freezer', type: StorageType.Freezer },
+    ],
+    [
+      'a typed location by its name',
+      { storageLocation: ' Garage ' },
+      { name: 'Garage', type: StorageType.Custom },
+    ],
+  ])('shows %s', async (_what, over, location) => {
+    const { cache, result } = renderSubmission([created(true)]);
 
     await act(async () => {
-      await result.current.handleConfirm();
+      void result.current.handleConfirm(form(over));
+      await log.requested(CreatePantryItemDocument);
     });
+
+    expect(addedRow(cache).storageLocation).toMatchObject(location);
+  });
+});
+
+describe('the outcome', () => {
+  it('closes the form once the item is added', async () => {
+    await renderSubmission([created()]).confirm(form());
+
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  it('says why a refusal was refused, and keeps the form open', async () => {
+    const refused = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          message: 'The server’s own words',
+          field: 'shelfLife',
+        },
+      },
+    });
+
+    await renderSubmission([refused]).confirm(form());
 
     expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Failed to add item',
+      t('labels.error'),
+      t('errors.addItemFailed'),
     );
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 
-  it('states a measure inside as the package size', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () =>
-        useSubmission({
-          sizeInput: '500',
-          sizeUnitDisplay: 'g',
-          sizeUnitId: 'g-unit',
-          sizeUnitType: UnitType.Weight,
-        }),
-      { operationMocks: [m.mock] },
-    );
+  it('sends nothing with no pantry', async () => {
+    const create = created();
 
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
+    await renderSubmission([create], {
+      cache: makeCache(),
+      pantryId: null,
+    }).confirm(form());
 
-    expect(m.fired).toContainEqual({
-      today: expect.any(String),
-      input: expect.objectContaining({
-        netWeight: { netWeight: 500, netWeightUnitId: 'g-unit' },
-      }),
-    });
-  });
-
-  it('states nothing inside for an amount in a measure', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () =>
-        useSubmission({
-          unit: 'g',
-          unitId: 'g-unit',
-          unitType: UnitType.Weight,
-          sizeInput: '5',
-          sizeUnitId: 'lb-unit',
-        }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(m.fired).toContainEqual({
-      today: expect.any(String),
-      input: expect.not.objectContaining({
-        netWeight: expect.anything(),
-      }),
-    });
-  });
-
-  it('omits unit from input when no unitId and no unit name', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () => useSubmission({ unit: '', unitId: null }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(m.fired).toContainEqual({
-      today: expect.any(String),
-      input: expect.objectContaining({
-        unit: undefined,
-      }),
-    });
-  });
-
-  describe('the cost per unit', () => {
-    afterEach(() => {
-      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
-    });
-
-    const submit = async (overrides: Partial<AddPantryItemFormData>) => {
-      const m = createMock();
-      const { result } = renderHookWithApollo(() => useSubmission(overrides), {
-        operationMocks: [m.mock],
-      });
-      await act(async () => {
-        await result.current.handleConfirm();
-      });
-      const [fired] = m.fired;
-      return inputOf(fired!);
-    };
-
-    it('sends the cost typed with budget & prices on', async () => {
-      const input = await submit({ costPerUnit: '4.99' });
-
-      expect(input.purchase).toEqual(
-        expect.objectContaining({ costPerUnit: 4.99 }),
-      );
-    });
-
-    it('sends no cost with budget & prices off, whatever the form holds', async () => {
-      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
-
-      const input = await submit({ costPerUnit: '4.99' });
-
-      expect(input.purchase).toBeUndefined();
-      expect(mockOnSuccess).toHaveBeenCalled();
-    });
-
-    it('still sends the store picked with budget & prices off', async () => {
-      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
-
-      const input = await submit({ costPerUnit: '4.99', storeId: 'store-1' });
-
-      // `toEqual` passes only while `costPerUnit` is absent or undefined.
-      expect(input.purchase).toEqual({
-        storeId: 'store-1',
-        acquisitionMethod: AcquisitionMethod.Purchased,
-      });
-    });
-  });
-
-  describe('a product the pantry already holds', () => {
-    // Args are load-bearing — see the reader's own suite: the connection is
-    // keyed on them, so a seed without them writes a key the app never has.
-    const STOCKED_PANTRY = gql`
-      query SeedStockedPantry(
-        $id: ID!
-        $itemsFirst: Int
-        $itemsFilter: PantryItemFilters
-        $itemsOrderBy: PantryItemOrderBy
-      ) {
-        pantry(id: $id) {
-          __typename
-          id
-          itemsConnection(
-            first: $itemsFirst
-            filters: $itemsFilter
-            orderBy: $itemsOrderBy
-          ) {
-            __typename
-            totalCount
-            edges {
-              __typename
-              cursor
-              node {
-                __typename
-                id
-                itemName
-                quantity
-                item {
-                  __typename
-                  id
-                }
-                unit {
-                  __typename
-                  id
-                }
-              }
-            }
-          }
-        }
-      }
-    `;
-
-    const seedStocked = (itemName: string, unitId = 'unit-1') => {
-      const cache = makeCache();
-      seedQuery(cache, {
-        query: STOCKED_PANTRY,
-        variables: {
-          id: 'pantry-1',
-          itemsFirst: 100,
-          itemsFilter: undefined,
-          itemsOrderBy: undefined,
-        },
-        data: {
-          pantry: {
-            __typename: 'Pantry',
-            id: 'pantry-1',
-            itemsConnection: {
-              __typename: 'PantryItemConnection',
-              totalCount: 1,
-              edges: [
-                {
-                  __typename: 'PantryItemEdge',
-                  cursor: 'pi-1',
-                  node: {
-                    __typename: 'PantryItem',
-                    id: 'pi-1',
-                    itemName,
-                    quantity: 3,
-                    item: { __typename: 'Item', id: 'item-1' },
-                    unit: { __typename: 'Unit', id: unitId },
-                  },
-                },
-              ],
-            },
-          },
-        },
-      });
-      return cache;
-    };
-
-    // USM-2: an add of a held product joins its stack, or opens its own, on
-    // the server; the form asks nothing and never restocks itself.
-    it.each([
-      ['in the same unit', '  MILK ', 'unit-1'],
-      ['in another unit', 'Milk', 'unit-2'],
-    ])('goes as a forced add %s, with no prompt', async (_l, name, unitId) => {
-      const m = createMock();
-      const { result } = renderHookWithApollo(() => useSubmission({}), {
-        cache: seedStocked(name, unitId),
-        operationMocks: [m.mock],
-      });
-
-      await act(async () => {
-        await result.current.handleConfirm();
-      });
-
-      expect(alertService.alert).not.toHaveBeenCalled();
-      expect(m.fired).toHaveLength(1);
-      expect(m.fired[0]).toMatchObject({ input: { forceAdd: true } });
-    });
+    expect(create.fired).toEqual([]);
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 });

@@ -1,20 +1,33 @@
 'use no memo';
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
-import { act, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 import {
   renderWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
-import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { PantryItemCard } from '../PantryItemCard';
 import { StatusLine } from '#components/atoms/StatusLine';
+import { CachedImage } from '#components/atoms/CachedImage';
+import { Text } from '#components/atoms/Text';
+import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import {
+  makeQueuedMutation,
+  queuedMutationFor,
+} from '#/test-utils/queuedMutation';
+import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetUserSettingsDocument } from '#operations/auth/user.generated';
+import { gql, type ApolloClient } from '@apollo/client';
+import { t } from '#/i18n';
 import {
   PantryItemCard_PantryItemFragmentDoc,
   type PantryItemCard_PantryItemFragment,
 } from '../PantryItemCard.generated';
-import { PantryActionsProvider } from '../PantryActionsContext';
+import {
+  PantryActionsProvider,
+  type PantryItemActions,
+} from '../PantryActionsContext';
 import {
   EntryImageSource,
   StorageState,
@@ -33,118 +46,52 @@ jest.mock('#hooks/app/useToday', () => ({
   useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
 }));
 
-jest.mock('react-native-worklets', () => ({
-  createWorkletRuntime: jest.fn(),
-  runOnRuntime: jest.fn(),
-  useWorklet: jest.fn(),
-  scheduleOnRN: jest.fn((fn: (...args: unknown[]) => unknown) => fn),
-}));
-
-jest.mock('#/constants/animations', () => ({
-  SLIDE_PRESETS: {
-    exitWithFade: { duration: 300, opacityTarget: 0 },
-  },
-}));
-
-jest.mock('#components/atoms/ThemeEpochSentinel', () => {
-  const RN = require('react-native');
-  const R = require('react');
-  return {
-    ThemeEpochSentinel: () =>
-      R.createElement(RN.View, { testID: 'theme-epoch-sentinel' }),
-  };
-});
-
-jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
-  const RN = require('react-native');
-  const R = require('react');
-  return {
-    BaseItemCard: ({
-      children,
-      accessibilityLabel,
-      testID,
-      itemId,
-      leftElement,
-      rightElement,
-    }: {
-      children?: React.ReactNode;
-      accessibilityLabel: string;
-      testID?: string;
-      itemId?: string;
-      leftElement?: React.ReactNode;
-      rightElement?: React.ReactNode;
-    }) =>
-      R.createElement(
-        RN.View,
-        {
-          testID: testID || `base-item-card-${itemId}`,
-          accessibilityLabel,
-        },
-        leftElement || null,
-        children,
-        rightElement || null,
-      ),
-  };
-});
-
-jest.mock('#features/pantry/components/BaseItemCard/CardLeftSlot', () => {
-  const RN = require('react-native');
-  return {
-    CardLeftSlot: ({ imageUrl }: { imageUrl?: string | null }) =>
-      require('react').createElement(RN.View, {
-        testID: 'card-left-image',
-        accessibilityLabel: imageUrl,
-      }),
-  };
-});
-
-jest.mock('#features/pantry/components/BaseItemCard/CardContent', () => {
-  const RN = require('react-native');
-  const R = require('react');
-  return {
-    CardContent: ({
-      title,
-      subtitle,
-    }: {
-      title?: string;
-      subtitle?: React.ReactNode;
-    }) =>
-      R.createElement(
-        RN.View,
-        { testID: 'card-content' },
-        R.createElement(RN.Text, null, title),
-        subtitle,
-      ),
-  };
-});
-
-jest.mock('#features/pantry/components/BaseItemCard/CardRightSlot', () => {
-  const RN = require('react-native');
-  const R = require('react');
-  return {
-    CardRightSlot: ({
-      primary,
-      secondary,
-      tertiary,
-    }: {
-      primary?: React.ReactNode;
-      secondary?: React.ReactNode;
-      tertiary?: React.ReactNode;
-    }) =>
-      R.createElement(
-        RN.View,
-        { testID: 'card-right-slot' },
-        R.createElement(RN.Text, null, primary),
-        secondary ? R.createElement(RN.Text, null, secondary) : null,
-        tertiary ? R.createElement(RN.Text, null, tertiary) : null,
-      ),
-  };
-});
-
 const defaultActions = {
   onItemPress: jest.fn(),
   onItemEdit: jest.fn(),
 };
+
+/** What holds the row's accessibility actions, which a swipe offers too. */
+const actionsHostOf = () => {
+  let node = screen.getByText('Milk').parent;
+  while (node && !node.props.accessibilityActions) node = node.parent;
+  return node;
+};
+const actionsHost = () => {
+  const host = actionsHostOf();
+  if (!host) throw new Error('the row offers no actions');
+  return host;
+};
+const rowActions = (): string[] =>
+  (actionsHostOf()?.props.accessibilityActions ?? []).map(
+    (action: { name: string }) => action.name,
+  );
+
+/** Less of a row than the card reads. */
+const PantryItem_PartialTestFragmentDoc = gql`
+  fragment PantryItemCardTestPartial on PantryItem {
+    id
+    itemName
+  }
+`;
+
+/**
+ * Resolves once the cache's watchers read the user's system as `system`: a
+ * cache write reaches a watching query a task later (`scheduleNotify`).
+ */
+async function settingsRead(client: ApolloClient, system: UnitSystem) {
+  const watch = client.watchQuery({
+    query: GetUserSettingsDocument,
+    fetchPolicy: 'cache-only',
+  });
+  let subscription: { unsubscribe: () => void } | undefined;
+  await new Promise<void>(resolve => {
+    subscription = watch.subscribe(({ data }) => {
+      if (data?.me?.settings?.preferredUnitSystem === system) resolve();
+    });
+  });
+  subscription?.unsubscribe();
+}
 
 interface BuildItemOverrides {
   id?: string;
@@ -334,7 +281,7 @@ function buildCache(item: PantryItemCard_PantryItemFragment) {
 /** Caches the user's settings, as a signed-in session holds them. */
 function renderCard(
   overrides: BuildItemOverrides = {},
-  actions = defaultActions,
+  actions: PantryItemActions = defaultActions,
   settings?: { preferred: UnitSystem; device: UnitSystem },
 ) {
   const item = buildItem(overrides);
@@ -349,12 +296,9 @@ function renderCard(
   );
 }
 
-beforeEach(() => {
-  jest.useFakeTimers();
-});
-
+// A test that queues a write leaves none behind.
 afterEach(() => {
-  jest.useRealTimers();
+  queueStore.clearQueueForUser('user-1');
 });
 
 describe('PantryItemCard', () => {
@@ -427,13 +371,8 @@ describe('PantryItemCard', () => {
   it('names the row by what it shows, in reading order', () => {
     renderCard({ quantity: 0, storageLocationName: 'Kitchen Cabinet' });
     expect(
-      screen.getByTestId('pantry-item-pantry-1').props.accessibilityLabel,
-    ).toBe('Milk, Out of stock, 0 gal, Kitchen Cabinet');
-  });
-
-  it('renders with testID based on item id', () => {
-    renderCard();
-    expect(screen.getByTestId('pantry-item-pantry-1')).toBeTruthy();
+      screen.getByLabelText('Milk, Out of stock, 0 gal, Kitchen Cabinet'),
+    ).toBeTruthy();
   });
 
   it('renders "Out of stock" text when quantity is zero', () => {
@@ -459,9 +398,9 @@ describe('PantryItemCard', () => {
     renderCard({ expiresOn: toDateKey(expires) });
     expect(screen.getByText('Expires in 3 days')).toBeTruthy();
 
-    await drained(() => changeLanguage('es'));
+    await act(() => changeLanguage('es'));
     const inSpanish = screen.queryByText('Caduca en 3 días');
-    await drained(() => changeLanguage('en'));
+    await act(() => changeLanguage('en'));
 
     expect(inSpanish).toBeTruthy();
   });
@@ -482,9 +421,11 @@ describe('PantryItemCard', () => {
     expect(screen.getAllByText(/day/i).length).toBeGreaterThan(0);
   });
 
-  it('renders image left slot when item has imageUrl', () => {
+  it('leads with the item photo', () => {
     renderCard({ imageUrl: 'https://example.com/milk.jpg' });
-    expect(screen.getByTestId('card-left-image')).toBeTruthy();
+    expect(screen.UNSAFE_getByType(CachedImage).props.uri).toBe(
+      'https://example.com/milk.jpg',
+    );
   });
 
   // The household overrides the item photo on its own entries.
@@ -498,27 +439,98 @@ describe('PantryItemCard', () => {
         catalogImageId: null,
       },
     });
-    expect(screen.getByTestId('card-left-image').props.accessibilityLabel).toBe(
+    expect(screen.UNSAFE_getByType(CachedImage).props.uri).toBe(
       'https://example.com/our-milk.jpg',
     );
   });
 
-  it('renders placeholder image slot when no imageUrl', () => {
+  // Its photo or nothing: no placeholder tile, no stand-in icon.
+  it('shows nothing in place of a photo it does not have', () => {
     renderCard();
-    // The image slot is always rendered; it shows a consistent placeholder
-    // tile when no image is available, so rows stay aligned.
-    expect(screen.getByTestId('card-left-image')).toBeTruthy();
+    expect(screen.UNSAFE_queryByType(CachedImage)).toBeNull();
   });
 
-  it('wraps in SlideAnimatedWrapper when onItemDelete action is available', () => {
-    const actionsWithDelete = {
-      ...defaultActions,
-      onItemDelete: jest.fn(),
-    };
-    renderCard({}, actionsWithDelete);
-    expect(screen.getByText('Milk')).toBeTruthy();
-    // The themed card sits under the animated slide.
-    expect(screen.getByTestId('theme-epoch-sentinel')).toBeTruthy();
+  it('opens its detail on a press', () => {
+    renderCard();
+
+    fireEvent.press(screen.getByText('Milk'));
+
+    expect(defaultActions.onItemPress).toHaveBeenCalledWith('pantry-1');
+  });
+
+  it.each([
+    { offered: 'none', actions: {}, names: [] },
+    {
+      offered: 'every one the screen allows',
+      actions: {
+        onItemEdit: jest.fn(),
+        onItemConsume: jest.fn(),
+        onItemWaste: jest.fn(),
+        onItemRestock: jest.fn(),
+        onItemDelete: jest.fn(),
+      },
+      names: ['consume', 'waste', 'restock', 'edit', 'delete'],
+    },
+  ])('offers $offered of the row actions', ({ actions, names }) => {
+    renderCard({}, { onItemPress: jest.fn(), ...actions });
+
+    expect(rowActions().sort()).toEqual([...names].sort());
+  });
+
+  it('runs a row action on this stack', () => {
+    const onItemRestock = jest.fn();
+    renderCard({}, { onItemPress: jest.fn(), onItemRestock });
+
+    fireEvent(actionsHost(), 'accessibilityAction', {
+      nativeEvent: { actionName: 'restock' },
+    });
+
+    expect(onItemRestock).toHaveBeenCalledWith('pantry-1');
+  });
+
+  it("shows a screen's own action beside the amount", () => {
+    const item = buildItem();
+    renderWithApollo(
+      <PantryActionsProvider actions={defaultActions}>
+        <PantryItemCard
+          pantryItemId={item.id}
+          accessory={<Text>Add to cart</Text>}
+        />
+      </PantryActionsProvider>,
+      { cache: buildCache(item) },
+    );
+
+    expect(screen.getByText('Add to cart')).toBeTruthy();
+  });
+
+  it('says a row with a write waiting to reach the server is syncing', () => {
+    queueStore.setCurrentUserId('user-1');
+    queueStore.addMutation(
+      makeQueuedMutation({
+        ...queuedMutationFor(UpdatePantryItemDocument),
+        variables: { input: { id: 'pantry-1' } },
+      }),
+    );
+    renderCard();
+
+    expect(screen.getByText(t('status.syncing'))).toBeTruthy();
+  });
+
+  // A row whose fields are not all held would show what it does not have.
+  it('shows nothing of a row the cache holds only part of', () => {
+    const cache = makeCache();
+    seedFragment(cache, {
+      fragment: PantryItem_PartialTestFragmentDoc,
+      data: { __typename: 'PantryItem', id: 'pantry-1', itemName: 'Milk' },
+    });
+    renderWithApollo(
+      <PantryActionsProvider actions={defaultActions}>
+        <PantryItemCard pantryItemId="pantry-1" />
+      </PantryActionsProvider>,
+      { cache },
+    );
+
+    expect(screen.queryByText('Milk')).toBeNull();
   });
 
   describe('row status', () => {
@@ -610,7 +622,7 @@ describe('PantryItemCard', () => {
       const item = buildItem(honey);
       const cache = buildCache(item);
       writeUnitSystemSettings(cache, UnitSystem.Imperial, UnitSystem.Imperial);
-      renderWithApollo(
+      const { client } = renderWithApollo(
         <PantryActionsProvider actions={defaultActions}>
           <PantryItemCard pantryItemId={item.id} />
         </PantryActionsProvider>,
@@ -618,14 +630,12 @@ describe('PantryItemCard', () => {
       );
       expect(screen.getByText('3 lb')).toBeTruthy();
 
-      act(() => {
-        cache.modify({
-          id: 'UserSettings:settings-1',
-          fields: { preferredUnitSystem: () => UnitSystem.Metric },
-        });
+      await act(async () => {
+        const changed = settingsRead(client, UnitSystem.Metric);
+        writeUnitSystemSettings(cache, UnitSystem.Metric, UnitSystem.Metric);
+        await changed;
       });
 
-      await drainTimers();
       expect(screen.getByText('1.36 kg')).toBeTruthy();
     });
   });
