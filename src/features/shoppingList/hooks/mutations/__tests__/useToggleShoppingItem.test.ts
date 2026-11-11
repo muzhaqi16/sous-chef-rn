@@ -1,820 +1,428 @@
-import { alertService } from '#/services/alertService';
+import { act } from '@testing-library/react-native';
+import type { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
-import { act } from '@testing-library/react-native';
-import { gql } from '@apollo/client';
-import type { MockFor } from '#/test-utils/apolloMockProvider';
+import { alertService } from '#/services/alertService';
+import { cacheShows } from '#/test-utils/cacheWaits';
 import {
+  type MockDataFor,
+  recordMock,
   renderHookWithApollo,
-  seedCache,
-  seedFragment,
 } from '#/test-utils/apolloMockProvider';
-import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
-  moveShoppingListItemToPurchased,
-  moveShoppingListItemToUnpurchased,
-} from '#features/shoppingList/cache/connections';
+  listLine,
+  listLineIds,
+  purchaseRecordOf,
+  purchaseRecordWatch,
+  seedListLines,
+  seedPurchaseRecord,
+  type ListLine,
+} from '#/test-utils/fixtures/shoppingListFixtures';
+import type { ShoppingListItemPurchaseInfoFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useToggleShoppingItem } from '../useToggleShoppingItem';
 
-jest.mock('#/services/errorService');
+type Answer = MockDataFor<
+  typeof UpdateShoppingListItemDocument
+>['updateShoppingListItem'];
 
-// Spread the real module: only the two connection movers are stubbed. The
-// purchase-record writer must be the real one, because these tests assert on
-// what it leaves in the cache — and a partial factory silently makes any export
-// the hook reaches next `undefined`.
-jest.mock('#features/shoppingList/cache/connections', () => ({
-  ...jest.requireActual('#features/shoppingList/cache/connections'),
-  moveShoppingListItemToPurchased: jest.fn(),
-  moveShoppingListItemToUnpurchased: jest.fn(),
-}));
+/** A line on the list at version 3. */
+const line = (bought: boolean, movedToPantryAt: string | null = null) => ({
+  ...listLine('line-1', 'Milk', { bought, movedToPantryAt }),
+  version: 3,
+});
 
-jest.mock('#/utils/isNetworkError', () => ({
-  isNetworkError: jest.fn(() => false),
-}));
+/** The server's answer for the line, now in `bought`'s state. */
+const applied = (bought: boolean): Answer => ({
+  __typename: 'UpdateShoppingListItemPayload',
+  shoppingListItem: {
+    __typename: 'ShoppingListItem',
+    id: 'line-1',
+    version: 4,
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: bought,
+      movedToPantryAt: null,
+    },
+  },
+});
 
-const mockAlert = jest.mocked(alertService.alert);
+/** A purchase the line cannot be recorded against: it has no name. */
+const NAMELESS: Answer = {
+  __typename: 'ValidationError',
+  code: ErrorCode.ValidationFailed,
+  // Server English; the app shows its own copy for the field.
+  message: 'This item has no name to record a purchase against.',
+  field: 'itemName',
+};
+
+interface Setup {
+  /** The lines the list's two tabs hold; none seeds nothing. */
+  lines?: ListLine[];
+  /** The line's purchase record beyond what the list reads. */
+  record?: Partial<ShoppingListItemPurchaseInfoFragment>;
+  totals?: { toBuy?: number; bought?: number };
+  answer?: Answer;
+  /** The answer comes only once the test releases it. */
+  held?: boolean;
+  listId?: string | null;
+}
+
+function renderToggle({
+  lines = [line(false)],
+  record,
+  totals,
+  answer = applied(true),
+  held = false,
+  listId = 'list-1',
+}: Setup = {}) {
+  const cache = makeCache();
+  seedListLines(cache, 'list-1', lines, totals);
+  const [first] = lines;
+  if (record && first) {
+    seedPurchaseRecord(cache, 'line-1', {
+      isPurchased: first.purchaseInfo?.isPurchased ?? false,
+      movedToPantryAt: first.purchaseInfo?.movedToPantryAt ?? null,
+      ...record,
+    });
+  }
+  const sent = recordMock(UpdateShoppingListItemDocument, {
+    data: { updateShoppingListItem: answer },
+    held,
+  });
+  const refetch = jest.fn().mockResolvedValue(undefined);
+  const { result } = renderHookWithApollo(
+    () => useToggleShoppingItem({ listId, refetch }),
+    { cache, operationMocks: [sent.mock] },
+  );
+  return { hook: result, cache, sent, refetch };
+}
+
+const shownIn = (cache: InMemoryCache, isPurchased: boolean) =>
+  listLineIds(cache, 'list-1', isPurchased);
+
+const purchaseSent = (sent: ReturnType<typeof renderToggle>['sent']) =>
+  sent.fired.map(variables => variables.input);
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function createToggleMock(
-  recorded: Array<Record<string, unknown>>,
-  responseItem: Record<string, unknown>,
-): MockFor<typeof UpdateShoppingListItemDocument> {
-  return {
-    request: {
-      query: UpdateShoppingListItemDocument,
-      variables: vars => {
-        recorded.push(vars);
-        return true;
-      },
-    },
-    maxUsageCount: Number.POSITIVE_INFINITY,
-    result: {
-      data: {
-        updateShoppingListItem: {
-          __typename: 'UpdateShoppingListItemPayload',
-          shoppingListItem: responseItem,
-        },
-      },
-    },
-  };
-}
+describe('a tick', () => {
+  it('sends the flag alone at the cached version, and moves the line to the bought', async () => {
+    const { hook, cache, sent } = renderToggle();
 
-describe('useToggleShoppingItem', () => {
-  const mockRefetch = jest.fn().mockResolvedValue(undefined);
-
-  it('returns toggleItem function', () => {
-    const { result } = renderHookWithApollo(() =>
-      useToggleShoppingItem({
-        listId: 'list-1',
-        refetch: mockRefetch,
-      }),
-    );
-
-    expect(typeof result.current.toggleItem).toBe('function');
-  });
-
-  // A false answer has always told the user, whether refused or never sent.
-  it('returns false when listId is null, and says so', async () => {
-    const recorded: Array<Record<string, unknown>> = [];
-    const { result } = renderHookWithApollo(
-      () =>
-        useToggleShoppingItem({
-          listId: null,
-          refetch: mockRefetch,
-        }),
-      {
-        operationMocks: [
-          createToggleMock(recorded, {
-            __typename: 'ShoppingListItem',
-            id: 'item-1',
-          }),
-        ],
-      },
-    );
-
-    let toggleResult!: Awaited<ReturnType<typeof result.current.toggleItem>>;
+    let ticked: unknown;
     await act(async () => {
-      toggleResult = await result.current.toggleItem('item-1');
+      ticked = await hook.current.toggleItem('line-1');
     });
 
-    expect(toggleResult).toBe(false);
-    expect(recorded).toEqual([]);
-    expect(mockAlert).toHaveBeenCalledWith(
-      t('labels.error'),
-      t('errors.updateItemFailed'),
-    );
-  });
-
-  it('returns false when item is not found in cache, and says so', async () => {
-    // No cache seeding — readFragment will return null, hook bails out.
-    const recorded: Array<Record<string, unknown>> = [];
-    const { result } = renderHookWithApollo(
-      () =>
-        useToggleShoppingItem({
-          listId: 'list-1',
-          refetch: mockRefetch,
-        }),
+    expect(purchaseSent(sent)).toEqual([
       {
-        operationMocks: [
-          createToggleMock(recorded, {
-            __typename: 'ShoppingListItem',
-            id: 'non-existent',
-          }),
-        ],
-      },
-    );
-
-    let toggleResult!: Awaited<ReturnType<typeof result.current.toggleItem>>;
-    await act(async () => {
-      toggleResult = await result.current.toggleItem('non-existent');
-    });
-
-    expect(toggleResult).toBe(false);
-    expect(recorded).toEqual([]);
-    expect(mockAlert).toHaveBeenCalledWith(
-      t('labels.error'),
-      t('errors.updateItemFailed'),
-    );
-  });
-
-  // A store-mode add with a price ticks through this setter.
-  it('says so when a purchase cannot be recorded for a line not in the cache', async () => {
-    const { result } = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { operationMocks: [] },
-    );
-
-    let recordResult!: Awaited<
-      ReturnType<typeof result.current.recordPurchase>
-    >;
-    await act(async () => {
-      recordResult = await result.current.recordPurchase('non-existent', {
-        purchasedQuantity: 1,
-        purchasedPrice: 3,
-      });
-    });
-
-    expect(recordResult).toBe(false);
-    expect(mockAlert).toHaveBeenCalledWith(
-      t('labels.error'),
-      t('errors.updateItemFailed'),
-    );
-  });
-});
-
-// Reads just the purchased flag to assert the optimistic move + revert.
-const PURCHASE_INFO_FRAGMENT = gql`
-  fragment _TestPurchaseInfo on ShoppingListItem {
-    id
-    purchaseInfo {
-      isPurchased
-    }
-  }
-`;
-
-// Full useToggleShoppingItem_item shape so cache.readFragment is `complete`.
-function seedShoppingItem(purchaseInfo: Record<string, unknown> = {}) {
-  return seedCache([
-    {
-      __typename: 'ShoppingListItem',
-      id: 'item-1',
-      itemName: 'Milk',
-      quantity: 1,
-      quantityInput: '1',
-      displayFormat: 'DECIMAL',
-      purchaseInfo: {
-        __typename: 'ShoppingListItemPurchaseInfo',
-        isPurchased: false,
-        // The snapshot fragment selects it, so a fixture without it makes the
-        // strict read incomplete and the hook refuse the toggle. The rest are
-        // here for the same reason: `writePurchaseInfo` carries the cached
-        // record forward, so whatever the fixture omits it writes back partial.
-        movedToPantryAt: null,
-        purchaseDate: null,
-        purchasedById: null,
-        purchasedPrice: null,
-        purchasedQuantity: null,
-        purchasedBy: null,
-        ...purchaseInfo,
-      },
-      version: 3,
-      updatedAt: '2026-01-01T00:00:00.000Z',
-      category: null,
-      notes: null,
-      unitName: null,
-      unit: null,
-      sortOrder: '1',
-      item: null,
-    },
-  ]);
-}
-
-const readPurchased = (cache: ReturnType<typeof seedCache>) =>
-  cache.readFragment<{ purchaseInfo: { isPurchased: boolean } }>({
-    id: 'ShoppingListItem:item-1',
-    fragment: PURCHASE_INFO_FRAGMENT,
-  })?.purchaseInfo?.isPurchased;
-
-// The sentence the API returns when a purchase has no name to record against
-// (the row's catalog item was hard-deleted and it carries no name of its own).
-// Server-authored English — the fixture carries it, and the app never shows it.
-const NAMELESS_ROW_MESSAGE =
-  'This item has no name to record a purchase against. Add a name first.';
-
-// What the user actually sees: the app's own copy for `field: 'itemName'`.
-const ITEM_NAME_COPY = 'Enter a name for this item.';
-
-function updatePurchaseMock(
-  recorded: Array<Record<string, unknown>>,
-  outcome: 'success' | 'reject' | 'fieldRefusal',
-): MockFor<typeof UpdateShoppingListItemDocument> {
-  return {
-    request: {
-      query: UpdateShoppingListItemDocument,
-      variables: vars => {
-        recorded.push(vars);
-        return true;
-      },
-    },
-    maxUsageCount: Number.POSITIVE_INFINITY,
-    result: {
-      data: {
-        updateShoppingListItem:
-          outcome === 'success'
-            ? {
-                __typename: 'UpdateShoppingListItemPayload',
-                shoppingListItem: {
-                  id: 'item-1',
-                  // Recording a purchase through `purchaseTracking` writes a
-                  // purchase row server-side, so the summary and the amounts
-                  // move with the response — the mutation selects both so the
-                  // detail screen doesn't need its own refetch to catch up.
-                  purchaseHistory: {
-                    previouslyPurchased: true,
-                    purchaseCount: 2,
-                    lastPurchaseDate: '2026-08-19T00:00:00.000Z',
-                  },
-                  purchaseInfo: {
-                    isPurchased: true,
-                    purchasedQuantity: 2,
-                    purchasedPrice: 4.5,
-                    purchaseDate: '2026-08-19T00:00:00.000Z',
-                    purchasedBy: {
-                      id: 'user-1',
-                      profile: {
-                        id: 'profile-1',
-                        displayName: 'Sam',
-                        avatar: null,
-                      },
-                    },
-                  },
-                },
-              }
-            : outcome === 'fieldRefusal'
-            ? {
-                __typename: 'ValidationError',
-                code: ErrorCode.ValidationFailed,
-                message: NAMELESS_ROW_MESSAGE,
-                field: 'itemName',
-              }
-            : {
-                __typename: 'ConflictError',
-                code: ErrorCode.Conflict,
-                message: 'conflict',
-              },
-      },
-    },
-  };
-}
-
-describe('useToggleShoppingItem — toggleItem', () => {
-  const mockRefetch = jest.fn().mockResolvedValue(undefined);
-
-  const responseRow = (isPurchased: boolean) => ({
-    __typename: 'ShoppingListItem',
-    id: 'item-1',
-    purchaseInfo: {
-      __typename: 'ShoppingListItemPurchaseInfo',
-      isPurchased,
-    },
-  });
-
-  it('ticks through the update door with the cached version and the flag alone', async () => {
-    const recorded: Array<Record<string, unknown>> = [];
-    const cache = seedShoppingItem();
-    const { result } = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      {
-        cache,
-        operationMocks: [createToggleMock(recorded, responseRow(true))],
-      },
-    );
-
-    let toggled!: Awaited<ReturnType<typeof result.current.toggleItem>>;
-    await act(async () => {
-      toggled = await result.current.toggleItem('item-1');
-    });
-
-    expect(recorded).toEqual([
-      {
-        input: {
-          idempotencyKey: expect.any(String),
-          id: 'item-1',
-          version: 3,
-          purchaseTracking: { isPurchased: true },
-        },
-      },
-    ]);
-    expect(toggled).toMatchObject({ id: 'item-1' });
-    expect(readPurchased(cache)).toBe(true);
-    expect(moveShoppingListItemToPurchased).toHaveBeenCalledWith(
-      expect.anything(),
-      'list-1',
-      expect.objectContaining({ id: 'item-1' }),
-    );
-    expect(moveShoppingListItemToUnpurchased).not.toHaveBeenCalled();
-    expect(mockAlert).not.toHaveBeenCalled();
-  });
-
-  it('un-ticks with no amounts beside the flag', async () => {
-    const recorded: Array<Record<string, unknown>> = [];
-    // The cached purchase carries amounts; the server refuses any beside an
-    // un-tick, so none of them may ride along.
-    const cache = seedShoppingItem({
-      isPurchased: true,
-      purchasedQuantity: 3,
-      purchasedPrice: 4.5,
-    });
-    const { result } = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      {
-        cache,
-        operationMocks: [createToggleMock(recorded, responseRow(false))],
-      },
-    );
-
-    await act(async () => {
-      await result.current.toggleItem('item-1');
-    });
-
-    expect(recorded).toEqual([
-      {
-        input: {
-          idempotencyKey: expect.any(String),
-          id: 'item-1',
-          version: 3,
-          purchaseTracking: { isPurchased: false },
-        },
-      },
-    ]);
-    expect(readPurchased(cache)).toBe(false);
-    expect(moveShoppingListItemToUnpurchased).toHaveBeenCalledWith(
-      expect.anything(),
-      'list-1',
-      expect.objectContaining({ id: 'item-1' }),
-    );
-    expect(moveShoppingListItemToPurchased).not.toHaveBeenCalled();
-  });
-
-  it('names the product a tick bought, and never on an un-tick', async () => {
-    const ticked: Array<Record<string, unknown>> = [];
-    const tick = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      {
-        cache: seedShoppingItem(),
-        operationMocks: [createToggleMock(ticked, responseRow(true))],
-      },
-    );
-    await act(async () => {
-      await tick.result.current.toggleItem('item-1', { variation: 'var-1' });
-    });
-    expect(ticked).toEqual([
-      {
-        input: {
-          idempotencyKey: expect.any(String),
-          id: 'item-1',
-          version: 3,
-          purchaseTracking: {
-            isPurchased: true,
-            purchasedItem: { variation: 'var-1' },
-          },
-        },
-      },
-    ]);
-
-    // The server refuses it beside an un-tick.
-    const unticked: Array<Record<string, unknown>> = [];
-    const untick = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      {
-        cache: seedShoppingItem({ isPurchased: true }),
-        operationMocks: [createToggleMock(unticked, responseRow(false))],
-      },
-    );
-    await act(async () => {
-      await untick.result.current.toggleItem('item-1', { variation: 'var-1' });
-    });
-    expect(unticked).toEqual([
-      {
-        input: {
-          idempotencyKey: expect.any(String),
-          id: 'item-1',
-          version: 3,
-          purchaseTracking: { isPurchased: false },
-        },
-      },
-    ]);
-  });
-});
-
-// Store mode's tick: it only ever puts a line in the cart. The server answers
-// a bare claim of the state a line already holds with no write.
-describe('useToggleShoppingItem — claimPurchased', () => {
-  const mockRefetch = jest.fn().mockResolvedValue(undefined);
-  const purchasedRow = {
-    __typename: 'ShoppingListItem',
-    id: 'item-1',
-    purchaseInfo: {
-      __typename: 'ShoppingListItemPurchaseInfo',
-      isPurchased: true,
-    },
-  };
-
-  const renderClaim = (cache: ReturnType<typeof seedCache>) => {
-    const recorded: Array<Record<string, unknown>> = [];
-    const hook = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { cache, operationMocks: [createToggleMock(recorded, purchasedRow)] },
-    );
-    return { ...hook, recorded };
-  };
-
-  it('puts an open line in the cart', async () => {
-    const cache = seedShoppingItem();
-    const { result, recorded } = renderClaim(cache);
-
-    await act(async () => {
-      await result.current.claimPurchased('item-1', { variation: 'var-1' });
-    });
-
-    expect(recorded).toEqual([
-      {
-        input: {
-          idempotencyKey: expect.any(String),
-          id: 'item-1',
-          version: 3,
-          purchaseTracking: {
-            isPurchased: true,
-            purchasedItem: { variation: 'var-1' },
-          },
-        },
-      },
-    ]);
-    expect(readPurchased(cache)).toBe(true);
-    expect(moveShoppingListItemToPurchased).toHaveBeenCalledTimes(1);
-  });
-
-  it('keeps a line another member already ticked in the cart', async () => {
-    const cache = seedShoppingItem({ isPurchased: true });
-    const { result, recorded } = renderClaim(cache);
-
-    await act(async () => {
-      await result.current.claimPurchased('item-1');
-    });
-
-    expect(recorded).toEqual([
-      {
-        input: {
-          idempotencyKey: expect.any(String),
-          id: 'item-1',
-          version: 3,
-          purchaseTracking: { isPurchased: true },
-        },
-      },
-    ]);
-    expect(readPurchased(cache)).toBe(true);
-    expect(moveShoppingListItemToPurchased).not.toHaveBeenCalled();
-    expect(moveShoppingListItemToUnpurchased).not.toHaveBeenCalled();
-  });
-
-  it('leaves the line purchased when the same tick is sent again', async () => {
-    const cache = seedShoppingItem();
-    const { result, recorded } = renderClaim(cache);
-
-    await act(async () => {
-      await result.current.claimPurchased('item-1');
-    });
-    await act(async () => {
-      await result.current.claimPurchased('item-1');
-    });
-
-    expect(recorded).toHaveLength(2);
-    expect(readPurchased(cache)).toBe(true);
-    // Counted into the cart once: a second move would count it twice.
-    expect(moveShoppingListItemToPurchased).toHaveBeenCalledTimes(1);
-    expect(moveShoppingListItemToUnpurchased).not.toHaveBeenCalled();
-  });
-});
-
-describe('useToggleShoppingItem — recordPurchase', () => {
-  const mockRefetch = jest.fn().mockResolvedValue(undefined);
-
-  it('optimistically marks purchased and fires purchaseTracking with the version', async () => {
-    const recorded: Array<Record<string, unknown>> = [];
-    const cache = seedShoppingItem();
-    const { result } = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { cache, operationMocks: [updatePurchaseMock(recorded, 'success')] },
-    );
-
-    let ok: boolean | undefined;
-    await act(async () => {
-      ok = await result.current.recordPurchase('item-1', {
-        purchasedQuantity: 2,
-        purchasedPrice: 4.5,
-      });
-    });
-
-    expect(ok).toBe(true);
-    // Optimistic move to the purchased connection + purchaseInfo flip.
-    expect(moveShoppingListItemToPurchased).toHaveBeenCalledWith(
-      expect.anything(),
-      'list-1',
-      expect.objectContaining({ id: 'item-1' }),
-    );
-    expect(readPurchased(cache)).toBe(true);
-    // The mutation carried the cached snapshot version + entered amounts.
-    expect(recorded).toContainEqual({
-      input: {
         idempotencyKey: expect.any(String),
-        id: 'item-1',
+        id: 'line-1',
+        version: 3,
+        purchaseTracking: { isPurchased: true },
+      },
+    ]);
+    expect(ticked).toMatchObject({ id: 'line-1' });
+    expect(shownIn(cache, false)).toEqual([]);
+    expect(shownIn(cache, true)).toEqual(['line-1']);
+    expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  // The server refuses amounts beside an un-tick.
+  it('un-ticks a bought line with nothing beside the flag', async () => {
+    const { hook, cache, sent } = renderToggle({
+      lines: [line(true)],
+      record: { purchasedQuantity: 3, purchasedPrice: 4.5 },
+      answer: applied(false),
+    });
+
+    await act(async () => {
+      await hook.current.toggleItem('line-1');
+    });
+
+    expect(purchaseSent(sent)).toEqual([
+      expect.objectContaining({ purchaseTracking: { isPurchased: false } }),
+    ]);
+    expect(shownIn(cache, false)).toEqual(['line-1']);
+  });
+
+  it.each([
+    [
+      'names the product a tick bought',
+      false,
+      { isPurchased: true, purchasedItem: { variation: 'var-1' } },
+    ],
+    ['never on an un-tick', true, { isPurchased: false }],
+  ])('%s', async (_, bought, tracked) => {
+    const { hook, sent } = renderToggle({
+      lines: [line(bought)],
+      answer: applied(!bought),
+    });
+
+    await act(async () => {
+      await hook.current.toggleItem('line-1', { variation: 'var-1' });
+    });
+
+    expect(purchaseSent(sent)).toEqual([
+      expect.objectContaining({ purchaseTracking: tracked }),
+    ]);
+  });
+
+  it('keeps a queued tick, and says it went', async () => {
+    const { hook, cache } = renderToggle({ answer: null });
+
+    let ticked: unknown;
+    await act(async () => {
+      ticked = await hook.current.toggleItem('line-1');
+    });
+
+    expect(ticked).toBe(true);
+    expect(shownIn(cache, true)).toEqual(['line-1']);
+  });
+
+  it('drops a refused tick, saying why on the field it names', async () => {
+    const { hook, cache } = renderToggle({ answer: NAMELESS });
+
+    let ticked: unknown;
+    await act(async () => {
+      ticked = await hook.current.toggleItem('line-1');
+    });
+
+    expect(ticked).toBe(false);
+    expect(shownIn(cache, false)).toEqual(['line-1']);
+    expect(alertService.alert).toHaveBeenCalledWith(
+      expect.anything(),
+      t('errors.field.itemName'),
+    );
+  });
+
+  // The page a tick empties may not be all the tab holds.
+  it.each([
+    ['the tab it emptied, which holds more', 1, 5, true],
+    ['not a tab it emptied that holds nothing more', 1, 1, false],
+    ['not a tab with lines left', 2, 5, false],
+  ])('reads again %s', async (_, onPage, total, readAgain) => {
+    const lines: ListLine[] = [line(false)];
+    if (onPage > 1) lines.push(listLine('line-2', 'Eggs'));
+    const { hook, refetch } = renderToggle({ lines, totals: { toBuy: total } });
+
+    await act(async () => {
+      await hook.current.toggleItem('line-1');
+    });
+
+    expect(refetch).toHaveBeenCalledTimes(readAgain ? 1 : 0);
+  });
+});
+
+describe("store mode's claim", () => {
+  it('puts an open line in the cart, naming the product bought', async () => {
+    const { hook, cache, sent } = renderToggle();
+
+    await act(async () => {
+      await hook.current.claimPurchased('line-1', { variation: 'var-1' });
+    });
+
+    expect(purchaseSent(sent)).toEqual([
+      expect.objectContaining({
+        purchaseTracking: {
+          isPurchased: true,
+          purchasedItem: { variation: 'var-1' },
+        },
+      }),
+    ]);
+    expect(shownIn(cache, true)).toEqual(['line-1']);
+  });
+
+  // Another member may have ticked it: a claim never takes it back out.
+  it('keeps a line already in the cart there, counted once however often it is sent', async () => {
+    const { hook, cache, sent } = renderToggle({ lines: [line(true)] });
+
+    await act(async () => {
+      await hook.current.claimPurchased('line-1');
+    });
+    await act(async () => {
+      await hook.current.claimPurchased('line-1');
+    });
+
+    expect(purchaseSent(sent)).toEqual([
+      expect.objectContaining({ purchaseTracking: { isPurchased: true } }),
+      expect.objectContaining({ purchaseTracking: { isPurchased: true } }),
+    ]);
+    expect(shownIn(cache, true)).toEqual(['line-1']);
+    expect(shownIn(cache, false)).toEqual([]);
+  });
+});
+
+describe('a recorded purchase', () => {
+  it('sends the amounts and the product, and shows the line bought at once', async () => {
+    const { hook, cache, sent } = renderToggle();
+
+    let recorded: unknown;
+    await act(async () => {
+      recorded = await hook.current.recordPurchase(
+        'line-1',
+        { purchasedQuantity: 2, purchasedPrice: 4.5 },
+        { variation: 'var-1' },
+      );
+    });
+
+    expect(recorded).toBe(true);
+    expect(purchaseSent(sent)).toEqual([
+      {
+        idempotencyKey: expect.any(String),
+        id: 'line-1',
         version: 3,
         purchaseTracking: {
           isPurchased: true,
           purchasedQuantity: 2,
           purchasedPrice: 4.5,
-        },
-      },
-    });
-    expect(moveShoppingListItemToUnpurchased).not.toHaveBeenCalled();
-  });
-
-  it('records the purchase on the product bought, when the tick names one', async () => {
-    const recorded: Array<Record<string, unknown>> = [];
-    const { result } = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      {
-        cache: seedShoppingItem(),
-        operationMocks: [updatePurchaseMock(recorded, 'success')],
-      },
-    );
-
-    await act(async () => {
-      await result.current.recordPurchase(
-        'item-1',
-        { purchasedQuantity: 1, purchasedPrice: 6.49 },
-        { variation: 'var-1' },
-      );
-    });
-
-    expect(recorded).toContainEqual({
-      input: {
-        idempotencyKey: expect.any(String),
-        id: 'item-1',
-        version: 3,
-        purchaseTracking: {
-          isPurchased: true,
-          purchasedQuantity: 1,
-          purchasedPrice: 6.49,
           purchasedItem: { variation: 'var-1' },
         },
       },
+    ]);
+    expect(shownIn(cache, true)).toEqual(['line-1']);
+  });
+
+  it('shows the line bought while it is sent', async () => {
+    const { hook, cache, sent } = renderToggle({ held: true });
+
+    let recording: Promise<boolean> = Promise.resolve(false);
+    await act(async () => {
+      recording = hook.current.recordPurchase('line-1', {
+        purchasedQuantity: 1,
+        purchasedPrice: null,
+      });
+    });
+
+    expect(shownIn(cache, true)).toEqual(['line-1']);
+    await act(async () => {
+      sent.release();
+      await recording;
     });
   });
 
-  it("writes the server's purchase summary and amounts into the cache", async () => {
-    const recorded: Array<Record<string, unknown>> = [];
-    const cache = seedShoppingItem();
-    const { result } = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { cache, operationMocks: [updatePurchaseMock(recorded, 'success')] },
-    );
+  it('keeps the amounts the server recorded', async () => {
+    const { hook, cache } = renderToggle({
+      record: {},
+      answer: {
+        __typename: 'UpdateShoppingListItemPayload',
+        shoppingListItem: {
+          __typename: 'ShoppingListItem',
+          id: 'line-1',
+          version: 4,
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+            movedToPantryAt: null,
+            purchasedQuantity: 2,
+            purchasedPrice: 4.5,
+          },
+        },
+      },
+    });
 
     await act(async () => {
-      await result.current.recordPurchase('item-1', {
+      await hook.current.recordPurchase('line-1', {
         purchasedQuantity: 2,
         purchasedPrice: 4.5,
       });
     });
 
-    // Assert the cache, not the mock: this route moves `purchaseCount` and the
-    // amounts server-side, and ItemDetail reads them straight from the
-    // normalized entity. Before the mutation selected them the entity kept the
-    // pre-purchase count and no amounts at all.
-    const entity = cache.extract()['ShoppingListItem:item-1'] as {
-      purchaseHistory?: Record<string, unknown>;
-      purchaseInfo?: Record<string, unknown>;
-    };
-    expect(entity.purchaseHistory).toMatchObject({
-      previouslyPurchased: true,
-      purchaseCount: 2,
-      lastPurchaseDate: '2026-08-19T00:00:00.000Z',
-    });
-    expect(entity.purchaseInfo).toMatchObject({
-      isPurchased: true,
-      purchasedQuantity: 2,
-      purchasedPrice: 4.5,
-    });
+    // The write's layer gives way to the answer once it is rebuilt.
+    await expect(
+      cacheShows(
+        cache,
+        purchaseRecordWatch('line-1'),
+        () => purchaseRecordOf(cache, 'line-1'),
+        record =>
+          record?.purchasedQuantity === 2 && record.purchasedPrice === 4.5,
+      ),
+    ).resolves.toBeUndefined();
   });
 
-  it('omits purchasedPrice when null and reverts on a resolved rejection', async () => {
-    const recorded: Array<Record<string, unknown>> = [];
-    const cache = seedShoppingItem();
-    const { result } = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { cache, operationMocks: [updatePurchaseMock(recorded, 'reject')] },
-    );
+  it('sends no price when none was paid, and drops a refused record, saying why', async () => {
+    const { hook, cache, sent } = renderToggle({ answer: NAMELESS });
 
-    let ok: boolean | undefined;
+    let recorded: unknown;
     await act(async () => {
-      ok = await result.current.recordPurchase('item-1', {
+      recorded = await hook.current.recordPurchase('line-1', {
         purchasedQuantity: 2,
         purchasedPrice: null,
       });
     });
 
-    expect(ok).toBe(false);
-    // A null price is dropped so the server auto-derives it.
-    expect(recorded[0]).toEqual({
-      input: {
-        idempotencyKey: expect.any(String),
-        id: 'item-1',
-        version: 3,
+    expect(recorded).toBe(false);
+    expect(purchaseSent(sent)).toEqual([
+      expect.objectContaining({
         purchaseTracking: { isPurchased: true, purchasedQuantity: 2 },
-      },
-    });
-    // The resolved error-union rejection drops the held purchase.
-    expect(readPurchased(cache)).toBe(false);
-    expect(mockAlert).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows copy for the field the refusal names', async () => {
-    const recorded: Array<Record<string, unknown>> = [];
-    const cache = seedShoppingItem();
-    const { result } = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { cache, operationMocks: [updatePurchaseMock(recorded, 'fieldRefusal')] },
-    );
-
-    await act(async () => {
-      await result.current.recordPurchase('item-1', {
-        purchasedQuantity: 2,
-        purchasedPrice: null,
-      });
-    });
-
-    expect(readPurchased(cache)).toBe(false);
-    expect(mockAlert).toHaveBeenCalledWith(expect.anything(), ITEM_NAME_COPY);
-    // Never the server's English, however specific it is.
-    expect(mockAlert).not.toHaveBeenCalledWith(
+      }),
+    ]);
+    expect(shownIn(cache, false)).toEqual(['line-1']);
+    expect(alertService.alert).toHaveBeenCalledWith(
       expect.anything(),
-      NAMELESS_ROW_MESSAGE,
+      t('errors.field.itemName'),
     );
-  });
-
-  it('shows it on the plain toggle too', async () => {
-    const recorded: Array<Record<string, unknown>> = [];
-    const cache = seedShoppingItem();
-    const { result } = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { cache, operationMocks: [updatePurchaseMock(recorded, 'fieldRefusal')] },
-    );
-
-    let toggled!: Awaited<ReturnType<typeof result.current.toggleItem>>;
-    await act(async () => {
-      toggled = await result.current.toggleItem('item-1');
-    });
-
-    expect(toggled).toBe(false);
-    expect(readPurchased(cache)).toBe(false);
-    expect(mockAlert).toHaveBeenCalledWith(expect.anything(), ITEM_NAME_COPY);
   });
 });
 
-describe('the stocked stamp follows the purchased flag', () => {
-  const RECORD = gql`
-    fragment ToggleStampProbe on ShoppingListItem {
-      id
-      purchaseInfo {
-        isPurchased
-        movedToPantryAt
-        purchasedQuantity
-      }
-    }
-  `;
+describe('a change it cannot send', () => {
+  const unsendable: [string, 'toggleItem' | 'recordPurchase', Setup][] = [
+    ['a tick with no list', 'toggleItem', { listId: null }],
+    ['a tick of a line it does not hold', 'toggleItem', { lines: [] }],
+    ['a record with no list', 'recordPurchase', { listId: null }],
+    ['a record of a line it does not hold', 'recordPurchase', { lines: [] }],
+  ];
+  it.each(unsendable)(
+    'says so for %s, sending nothing',
+    async (_, change, setup) => {
+      const { hook, sent } = renderToggle(setup);
 
-  /**
-   * The mutation resolves as QUEUED — a null payload, no error.
-   *
-   * Without a mock the operation is unmatched, resolves as an error, and the
-   * hook REVERTS — so every assertion below would describe the post-revert
-   * state while claiming to describe the flip, and pass only if the revert
-   * clears the stamp too, which is the defect they were written to catch.
-   */
-  const queued: MockFor<typeof UpdateShoppingListItemDocument> = {
-    request: {
-      query: UpdateShoppingListItemDocument,
-      variables: () => true,
+      let done: unknown;
+      await act(async () => {
+        done =
+          change === 'toggleItem'
+            ? await hook.current.toggleItem('line-1')
+            : await hook.current.recordPurchase('line-1', {
+                purchasedQuantity: 1,
+                purchasedPrice: 3,
+              });
+      });
+
+      expect(done).toBe(false);
+      expect(sent.fired).toEqual([]);
+      expect(alertService.alert).toHaveBeenCalledWith(
+        t('labels.error'),
+        t('errors.updateItemFailed'),
+      );
     },
-    result: { data: { updateShoppingListItem: null } },
-    maxUsageCount: Number.POSITIVE_INFINITY,
-  };
+  );
+});
 
-  /** A line that was purchased AND already moved into the pantry. */
-  function seedStockedItem() {
-    const cache = seedShoppingItem();
-    seedFragment(cache, {
-      id: 'ShoppingListItem:item-1',
-      fragment: RECORD,
-      data: {
-        __typename: 'ShoppingListItem',
-        id: 'item-1',
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
-          isPurchased: true,
-          movedToPantryAt: '2026-08-28T10:00:00.000Z',
-          purchasedQuantity: 3,
-        },
-      },
+describe('the stocked stamp', () => {
+  // The server clears it on an un-tick, and the bulk move acts on the line.
+  it('goes when the line is un-ticked, and stays gone when it is ticked again', async () => {
+    const { hook, cache } = renderToggle({
+      lines: [line(true, '2026-08-28T10:00:00.000Z')],
+      record: { purchasedQuantity: 3 },
+      answer: null,
     });
-    return cache;
-  }
-
-  const readRecord = (cache: ReturnType<typeof seedCache>) =>
-    cache.readFragment<{
-      purchaseInfo: {
-        isPurchased: boolean;
-        movedToPantryAt: string | null;
-        purchasedQuantity: number | null;
-      };
-    }>({
-      id: 'ShoppingListItem:item-1',
-      fragment: RECORD,
-      optimistic: true,
-    })?.purchaseInfo;
-
-  it('clears the stamp when the line is un-purchased', async () => {
-    const cache = seedStockedItem();
-    const { result } = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: jest.fn() }),
-      { cache, operationMocks: [queued] },
-    );
 
     await act(async () => {
-      await result.current.toggleItem('item-1');
-    });
-
-    // The server clears the stamp on exactly this transition, so a line the
-    // user just un-checked must stop reading as "already in your pantry" —
-    // otherwise its row withholds the move-to-pantry action for a line the
-    // bulk move WILL act on.
-    expect(readRecord(cache)?.movedToPantryAt).toBeNull();
-  });
-
-  it('does not resurrect the stamp when the line is re-purchased', async () => {
-    const cache = seedStockedItem();
-    const { result } = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: jest.fn() }),
-      { cache, operationMocks: [queued] },
-    );
-
-    await act(async () => {
-      await result.current.toggleItem('item-1');
+      await hook.current.toggleItem('line-1');
     });
     await act(async () => {
-      await result.current.toggleItem('item-1');
+      await hook.current.toggleItem('line-1');
     });
 
-    expect(readRecord(cache)?.isPurchased).toBe(true);
-    expect(readRecord(cache)?.movedToPantryAt).toBeNull();
-  });
-
-  it('leaves the rest of the purchase record alone on a flip', async () => {
-    const cache = seedStockedItem();
-    const { result } = renderHookWithApollo(
-      () => useToggleShoppingItem({ listId: 'list-1', refetch: jest.fn() }),
-      { cache, operationMocks: [queued] },
-    );
-
-    await act(async () => {
-      await result.current.toggleItem('item-1');
+    expect(purchaseRecordOf(cache, 'line-1')).toMatchObject({
+      isPurchased: true,
+      movedToPantryAt: null,
+      // Not this write's to discard.
+      purchasedQuantity: 3,
     });
-
-    // Only the stamp is derived from the flag. The amounts belong to the
-    // purchase the server recorded and are not this write's to discard.
-    expect(readRecord(cache)?.purchasedQuantity).toBe(3);
   });
 });

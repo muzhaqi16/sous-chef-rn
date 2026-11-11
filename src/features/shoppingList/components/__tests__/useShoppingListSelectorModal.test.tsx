@@ -1,7 +1,11 @@
 import React, { useEffect } from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
-import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderWithApollo,
+  type MockDataFor,
+} from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import {
   homeShoppingList,
@@ -16,7 +20,11 @@ import { useStore } from '#store';
 import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
-import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
+import {
+  CollaboratorRole,
+  ErrorCode,
+  MembershipRole,
+} from '#/graphql/generated/schemaTypes';
 import {
   TabBarActionsProvider,
   useTabBarState,
@@ -28,6 +36,7 @@ import {
   GetShoppingListsLiteDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GetPendingListInvitesDocument } from '#features/shoppingList/hooks/usePendingListInvites.generated';
+import { AcceptShoppingListInviteDocument } from '#features/shoppingList/graphql/collaboration.generated';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { ShoppingListMain } from '#features/shoppingList/screens/ShoppingListMain';
 
@@ -104,9 +113,30 @@ function OverlayProbe() {
 let log = operationLog();
 
 /** The list tab, on Groceries, its switcher opened. */
+type InviteEdge = NonNullable<
+  NonNullable<
+    NonNullable<
+      NonNullable<
+        MockDataFor<typeof GetPendingListInvitesDocument>['me']
+      >['pendingCollaborationInvitesConnection']
+    >['edges']
+  >[number]
+>;
+type Invite = InviteEdge['node'];
+
+/** Kim's invitation to her Holiday list. */
+const HOLIDAY_INVITE: Invite = {
+  __typename: 'ShoppingListCollaborator',
+  id: 'inv-1',
+  role: CollaboratorRole.Editor,
+  inviterName: 'Kim',
+  shoppingList: { __typename: 'ShoppingList', id: 'list-9', name: 'Holiday' },
+};
+
 async function openSwitcher(
   answers: ReturnType<typeof recordMock>[] = [],
   lists: ShoppingListNode[] = [GROCERIES, PARTY, CAMPING],
+  invites: Invite[] = [],
 ) {
   renderWithApollo(
     <TabBarActionsProvider>
@@ -128,7 +158,12 @@ async function openSwitcher(
               id: ME,
               pendingCollaborationInvitesConnection: {
                 __typename: 'ShoppingListCollaboratorConnection',
-                edges: [],
+                edges: invites.map(
+                  (node): InviteEdge => ({
+                    __typename: 'ShoppingListCollaboratorEdge',
+                    node,
+                  }),
+                ),
               },
             },
           },
@@ -140,6 +175,8 @@ async function openSwitcher(
   await log.landed(GetShoppingListDetailsDocument);
   await log.landed(GetShoppingListItemsFilteredDocument, 2);
   fireEvent.press(screen.getByTestId(shoppingListTestIDs.listSelectorButton));
+  // Asked for as the switcher opens.
+  await log.landed(GetPendingListInvitesDocument);
 }
 
 /** Presses `label` on the last alert raised, as the person answers it. */
@@ -195,6 +232,9 @@ describe('the switcher', () => {
       screen.getAllByText(t('shoppingListSelector.sharedBy', { name: 'Alex' })),
     ).toHaveLength(2);
     expect(
+      screen.queryByText(t('shoppingListSelector.sharedBy', { name: 'Sam' })),
+    ).not.toBeOnTheScreen();
+    expect(
       screen.getByText(
         t('shoppingListSelector.itemsRemaining', { remaining: 3, total: 5 }),
       ),
@@ -242,6 +282,30 @@ describe('the switcher', () => {
 
     expect(mockNav.toShareList).toHaveBeenCalledWith({ listId: 'list-1' });
     expect(mockNav.toListSettings).toHaveBeenCalledWith({ listId: 'list-1' });
+  });
+});
+
+describe('an invitation in the switcher', () => {
+  it('opens the list once accepted', async () => {
+    await openSwitcher(
+      [
+        recordMock(AcceptShoppingListInviteDocument, {
+          data: {
+            acceptShoppingListInvite: {
+              __typename: 'AcceptShoppingListInvitePayload',
+              shoppingList: { __typename: 'ShoppingList', id: 'list-9' },
+            },
+          },
+        }),
+      ],
+      undefined,
+      [HOLIDAY_INVITE],
+    );
+
+    fireEvent.press(screen.getByText(t('labels.accept')));
+    await log.landed(AcceptShoppingListInviteDocument);
+
+    expect(useStore.getState().selectedShoppingListId).toBe('list-9');
   });
 });
 
@@ -374,6 +438,36 @@ describe('deleting from the switcher', () => {
 
     expect(toastService.success).not.toHaveBeenCalled();
     expect(useStore.getState().selectedShoppingListId).toBe('list-1');
+  });
+
+  it('hides invitations while picking', async () => {
+    await openSwitcher([], undefined, [HOLIDAY_INVITE]);
+    expect(screen.getByText(t('labels.accept'))).toBeTruthy();
+
+    longPress('Groceries');
+
+    expect(screen.queryByText(t('labels.accept'))).not.toBeOnTheScreen();
+  });
+
+  // The stand-in sheet never closes itself: its dismiss is fired as gorhom would.
+  it('is left when the switcher closes', async () => {
+    await openSwitcher();
+    longPress('Groceries');
+
+    const [tray] = screen.UNSAFE_root.findAll(
+      node =>
+        typeof node.props.onDismiss === 'function' &&
+        node.findAll(
+          child =>
+            child.props.children ===
+            t('shoppingListSelector.deleteModeTitle', { count: 1 }),
+        ).length > 0,
+    );
+    if (!tray) throw new Error('no switcher sheet');
+    fireEvent(tray, 'dismiss');
+    fireEvent.press(screen.getByTestId(shoppingListTestIDs.listSelectorButton));
+
+    expect(screen.getByText(t('shoppingListSelector.title'))).toBeTruthy();
   });
 
   it('is left on Cancel', async () => {

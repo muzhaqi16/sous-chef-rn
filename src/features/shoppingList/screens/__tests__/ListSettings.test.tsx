@@ -11,7 +11,10 @@ import {
 import { operationLog } from '#/test-utils/operationLog';
 import { memoryIntents } from '#/test-utils/memoryPlatform';
 import {
+  collaboratorsOf,
+  listCollaborator,
   listDetailsRead,
+  listOwner,
   ownShoppingList,
   type ShoppingListNode,
 } from '#/test-utils/fixtures/shoppingListFixtures';
@@ -22,7 +25,6 @@ import { toastService } from '#/services/toastService';
 import { Text as AppText } from '#components/atoms/Text';
 import {
   CollaboratorRole,
-  CollaboratorStatus,
   ErrorCode,
   ListStatus,
   MembershipRole,
@@ -72,59 +74,9 @@ const person = {
   onBoarded: true,
 };
 
-type Collaborators = NonNullable<ShoppingListNode['collaboratorsConnection']>;
-type Collaborator = NonNullable<NonNullable<Collaborators['edges']>[number]>;
-type Ownership = NonNullable<
-  NonNullable<ShoppingListNode['ownerships']>[number]
->;
-
-/** Whose list it is, as its read names its owner. */
-const ownedBy = (userId: string): Ownership => ({
-  __typename: 'ShoppingListOwnership',
-  id: `own-${userId}`,
-  userId,
-  user: {
-    __typename: 'User',
-    id: userId,
-    email: null,
-    displayName: userId === USER_ID ? 'Sam' : 'Alex',
-    profile: null,
-  },
-});
-
-/** Someone the list is shared with. */
-const sharedWith = (
-  userId: string,
-  {
-    role = CollaboratorRole.Viewer,
-    canEdit = false,
-    email = `${userId}@example.com`,
-  }: { role?: CollaboratorRole; canEdit?: boolean; email?: string | null } = {},
-): Collaborator => ({
-  __typename: 'ShoppingListCollaboratorEdge',
-  cursor: `c-${userId}`,
-  node: {
-    __typename: 'ShoppingListCollaborator',
-    id: `c-${userId}`,
-    email,
-    role,
-    status: CollaboratorStatus.Active,
-    collaboratorId: userId,
-    canEdit,
-    collaborator: {
-      __typename: 'User',
-      id: userId,
-      email,
-      displayName: null,
-      profile: null,
-    },
-  },
-});
-
-const collaborators = (...edges: Collaborator[]): Collaborators => ({
-  __typename: 'ShoppingListCollaboratorConnection',
-  edges,
-});
+/** Whose list it is: mine, or Alex's. */
+const ownedBy = (userId: string) =>
+  listOwner(userId, userId === USER_ID ? 'Sam' : 'Alex');
 
 /**
  * A list as its settings read it. Every flag is stated: completion would
@@ -147,7 +99,7 @@ const settingsList = (
   reminderEnabled: false,
   reminderDate: null,
   ownerships: [ownedBy(USER_ID)],
-  collaboratorsConnection: collaborators(),
+  collaboratorsConnection: collaboratorsOf(),
   ...overrides,
 });
 
@@ -685,9 +637,9 @@ describe('a list someone else owns', () => {
     await openSettings(
       settingsList({
         ownerships: [ownedBy(OTHER_ID)],
-        collaboratorsConnection: collaborators(
-          sharedWith(USER_ID),
-          sharedWith('u3'),
+        collaboratorsConnection: collaboratorsOf(
+          listCollaborator(USER_ID),
+          listCollaborator('u3'),
         ),
       }),
     );
@@ -712,8 +664,11 @@ describe('a list someone else owns', () => {
     await openSettings(
       settingsList({
         ownerships: [ownedBy(OTHER_ID)],
-        collaboratorsConnection: collaborators(
-          sharedWith(USER_ID, { role: CollaboratorRole.Editor, canEdit: true }),
+        collaboratorsConnection: collaboratorsOf(
+          listCollaborator(USER_ID, {
+            role: CollaboratorRole.Editor,
+            canEdit: true,
+          }),
         ),
       }),
     );
@@ -738,7 +693,7 @@ describe('a list someone else owns', () => {
     await openSettings(
       settingsList({
         ownerships: [ownedBy(OTHER_ID)],
-        collaboratorsConnection: collaborators(sharedWith(USER_ID)),
+        collaboratorsConnection: collaboratorsOf(listCollaborator(USER_ID)),
       }),
       [leave],
     );
@@ -767,7 +722,7 @@ describe('a list someone else owns', () => {
           myMembership: null,
         },
         ownerships: [ownedBy(OTHER_ID)],
-        collaboratorsConnection: collaborators(sharedWith(USER_ID)),
+        collaboratorsConnection: collaboratorsOf(listCollaborator(USER_ID)),
       }),
     );
 
@@ -813,8 +768,8 @@ describe('a list someone else owns', () => {
     await openSettings(
       settingsList({
         ownerships: [ownedBy(OTHER_ID)],
-        collaboratorsConnection: collaborators(
-          sharedWith('u3', { email: null }),
+        collaboratorsConnection: collaboratorsOf(
+          listCollaborator('u3', { email: null }),
         ),
       }),
     );

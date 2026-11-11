@@ -1,980 +1,358 @@
-import { toastService } from '#/services/toastService';
-import { alertService } from '#/services/alertService';
 import { act } from '@testing-library/react-native';
-import { gql } from '@apollo/client';
+import type { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
+  type MockDataFor,
   recordMock,
   renderHookWithApollo,
-  seedCache,
-  seedFragment,
 } from '#/test-utils/apolloMockProvider';
-import { MovePurchasedItemsToPantryDocument } from '../useBatchMoveToPantry.generated';
-import { useBatchMoveToPantry } from '../useBatchMoveToPantry';
+import { t } from '#/i18n';
+import { toastService } from '#/services/toastService';
+import { alertService } from '#/services/alertService';
+import { Telemetry } from '#services/telemetry';
 import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
+import { onTutorialEvent } from '#domain/tutorialEvents';
+import { MovePurchasedItemsToPantryDocument } from '../useBatchMoveToPantry.generated';
+import {
+  purchaseRecordOf,
+  seedPurchaseRecord,
+} from '#/test-utils/fixtures/shoppingListFixtures';
+import { useBatchMoveToPantry } from '../useBatchMoveToPantry';
 
+// The OS review sheet waits out four seconds of quiet toasts, a clock this
+// test does not run; `reviewPrompt.test.ts` holds that wait.
 jest.mock('#/domain/reviewPrompt');
 
-const mockToastSuccess = jest.mocked(toastService.success);
-const mockToastError = jest.mocked(toastService.error);
-const mockToastInfo = jest.mocked(toastService.info);
+type Payload = NonNullable<
+  MockDataFor<
+    typeof MovePurchasedItemsToPantryDocument
+  >['movePurchasedItemsToPantry']
+>;
+type Line = {
+  __typename: 'MovePurchasedLineResult';
+  shoppingListItemId: string;
+  success: boolean;
+  itemName: string;
+  failure: {
+    __typename: 'BatchElementFailure';
+    code: ErrorCode;
+    errorId: string | null;
+  } | null;
+};
 
-const mockAlert = jest.mocked(alertService.alert);
+const stocked = (id: string): Line => ({
+  __typename: 'MovePurchasedLineResult',
+  shoppingListItemId: id,
+  success: true,
+  itemName: id,
+  failure: null,
+});
+const failedLine = (
+  itemName: string,
+  code: ErrorCode,
+  errorId: string | null = null,
+): Line => ({
+  __typename: 'MovePurchasedLineResult',
+  shoppingListItemId: `failed-${itemName}`,
+  success: false,
+  itemName,
+  failure: { __typename: 'BatchElementFailure', code, errorId },
+});
+
+/** What the server says it did: lines moved now, moved before, and failed. */
+function answered({
+  moved = [],
+  alreadyThere = [],
+  failed = [],
+}: {
+  moved?: string[];
+  alreadyThere?: string[];
+  failed?: Line[];
+}): Payload {
+  return {
+    __typename: 'MovePurchasedItemsToPantryPayload',
+    results: [...moved, ...alreadyThere].map(stocked).concat(failed),
+    summary: {
+      total: moved.length + alreadyThere.length + failed.length,
+      succeeded: moved.length,
+      skipped: alreadyThere.length,
+      failed: failed.length,
+    },
+  };
+}
+
+interface Move {
+  /** The answer; `null` is the queue's for a write it holds. */
+  answer?: Payload | null;
+  /** The bought lines on screen. */
+  onScreen?: string[];
+  listId?: string;
+  cache?: InMemoryCache;
+}
+
+/** Presses Move all on a list and lets the answer settle. */
+async function moveAll({
+  answer = answered({ moved: ['line-1'] }),
+  onScreen = ['line-1'],
+  listId = 'list-1',
+  cache = makeCache(),
+}: Move = {}) {
+  onScreen.forEach(id => seedPurchaseRecord(cache, id));
+  const sent = recordMock(MovePurchasedItemsToPantryDocument, {
+    data: { movePurchasedItemsToPantry: answer },
+  });
+  const onSuccess = jest.fn();
+  const { result } = renderHookWithApollo(
+    () =>
+      useBatchMoveToPantry({
+        currentListId: listId || undefined,
+        purchasedItems: onScreen.map(id => ({ id })),
+        onSuccess,
+      }),
+    { operationMocks: [sent.mock], cache },
+  );
+  await act(async () => {
+    await result.current.batchMoveToPantry();
+  });
+  return { sent, onSuccess, cache };
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function moveMock(payload: {
-  movedCount: number;
-  /** Lines an earlier call had already moved — `summary.skipped`. */
-  skippedCount: number;
-  targetPantryName: string;
-  movedItemIds: string[];
-  /** Lines that errored — `summary.failed`, itemised in `results`. */
-  failedItems?: {
-    itemName: string;
-    code: ErrorCode;
-    errorId?: string | null;
-  }[];
-}) {
-  type Line = {
-    __typename: 'MovePurchasedLineResult';
-    shoppingListItemId: string;
-    success: boolean;
-    itemName: string;
-    failure: {
-      __typename: 'BatchElementFailure';
-      code: ErrorCode;
-      errorId: string | null;
-    } | null;
-  };
-  const stocked = (id: string): Line => ({
-    __typename: 'MovePurchasedLineResult',
-    shoppingListItemId: id,
-    success: true,
-    itemName: id,
-    failure: null,
-  });
+describe('moving every bought line to the pantry', () => {
+  it('asks for a list first, and sends nothing', async () => {
+    const { sent } = await moveAll({ listId: '' });
 
-  const data: MockDataFor<typeof MovePurchasedItemsToPantryDocument> = {
-    movePurchasedItemsToPantry: {
-      __typename: 'MovePurchasedItemsToPantryPayload',
-      // Every attempted line: the ones this call moved, the already-stocked
-      // ones the server reports as skipped, and the ones that failed.
-      results: [
-        ...payload.movedItemIds.map(stocked),
-        ...Array.from({ length: payload.skippedCount }, (_, i) =>
-          stocked(`already-${i}`),
-        ),
-        ...(payload.failedItems ?? []).map(
-          (item, i): Line => ({
-            __typename: 'MovePurchasedLineResult',
-            shoppingListItemId: `failed-${i}`,
-            success: false,
-            itemName: item.itemName,
-            failure: {
-              __typename: 'BatchElementFailure',
-              code: item.code,
-              errorId: item.errorId ?? null,
-            },
-          }),
-        ),
-      ],
-      summary: {
-        total:
-          payload.movedCount +
-          payload.skippedCount +
-          (payload.failedItems?.length ?? 0),
-        succeeded: payload.movedCount,
-        failed: payload.failedItems?.length ?? 0,
-        skipped: payload.skippedCount,
-      },
-    },
-  };
-  return recordMock(MovePurchasedItemsToPantryDocument, {
-    data,
-  });
-}
-
-/** The purchase record as a reading operation would have cached it. */
-const PURCHASED_ROW_SEED = gql`
-  fragment PurchasedRowSeed on ShoppingListItem {
-    id
-    purchaseInfo {
-      isPurchased
-      movedToPantryAt
-      purchaseDate
-      purchasedById
-      purchasedPrice
-      purchasedQuantity
-      purchasedBy {
-        id
-      }
-    }
-  }
-`;
-
-/**
- * The rows the server reports as moved, cached the way the list query would
- * have cached them. `writePurchaseInfo` carries the CACHED record forward, so
- * a row the test never cached gets written back with three of its eight fields
- * — a purchase record no server response could produce.
- */
-function cacheWithPurchasedRows(
-  ids: string[] = ['item-1', 'item-2', 'item-3'],
-) {
-  return seedCache(
-    ids.map(id => ({
-      // The seed is checked against a REAL selection rather than one
-      // synthesized from the fixture's own keys — a derived selection can
-      // never be incomplete, so it cannot hold the seed to anything.
-      fragment: PURCHASED_ROW_SEED,
-      fragmentName: 'PurchasedRowSeed',
-      data: {
-        __typename: 'ShoppingListItem',
-        id,
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
-          isPurchased: true,
-          movedToPantryAt: null,
-          purchaseDate: null,
-          purchasedById: null,
-          purchasedPrice: null,
-          purchasedQuantity: null,
-          purchasedBy: null,
-        },
-      },
-    })),
-  );
-}
-
-describe('useBatchMoveToPantry', () => {
-  beforeEach(() => jest.mocked(askForReviewAfterSuccess).mockClear());
-
-  it('returns batchMoveToPantry function and loading state', () => {
-    const { result } = renderHookWithApollo(() =>
-      useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
+    expect(toastService.error).toHaveBeenCalledWith(
+      t('moveToPantry.noListSelected'),
     );
-
-    expect(typeof result.current.batchMoveToPantry).toBe('function');
-    expect(result.current.loading).toBe(false);
+    expect(sent.fired).toHaveLength(0);
   });
 
-  it('shows error toast when no list is selected', async () => {
-    const { result } = renderHookWithApollo(() =>
-      useBatchMoveToPantry({ currentListId: undefined, purchasedItems: [] }),
-    );
+  it('sends the list, the day, and a pantry id of its own for each line on screen', async () => {
+    const { sent } = await moveAll({ onScreen: ['line-1', 'line-2'] });
 
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    expect(mockToastError).toHaveBeenCalledWith('No shopping list selected');
-  });
-
-  it('calls mutation with correct variables', async () => {
-    const move = moveMock({
-      movedCount: 3,
-      skippedCount: 0,
-      targetPantryName: 'My Pantry',
-      movedItemIds: ['item-1', 'item-2', 'item-3'],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    // `today` dates each moved line's default expiry.
-    expect(move.fired).toContainEqual({
+    const [variables] = sent.fired;
+    expect(variables).toMatchObject({
       input: {
         shoppingListId: 'list-1',
         today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        pantryItemHints: [
+          expect.objectContaining({ shoppingListItemId: 'line-1' }),
+          expect.objectContaining({ shoppingListItemId: 'line-2' }),
+        ],
       },
     });
+    const hints: unknown = variables?.input;
+    const ids = new Set(
+      (isHinted(hints) ? hints.pantryItemHints : []).map(
+        hint => hint.pantryItemId,
+      ),
+    );
+    expect(ids.size).toBe(2);
   });
 
-  it('shows success toast with moved count', async () => {
-    const move = moveMock({
-      movedCount: 3,
-      skippedCount: 0,
-      targetPantryName: 'My Pantry',
-      movedItemIds: ['item-1', 'item-2', 'item-3'],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    expect(mockToastSuccess).toHaveBeenCalledWith('Moved 3 items to pantry');
-    expect(askForReviewAfterSuccess).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows success toast with singular item text', async () => {
-    const move = moveMock({
-      movedCount: 1,
-      skippedCount: 0,
-      targetPantryName: 'My Pantry',
-      movedItemIds: ['item-1'],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    expect(mockToastSuccess).toHaveBeenCalledWith('Moved 1 item to pantry');
-  });
-
-  // `summary.skipped` now means "an earlier call already moved this line", not
-  // "this line could not be moved" — the opposite of a problem, so the copy says
-  // so instead of calling it skipped.
-  it('names already-stocked lines as already there, not skipped', async () => {
-    const move = moveMock({
-      movedCount: 2,
-      skippedCount: 1,
-      targetPantryName: 'My Pantry',
-      movedItemIds: ['item-1', 'item-2'],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    expect(mockToastSuccess).toHaveBeenCalledWith(
-      'Moved 2 items to pantry (1 was already there)',
-    );
-  });
-
-  // A repeat call on an unchanged list reports `succeeded: 0` with everything in
-  // `skipped`. That is the list already being stocked, not a failure — saying
-  // "no items could be moved" would read as something going wrong.
-  it('says everything is already stocked when nothing was left to move', async () => {
-    const move = moveMock({
-      movedCount: 0,
-      skippedCount: 3,
-      targetPantryName: 'My Pantry',
-      movedItemIds: [],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    expect(mockToastInfo).toHaveBeenCalledWith(
-      'Those 3 items are already in your pantry',
-    );
-  });
-
-  // Since the move began stamping the lines it moves, a second press with
-  // nothing newly purchased reports every bucket empty. That is the ordinary
-  // steady state, not a failure, and must not read like one.
-  it('says everything purchased is already stocked when every bucket is empty', async () => {
-    const move = moveMock({
-      movedCount: 0,
-      skippedCount: 0,
-      targetPantryName: 'My Pantry',
-      movedItemIds: [],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    expect(mockToastInfo).toHaveBeenCalledWith(
-      'Everything purchased is already in your pantry',
-    );
-  });
-
-  it('still says nothing moved when lines failed and none moved', async () => {
-    const move = moveMock({
-      movedCount: 0,
-      skippedCount: 0,
-      targetPantryName: 'My Pantry',
-      movedItemIds: [],
-      failedItems: [{ itemName: 'bread', code: ErrorCode.ValidationFailed }],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    expect(mockToastInfo).toHaveBeenCalledWith(
-      'No items could be moved to pantry',
-    );
-  });
-
-  it('reports lines that failed, by name, without showing the server reason', async () => {
-    const move = moveMock({
-      movedCount: 1,
-      skippedCount: 0,
-      targetPantryName: 'My Pantry',
-      movedItemIds: ['item-1'],
-      failedItems: [
-        {
-          itemName: 'bread',
-          code: ErrorCode.ValidationFailed,
-          errorId: 'log-42',
-        },
-      ],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    // The item name is the user's own words; `reason` is an unlocalizable
-    // server string and must not reach the screen.
-    expect(mockToastError).toHaveBeenCalledWith("Couldn't move bread");
-    expect(mockToastError).not.toHaveBeenCalledWith(
-      expect.stringContaining('needs a name'),
-    );
-    // A partial success still reports what did land.
-    expect(mockToastSuccess).toHaveBeenCalledWith('Moved 1 item to pantry');
-  });
-
-  it('calls onSuccess callback after successful move', async () => {
-    const mockOnSuccess = jest.fn();
-    const move = moveMock({
-      movedCount: 1,
-      skippedCount: 0,
-      targetPantryName: 'My Pantry',
-      movedItemIds: ['item-1'],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({
-          currentListId: 'list-1',
-          purchasedItems: [],
-          onSuccess: mockOnSuccess,
-        }),
-      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    expect(mockOnSuccess).toHaveBeenCalled();
-  });
-
-  it('tracks telemetry event', async () => {
-    const { Telemetry } = require('#/services/telemetry');
-    const move = moveMock({
-      movedCount: 2,
-      skippedCount: 1,
-      targetPantryName: 'My Pantry',
-      movedItemIds: ['item-1', 'item-2'],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    expect(Telemetry.trackEvent).toHaveBeenCalledWith(
-      'batch_move_purchased_to_pantry',
-      expect.objectContaining({
-        shopping_list_id: 'list-1',
-        moved_count: 2,
-        already_in_pantry_count: 1,
-        failed_count: 0,
+  it.each([
+    [
+      'what it moved',
+      answered({ moved: ['line-1', 'line-2', 'line-3'] }),
+      'success',
+      t('moveToPantry.movedItems', { count: 3, skipped: '' }),
+    ],
+    [
+      'what it moved, and what was there already',
+      answered({ moved: ['line-1', 'line-2'], alreadyThere: ['line-3'] }),
+      'success',
+      t('moveToPantry.movedItems', {
+        count: 2,
+        skipped: t('moveToPantry.alreadyThereSuffix', { count: 1 }),
       }),
+    ],
+    [
+      'that it was all there already',
+      answered({ alreadyThere: ['line-1', 'line-2'] }),
+      'info',
+      t('moveToPantry.allAlreadyThere', { count: 2 }),
+    ],
+    [
+      'that nothing was left to move',
+      answered({}),
+      'info',
+      t('moveToPantry.nothingLeftToMove'),
+    ],
+    [
+      'that nothing moved when every line failed',
+      answered({ failed: [failedLine('bread', ErrorCode.ValidationFailed)] }),
+      'info',
+      t('moveToPantry.noItemsMoved'),
+    ],
+  ] as const)('says %s', async (_, answer, tone, said) => {
+    await moveAll({ answer });
+
+    expect(toastService[tone]).toHaveBeenCalledWith(said);
+  });
+
+  it('names up to three lines that failed, and never why', async () => {
+    await moveAll({
+      answer: answered({
+        moved: ['line-1'],
+        failed: ['bread', 'milk', 'eggs', 'jam'].map(name =>
+          failedLine(name, ErrorCode.ValidationFailed),
+        ),
+      }),
+    });
+
+    expect(toastService.error).toHaveBeenCalledWith(
+      t('moveToPantry.failedItems', { count: 4, names: 'bread, milk, eggs' }),
     );
   });
 
-  it('records WHY lines failed, which the user is never shown', async () => {
-    const { Telemetry } = require('#/services/telemetry');
-    const move = moveMock({
-      movedCount: 1,
-      skippedCount: 0,
-      targetPantryName: 'My Pantry',
-      movedItemIds: ['item-1'],
-      failedItems: [
-        {
-          itemName: 'bread',
-          code: ErrorCode.ValidationFailed,
-          errorId: 'log-42',
-        },
-        {
-          itemName: 'milk',
-          code: ErrorCode.InternalServerError,
-          errorId: 'log-43',
-        },
-        { itemName: 'eggs', code: ErrorCode.ValidationFailed, errorId: null },
-      ],
+  it('records what moved, and why lines failed, which the person never sees', async () => {
+    await moveAll({
+      answer: answered({
+        moved: ['line-1'],
+        alreadyThere: ['line-2'],
+        failed: [
+          failedLine('bread', ErrorCode.ValidationFailed, 'log-42'),
+          failedLine('milk', ErrorCode.InternalServerError, 'log-43'),
+          failedLine('eggs', ErrorCode.ValidationFailed),
+        ],
+      }),
     });
 
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    // A count cannot tell a refusal from a database fault, and the screen shows
-    // neither — so without this the only record of a failed move is a number.
     expect(Telemetry.trackEvent).toHaveBeenCalledWith(
       'batch_move_purchased_to_pantry',
-      expect.objectContaining({
+      {
+        shopping_list_id: 'list-1',
+        moved_count: 1,
+        already_in_pantry_count: 1,
         failed_count: 3,
         // Distinct and sorted: three failures, two causes.
         failed_codes: `${ErrorCode.InternalServerError},${ErrorCode.ValidationFailed}`,
-        // Only the ids that exist, so a null cannot become an empty slot.
+        // Only the ids that exist.
         failed_error_ids: 'log-42,log-43',
-      }),
+      },
     );
   });
 
-  it('surfaces an alert and skips onSuccess when the server resolves an error member', async () => {
-    const mockOnSuccess = jest.fn();
-    const data: MockDataFor<typeof MovePurchasedItemsToPantryDocument> = {
-      movePurchasedItemsToPantry: {
-        __typename: 'ForbiddenError',
-        code: ErrorCode.Forbidden,
-      },
-    };
-    const move = recordMock(MovePurchasedItemsToPantryDocument, {
-      data,
-    });
+  it('closes, asks for a review, and tells the guide once something moved', async () => {
+    const heard = jest.fn();
+    const stop = onTutorialEvent(heard);
 
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({
-          currentListId: 'list-1',
-          purchasedItems: [],
-          onSuccess: mockOnSuccess,
-        }),
-      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-    );
+    const { onSuccess } = await moveAll();
+    stop();
 
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(askForReviewAfterSuccess).toHaveBeenCalledTimes(1);
+    expect(heard).toHaveBeenCalledWith('list.movedToPantry');
+  });
 
-    expect(mockAlert).toHaveBeenCalled();
-    expect(mockOnSuccess).not.toHaveBeenCalled();
+  it('closes on a move that moved nothing, asking for no review', async () => {
+    const { onSuccess } = await moveAll({ answer: answered({}) });
+
+    expect(onSuccess).toHaveBeenCalledTimes(1);
     expect(askForReviewAfterSuccess).not.toHaveBeenCalled();
   });
 
-  /**
-   * A null payload with no error is how the offline queue reports a QUEUED
-   * mutation, not a failure — `settledStatus` is the single place that
-   * meaning is encoded. Treating it as a failure only holds for an online-only
-   * move, where a null result can mean nothing else.
-   */
-  it('treats a null payload as queued: reports pending, not a count, and succeeds', async () => {
-    const mockOnSuccess = jest.fn();
-    const data: MockDataFor<typeof MovePurchasedItemsToPantryDocument> = {
-      movePurchasedItemsToPantry: null,
-    };
-    const move = recordMock(MovePurchasedItemsToPantryDocument, {
-      data,
+  it('stays open on a refusal, which it alerts, changing nothing', async () => {
+    const cache = makeCache();
+    const { onSuccess } = await moveAll({
+      cache,
+      answer: {
+        __typename: 'ForbiddenError',
+        code: ErrorCode.Forbidden,
+        message: 'No',
+      },
     });
 
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({
-          currentListId: 'list-1',
-          purchasedItems: [{ id: 'item-1' }],
-          onSuccess: mockOnSuccess,
-        }),
-      { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-    );
+    expect(alertService.alert).toHaveBeenCalled();
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(askForReviewAfterSuccess).not.toHaveBeenCalled();
+    expect(purchaseRecordOf(cache, 'line-1')?.movedToPantryAt).toBeNull();
+  });
 
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
+  // The input names only the list, and the lines on screen are one page of it,
+  // so a queued move cannot know how many the server will move.
+  it('says a queued move will go once online, with no count, and closes', async () => {
+    const { onSuccess } = await moveAll({ answer: null });
 
-    expect(mockOnSuccess).toHaveBeenCalled();
-    expect(mockAlert).not.toHaveBeenCalled();
+    expect(toastService.success).toHaveBeenCalledWith(t('moveToPantry.queued'));
+    expect(onSuccess).toHaveBeenCalledTimes(1);
     expect(askForReviewAfterSuccess).toHaveBeenCalledTimes(1);
-    // The client cannot know how many rows the server will move: the input
-    // carries only the list id, while `purchasedItems` is the slice on screen.
-    // Claiming a count here was right only when the whole list was loaded.
-    expect(mockToastSuccess).toHaveBeenCalledWith(
-      expect.stringMatching(/back online/i),
-    );
-    expect(mockToastSuccess).not.toHaveBeenCalledWith(
-      expect.stringMatching(/\b1 item\b/i),
-    );
-  });
-
-  describe('when the API is unavailable', () => {
-    /**
-     * The batch is local-first, not an offline refusal with a toast: the
-     * client mints a pantry-row id per purchased line (`pantryItemHints`), so a
-     * replay resolves to the same rows rather than creating a second set.
-     */
-    it('still fires the mutation, so the queue can replay it', async () => {
-      const move = moveMock({
-        movedCount: 1,
-        skippedCount: 0,
-        targetPantryName: 'My Pantry',
-        movedItemIds: ['item-1'],
-      });
-
-      const { result } = renderHookWithApollo(
-        () =>
-          useBatchMoveToPantry({
-            currentListId: 'list-1',
-            purchasedItems: [{ id: 'item-1' }],
-          }),
-        { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-      );
-
-      await act(async () => {
-        await result.current.batchMoveToPantry();
-      });
-
-      expect(move.fired).toHaveLength(1);
-      expect(mockToastError).not.toHaveBeenCalledWith('Not available offline');
-    });
-
-    it('sends one client-minted id hint per purchased line', async () => {
-      const move = moveMock({
-        movedCount: 2,
-        skippedCount: 0,
-        targetPantryName: 'My Pantry',
-        movedItemIds: ['item-1', 'item-2'],
-      });
-
-      const { result } = renderHookWithApollo(
-        () =>
-          useBatchMoveToPantry({
-            currentListId: 'list-1',
-            purchasedItems: [{ id: 'item-1' }, { id: 'item-2' }],
-          }),
-        { operationMocks: [move.mock], cache: cacheWithPurchasedRows() },
-      );
-
-      await act(async () => {
-        await result.current.batchMoveToPantry();
-      });
-
-      const input = move.fired[0]?.input as {
-        pantryItemHints?: {
-          shoppingListItemId: string;
-          pantryItemId: string;
-        }[];
-      };
-      expect(input.pantryItemHints).toHaveLength(2);
-      expect(input.pantryItemHints?.map(h => h.shoppingListItemId)).toEqual([
-        'item-1',
-        'item-2',
-      ]);
-      // Distinct ids — one row per line, not one row reused.
-      expect(
-        new Set(input.pantryItemHints?.map(h => h.pantryItemId)).size,
-      ).toBe(2);
-    });
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 });
 
-describe('counters are adjusted exactly once', () => {
-  /**
-   * Every test above passes `purchasedItems: []`, which takes an early return
-   * before reaching the code under test. These pass a real slice.
-   *
-   * The hook must not remove the purchased edges eagerly AND let the
-   * mutation's `update` callback remove them again on the response. Filtering
-   * edges twice is idempotent; subtracting the count twice is not.
-   */
-  const COUNTS = gql`
-    fragment ShoppingListCounts on ShoppingList {
-      id
-      totalItems
-      completedItems
-    }
-  `;
+describe('the moved lines, in the cache', () => {
+  it('are stamped, so their rows stop offering the move', async () => {
+    const { cache } = await moveAll();
 
-  function seededCache() {
-    const { makeCache } = require('#/apollo/cache');
-    const cache = makeCache();
-    seedFragment(cache, {
-      id: 'ShoppingList:list-1',
-      fragment: COUNTS,
-      data: {
-        __typename: 'ShoppingList',
-        id: 'list-1',
-        totalItems: 10,
-        completedItems: 4,
-      },
-    });
-    return cache;
-  }
-
-  function readCounts(cache: { readFragment: Function }) {
-    return cache.readFragment({
-      id: 'ShoppingList:list-1',
-      fragment: COUNTS,
-    }) as { totalItems: number; completedItems: number } | null;
-  }
-
-  const purchased = [
-    { id: 'item-1' },
-    { id: 'item-2' },
-    { id: 'item-3' },
-    { id: 'item-4' },
-  ];
-
-  it('leaves the list counters alone — the server keeps the lines it moves', async () => {
-    const cache = seededCache();
-    const move = moveMock({
-      movedCount: 4,
-      skippedCount: 0,
-      targetPantryName: 'My Pantry',
-      movedItemIds: ['item-1', 'item-2', 'item-3', 'item-4'],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({
-          currentListId: 'list-1',
-          purchasedItems: purchased,
-        }),
-      { operationMocks: [move.mock], cache },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    // `movePurchasedItemsToPantry` never removes the lines it moves — clearing
-    // them is `deleteShoppingListItems(purchased: true)`, a separate act. A
-    // client that filters the edges and subtracts the counts anyway gets the
-    // rows back on the next fetch, with the totals disagreeing with them.
-    expect(readCounts(cache)).toEqual(
-      expect.objectContaining({ totalItems: 10, completedItems: 4 }),
-    );
-  });
-
-  it('leaves the counters untouched when the server refuses', async () => {
-    const cache = seededCache();
-    const data: MockDataFor<typeof MovePurchasedItemsToPantryDocument> = {
-      movePurchasedItemsToPantry: {
-        __typename: 'ValidationError',
-      },
-    };
-    const refused = recordMock(MovePurchasedItemsToPantryDocument, {
-      data,
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({
-          currentListId: 'list-1',
-          purchasedItems: purchased,
-        }),
-      { operationMocks: [refused.mock], cache },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    // Nothing is written ahead of the response, so there is nothing to restore
-    // — which is why this hook needs no restore path.
-    expect(readCounts(cache)).toEqual(
-      expect.objectContaining({ totalItems: 10, completedItems: 4 }),
-    );
-  });
-});
-
-describe('moved lines are marked stocked in the cache', () => {
-  const STOCKED = gql`
-    fragment StockedProbe on ShoppingListItem {
-      id
-      purchaseInfo {
-        isPurchased
-        movedToPantryAt
-        purchaseDate
-        purchasedById
-        purchasedPrice
-        purchasedQuantity
-        purchasedBy {
-          id
-        }
-      }
-    }
-  `;
-
-  function seededCache() {
-    const { makeCache } = require('#/apollo/cache');
-    const cache = makeCache();
-    seedFragment(cache, {
-      id: 'ShoppingListItem:item-1',
-      fragment: STOCKED,
-      data: {
-        __typename: 'ShoppingListItem',
-        id: 'item-1',
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
-          isPurchased: true,
-          movedToPantryAt: null,
-          // Present so the merge's clearing behaviour is observable below.
-          purchasedQuantity: 3,
-          purchasedPrice: null,
-          purchaseDate: null,
-          purchasedById: null,
-          purchasedBy: null,
-        },
-      },
-    });
-    return cache;
-  }
-
-  const read = (cache: { readFragment: Function }) =>
-    cache.readFragment({
-      id: 'ShoppingListItem:item-1',
-      fragment: STOCKED,
-    }) as {
-      purchaseInfo: {
-        movedToPantryAt: string | null;
-        purchasedQuantity: number | null;
-      };
-    } | null;
-
-  it('stamps the moved line so its row stops offering the action', async () => {
-    const cache = seededCache();
-    const move = moveMock({
-      movedCount: 1,
-      skippedCount: 0,
-      targetPantryName: 'My Pantry',
-      movedItemIds: ['item-1'],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    // Without this the row keeps its move-to-pantry button until a refetch,
-    // promising an action the server will not act on.
-    expect(read(cache)?.purchaseInfo.movedToPantryAt).toEqual(
+    expect(purchaseRecordOf(cache, 'line-1')?.movedToPantryAt).toEqual(
       expect.any(String),
     );
   });
 
-  it('keeps the server stamp on a line an earlier call already moved', async () => {
-    const cache = seededCache();
-    const SERVER_STAMP = '2026-08-01T09:00:00.000Z';
-    seedFragment(cache, {
-      id: 'ShoppingListItem:item-1',
-      fragment: STOCKED,
-      data: {
-        __typename: 'ShoppingListItem',
-        id: 'item-1',
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
-          isPurchased: true,
-          movedToPantryAt: SERVER_STAMP,
-          purchasedQuantity: 3,
-          purchasedPrice: null,
-          purchaseDate: null,
-          purchasedById: null,
-          purchasedBy: null,
-        },
-      },
-    });
-
-    // The payload lists every line now in the pantry, including ones an earlier
-    // call moved. Those carry the real time they were stocked, so the local
-    // placeholder must not replace it — the stamp would otherwise jump forward
-    // on every press of a button that did nothing.
-    const move = moveMock({
-      movedCount: 0,
-      skippedCount: 0,
-      targetPantryName: 'My Pantry',
-      movedItemIds: ['item-1'],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    expect(read(cache)?.purchaseInfo.movedToPantryAt).toBe(SERVER_STAMP);
-  });
-
-  it('leaves the rest of the purchase record alone', async () => {
-    const cache = seededCache();
-    const move = moveMock({
-      movedCount: 1,
-      skippedCount: 0,
-      targetPantryName: 'My Pantry',
-      movedItemIds: ['item-1'],
-    });
-
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache },
-    );
-
-    await act(async () => {
-      await result.current.batchMoveToPantry();
-    });
-
-    // `ShoppingListItemPurchaseInfo` clears every omitted field when
-    // `isPurchased` CHANGES. This write keeps it true, so the merge takes the
-    // mergeObjects path and the amounts survive — the property that makes
-    // writing one field of this record safe at all.
-    expect(read(cache)?.purchaseInfo.purchasedQuantity).toBe(3);
-  });
-});
-
-describe('the write-back cannot clear the purchase record', () => {
-  const RECORD = gql`
-    fragment BatchRecordProbe on ShoppingListItem {
-      id
-      purchaseInfo {
-        isPurchased
-        movedToPantryAt
-        purchaseDate
-        purchasedById
-        purchasedPrice
-        purchasedQuantity
-        purchasedBy {
-          id
-        }
-      }
-    }
-  `;
-
-  /**
-   * The client's cached flag says un-purchased while the server still considers
-   * the line purchased and moves it: the user un-checked it offline (queued),
-   * or un-checked it while the batch was in flight.
-   */
-  function seedLocallyUnpurchased() {
-    const { makeCache } = require('#/apollo/cache');
+  // The payload lists lines an earlier move stocked, with their real time.
+  it('keep the stamp of an earlier move', async () => {
     const cache = makeCache();
-    seedFragment(cache, {
-      id: 'ShoppingListItem:item-1',
-      fragment: RECORD,
-      data: {
-        __typename: 'ShoppingListItem',
-        id: 'item-1',
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
-          isPurchased: false,
-          movedToPantryAt: null,
-          purchasedQuantity: 7,
-          purchasedPrice: 4.5,
-          purchaseDate: null,
-          purchasedById: null,
-          purchasedBy: null,
-        },
-      },
-    });
-    return cache;
-  }
-
-  const read = (cache: { readFragment: Function }) =>
-    (
-      cache.readFragment({
-        id: 'ShoppingListItem:item-1',
-        fragment: RECORD,
-        returnPartialData: true,
-      }) as {
-        purchaseInfo: {
-          purchasedQuantity: number | null;
-          purchasedPrice: number | null;
-        };
-      } | null
-    )?.purchaseInfo;
-
-  it('keeps the recorded amounts when the cached flag disagrees with the server', async () => {
-    const cache = seedLocallyUnpurchased();
-    const move = moveMock({
-      movedCount: 1,
-      skippedCount: 0,
-      targetPantryName: 'My Pantry',
-      movedItemIds: ['item-1'],
+    seedPurchaseRecord(cache, 'line-1', {
+      movedToPantryAt: '2026-08-01T09:00:00.000Z',
     });
 
-    const { result } = renderHookWithApollo(
-      () =>
-        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
-      { operationMocks: [move.mock], cache },
+    await moveAll({
+      cache,
+      onScreen: [],
+      answer: answered({ alreadyThere: ['line-1'] }),
+    });
+
+    expect(purchaseRecordOf(cache, 'line-1')?.movedToPantryAt).toBe(
+      '2026-08-01T09:00:00.000Z',
     );
+  });
 
-    await act(async () => {
-      await result.current.batchMoveToPantry();
+  it('are not stamped when they failed', async () => {
+    const { cache } = await moveAll({
+      onScreen: ['failed-bread'],
+      answer: answered({
+        failed: [failedLine('bread', ErrorCode.ValidationFailed)],
+      }),
     });
 
-    // Asserting `isPurchased: true` over a cached `false` flips it, and the
-    // record's merge clears every field the write omits. The quantity and price
-    // belong to a purchase the server recorded; losing them is data loss.
-    expect(read(cache)?.purchasedQuantity).toBe(7);
-    expect(read(cache)?.purchasedPrice).toBe(4.5);
+    expect(purchaseRecordOf(cache, 'failed-bread')?.movedToPantryAt).toBeNull();
+  });
+
+  // Unticked here (offline, or mid-move) while the server still moved it:
+  // asserting the flag would clear the amounts the server recorded.
+  it.each([
+    ['bought', true],
+    ['unticked here', false],
+  ])('keep what was paid for a line %s', async (_, isPurchased) => {
+    const cache = makeCache();
+    seedPurchaseRecord(cache, 'line-1', {
+      isPurchased,
+      purchasedQuantity: 7,
+      purchasedPrice: 4.5,
+    });
+
+    await moveAll({ cache, onScreen: [] });
+
+    expect(purchaseRecordOf(cache, 'line-1')).toMatchObject({
+      purchasedQuantity: 7,
+      purchasedPrice: 4.5,
+    });
   });
 });
+
+function isHinted(
+  input: unknown,
+): input is { pantryItemHints: { pantryItemId: string }[] } {
+  return (
+    typeof input === 'object' &&
+    input !== null &&
+    'pantryItemHints' in input &&
+    Array.isArray(input.pantryItemHints)
+  );
+}

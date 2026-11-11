@@ -1,9 +1,12 @@
 import React, { useEffect } from 'react';
+import { RefreshControl } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import {
   act,
   fireEvent,
   screen,
   userEvent,
+  within,
 } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
@@ -21,6 +24,8 @@ import {
   type ShoppingListNode,
 } from '#/test-utils/fixtures/shoppingListFixtures';
 import { useStore } from '#store';
+import { isRecord } from '#/utils/isRecord';
+import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { markFeatureHintShown } from '#hooks/settings/useFeatureHint';
@@ -45,8 +50,10 @@ import {
   GetShoppingListSuggestionsDocument,
   GetShoppingListsLiteDocument,
   RemoveItemFromShoppingListDocument,
+  RemoveItemsFromShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import { MovePurchasedItemsToPantryDocument } from '#features/shoppingList/hooks/useBatchMoveToPantry.generated';
 import { MoveToPantryPurchaseInfoDocument } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import {
@@ -142,6 +149,16 @@ const rowAction = (lineId: string, actionName: string) =>
     { nativeEvent: { actionName } },
   );
 
+/** Presses `label` on the last alert raised, as the person answers it. */
+async function answerAlert(label: string) {
+  const [, , buttons] = jest.mocked(alertService.alert).mock.calls.at(-1) ?? [];
+  const { onPress } = buttons?.find(button => button.text === label) ?? {};
+  if (!onPress) throw new Error(`no ${label} on the last alert`);
+  await act(async () => {
+    onPress();
+  });
+}
+
 const menuEntry = (key: string) =>
   shell.addMenu?.find(action => action.key === key);
 
@@ -190,6 +207,10 @@ interface Visit {
   details?: ShoppingListNode | null | 'held';
   /** The lines cannot be read. */
   linesFail?: boolean;
+  /** The lines come only once the test releases them. */
+  holdLines?: boolean;
+  /** At most this many lines to a page. */
+  pageSize?: number;
   /** The lists come only once the test releases them. */
   holdLists?: boolean;
   /** Answers ahead of the ones every visit gets. */
@@ -204,6 +225,8 @@ async function openListTab({
   lines = [],
   details = lists[0] ?? null,
   linesFail = false,
+  holdLines = false,
+  pageSize,
   holdLists = false,
   selected = lists[0]?.id ?? null,
   answers = [],
@@ -225,7 +248,10 @@ async function openListTab({
         error: new Error('Network request failed'),
         held: true,
       })
-    : listLinesRead(lists[0]?.id ?? 'list-1', lines);
+    : listLinesRead(lists[0]?.id ?? 'list-1', lines, {
+        pageSize,
+        held: holdLines,
+      });
   const listsAnswer = listsRead(lists, { held: holdLists });
   const cache = makeCache();
   const view = renderWithApollo(
@@ -251,20 +277,25 @@ async function openListTab({
   if (lists.length > 0 && linesFail) {
     await log.landed(GetShoppingListDetailsDocument);
     linesRead.release();
-    await log.landed(GetShoppingListItemsFilteredDocument);
+    // Both pages fail, in either order; the screen reads the two together.
+    await log.landed(GetShoppingListItemsFilteredDocument, 2);
+  } else if (lists.length > 0 && holdLines) {
+    await log.requested(GetShoppingListItemsFilteredDocument);
   } else if (lists.length > 0) {
     // To buy, then bought: the second page waits for the first.
     await log.landed(GetShoppingListItemsFilteredDocument, 2);
     if (details === null) detailRead.release();
     if (details !== 'held') await log.landed(GetShoppingListDetailsDocument);
   }
-  return { ...view, cache, releaseLists: listsAnswer.release };
+  return { ...view, cache, linesRead, releaseLists: listsAnswer.release };
 }
 
 const MILK = listLine('line-1', 'Milk');
 const EGGS = listLine('line-2', 'Eggs');
 const BREAD = listLine('line-3', 'Bread');
 const BOUGHT_OATS = listLine('line-9', 'Oats', { bought: true });
+const BOUGHT_RICE = listLine('line-10', 'Rice', { bought: true });
+const BOUGHT_TEA = listLine('line-11', 'Tea', { bought: true });
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -478,6 +509,228 @@ describe('the bought lines', () => {
 
     expect(screen.getByLabelText('Milk')).toBeTruthy();
     expect(screen.queryByTestId('state-error')).not.toBeOnTheScreen();
+  });
+});
+
+describe('the tabs', () => {
+  const tab = (key: 'shopping' | 'purchased') =>
+    screen.getByTestId(
+      kitTestIDs.filterTab(shoppingListTestIDs.tabBarPrefix, key),
+    );
+  const clearButton = () =>
+    screen.queryByTestId(shoppingListTestIDs.clearAllButton);
+  const moveAllButton = () =>
+    screen.queryByTestId(shoppingListTestIDs.batchMoveToPantryButton);
+  /** The list showing a line, as FlashList is handed it. */
+  const listShowing = (lineId: string) => {
+    const list = screen.UNSAFE_getAllByType(FlashList).find(candidate => {
+      const rows: unknown = candidate.props.data;
+      return (
+        Array.isArray(rows) &&
+        rows.some(row => isRecord(row) && row.id === lineId)
+      );
+    });
+    if (!list) throw new Error(`no list shows ${lineId}`);
+    return list;
+  };
+
+  it('count each tab’s lines by the list’s totals, not the page loaded', async () => {
+    await openListTab({
+      lines: [MILK, EGGS, BREAD, BOUGHT_OATS, BOUGHT_RICE],
+      pageSize: 1,
+    });
+
+    expect(within(tab('shopping')).getByText('3')).toBeTruthy();
+    expect(within(tab('purchased')).getByText('2')).toBeTruthy();
+  });
+
+  it.each([
+    [
+      'shopping',
+      'clearShoppingTitle',
+      'clearShoppingBody',
+      2,
+      ['line-1', 'line-2'],
+    ],
+    ['bought', 'clearPurchasedTitle', 'clearPurchasedBody', 1, ['line-9']],
+  ] as const)(
+    'clear the %s lines from their own tab once asked',
+    async (shown, title, body, count, ids) => {
+      const removal = recordMock(RemoveItemsFromShoppingListDocument, {
+        held: true,
+      });
+      await openListTab({
+        lines: [MILK, EGGS, BOUGHT_OATS],
+        answers: [removal],
+      });
+      if (shown === 'bought') fireEvent.press(purchasedTab());
+
+      fireEvent.press(screen.getByTestId(shoppingListTestIDs.clearAllButton));
+      expect(alertService.alert).toHaveBeenLastCalledWith(
+        t(`shoppingListTabs.${title}`),
+        t(`shoppingListTabs.${body}`, { count }),
+        expect.any(Array),
+      );
+      await answerAlert(t('shoppingListTabs.clearAll'));
+      await log.requested(RemoveItemsFromShoppingListDocument);
+
+      expect(removal.fired[0]).toMatchObject({ input: { ids } });
+    },
+  );
+
+  it('offer neither Clear nor a move on a tab with nothing on it', async () => {
+    await openListTab({ lines: [MILK] });
+
+    fireEvent.press(purchasedTab());
+
+    expect(clearButton()).not.toBeOnTheScreen();
+    expect(moveAllButton()).not.toBeOnTheScreen();
+  });
+
+  it('offer a guest no Clear', async () => {
+    await openListTab({
+      lists: [
+        homeShoppingList('list-1', 'Groceries', {
+          role: MembershipRole.Guest,
+        }),
+      ],
+      lines: [MILK],
+    });
+
+    expect(screen.getByLabelText('Milk')).toBeTruthy();
+    expect(clearButton()).not.toBeOnTheScreen();
+  });
+
+  it('move every bought line to the pantry once asked, from the bought tab alone', async () => {
+    const move = recordMock(MovePurchasedItemsToPantryDocument, {
+      held: true,
+    });
+    await openListTab({ lines: [MILK, BOUGHT_OATS], answers: [move] });
+    expect(moveAllButton()).not.toBeOnTheScreen();
+
+    fireEvent.press(purchasedTab());
+    fireEvent.press(
+      screen.getByTestId(shoppingListTestIDs.batchMoveToPantryButton),
+    );
+    const [title, body, buttons] =
+      jest.mocked(alertService.alert).mock.calls.at(-1) ?? [];
+    expect([title, body]).toEqual([
+      t('shoppingListTabs.moveAllTitle'),
+      t('shoppingListTabs.moveAllBody', { count: 1 }),
+    ]);
+    // Nothing is lost by it, so it is not asked as a destructive action.
+    expect(
+      buttons?.find(button => button.text === t('shoppingListTabs.moveAll'))
+        ?.style,
+    ).toBe('default');
+    await answerAlert(t('shoppingListTabs.moveAll'));
+    await log.requested(MovePurchasedItemsToPantryDocument);
+
+    expect(move.fired[0]).toMatchObject({
+      input: {
+        shoppingListId: 'list-1',
+        pantryItemHints: [
+          expect.objectContaining({ shoppingListItemId: 'line-9' }),
+        ],
+      },
+    });
+    expect(
+      screen.getByTestId(shoppingListTestIDs.batchMoveToPantryButton),
+    ).toBeDisabled();
+  });
+
+  it('read the next bought lines at the end of the bought tab', async () => {
+    const { linesRead } = await openListTab({
+      lines: [MILK, BOUGHT_OATS, BOUGHT_RICE, BOUGHT_TEA],
+      pageSize: 2,
+    });
+
+    fireEvent.press(purchasedTab());
+    fireEvent(listShowing('line-9'), 'endReached');
+    await log.requested(GetShoppingListItemsFilteredDocument, 3);
+
+    expect(linesRead.fired).toContainEqual(
+      expect.objectContaining({ isPurchased: true, after: 'line-10' }),
+    );
+  });
+
+  // Reanimated's reaction is a stand-in, so the bar's hiding is not seen here:
+  // what the list on screen is handed to report its scrolling is.
+  it('let the list on screen report its scrolling, whichever tab it is', async () => {
+    await openListTab({ lines: [MILK, BOUGHT_OATS] });
+    expect(listShowing('line-1').props.onScroll).toEqual(expect.any(Function));
+
+    fireEvent.press(purchasedTab());
+
+    expect(listShowing('line-9').props.onScroll).toEqual(expect.any(Function));
+  });
+});
+
+describe('an empty list', () => {
+  const listCalledEmpty = () =>
+    screen.queryByText(t('shoppingListScreen.emptyTitle'));
+
+  it('says so, and is read again on a pull', async () => {
+    await openListTab({ lines: [] });
+    expect(listCalledEmpty()).toBeTruthy();
+
+    act(() => {
+      screen.UNSAFE_getByType(RefreshControl).props.onRefresh();
+    });
+
+    await expect(
+      log.requested(GetShoppingListItemsFilteredDocument, 3),
+    ).resolves.toBeUndefined();
+  });
+
+  it('is not one holding only bought lines', async () => {
+    await openListTab({ lines: [BOUGHT_OATS] });
+
+    expect(listCalledEmpty()).not.toBeOnTheScreen();
+    fireEvent.press(purchasedTab());
+    expect(screen.getByLabelText('Oats')).toBeTruthy();
+  });
+
+  it('is not one a search matched nothing on, which says so', async () => {
+    await openListTab({ lines: [MILK] });
+
+    await userEvent
+      .setup()
+      .type(screen.getByTestId(shoppingListTestIDs.searchInput), 'Zuc');
+
+    expect(listCalledEmpty()).not.toBeOnTheScreen();
+    expect(
+      screen.getByText(t('empty.noResultsFor', { query: 'Zuc' })),
+    ).toBeTruthy();
+  });
+
+  it('is not one whose lines are still coming', async () => {
+    await openListTab({ lines: [MILK], holdLines: true });
+
+    expect(listCalledEmpty()).not.toBeOnTheScreen();
+  });
+
+  it('is not one switched to while its lines are still coming', async () => {
+    const weekendReads = [
+      recordMock(GetShoppingListItemsFilteredDocument, {
+        match: variables => variables.id === 'list-2',
+        held: true,
+      }),
+      recordMock(GetShoppingListDetailsDocument, {
+        match: variables => variables.id === 'list-2',
+        held: true,
+      }),
+    ];
+    await openListTab({ lines: [MILK], answers: weekendReads });
+    const user = userEvent.setup();
+
+    await user.press(
+      screen.getByTestId(shoppingListTestIDs.listSelectorButton),
+    );
+    await user.press(screen.getByText('Weekend'));
+    await log.requested(GetShoppingListItemsFilteredDocument, 3);
+
+    expect(listCalledEmpty()).not.toBeOnTheScreen();
   });
 });
 
