@@ -146,7 +146,6 @@
     "manageHome": "Menaxho shtëpinë",
     "shareHomeLinkedNotice": "Kjo listë i përket shtëpisë \"{{name}}\". Anëtarët menaxhohen nga cilësimet e shtëpisë.",
     "removeMemberA11y": "Hiq anëtarin",
-    "cannotLeaveOwnerMessage": "Pronarët nuk mund të largohen nga lista. Transfero pronësinë te një anëtar tjetër ose fshi listën.",
     "failedToUpdateShareSettings": "Nuk u përditësuan dot cilësimet e ndarjes",
     "sharingOfflineMessage": "Ndarja nuk është e disponueshme offline",
     "sharingOfflineDescription": "Lidhu me internet për të ftuar anëtarë ose menaxhuar ndarjen.",

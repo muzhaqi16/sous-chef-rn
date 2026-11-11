@@ -146,7 +146,6 @@
     "manageHome": "Gestionar hogar",
     "shareHomeLinkedNotice": "Esta lista pertenece al hogar \"{{name}}\". Los miembros se gestionan desde los ajustes del hogar.",
     "removeMemberA11y": "Eliminar miembro",
-    "cannotLeaveOwnerMessage": "Los propietarios no pueden abandonar la lista. Transfiere la propiedad a otro miembro o elimina la lista.",
     "failedToUpdateShareSettings": "No se pudieron actualizar los ajustes de compartir",
     "sharingOfflineMessage": "Compartir no disponible sin conexión",
     "sharingOfflineDescription": "Conéctate a internet para invitar a miembros o gestionar el uso compartido.",

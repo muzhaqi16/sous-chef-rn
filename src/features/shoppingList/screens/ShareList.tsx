@@ -112,17 +112,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     );
   };
 
+  // Offered only to a collaborator: an owner is never shown the way out.
   const handleLeaveList = () => {
-    // Block owners from leaving
-    if (isOwner) {
-      alertService.alert(
-        t('labels.cannotLeave'),
-        t('shoppingListScreens.cannotLeaveOwnerMessage'),
-        [{ text: t('labels.ok') }],
-      );
-      return;
-    }
-
     alertService.alert(
       t('shoppingListScreens.leaveListTitle'),
       t('shoppingListScreens.leaveListMessage', {
@@ -249,7 +240,6 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                 onPress={handleLeaveList}
                 variant="danger"
                 loading={leaving}
-                disabled={leaving}
               />
             </View>
           )}
