@@ -77,10 +77,15 @@ export function operationLog() {
     /** Resolves once the operation's `nth` answer has reached the client. */
     answered: (document: DocumentNode, nth = 1) =>
       until('answered', document, nth),
-    /** Waits for the `nth` answer inside `act`, so what it started renders. */
-    landed: (document: DocumentNode, nth = 1) =>
-      act(async () => {
+    /**
+     * Waits for the `nth` answer inside `act`, so what it started renders. A
+     * real promise: `act`'s thenable returns nothing from `then`, so a chained
+     * wait (`expect(…).resolves`) would move on with the scope still open.
+     */
+    landed: async (document: DocumentNode, nth = 1) => {
+      await act(async () => {
         await until('answered', document, nth);
-      }),
+      });
+    },
   };
 }
