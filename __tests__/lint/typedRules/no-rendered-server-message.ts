@@ -5,7 +5,6 @@ const PRELUDE = `import type {
   DeletionBlocker,
   LedgerPeriodData,
   ShoppingList,
-  UserEvent,
 } from '#/graphql/generated/schemaTypes';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 import type { UserEventsSubscription } from '#operations/auth/user.generated';
@@ -25,7 +24,6 @@ declare const combined: CombinedGraphQLErrors;
 declare const fieldError: FieldError | undefined;
 declare const local: Error;
 declare const notification: UseNotificationsOnLaunch_NotificationFragment;
-declare const userEvent: UserEvent;
 declare const failure: BatchElementFailure;
 declare const blockers: DeletionBlocker[];
 declare const period: LedgerPeriodData;
@@ -69,7 +67,7 @@ testTypedRule(
       code('export const a = <Text>{list.description}</Text>;'),
       // The same field name on a type the app declares is not the server's.
       code('export const a = <Text>{draft.title}</Text>;'),
-      code('console.warn(userEvent.reason);'),
+      code('console.warn(failure.reason);'),
       code(
         "export const a = <Text>{notification.title ? t('a') : t('b')}</Text>;",
       ),
@@ -185,19 +183,19 @@ testTypedRule(
       // The exemption covers title and message only.
       {
         code: code(
-          'export const a = notification.isAuthoredContent ? <Text>{userEvent.reason}</Text> : null;',
+          'export const a = notification.isAuthoredContent ? <Text>{failure.reason}</Text> : null;',
         ),
         errors: ['renderedServerCopy'],
       },
       {
         code: code(
-          "toastService.error(userEvent.reason || t('accountEvents.warningReceived'));",
+          "toastService.error(failure.reason || t('accountEvents.warningReceived'));",
         ),
         errors: ['renderedServerCopy'],
       },
       {
         code: code(
-          'const { reason } = userEvent;\nexport const a = <Text>{reason}</Text>;',
+          'const { reason } = failure;\nexport const a = <Text>{reason}</Text>;',
         ),
         errors: ['renderedServerCopy'],
       },
@@ -228,7 +226,7 @@ testTypedRule(
       },
       {
         code: code(
-          'const toRow = (e: typeof userEvent) => ({ why: e.reason });\nexport const Row = ({ why }: ReturnType<typeof toRow>) => <Text>{why}</Text>;',
+          'const toRow = (e: typeof failure) => ({ why: e.reason });\nexport const Row = ({ why }: ReturnType<typeof toRow>) => <Text>{why}</Text>;',
         ),
         options: FOLLOW,
         errors: ['renderedServerCopyProjected'],
