@@ -454,9 +454,17 @@ describe('deviceInfo', () => {
       expect(info.deviceName).toBe('ios Device');
     });
 
-    it('handles location providers as object', async () => {
+    // The API stores the platform's provider→availability map, so a provider
+    // that is switched off reads as off, not as one the device has.
+    it('reports each location provider with whether it is available', async () => {
+      jest
+        .mocked(DeviceInfo.getAvailableLocationProviders)
+        .mockResolvedValue({ gps: true, network: false });
       const info = await collectDeviceInformation();
-      expect(info.availableLocationProviders).toEqual(['gps', 'network']);
+      expect(info.availableLocationProviders).toEqual({
+        gps: true,
+        network: false,
+      });
     });
 
     it('returns fallback device info on complete failure', async () => {
