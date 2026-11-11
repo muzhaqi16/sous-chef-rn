@@ -503,7 +503,8 @@ export const ShoppingListMainContent: React.FC<
   // No lists on screen. Only a fetch that actually succeeded and returned
   // nothing may offer to create one — after a failure we do not know whether
   // this person already has lists, and "Create a list" would duplicate them.
-  if (!isLoadingInitial && lists.length === 0) {
+  // The remembered list's lines can land first: they stay up meanwhile.
+  if (!isLoadingInitial && listsState !== 'loading' && lists.length === 0) {
     return (
       <Screen
         testID={shoppingListTestIDs.screen}
