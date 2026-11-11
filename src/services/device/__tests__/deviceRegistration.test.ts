@@ -296,6 +296,15 @@ describe('registerDeviceInBackground — the unit pickers', () => {
     // Nor a country it never read.
     expect(location).not.toHaveProperty('ipCountry');
   });
+
+  // A LAN address says nothing about where the device is; the API records the
+  // public address it sees.
+  it("sends no address of the device's own", async () => {
+    registerDeviceInBackground();
+    await flush();
+
+    expect(registerCall()?.location).not.toHaveProperty('ipAddress');
+  });
 });
 
 // The collection is ~34 native round trips, one of them instantiating a WebView

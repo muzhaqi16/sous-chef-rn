@@ -63,7 +63,6 @@ export interface DeviceInformation {
 
   // Network & connectivity
   carrier?: string;
-  deviceIpAddress?: string;
   isAirplaneMode?: boolean;
   isLocationEnabled?: boolean;
 
@@ -258,9 +257,6 @@ const collectNetworkInfo = async () => {
   try {
     // Basic network info
     networkInfo.carrier = await DeviceInfo.getCarrier().catch(() => undefined);
-    networkInfo.deviceIpAddress = await DeviceInfo.getIpAddress().catch(
-      () => undefined,
-    );
 
     // Connectivity states
     networkInfo.isAirplaneMode = await DeviceInfo.isAirplaneMode().catch(
