@@ -246,12 +246,6 @@ export function useRecipeScreen() {
         title: t('errors.notAvailableOffline'),
         description: t('errors.offlineSearchUnavailable'),
       }
-    : searchLoading
-    ? {
-        icon: 'search',
-        title: t('recipes.searchingTitle'),
-        description: t('recipes.searchingDescription'),
-      }
     : searchPerformed && activeFilterCount > 0 && searchQuery.trim() !== ''
     ? {
         // No TEXT-search results under dietary filters: say why and offer a

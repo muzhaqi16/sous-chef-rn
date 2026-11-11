@@ -110,8 +110,6 @@
     "resultSingular": "{{count}} rezultat",
     "resultPlural": "{{count}} rezultate",
     "clearSearch": "Pastro rezultatet",
-    "searchingTitle": "Duke kërkuar...",
-    "searchingDescription": "Po gjejmë receta për ty",
     "noRecipesFoundTitle": "Nuk u gjet asnjë recetë",
     "noRecipesFoundDescription": "Provo një term tjetër kërkimi ose përbërës të tjerë",
     "discoverTitle": "Zbulo receta",
