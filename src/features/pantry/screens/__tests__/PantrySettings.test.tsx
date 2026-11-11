@@ -3,7 +3,7 @@
 import { todayKey } from '#/utils/dateUtils';
 import React from 'react';
 import { gql, type InMemoryCache } from '@apollo/client';
-import type { DocumentNode } from 'graphql';
+
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import {
   type MockDataFor,
@@ -90,12 +90,6 @@ const creating = { params: undefined };
 
 let log = operationLog();
 
-/** Waits for the operation's nth answer, then lets what it started render. */
-const answered = (document: DocumentNode, nth = 1) =>
-  act(async () => {
-    await log.answered(document, nth);
-  });
-
 /** The home's pantries, as the app reads them. */
 function seedHome(cache: InMemoryCache, pantryIds: string[]) {
   seedFragment(cache, {
@@ -157,7 +151,7 @@ async function renderEditing(
       ...answers.map(answer => answer.mock),
     ],
   });
-  await answered(GetPantryDocument);
+  await log.landed(GetPantryDocument);
   return cache;
 }
 
@@ -286,7 +280,7 @@ describe('editing a pantry', () => {
     expect(isOn()).toBe(true);
 
     markDefault.release();
-    await answered(MarkPantryAsDefaultDocument);
+    await log.landed(MarkPantryAsDefaultDocument);
     expect(isOn()).toBe(false);
   });
 
@@ -298,7 +292,7 @@ describe('editing a pantry', () => {
         recordMock(GetPantryDocument, { error: new Error('offline') }).mock,
       ],
     });
-    await answered(GetPantryDocument);
+    await log.landed(GetPantryDocument);
 
     expect(errorService.reportError).toHaveBeenCalled();
     expect(alertService.alert).toHaveBeenCalled();
@@ -341,7 +335,7 @@ describe('editing a pantry', () => {
       expect(homePantries(cache)).toEqual([]);
 
       remove.release();
-      await answered(DeletePantryDocument);
+      await log.landed(DeletePantryDocument);
 
       expect(useStore.getState().selectedPantryId).toBeNull();
       expect(mockNav.goBack).toHaveBeenCalled();

@@ -3,13 +3,14 @@
 import React from 'react';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
-import { renderWithApollo, seedQuery } from '#/test-utils/apolloMockProvider';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
-  pantryData,
+  pantryRows,
+  seedPantry,
   type PantryItemFixture,
 } from '#/test-utils/fixtures/pantryFixtures';
 import { t } from '#/i18n';
-import { todayKey } from '#/utils/dateUtils';
+
 import {
   PantrySortDirection,
   PantrySortOption,
@@ -19,32 +20,18 @@ import {
   OverlayBackdropProvider,
   useBackdropClaim,
 } from '#components/providers/OverlayBackdropProvider';
-import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import type { PantryListNode } from '../pantryDisplay/renderItem';
 import type { PantryContentProps } from '../pantryDisplay/types';
 import { sortOptionLabelKey } from '../PantrySortModal';
 import { PantryContent } from '../PantryContent';
 
-const PANTRY_READ = {
-  id: 'p1',
-  itemsFirst: 50,
-  storageLocationsFirst: 20,
-  today: todayKey(),
-};
-
 /** The rows the screen hands over, each readable by its card from the cache. */
 function stocked(rows: PantryItemFixture[]) {
   const cache = makeCache();
-  seedQuery(cache, {
-    query: GetPantryDocument,
-    variables: PANTRY_READ,
-    data: pantryData({ id: 'p1', items: rows }),
-  });
-  const items: PantryListNode[] =
-    cache
-      .readQuery({ query: GetPantryDocument, variables: PANTRY_READ })
-      ?.pantry?.itemsConnection.edges.map(edge => edge.node) ?? [];
+  seedPantry(cache, { id: 'p1', items: rows });
+  const items: PantryListNode[] = pantryRows(cache, 'p1', false);
   return { cache, items };
 }
 

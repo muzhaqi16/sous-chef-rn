@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { GraphQLError, type DocumentNode } from 'graphql';
+import { GraphQLError } from 'graphql';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import type { ApolloClient, InMemoryCache } from '@apollo/client';
@@ -15,6 +15,7 @@ import {
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
+import { screenShows } from '#/test-utils/cacheWaits';
 import { homesData } from '#/test-utils/fixtures/homeFixtures';
 import {
   pantryItemData,
@@ -178,12 +179,6 @@ const noSuggestions: MockDataFor<typeof CatalogRecipesForItemDocument> = {
 
 let log = operationLog();
 
-/** Waits for the operation's nth answer, then lets what it started render. */
-const answered = (document: DocumentNode, nth = 1) =>
-  act(async () => {
-    await log.answered(document, nth);
-  });
-
 interface Open {
   /** The stack the read answers with. */
   item?: PantryItemFixture;
@@ -223,7 +218,7 @@ function renderDetail({
 /** The detail once its stack has been read. */
 async function openDetail(options: Open = {}) {
   const client = renderDetail(options);
-  await answered(GetPantryItemDocument);
+  await log.landed(GetPantryItemDocument);
   return client;
 }
 
@@ -232,19 +227,15 @@ async function openDetail(options: Open = {}) {
  * cache write reaches a watching query a task later (`scheduleNotify`), and the
  * screen's watcher, older than this one, is told first.
  */
-async function settingsRead(client: ApolloClient, system: UnitSystem) {
-  const watch = client.watchQuery({
-    query: GetUserSettingsDocument,
-    fetchPolicy: 'cache-only',
-  });
-  let subscription: { unsubscribe: () => void } | undefined;
-  await new Promise<void>(resolve => {
-    subscription = watch.subscribe(({ data }) => {
-      if (data?.me?.settings?.preferredUnitSystem === system) resolve();
-    });
-  });
-  subscription?.unsubscribe();
-}
+const settingsRead = (client: ApolloClient, system: UnitSystem) =>
+  screenShows(
+    client,
+    { query: GetUserSettingsDocument },
+    () =>
+      client.readQuery({ query: GetUserSettingsDocument })?.me?.settings
+        ?.preferredUnitSystem,
+    seen => seen === system,
+  );
 
 /** A header action, in the bar or in the "more" menu it overflowed into. */
 const headerAction = (testID: string) => {
@@ -371,7 +362,7 @@ describe('the states it can be in', () => {
     expect(screen.getByTestId(kitTestIDs.stateLoading)).toBeTruthy();
 
     act(() => unconfirmedCreates.confirm('pi1'));
-    await answered(GetPantryItemDocument);
+    await log.landed(GetPantryItemDocument);
     expect(screen.getAllByText('Milk').length).toBeGreaterThan(0);
   });
 
@@ -550,7 +541,7 @@ describe('discarding what has expired', () => {
       },
     });
     await openDetail({ answers: [batches] });
-    await answered(GetPantryItemBatchesDocument);
+    await log.landed(GetPantryItemBatchesDocument);
 
     expect(headerAction(pantryTestIDs.itemDiscardButton)).toBeTruthy();
   });
@@ -576,7 +567,7 @@ describe('recipes to try', () => {
       },
     });
     await openDetail({ answers: [suggestions] });
-    await answered(CatalogRecipesForItemDocument);
+    await log.landed(CatalogRecipesForItemDocument);
 
     fireEvent.press(screen.getByText('Tomato soup'));
 
@@ -596,7 +587,7 @@ describe('recipes to try', () => {
         recordMock(CatalogRecipesForItemDocument, { error: new Error('500') }),
       ],
     });
-    await answered(CatalogRecipesForItemDocument);
+    await log.landed(CatalogRecipesForItemDocument);
 
     expect(
       screen.queryByText(t('pantryItemDetail.noRecipeSuggestions')),
@@ -751,7 +742,7 @@ describe('what the stock cost', () => {
         }),
       ],
     });
-    await answered(GetPantryItemBatchesDocument);
+    await log.landed(GetPantryItemBatchesDocument);
   };
 
   it('labels a restocked rate as an average, and names the last purchase', async () => {

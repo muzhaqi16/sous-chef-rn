@@ -1,6 +1,6 @@
 import React from 'react';
 import type { DocumentNode } from 'graphql';
-import type { ApolloClient } from '@apollo/client';
+import type { ApolloCache, ApolloClient } from '@apollo/client';
 import {
   act,
   fireEvent,
@@ -12,10 +12,15 @@ import {
   type MockDataFor,
   recordMock,
   renderWithApollo,
-  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
+import {
+  pantryData,
+  pantryReadOf,
+  readPantry,
+  seedPantry,
+} from '#/test-utils/fixtures/pantryFixtures';
+import { screenShows } from '#/test-utils/cacheWaits';
 import { t } from '#/i18n';
 import { todayKey } from '#/utils/dateUtils';
 import {
@@ -53,12 +58,6 @@ type Found = NonNullable<
 
 const PANTRY_ID = 'pantry-1';
 const PREFIX = pantryTestIDs.addItemSheetPrefix;
-const PANTRY_READ = {
-  id: PANTRY_ID,
-  itemsFirst: 50,
-  storageLocationsFirst: 20,
-  today: todayKey(),
-};
 
 /** A row the pantry suggests; `pantryItemId` is the stack a row names. */
 const suggestion = (
@@ -103,18 +102,13 @@ function stockedPantry(unitType = UnitType.Count, totalItems?: number) {
   for (const edge of data.pantry!.itemsConnection.edges) {
     edge.node.unit = { ...edge.node.unit, type: unitType };
   }
-  seedQuery(cache, { query: GetPantryDocument, variables: PANTRY_READ, data });
+  seedPantry(cache, { id: PANTRY_ID }, data);
   return cache;
 }
 const STOCKED_ITEM = 'item-pi-1';
 const STOCKED_UNIT = 'unit-piece';
 
-const pantryRead = (cache: ReturnType<typeof makeCache>) =>
-  cache.readQuery({
-    query: GetPantryDocument,
-    variables: PANTRY_READ,
-    optimistic: true,
-  })?.pantry;
+const pantryRead = (cache: ApolloCache) => readPantry(cache, PANTRY_ID);
 
 const created = (
   over: { match?: (vars: unknown) => boolean; held?: boolean } = {},
@@ -152,11 +146,6 @@ const refusedRestock = () =>
   });
 
 let log = operationLog();
-
-const answered = (document: DocumentNode, nth = 1) =>
-  act(async () => {
-    await log.answered(document, nth);
-  });
 
 // Fresh per test: a write still on its way when a test ends calls the
 // callbacks it was rendered with.
@@ -217,7 +206,7 @@ async function openSheet({
     },
   );
   await log.requested(GetPantryItemSuggestionsDocument);
-  await answered(GetPantryItemSuggestionsDocument);
+  await log.landed(GetPantryItemSuggestionsDocument);
   return { ...view, cache, suggestions };
 }
 
@@ -242,7 +231,7 @@ const listed = (
 };
 
 /** What the cache suggests now, as the sheet will show it. */
-const suggested = (cache: ReturnType<typeof makeCache>) =>
+const suggested = (cache: ApolloCache) =>
   listed(
     cache.readQuery({
       query: GetPantryItemSuggestionsDocument,
@@ -251,44 +240,26 @@ const suggested = (cache: ReturnType<typeof makeCache>) =>
     }),
   );
 
-/**
- * Resolves once the sheet's suggestions hold `itemId` again. A cache write
- * reaches a watching query a task later (`scheduleNotify`), and the sheet's
- * watcher, older than this one, is told first.
- */
-async function suggestedAgain(client: ApolloClient, itemId: string) {
-  const watch = client.watchQuery({
-    query: GetPantryItemSuggestionsDocument,
-    variables: SUGGESTIONS_READ,
-    fetchPolicy: 'cache-only',
-  });
-  let subscription: { unsubscribe: () => void } | undefined;
-  await new Promise<void>(resolve => {
-    subscription = watch.subscribe(({ data }) => {
-      if (listed(data).includes(itemId)) resolve();
-    });
-  });
-  subscription?.unsubscribe();
-}
+/** Resolves once the sheet, as it watches its suggestions, holds `itemId` again. */
+const suggestedAgain = (client: ApolloClient, itemId: string) =>
+  screenShows(
+    client,
+    { query: GetPantryItemSuggestionsDocument, variables: SUGGESTIONS_READ },
+    () => suggested(client.cache),
+    ids => ids.includes(itemId),
+  );
 
 /**
  * Resolves once the pantry, as its screen watches it, counts `total`. A
  * confirmed write's layer is rebuilt after a short window, not on its answer.
  */
-async function pantryCounts(client: ApolloClient, total: number) {
-  const watch = client.watchQuery({
-    query: GetPantryDocument,
-    variables: PANTRY_READ,
-    fetchPolicy: 'cache-only',
-  });
-  let subscription: { unsubscribe: () => void } | undefined;
-  await new Promise<void>(resolve => {
-    subscription = watch.subscribe(({ data }) => {
-      if (data?.pantry?.stats?.totalItems === total) resolve();
-    });
-  });
-  subscription?.unsubscribe();
-}
+const pantryCounts = (client: ApolloClient, total: number) =>
+  screenShows(
+    client,
+    { query: GetPantryDocument, variables: pantryReadOf(PANTRY_ID) },
+    () => pantryRead(client.cache)?.stats.totalItems,
+    seen => seen === total,
+  );
 
 /** Lets a refused write's answer land, and its suggestion come back. */
 const refusedBack = (
@@ -318,7 +289,7 @@ async function search(text: string) {
     text,
   );
   await log.requested(AutocompleteItemsDocument, searches);
-  await answered(AutocompleteItemsDocument, searches);
+  await log.landed(AutocompleteItemsDocument, searches);
 }
 const result = (name: string) =>
   screen.getByLabelText(t('a11y.quickAdd', { name }));
@@ -352,7 +323,7 @@ describe('opening', () => {
     });
     searches += 1;
     await log.requested(AutocompleteItemsDocument);
-    await answered(AutocompleteItemsDocument);
+    await log.landed(AutocompleteItemsDocument);
 
     expect(result('Oats')).toBeTruthy();
   });
@@ -376,7 +347,7 @@ describe('a suggestion', () => {
     expect(create.fired[0]).toMatchObject({
       input: { item: { id: 'item-b' } },
     });
-    await answered(CreatePantryItemDocument);
+    await log.landed(CreatePantryItemDocument);
     expect(onItemAdded).toHaveBeenCalledTimes(1);
   });
 
@@ -390,7 +361,7 @@ describe('a suggestion', () => {
 
     fireEvent.press(bread);
     fireEvent.press(bread);
-    await answered(CreatePantryItemDocument);
+    await log.landed(CreatePantryItemDocument);
 
     expect(create.fired).toHaveLength(1);
   });
@@ -412,7 +383,7 @@ describe('a suggestion', () => {
 
     fireEvent.press(tile('apples'));
     fireEvent.press(tile('bread'));
-    await answered(CreatePantryItemDocument, 2);
+    await log.landed(CreatePantryItemDocument, 2);
 
     expect(suggested(cache)).toEqual(['apples', 'cheese']);
     expect(toastService.error).toHaveBeenCalledWith(t('errors.addItemFailed'));
@@ -436,7 +407,7 @@ describe('a suggestion', () => {
 
     fireEvent.press(tile('Milk'));
     await log.requested(RestockPantryItemDocument);
-    await answered(RestockPantryItemDocument);
+    await log.landed(RestockPantryItemDocument);
 
     expect(restock.fired[0]).toMatchObject({ input: { id: 'pi-1' } });
     expect(create.fired).toEqual([]);
@@ -467,7 +438,7 @@ describe('a suggestion', () => {
       screen.getByLabelText(t('labels.dismissNamed', { name: 'Bread' })),
     );
     await log.requested(MarkSuggestionDismissedDocument);
-    await answered(MarkSuggestionDismissedDocument);
+    await log.landed(MarkSuggestionDismissedDocument);
 
     expect(suggested(cache)).toEqual([]);
   });
@@ -497,7 +468,7 @@ describe('a row that names its stack', () => {
 
       fireEvent.press(tile('Milk'));
       await log.requested(RestockPantryItemDocument);
-      await answered(RestockPantryItemDocument);
+      await log.landed(RestockPantryItemDocument);
 
       expect(restock.fired[0]).toMatchObject({
         input: { id: 'pi-held', amount: { packages: { count: 1 } } },
@@ -522,7 +493,7 @@ describe('a row that names its stack', () => {
 
     fireEvent.press(tile('Milk'));
     await log.requested(CreatePantryItemDocument);
-    await answered(CreatePantryItemDocument);
+    await log.landed(CreatePantryItemDocument);
 
     expect(restock.fired).toEqual([]);
   });
@@ -557,7 +528,7 @@ describe('a row that names its stack', () => {
 
       fireEvent.press(tile('Milk'));
       await log.requested(RestockPantryItemDocument);
-      await answered(RestockPantryItemDocument);
+      await log.landed(RestockPantryItemDocument);
 
       expect(onRestockNeedsAmount).toHaveBeenCalledWith(
         'pi-held',
@@ -607,7 +578,7 @@ describe('a row that names its stack', () => {
 
     fireEvent.press(tile('Milk'));
     await log.requested(RestockPantryItemDocument, 2);
-    await answered(RestockPantryItemDocument, 2);
+    await log.landed(RestockPantryItemDocument, 2);
 
     expect(restock.fired).toHaveLength(2);
   });
@@ -628,7 +599,7 @@ describe('a search result', () => {
       t('addItemSheet.added', { name: 'Eggs' }),
     );
     await log.requested(CreatePantryItemDocument);
-    await answered(CreatePantryItemDocument);
+    await log.landed(CreatePantryItemDocument);
     expect(onItemAdded).toHaveBeenCalledTimes(1);
   });
 
@@ -661,7 +632,7 @@ describe('a search result', () => {
 
     fireEvent.press(result('Milk'));
     await log.requested(RestockPantryItemDocument);
-    await answered(RestockPantryItemDocument);
+    await log.landed(RestockPantryItemDocument);
 
     expect(restock.fired[0]).toMatchObject({ input: { id: 'pi-1' } });
     expect(create.fired).toEqual([]);
@@ -699,7 +670,7 @@ describe('a search result', () => {
 
     fireEvent.press(result('Milk'));
     await log.requested(CreatePantryItemDocument);
-    await answered(CreatePantryItemDocument);
+    await log.landed(CreatePantryItemDocument);
 
     expect(create.fired).toHaveLength(1);
   });
@@ -803,7 +774,7 @@ describe('adding by hand', () => {
 
     await user.press(screen.getByTestId(pantryTestIDs.addDetailsSubmitButton));
     await log.requested(CreatePantryItemDocument);
-    await answered(CreatePantryItemDocument);
+    await log.landed(CreatePantryItemDocument);
 
     expect(toastService.success).toHaveBeenCalledWith(
       t('addToPantry.itemAdded'),

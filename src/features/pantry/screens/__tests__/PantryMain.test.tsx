@@ -1,7 +1,7 @@
 'use no memo';
 
 import React, { useEffect } from 'react';
-import type { DocumentNode } from 'graphql';
+
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import {
   type MockDataFor,
@@ -117,11 +117,6 @@ const menuAction = (key: string) =>
   shell.addMenu?.find(action => action.key === key);
 
 let log = operationLog();
-const answered = (document: DocumentNode, nth = 1) =>
-  act(async () => {
-    await log.answered(document, nth);
-  });
-
 /** Resolves when the tour shows the step, the signal the spotlight is up. */
 const stepViewed = (featureId: string) =>
   new Promise<void>(resolve => {
@@ -198,7 +193,7 @@ async function renderPantryTab({
       operationMocks: pantryRead ? [pantryRead.mock] : [],
     },
   );
-  if (pantry) await answered(GetPantryDocument);
+  if (pantry) await log.landed(GetPantryDocument);
   return { pantryReads: pantryRead?.fired ?? [] };
 }
 
@@ -378,7 +373,7 @@ describe('the list', () => {
       pantry: { ...kitchen, totalItems: 500 },
       morePages: true,
     });
-    await answered(GetPantryDocument, 2);
+    await log.landed(GetPantryDocument, 2);
     const search = screen.getByPlaceholderText(
       t('pantryScreen.searchPlaceholder'),
     );
@@ -386,14 +381,14 @@ describe('the list', () => {
     fireEvent.changeText(search, 'ri');
     // A term is debounced, so its request is awaited before its answer.
     await log.requested(GetPantryDocument, 3);
-    await answered(GetPantryDocument, 3);
+    await log.landed(GetPantryDocument, 3);
     expect(pantryReads[2]?.itemsFilter).toMatchObject({ search: 'ri' });
 
     reachListEnd();
     // A page the end asked for would go before the next term's answer lands.
     fireEvent.changeText(search, 'ric');
     await log.requested(GetPantryDocument, 4);
-    await answered(GetPantryDocument, 4);
+    await log.landed(GetPantryDocument, 4);
     expect(pageRequests(pantryReads)).toEqual([]);
 
     fireEvent.changeText(search, '');
@@ -423,7 +418,7 @@ describe('the list', () => {
     act(() => {
       useStore.setState({ selectedPantryId: 'p2' });
     });
-    await answered(GetPantryDocument, 2);
+    await log.landed(GetPantryDocument, 2);
 
     expect(pageRequests(pantryReads)).toEqual([]);
   });

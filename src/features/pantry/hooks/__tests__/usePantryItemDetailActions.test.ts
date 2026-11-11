@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import type { DocumentNode } from 'graphql';
+
 import { gql, type InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
@@ -9,7 +9,7 @@ import {
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
+import { seedPantry } from '#/test-utils/fixtures/pantryFixtures';
 import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
 import { t } from '#/i18n';
 import { todayKey } from '#/utils/dateUtils';
@@ -26,7 +26,6 @@ import {
   ConvertExpiredToWasteDocument,
   CorrectPantryItemPackageSizeDocument,
   DeletePantryItemDocument,
-  GetPantryDocument,
   GetPantryItemBatchesDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
@@ -46,13 +45,6 @@ const milk = {
   itemName: 'Milk',
   activeBatchCount: 0,
 };
-
-const pantryRead = (id: string) => ({
-  id,
-  itemsFirst: 50,
-  storageLocationsFirst: 20,
-  today: todayKey(),
-});
 
 const LISTED = gql`
   fragment DetailActionsTestListed on Pantry {
@@ -92,21 +84,13 @@ const counted = (cache: InMemoryCache, pantryId: string) =>
 /** Milk listed in its pantry, beside a jar in another the user has selected. */
 function stocked(owner = 'pantry-1') {
   const cache = makeCache();
-  seedQuery(cache, {
-    query: GetPantryDocument,
-    variables: pantryRead(owner),
-    data: pantryData({
-      id: owner,
-      items: [{ id: 'item-1', itemName: 'Milk' }],
-    }),
+  seedPantry(cache, {
+    id: owner,
+    items: [{ id: 'item-1', itemName: 'Milk' }],
   });
-  seedQuery(cache, {
-    query: GetPantryDocument,
-    variables: pantryRead('pantry-other'),
-    data: pantryData({
-      id: 'pantry-other',
-      items: [{ id: 'item-9', itemName: 'Jam' }],
-    }),
+  seedPantry(cache, {
+    id: 'pantry-other',
+    items: [{ id: 'item-9', itemName: 'Jam' }],
   });
   seedQuery(cache, {
     query: GetPantryItemDocument,
@@ -131,12 +115,6 @@ const added: MockDataFor<typeof AddItemToShoppingListFromPantryItemDocument> = {
 };
 
 let log = operationLog();
-
-/** Waits for the operation's nth answer, then lets what it started render. */
-const answered = (document: DocumentNode, nth = 1) =>
-  act(async () => {
-    await log.answered(document, nth);
-  });
 
 const goBack = jest.fn();
 const needsList = jest.fn();
@@ -224,7 +202,7 @@ describe('deleting the stack', () => {
     expect(goBack).not.toHaveBeenCalled();
 
     del.release();
-    await answered(DeletePantryItemDocument);
+    await log.landed(DeletePantryItemDocument);
     expect(goBack).toHaveBeenCalledTimes(1);
   });
 
@@ -261,7 +239,7 @@ describe('deleting the stack', () => {
 
     act(() => result.current.handleDelete());
     confirm();
-    await answered(DeletePantryItemDocument);
+    await log.landed(DeletePantryItemDocument);
 
     expect(goBack).toHaveBeenCalledTimes(1);
   });
@@ -295,7 +273,7 @@ describe('deleting the stack', () => {
 
     act(() => result.current.handleDelete());
     confirm();
-    await answered(DeletePantryItemDocument);
+    await log.landed(DeletePantryItemDocument);
 
     expect(goBack).toHaveBeenCalledTimes(1);
   });
@@ -314,7 +292,7 @@ describe('deleting the stack', () => {
 
     act(() => result.current.handleDelete());
     confirm();
-    await answered(DeletePantryItemDocument);
+    await log.landed(DeletePantryItemDocument);
 
     expect(lastAlert().title).toBe(t('labels.error'));
     expect(goBack).not.toHaveBeenCalled();
@@ -560,7 +538,7 @@ describe('discarding what expired', () => {
 
       act(() => result.current.handleDiscardExpired());
       confirm();
-      await answered(ConvertExpiredToWasteDocument);
+      await log.landed(ConvertExpiredToWasteDocument);
 
       expect(convert.fired).toEqual([
         expect.objectContaining({
@@ -585,7 +563,7 @@ describe('discarding what expired', () => {
 
     act(() => result.current.handleDiscardExpired());
     confirm();
-    await answered(ConvertExpiredToWasteDocument);
+    await log.landed(ConvertExpiredToWasteDocument);
 
     expect(toastService.success).not.toHaveBeenCalled();
   });

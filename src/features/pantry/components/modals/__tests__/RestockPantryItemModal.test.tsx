@@ -1,5 +1,5 @@
 import React from 'react';
-import type { DocumentNode } from 'graphql';
+
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { RestockPantryItemModal } from '#features/pantry/components/modals/RestockPantryItemModal';
 import {
@@ -90,12 +90,6 @@ const SEARCHED: SearchedUnit[] = [
 
 let log = operationLog();
 
-/** Waits for the operation's nth answer, then lets what it started render. */
-const answered = (document: DocumentNode, nth = 1) =>
-  act(async () => {
-    await log.answered(document, nth);
-  });
-
 const onClose = jest.fn();
 const onConfirm = jest.fn<
   ReturnType<Props['onConfirm']>,
@@ -138,7 +132,7 @@ async function openRestock({
       }).mock,
     ],
   });
-  await answered(RestockUnitsForPantryItemDocument);
+  await log.landed(RestockUnitsForPantryItemDocument);
   return view;
 }
 
@@ -334,7 +328,7 @@ describe('a package of a different size', () => {
       typed,
     );
     await log.requested(SearchUnitsDocument);
-    await answered(SearchUnitsDocument);
+    await log.landed(SearchUnitsDocument);
     fireEvent.press(screen.getByText(name));
   };
 

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { gql, type InMemoryCache } from '@apollo/client';
-import type { DocumentNode } from 'graphql';
+
 import {
   act,
   fireEvent,
@@ -177,12 +177,6 @@ const saved = (cache: InMemoryCache) =>
 
 let log = operationLog();
 
-/** Waits for the operation's nth answer, then lets what it started render. */
-const answered = (document: DocumentNode, nth = 1) =>
-  act(async () => {
-    await log.answered(document, nth);
-  });
-
 interface Render {
   /** The stack the edit read answers with. */
   stack?: Stack;
@@ -246,8 +240,8 @@ function renderForm({
 /** The form once its stack and its pantry's locations are read. */
 async function openForm(options: Render = {}) {
   const cache = renderForm(options);
-  await answered(PantryItemForEditDocument);
-  await answered(GetPantryDocument);
+  await log.landed(PantryItemForEditDocument);
+  await log.landed(GetPantryDocument);
   return cache;
 }
 
@@ -269,7 +263,7 @@ const chip = (label: string, selected: boolean) =>
  */
 async function searchAnswered() {
   await log.requested(SearchUnitsDocument);
-  await answered(SearchUnitsDocument);
+  await log.landed(SearchUnitsDocument);
 }
 
 /** A save the server accepts, once released. */
@@ -319,7 +313,7 @@ describe('opening the form', () => {
     expect(saveButton()).toBeDisabled();
 
     read.release();
-    await answered(PantryItemForEditDocument);
+    await log.landed(PantryItemForEditDocument);
     expect(field(t('itemForm.placeholderItemName'))).toHaveDisplayValue(
       'Flour',
     );
@@ -464,7 +458,7 @@ describe('the stack the form opens on', () => {
     fireEvent.changeText(field(t('itemForm.placeholderItemName')), 'Rye flour');
 
     read.release();
-    await answered(PantryItemForEditDocument);
+    await log.landed(PantryItemForEditDocument);
 
     expect(field(t('itemForm.placeholderItemName'))).toHaveDisplayValue(
       'Rye flour',
@@ -591,7 +585,7 @@ describe('saving', () => {
     expect(onSuccess).not.toHaveBeenCalled();
 
     update.release();
-    await answered(UpdatePantryItemDocument);
+    await log.landed(UpdatePantryItemDocument);
     expect(onSuccess).toHaveBeenCalledTimes(1);
     expect(saveButton()).toBeEnabled();
   });
@@ -712,7 +706,7 @@ describe('the net weight', () => {
     goTo('Basics');
 
     fireEvent.press(saveButton());
-    await answered(GetUnitBySymbolDocument);
+    await log.landed(GetUnitBySymbolDocument);
 
     expect(
       screen.getByRole('tab', {

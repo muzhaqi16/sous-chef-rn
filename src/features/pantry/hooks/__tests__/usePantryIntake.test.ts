@@ -5,13 +5,15 @@ import {
   type MockDataFor,
   recordMock,
   renderHookWithApollo,
-  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import {
-  pantryData,
+  pantryReadOf,
+  pantryRows,
+  seedPantry,
   type PantryItemFixture,
 } from '#/test-utils/fixtures/pantryFixtures';
+import { cacheShows } from '#/test-utils/cacheWaits';
 import { t } from '#/i18n';
 import { todayKey } from '#/utils/dateUtils';
 import {
@@ -32,33 +34,16 @@ type Input = Parameters<ReturnType<typeof usePantryIntake>['addItem']>[1];
 type Options = Parameters<ReturnType<typeof usePantryIntake>['addItem']>[2];
 
 const PANTRY_ID = 'p-1';
-const PANTRY_READ = {
-  id: PANTRY_ID,
-  itemsFirst: 50,
-  storageLocationsFirst: 20,
-  today: todayKey(),
-};
 const MILK: Input = { item: { id: 'item-milk' }, quantity: 1 };
 
 /** The pantry as its screen holds it. */
 function pantryHolding(items: PantryItemFixture[] = []) {
   const cache = makeCache();
-  seedQuery(cache, {
-    query: GetPantryDocument,
-    variables: PANTRY_READ,
-    data: pantryData({ id: PANTRY_ID, items }),
-  });
+  seedPantry(cache, { id: PANTRY_ID, items });
   return cache;
 }
 
-const rows = (cache: Cache) =>
-  cache
-    .readQuery({
-      query: GetPantryDocument,
-      variables: PANTRY_READ,
-      optimistic: true,
-    })
-    ?.pantry?.itemsConnection.edges.map(edge => edge.node) ?? [];
+const rows = (cache: Cache) => pantryRows(cache, PANTRY_ID);
 
 /** The row the add published: the one the pantry did not hold. */
 const addedRow = (cache: Cache) => {
@@ -71,26 +56,18 @@ const addedRow = (cache: Cache) => {
  * Resolves once the pantry's rows, as the cache shows them, satisfy `ok`. A
  * confirmed write's layer is rebuilt after a short window, not on its answer.
  */
-async function rowsSettle(
+const rowsSettle = (
   cache: Cache,
   ok: (shown: ReturnType<typeof rows>) => boolean,
-) {
-  let stop: (() => void) | undefined;
-  await act(async () => {
-    await new Promise<void>(resolve => {
-      stop = cache.watch({
-        query: GetPantryDocument,
-        variables: PANTRY_READ,
-        optimistic: true,
-        immediate: true,
-        callback: () => {
-          if (ok(rows(cache))) resolve();
-        },
-      });
-    });
+) =>
+  act(async () => {
+    await cacheShows(
+      cache,
+      { query: GetPantryDocument, variables: pantryReadOf(PANTRY_ID) },
+      () => rows(cache),
+      ok,
+    );
   });
-  stop?.();
-}
 
 /** The id the create was sent under. */
 const sentId = (variables: Record<string, unknown>) => {

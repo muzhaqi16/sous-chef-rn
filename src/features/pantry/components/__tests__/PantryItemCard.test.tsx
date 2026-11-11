@@ -6,6 +6,7 @@ import {
   renderWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { screenShows } from '#/test-utils/cacheWaits';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { PantryItemCard } from '../PantryItemCard';
 import { StatusLine } from '#components/atoms/StatusLine';
@@ -79,19 +80,15 @@ const PantryItem_PartialTestFragmentDoc = gql`
  * Resolves once the cache's watchers read the user's system as `system`: a
  * cache write reaches a watching query a task later (`scheduleNotify`).
  */
-async function settingsRead(client: ApolloClient, system: UnitSystem) {
-  const watch = client.watchQuery({
-    query: GetUserSettingsDocument,
-    fetchPolicy: 'cache-only',
-  });
-  let subscription: { unsubscribe: () => void } | undefined;
-  await new Promise<void>(resolve => {
-    subscription = watch.subscribe(({ data }) => {
-      if (data?.me?.settings?.preferredUnitSystem === system) resolve();
-    });
-  });
-  subscription?.unsubscribe();
-}
+const settingsRead = (client: ApolloClient, system: UnitSystem) =>
+  screenShows(
+    client,
+    { query: GetUserSettingsDocument },
+    () =>
+      client.readQuery({ query: GetUserSettingsDocument })?.me?.settings
+        ?.preferredUnitSystem,
+    seen => seen === system,
+  );
 
 interface BuildItemOverrides {
   id?: string;

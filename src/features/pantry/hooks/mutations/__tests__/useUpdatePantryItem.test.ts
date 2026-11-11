@@ -7,6 +7,7 @@ import {
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
+import { cacheShows } from '#/test-utils/cacheWaits';
 import { t } from '#/i18n';
 import { todayKey } from '#/utils/dateUtils';
 import {
@@ -78,17 +79,13 @@ const shown = (cache: ReturnType<typeof makeCache>) =>
   });
 
 /** Resolves once the stack, as the cache shows it, is named `name` again. */
-async function namedAgain(cache: ReturnType<typeof makeCache>, name: string) {
-  let subscription: { unsubscribe: () => void } | undefined;
-  await new Promise<void>(resolve => {
-    subscription = cache
-      .watchFragment({ ...SHOWN, from: `PantryItem:${STACK}` })
-      .subscribe(({ data }) => {
-        if (data?.itemName === name) resolve();
-      });
-  });
-  subscription?.unsubscribe();
-}
+const namedAgain = (cache: ReturnType<typeof makeCache>, name: string) =>
+  cacheShows(
+    cache,
+    { ...SHOWN, from: `PantryItem:${STACK}` },
+    () => shown(cache)?.itemName,
+    seen => seen === name,
+  );
 
 let log = operationLog();
 

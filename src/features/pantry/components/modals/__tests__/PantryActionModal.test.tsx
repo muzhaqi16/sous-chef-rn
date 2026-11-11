@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text } from '#components/atoms/Text';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
-import type { DocumentNode } from 'graphql';
+
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import { PantryActionModal } from '#features/pantry/components/modals/PantryActionModal';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
@@ -36,12 +36,6 @@ const unitsAnswer = (units: RankedActionUnit[]) =>
   });
 
 let log = operationLog();
-
-/** Waits for the operation's nth answer, then lets what it started render. */
-const answered = (document: DocumentNode, nth = 1) =>
-  act(async () => {
-    await log.answered(document, nth);
-  });
 
 /** What a consumer's fields last received. */
 let lastShared: PantryActionSharedState | undefined;
@@ -243,12 +237,12 @@ describe('a stack the device does not hold', () => {
       error: new Error('network down'),
     });
     renderModal({ cache: seedCache([]), answers: [failed] });
-    await answered(GetPantryActionItemDocument);
+    await log.landed(GetPantryActionItemDocument);
 
     expect(screen.getByText(t('dataState.errorTitle'))).toBeTruthy();
 
     fireEvent.press(screen.getByText(t('labels.tryAgain')));
-    await answered(GetPantryActionItemDocument, 2);
+    await log.landed(GetPantryActionItemDocument, 2);
     expect(failed.fired).toHaveLength(2);
   });
 });
@@ -284,7 +278,7 @@ describe('each time it opens', () => {
         ),
       ],
     });
-    await answered(ConsumptionUnitsForPantryItemDocument);
+    await log.landed(ConsumptionUnitsForPantryItemDocument);
 
     view.rerender(modal());
 
@@ -302,7 +296,7 @@ describe('each time it opens', () => {
     });
     expect(shared().activeUnitId).toBe('u1');
 
-    await answered(ConsumptionUnitsForPantryItemDocument);
+    await log.landed(ConsumptionUnitsForPantryItemDocument);
 
     expect(shared().activeUnitId).toBe('cup');
   });
@@ -324,7 +318,7 @@ describe('picking a unit', () => {
 
   it('measures in the unit picked, with its own step, as a converted one', async () => {
     renderModal({ units });
-    await answered(ConsumptionUnitsForPantryItemDocument);
+    await log.landed(ConsumptionUnitsForPantryItemDocument);
     expect(shared().isConvertedUnit).toBe(false);
 
     fireEvent.press(screen.getByRole('button', { name: 'oz' }));
@@ -517,7 +511,7 @@ describe('a stack of pieces shown in dozens', () => {
 
   it('needs no conversion in dozens, which count 12 pieces each', async () => {
     renderModal({ cache: stockedCache(eggs), units: [dozen] });
-    await answered(ConsumptionUnitsForPantryItemDocument);
+    await log.landed(ConsumptionUnitsForPantryItemDocument);
 
     expect(shared().activeUnitId).toBe('doz');
     expect(shared().exactFactor).toBe(12);
@@ -537,7 +531,7 @@ describe('a stack of pieces shown in dozens', () => {
       }),
       units: [dozen],
     });
-    await answered(ConsumptionUnitsForPantryItemDocument);
+    await log.landed(ConsumptionUnitsForPantryItemDocument);
 
     expect(shared().activeUnitId).toBe('doz');
     expect(shared().exactFactor).toBeNull();

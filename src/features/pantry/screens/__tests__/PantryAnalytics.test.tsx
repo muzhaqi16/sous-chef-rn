@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { RefreshControl } from 'react-native';
-import type { DocumentNode } from 'graphql';
+
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import {
   type MockDataFor,
@@ -125,12 +125,6 @@ const unitCost = (
 
 let log = operationLog();
 
-/** Waits for the operation's nth answer, then lets what it started render. */
-const answered = (document: DocumentNode, nth = 1) =>
-  act(async () => {
-    await log.answered(document, nth);
-  });
-
 interface Open {
   ledgerAnswer?: LedgerAnswer;
   wasteAnswer?: WasteAnswer;
@@ -160,9 +154,9 @@ async function openAnalytics({
       reads.ledger.mock,
     ],
   });
-  await answered(GetPantryUsageAnalyticsDocument);
-  await answered(GetPantryWasteAnalyticsDocument);
-  await answered(GetPantryLedgerAnalyticsDocument);
+  await log.landed(GetPantryUsageAnalyticsDocument);
+  await log.landed(GetPantryWasteAnalyticsDocument);
+  await log.landed(GetPantryLedgerAnalyticsDocument);
   return reads;
 }
 
@@ -195,7 +189,7 @@ describe('the screen', () => {
     const reads = await openAnalytics();
 
     fireEvent.press(screen.getByText(t('dateRange.week')));
-    await answered(GetPantryLedgerAnalyticsDocument, 2);
+    await log.landed(GetPantryLedgerAnalyticsDocument, 2);
 
     for (const read of [reads.usage, reads.waste, reads.ledger]) {
       expect(read.fired.at(-1)).toMatchObject({
@@ -210,9 +204,9 @@ describe('the screen', () => {
     act(() => {
       screen.UNSAFE_getByType(RefreshControl).props.onRefresh();
     });
-    await answered(GetPantryUsageAnalyticsDocument, 2);
-    await answered(GetPantryWasteAnalyticsDocument, 2);
-    await answered(GetPantryLedgerAnalyticsDocument, 2);
+    await log.landed(GetPantryUsageAnalyticsDocument, 2);
+    await log.landed(GetPantryWasteAnalyticsDocument, 2);
+    await log.landed(GetPantryLedgerAnalyticsDocument, 2);
   });
 
   it('titles its three tabs', async () => {
@@ -349,7 +343,7 @@ describe('the ledger', () => {
     openTab(t('pantryAnalytics.tabLedger'));
 
     fireEvent.press(screen.getByText(t('labels.monthly')));
-    await answered(GetPantryLedgerAnalyticsDocument, 2);
+    await log.landed(GetPantryLedgerAnalyticsDocument, 2);
 
     expect(reads.ledger.fired.at(-1)).toMatchObject({
       granularity: PeriodGranularity.Monthly,
@@ -383,7 +377,7 @@ describe('the ledger', () => {
     openTab(t('pantryAnalytics.tabLedger'));
     if (granularity === PeriodGranularity.Monthly) {
       fireEvent.press(screen.getByText(t('labels.monthly')));
-      await answered(GetPantryLedgerAnalyticsDocument, 2);
+      await log.landed(GetPantryLedgerAnalyticsDocument, 2);
     }
 
     expect(screen.getByText(shown)).toBeTruthy();

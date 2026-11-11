@@ -12,8 +12,12 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import {
   pantryData,
+  pantryReadOf,
+  readPantry,
+  seedPantry,
   type PantryItemFixture,
 } from '#/test-utils/fixtures/pantryFixtures';
+import { cacheShows } from '#/test-utils/cacheWaits';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { errorService } from '#/services/errorService';
 import {
@@ -71,12 +75,6 @@ type Row = NonNullable<
 const NOW = '2026-10-30T10:00:00.000Z';
 const TODAY = '2026-10-30';
 const PANTRY_ID = 'pantry-1';
-const PANTRY_READ = {
-  id: PANTRY_ID,
-  itemsFirst: 50,
-  storageLocationsFirst: 20,
-  today: TODAY,
-};
 const TABLE = {
   CreatePantryItem: createItem,
   UpdatePantryItemQuantity: setStock,
@@ -127,22 +125,14 @@ function pantryRead(over: Partial<Row>, items: PantryItemFixture[]) {
 /** The pantry as its screen holds it. */
 function stocked(over: Partial<Row> = {}, items: PantryItemFixture[] = []) {
   const cache = makeCache();
-  seedQuery(cache, {
-    query: GetPantryDocument,
-    variables: PANTRY_READ,
-    data: pantryRead(over, items),
-  });
+  seedPantry(cache, { id: PANTRY_ID }, pantryRead(over, items));
   return { cache, writes: new PendingWrites(cache, TABLE) };
 }
 type Device = ReturnType<typeof stocked>;
 
 /** A read of the pantry lands, with `held` shaped by `over`. */
 const serverReads = ({ cache }: Device, over: Partial<Row>) =>
-  seedQuery(cache, {
-    query: GetPantryDocument,
-    variables: PANTRY_READ,
-    data: pantryRead(over, []),
-  });
+  seedPantry(cache, { id: PANTRY_ID }, pantryRead(over, []));
 
 /**
  * A restock's answer naming `id`. Its stack's units are the stack's own: a
@@ -169,11 +159,7 @@ const restocked = (id: string, extra: Record<string, unknown> = {}) => ({
 });
 
 const pantryOf = ({ cache }: Device, optimistic = true) =>
-  cache.readQuery({
-    query: GetPantryDocument,
-    variables: PANTRY_READ,
-    optimistic,
-  })?.pantry;
+  readPantry(cache, PANTRY_ID, optimistic);
 
 const listed = (device: Device, optimistic = true) => {
   const pantry = pantryOf(device, optimistic);
@@ -263,22 +249,17 @@ function answer(
 }
 
 /** Resolves once the pantry, as the server's data holds it, lists `ids`. */
-async function rootLists(device: Device, ids: string[]) {
-  let stop: (() => void) | undefined;
-  await new Promise<void>(resolve => {
-    stop = device.cache.watch({
+const rootLists = (device: Device, ids: string[]) =>
+  cacheShows(
+    device.cache,
+    {
       query: GetPantryDocument,
-      variables: PANTRY_READ,
+      variables: pantryReadOf(PANTRY_ID),
       optimistic: false,
-      immediate: true,
-      callback: () => {
-        const shown = listed(device, false).ids;
-        if (JSON.stringify(shown) === JSON.stringify(ids)) resolve();
-      },
-    });
-  });
-  stop?.();
-}
+    },
+    () => listed(device, false).ids,
+    shown => JSON.stringify(shown) === JSON.stringify(ids),
+  );
 
 describe('creating a stack', () => {
   it('shows it and counts it once, however often it is rebuilt', () => {
@@ -625,7 +606,10 @@ describe('a restock', () => {
     const device = stocked();
     seedQuery(device.cache, {
       query: GetPantryDocument,
-      variables: { ...PANTRY_READ, itemsFilter: { expiringSoon: true } },
+      variables: {
+        ...pantryReadOf(PANTRY_ID),
+        itemsFilter: { expiringSoon: true },
+      },
       data: pantryData({ id: PANTRY_ID, items: [{ id: 'emptied' }] }),
     });
 
@@ -675,7 +659,10 @@ describe('a write the server landed on the survivor of a merge', () => {
     const device = stocked();
     seedQuery(device.cache, {
       query: GetPantryDocument,
-      variables: { ...PANTRY_READ, itemsFilter: { expiringSoon: true } },
+      variables: {
+        ...pantryReadOf(PANTRY_ID),
+        itemsFilter: { expiringSoon: true },
+      },
       data: pantryData({ id: PANTRY_ID, items: [{ id: 'survivor' }] }),
     });
 

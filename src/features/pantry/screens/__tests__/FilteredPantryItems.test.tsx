@@ -1,8 +1,8 @@
 'use no memo';
 
 import React from 'react';
-import type { DocumentNode } from 'graphql';
-import { act, fireEvent, screen } from '@testing-library/react-native';
+
+import { fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   type MockDataFor,
@@ -157,12 +157,6 @@ const addLands = () =>
 
 let log = operationLog();
 
-/** Waits for the operation's nth answer, then lets what it started render. */
-const answered = (document: DocumentNode, nth = 1) =>
-  act(async () => {
-    await log.answered(document, nth);
-  });
-
 interface Render {
   mode?: FilteredPantryItemsMode;
   /** The user's role in the home the chosen list belongs to. */
@@ -214,7 +208,7 @@ function renderScreen({
 /** The screen once its view has been read. */
 async function openScreen(options: Render = {}) {
   renderScreen(options);
-  await answered(GetPantryDocument);
+  await log.landed(GetPantryDocument);
 }
 
 const names = () =>
@@ -294,7 +288,7 @@ describe('which rows each view lists', () => {
   it('pages through the whole view online', async () => {
     const pantry = pantryServer({ morePages: true, nextPage: [milk] });
     renderScreen({ mode: 'expiring', pantry });
-    await answered(GetPantryDocument, 2);
+    await log.landed(GetPantryDocument, 2);
 
     expect(pantry.fired).toContainEqual(
       expect.objectContaining({ itemsCursor: 'page-1' }),
@@ -397,7 +391,7 @@ describe('the cart', () => {
     await openScreen({ answers: [add] });
 
     fireEvent.press(rowCarts()[0]!);
-    await answered(AddItemToShoppingListFromFilteredPantryDocument);
+    await log.landed(AddItemToShoppingListFromFilteredPantryDocument);
 
     expect(add.fired).toEqual([
       {
@@ -415,11 +409,11 @@ describe('the cart', () => {
     useStore.setState({ selectedShoppingListId: null });
     const add = addLands();
     await openScreen({ answers: [add] });
-    await answered(GetShoppingListsLiteDocument);
+    await log.landed(GetShoppingListsLiteDocument);
 
     fireEvent.press(rowCarts()[0]!);
     fireEvent.press(screen.getByText('Weekend'));
-    await answered(AddItemToShoppingListFromFilteredPantryDocument);
+    await log.landed(AddItemToShoppingListFromFilteredPantryDocument);
 
     expect(add.fired).toEqual([
       {
@@ -444,7 +438,7 @@ describe('the cart', () => {
     });
 
     fireEvent.press(rowCarts()[0]!);
-    await answered(AddItemToShoppingListFromFilteredPantryDocument);
+    await log.landed(AddItemToShoppingListFromFilteredPantryDocument);
 
     expect(alertService.alert).toHaveBeenCalledWith(
       t('labels.error'),
@@ -454,8 +448,8 @@ describe('the cart', () => {
 
   it('is withheld from a guest of the chosen list', async () => {
     await openScreen({ role: MembershipRole.Guest });
-    await answered(GetShoppingListDetailsDocument);
-    await answered(GetShoppingListsLiteDocument);
+    await log.landed(GetShoppingListDetailsDocument);
+    await log.landed(GetShoppingListsLiteDocument);
 
     expect(screen.queryByLabelText(addLabel())).not.toBeOnTheScreen();
   });
@@ -472,11 +466,11 @@ describe('the cart', () => {
     useStore.setState({ selectedShoppingListId: null });
     const add = addLands();
     await openScreen({ mode: 'expiring', answers: [add] });
-    await answered(GetShoppingListsLiteDocument);
+    await log.landed(GetShoppingListsLiteDocument);
 
     fireEvent.press(headerCart());
     fireEvent.press(screen.getByText('Weekend'));
-    await answered(AddItemToShoppingListFromFilteredPantryDocument, 3);
+    await log.landed(AddItemToShoppingListFromFilteredPantryDocument, 3);
 
     const added = add.fired.flatMap(vars =>
       isRecord(vars.input) && Array.isArray(vars.input.items)

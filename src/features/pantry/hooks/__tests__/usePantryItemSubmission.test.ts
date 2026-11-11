@@ -3,10 +3,9 @@ import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
-  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
+import { pantryRows, seedPantry } from '#/test-utils/fixtures/pantryFixtures';
 import { useStore } from '#store';
 import { t } from '#/i18n';
 import { todayKey } from '#/utils/dateUtils';
@@ -19,22 +18,12 @@ import {
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
-import {
-  CreatePantryItemDocument,
-  GetPantryDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { addPantryItemDefaults } from '#features/pantry/components/modals/AddToPantrySheet/addPantryItemFormConfig';
 import type { AddPantryItemFormData } from '#features/pantry/types';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
 
 const PANTRY_ID = 'pantry-1';
-const PANTRY_READ = {
-  id: PANTRY_ID,
-  itemsFirst: 50,
-  storageLocationsFirst: 20,
-  today: todayKey(),
-};
-
 /** Two of milk in a picked unit: the form as the sheet hands it over valid. */
 const form = (
   over: Partial<AddPantryItemFormData> = {},
@@ -49,28 +38,19 @@ const form = (
 /** The pantry as its screen holds it, with one location to pick. */
 function pantryHolding() {
   const cache = makeCache();
-  seedQuery(cache, {
-    query: GetPantryDocument,
-    variables: PANTRY_READ,
-    data: pantryData({
-      id: PANTRY_ID,
-      storageLocations: [
-        { id: 'loc-1', name: 'Chest freezer', type: StorageType.Freezer },
-      ],
-    }),
+  seedPantry(cache, {
+    id: PANTRY_ID,
+    storageLocations: [
+      { id: 'loc-1', name: 'Chest freezer', type: StorageType.Freezer },
+    ],
   });
   return cache;
 }
 
 const addedRow = (cache: ReturnType<typeof makeCache>) => {
-  const [row] =
-    cache.readQuery({
-      query: GetPantryDocument,
-      variables: PANTRY_READ,
-      optimistic: true,
-    })?.pantry?.itemsConnection.edges ?? [];
+  const [row] = pantryRows(cache, PANTRY_ID);
   if (!row) throw new Error('the add published no row');
-  return row.node;
+  return row;
 };
 
 const created = (held = false) =>

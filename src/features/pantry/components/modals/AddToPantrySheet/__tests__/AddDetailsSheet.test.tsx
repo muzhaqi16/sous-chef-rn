@@ -1,11 +1,6 @@
 import React from 'react';
-import type { DocumentNode } from 'graphql';
-import {
-  act,
-  fireEvent,
-  screen,
-  userEvent,
-} from '@testing-library/react-native';
+
+import { fireEvent, screen, userEvent } from '@testing-library/react-native';
 import {
   type MockDataFor,
   recordMock,
@@ -68,12 +63,6 @@ const LOCATIONS = [
 
 let log = operationLog();
 
-/** Waits for the operation's nth answer, then lets what it started render. */
-const answered = (document: DocumentNode, nth = 1) =>
-  act(async () => {
-    await log.answered(document, nth);
-  });
-
 const onClose = jest.fn();
 const onSuccess = jest.fn();
 
@@ -119,7 +108,7 @@ async function pickUnit(fieldTestID: string, typed: string, name: string) {
   searches += 1;
   fireEvent.changeText(screen.getByTestId(fieldTestID), typed);
   await log.requested(SearchUnitsDocument, searches);
-  await answered(SearchUnitsDocument, searches);
+  await log.landed(SearchUnitsDocument, searches);
   // Through `userEvent`, whose act settles the validation the pick starts.
   await userEvent.setup().press(screen.getByText(name));
 }
@@ -211,7 +200,7 @@ describe('adding', () => {
     });
 
     create.release();
-    await answered(CreatePantryItemDocument);
+    await log.landed(CreatePantryItemDocument);
     expect(onSuccess).toHaveBeenCalledTimes(1);
   });
 });
