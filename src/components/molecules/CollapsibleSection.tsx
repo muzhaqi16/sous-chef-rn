@@ -31,7 +31,12 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 
   return (
     <>
-      <AppPressable style={variantStyles.header} onPress={onToggle}>
+      <AppPressable
+        style={variantStyles.header}
+        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+      >
         <Text role="bodyStrong">
           {title}
           {count != null ? ` (${count})` : ''}
