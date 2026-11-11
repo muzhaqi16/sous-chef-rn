@@ -152,30 +152,25 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
   // Store selection (PurchaseInfoInput stores by id; free text isn't sent)
   const handleStoreSelected = makeIdNameHandler(setStoreId, setStoreName);
-  const pickUnit = makeIdNameHandler(setUnitId, setUnit);
+  // `UnitAutocompleteField` has already written the picked unit's symbol.
   const handleUnitSelected = (
     id: string | null,
-    name: string | null,
+    _name: string | null,
     type?: UnitType | null,
   ) => {
-    pickUnit(id, name);
+    setUnitId(id);
     setField('unitType', type ?? null);
   };
   // Each keystroke clears the pick, and a half-typed unit is not yet a mistake.
-  const pickSizeUnit = makeIdNameHandler(
-    (v: string | null) =>
-      setValue('sizeUnitId', v, {
-        shouldDirty: true,
-        shouldValidate: v !== null,
-      }),
-    setSizeUnit,
-  );
   const handleSizeUnitSelected = (
     id: string | null,
-    name: string | null,
+    _name: string | null,
     type?: UnitType | null,
   ) => {
-    pickSizeUnit(id, name);
+    setValue('sizeUnitId', id, {
+      shouldDirty: true,
+      shouldValidate: id !== null,
+    });
     setField('sizeUnitType', type ?? null);
   };
 

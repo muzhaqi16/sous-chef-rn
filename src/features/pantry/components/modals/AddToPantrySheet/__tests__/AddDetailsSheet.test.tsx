@@ -257,6 +257,20 @@ describe('what one package holds', () => {
     await pickUnit(pantryTestIDs.addDetailsUnitPicker, 'can', 'can');
   };
 
+  it('shows a picked size unit as its symbol, as every unit field does', async () => {
+    renderSheet({ prefilledItemName: 'Tuna' });
+    await countInCans();
+    fireEvent.changeText(
+      screen.getByTestId(pantryTestIDs.addDetailsSizeInput),
+      '5',
+    );
+    await pickUnit(pantryTestIDs.addDetailsSizeUnitPicker, 'oun', 'ounce');
+
+    expect(
+      screen.getByTestId(pantryTestIDs.addDetailsSizeUnitPicker).props.value,
+    ).toBe('oz');
+  });
+
   it('is asked of a count, and not of an item measured by weight', async () => {
     renderSheet({ prefilledItemName: 'Flour' });
     fireEvent.press(tab(t('labels.details')));
@@ -265,6 +279,9 @@ describe('what one package holds', () => {
     await pickUnit(pantryTestIDs.addDetailsUnitPicker, 'oun', 'ounce');
 
     expect(screen.queryByTestId(pantryTestIDs.addDetailsSizeInput)).toBeNull();
+    expect(
+      screen.getByTestId(pantryTestIDs.addDetailsUnitPicker).props.value,
+    ).toBe('oz');
   });
 
   it('asks for the size’s unit on its field, once a size is typed', async () => {
