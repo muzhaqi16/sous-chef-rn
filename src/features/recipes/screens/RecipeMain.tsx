@@ -520,9 +520,10 @@ const RecipeMainInner: React.FC = () => {
         activeFilters={screen.activeFilters}
         onApplyFilters={screen.applyFilters}
         onSheetChange={handleSheetChange}
+        // The sheet opens only in name search, where picks are left over
+        // from the other mode: only the pantry's suggestions take no filters.
         isIngredientSearch={
-          screen.selectedIngredients.size > 0 ||
-          (!screen.showSearchResults && screen.discovery.mode === 'pantry')
+          !screen.showSearchResults && screen.discovery.mode === 'pantry'
         }
       />
 

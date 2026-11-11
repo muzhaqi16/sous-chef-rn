@@ -4,7 +4,6 @@ import React, { useEffect } from 'react';
 
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import {
-  type MockDataFor,
   recordMock,
   renderWithApollo,
   seedQuery,
@@ -16,7 +15,7 @@ import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import {
-  homesData,
+  homesWithRole,
   type HomeFixture,
 } from '#/test-utils/fixtures/homeFixtures';
 import {
@@ -127,34 +126,6 @@ const stepViewed = (featureId: string) =>
     });
   });
 
-/** The member's role is stated: left to completion, it would be any role. */
-function homesAnswer(
-  homes: HomeFixture[],
-  role: MembershipRole,
-): MockDataFor<typeof GetHomesDocument> {
-  const data = homesData(homes);
-  return {
-    ...data,
-    homes: {
-      ...data.homes,
-      edges: data.homes.edges.map(edge => ({
-        ...edge,
-        node: {
-          ...edge.node,
-          myMembership: {
-            __typename: 'Membership',
-            id: `m-${edge.node.id}`,
-            role,
-            canEditPantry: false,
-            canAddItems: false,
-            canRemoveItems: false,
-          },
-        },
-      })),
-    },
-  };
-}
-
 /** The pantry tab as HomeTabs mounts it, over homes the app has already read. */
 async function renderPantryTab({
   homes = [home],
@@ -170,7 +141,10 @@ async function renderPantryTab({
   // The app fetches the homes before any tab mounts (`useDefaultHome`); the
   // tab reads them cache-only.
   const cache = makeCache();
-  seedQuery(cache, { query: GetHomesDocument, data: homesAnswer(homes, role) });
+  seedQuery(cache, {
+    query: GetHomesDocument,
+    data: homesWithRole(homes, role),
+  });
   const answer = pantry ? pantryData(pantry) : null;
   if (answer?.pantry && morePages) {
     answer.pantry.itemsConnection.pageInfo = {
