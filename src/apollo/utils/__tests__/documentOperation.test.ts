@@ -5,7 +5,7 @@ import {
   operationNameOf,
   rootFieldOf,
 } from '../documentOperation';
-import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { RemoveItemFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { UpdateDietaryProfileDocument } from '#operations/user/user.generated';
 
@@ -18,7 +18,7 @@ const operationOf = (document: DocumentNode) =>
   );
 
 describe('documentOperation', () => {
-  it.each([MoveShoppingListItemDocument, ForkRecipeDocument])(
+  it.each([RemoveItemFromShoppingListDocument, ForkRecipeDocument])(
     'reads the operation name the document declares',
     document => {
       expect(operationNameOf(document)).toBe(
@@ -53,7 +53,7 @@ describe('documentOperation', () => {
     expect(inputTypeNameOf(ForkRecipeDocument)).toBe(declared);
   });
 
-  it.each([MoveShoppingListItemDocument, UpdateDietaryProfileDocument])(
+  it.each([RemoveItemFromShoppingListDocument, UpdateDietaryProfileDocument])(
     'reads the root field the operation selects',
     document => {
       const [first] = operationOf(document)?.selectionSet.selections ?? [];

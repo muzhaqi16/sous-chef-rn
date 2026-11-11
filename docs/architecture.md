@@ -812,8 +812,7 @@ too. Changing that config needs a Metro restart with `--reset-cache`.
 
 **FlashList v2** for anything that can grow — it's in ~60 files. Plain
 `ScrollView` is for static, bounded content (settings, forms).
-`SortableShoppingList` handles drag-and-drop. Never `.map()` an unbounded list
-inside a `ScrollView`.
+Never `.map()` an unbounded list inside a `ScrollView`.
 
 FlashList v2 takes no `estimatedItemSize`. List
 `data` must never come through `useDeferredValue` / `startTransition` —

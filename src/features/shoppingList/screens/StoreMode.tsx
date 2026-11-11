@@ -81,7 +81,6 @@ const StoreModeBody: React.FC<{
         perfName="StoreModeList"
         items={state.rows}
         showImages={showImages}
-        reorderable={false}
         onItemPress={id => toShoppingListItemDetail({ listId, itemId: id })}
         itemSwipeActions={id =>
           inCart ? undefined : { left: [moveToAisle(id)] }

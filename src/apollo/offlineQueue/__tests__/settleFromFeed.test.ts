@@ -8,7 +8,6 @@ import {
 } from '#/test-utils/queuedMutation';
 import {
   AddItemToShoppingListDocument,
-  MoveShoppingListItemDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -73,26 +72,6 @@ describe('a pull confirming a queued write', () => {
     expect(queueStore.getMutation('second')?.variables.input).toMatchObject({
       version: 7,
     });
-  });
-
-  it('moves an edit built on a reorder, which sends no version', () => {
-    queueStore.addMutation(
-      makeQueuedMutation({
-        id: 'reorder',
-        userId: USER,
-        ...queuedMutationFor(MoveShoppingListItemDocument),
-        variables: { input: { id: 'row-1', afterItemId: 'row-2' } },
-        pendingWrite: { id: 'write-reorder', inputs: {} },
-      }),
-    );
-    queueStore.addMutation(edit('after-reorder'));
-
-    new QueueManager().settleFromFeed([applied('write-reorder', 'row-1', 4)]);
-
-    expect(settled('reorder')).toBe(true);
-    expect(
-      queueStore.getMutation('after-reorder')?.variables.input,
-    ).toMatchObject({ version: 4 });
   });
 
   it('reports the queue drained when it settles the last write', () => {

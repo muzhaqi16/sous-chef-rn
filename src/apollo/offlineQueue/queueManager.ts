@@ -968,8 +968,7 @@ export class QueueManager {
       ) {
         continue;
       }
-      // As a replay's answer would: a write that sent no version (a reorder)
-      // still moves the writes built on it, and never adds one to theirs.
+      // As a replay's answer would: the writes built on it move with it.
       this.rebasePending(
         entry,
         row.entityId,

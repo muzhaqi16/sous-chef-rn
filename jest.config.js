@@ -61,7 +61,6 @@ const transformIgnorePatterns = [
     'react-native-launch-arguments|' +
     'react-native-performance|' +
     'react-native-haptic-feedback|' +
-    'fractional-indexing|' +
     '@paralleldrive/cuid2|' +
     '@noble/hashes|' +
     'error-causes' +

@@ -15,7 +15,6 @@ import {
   DeleteShoppingListDocument,
   GetShoppingListItemsFilteredDocument,
   MoveShoppingItemToPantryDocument,
-  MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
   RemoveItemsFromShoppingListDocument,
   UpdateShoppingListItemDocument,
@@ -27,13 +26,11 @@ import {
   moveToPantry,
   removeList,
   removeRows,
-  reorderRow,
   updateRow,
   type AddRowsInputs,
   type CreateListInputs,
   type MoveToPantryInputs,
   type RemoveRowsInputs,
-  type ReorderRowInputs,
   type UpdateRowInputs,
 } from '../localWrites';
 
@@ -96,7 +93,6 @@ function setup() {
       UpdateShoppingListItem: updateRow,
       RemoveItemFromShoppingList: removeRows,
       RemoveItemsFromShoppingList: removeRows,
-      MoveShoppingListItem: reorderRow,
     }),
   };
 }
@@ -715,102 +711,6 @@ describe('with a list of both kinds of row', () => {
         completedItems: 0,
         remainingItems: 0,
       });
-    });
-  });
-
-  describe('reordering a row', () => {
-    const SORT = gql`
-      fragment LocalWritesSort on ShoppingListItem {
-        sortOrder
-      }
-    `;
-
-    const sorted = (list: Setup, id: string, sortOrder: string) =>
-      seedFragment(list.cache, {
-        fragment: SORT,
-        data: { __typename: 'ShoppingListItem', id, sortOrder },
-      });
-
-    const move = ({ writes }: Setup, id: string, sortOrder: string) => {
-      const inputs: ReorderRowInputs = {
-        listId: 'list-1',
-        sortOrder,
-        now: NOW,
-      };
-      return writes.begin(
-        MoveShoppingListItemDocument,
-        { input: { id } },
-        inputs,
-      );
-    };
-
-    function ordered() {
-      const list = setup();
-      seedQuery(list.cache, {
-        query: GetShoppingListItemsFilteredDocument,
-        variables: listVariables,
-        data: {
-          shoppingList: {
-            __typename: 'ShoppingList',
-            id: 'list-1',
-            version: 1,
-            itemsConnection: {
-              totalCount: 2,
-              edges: [
-                {
-                  cursor: 'c-held',
-                  node: {
-                    __typename: 'ShoppingListItem',
-                    id: 'held',
-                    version: 1,
-                    sortOrder: 'a',
-                  },
-                },
-                {
-                  cursor: 'c-later',
-                  node: {
-                    __typename: 'ShoppingListItem',
-                    id: 'later',
-                    version: 1,
-                    sortOrder: 'c',
-                  },
-                },
-              ],
-            },
-          },
-        },
-      });
-      return list;
-    }
-
-    it('puts the row in its place, however often it is rebuilt', () => {
-      const list = ordered();
-
-      move(list, 'later', '0');
-      list.writes.rebuild();
-
-      expect(shownIds(list)).toEqual(['later', 'held']);
-      expect(shownIds(list, false)).toEqual(['held', 'later']);
-    });
-
-    it('goes back when refused', () => {
-      const list = ordered();
-
-      list.writes.drop(move(list, 'later', '0').id);
-
-      expect(shownIds(list)).toEqual(['held', 'later']);
-    });
-
-    it('takes the order the server answered', () => {
-      const list = ordered();
-      const { id } = move(list, 'later', 'b');
-      // Apollo writes the answer's row before the write commits.
-      sorted(list, 'later', '0');
-
-      list.writes.confirm(id, {});
-      list.writes.rebuild();
-
-      expect(shownIds(list, false)).toEqual(['later', 'held']);
     });
   });
 });
