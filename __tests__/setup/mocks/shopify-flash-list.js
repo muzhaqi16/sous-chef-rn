@@ -17,16 +17,43 @@ jest.mock('@shopify/flash-list', () => {
   // An effect with no dependency array is the closest FlatList-world stand-in;
   // without it, anything gated on first-content-layout (skeleton overlays)
   // never releases in tests.
+  // The ref offers FlashList's own API over FlatList's: every FlatList member
+  // as it is, plus `scrollToTop`, which FlashList has and FlatList lacks.
   const FlashListMock = ({
     renderScrollComponent,
     onCommitLayoutEffect,
+    ref,
     ...props
   }) => {
+    const listRef = React.useRef(null);
+    React.useImperativeHandle(
+      ref,
+      () =>
+        new Proxy(
+          {},
+          {
+            get: (_, key) => {
+              const list = listRef.current;
+              if (key === 'scrollToTop') {
+                return (params = {}) =>
+                  list?.scrollToOffset({
+                    offset: 0,
+                    animated: params.animated,
+                  });
+              }
+              const member = list?.[key];
+              return typeof member === 'function' ? member.bind(list) : member;
+            },
+          },
+        ),
+      [],
+    );
     React.useEffect(() => {
       onCommitLayoutEffect?.();
     });
     return React.createElement(FlatList, {
       ...props,
+      ref: listRef,
       renderScrollComponent: asRenderFunction(renderScrollComponent),
     });
   };
