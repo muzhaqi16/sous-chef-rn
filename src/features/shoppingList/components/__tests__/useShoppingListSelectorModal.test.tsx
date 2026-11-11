@@ -1,147 +1,48 @@
-'use no memo';
-
-import { isValidElement, type ReactElement } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { alertService } from '#/services/alertService';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import React, { useEffect } from 'react';
+import { fireEvent, screen } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
 import {
-  useShoppingListSelectorModal,
-  type ShoppingListSelectorItem,
-} from '../useShoppingListSelectorModal';
-import { PendingListInvites } from '#features/shoppingList/components/PendingListInvites';
+  homeShoppingList,
+  listDetailsRead,
+  listLinesRead,
+  listOwner,
+  listsRead,
+  ownShoppingList,
+  type ShoppingListNode,
+} from '#/test-utils/fixtures/shoppingListFixtures';
+import { useStore } from '#store';
+import { t } from '#/i18n';
+import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
+import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
+import {
+  TabBarActionsProvider,
+  useTabBarState,
+} from '#/context/TabBarActionsContext';
+import {
+  DeleteShoppingListDocument,
+  GetShoppingListDetailsDocument,
+  GetShoppingListItemsFilteredDocument,
+  GetShoppingListsLiteDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { GetPendingListInvitesDocument } from '#features/shoppingList/hooks/usePendingListInvites.generated';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { ShoppingListMain } from '#features/shoppingList/screens/ShoppingListMain';
 
-// Section headers injected into the grouped data by the hook.
-interface SectionHeader {
-  _isHeader: true;
-  id: string;
-  title: string;
-}
-
-// Shape of the `extraData` the hook passes to the selector config.
-interface SelectorExtraData {
-  isDeleteMode: boolean;
-  selectedForDeletion: Set<string>;
-}
-
-// Build a fully-typed ShoppingListSelectorItem so the hook input needs no cast.
-const makeList = (
-  overrides: Partial<ShoppingListSelectorItem>,
-): ShoppingListSelectorItem => ({
-  __typename: 'ShoppingList',
-  version: 1,
-  id: 'list-x',
-  name: 'List',
-  isDefault: false,
-  totalItems: 0,
-  completedItems: 0,
-  homeId: null,
-  home: null,
-  ownerships: [],
-  _isOwner: true,
-  _canDelete: true,
-  ...overrides,
+jest.mock('#hooks/navigation/useAppNavigation');
+// No navigator: the screen counts as focused while mounted.
+jest.mock('@react-navigation/native', () => {
+  const { useEffect: useMountEffect } = jest.requireActual('react');
+  return {
+    ...jest.requireActual('@react-navigation/native'),
+    useFocusEffect: (effect: () => undefined | (() => void)) =>
+      useMountEffect(effect, [effect]),
+    useIsFocused: () => true,
+    useRoute: () => ({ params: {} }),
+  };
 });
-
-const makeHome = (name: string): ShoppingListSelectorItem['home'] => ({
-  __typename: 'Home',
-  version: 1,
-  id: 'home-1',
-  name,
-  myMembership: null,
-});
-
-const makeOwnership = (
-  email: string,
-  displayName: string | null,
-): ShoppingListSelectorItem['ownerships'][number] => ({
-  __typename: 'ShoppingListOwnership',
-  id: 'ownership-1',
-  userId: 'user-1',
-  user: {
-    __typename: 'User',
-    id: 'user-1',
-    email,
-    displayName: null,
-    profile:
-      displayName === null
-        ? null
-        : {
-            __typename: 'UserProfile',
-            id: 'profile-1',
-            displayName,
-            avatar: null,
-          },
-  },
-});
-
-const renderHook = <TResult, TProps>(callback: (props: TProps) => TResult) =>
-  renderHookWithApollo(callback);
-
-/**
- * `renderCustomItem` returns a React element, and a React element is always
- * truthy — asserting that tells you nothing about which branch it took. Mount
- * it so the branch becomes observable as rendered output.
- */
-const mount = (element: ReactElement) => render(element);
-
-/**
- * `Icon` is mocked to a host string, so the icon a branch chose is only
- * readable off its props.
- */
-const iconCount = (name: string) =>
-  screen.UNSAFE_queryAllByProps({ name }).length;
-
-const mockNav = {
-  toListSettings: jest.fn(),
-  toShareList: jest.fn(),
-};
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: jest.fn(() => mockNav),
-}));
-
-jest.mock('#hooks/auth/useEmailVerification', () => ({
-  useVerifiedEmailGate: jest.fn(() => ({
-    requireVerifiedEmail: jest.fn(() => true),
-    hasUnverifiedEmail: false,
-  })),
-}));
-
-const mockSetOverlayOpen = jest.fn();
-jest.mock('#/context/TabBarActionsContext', () => ({
-  useTabBarSetters: jest.fn(() => ({
-    setOverlayOpen: mockSetOverlayOpen,
-  })),
-}));
-
-// react-native-unistyles is auto-mocked via jest.setup.js
-// (__tests__/setup/mocks/react-native-unistyles.js) which provides the
-// full lightTheme. No local override needed.
-
-jest.mock('#hooks/ui/useSelectorManagement', () => ({
-  useSelectorManagement: jest.fn(() => ({
-    handleOpenSelector: jest.fn(),
-    handleOverlayOpen: jest.fn(),
-    handleOverlayClose: jest.fn(),
-  })),
-}));
-
-jest.mock('#components/atoms/Icon', () => ({
-  Icon: 'Icon',
-}));
-
-jest.mock('#features/shoppingList/components/ShoppingListAvatar', () => ({
-  ShoppingListAvatar: 'ShoppingListAvatar',
-}));
-
-// Keep the real module surface — useDeleteShoppingList reaches the shopping
-// list's cache updaters, which need the full factory set at import time.
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
-  createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
-}));
-
-jest.mock('#/services/errorService');
-
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     registerParentDeletion: jest.fn(),
@@ -149,970 +50,338 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   },
 }));
 
-jest.mock('#store', () => ({
-  useStore: {
-    getState: jest.fn(() => ({
-      setSelectedShoppingListId: jest.fn(),
-    })),
-  },
+// A skeleton's minimum time on screen is a clock, held by its own test.
+jest.mock('#features/shoppingList/hooks/useMinimumVisible', () => ({
+  useMinimumVisible: (active: boolean) => active,
 }));
 
-const makeLists = (): ShoppingListSelectorItem[] => [
-  makeList({
-    id: 'list-1',
-    name: 'Groceries',
-    isDefault: true,
-    homeId: null,
-    home: null,
-    totalItems: 5,
-    completedItems: 2,
-    _isOwner: true,
-    ownerships: [makeOwnership('me@test.com', 'Me')],
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
+
+const ME = 'u1';
+const ALEX = 'u2';
+
+/** My own list, five lines of which two are done. */
+const GROCERIES: ShoppingListNode = {
+  ...ownShoppingList('list-1', 'Groceries'),
+  ownerships: [listOwner(ME, 'Sam')],
+  totalItems: 5,
+  completedItems: 2,
+};
+/** Alex's list in our home, which as a member I may not delete. */
+const PARTY: ShoppingListNode = {
+  ...homeShoppingList('list-2', 'Party', {
+    role: MembershipRole.Member,
+    homeName: 'Family Home',
   }),
-  makeList({
-    id: 'list-2',
-    name: 'Party',
-    isDefault: false,
-    homeId: 'home-1',
-    home: makeHome('Family Home'),
-    totalItems: 3,
-    completedItems: 0,
-    _isOwner: false,
-    _canDelete: false,
-    ownerships: [makeOwnership('other@test.com', 'Other')],
+  ownerships: [listOwner(ALEX, 'Alex')],
+  totalItems: 0,
+  completedItems: 0,
+};
+/** Alex's list in a home I run, which I may delete. */
+const CAMPING: ShoppingListNode = {
+  ...homeShoppingList('list-3', 'Camping', {
+    role: MembershipRole.Admin,
+    homeId: 'h2',
+    homeName: 'Cabin',
   }),
-];
+  ownerships: [listOwner(ALEX, 'Alex')],
+  totalItems: 0,
+  completedItems: 0,
+};
 
-describe('useShoppingListSelectorModal', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+/** Whether the shell's overlay is up, as the tab bar reads it. */
+const shell: { overlayOpen?: boolean } = {};
+function OverlayProbe() {
+  const { isOverlayOpen } = useTabBarState();
+  useEffect(() => {
+    shell.overlayOpen = isOverlayOpen;
+  });
+  return null;
+}
+
+let log = operationLog();
+
+/** The list tab, on Groceries, its switcher opened. */
+async function openSwitcher(
+  answers: ReturnType<typeof recordMock>[] = [],
+  lists: ShoppingListNode[] = [GROCERIES, PARTY, CAMPING],
+) {
+  renderWithApollo(
+    <TabBarActionsProvider>
+      <OverlayProbe />
+      <ShoppingListMain />
+    </TabBarActionsProvider>,
+    {
+      cache: makeCache(),
+      links: [log.link],
+      operationMocks: [
+        ...answers.map(answer => answer.mock),
+        listsRead(lists).mock,
+        listDetailsRead(GROCERIES).mock,
+        listLinesRead('list-1', []).mock,
+        recordMock(GetPendingListInvitesDocument, {
+          data: {
+            me: {
+              __typename: 'User',
+              id: ME,
+              pendingCollaborationInvitesConnection: {
+                __typename: 'ShoppingListCollaboratorConnection',
+                edges: [],
+              },
+            },
+          },
+        }).mock,
+      ],
+    },
+  );
+  await log.landed(GetShoppingListsLiteDocument);
+  await log.landed(GetShoppingListDetailsDocument);
+  await log.landed(GetShoppingListItemsFilteredDocument, 2);
+  fireEvent.press(screen.getByTestId(shoppingListTestIDs.listSelectorButton));
+}
+
+/** Presses `label` on the last alert raised, as the person answers it. */
+function answerAlert(label: string) {
+  const [, , buttons] = jest.mocked(alertService.alert).mock.calls.at(-1) ?? [];
+  const button = buttons?.find(candidate => candidate.text === label);
+  if (!button?.onPress) throw new Error(`no ${label} on the last alert`);
+  button.onPress();
+}
+
+/** A list's row in the switcher; the one on screen is the header's title too. */
+function row(name: string) {
+  const match = screen.getAllByText(name).at(-1);
+  if (!match) throw new Error(`no row named ${name}`);
+  return match;
+}
+
+const deleted = (count: number) =>
+  t('shoppingListSelector.deletedToast', { count });
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  log = operationLog();
+  shell.overlayOpen = undefined;
+  useStore.setState({
+    user: {
+      id: ME,
+      email: 'sam@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    selectedShoppingListId: 'list-1',
+    isOnline: true,
+    apiReachable: true,
+  });
+});
+
+describe('the switcher', () => {
+  it('groups personal lists apart from each home’s', async () => {
+    await openSwitcher();
+
+    expect(
+      screen.getByText(t('shoppingListSelector.personalLists')),
+    ).toBeTruthy();
+    expect(screen.getByText('Family Home')).toBeTruthy();
+    expect(screen.getByText('Cabin')).toBeTruthy();
   });
 
-  it('returns expected API shape', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
+  it('says who shared a list, and what is left on one with lines', async () => {
+    await openSwitcher();
 
-    expect(result.current.selectorRef).toBeDefined();
-    expect(result.current.listConfig).toBeDefined();
-    expect(typeof result.current.handleOpenSelector).toBe('function');
-    expect(typeof result.current.handleOverlayOpen).toBe('function');
-    expect(typeof result.current.handleOverlayClose).toBe('function');
+    expect(
+      screen.getAllByText(t('shoppingListSelector.sharedBy', { name: 'Alex' })),
+    ).toHaveLength(2);
+    expect(
+      screen.getByText(
+        t('shoppingListSelector.itemsRemaining', { remaining: 3, total: 5 }),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(
+        t('shoppingListSelector.itemsRemaining', { remaining: 0, total: 0 }),
+      ),
+    ).not.toBeOnTheScreen();
   });
 
-  it('builds grouped data with section headers', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
+  it('switches to the list picked', async () => {
+    await openSwitcher();
 
-    const { data } = result.current.listConfig;
-    // Should have: personal header, list-1, home header, list-2
-    expect(data).toHaveLength(4);
-    expect((data[0] as SectionHeader)._isHeader).toBe(true);
-    expect((data[0] as SectionHeader).title).toBe('Personal Lists');
-    expect((data[2] as SectionHeader)._isHeader).toBe(true);
-    expect((data[2] as SectionHeader).title).toBe('Family Home');
+    fireEvent.press(row('Party'));
+
+    expect(useStore.getState().selectedShoppingListId).toBe('list-2');
   });
 
-  it('creates actions including create, share, and settings', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
+  it('switches to no section header', async () => {
+    await openSwitcher();
 
-    const { actions } = result.current.listConfig;
-    expect(actions).toBeDefined();
-    expect(actions.length).toBe(3);
-    expect(actions[0]!.label).toBe('Create');
-    expect(actions[1]!.label).toBe('Share');
-    expect(actions[2]!.label).toBe('Settings');
+    fireEvent.press(screen.getByText('Family Home'));
+
+    expect(useStore.getState().selectedShoppingListId).toBe('list-1');
   });
 
-  it('has only create action when no currentListId', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: undefined,
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
+  it('makes a new list, closing itself first', async () => {
+    await openSwitcher();
+    expect(shell.overlayOpen).toBe(true);
 
-    const { actions } = result.current.listConfig;
-    expect(actions.length).toBe(1);
-    expect(actions[0]!.label).toBe('Create');
-  });
+    fireEvent.press(screen.getByText(t('labels.create')));
 
-  it('sets title to "Select Shopping List" when not in delete mode', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    expect(result.current.listConfig.title).toBe('Select Shopping List');
-  });
-
-  it('config selectedId matches currentListId', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    expect(result.current.listConfig.selectedId).toBe('list-1');
-  });
-
-  it('handles empty list data gracefully', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: [],
-        currentListId: undefined,
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    expect(result.current.listConfig.data).toHaveLength(0);
-    expect(result.current.listConfig.emptyMessage).toBe(
-      'No shopping lists available',
-    );
-  });
-
-  it('provides renderCustomItem function', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    expect(result.current.listConfig.renderCustomItem).toBeDefined();
-    expect(typeof result.current.listConfig.renderCustomItem).toBe('function');
-  });
-
-  // --- Branch coverage tests ---
-
-  it('renderCustomItem renders section header for header items', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    const headerItem: SectionHeader = {
-      _isHeader: true,
-      id: 'header-personal',
-      title: 'Personal Lists',
-    };
-    mount(
-      result.current.listConfig.renderCustomItem!(headerItem, false, jest.fn()),
-    );
-
-    expect(screen.getByText('Personal Lists')).toBeTruthy();
-    expect(iconCount('person')).toBe(1);
-    expect(iconCount('home')).toBe(0);
-  });
-
-  it('renderCustomItem renders normal list item (non-owner) with shared text', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    const lists = makeLists();
-    mount(
-      result.current.listConfig.renderCustomItem!(lists[1]!, false, jest.fn()),
-    );
-
-    // list-2: 'Party', shared by 'Other', 3 items with none completed.
-    expect(screen.getByText('Party')).toBeTruthy();
-    expect(screen.getByText('Shared by Other')).toBeTruthy();
-    expect(screen.getByText('3 of 3')).toBeTruthy();
-    expect(iconCount('checkmark')).toBe(0);
-  });
-
-  it('renderCustomItem renders selected list item with checkmark', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    const lists = makeLists();
-    mount(
-      result.current.listConfig.renderCustomItem!(lists[0]!, true, jest.fn()),
-    );
-
-    // list-1: 'Groceries', owned, 5 items with 2 completed.
-    expect(screen.getByText('Groceries')).toBeTruthy();
-    expect(iconCount('checkmark')).toBe(1);
-    expect(screen.getByText('3 of 5')).toBeTruthy();
-  });
-
-  it('renderCustomItem renders list item with 0 totalItems (no count shown)', () => {
-    const emptyList = makeList({
-      id: 'list-3',
-      name: 'Empty List',
-      isDefault: false,
-      homeId: null,
-      home: null,
-      totalItems: 0,
-      completedItems: 0,
-      _isOwner: true,
-      ownerships: [],
-    });
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: [emptyList],
-        currentListId: undefined,
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    mount(
-      result.current.listConfig.renderCustomItem!(emptyList, false, jest.fn()),
-    );
-
-    expect(screen.getByText('Empty List')).toBeTruthy();
-    // The count line is suppressed entirely rather than rendering '0 of 0'.
-    expect(screen.queryByText('0 of 0')).toBeNull();
-  });
-
-  it('onSelect skips header items', () => {
-    const mockSetId = jest.fn();
-    const { useStore } = require('#store');
-    useStore.getState.mockReturnValue({ setSelectedShoppingListId: mockSetId });
-
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    act(() => {
-      result.current.listConfig.onSelect('header-personal', {
-        _isHeader: true,
-        id: 'header-personal',
-        title: 'Personal',
-      } satisfies SectionHeader);
-    });
-
-    expect(mockSetId).not.toHaveBeenCalled();
-  });
-
-  it('onSelect sets selected shopping list id for regular items', () => {
-    const mockSetId = jest.fn();
-    const { useStore } = require('#store');
-    useStore.getState.mockReturnValue({ setSelectedShoppingListId: mockSetId });
-
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    act(() => {
-      result.current.listConfig.onSelect('list-2', makeLists()[1]!);
-    });
-
-    expect(mockSetId).toHaveBeenCalledWith('list-2');
-  });
-
-  it('handleOverlayClose exits delete mode', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    act(() => {
-      result.current.handleOverlayClose();
-    });
-
-    // After close, delete mode should be off -> title should be normal
-    expect(result.current.listConfig.title).toBe('Select Shopping List');
-  });
-
-  it('groups lists with home into their own section', () => {
-    const lists = [
-      ...makeLists(),
-      makeList({
-        id: 'list-3',
-        name: 'Home List',
-        isDefault: false,
-        homeId: 'home-1',
-        home: makeHome('Family Home'),
-        totalItems: 0,
-        completedItems: 0,
-        _isOwner: true,
-        ownerships: [],
-      }),
-    ];
-
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: lists,
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    const { data } = result.current.listConfig;
-    // Personal Lists header + list-1 + Family Home header + list-2 + list-3
-    expect(data.length).toBe(5);
-  });
-
-  it('has no header actions when not in delete mode', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    expect(result.current.listConfig.headerActions).toBeUndefined();
-  });
-
-  it('action navigates to ListSettings when Create pressed', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    act(() => {
-      result.current.listConfig.actions[0]!.onPress();
-    });
-
-    expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
+    expect(shell.overlayOpen).toBe(false);
     expect(mockNav.toListSettings).toHaveBeenCalledWith();
   });
 
-  it('action navigates to ShareList when Share pressed', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
+  it('shares and sets up the list on screen', async () => {
+    await openSwitcher();
+
+    fireEvent.press(
+      screen.getByText(t('shoppingListSelector.shareCurrentList')),
     );
+    fireEvent.press(screen.getByText(t('shoppingListSelector.listSettings')));
 
-    act(() => {
-      result.current.listConfig.actions[1]!.onPress();
-    });
+    expect(mockNav.toShareList).toHaveBeenCalledWith({ listId: 'list-1' });
+    expect(mockNav.toListSettings).toHaveBeenCalledWith({ listId: 'list-1' });
+  });
+});
 
-    expect(mockNav.toShareList).toHaveBeenCalledWith({
-      listId: 'list-1',
-    });
+describe('deleting from the switcher', () => {
+  /** A long-press, held then let go, as a finger does. */
+  const longPress = (name: string) => {
+    fireEvent(row(name), 'longPress');
+    fireEvent.press(row(name));
+  };
+  const deleteButton = () =>
+    screen.getByRole('button', { name: t('labels.delete') });
+
+  it('starts from a long-press on a list one may delete, picked', async () => {
+    await openSwitcher();
+
+    longPress('Groceries');
+
+    expect(
+      screen.getByText(t('shoppingListSelector.deleteModeTitle', { count: 1 })),
+    ).toBeTruthy();
+    expect(deleteButton()).toBeEnabled();
   });
 
-  it('action navigates to ListSettings with listId when Settings pressed', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
+  it('never starts on a list one may not delete, which says so', async () => {
+    await openSwitcher();
 
-    act(() => {
-      result.current.listConfig.actions[2]!.onPress();
-    });
-
-    expect(mockNav.toListSettings).toHaveBeenCalledWith({
-      listId: 'list-1',
-    });
-  });
-
-  it('renderCustomItem for non-owner shared list shows owner info fallback', () => {
-    const listsNoProfile = [
-      makeList({
-        id: 'list-4',
-        name: 'Shared',
-        isDefault: false,
-        homeId: null,
-        home: null,
-        totalItems: 2,
-        completedItems: 1,
-        _isOwner: false,
-        ownerships: [makeOwnership('', null)],
-      }),
-    ];
-
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: listsNoProfile,
-        currentListId: undefined,
-        setSelectedShoppingListId: jest.fn(),
-      }),
-    );
-
-    mount(
-      result.current.listConfig.renderCustomItem!(
-        listsNoProfile[0]!,
-        false,
-        jest.fn(),
+    longPress('Party');
+    expect(
+      screen.queryByText(
+        t('shoppingListSelector.deleteModeTitle', { count: 1 }),
       ),
-    );
+    ).not.toBeOnTheScreen();
 
-    // Neither a displayName nor an email is available, so the owner falls all
-    // the way back to the generic term.
-    expect(screen.getByText('Shared')).toBeTruthy();
-    expect(screen.getByText('Shared by someone')).toBeTruthy();
-    expect(screen.getByText('1 of 2')).toBeTruthy();
+    longPress('Groceries');
+    fireEvent.press(row('Party'));
+
+    expect(
+      screen.getByText(t('shoppingListSelector.cannotDeleteShared')),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(t('shoppingListSelector.deleteModeTitle', { count: 1 })),
+    ).toBeTruthy();
   });
 
-  it('renderCustomItem for home section header with non-Personal title uses home icon', () => {
-    const { result } = renderHook(() =>
-      useShoppingListSelectorModal({
-        listDataWithOwnership: makeLists(),
-        currentListId: 'list-1',
-        setSelectedShoppingListId: jest.fn(),
+  it('switches nothing while picking, and offers no delete with none picked', async () => {
+    await openSwitcher();
+
+    longPress('Groceries');
+    fireEvent.press(row('Groceries'));
+    fireEvent.press(row('Camping'));
+
+    expect(useStore.getState().selectedShoppingListId).toBe('list-1');
+    expect(
+      screen.getByText(t('shoppingListSelector.deleteModeTitle', { count: 1 })),
+    ).toBeTruthy();
+    fireEvent.press(row('Camping'));
+    expect(deleteButton()).toBeDisabled();
+  });
+
+  it('deletes one list once confirmed, naming it, and moves off it', async () => {
+    const removal = recordMock(DeleteShoppingListDocument, {
+      data: {
+        deleteShoppingList: { __typename: 'DeleteShoppingListPayload' },
+      },
+    });
+    await openSwitcher([removal]);
+
+    longPress('Groceries');
+    fireEvent.press(deleteButton());
+    expect(alertService.alert).toHaveBeenLastCalledWith(
+      t('labels.deleteNamed', { name: 'Groceries' }),
+      expect.any(String),
+      expect.any(Array),
+    );
+    answerAlert(t('labels.delete'));
+    await log.landed(DeleteShoppingListDocument);
+
+    expect(removal.fired[0]).toMatchObject({ input: { id: 'list-1' } });
+    expect(useStore.getState().selectedShoppingListId).toBe('list-2');
+    expect(toastService.success).toHaveBeenCalledWith(deleted(1));
+  });
+
+  it('counts only what the server deleted', async () => {
+    await openSwitcher([
+      recordMock(DeleteShoppingListDocument, {
+        match: variables => JSON.stringify(variables).includes('list-3'),
+        data: {
+          deleteShoppingList: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            message: 'No',
+          },
+        },
       }),
-    );
+      recordMock(DeleteShoppingListDocument, {
+        data: {
+          deleteShoppingList: { __typename: 'DeleteShoppingListPayload' },
+        },
+      }),
+    ]);
 
-    const headerItem: SectionHeader = {
-      _isHeader: true,
-      id: 'header-home-1',
-      title: 'Family Home',
-    };
-    mount(
-      result.current.listConfig.renderCustomItem!(headerItem, false, jest.fn()),
-    );
+    longPress('Groceries');
+    fireEvent.press(row('Camping'));
+    fireEvent.press(deleteButton());
+    answerAlert(t('labels.delete'));
+    await log.landed(DeleteShoppingListDocument, 2);
 
-    expect(screen.getByText('Family Home')).toBeTruthy();
-    expect(iconCount('home')).toBe(1);
-    expect(iconCount('person')).toBe(0);
+    expect(toastService.success).toHaveBeenCalledWith(deleted(1));
   });
 
-  // ========== Additional branch/function coverage tests ==========
+  // The removal shows at once and the List moves off it; the refusal brings
+  // both back.
+  it('says nothing was deleted when the server refused all of it, and stays on the list', async () => {
+    await openSwitcher([
+      recordMock(DeleteShoppingListDocument, {
+        data: {
+          deleteShoppingList: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            message: 'No',
+          },
+        },
+      }),
+    ]);
 
-  describe('long press and delete mode', () => {
-    it('enters delete mode on long press of owner item', () => {
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists(),
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
+    longPress('Groceries');
+    fireEvent.press(deleteButton());
+    answerAlert(t('labels.delete'));
+    await log.landed(DeleteShoppingListDocument);
 
-      const lists = makeLists();
-      const onPress = jest.fn();
-      const rendered = result.current.listConfig.renderCustomItem!(
-        lists[0]!,
-        false,
-        onPress,
-      );
-
-      // Simulate long press via the Pressable
-      const { render: rtlRender } = require('@testing-library/react-native');
-
-      rtlRender(rendered);
-      // Find Pressable (onLongPress handler)
-      // The long press is on the outer Pressable
-    });
-
-    it('does not enter delete mode on long press of non-owner item', () => {
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists(),
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      // list-2 is not owned by the user
-      // After long-pressing a non-owner item, title should remain the same
-      expect(result.current.listConfig.title).toBe('Select Shopping List');
-    });
-
-    it('title changes to show count when in delete mode', () => {
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists(),
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      // Before delete mode
-      expect(result.current.listConfig.title).toBe('Select Shopping List');
-    });
+    expect(toastService.success).not.toHaveBeenCalled();
+    expect(useStore.getState().selectedShoppingListId).toBe('list-1');
   });
 
-  describe('onSelect in delete mode', () => {
-    it('does not select list when in delete mode ref is true', () => {
-      const mockSetId = jest.fn();
-      const { useStore } = require('#store');
-      useStore.getState.mockReturnValue({
-        setSelectedShoppingListId: mockSetId,
-      });
+  it('is left on Cancel', async () => {
+    await openSwitcher();
 
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists(),
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
+    longPress('Groceries');
+    fireEvent.press(screen.getByText(t('labels.cancel')));
 
-      // The onSelect function checks isDeleteModeRef.current
-      // Since we can't directly set the ref, we test the normal path
-      act(() => {
-        result.current.listConfig.onSelect('list-1', makeLists()[0]!);
-      });
-
-      // Normal mode: should set id
-      expect(mockSetId).toHaveBeenCalledWith('list-1');
-    });
-  });
-
-  describe('handleDeleteSelected', () => {
-    it('does nothing when no items are selected for deletion', () => {
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists(),
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      // Not in delete mode, selectedForDeletion is empty
-      // no header actions when not in delete mode
-      expect(result.current.listConfig.headerActions).toBeUndefined();
-    });
-  });
-
-  describe('groupedData edge cases', () => {
-    it('handles only home lists (no personal lists)', () => {
-      const homeLists = [
-        makeList({
-          id: 'list-h1',
-          name: 'Home List 1',
-          homeId: 'home-1',
-          home: makeHome('My Home'),
-          totalItems: 3,
-          completedItems: 1,
-        }),
-      ];
-
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: homeLists,
-          currentListId: 'list-h1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      const { data } = result.current.listConfig;
-      // Should have: home header + list-h1 (no personal header)
-      expect(data).toHaveLength(2);
-      expect((data[0] as SectionHeader)._isHeader).toBe(true);
-      expect((data[0] as SectionHeader).title).toBe('My Home');
-    });
-
-    it('handles multiple homes with multiple lists each', () => {
-      const multiHomeLists = [
-        makeList({
-          id: 'list-a',
-          name: 'List A',
-          homeId: 'home-1',
-          home: makeHome('Home Alpha'),
-        }),
-        makeList({
-          id: 'list-b',
-          name: 'List B',
-          homeId: 'home-1',
-          home: makeHome('Home Alpha'),
-        }),
-        makeList({
-          id: 'list-c',
-          name: 'List C',
-          homeId: 'home-2',
-          home: makeHome('Home Beta'),
-        }),
-      ];
-
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: multiHomeLists,
-          currentListId: undefined,
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      const { data } = result.current.listConfig;
-      // Home Alpha header + list-a + list-b + Home Beta header + list-c = 5
-      expect(data).toHaveLength(5);
-      expect((data[0] as SectionHeader).title).toBe('Home Alpha');
-      expect((data[3] as SectionHeader).title).toBe('Home Beta');
-    });
-
-    it('uses "Unknown Home" when home name is missing', () => {
-      const lists = [
-        makeList({
-          id: 'list-x',
-          name: 'List X',
-          homeId: 'home-unknown',
-          home: null,
-        }),
-      ];
-
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: lists,
-          currentListId: undefined,
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      const { data } = result.current.listConfig;
-      expect((data[0] as SectionHeader).title).toBe('Unknown Home');
-    });
-  });
-
-  describe('renderCustomItem shared list owner info fallbacks', () => {
-    it('shows "someone" when ownerships is empty', () => {
-      const lists = [
-        makeList({
-          id: 'list-shared',
-          name: 'Shared List',
-          totalItems: 1,
-          completedItems: 0,
-          _isOwner: false,
-          ownerships: [],
-        }),
-      ];
-
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: lists,
-          currentListId: undefined,
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      mount(
-        result.current.listConfig.renderCustomItem!(
-          lists[0]!,
-          false,
-          jest.fn(),
-        ),
-      );
-
-      expect(screen.getByText('Shared by someone')).toBeTruthy();
-      expect(screen.getByText('1 of 1')).toBeTruthy();
-    });
-
-    it('shows email when displayName is missing', () => {
-      const lists = [
-        makeList({
-          id: 'list-email',
-          name: 'Email List',
-          totalItems: 2,
-          completedItems: 1,
-          _isOwner: false,
-          ownerships: [makeOwnership('friend@test.com', null)],
-        }),
-      ];
-
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: lists,
-          currentListId: undefined,
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      mount(
-        result.current.listConfig.renderCustomItem!(
-          lists[0]!,
-          false,
-          jest.fn(),
-        ),
-      );
-
-      expect(screen.getByText('Shared by friend@test.com')).toBeTruthy();
-      expect(screen.getByText('1 of 2')).toBeTruthy();
-    });
-  });
-
-  describe('listConfig properties', () => {
-    it('heads the lists with the pending invitations, selecting what an accept joins', () => {
-      const setSelectedShoppingListId = jest.fn();
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists(),
-          currentListId: 'list-1',
-          setSelectedShoppingListId,
-        }),
-      );
-
-      const { listHeader } = result.current.listConfig;
-      if (!isValidElement(listHeader)) throw new Error('no list header');
-      expect(listHeader.type).toBe(PendingListInvites);
-      expect(listHeader.props).toEqual({
-        onAccepted: setSelectedShoppingListId,
-        requireVerifiedEmail: expect.any(Function),
-      });
-    });
-
-    it('loading is always false', () => {
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists(),
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      expect(result.current.listConfig.loading).toBe(false);
-    });
-
-    it('displayProperty is "id"', () => {
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists(),
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      expect(result.current.listConfig.displayProperty).toBe('id');
-    });
-
-    it('extraData reflects delete mode state', () => {
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists(),
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      const extraData = result.current.listConfig
-        .extraData as SelectorExtraData;
-      expect(extraData.isDeleteMode).toBe(false);
-      expect(extraData.selectedForDeletion).toBeDefined();
-      expect(extraData.selectedForDeletion.size).toBe(0);
-    });
-  });
-
-  describe('renderCustomItem owner item not selected', () => {
-    it('renders owner item without checkmark when not selected', () => {
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists(),
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      const lists = makeLists();
-      mount(
-        result.current.listConfig.renderCustomItem!(
-          lists[0]!,
-          false,
-          jest.fn(),
-        ),
-      );
-
-      expect(screen.getByText('Groceries')).toBeTruthy();
-      expect(iconCount('checkmark')).toBe(0);
-      // An owned list carries no shared-by attribution line.
-      expect(screen.queryByText(/^Shared by/)).toBeNull();
-    });
-
-    it('renders owner item with checkmark when selected', () => {
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists(),
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      const lists = makeLists();
-      mount(
-        result.current.listConfig.renderCustomItem!(lists[0]!, true, jest.fn()),
-      );
-
-      expect(screen.getByText('Groceries')).toBeTruthy();
-      expect(iconCount('checkmark')).toBe(1);
-    });
-  });
-
-  describe('mixed personal and home lists', () => {
-    it('orders personal lists before home lists', () => {
-      const mixedLists = [
-        makeList({
-          id: 'personal-1',
-          name: 'My List',
-          isDefault: true,
-        }),
-        makeList({
-          id: 'home-list-1',
-          name: 'Home List',
-          homeId: 'home-1',
-          home: makeHome('My Home'),
-        }),
-      ];
-
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: mixedLists,
-          currentListId: 'personal-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      const { data } = result.current.listConfig;
-      // Personal Lists header, personal-1, My Home header, home-list-1
-      expect(data).toHaveLength(4);
-      expect((data[0] as SectionHeader).title).toBe('Personal Lists');
-      expect((data[2] as SectionHeader).title).toBe('My Home');
-    });
-  });
-
-  describe('action callbacks close selector', () => {
-    it('share action closes overlay and selector', () => {
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists(),
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      act(() => {
-        result.current.listConfig.actions[1]!.onPress();
-      });
-
-      expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
-      expect(mockNav.toShareList).toHaveBeenCalledWith({
-        listId: 'list-1',
-      });
-    });
-
-    it('settings action closes overlay and selector', () => {
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: makeLists(),
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      act(() => {
-        result.current.listConfig.actions[2]!.onPress();
-      });
-
-      expect(mockSetOverlayOpen).toHaveBeenCalledWith(false);
-      expect(mockNav.toListSettings).toHaveBeenCalledWith({
-        listId: 'list-1',
-      });
-    });
-  });
-
-  describe('deleting selected lists', () => {
-    const deletable = () => [
-      ...makeLists(),
-      makeList({ id: 'list-3', name: 'Camping', _isOwner: true }),
-    ];
-
-    /** Long-presses a row into delete mode, then presses the trash action. */
-    const deleteVia = (
-      result: { current: ReturnType<typeof useShoppingListSelectorModal> },
-      lists: ShoppingListSelectorItem[],
-      rowName: string,
-      alsoSelect?: string,
-    ) => {
-      const row = lists.find(list => list.name === rowName)!;
-      mount(result.current.listConfig.renderCustomItem!(row, false, jest.fn()));
-      fireEvent(screen.getByText(rowName), 'longPress');
-      if (alsoSelect) {
-        // A row rendered in delete mode toggles its selection on press.
-        const other = lists.find(list => list.name === alsoSelect)!;
-        mount(
-          result.current.listConfig.renderCustomItem!(other, false, jest.fn()),
-        );
-        fireEvent.press(screen.getByText(alsoSelect));
-      }
-      act(() => result.current.listConfig.headerActions?.[0]?.onPress?.());
-    };
-
-    it('names the one list it is about to delete', () => {
-      const alert = jest.spyOn(alertService, 'alert');
-      const lists = deletable();
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: lists,
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      deleteVia(result, lists, 'Groceries');
-
-      expect(alert).toHaveBeenCalledWith(
-        'Delete Groceries?',
-        expect.any(String),
-        expect.any(Array),
-      );
-      alert.mockRestore();
-    });
-
-    it('counts the lists when several are selected', () => {
-      const alert = jest.spyOn(alertService, 'alert');
-      const lists = deletable();
-      const { result } = renderHook(() =>
-        useShoppingListSelectorModal({
-          listDataWithOwnership: lists,
-          currentListId: 'list-1',
-          setSelectedShoppingListId: jest.fn(),
-        }),
-      );
-
-      deleteVia(result, lists, 'Groceries', 'Camping');
-
-      expect(alert).toHaveBeenCalledWith(
-        'Delete 2 Lists',
-        expect.any(String),
-        expect.any(Array),
-      );
-      alert.mockRestore();
-    });
+    expect(screen.getByText(t('shoppingListSelector.title'))).toBeTruthy();
   });
 });

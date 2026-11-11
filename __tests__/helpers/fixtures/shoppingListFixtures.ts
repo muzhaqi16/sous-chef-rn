@@ -42,7 +42,8 @@ export const homeShoppingList = (
   {
     role = MembershipRole.Owner,
     homeId = 'h1',
-  }: { role?: MembershipRole; homeId?: string } = {},
+    homeName = 'Family',
+  }: { role?: MembershipRole; homeId?: string; homeName?: string } = {},
 ): ShoppingListNode => ({
   __typename: 'ShoppingList',
   id,
@@ -51,6 +52,7 @@ export const homeShoppingList = (
   home: {
     __typename: 'Home',
     id: homeId,
+    name: homeName,
     myMembership: { __typename: 'Membership', id: `m-${homeId}`, role },
   },
   ownerships: [],
