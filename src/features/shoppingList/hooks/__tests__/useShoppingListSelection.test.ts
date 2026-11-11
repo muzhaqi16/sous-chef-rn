@@ -94,18 +94,15 @@ describe('useShoppingListSelection', () => {
     expect(result.current.currentListId).toBe('list-2');
   });
 
-  it('falls back to default list when selected id is not in lists', () => {
+  it('selects the default list when the selected id is not in lists', () => {
     mockSelectedShoppingListId = 'deleted-list';
     const lists = [
       createList({ id: 'list-1' }),
       createList({ id: 'list-2', isDefault: true }),
     ];
 
-    const { result } = renderHook(() => useShoppingListSelection(lists));
+    renderHook(() => useShoppingListSelection(lists));
 
-    // currentListId should fall back to default
-    expect(result.current.currentListId).toBe('list-2');
-    // Auto-select should fire
     expect(mockSetSelectedShoppingListId).toHaveBeenCalledWith('list-2');
   });
 

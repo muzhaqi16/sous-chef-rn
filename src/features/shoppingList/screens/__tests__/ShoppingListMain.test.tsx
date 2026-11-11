@@ -338,6 +338,19 @@ describe('a list', () => {
     expect(screen.getByLabelText('Milk')).toBeTruthy();
   });
 
+  it('acts on its lines while the lists are still coming', async () => {
+    await openListTab({ lines: [MILK], holdLists: true });
+
+    fireEvent.press(screen.getByTestId(shoppingListTestIDs.itemRow('line-1')));
+    act(() => menuEntry('search')?.onPress());
+
+    expect(mockNav.toShoppingListItemDetail).toHaveBeenCalledWith({
+      listId: 'list-1',
+      itemId: 'line-1',
+    });
+    await expect(addSheetOpened()).resolves.toBeUndefined();
+  });
+
   it('is opened on the list a link names', async () => {
     mockRoute.params = { listId: 'list-2' };
 
