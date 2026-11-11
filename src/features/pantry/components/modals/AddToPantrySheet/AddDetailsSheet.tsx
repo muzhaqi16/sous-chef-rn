@@ -21,7 +21,6 @@ import { StoragePage } from './StoragePage';
 import { StockSettingsPage } from './StockSettingsPage';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
-import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
 import { takesContents } from '#domain/stockAmount';
 import type { UnitType } from '#/graphql/generated/schemaTypes';
 import { reportValidationErrors } from '#/utils/validation/common';
@@ -150,8 +149,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const setAcquisitionMethod = (v: OfferedAcquisitionMethod) =>
     setField('acquisitionMethod', v);
 
-  // Store selection (PurchaseInfoInput stores by id; free text isn't sent)
-  const handleStoreSelected = makeIdNameHandler(setStoreId, setStoreName);
+  // Sent by id; the field has handed a picked store's name over as text.
+  const handleStoreSelected = (id: string | null) => setStoreId(id);
   // `UnitAutocompleteField` has already written the picked unit's symbol.
   const handleUnitSelected = (
     id: string | null,
