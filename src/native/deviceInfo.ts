@@ -16,7 +16,6 @@ export interface DeviceInformation {
   appVersion: string;
   userAgent?: string;
   browserName?: string;
-  browserVersion?: string;
   screenResolution?: string;
   timezone: string;
   /**
@@ -404,7 +403,6 @@ const getScreenResolution = async (): Promise<string> => {
  */
 const getBrowserInfo = async (): Promise<{
   browserName?: string;
-  browserVersion?: string;
   userAgent?: string;
 }> => {
   try {
@@ -420,7 +418,6 @@ const getBrowserInfo = async (): Promise<{
       return {
         userAgent,
         browserName,
-        browserVersion: 'unknown',
       };
     }
 

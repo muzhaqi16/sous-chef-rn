@@ -81,7 +81,6 @@ function buildDeviceInput(
         osVersion: deviceInfo.osVersion,
         userAgent: deviceInfo.userAgent,
         browserName: deviceInfo.browserName,
-        browserVersion: deviceInfo.browserVersion,
         screenResolution: deviceInfo.screenResolution,
       },
       characteristics: {
