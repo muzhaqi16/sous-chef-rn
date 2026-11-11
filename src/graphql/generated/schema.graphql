@@ -168,7 +168,6 @@ input AcceptHomeInviteInput @oneOf {
 }
 
 type AcceptHomeInvitePayload {
-  home: Home
   """
   The list the invite opens on; null when it named none, or the list is gone or unreadable
   """
@@ -397,38 +396,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union AddTemplateItemResult = AddTemplateItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
-input AddUserAddressInput {
-  city: String!
-  country: CountryCode!
-  """
-  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
-  """
-  id: ID
-  isDefault: Boolean
-  label: String
-  lat: Float
-  lng: Float
-  postalCode: String!
-  state: String!
-  street: String!
-}
-
-type AddUserAddressPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
-  userAddress: UserAddress!
-}
-
-"""
-Result of AddUserAddress. Select on AddUserAddressPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AddUserAddressResult = AddUserAddressPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
 input AddUsualStoreInput {
   """
   The household; the caller's only household when omitted, else the caller alone
@@ -601,14 +568,6 @@ enum AppTheme {
   DARK
   LIGHT
   SYSTEM
-}
-
-enum AppealStatus {
-  APPROVED
-  DENIED
-  SUBMITTED
-  UNDER_REVIEW
-  WITHDRAWN
 }
 
 """Authentication response containing tokens"""
@@ -967,11 +926,6 @@ input BrowserOsDetailsInput {
   userAgent: String
 }
 
-type BrowserStat {
-  browserName: String!
-  count: Int!
-}
-
 """One entry's outcome in bulkCreateItems."""
 type BulkCreateItemResult {
   """Why the entry failed; set exactly when success is false"""
@@ -1023,45 +977,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union BulkCreateItemsResult = BulkCreateItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
-"""One entry's outcome in bulkCreatePurchases, in input order."""
-type BulkCreatePurchaseResult {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
-  """Why the entry failed; set exactly when success is false"""
-  failure: BatchElementFailure
-  """The entry's position in the input list"""
-  index: Int!
-  """The purchase recorded; null when the entry failed"""
-  purchase: Purchase
-  success: Boolean!
-}
-
-"""
-Up to 100 purchases recorded in one call, each as createPurchase records it:
-one that fails is reported in its result and counted as failed in the
-summary, and the rest are kept.
-"""
-input BulkCreatePurchasesInput {
-  """1 to 100 purchases; a client-minted id may appear at most once"""
-  purchases: [CreatePurchaseInput!]!
-}
-
-type BulkCreatePurchasesPayload {
-  """One element per input entry, in input order"""
-  results: [BulkCreatePurchaseResult!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of BulkCreatePurchases. Select on BulkCreatePurchasesPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union BulkCreatePurchasesResult = BulkCreatePurchasesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
 """One id's outcome in bulkDeleteItems and adminBulkDeleteItems."""
 type BulkDeleteItemResult {
   """Why the id failed; set exactly when success is false"""
@@ -1095,55 +1010,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union BulkDeleteItemsResult = BulkDeleteItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
-"""One id's outcome in bulkDeletePurchases, in input order."""
-type BulkDeletePurchaseResult {
-  """Why the entry failed; set exactly when success is false"""
-  failure: BatchElementFailure
-  """The id's position in the input list"""
-  index: Int!
-  """
-  The purchase removed, as it was; null when the entry failed, and when the purchase was already removed
-  """
-  purchase: Purchase
-  """The purchase the entry named"""
-  purchaseId: ID!
-  success: Boolean!
-}
-
-"""
-Purchases removed in one call, each as deletePurchase removes it: one that is
-missing or that the caller may not delete is reported in its result and
-counted as failed, and the rest are still removed.
-"""
-input BulkDeletePurchasesInput {
-  """1 to 100 purchases to remove"""
-  purchaseIds: [ID!]!
-}
-
-type BulkDeletePurchasesPayload {
-  """One element per input id, in input order"""
-  results: [BulkDeletePurchaseResult!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of BulkDeletePurchases. Select on BulkDeletePurchasesPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union BulkDeletePurchasesResult = BulkDeletePurchasesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-"""
-Input for bulk device updates.
-Only status fields that make sense for bulk operations.
-"""
-input BulkDeviceUpdateInput {
-  delete: Boolean
-  isActive: Boolean
-  isTrusted: Boolean
-  isVerified: Boolean
-}
-
 """
 The summary every bulk, batch and admin-purge mutation returns.
 Operation-level failure is the result union's error members; per-element
@@ -1161,38 +1027,6 @@ type BulkSummary {
   """Total elements the operation attempted."""
   total: Int!
 }
-
-"""One id's outcome in bulkUpdateDevices."""
-type BulkUpdateDeviceResult {
-  """The device after the update; null when it failed"""
-  device: Device
-  """The device id this element is for"""
-  deviceId: ID!
-  """Why the update failed; set exactly when success is false"""
-  failure: BatchElementFailure
-  """The id's position in the input ids"""
-  index: Int!
-  """Whether the update applied to this device"""
-  success: Boolean!
-}
-
-input BulkUpdateDevicesInput {
-  ids: [ID!]!
-  update: BulkDeviceUpdateInput!
-}
-
-type BulkUpdateDevicesPayload {
-  """One element per id in the input, in input order."""
-  results: [BulkUpdateDeviceResult!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of BulkUpdateDevices. Select on BulkUpdateDevicesPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union BulkUpdateDevicesResult = BulkUpdateDevicesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 """
 Fields to apply to all items in a bulk update.
@@ -1695,32 +1529,18 @@ enum ChangeType {
 Someone accepted the recipient's invitation to a shared list (COLLABORATION_ACCEPTED).
 """
 type CollaborationAcceptedNotificationData {
-  """The user who accepted."""
-  accepterId: ID!
   """The display name of who accepted."""
   accepterName: String!
-  """Their collaborator record."""
-  collaboratorId: ID!
-  """The shared list."""
-  listId: ID!
   """The list's name when the invitation was accepted."""
   listName: String!
-  """The role they joined with."""
-  role: CollaboratorRole!
 }
 
 """
 Someone declined the recipient's invitation to a shared list (COLLABORATION_DECLINED).
 """
 type CollaborationDeclinedNotificationData {
-  """Their collaborator record."""
-  collaboratorId: ID!
-  """The user who declined."""
-  declinerId: ID!
   """The display name of who declined."""
   declinerName: String!
-  """The shared list."""
-  listId: ID!
   """The list's name when the invitation was declined."""
   listName: String!
 }
@@ -1731,18 +1551,10 @@ An invitation to collaborate on a shopping list (COLLABORATION_INVITE).
 type CollaborationInviteNotificationData {
   """The invitation."""
   inviteId: ID!
-  """The inviter's email address, when they shared one."""
-  inviterEmail: EmailAddress
-  """The inviting user."""
-  inviterId: ID!
   """The inviter's display name when the invitation was sent."""
   inviterName: String!
-  """The list the recipient is invited to."""
-  listId: ID!
   """The list's name when the invitation was sent."""
   listName: String!
-  """The role the invitation grants."""
-  role: CollaboratorRole!
   """The token that accepts or declines the invitation."""
   token: String!
 }
@@ -1756,42 +1568,16 @@ input CollaboratorOrderBy {
 The recipient's permissions on a shared list changed (COLLABORATOR_PERMISSIONS_UPDATED).
 """
 type CollaboratorPermissionsUpdatedNotificationData {
-  """Whether the recipient may now add items."""
-  canAddItems: Boolean!
-  """Whether the recipient may now edit the list."""
-  canEdit: Boolean!
-  """Whether the recipient may now edit items."""
-  canEditItems: Boolean!
-  """Whether the recipient may now invite others."""
-  canInviteOthers: Boolean!
-  """Whether the recipient may now mark items purchased."""
-  canMarkPurchased: Boolean!
-  """Whether the recipient may now remove items."""
-  canRemoveItems: Boolean!
-  """The permission names that changed."""
-  changedFields: [String!]!
-  """The user who changed the permissions."""
-  changerId: ID!
   """The display name of who changed the permissions."""
   changerName: String!
-  """The recipient's collaborator record."""
-  collaboratorId: ID!
-  """The shared list."""
-  listId: ID!
   """The list's name at the time, null when it was not known."""
   listName: String
 }
 
 """The recipient was removed from a shared list (COLLABORATOR_REMOVED)."""
 type CollaboratorRemovedNotificationData {
-  """The recipient's collaborator record."""
-  collaboratorId: ID!
-  """The list the recipient left."""
-  listId: ID!
   """The list's name at the time, null when it was not known."""
   listName: String
-  """The user who removed them."""
-  removerId: ID!
   """The display name of who removed them."""
   removerName: String!
 }
@@ -1818,14 +1604,8 @@ enum CollaboratorRole {
 The recipient's role on a shared list changed (COLLABORATOR_ROLE_CHANGED).
 """
 type CollaboratorRoleChangedNotificationData {
-  """The user who changed the role."""
-  changerId: ID!
   """The display name of who changed the role."""
   changerName: String!
-  """The recipient's collaborator record."""
-  collaboratorId: ID!
-  """The shared list."""
-  listId: ID!
   """The list's name at the time, null when it was not known."""
   listName: String
   """The role after the change."""
@@ -2169,20 +1949,10 @@ enum CookingLogSubtype {
 
 """It is time to start cooking a planned recipe (COOKING_REMINDER)."""
 type CookingReminderNotificationData {
-  """Its meal plan."""
-  mealPlanId: ID!
-  """The meal-plan entry."""
-  mealPlanItemId: ID!
   """The meal's local time, as HH:MM."""
   mealTime: String!
-  """Which meal of the day it is."""
-  mealType: MealType!
-  """The recipe to cook."""
-  recipeId: ID!
   """The recipe's name when the reminder was sent."""
   recipeName: String!
-  """The minutes the recipe takes, as the reminder counted them."""
-  totalTimeMinutes: Int!
 }
 
 """How much cooking experience a dietary profile claims."""
@@ -2845,73 +2615,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union CreatePantryResult = ConflictError | CreatePantryPayload | ForbiddenError | NotFoundError | ValidationError
-
-"""
-A purchase the caller records directly. itemName, itemUpc, unitSymbol,
-currencySymbol and storeName are copied from the rows it names. Naming a
-shopping list line records that line's purchase and marks it purchased.
-"""
-input CreatePurchaseInput {
-  """The currency every price on this purchase is in"""
-  currencyId: ID!
-  """The discount taken; not negative, 0 when omitted"""
-  discountAmount: Float
-  """The expiry date as YYYY-MM-DD."""
-  expiresOn: LocalDate
-  """
-  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
-  """
-  id: ID
-  """The catalog item bought; it must exist and be visible to the caller"""
-  itemId: ID!
-  """The price per unit before any discount; not negative"""
-  originalPrice: Float
-  """When it was bought; the time of recording when omitted"""
-  purchaseDate: DateTime
-  """How many units were bought; more than 0"""
-  quantity: Float!
-  """The receipt's number, as printed"""
-  receiptNumber: String
-  """
-  The shopping list it was bought from; the caller must be able to view it
-  """
-  shoppingListId: ID
-  """
-  The shopping list line this purchase satisfies; the caller must have access to its list
-  """
-  shoppingListItemId: ID
-  """
-  The store it was bought at; a client-minted id that merged into an existing store records that store
-  """
-  storeId: ID!
-  """
-  The amount paid in all; quantity times unitPrice when omitted. Either is rounded to the currency's decimal places.
-  """
-  totalPrice: Float
-  """A transaction reference to keep with the purchase"""
-  transactionId: String
-  """The unit quantity is counted in"""
-  unitId: ID!
-  """The price paid per unit; not negative"""
-  unitPrice: Float!
-}
-
-type CreatePurchasePayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
-  purchase: Purchase!
-  store: Store
-}
-
-"""
-Result of CreatePurchase. Select on CreatePurchasePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union CreatePurchaseResult = ConflictError | CreatePurchasePayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateReceiptCheckInInput {
   """
@@ -3904,11 +3607,6 @@ type DeleteNotificationPayload {
   replay flag.
   """
   converged: Boolean!
-  """
-  The deleted notification, or null when it was already deleted: a replay, or a
-  second device, that converged as success. See converged.
-  """
-  notification: Notification
   """The caller's badge after this write"""
   notificationSummary: NotificationSummary!
 }
@@ -4005,37 +3703,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union DeletePantryResult = ConflictError | DeletePantryPayload | ForbiddenError | NotFoundError | ValidationError
-
-"""
-A purchase to delete: the caller's own, or any for an admin. A deleted
-purchase is left out of purchase lists and purchase statistics.
-"""
-input DeletePurchaseInput {
-  """The purchase to delete"""
-  id: ID!
-}
-
-type DeletePurchasePayload {
-  """
-  True when this call CONVERGED on a purchase that was already deleted: a
-  no-op success that deleted nothing. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
-  """
-  The deleted purchase, or null when it was already deleted: a replay, or a
-  second device, that converged as success. See converged.
-  """
-  purchase: Purchase
-  """The purchase's store; null when it has none, and on a converged replay"""
-  store: Store
-}
-
-"""
-Result of DeletePurchase. Select on DeletePurchasePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union DeletePurchaseResult = ConflictError | DeletePurchasePayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteRecipeFolderInput {
   folder: String!
@@ -4180,30 +3847,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union DeleteStorageLocationResult = ConflictError | DeleteStorageLocationPayload | ForbiddenError | NotFoundError | ValidationError
 
-input DeleteUserAddressInput {
-  id: ID!
-}
-
-type DeleteUserAddressPayload {
-  """
-  True when this call CONVERGED on an address that was already gone: a no-op
-  success that deleted nothing. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
-  """
-  The deleted address, or null when no address has this id any more: a
-  replay, or a second device, that converged as success. See converged.
-  """
-  userAddress: UserAddress
-}
-
-"""
-Result of DeleteUserAddress. Select on DeleteUserAddressPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union DeleteUserAddressResult = ConflictError | DeleteUserAddressPayload | ForbiddenError | NotFoundError | ValidationError
-
 type DeletionBlocker {
   """
   Other active collaborators on the list, the count message states. Set on SHOPPING_LIST blockers only.
@@ -4247,8 +3890,6 @@ type Device {
   brand: String
   """Browser name, as reported at registration; null when not reported"""
   browserName: String
-  """Browser version, as reported at registration; null when not reported"""
-  browserVersion: String
   """
   The app's build number on this device, as reported; null when not reported
   """
@@ -4298,10 +3939,6 @@ type Device {
   """
   isBatteryCharging: Boolean
   """
-  Whether Bluetooth headphones were connected when last reported; null when not reported
-  """
-  isBluetoothHeadphonesConnected: Boolean
-  """
   Whether any headphones were connected when last reported; null when not reported
   """
   isHeadphonesConnected: Boolean
@@ -4321,18 +3958,6 @@ type Device {
   Whether the device reports a tablet form factor; null when not reported
   """
   isTablet: Boolean
-  """
-  Whether the device has been marked trusted, by its owner or an administrator; false for a new device
-  """
-  isTrusted: Boolean!
-  """
-  Whether the device has been marked verified, by its owner or an administrator; false for a new device
-  """
-  isVerified: Boolean!
-  """
-  Whether wired headphones were connected when last reported; null when not reported
-  """
-  isWiredHeadphonesConnected: Boolean
   """
   The language the device reported at registration; null when not reported
   """
@@ -4409,8 +4034,6 @@ type Device {
   Memory in use in bytes, as a decimal string, when last reported; null when not reported
   """
   usedMemory: String
-  """The account this device is registered to"""
-  user: User
   """
   The user agent string last recorded for this device, at registration or sign-in; null when none was sent
   """
@@ -4419,27 +4042,6 @@ type Device {
   The id of the account this device is registered to. Only that account and administrators can read the device.
   """
   userId: ID!
-  """
-  When isVerified last turned true; null when the device is not verified or no time is recorded
-  """
-  verifiedAt: DateTime
-}
-
-type DeviceActivity {
-  deviceName: String
-  deviceType: DeviceType!
-  id: ID!
-  isActive: Boolean!
-  isTrusted: Boolean!
-  lastSeenAt: DateTime!
-  loginCount: Int!
-}
-
-type DeviceBreakdown {
-  browsers: [BrowserStat!]!
-  deviceTypes: [DeviceTypeStat!]!
-  operatingSystems: [OperatingSystemStat!]!
-  platforms: [PlatformStat!]!
 }
 
 """Sub-input for device characteristics"""
@@ -4477,10 +4079,6 @@ type DeviceCredential {
   createdAt: DateTime!
   """The client-minted device identifier this credential is bound to."""
   deviceId: String!
-  """
-  Name of the registered device, when one is registered under this device id.
-  """
-  deviceName: String
   """
   When the credential stops working. Extended by each successful exchange.
   """
@@ -4549,32 +4147,6 @@ type DeviceEdge implements Edge {
 }
 
 """
-Real-time event envelope for the caller's devices.
-Subscribe once via deviceEvents and branch on subtype. For DELETED
-the node is the row as it was before the delete, so clients can evict by
-node.id.
-"""
-type DeviceEvent implements DomainEvent {
-  """The user who caused the change (self-service: same as userId)."""
-  actorUserId: ID
-  mutation: MutationType!
-  node: Device!
-  """
-  Device/client that triggered the change (for echo suppression). Compare it
-  against your own device id: a match means this event is the echo of your
-  own write. Null when no device caused the change (a background job) or the
-  request sent no device id.
-  """
-  originatorClientId: ID
-  subtype: DeviceSubtype!
-  timestamp: DateTime!
-  """Changed field names; empty for a create or a delete"""
-  updatedFields: [String!]!
-  """The user the device belongs to (subscription scope)."""
-  userId: ID!
-}
-
-"""
 Filter input for querying devices.
 If userId is not provided, returns current user's devices.
 """
@@ -4586,8 +4158,6 @@ input DeviceFilters {
   isActive: Boolean
   isEmulated: Boolean
   isSuspicious: Boolean
-  isTrusted: Boolean
-  isVerified: Boolean
   manufacturer: String
   platform: MobilePlatform
   search: String
@@ -4640,116 +4210,6 @@ input DevicePeripheralsDetailsInput {
   isWiredHeadphonesConnected: Boolean
 }
 
-"""
-One device this account currently holds a live session from.
-
-Live means a refresh token that is neither revoked, nor consumed by a
-rotation, nor expired. A session that has been refreshed many times is still
-ONE entry: the rotation lineage is the session, and the tokens in it are its
-successive forms.
-
-At most one entry carries a null `deviceId`. Sessions established without a
-device header cannot be told apart — there is nothing to tell them apart BY —
-so they are reported as a single aggregate rather than one row each. That is
-what bounds this list by the per-user device cap; one row each would let a
-client that never sends the header grow it with every sign-in.
-"""
-type DeviceSession {
-  """
-  The registered device, when one still exists. Null once the per-user device
-  cap has evicted its telemetry row, which does not end the session.
-  """
-  device: Device
-  """
-  The client-minted device identifier this session is bound to. Null on the
-  single aggregate entry standing for every session established without a
-  device header.
-  """
-  deviceId: String
-  """
-  Name of the registered device, when one is registered under this device id.
-  """
-  deviceName: String
-  """
-  When the session stops working unless refreshed again. On the aggregate
-  entry, the latest expiry among the sessions it stands for.
-  """
-  expiresAt: DateTime!
-  """
-  Whether this is the session the current request is authenticated by, so a
-  client can label it rather than offering to sign itself out unawares. Always
-  false on the aggregate entry, which stands for sessions no device id
-  identifies.
-  """
-  isCurrent: Boolean!
-  """
-  Whether this entry can be passed to `revokeDeviceSessions`. False on the
-  aggregate entry: revocation names a device, and these sessions have none.
-  """
-  isRevocable: Boolean!
-  """
-  When the session's current token was minted, so the last refresh. On the
-  aggregate entry, the most recent one.
-  """
-  lastRefreshedAt: DateTime!
-  """
-  How many live sessions this entry stands for. One for an ordinary device;
-  on the unknown-device entry, how many unbound sessions were folded into it.
-  """
-  sessionCount: Int!
-  """
-  When this session was established — the sign-in, not the most recent
-  refresh. On the aggregate entry, the earliest such moment.
-  """
-  startedAt: DateTime!
-}
-
-type DeviceStat {
-  count: Int!
-  userAgent: String!
-}
-
-type DeviceStats {
-  breakdown: DeviceBreakdown!
-  recentActivity: [DeviceActivity!]!
-  summary: DeviceSummary!
-}
-
-"""Subtype discriminator for device domain events."""
-enum DeviceSubtype {
-  """
-  Device activity updated: a sign-in, a re-registration, last-seen, location
-  or login count.
-  """
-  ACTIVITY
-  """
-  Device was deleted: by its owner, by an admin, or evicted by the device cap.
-  """
-  DELETED
-  """A new device was registered for the user."""
-  REGISTERED
-  """
-  Device active-status flipped (activated / deactivated) by updateDevice.
-  """
-  STATUS_CHANGED
-  """Device trust flipped (trusted / untrusted) by updateDevice."""
-  TRUST_CHANGED
-  """
-  Device verification changed by updateDevice: verified, or verification
-  withdrawn. node.isVerified says which.
-  """
-  VERIFIED
-}
-
-type DeviceSummary {
-  activeDevices: Int!
-  mobileDevices: Int!
-  staleDevices: Int!
-  totalDevices: Int!
-  trustedDevices: Int!
-  verifiedDevices: Int!
-}
-
 enum DeviceType {
   DESKTOP
   MOBILE
@@ -4757,11 +4217,6 @@ enum DeviceType {
   TV
   UNKNOWN
   WATCH
-}
-
-type DeviceTypeStat {
-  count: Int!
-  deviceType: DeviceType!
 }
 
 """
@@ -4801,42 +4256,15 @@ enum Diet {
 }
 
 """
-A member restriction a subject may break, with the strongest evidence. No alert means only no evidence, never safe.
+A member restriction a subject may break, at the strongest evidence's state. No alert means only no evidence, never safe.
 """
 type DietaryAlert {
-  """
-  The evidence's own name: an allergen, an item, an analysis tag or a department
-  """
-  matched: String!
   """
   The member's membership of the home; its displayName is the name to show
   """
   membership: Membership!
   restriction: SharedDietaryRestriction!
-  source: DietaryAlertSource!
   state: DietaryAlertState!
-}
-
-"""
-What kind of evidence raised a dietary alert; the client writes the copy per kind.
-"""
-enum DietaryAlertSource {
-  """
-  An allergen or animal food the product declares, or one a name names; matched is its name
-  """
-  ALLERGEN
-  """
-  The subject is at or below an avoided catalog item; matched is that item's name
-  """
-  AVOIDED_ITEM
-  """
-  The store department the subject sits in, such as MEAT_SEAFOOD; only ever MAY_CONTAIN
-  """
-  DEPARTMENT
-  """
-  An Open Food Facts ingredients analysis, such as non-vegan; matched is the tag without its language prefix
-  """
-  INGREDIENTS_ANALYSIS
 }
 
 """
@@ -4921,8 +4349,6 @@ type DietaryRestriction {
   appliesToHomeId: ID @deprecated(reason: "A restriction is shared per home through Membership.sharesDietaryNeeds (updateDietarySharing); read a home's through Home.dietaryNeeds. This label is stored and decides nothing.")
   createdAt: DateTime!
   diet: Diet
-  dietaryProfile: DietaryProfile!
-  dietaryProfileId: ID!
   healthGoal: HealthGoal
   id: ID!
   intolerance: Intolerance
@@ -4936,7 +4362,6 @@ type DietaryRestriction {
   """
   religiousDiet: ReligiousDiet
   severity: RestrictionSeverity!
-  updatedAt: DateTime!
 }
 
 """Reusable sub-input for dietary tags"""
@@ -5045,21 +4470,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union EnableHomeJoinLinkResult = ConflictError | ForbiddenError | NotFoundError | UpdateHomePayload | ValidationError
-
-"""One of the caller's active holds on a plan"""
-type Entitlement {
-  """When it ends; null when it lasts until revoked"""
-  expiresAt: DateTime
-  plan: Plan!
-  """Where the hold comes from"""
-  source: EntitlementSource!
-}
-
-"""Where a user's hold on a plan comes from"""
-enum EntitlementSource {
-  """Granted by an admin"""
-  ADMIN
-}
 
 """
 The photo a household's entry shows. In order: the household's own photo for
@@ -5277,35 +4687,21 @@ input ExpirationNotifConfigInput {
 }
 
 type ExpirationNotification {
-  actionAt: DateTime
   actionTaken: ExpirationAction
-  batchId: String
-  createdAt: DateTime!
-  daysUntilExpiry: Int!
   """The expiry date this reminder is about."""
   expiresOn: LocalDate!
   """
-  The feed notification that announced this reminder; null when none was created for it. Reading either marks both
-  """
-  genericNotification: Notification
-  """
-  The id of the feed notification that announced this reminder; null when none was created for it
+  The id of the feed notification that announced this reminder; null when none was created for it. Reading that notification reads this reminder
   """
   genericNotificationId: ID
   id: ID!
-  isBatched: Boolean!
+  """The rung of the expiry reminder ladder this reminder is"""
   notificationType: ExpirationNotificationType!
   pantryItem: PantryItem!
-  pantryItemId: ID!
-  """When the reminder was read; null while it is unread"""
-  readAt: DateTime
   """
-  PENDING until the reminder is read, then READ. Whether it was delivered is the state of genericNotification
+  PENDING until the reminder is read, then READ. Whether it was delivered is the state of the feed notification
   """
   status: NotificationDeliveryStatus!
-  updatedAt: DateTime!
-  user: User!
-  userId: ID!
 }
 
 """
@@ -5337,7 +4733,6 @@ type ExpirationNotificationEdge implements Edge {
 """Filter criteria for User.expirationNotificationsConnection."""
 input ExpirationNotificationFilters {
   pantryItemId: ID
-  status: NotificationDeliveryStatus
 }
 
 """Order by options for expiration notifications"""
@@ -5346,6 +4741,11 @@ input ExpirationNotificationOrderBy {
   expiresOn: SortOrder
 }
 
+"""
+The expiry reminder ladder: one rung per reminder the expiry check sends. The
+app offers the rungs that carry a day count as expirationDaysThreshold
+choices, so the type stays in the schema while it does.
+"""
 enum ExpirationNotificationType {
   EXPIRED_REMINDER
   EXPIRES_IN_3_DAYS
@@ -5361,18 +4761,12 @@ type ExpiryDigestNotificationData {
   itemCount: Int!
   """Each item the digest covers."""
   items: [NotificationPantryItem!]!
-  """The soonest expiry date among them, null when none had one."""
-  soonestExpiresOn: LocalDate
 }
 
 """One expiring pantry item or package (EXPIRY_REMINDER)."""
 type ExpiryReminderNotificationData {
-  """How many packages of the item were active when the reminder was sent."""
-  activeBatchCount: Int!
   """When the package was added, null without package tracking."""
   batchAddedAt: DateTime
-  """The package's number within its item, null without package tracking."""
-  batchNumber: Int
   """When the package was opened, null when it was not."""
   batchOpenedAt: DateTime
   """Days from the reminder to the expiry date."""
@@ -5383,12 +4777,6 @@ type ExpiryReminderNotificationData {
   isMultiBatch: Boolean!
   """The item's name when the reminder was sent."""
   itemName: String!
-  """
-  The package the reminder is for, null for an item without package tracking.
-  """
-  pantryItemBatchId: ID
-  """The pantry item."""
-  pantryItemId: ID!
 }
 
 """A catalog recipe's provider-specific data, one member per provider."""
@@ -5534,11 +4922,6 @@ enum ExternalSyncStatus {
   SYNCED
 }
 
-type FailedIPStat {
-  count: Int!
-  ipAddress: String
-}
-
 """
 A server-owned feature. A client ignores a member it does not know: a new
 feature is a new member.
@@ -5568,13 +4951,9 @@ enum FeatureFlagName {
 
 """One server-owned feature, resolved for the caller"""
 type FeatureFlagState {
-  """Whether the caller can use it now: true exactly when state is ON"""
+  """Whether the caller can use it now"""
   enabled: Boolean!
   flag: FeatureFlagName!
-  """The plan the feature needs; null when it is free"""
-  plan: Plan
-  """ON: show it. UPGRADE_REQUIRED: offer the plan. OFF: hide it"""
-  state: FeatureState!
 }
 
 """Sub-input for feature-specific notifications"""
@@ -5592,34 +4971,12 @@ input FeatureNotificationsInput {
   weeklyDigest: Boolean
 }
 
-"""A feature's state for one user"""
-enum FeatureState {
-  """Not available to the user: hide it"""
-  OFF
-  """
-  Available: the feature is released to the user and they hold any plan it needs
-  """
-  ON
-  """
-  Released, but it needs a plan the user does not hold: show an upgrade prompt
-  """
-  UPGRADE_REQUIRED
-}
-
-"""
-Lists the user keeps about themselves. The server stores and returns them,
-never reads them, and they unlock nothing: a feature's availability is
-myFeatureFlags.
-"""
+"""Ignored. A feature's availability is myFeatureFlags."""
 input FeatureTogglesInput {
-  """
-  Replaces the whole list: at most 100 names, each 1 to 100 characters after trimming. Null is refused
-  """
-  betaFeatures: [String!]
-  """
-  Replaces the whole list: at most 100 names, each 1 to 100 characters after trimming. Null is refused
-  """
-  enabledFeatures: [String!]
+  """Ignored"""
+  betaFeatures: [String!] @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
+  """Ignored"""
+  enabledFeatures: [String!] @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
 }
 
 """
@@ -5740,19 +5097,6 @@ type Home {
   """
   dietaryNeeds: [MemberDietaryNeeds!]!
   id: ID!
-  inviteLogsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; newest first when omitted"""
-    orderBy: InviteLogOrderBy
-  ): InviteLogConnection!
-  inviteStats: [HomeInviteStatsGroup!]!
   invitesConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
@@ -5776,29 +5120,7 @@ type Home {
   unless allowJoinCode is enabled and a joinCode is set.
   """
   joinLink: ShareLink
-  """
-  The stacks across this home's pantries that are at or under the minimum
-  the user set for them, with low-stock alerts on, by item name.
-  """
-  lowStockItems(
-    """At most this many: default 20, at most 50 (a larger value gives 50)"""
-    limit: Int = 20
-  ): [LowStockItem!]!
   maxMembers: Int
-  mealTemplatesConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: MealTemplateOrderBy
-  ): MealTemplateConnection!
   membersConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
@@ -5811,7 +5133,6 @@ type Home {
     """Sort order; oldest first when omitted"""
     orderBy: MembershipOrderBy
   ): MembershipConnection!
-  membershipStats: MembershipStats!
   """
   What this household spent, saved, wasted and paid per cooked meal over a
   period. Readable by a member who can view the home; the waste and meal
@@ -5828,19 +5149,15 @@ type Home {
   ): HouseholdMoneyReport!
   myMembership: Membership
   name: String!
-  """Deep link that opens this home in the app (for existing members)."""
-  navigateLink: ShareLink!
   """
-  The home's pantries; the default one is `filters: { isDefault: true }`.
-  Empty for a member whose pantry view (`canViewPantry`) is off.
+  The home's pantries; the default one has `isDefault`. Empty for a member
+  whose pantry view (`canViewPantry`) is off.
   """
   pantriesConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
     """Resume before this cursor: a previous page's startCursor"""
     before: String
-    """Narrows the list: every field given must match"""
-    filters: PantryFilters
     """Page size, reading forward: default 20, at most 100"""
     first: Int
     """Page size, reading backward: default 20, at most 100"""
@@ -5850,10 +5167,6 @@ type Home {
     """
     orderBy: PantryOrderBy
   ): PantryConnection!
-  """
-  Deep link that opens this home's pantry in the app (for existing members).
-  """
-  pantryLink: ShareLink!
   """
   The household's purchases, every member's: each one recorded for this home
   (Purchase.homeId), with its buyer as `user`. Readable by any member who
@@ -5885,7 +5198,6 @@ type Home {
     after: String
     """Resume before this cursor: a previous page's startCursor"""
     before: String
-    filters: ShoppingListFilters
     """Page size, reading forward: default 20, at most 100"""
     first: Int
     """Page size, reading backward: default 20, at most 100"""
@@ -5980,39 +5292,22 @@ input HomeFilters {
 
 """An invitation to join a home (HOME_INVITATION)."""
 type HomeInvitationNotificationData {
-  """The home the recipient is invited to."""
-  homeId: ID!
   """The home's name when the invitation was sent."""
   homeName: String!
   """The invitation."""
   inviteId: ID!
-  """The inviter's email address, when they shared one."""
-  inviterEmail: EmailAddress
-  """The inviting user."""
-  inviterId: ID!
   """The inviter's display name when the invitation was sent."""
   inviterName: String!
-  """The note the inviter wrote, if any."""
-  message: String
-  """The role the invitation grants."""
-  role: MembershipRole!
   """The token that accepts or declines the invitation."""
   token: String!
 }
 
 """An invitation to join a home, sent to an email address"""
 type HomeInvite {
-  """When the invite was accepted; null until then"""
-  acceptedAt: DateTime
   """
   When the invite was created, reset when the same address is re-invited to the same home
   """
   createdAt: DateTime!
-  """
-  When the recipient declined the invite; null otherwise. Re-inviting the
-  same address is refused for 24 hours after a decline.
-  """
-  declinedAt: DateTime
   """The email address the invite was sent to"""
   email: EmailAddress!
   """
@@ -6021,21 +5316,8 @@ type HomeInvite {
   expiresAt: DateTime!
   """The home the invite is for"""
   home: Home!
-  """ID of the home the invite is for"""
-  homeId: ID!
   """The invite's unique identifier"""
   id: ID!
-  """
-  The account the invite is for; null when the invited address had no
-  account when the invite was sent and nobody has accepted it.
-  """
-  invitedUser: User
-  """
-  ID of the account the invite is for: the account holding the invited
-  address when the invite was sent, or the account that accepted it. Null
-  when neither is known.
-  """
-  invitedUserId: ID
   """Who sent the invite; null once that account is deleted"""
   inviter: User
   """
@@ -6049,11 +5331,6 @@ type HomeInvite {
   gone or the caller cannot read it.
   """
   landingShoppingList: ShoppingList
-  """The invite's newest logs. `limit` defaults to 10 and is capped at 50."""
-  logs(
-    """At most this many entries, newest first"""
-    limit: Int = 10
-  ): [InviteLog!]!
   """
   An optional note from the inviter, included in the invite email; null when none
   """
@@ -6063,22 +5340,13 @@ type HomeInvite {
   when the invited address belongs to one; null otherwise, never the address.
   """
   recipientName: String
-  """When the invite was revoked; null otherwise"""
-  revokedAt: DateTime
   """The home role the recipient gets on accepting"""
   role: MembershipRole!
-  """
-  When the invite was first sent. Re-inviting the same address to the same
-  home reuses the invite and leaves this unchanged.
-  """
-  sentAt: DateTime!
   """
   Where the invite stands. An invite past expiresAt stays PENDING until
   someone tries to accept it, which marks it EXPIRED.
   """
   status: InviteStatus!
-  """When the invite last changed"""
-  updatedAt: DateTime!
   """Version counter of the invite, starting at 1"""
   version: Int!
 }
@@ -6109,11 +5377,6 @@ type HomeInviteEdge implements Edge {
   node: HomeInvite!
 }
 
-type HomeInviteStatsGroup {
-  action: InviteAction!
-  count: InviteActionCount!
-}
-
 type HomeItemPhotoPayload {
   homeId: ID!
   """The photo the household's entries for the item show now."""
@@ -6133,43 +5396,6 @@ type HomeItemPhotoPayload {
 input HomeOrderBy {
   createdAt: SortOrder
   name: SortOrder
-}
-
-type HomeOwnership {
-  createdAt: DateTime!
-  home: Home!
-  homeId: ID!
-  id: ID!
-  transferredAt: DateTime
-  transferredFrom: String
-  user: User!
-  userId: ID!
-}
-
-"""
-A page of HomeOwnership results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type HomeOwnershipConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [HomeOwnershipEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One HomeOwnership in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type HomeOwnershipEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The HomeOwnership this edge wraps."""
-  node: HomeOwnership!
 }
 
 """Subtype discriminator for the consolidated homeEvents stream."""
@@ -6328,11 +5554,6 @@ type HouseholdUsualPrice {
     unitId: ID
   ): Float
   windowDays: Int!
-}
-
-type IPStat {
-  count: Int!
-  ipAddress: String!
 }
 
 """
@@ -6593,67 +5814,6 @@ input InventoryThresholdsInput {
   restockQuantity: Float
 }
 
-enum InviteAction {
-  INVITE_ACCEPTED
-  INVITE_DECLINED
-  INVITE_EXPIRED
-  INVITE_REVOKED
-  INVITE_SENT
-  INVITE_VIEWED
-  PERMISSIONS_UPDATED
-  REMINDER_SENT
-  STATUS_CHANGED
-}
-
-type InviteActionCount {
-  action: Int!
-}
-
-type InviteLog {
-  action: InviteAction!
-  actor: User
-  actorId: ID
-  createdAt: DateTime!
-  description: String!
-  id: ID!
-  invite: HomeInvite!
-  inviteId: ID!
-  metadata: JSON
-  newStatus: InviteStatus
-  oldStatus: InviteStatus
-}
-
-"""
-A page of InviteLog results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type InviteLogConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [InviteLogEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One InviteLog in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type InviteLogEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The InviteLog this edge wraps."""
-  node: InviteLog!
-}
-
-"""Order by options for invite logs"""
-input InviteLogOrderBy {
-  createdAt: SortOrder
-}
-
 enum InviteStatus {
   ACCEPTED
   DECLINED
@@ -6676,13 +5836,7 @@ input InviteToHomeInput {
 }
 
 type InviteToHomePayload {
-  home: Home
   homeInvite: HomeInvite!
-  """
-  The invite's bearer token. Returned only here, to the inviter, at creation;
-  HomeInvite never carries it, so no list or nested read can disclose it.
-  """
-  token: String!
 }
 
 """
@@ -6708,7 +5862,6 @@ input InviteToShoppingListInput {
 type InviteToShoppingListPayload {
   collaborator: ShoppingListCollaborator!
   shoppingList: ShoppingList
-  token: String
 }
 
 """
@@ -8115,7 +7268,6 @@ type LeaveHomePayload {
   API-wide replay flag.
   """
   converged: Boolean!
-  home: Home
   """
   The removed membership, or null when it was already gone: a replay that
   converged as success. See converged.
@@ -8229,12 +7381,8 @@ union LinkShoppingListToMealPlanResult = ConflictError | ForbiddenError | LinkSh
 type ListReminderNotificationData {
   """Items still to buy when the reminder was sent."""
   itemCount: Int!
-  """The list."""
-  listId: ID!
   """The list's name when the reminder was sent."""
   listName: String!
-  """The reminder's day in the owner's zone."""
-  reminderDate: LocalDate!
 }
 
 enum ListStatus {
@@ -8248,12 +7396,8 @@ enum ListStatus {
 
 """A shared list was completed (LIST_UPDATED)."""
 type ListUpdatedNotificationData {
-  """The user who completed it."""
-  actorId: ID!
   """What happened to the list; `complete` is the one event written."""
   eventType: String!
-  """The list."""
-  listId: ID!
   """The list's name when it was completed."""
   listName: String!
 }
@@ -8263,233 +7407,9 @@ A calendar date as YYYY-MM-DD, with no time and no timezone. A value with a time
 """
 scalar LocalDate @specifiedBy(url: "https://www.rfc-editor.org/rfc/rfc3339#section-5.6")
 
-type LocationStat {
-  count: Int!
-  ipCity: String
-  ipCountry: String
-}
-
-"""
-Real-time event envelope for the caller's login history.
-Subscribe once via loginEvents and branch on subtype. Detection criteria
-are not carried, so an attacker cannot adapt to them.
-"""
-type LoginEvent implements DomainEvent {
-  """The user who caused the change (self-service: same as userId)."""
-  actorUserId: ID
-  """Failure reason (FAILED)."""
-  failureReason: LoginFailureReason
-  mutation: MutationType!
-  node: LoginHistory!
-  """
-  Device/client that triggered the change (for echo suppression). Compare it
-  against your own device id: a match means this event is the echo of your
-  own write. Null when no device caused the change (a background job) or the
-  request sent no device id.
-  """
-  originatorClientId: ID
-  """Whether the login requires MFA (RISKY)."""
-  requiresMfa: Boolean
-  """Authoritative risk score (RISKY / SUSPICIOUS)."""
-  riskScore: Float
-  subtype: LoginSubtype!
-  timestamp: DateTime!
-  """What triggered the suspicion classification (SUSPICIOUS)."""
-  triggerEvent: String
-  """
-  Changed field names: the risk fields for RISKY and SUSPICIOUS, empty for
-  ATTEMPTED and FAILED, which record a new attempt
-  """
-  updatedFields: [String!]!
-  """The user whose login history this is (subscription scope)."""
-  userId: ID!
-}
-
-enum LoginFailureReason {
-  ACCOUNT_DISABLED
-  ACCOUNT_LOCKED
-  ACCOUNT_NOT_FOUND
-  DEVICE_BLOCKED
-  EMAIL_NOT_VERIFIED
-  INVALID_CREDENTIALS
-  IP_BLOCKED
-  MAINTENANCE_MODE
-  MFA_FAILED
-  MFA_REQUIRED
-  PASSWORD_EXPIRED
-  RATE_LIMITED
-  SUSPICIOUS_ACTIVITY
-}
-
-"""Security audit log for login attempts"""
-type LoginHistory {
-  apiClient: String
-  browserName: String
-  browserVersion: String
-  """
-  The device id the client claimed, verbatim and unverified. Present on
-  failed attempts too, where there is no Device row to point at — which is
-  what makes a burst of failures attributable to the client that made it.
-  """
-  claimedDeviceId: String
-  createdAt: DateTime!
-  device: Device
-  """
-  The Device row this attempt resolved to, set only where the presented
-  identifier matched a device of this same user.
-  """
-  deviceId: String
-  deviceType: DeviceType
-  failureReason: LoginFailureReason
-  id: ID!
-  ipCity: String
-  ipCountry: String
-  ipRegion: String
-  isApiLogin: Boolean!
-  isMobileApp: Boolean!
-  isNewBrowser: Boolean!
-  isNewDevice: Boolean!
-  isNewLocation: Boolean!
-  isRisky: Boolean!
-  lastActivityAt: DateTime
-  loggedInAt: DateTime!
-  loggedOutAt: DateTime
-  method: LoginMethod!
-  mfaCompleted: Boolean!
-  mfaMethod: MfaMethod
-  osName: String
-  osVersion: String
-  provider: String
-  requiresMfa: Boolean!
-  sessionDuration: Int
-  success: Boolean!
-  updatedAt: DateTime!
-  user: User!
-  userAgent: String
-  userId: ID!
-}
-
-type LoginHistoryActivity {
-  id: ID!
-  isRisky: Boolean!
-  loggedInAt: DateTime!
-  method: LoginMethod!
-  success: Boolean!
-}
-
-type LoginHistoryBreakdown {
-  locations: [LocationStat!]!
-  methods: [LoginMethodStat!]!
-  uniqueDevices: [DeviceStat!]!
-  uniqueIPs: [IPStat!]!
-}
-
-"""
-A page of LoginHistory results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type LoginHistoryConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [LoginHistoryEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One LoginHistory in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type LoginHistoryEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The LoginHistory this edge wraps."""
-  node: LoginHistory!
-}
-
-input LoginHistoryOrderBy {
-  createdAt: SortOrder
-  loginAt: SortOrder
-}
-
-type LoginHistoryPeriod {
-  days: Int!
-  from: DateTime!
-  to: DateTime!
-}
-
-"""Filter input for querying login history."""
-input LoginHistoryQueryFilters {
-  """
-  Records whose caller PRESENTED this device identifier, matched exactly.
-  
-  This is the one that answers "what has this client been doing": it is
-  recorded on every attempt including failures, where no device row exists to
-  point at and none may be created. Investigating a burst of failed sign-ins
-  from one client uses this, not 'deviceId'.
-  """
-  claimedDeviceId: String
-  """
-  Records attributed to one registered device, by its Device id.
-  
-  Only a login the account's own device produced carries this, so it matches
-  successful sign-ins and failures from an already-registered device — never
-  an attempt from an identifier that resolved to nothing.
-  """
-  deviceId: ID
-  failuresOnly: Boolean
-  fromDate: DateTime
-  """
-  Convenience window: return records from the last N hours. Ignored when
-  fromDate is supplied. Clamped to a maximum of 2160 hours (90 days); a
-  non-positive value is ignored and the default window applies.
-  """
-  hours: Int
-  method: LoginMethod
-  riskyOnly: Boolean
-  successOnly: Boolean
-  toDate: DateTime
-}
-
-type LoginHistoryStats {
-  breakdown: LoginHistoryBreakdown!
-  period: LoginHistoryPeriod!
-  recentActivity: [LoginHistoryActivity!]!
-  summary: LoginHistorySummary!
-}
-
-type LoginHistorySummary {
-  failedLogins: Int!
-  riskyLogins: Int!
-  successRate: Float!
-  successfulLogins: Int!
-  totalLogins: Int!
-  uniqueDeviceCount: Int!
-  uniqueIPCount: Int!
-}
-
 input LoginInput {
   email: EmailAddress!
   password: String!
-}
-
-enum LoginMethod {
-  API_KEY
-  BIOMETRIC
-  MAGIC_LINK
-  OAUTH
-  PASSWORD
-  SMS
-  SSO
-  TOKEN
-}
-
-type LoginMethodStat {
-  count: Int!
-  method: LoginMethod!
 }
 
 """
@@ -8499,35 +7419,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union LoginResult = AuthPayload | AuthenticationError | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
-"""Subtype discriminator for login domain events."""
-enum LoginSubtype {
-  """A successful login was recorded."""
-  ATTEMPTED
-  """A failed login attempt was recorded."""
-  FAILED
-  """An individual login was classified as high-risk."""
-  RISKY
-  """An aggregate pattern of activity crossed a suspicion threshold."""
-  SUSPICIOUS
-}
-
-"""A pantry item that is running low on stock"""
-type LowStockItem {
-  currentQuantity: Float!
-  id: ID!
-  itemId: ID!
-  itemName: String!
-  minQuantity: Float!
-  pantryId: ID!
-  pantryName: String!
-  restockQuantity: Float
-  unitId: ID!
-  """
-  The stack's unit label: in the request's language, agreeing with currentQuantity, while it spells the stack's unit; a label the user gave is returned as written
-  """
-  unitName: String!
-}
-
 """A pantry item fell to its minimum (LOW_STOCK)."""
 type LowStockNotificationData {
   """
@@ -8536,12 +7427,6 @@ type LowStockNotificationData {
   currentQuantity: Float!
   """The item's name when the alert was sent."""
   itemName: String!
-  """The minimum the alert fires below, in the same unit."""
-  minQuantity: Float!
-  """Its pantry."""
-  pantryId: ID!
-  """The pantry item."""
-  pantryItemId: ID!
 }
 
 type MarkAllNotificationsAsReadPayload {
@@ -8582,7 +7467,6 @@ type MarkExpirationActionPayload {
   expirationNotification: ExpirationNotification!
   """The pantry the stack is in"""
   pantry: Pantry
-  pantryItem: PantryItem
   """The location the stack is kept in; null when it has none"""
   storageLocation: StorageLocation
 }
@@ -8593,24 +7477,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union MarkExpirationActionResult = ConflictError | ForbiddenError | MarkExpirationActionPayload | NotFoundError | ValidationError
-
-input MarkExpirationNotificationAsReadInput {
-  notificationId: ID!
-}
-
-type MarkExpirationNotificationAsReadPayload {
-  expirationNotification: ExpirationNotification!
-  """The caller's badge after this write"""
-  notificationSummary: NotificationSummary!
-  pantryItem: PantryItem
-}
-
-"""
-Result of MarkExpirationNotificationAsRead. Select on MarkExpirationNotificationAsReadPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union MarkExpirationNotificationAsReadResult = ConflictError | ForbiddenError | MarkExpirationNotificationAsReadPayload | NotFoundError | ValidationError
 
 """The home to make the caller's default."""
 input MarkHomeAsDefaultInput {
@@ -8677,23 +7543,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union MarkNotificationAsReadResult = ConflictError | ForbiddenError | MarkNotificationAsReadPayload | NotFoundError | ValidationError
-
-input MarkNotificationUnreadInput {
-  id: ID!
-}
-
-type MarkNotificationUnreadPayload {
-  notification: Notification!
-  """The caller's badge after this write"""
-  notificationSummary: NotificationSummary!
-}
-
-"""
-Result of MarkNotificationUnread. Select on MarkNotificationUnreadPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union MarkNotificationUnreadResult = ConflictError | ForbiddenError | MarkNotificationUnreadPayload | NotFoundError | ValidationError
 
 input MarkPantryAsDefaultInput {
   id: ID!
@@ -9214,8 +8063,6 @@ input MealPlanOrderBy {
 
 """The day's planned, not-yet-completed meals (MEAL_PLAN_REMINDER)."""
 type MealPlanReminderNotificationData {
-  """The day."""
-  date: LocalDate!
   """How many meals were planned."""
   mealCount: Int!
   """Each planned meal."""
@@ -9617,8 +8464,6 @@ type Membership {
   owners included.
   """
   canViewPantry: Boolean!
-  """When the membership was created"""
-  createdAt: DateTime!
   """
   The name to show for the member in this home: the name set on the
   membership, else the member's profile display name, first name or email.
@@ -9633,8 +8478,6 @@ type Membership {
   id: ID!
   """When the member joined the home; reset when a former member rejoins"""
   joinedAt: DateTime!
-  """When the member left or was removed from the home; null otherwise"""
-  leftAt: DateTime
   """
   The member's role in the home. It sets the default permission flags below;
   owners and admins hold every permission below whatever its flag says,
@@ -9650,8 +8493,6 @@ type Membership {
   to the home; LEFT, REMOVED and SUSPENDED memberships grant nothing.
   """
   status: MembershipStatus!
-  """When the membership last changed"""
-  updatedAt: DateTime!
   """The member's account"""
   user: User!
   """ID of the member's account"""
@@ -9702,41 +8543,11 @@ enum MembershipRole {
   OWNER
 }
 
-type MembershipRoleStats {
-  admin: Int!
-  guest: Int!
-  member: Int!
-  owner: Int!
-}
-
-type MembershipStats {
-  active: Int!
-  byRole: MembershipRoleStats!
-  byStatus: MembershipStatusStats!
-  total: Int!
-}
-
 enum MembershipStatus {
   ACTIVE
   LEFT
   REMOVED
   SUSPENDED
-}
-
-type MembershipStatusStats {
-  active: Int!
-  left: Int!
-  removed: Int!
-  suspended: Int!
-}
-
-enum MfaMethod {
-  BIOMETRIC
-  EMAIL
-  HARDWARE
-  PUSH
-  SMS
-  TOTP
 }
 
 enum MobilePlatform {
@@ -9854,21 +8665,6 @@ enum ModerationRestriction {
   NO_SHARING
 }
 
-"""
-A moderation record's standing: the strongest state in force. WARNED and
-RESTRICTED follow from addWarning and updateUserRestrictions; APPEALING is
-never set.
-"""
-enum ModerationStatus {
-  ACTIVE
-  APPEALING
-  BANNED
-  RESTRICTED
-  SUSPENDED
-  UNDER_REVIEW
-  WARNED
-}
-
 """A moderator's finding against a user."""
 type ModerationViolation {
   contentId: ID
@@ -9885,7 +8681,6 @@ type ModerationViolation {
   severity: ViolationSeverity!
   status: ViolationStatus!
   type: ViolationType!
-  updatedAt: DateTime!
 }
 
 """
@@ -9903,34 +8698,12 @@ type ModerationViolationEdge implements Edge {
 The previous month's figures for the recipient's households (MONTHLY_REPORT).
 """
 type MonthlyReportNotificationData {
-  """
-  The cooking logs that drew stock from the households' pantries; null when not recorded or no pantry is viewable.
-  """
-  cookedMealCount: Int
-  """
-  What such a meal cost, per currency; null when not recorded or no pantry is viewable.
-  """
-  costPerCookedMeal: [CurrencyAmount!]
-  """The month, as YYYY-MM."""
-  month: String!
   """How many purchases the households recorded."""
   purchaseCount: Int!
   """The recipient's own cooking logs."""
   recipesCooked: Int!
-  """
-  The discounts recorded on the purchases, per currency; null on a report sent before discounts were recorded.
-  """
-  saved: [CurrencyAmount!]
-  """What the purchases cost, per currency."""
-  spending: [CurrencyAmount!]!
-  """The most-bought items' names."""
-  topItemNames: [String!]!
   """How many items were wasted, over the pantries the recipient may view."""
   wastedItemCount: Int!
-  """
-  What the wasted items cost, per currency, a waste of unknown cost left out; null when the recipient may view no pantry.
-  """
-  wastedValue: [CurrencyAmount!]
 }
 
 input MovePurchasedItemsToPantryInput {
@@ -9969,10 +8742,6 @@ union MovePurchasedItemsToPantryResult = ConflictError | ForbiddenError | MovePu
 """One purchased line's outcome in movePurchasedItemsToPantry."""
 type MovePurchasedLineResult {
   """
-  True when an earlier move had already placed this line and this call wrote nothing
-  """
-  alreadyInPantry: Boolean!
-  """
   True when this call was a replay of a write already applied: it wrote nothing,
   and this payload is read as it stands now. The canonical, API-wide replay flag.
   """
@@ -9980,14 +8749,6 @@ type MovePurchasedLineResult {
   """Why the line failed; set exactly when success is false"""
   failure: BatchElementFailure
   itemName: String!
-  """
-  MERGED when the purchase restocked a stack the pantry already held; null when the line failed
-  """
-  outcome: CreateOutcome
-  """The stack the purchase is in; null when the line failed"""
-  pantryItem: PantryItem
-  """The purchased amount moved; null when the line failed"""
-  quantity: Float
   shoppingListItemId: ID!
   success: Boolean!
 }
@@ -10069,20 +8830,10 @@ input MoveShoppingItemToPantryInput {
 
 type MoveShoppingItemToPantryPayload {
   """
-  True when this line's purchase was already in the pantry and the call
-  wrote nothing — a replay, or a move retargeted at a different pantry.
-  Same meaning as MovePurchasedLineResult.alreadyInPantry in the batch form, so a
-  client does not have to call the batch to learn whether its single call
-  did anything.
-  """
-  alreadyInPantry: Boolean!
-  """
   True when this call was a replay of a write already applied: it wrote nothing,
   and this payload is read as it stands now. The canonical, API-wide replay flag.
   """
   converged: Boolean!
-  """MERGED when the purchase restocked a stack the pantry already held"""
-  outcome: CreateOutcome!
   pantry: Pantry
   pantryItem: PantryItem!
   shoppingList: ShoppingList
@@ -10205,12 +8956,6 @@ type Mutation {
   """Add an item to a template"""
   addTemplateItem(input: AddTemplateItemInput!): AddTemplateItemResult!
   """
-  Add a new address to the current user's account. With isDefault true it
-  becomes the one default, and the previous default is unset. Sending an id
-  the caller already used answers that address with converged true.
-  """
-  addUserAddress(input: AddUserAddressInput!): AddUserAddressResult!
-  """
   Add a store or a whole chain to a household's usual stores, bringing back
   one a member removed. A household keeps at most 20 it added or pinned; past
   that, a ValidationError on target until one is removed or unpinned. Safe to
@@ -10232,29 +8977,12 @@ type Mutation {
   """
   bulkCreateItems(input: BulkCreateItemsInput!): BulkCreateItemsResult!
   """
-  Record up to 100 purchases at once, each as createPurchase does, with one
-  result per entry.
-  """
-  bulkCreatePurchases(input: BulkCreatePurchasesInput!): BulkCreatePurchasesResult!
-  """
   Soft-delete many items under the direct-write gate: the creator of a
   PRIVATE item, or an admin. restoreItem undoes one. One result per id, in
   input order; a failing id stops no other. An item the caller already
   deleted succeeds again, with a null item.
   """
   bulkDeleteItems(input: BulkDeleteItemsInput!): BulkDeleteItemsResult!
-  """
-  Remove up to 100 purchases at once, each as deletePurchase does, with one
-  result per id. A purchase already removed succeeds again, with a null
-  purchase.
-  """
-  bulkDeletePurchases(input: BulkDeletePurchasesInput!): BulkDeletePurchasesResult!
-  """
-  Apply the same change to up to 100 of the caller's devices: the active,
-  trusted and verified flags, or a delete. Each id reports its own outcome in
-  results; one failed id does not stop the others.
-  """
-  bulkUpdateDevices(input: BulkUpdateDevicesInput!): BulkUpdateDevicesResult!
   """
   Update multiple items with the same changes.
   Note: the `id` field on `update` is ignored — ids are taken from the `ids` field.
@@ -10346,13 +9074,6 @@ type Mutation {
   adjustPantryItemQuantity record those.
   """
   createPantryItemUsage(input: CreatePantryItemUsageInput!): CreatePantryItemUsageResult!
-  """
-  Record a purchase. Naming a shopping-list line records that line's
-  purchase, as marking it purchased does: it needs the right to mark the
-  line purchased, the line becomes purchased, and a line already purchased
-  is a ConflictError.
-  """
-  createPurchase(input: CreatePurchaseInput!): CreatePurchaseResult!
   """
   Check a confirmed receipt into a household in one call, so a whole shop is
   one request. Each line records its purchase with the receipt's store, day
@@ -10515,12 +9236,6 @@ type Mutation {
   """
   deletePantryItemUsage(input: DeletePantryItemUsageInput!): DeletePantryItemUsageResult!
   """
-  Delete one of the caller's purchases; an administrator may delete any. A
-  replay converges: a purchase already deleted answers converged, with a
-  null purchase.
-  """
-  deletePurchase(input: DeletePurchaseInput!): DeletePurchaseResult!
-  """
   Soft-delete a recipe the caller owns. Cooking logs referencing it are
   retained.
   """
@@ -10542,12 +9257,6 @@ type Mutation {
   Requires user to have edit permissions in the home
   """
   deleteStorageLocation(input: DeleteStorageLocationInput!): DeleteStorageLocationResult!
-  """
-  Delete one of the caller's addresses. The only address cannot be deleted
-  while it is the default. A replay converges: an id that names no address
-  answers converged, with a null userAddress.
-  """
-  deleteUserAddress(input: DeleteUserAddressInput!): DeleteUserAddressResult!
   """
   Enable the anyone-with-link join code for a home (doubles as the
   pantry-share link). Idempotent — preserves an existing code so links
@@ -10627,12 +9336,6 @@ type Mutation {
   markAsTemplate(input: MarkAsTemplateInput!): MarkAsTemplateResult!
   """Record an action taken on an expiring item."""
   markExpirationAction(input: MarkExpirationActionInput!): MarkExpirationActionResult!
-  """
-  Mark an expiration notification as read; there is no separate dismiss. Its
-  feed notification (genericNotification) is marked read once every reminder
-  it announced is read.
-  """
-  markExpirationNotificationAsRead(input: MarkExpirationNotificationAsReadInput!): MarkExpirationNotificationAsReadResult!
   """Mark a home as the default for the current user."""
   markHomeAsDefault(input: MarkHomeAsDefaultInput!): MarkHomeAsDefaultResult!
   """
@@ -10648,11 +9351,6 @@ type Mutation {
   are marked read with it.
   """
   markNotificationAsRead(input: MarkNotificationAsReadInput!): MarkNotificationAsReadResult!
-  """
-  Mark a notification as unread. The expiration notifications it announced
-  stay read.
-  """
-  markNotificationUnread(input: MarkNotificationUnreadInput!): MarkNotificationUnreadResult!
   """Mark a pantry as the default for its home."""
   markPantryAsDefault(input: MarkPantryAsDefaultInput!): MarkPantryAsDefaultResult!
   """
@@ -10842,18 +9540,6 @@ type Mutation {
   this ends the ability to sign back in on it, not the session running on it.
   """
   revokeDeviceCredential(input: RevokeDeviceCredentialInput!): RevokeDeviceCredentialResult!
-  """
-  Sign one device out, leaving every other device signed in.
-  
-  Ends every live session bound to that device: each token in a rotation
-  lineage that started there, that device's stored credential, and the access
-  token it is already holding. A client signing out the device it runs on
-  MUST expect its own next request to be refused.
-  
-  Deliberately narrower than a revoke-all: it does not touch other devices'
-  sessions, their access tokens, or their device credentials.
-  """
-  revokeDeviceSessions(input: RevokeDeviceSessionsInput!): RevokeDeviceSessionsResult!
   """Share a shopping list publicly with an optional share code."""
   shareShoppingList(input: ShareShoppingListInput!): ShareShoppingListResult!
   """Toggle a helpful vote on a recipe review."""
@@ -10941,11 +9627,6 @@ type Mutation {
   """
   updateProfile(input: UpdateProfileInput!): UpdateProfileResult!
   """
-  Update one of the caller's purchases; an administrator may update any.
-  Another member's purchase, though the caller can read it, is FORBIDDEN.
-  """
-  updatePurchase(input: UpdatePurchaseInput!): UpdatePurchaseResult!
-  """
   Update a recipe the caller owns, its ingredient list (`ingredients`) in
   the same write. A PUBLISHED recipe stays live: the edit is held as its
   pending revision until an admin approves it.
@@ -10960,8 +9641,6 @@ type Mutation {
   updateRecipeIngredients(input: UpdateRecipeIngredientsInput!): UpdateRecipeIngredientsResult!
   """Update an existing recipe review (author only)."""
   updateRecipeReview(input: UpdateRecipeReviewInput!): UpdateRecipeReviewResult!
-  """Update an existing dietary restriction."""
-  updateRestriction(input: UpdateRestrictionInput!): UpdateRestrictionResult!
   """Update settings for the current user."""
   updateSettings(input: UpdateSettingsInput!): UpdateSettingsResult!
   """Update an existing shopping list."""
@@ -10988,17 +9667,6 @@ type Mutation {
   updateStorageLocation(input: UpdateStorageLocationInput!): UpdateStorageLocationResult!
   """Update a template item"""
   updateTemplateItem(input: UpdateTemplateItemInput!): UpdateTemplateItemResult!
-  """
-  Update one of the caller's addresses. Setting isDefault true makes it the
-  one default, and the previous default is unset.
-  """
-  updateUserAddress(input: UpdateUserAddressInput!): UpdateUserAddressResult!
-  """
-  Submit, or amend, an appeal against the caller's own moderation status.
-  An account that can still sign in can appeal: a banned or suspended
-  account holds no session, so it cannot call this.
-  """
-  updateUserAppeal(input: UpdateUserAppealInput!): UpdateUserAppealResult!
   """
   Pin or unpin a usual store: a pinned one is always compared. Pinning counts
   toward the 20 a household adds or pins, as addUsualStore states. Safe to
@@ -11069,35 +9737,6 @@ enum MutationType {
   STATUS_CHANGED
   """An existing resource was modified"""
   UPDATED
-}
-
-"""
-Limited moderation view for users checking their own status.
-Excludes internal scoring and moderator notes.
-"""
-type MyModerationStatus {
-  appealNotes: String
-  appealStatus: AppealStatus
-  appealedAt: DateTime
-  banReason: String
-  """Why the ban is in force; null when not banned."""
-  banReasonCode: ModerationReasonCode
-  """The moderation record's id; the user's own id while no record exists"""
-  id: ID!
-  isBanned: Boolean!
-  isSuspended: Boolean!
-  restrictedUntil: DateTime
-  restrictionReason: String
-  """Why restrictions are in force; null when none are."""
-  restrictionReasonCode: ModerationReasonCode
-  restrictions: [ModerationRestriction!]!
-  status: ModerationStatus!
-  suspendedUntil: DateTime
-  suspensionReason: String
-  """Why the suspension is in force; null when not suspended."""
-  suspensionReasonCode: ModerationReasonCode
-  trustLevel: TrustLevel!
-  underReview: Boolean!
 }
 
 """
@@ -11272,8 +9911,6 @@ type Notification {
 
 """A catalog item a notification names, as it was named when sent."""
 type NotificationCatalogItem {
-  """The household's own product."""
-  itemId: ID!
   """Its name when the notification was sent."""
   name: String!
 }
@@ -11344,9 +9981,7 @@ operations arrive as a single BULK_READ / BULK_CLEARED / BULK_EXPIRED event.
 type NotificationEvent implements DomainEvent {
   """
   The user who caused the change — never the user it happened TO. Null when
-  the change was system-initiated or the acting user is unknown. For
-  suppressing the echo of your own write, prefer originatorClientId: this
-  field cannot tell your two devices apart.
+  the change was system-initiated or the acting user is unknown.
   """
   actorUserId: ID
   """
@@ -11361,16 +9996,8 @@ type NotificationEvent implements DomainEvent {
   set-based mutation with no single node — read affectedCount instead.
   """
   node: Notification
-  """
-  Device/client that triggered the change (for echo suppression). Compare it
-  against your own device id: a match means this event is the echo of your
-  own write. Null when no device caused the change (a background job) or the
-  request sent no device id.
-  """
-  originatorClientId: ID
   subtype: NotificationSubtype!
   timestamp: DateTime!
-  updatedFields: [String!]!
 }
 
 input NotificationFilters {
@@ -11405,16 +10032,10 @@ enum NotificationOrderBy {
 type NotificationPantryItem {
   """Its name when the notification was sent."""
   name: String!
-  """The pantry item."""
-  pantryItemId: ID!
 }
 
 """A planned meal a notification names, as it was when sent."""
 type NotificationPlannedMeal {
-  """The meal-plan entry."""
-  mealPlanItemId: ID!
-  """Which meal of the day it is."""
-  mealType: MealType!
   """Its name when the notification was sent."""
   name: String!
 }
@@ -11433,8 +10054,6 @@ type NotificationPreferences {
   default. The server creates no such notifications, so it has no effect.
   """
   cookingReminders: Boolean!
-  """When the preferences were created"""
-  createdAt: DateTime!
   """
   Whether notification email reaches the user: expiry reminders and
   shopping-list invites. Off by default.
@@ -11529,10 +10148,6 @@ type NotificationPreferences {
   list being completed. Off by default.
   """
   shoppingListUpdates: Boolean!
-  """When the preferences last changed"""
-  updatedAt: DateTime!
-  """The user these preferences belong to"""
-  user: User!
   """ID of the user these preferences belong to"""
   userId: ID!
   """
@@ -11934,11 +10549,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union OpenPantryItemBatchResult = ConflictError | ForbiddenError | NotFoundError | OpenPantryItemBatchPayload | ValidationError
 
-type OperatingSystemStat {
-  count: Int!
-  osName: String!
-}
-
 """One place a source stated that names a country."""
 type OriginFact {
   countryCode: CountryCode!
@@ -12147,12 +10757,8 @@ type PantryChangeNotificationData {
   itemCount: Int!
   """Each item that changed."""
   items: [NotificationPantryItem!]!
-  """The pantry."""
-  pantryId: ID!
   """The pantry's name when the notification was sent."""
   pantryName: String!
-  """When the 15-minute window the changes fell in opened."""
-  windowStart: DateTime!
 }
 
 """
@@ -12222,17 +10828,6 @@ union PantryEventNode = ExpirationNotification | Pantry | PantryItem | PantryIte
 """Parent resource IDs for cache updates without refetch."""
 type PantryEventParents {
   homeId: ID!
-}
-
-"""
-Filters for querying pantries. The home a page covers is the query's own
-homeId argument — required on pantries, optional on adminPantries.
-"""
-input PantryFilters {
-  """Filter by default status"""
-  isDefault: Boolean
-  """Search by name, description, or location"""
-  search: String
 }
 
 """One stack in a pantry: one catalog item, in one unit."""
@@ -12453,27 +11048,6 @@ type PantryItem {
   as PantryItemBatch.purchaseId.
   """
   purchaseId: ID
-  """
-  The purchases behind this stack's acquisitions — its first, and each
-  restock's — that the caller may see, whoever bought them: their own, and
-  those recorded for a household they are an active member of. A stack merged
-  into this one brings its purchases. Empty for a caller who may not view the
-  stack's pantry. Only a purchase's buyer may update or delete it.
-  """
-  purchasesConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; most recent purchase first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: PurchaseOrderBy
-  ): PurchaseConnection!
   """
   Current amount, derived from the item's ACTIVE batches. Every path that adds
   or removes stock writes a batch and recomputes this; it is never set
@@ -13370,8 +11944,6 @@ type PantryUsageStats {
 A week of pantry activity across the pantries the recipient can see (WEEKLY_DIGEST).
 """
 type PantryWeeklyDigestNotificationData {
-  """The names of those expiring items."""
-  expiringItemNames: [String!]!
   """Items added during the week."""
   itemsAdded: Int!
   """Items expiring soon at the week's end."""
@@ -13380,12 +11952,6 @@ type PantryWeeklyDigestNotificationData {
   itemsUsed: Int!
   """Items wasted during the week."""
   itemsWasted: Int!
-  """The day after the last one summarised."""
-  periodEnd: LocalDate!
-  """The first day summarised."""
-  periodStart: LocalDate!
-  """The ISO week the digest is for, as YYYY-Www."""
-  week: String!
 }
 
 input ParseIngredientLinesInput {
@@ -13555,17 +12121,6 @@ enum PeriodGranularity {
   DAILY
   MONTHLY
   WEEKLY
-}
-
-"""A paid plan a feature can require"""
-enum Plan {
-  """The premium plan"""
-  PREMIUM
-}
-
-type PlatformStat {
-  count: Int!
-  platform: MobilePlatform!
 }
 
 """
@@ -13869,20 +12424,12 @@ type ProposedStore {
 
 """Purchase record - contains financial and shopping data"""
 type Purchase {
-  """When the purchase was recorded"""
-  createdAt: DateTime!
   """The currency every price on this purchase is in"""
   currency: Currency!
-  """The currency every price on this purchase is in"""
-  currencyId: ID!
-  """The currency's symbol when the purchase was recorded"""
-  currencySymbol: String!
   """
   The discount taken, in this purchase's currency; 0 unless one was given, null once an update clears it
   """
   discountAmount: Float
-  """The expiry date, with no time and no timezone."""
-  expiresOn: LocalDate
   """The purchase's unique identifier"""
   id: ID!
   """
@@ -13893,81 +12440,27 @@ type Purchase {
   """
   item: Item
   """
-  Catalog item bought, when the shopping line that recorded it had one. Null
-  when the purchase was recorded against a line with no catalog item — a line
-  an admin's permanent item delete had already orphaned. Read itemName, the
-  snapshot of what was bought, which is always set.
-  """
-  itemId: ID
-  """
   What was bought, as named when the purchase was recorded; kept when the catalog item is renamed or removed
   """
   itemName: String!
-  """
-  The barcode recorded for what was bought, from the shopping line or the catalog item; null when neither had one
-  """
-  itemUpc: String
-  """
-  The price per unit before any discount, in this purchase's currency: a receipt's discount adds its share of each unit to unitPrice. One recorded from a shopping line carries its unit price here.
-  """
-  originalPrice: Float
-  """
-  The pantry stacks created from this purchase that the caller may view, oldest first. A stack it only restocked is not listed, nor a removed one.
-  """
-  pantryItemsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-  ): PantryItemConnection!
   """
   When it was bought: the time it was recorded unless a date was given, or the receipt's day when a receipt backs it
   """
   purchaseDate: DateTime!
   """How many units were bought, counted in unit; always more than 0"""
   quantity: Float!
-  """The receipt's number, as printed; null when none was recorded"""
-  receiptNumber: String
-  """
-  The shopping list it was bought from; null when there was none or the list was deleted
-  """
-  shoppingList: ShoppingList
-  """
-  The shopping list it was bought from; null when there was none or the list was permanently deleted
-  """
-  shoppingListId: ID
-  """
-  The shopping list line this purchase was recorded against; null when there was none or the line was deleted
-  """
-  shoppingListItem: ShoppingListItem
-  """
-  The shopping list line this purchase was recorded against; null when there was none or the line was permanently deleted
-  """
-  shoppingListItemId: ID
   """
   The store it was bought at; null when none was recorded or the store was deleted, while storeName keeps its name
   """
   store: Store
-  """The store it was bought at; null when none was recorded"""
-  storeId: ID
   """
   The store's name when the purchase was recorded; null when no store was
   """
   storeName: String
   """Null with unitPrice."""
   totalPrice: Float
-  """
-  A transaction reference the client gave when recording or editing the purchase; null when none was
-  """
-  transactionId: String
   """The unit quantity is counted in"""
   unit: Unit!
-  """The unit quantity is counted in"""
-  unitId: ID!
   """
   Null when the price was never observed — a line moved to the pantry or
   marked purchased without one. The purchase still counts; its amount is
@@ -13978,14 +12471,10 @@ type Purchase {
   The unit as written when the purchase was recorded. While it spells unit itself (its name or symbol, in any language) it reads in the request's language, agreeing with quantity, as unit.localizedSymbol(quantity:); a label of the client's own is returned as written
   """
   unitSymbol: String!
-  """When the purchase last changed"""
-  updatedAt: DateTime!
   """
   The user who recorded the purchase, the one member who may update or delete it; resolves for a deleted account too
   """
   user: User!
-  """The user who recorded the purchase"""
-  userId: ID!
   """
   Incremented on every write; send it back with an update to refuse a stale edit
   """
@@ -14091,7 +12580,6 @@ type PurchaseStats {
   """The currency the two figures above are denominated in; null with them."""
   currency: Currency
   mostFrequentStore: String
-  recentPurchases: [Purchase!]!
   """
   Total spend in the currency named below — the account's primary, being
   the one it has priced the most purchases in. Never a sum across
@@ -14161,20 +12649,12 @@ type QuantityDisplay {
 
 """Sub-input for quantity display preferences"""
 input QuantityDisplayInput {
-  """
-  Whether quantities always show as fractions; off by default, null is refused
-  """
-  alwaysShowFractions: Boolean
-  """
-  The most decimal places a quantity shows, 0 to 20; 2 by default, null is refused
-  """
-  maxDecimalPlaces: Int
-  """
-  Fraction **denominators** to round quantities to — 4 means quarters. Inverse
-  of `Unit.commonFractions`, which holds decimals. See the UserSettings
-  output twin.
-  """
-  preferredFractionSet: [Int!]
+  """Ignored"""
+  alwaysShowFractions: Boolean @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
+  """Ignored"""
+  maxDecimalPlaces: Int @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
+  """Ignored"""
+  preferredFractionSet: [Int!] @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   """
   How formatted quantities show: FRACTION or MIXED where a fraction fits, DECIMAL always as decimals, AUTO (the default) by each unit's own rule. Null is refused
   """
@@ -14417,15 +12897,6 @@ type Query {
     today: LocalDate!
   ): MealPlan
   """
-  The caller's live device with the identifier the app generated for it;
-  null when there is none. An administrator's lookup is not limited to their
-  own devices.
-  """
-  deviceByDeviceId(
-    """The identifier the app generated for the device"""
-    deviceId: String!
-  ): Device
-  """
   The account's device credentials - the signed-in-devices list. Live entries
   only; a revoked or expired credential is not shown, because it is not
   something a person can act on.
@@ -14575,27 +13046,6 @@ type Query {
     orderBy: ItemOrderBy
   ): ItemConnection!
   """
-  The caller's sign-in attempts, successful and failed, newest first by
-  default. Filters by date range, device, success or failure, and method. A
-  page reads forward with first and after, or backward with last and before.
-  """
-  loginHistories(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Narrows the list: every field given must match"""
-    filters: LoginHistoryQueryFilters
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Every field sorts by sign-in time, in the direction of the first field set
-    """
-    orderBy: LoginHistoryOrderBy
-  ): LoginHistoryConnection!
-  """
   Match a recipe's ingredients against a pantry's contents, so the caller can
   confirm what would be consumed before marking the recipe as cooked.
   """
@@ -14662,13 +13112,6 @@ type Query {
     """
     orderBy: MealTemplateOrderBy
   ): MealTemplateConnection!
-  """Fetch a single membership by its ID."""
-  membership(
-    """The id of the Membership to read"""
-    id: ID!
-  ): Membership
-  """The caller's active holds on a plan; empty on the free tier"""
-  myEntitlements: [Entitlement!]!
   """
   Every server-owned feature flag resolved for the caller: one entry per
   FeatureFlagName. Read it at sign-in and on resync and keep it for offline
@@ -14693,13 +13136,6 @@ type Query {
     last: Int
   ): ItemEditSuggestionConnection!
   """
-  The calling user's own moderation status. A deliberately limited view: it
-  reports the state and its effect on the account, not the moderator identity
-  or internal notes. A caller no moderator has acted on reads the default
-  standing (ACTIVE, nothing in force); reading it creates no record.
-  """
-  myModeration: MyModerationStatus
-  """
   Everything the caller sent for review, newest first, as one timeline: their
   reports on people, recipes and reviews, their reports on items and photos,
   their suggested edits, and the photos they uploaded for moderation. A photo
@@ -14715,12 +13151,6 @@ type Query {
     """Page size, reading backward: default 20, at most 100"""
     last: Int
   ): ReviewSubmissionConnection!
-  """
-  The devices this account is currently signed in from, newest first. One
-  entry per device, not per token. A session with no device header appears as
-  an unknown device. At most 50.
-  """
-  mySessions: [DeviceSession!]!
   """The caller's own reports, newest first, as their reporter sees them."""
   myUserReports(
     """Resume after this cursor: a previous page's endCursor"""
@@ -14829,43 +13259,6 @@ type Query {
     """The stack and the unit it would change to"""
     input: PreviewPantryItemUnitChangeInput!
   ): PantryUnitChangePreview!
-  """
-  A purchase by its ID, when the caller may see it: their own, one recorded
-  for a household they are an active member of, or one naming no household
-  that was bought from a personal list they take part in. Null when there is
-  none; FORBIDDEN when it exists and the caller may not see it.
-  """
-  purchase(
-    """The id of the Purchase to read"""
-    id: ID!
-  ): Purchase
-  """
-  One user's recorded purchases, newest first by default: the caller's own
-  unless userId names someone else, which only an admin may do (anyone else
-  is refused FORBIDDEN). shoppingListId narrows the page to purchases made
-  from one list. A household's purchases, every member's, are
-  Home.purchasesConnection.
-  """
-  purchases(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Narrows the list: every field given must match"""
-    filters: PurchaseFilters
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: PurchaseOrderBy
-    """Only purchases moved from this list"""
-    shoppingListId: ID
-    """Whose purchases to list; the caller's own when omitted"""
-    userId: ID
-  ): PurchaseConnection!
   """
   A random draw of external catalog recipes suiting every listed diet and
   free of every listed intolerance. The draw is shared by every caller asking
@@ -15351,11 +13744,6 @@ type RankedUnit {
   The stack is never split below one whole unit (an egg): an amount in this unit must come to a whole number of them, so `commonFractions` lists only those (¼ doz is 3 eggs; ½ egg is refused). Offer whole steps.
   """
   wholeUnitsOnly: Boolean!
-}
-
-type RapidAttempt {
-  count: Int!
-  hour: String!
 }
 
 """A receipt checked into a household in one call."""
@@ -16607,8 +14995,6 @@ type RecipeRecommendationsNotificationData {
   recipeCount: Int!
   """Each recommended recipe, best match first."""
   recipes: [NotificationRecommendedRecipe!]!
-  """The ISO week the recommendations are for, as YYYY-Www."""
-  week: String!
 }
 
 type RecipeReview {
@@ -17188,7 +15574,6 @@ type RemoveMemberPayload {
   API-wide replay flag.
   """
   converged: Boolean!
-  home: Home
   """
   The removed membership, or null when it was already gone: a replay that
   converged as success. See converged.
@@ -17698,35 +16083,10 @@ Always include a __typename so the variant can be discriminated.
 """
 union RevokeDeviceCredentialResult = ConflictError | ForbiddenError | NotFoundError | RevokeDeviceCredentialPayload | ValidationError
 
-input RevokeDeviceSessionsInput {
-  """
-  The device to sign out, as its client-minted identifier — the same value
-  `registerDevice` and `mySessions` use. Scoped to the calling account: an
-  identifier belonging to someone else's device is refused, not silently
-  ignored.
-  """
-  deviceId: String!
-}
-
-type RevokeDeviceSessionsPayload {
-  revokedCount: Int!
-}
-
-"""
-Result of RevokeDeviceSessions. Select on RevokeDeviceSessionsPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union RevokeDeviceSessionsResult = ConflictError | ForbiddenError | NotFoundError | RevokeDeviceSessionsPayload | ValidationError
-
 """
 What a household is predicted to run out of within two days, soonest first (RUNNING_LOW).
 """
 type RunningLowNotificationData {
-  """The recipient's local date the prediction ran for."""
-  date: LocalDate!
-  """The households the items are named for."""
-  homeIds: [ID!]!
   """How many items are running low."""
   itemCount: Int!
   """Each item running low."""
@@ -17860,40 +16220,12 @@ Other participants changed a shared list's items in one 15-minute window (SHARED
 type SharedListChangedNotificationData {
   """The display names of who made the changes."""
   actorNames: [String!]!
-  """How many changes the window held."""
-  changeCount: Int!
-  """Items added."""
-  itemsAdded: Int!
-  """Items marked purchased."""
-  itemsPurchased: Int!
-  """Items removed."""
-  itemsRemoved: Int!
-  """Items updated."""
-  itemsUpdated: Int!
-  """The shared list."""
-  listId: ID!
   """The list's name when the notification was sent."""
   listName: String!
-  """When the 15-minute window the changes fell in opened."""
-  windowStart: DateTime!
 }
 
 """Shopping list for a home"""
 type ShoppingList {
-  """
-  The pantries of the list's home that the caller may view, for moving items
-  into, oldest first; empty when the list is in no home.
-  """
-  availablePantriesConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-  ): PantryConnection!
   """
   The template this list was created from; null when the caller cannot view
   that template.
@@ -17909,10 +16241,6 @@ type ShoppingList {
   """
   canMoveToPantry: Boolean!
   """
-  A free-text label for the kind of list, such as Weekly Groceries; null when unset
-  """
-  category: String
-  """
   The list's ACTIVE and PENDING collaborators, most recently invited first by default
   """
   collaboratorsConnection(
@@ -17927,11 +16255,6 @@ type ShoppingList {
     """Sort order; most recently invited first when omitted"""
     orderBy: CollaboratorOrderBy
   ): ShoppingListCollaboratorConnection!
-  """
-  When completeShoppingList marked the list complete. Cleared when the list
-  is made active again; null for a list never completed that way.
-  """
-  completedAt: DateTime
   """How many of the list's items are marked purchased"""
   completedItems: Int!
   """
@@ -17953,11 +16276,6 @@ type ShoppingList {
   is recorded in it.
   """
   currency: CurrencyCode
-  """
-  The default pantry of the list's home, when the caller may view it; null
-  when the list is in no home or the home has none.
-  """
-  defaultPantry: Pantry
   """Free-text description of the list; null when none"""
   description: String
   """
@@ -18034,18 +16352,12 @@ type ShoppingList {
     """
     orderBy: ShoppingListItemOrderBy
   ): ShoppingListItemConnection!
-  """When the list's reminder was last sent; null before the first."""
-  lastReminderSent: DateTime
   """
   The meal plan the list was made from; null when there is none or the caller cannot view it
   """
   mealPlan: MealPlan
   """The list's name"""
   name: String!
-  """
-  Deep link that opens this list in the app (for existing collaborators).
-  """
-  navigateLink: ShareLink!
   """
   When the next list in the series is due; null when the list does not
   repeat. createRecurringShoppingList sets it, one interval ahead when it is
@@ -18072,8 +16384,6 @@ type ShoppingList {
   records are unaffected.
   """
   priceTracking: Boolean!
-  """The list's priority: 0 low, 1 medium, 2 high. 0 when unset."""
-  priority: Int!
   """
   How many pattern periods lie between lists: days for DAILY and CUSTOM,
   weeks for WEEKLY, fortnights for BIWEEKLY, months for MONTHLY. Null when
@@ -18121,16 +16431,6 @@ type ShoppingList {
     """The store; the list's target store when omitted"""
     storeId: ID
   ): StoreRoute!
-  """How many lines suggestedTotal prices by suggestion"""
-  suggestedLines: Int!
-  """
-  The estimated cost with a suggestion standing in for each catalog line that
-  has no estimated price: each line's estimate, else its suggested price,
-  times its quantity, summed and rounded to two places. estimatedTotal is
-  unchanged by suggestions. Null when no line has an estimate or a
-  suggestion; unpricedItems less suggestedLines lines are left out.
-  """
-  suggestedTotal: Float
   """
   Items worth adding to this shopping list, one list per section. An item
   appears at most once, in the first section that offers it: runningLow,
@@ -18148,8 +16448,6 @@ type ShoppingList {
   tags: [String!]!
   """The store the user plans to shop at; null when none is set"""
   targetStore: Store
-  """ID of the store the user plans to shop at; null when none is set"""
-  targetStoreId: ID
   """
   The name the list carries as a template, set with markAsTemplate; null for a list never marked as one
   """
@@ -18211,12 +16509,6 @@ type ShoppingListCollaborator {
   The email address the invite was sent to; null for someone who joined through the list's share code
   """
   email: EmailAddress
-  """
-  When the invite stops being acceptable: the time the inviter chose, or 7
-  days after the invite. It does not end an accepted collaboration. Null for
-  someone who joined through the share code.
-  """
-  expiresAt: DateTime
   """The collaborator entry's unique identifier"""
   id: ID!
   """
@@ -18242,16 +16534,12 @@ type ShoppingListCollaborator {
   role: CollaboratorRole!
   """The shopping list"""
   shoppingList: ShoppingList!
-  """ID of the shopping list"""
-  shoppingListId: ID!
   """
   PENDING until the invite is accepted, then ACTIVE; REMOVED once the
   collaborator is removed or the invite is declined. Only an ACTIVE
   collaborator has access to the list.
   """
   status: CollaboratorStatus!
-  """When status last changed; null for an invite still pending"""
-  statusChangedAt: DateTime
 }
 
 """
@@ -18339,8 +16627,6 @@ type ShoppingListEvent implements DomainEvent {
   originatorClientId: this field cannot tell your two devices apart.
   """
   actorUserId: ID
-  """Count of items cleared (ITEMS_BATCH_CLEARED only)."""
-  clearedCount: Int
   """IDs of items that were cleared (ITEMS_BATCH_CLEARED only)."""
   clearedItemIds: [ID!]
   listId: ID!
@@ -18390,16 +16676,12 @@ type ShoppingListItem {
   The member who added the line; null when that account was deleted, or for a line copied from a template or a recurring list
   """
   addedBy: User
-  """The id of the member who added the line; null when none is recorded"""
-  addedById: ID
   """quantity in unit, read in both unit systems; null when either is."""
   amount: Measure
   """
   The brand chosen for this line, independent of the catalog item's brands: the one an add or update named, else a scanned product's; null when none
   """
   brand: Brand
-  """The id of brand; null when none"""
-  brandId: ID
   """A free-text category the client gave the line; null when none"""
   category: String
   """
@@ -18430,24 +16712,16 @@ type ShoppingListItem {
   The member whose add last merged into this line and raised its quantity. No other edit records one, so it is null on a line no add has merged into
   """
   lastEditedBy: User
-  """The id of lastEditedBy; null when none is recorded"""
-  lastEditedById: ID
   """
   The size of one package, in netWeightUnit, as stated or read from a scanned barcode. Null when none, after adds stating different sizes merged, or once a bought line is unmarked or re-added without one
   """
   netWeight: Float
   """The unit netWeight is in; null with netWeight"""
   netWeightUnit: Unit
-  """The id of netWeightUnit; null with netWeight"""
-  netWeightUnitId: ID
   """
   Free-text notes, at most 500 characters from a client; null when none. Adding a recipe can write the ingredient's note, or append an amount it could not add into the line's unit
   """
   notes: String
-  """
-  netWeight in netWeightUnit, read in both unit systems; null with netWeight.
-  """
-  packageSize: Measure
   """
   The line's estimated price per one of its unit, in the list's currency, and its budget
   """
@@ -18604,8 +16878,6 @@ type ShoppingListItemPurchaseInfo {
   purchaseDate: DateTime
   """Who purchased the item"""
   purchasedBy: User
-  """ID of user who purchased"""
-  purchasedById: ID
   """Actual price paid"""
   purchasedPrice: Float
   """Actual quantity purchased (may differ from requested)"""
@@ -18620,34 +16892,12 @@ type ShoppingListItemSource {
   addedContext: AddedContext!
   """Whether item came from meal planning"""
   isFromMealPlan: Boolean!
-  """Associated meal plan"""
-  mealPlan: MealPlan
-  """
-  The id of the meal plan the line was added for; null when none. Returned even when mealPlan reads null for a caller who cannot view the plan
-  """
-  mealPlanId: ID
-  """Specific meal plan item"""
-  mealPlanItem: MealPlanItem
-  """
-  The id of the meal plan entry the line was added for; null when none. Returned even when mealPlanItem reads null for a caller who cannot view its plan
-  """
-  mealPlanItemId: ID
-  """Associated recipe"""
-  recipe: Recipe
-  """Specific recipe ingredient"""
-  recipeIngredient: RecipeIngredient
 }
 
 """Store and location preferences for a shopping list item"""
 type ShoppingListItemStoreInfo {
-  """Aisle location in store"""
-  aisle: String
   """Preferred store for this item"""
   preferredStore: Store
-  """Storage location after purchase"""
-  storageLocation: String
-  """Section within store"""
-  storeSection: String
 }
 
 """Order by options for shopping lists"""
@@ -18660,10 +16910,6 @@ input ShoppingListOrderBy {
 type ShoppingListOwnership {
   createdAt: DateTime!
   id: ID!
-  shoppingList: ShoppingList!
-  shoppingListId: ID!
-  transferredAt: DateTime
-  transferredFrom: String
   user: User!
   userId: ID!
 }
@@ -18736,12 +16982,10 @@ type ShoppingListStoreComparison {
   """
   leftOutLines: Int!
   scope: PriceComparisonScope!
-  shoppingList: ShoppingList!
   """True when the list held more than the 200 lines a comparison considers"""
   truncated: Boolean!
   """Comparable lines no observation prices, left out of every total"""
   unpricedLines: [ShoppingListItem!]!
-  windowDays: Int!
 }
 
 input ShoppingListStoreComparisonInput {
@@ -18770,23 +17014,11 @@ type ShoppingListStoreSavings {
   answeredAt: DateTime!
   """Those with a total, cheapest first; then the rest"""
   candidates: [StoreSavingsCandidate!]!
-  comparableLines: Int!
   currency: Currency!
-  """
-  Unpurchased lines that cannot be compared: no catalog item, or a unit that does not convert
-  """
-  leftOutLines: Int!
-  shoppingList: ShoppingList!
-  """True when the list held more than the 200 lines a comparison considers"""
-  truncated: Boolean!
 }
 
 input ShoppingListStoreSavingsInput {
   listId: ID!
-  """
-  Up to 10 stores to compare instead of the household's compared usual stores; another household's own store is refused as one that does not exist
-  """
-  storeIds: [ID!]
 }
 
 """
@@ -18827,17 +17059,11 @@ type ShoppingListSuggestion {
   """
   defaultUnitId: ID
   """
-  Frequency count - times user added this item (for FREQUENTLY_ADDED source)
-  """
-  frequencyCount: Int
-  """
   Unique suggestion ID (itemId or shoppingListItemId depending on source)
   """
   id: ID!
   """Primary image URL"""
   imageUrl: String
-  """Full item reference"""
-  item: SuggestionItem!
   """The catalog Item ID - always present"""
   itemId: ID!
   """Last quantity used (for RECENTLY_DELETED source)"""
@@ -18846,8 +17072,6 @@ type ShoppingListSuggestion {
   lastUnitId: ID
   """Item name for display"""
   name: String!
-  """Popularity ranking position (for POPULAR source)"""
-  popularityRank: Int
   """
   When the household is predicted to run out, as a calendar day counted from
   the viewer's today; computed in instants, so it can be a day off at a
@@ -19956,12 +18180,6 @@ type Subscription {
     cookingLogId: ID!
   ): CookingLogEvent!
   """
-  Subscribe to all device events for the caller's own devices. Discriminate
-  by subtype: REGISTERED, ACTIVITY, STATUS_CHANGED, TRUST_CHANGED, VERIFIED,
-  DELETED.
-  """
-  deviceEvents: DeviceEvent!
-  """
   Per-home event stream (membership changes + home-invite
   changes). Subscribe once per home and branch on subtype, then on node's
   __typename (Membership vs HomeInvite).
@@ -19970,11 +18188,6 @@ type Subscription {
     """The home to watch"""
     homeId: ID!
   ): HomeEvent!
-  """
-  Subscribe to the caller's own login events. Discriminate by subtype:
-  ATTEMPTED, FAILED, RISKY, SUSPICIOUS.
-  """
-  loginEvents: LoginEvent!
   """
   Subscribe to all shared meal-plan and meal-template collaboration events for
   a home. Discriminate by subtype: MEAL_PLAN_CHANGED, MEAL_PLAN_ITEM_CHANGED,
@@ -20158,17 +18371,6 @@ type SuggestionUnit {
   localizedSymbolForms: PluralForms!
   name: String!
   symbol: String!
-}
-
-type SuspiciousActivity {
-  failedFromSameIP: [FailedIPStat!]!
-  multipleAccountsFromIP: [FailedIPStat!]!
-  newDeviceLogins: [LoginHistory!]!
-  newLocationLogins: [LoginHistory!]!
-  rapidAttempts: [RapidAttempt!]!
-  riskyLogins: [LoginHistory!]!
-  suspiciousActivity: Boolean!
-  unusualTimeLogins: [LoginHistory!]!
 }
 
 """A row one of this device's operations committed."""
@@ -20612,7 +18814,6 @@ input TransferHomeOwnershipInput {
 
 type TransferHomeOwnershipPayload {
   home: Home
-  homeOwnership: HomeOwnership!
 }
 
 """
@@ -20621,15 +18822,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union TransferHomeOwnershipResult = ConflictError | ForbiddenError | NotFoundError | TransferHomeOwnershipPayload | ValidationError
-
-enum TrustLevel {
-  ADMIN
-  BASIC
-  MODERATOR
-  NEW_USER
-  TRUSTED
-  VERIFIED
-}
 
 """An absolute http(s) URL, at most 2048 characters."""
 scalar URL @specifiedBy(url: "https://url.spec.whatwg.org/#absolute-url-string")
@@ -20657,9 +18849,6 @@ type Unit {
   baseUnitId: ID
   """
   Fractions this unit is commonly shown in, as decimals (0.25 = a quarter).
-  
-  Note these are decimals, whereas `QuantityDisplayInput.preferredFractionSet`
-  holds *denominators* (4 = a quarter). The two are inverses.
   """
   commonFractions: [Float!]
   conversionFactor: Float!
@@ -21038,8 +19227,10 @@ input UpdateDeviceInput {
   deviceType: DeviceType
   id: ID!
   isActive: Boolean
-  isTrusted: Boolean
-  isVerified: Boolean
+  """Ignored: a device is neither trusted nor verified"""
+  isTrusted: Boolean @deprecated(reason: "No device is trusted or verified; the value is ignored")
+  """Ignored: a device is neither trusted nor verified"""
+  isVerified: Boolean @deprecated(reason: "No device is trusted or verified; the value is ignored")
   location: NetworkLocationInput
   platform: MobilePlatform
   pushToken: String
@@ -21500,7 +19691,6 @@ input UpdateMembershipInput {
 }
 
 type UpdateMembershipPayload {
-  home: Home
   membership: Membership!
 }
 
@@ -21714,54 +19904,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union UpdateProfileResult = ConflictError | ForbiddenError | NotFoundError | UpdateProfilePayload | ValidationError
 
-"""
-Changes to a purchase: the caller's own, or any for an admin. An omitted field
-is kept and null clears it, except quantity and purchaseDate, which refuse
-null. The item, unit, currency and store cannot be changed here.
-"""
-input UpdatePurchaseInput {
-  """The discount taken; null clears it"""
-  discountAmount: Float
-  """The expiry date as YYYY-MM-DD."""
-  expiresOn: LocalDate
-  """The purchase to change"""
-  id: ID!
-  """The price per unit before any discount; null clears it"""
-  originalPrice: Float
-  """When it was bought; null is refused"""
-  purchaseDate: DateTime
-  """
-  How many units were bought; more than 0. When the purchase keeps a unit price, the total is recomputed.
-  """
-  quantity: Float
-  """The receipt's number, as printed; null clears it"""
-  receiptNumber: String
-  """
-  The amount paid in all; null clears it. Ignored when quantity or unitPrice is also sent and a unit price remains: the total is then recomputed.
-  """
-  totalPrice: Float
-  """The transaction reference; null clears it"""
-  transactionId: String
-  """
-  The price paid per unit; null clears it. The total is recomputed from it, or cleared with it unless totalPrice is also sent.
-  """
-  unitPrice: Float
-  """The version read; a newer one refuses the update (VERSION_CONFLICT)."""
-  version: Int!
-}
-
-type UpdatePurchasePayload {
-  purchase: Purchase!
-  store: Store
-}
-
-"""
-Result of UpdatePurchase. Select on UpdatePurchasePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union UpdatePurchaseResult = ConflictError | ForbiddenError | NotFoundError | UpdatePurchasePayload | ValidationError
-
 input UpdateRecipeIngredientsInput {
   ingredients: [RecipeIngredientInput!]!
   recipeId: ID!
@@ -21838,37 +19980,13 @@ Always include a __typename so the variant can be discriminated.
 union UpdateRecipeReviewResult = ConflictError | ForbiddenError | NotFoundError | UpdateRecipeReviewPayload | ValidationError
 
 """
-Changes to one of the caller's restrictions. An omitted field stays unchanged.
-"""
-input UpdateRestrictionInput {
-  """The restriction to update; it must be the caller's own"""
-  id: ID!
-  """Free text, at most 1000 characters after trimming; null clears it"""
-  notes: String
-  """How strictly the restriction holds; null is refused"""
-  severity: RestrictionSeverity
-}
-
-type UpdateRestrictionPayload {
-  dietaryProfile: DietaryProfile
-  dietaryRestriction: DietaryRestriction!
-}
-
-"""
-Result of UpdateRestriction. Select on UpdateRestrictionPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union UpdateRestrictionResult = ConflictError | ForbiddenError | NotFoundError | UpdateRestrictionPayload | ValidationError
-
-"""
 Changes to the caller's settings. An omitted or null group, and an omitted
 field, stay unchanged. A null field is refused, except in notifications,
 where it leaves that preference unchanged.
 """
 input UpdateSettingsInput {
-  """Feature opt-ins"""
-  features: FeatureTogglesInput
+  """Ignored"""
+  features: FeatureTogglesInput @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   """Notification toggles, written to the caller's notification preferences"""
   notifications: UserNotificationSettingsInput
   """Data-sharing consents"""
@@ -22016,21 +20134,12 @@ type UpdateShoppingListPayload {
   storeComparison(
     """Compare store branches (the default) or whole chains"""
     scope: PriceComparisonScope
-    """Up to five stores to compare instead of the household's own"""
-    storeIds: [ID!]
-    """How far back observations count: default 90 days, at most 365"""
-    windowDays: Int
   ): ShoppingListStoreComparison! @deprecated(reason: "Use storeSavings, as shoppingListStoreSavings reads them.")
   """
   The list's savings after this write, as shoppingListStoreSavings reads
   them: a change of store changes them. Computed only when selected.
   """
-  storeSavings(
-    """
-    Up to 10 stores to compare instead of the household's compared usual stores
-    """
-    storeIds: [ID!]
-  ): ShoppingListStoreSavings!
+  storeSavings: ShoppingListStoreSavings!
 }
 
 input UpdateShoppingListReminderInput {
@@ -22148,51 +20257,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union UpdateTemplateItemResult = ConflictError | ForbiddenError | NotFoundError | UpdateTemplateItemPayload | ValidationError
-
-input UpdateUserAddressInput {
-  city: String
-  country: CountryCode
-  id: ID!
-  isDefault: Boolean
-  label: String
-  lat: Float
-  lng: Float
-  postalCode: String
-  state: String
-  street: String
-}
-
-type UpdateUserAddressPayload {
-  userAddress: UserAddress!
-}
-
-"""
-Result of UpdateUserAddress. Select on UpdateUserAddressPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union UpdateUserAddressResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAddressPayload | ValidationError
-
-"""Input for submitting, or amending, the caller's own appeal."""
-input UpdateUserAppealInput {
-  """The appellant's case, in their own words."""
-  appealNotes: String
-}
-
-type UpdateUserAppealPayload {
-  """
-  The appellant's own view of their record, after the appeal is written —
-  the redaction Query.myModeration applies.
-  """
-  myModeration: MyModerationStatus!
-}
-
-"""
-Result of UpdateUserAppeal. Select on UpdateUserAppealPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union UpdateUserAppealResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAppealPayload | ValidationError
 
 input UpdateUsualStoreInput {
   """
@@ -22453,24 +20517,6 @@ type UsedPantryItem {
 
 """User account type"""
 type User {
-  """
-  The user's saved addresses, newest first by default. Empty unless the
-  caller is this user or an admin.
-  """
-  addressesConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: UserAddressOrderBy
-  ): UserAddressConnection!
   """Whether this user can access developer tools and internal dashboards"""
   canAccessDevTools: Boolean!
   """
@@ -22526,11 +20572,6 @@ type User {
   """
   defaultHomeId: ID
   """
-  Counts and breakdowns of the user's registered devices. Null unless the
-  caller is this user or an admin.
-  """
-  deviceStats: DeviceStats
-  """
   The user's dietary restrictions, cuisine and ingredient preferences and
   nutrition targets. Null unless the caller is this user or an admin.
   """
@@ -22580,55 +20621,8 @@ type User {
     """
     orderBy: ExpirationNotificationOrderBy
   ): ExpirationNotificationConnection!
-  """
-  The user's home ownership entries, current and past, newest first. An
-  entry with transferredAt set is ownership the user no longer holds. Empty
-  unless the caller is this user or an admin.
-  """
-  homeOwnershipsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-  ): HomeOwnershipConnection!
   """The user's unique identifier"""
   id: ID!
-  """
-  Log entries for home-invite actions the user performed, newest first by
-  default. Empty unless the caller is this user or an admin.
-  """
-  inviteLogsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; newest first when omitted"""
-    orderBy: InviteLogOrderBy
-  ): InviteLogConnection!
-  """
-  Sign-in statistics for a window of the last N days, where N is the days
-  argument (30 by default). Null unless the caller is this user or an admin.
-  """
-  loginHistoryStats(
-    """How many days back to count"""
-    days: Int = 30
-  ): LoginHistoryStats
-  """
-  The user's ACTIVE membership in the given home. Null when there is none,
-  or unless the caller is this user or an admin.
-  """
-  membershipInHome(
-    """The home to read the membership in"""
-    homeId: ID!
-  ): Membership
   """
   The user's ACTIVE home memberships, newest first by default. Empty unless
   the caller is this user or an admin.
@@ -22742,20 +20736,6 @@ type User {
     orderBy: SavedRecipeOrderBy
   ): SavedRecipeConnection!
   """
-  Home invites the user sent, in any status, newest first. Empty unless the
-  caller is this user or an admin.
-  """
-  sentHomeInvitesConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-  ): HomeInviteConnection!
-  """
   The user's app settings; null unless the caller is this user or an admin
   """
   settings: UserSettings
@@ -22777,60 +20757,6 @@ type User {
     """
     orderBy: ShoppingListOwnershipOrderBy
   ): ShoppingListOwnershipConnection!
-  """
-  Signs of suspicious sign-in activity in the last N hours, where N is the
-  hours argument (24 by default). Null unless the caller is this user or an
-  admin.
-  """
-  suspiciousLoginActivity(
-    """How many hours back to look"""
-    hours: Int = 24
-  ): SuspiciousActivity
-}
-
-"""User address information"""
-type UserAddress {
-  city: String!
-  country: CountryCode!
-  id: ID!
-  isDefault: Boolean!
-  label: String!
-  lat: Float
-  lng: Float
-  postalCode: String!
-  state: String!
-  street: String!
-}
-
-"""
-A page of UserAddress results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type UserAddressConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [UserAddressEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One UserAddress in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type UserAddressEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The UserAddress this edge wraps."""
-  node: UserAddress!
-}
-
-input UserAddressOrderBy {
-  createdAt: SortOrder
-  isDefault: SortOrder
 }
 
 """
@@ -22867,11 +20793,6 @@ type UserEvent implements DomainEvent {
   """
   originatorClientId: ID
   parents: UserEventParents
-  """
-  The reason given for this moderation action, as written by the moderator.
-  Null when none was given; never internal moderator notes.
-  """
-  reason: String
   """
   What caused a moderation event (BANNED / UNBANNED / SUSPENDED / UNSUSPENDED
   / WARNED). Null for every other subtype.
@@ -22983,14 +20904,8 @@ enum UserRole {
 
 """User settings and preferences"""
 type UserSettings {
-  """Whether quantities always show as fractions"""
-  alwaysShowFractions: Boolean!
   """Whether the app syncs automatically"""
   autoSync: Boolean!
-  """
-  Names the user wrote about themselves; empty when none. The server never reads them and they unlock nothing: a feature's availability is myFeatureFlags
-  """
-  betaFeatures: [String!]!
   """
   Whether the app shows prices, estimates and savings. Null until the user
   sets it, by hand or by answering the price prompt: the app shows no prices
@@ -23008,18 +20923,12 @@ type UserSettings {
   offline.
   """
   deviceUnitSystem: UnitSystem!
-  """
-  Names the user wrote about themselves; empty when none. The server never reads them and they unlock nothing: a feature's availability is myFeatureFlags
-  """
-  enabledFeatures: [String!]!
   """The settings row's unique identifier"""
   id: ID!
   """
   The user's language tag, such as 'en' or 'en-US'. It is the fallback locale for preferredUnitSystem SYSTEM, and receipt matching reads it when a receipt states no language.
   """
   language: String!
-  """The most decimal places a quantity shows"""
-  maxDecimalPlaces: Int!
   """Whether the app works offline"""
   offlineMode: Boolean!
   """The user's consent to personalized ads"""
@@ -23029,21 +20938,9 @@ type UserSettings {
   """
   preferredCurrency: CurrencyCode!
   """
-  Fraction **denominators** the user wants quantities rounded to — 4 means
-  quarters. Note the inverse of `Unit.commonFractions`, which holds decimals
-  (0.25 = a quarter).
-  
-  Int, not Float: a denominator is a count of parts, so 2.5 is meaningless.
-  """
-  preferredFractionSet: [Int!]
-  """
   The measurement system unit pickers offer and amounts are shown in. SYSTEM follows the requesting device's locale, then language.
   """
   preferredUnitSystem: UnitSystem!
-  """
-  How formatted quantities show: FRACTION or MIXED where a fraction fits, DECIMAL always as decimals, AUTO by each unit's own rule
-  """
-  quantityDisplayPreference: QuantityDisplayPreference!
   """The user's consent to share usage data"""
   shareUsageData: Boolean!
   """The user's consent to share data with partners"""
