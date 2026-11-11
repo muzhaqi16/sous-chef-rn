@@ -5,6 +5,7 @@
 import {
   CollaboratorRole,
   CollaboratorStatus,
+  DisplayFormat,
   MembershipRole,
   type StoreDepartment,
 } from '#/graphql/generated/schemaTypes';
@@ -13,7 +14,20 @@ import {
   GetShoppingListItemsFilteredDocument,
   GetShoppingListsLiteDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { recordMock, type MockDataFor } from '../apolloMockProvider';
+import { gql, type ApolloCache, type TypedDocumentNode } from '@apollo/client';
+import { Kind } from 'graphql';
+import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
+import {
+  ShoppingListItemPurchaseInfoFragmentDoc,
+  type ShoppingListItemDisplayFragment,
+  type ShoppingListItemPurchaseInfoFragment,
+} from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import {
+  recordMock,
+  seedFragment,
+  seedQuery,
+  type MockDataFor,
+} from '../apolloMockProvider';
 
 export type ShoppingListNode = NonNullable<
   MockDataFor<typeof GetShoppingListDetailsDocument>['shoppingList']
@@ -196,40 +210,198 @@ export const listDetailsRead = (
 
 /**
  * Answers both of a list's line reads, to buy and bought, from `lines`; with
- * `maxUsageCount`, only that many times.
+ * `maxUsageCount`, only that many times. With `pageSize`, each answer holds at
+ * most that many lines after the cursor asked for, and counts them all.
  */
 export const listLinesRead = (
   listId: string,
   lines: ListLine[],
-  { maxUsageCount }: { maxUsageCount?: number } = {},
+  {
+    maxUsageCount,
+    pageSize,
+    held = false,
+  }: { maxUsageCount?: number; pageSize?: number; held?: boolean } = {},
 ) =>
   recordMock(GetShoppingListItemsFilteredDocument, {
     maxUsageCount,
+    held,
     dataFor: ({
       isPurchased,
+      first,
+      after,
     }): MockDataFor<typeof GetShoppingListItemsFilteredDocument> => {
-      const page = lines.filter(
+      const matching = lines.filter(
         line => (line.purchaseInfo?.isPurchased ?? false) === isPurchased,
       );
-      return {
-        shoppingList: {
-          __typename: 'ShoppingList',
-          id: listId,
-          itemsConnection: {
-            __typename: 'ShoppingListItemConnection',
-            totalCount: page.length,
-            edges: page.map(node => ({
-              __typename: 'ShoppingListItemEdge',
-              cursor: node.id ?? '',
-              node,
-            })),
-            pageInfo: {
-              __typename: 'PageInfo',
-              hasNextPage: false,
-              endCursor: null,
-            },
-          },
-        },
-      };
+      const start = after
+        ? matching.findIndex(line => line.id === after) + 1
+        : 0;
+      const asked = typeof first === 'number' ? first : matching.length;
+      const page = matching.slice(
+        start,
+        start + Math.min(asked, pageSize ?? asked),
+      );
+      const hasNextPage = start + page.length < matching.length;
+      return linesPage(listId, page, {
+        totalCount: matching.length,
+        hasNextPage,
+        endCursor: page.at(-1)?.id ?? null,
+      });
     },
   });
+
+/** A page of a list's line read: its lines, and what the list holds in all. */
+function linesPage(
+  listId: string,
+  page: ListLine[],
+  {
+    totalCount = page.length,
+    hasNextPage = false,
+    endCursor = null,
+  }: { totalCount?: number; hasNextPage?: boolean; endCursor?: string | null },
+): MockDataFor<typeof GetShoppingListItemsFilteredDocument> {
+  return {
+    shoppingList: {
+      __typename: 'ShoppingList',
+      id: listId,
+      itemsConnection: {
+        __typename: 'ShoppingListItemConnection',
+        totalCount,
+        edges: page.map(node => ({
+          __typename: 'ShoppingListItemEdge',
+          cursor: node.id ?? '',
+          node,
+        })),
+        pageInfo: { __typename: 'PageInfo', hasNextPage, endCursor },
+      },
+    },
+  };
+}
+
+/**
+ * Seeds a list's two first pages, to buy and bought, as the list screen reads
+ * them; `totals` states a tab holding more than its page.
+ */
+export function seedListLines(
+  cache: ApolloCache,
+  listId: string,
+  lines: ListLine[],
+  totals: { toBuy?: number; bought?: number } = {},
+) {
+  for (const isPurchased of [false, true]) {
+    const page = lines.filter(
+      line => (line.purchaseInfo?.isPurchased ?? false) === isPurchased,
+    );
+    seedQuery(cache, {
+      query: GetShoppingListItemsFilteredDocument,
+      variables: { id: listId, first: PAGINATION.ITEMS_PAGE_SIZE, isPurchased },
+      data: linesPage(listId, page, {
+        totalCount: isPurchased ? totals.bought : totals.toBuy,
+      }),
+    });
+  }
+}
+
+/** A line's whole purchase record, as every write that can change it selects. */
+const PURCHASE_RECORD: TypedDocumentNode<{
+  __typename: 'ShoppingListItem';
+  id: string;
+  purchaseInfo: ShoppingListItemPurchaseInfoFragment | null;
+}> = {
+  kind: Kind.DOCUMENT,
+  definitions: [
+    ...gql`
+      fragment FixturePurchaseRecord on ShoppingListItem {
+        id
+        purchaseInfo {
+          ...ShoppingListItemPurchaseInfoFragment
+        }
+      }
+    `.definitions,
+    ...ShoppingListItemPurchaseInfoFragmentDoc.definitions,
+  ],
+};
+
+/** Seeds a line's purchase record: bought, unmoved and unpriced, unless stated. */
+export function seedPurchaseRecord(
+  cache: ApolloCache,
+  id: string,
+  record: Partial<ShoppingListItemPurchaseInfoFragment> = {},
+) {
+  seedFragment(cache, {
+    fragment: PURCHASE_RECORD,
+    fragmentName: 'FixturePurchaseRecord',
+    data: {
+      __typename: 'ShoppingListItem',
+      id,
+      purchaseInfo: {
+        __typename: 'ShoppingListItemPurchaseInfo',
+        isPurchased: true,
+        movedToPantryAt: null,
+        purchaseDate: null,
+        purchasedPrice: null,
+        purchasedQuantity: null,
+        purchasedBy: null,
+        ...record,
+      },
+    },
+  });
+}
+
+/** A line's purchase record as the cache holds it now, pending writes included. */
+export const purchaseRecordOf = (cache: ApolloCache, id: string) =>
+  cache.readFragment({
+    id: cache.identify({ __typename: 'ShoppingListItem', id }),
+    fragment: PURCHASE_RECORD,
+    fragmentName: 'FixturePurchaseRecord',
+    optimistic: true,
+  })?.purchaseInfo;
+
+/** A watch of a line's purchase record, for `cacheShows`. */
+export const purchaseRecordWatch = (id: string) => ({
+  fragment: PURCHASE_RECORD,
+  fragmentName: 'FixturePurchaseRecord',
+  from: `ShoppingListItem:${id}`,
+});
+
+/** Two of milk, open on list-1, as the list hands a line to a sheet. */
+export const displayedLine = (
+  overrides: Partial<ShoppingListItemDisplayFragment> = {},
+): ShoppingListItemDisplayFragment => ({
+  __typename: 'ShoppingListItem',
+  id: 'line-1',
+  shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
+  itemName: 'Milk',
+  quantity: 2,
+  quantityInput: '2',
+  displayFormat: DisplayFormat.Auto,
+  version: 3,
+  updatedAt: '2025-01-01T00:00:00.000Z',
+  category: 'Dairy',
+  notes: null,
+  unitName: null,
+  sortOrder: 'aaa',
+  purchaseInfo: {
+    __typename: 'ShoppingListItemPurchaseInfo',
+    movedToPantryAt: null,
+    isPurchased: false,
+  },
+  unit: null,
+  item: null,
+  ...overrides,
+});
+
+/** The ids a list's first page of a tab shows, pending writes included. */
+export const listLineIds = (
+  cache: ApolloCache,
+  listId: string,
+  isPurchased: boolean,
+  optimistic = true,
+) =>
+  cache
+    .readQuery({
+      query: GetShoppingListItemsFilteredDocument,
+      variables: { id: listId, first: PAGINATION.ITEMS_PAGE_SIZE, isPurchased },
+      optimistic,
+    })
+    ?.shoppingList?.itemsConnection.edges.map(edge => edge.node.id) ?? [];

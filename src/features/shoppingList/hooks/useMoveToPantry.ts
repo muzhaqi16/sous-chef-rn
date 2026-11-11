@@ -48,12 +48,7 @@ export function useMoveToPantry({
 }: UseMoveToPantryOptions) {
   const [moveShoppingItemToPantry] = useMutation(
     MoveShoppingItemToPantryDocument,
-    {
-      context: { localFirst: true },
-      onCompleted: () => {
-        onSuccess?.();
-      },
-    },
+    { context: { localFirst: true } },
   );
 
   const client = useApolloClient();
@@ -112,7 +107,9 @@ export function useMoveToPantry({
     // Released on every outcome; a queued move is tracked by the offline
     // queue's pending set from here on.
     unconfirmedCreates.confirm(pantryItemId);
+    // Not `onCompleted`, which a refusal's answer fires too.
     if (settled.status === 'failed') return false;
+    onSuccess?.();
 
     Telemetry.trackEvent('shopping_item_moved_to_pantry', {
       shopping_list_id: currentListId,
