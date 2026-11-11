@@ -5,7 +5,8 @@ import {
   seedCache,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { drained, drainTimers } from '#/test-utils/drainTimers';
+import { settledInAct } from '#/test-utils/settledInAct';
+import { cacheShows } from '#/test-utils/cacheWaits';
 import {
   CreateMealTemplateDocument,
   UpdateMealTemplateDocument,
@@ -41,14 +42,6 @@ const readTemplate = (cache: ReturnType<typeof seedCache>) =>
     optimistic: true,
   });
 
-beforeEach(() => {
-  jest.useFakeTimers();
-});
-
-afterEach(() => {
-  jest.useRealTimers();
-});
-
 describe('useMealTemplateEditor', () => {
   it('createTemplate returns the minted id when the create is queued offline', async () => {
     const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
@@ -64,7 +57,7 @@ describe('useMealTemplateEditor', () => {
     });
 
     let id: string | null = null;
-    id = await drained(() =>
+    id = await settledInAct(() =>
       result.current.createTemplate({
         name: 'New',
         category: TemplateCategory.Weekly,
@@ -98,7 +91,7 @@ describe('useMealTemplateEditor', () => {
     });
 
     let id: string | null = 'unset';
-    id = await drained(() =>
+    id = await settledInAct(() =>
       result.current.createTemplate({
         name: '',
         category: TemplateCategory.Weekly,
@@ -124,7 +117,7 @@ describe('useMealTemplateEditor', () => {
     });
 
     let ok: boolean | undefined;
-    await drained(async () => {
+    await settledInAct(async () => {
       const promise = result.current.updateTemplate('tpl-1', {
         name: 'Renamed',
       });
@@ -160,12 +153,21 @@ describe('useMealTemplateEditor', () => {
     });
 
     let ok: boolean | undefined;
-    ok = await drained(() =>
+    ok = await settledInAct(() =>
       result.current.updateTemplate('tpl-1', { name: 'Renamed' }),
     );
     expect(ok).toBe(false);
-    await drainTimers();
-    expect(readTemplate(cache)?.name).toBe('Weeknight Dinners');
+    // The refused write's layer drops when the pending writes rebuild.
+    await cacheShows(
+      cache,
+      {
+        fragment: TEMPLATE_NAME,
+        fragmentName: 'EditorTemplateName',
+        from: 'MealTemplate:tpl-1',
+      },
+      () => readTemplate(cache)?.name,
+      name => name === 'Weeknight Dinners',
+    );
   });
 
   it('addItem returns false on a rejection', async () => {
@@ -188,7 +190,7 @@ describe('useMealTemplateEditor', () => {
     });
 
     let ok: boolean | undefined;
-    ok = await drained(() =>
+    ok = await settledInAct(() =>
       result.current.addItem({
         templateId: 'tpl-1',
         dayOffset: 0,
@@ -260,7 +262,7 @@ describe('updateItem maps the @oneOf meal ref onto BOTH fields', () => {
       operationMocks: [queuedUpdate],
     });
 
-    await drained(() =>
+    await settledInAct(() =>
       result.current.updateItem({
         id: 'item-1',
         meal: { customMealName: 'Leftovers' },
@@ -284,7 +286,7 @@ describe('updateItem maps the @oneOf meal ref onto BOTH fields', () => {
       operationMocks: [queuedUpdate],
     });
 
-    await drained(() =>
+    await settledInAct(() =>
       result.current.updateItem({
         id: 'item-2',
         meal: { recipeId: 'recipe-1' },
@@ -308,7 +310,7 @@ describe('updateItem maps the @oneOf meal ref onto BOTH fields', () => {
       operationMocks: [queuedUpdate],
     });
 
-    await drained(() =>
+    await settledInAct(() =>
       result.current.updateItem({ id: 'item-1', servings: 5 }),
     );
 
@@ -425,7 +427,7 @@ describe("a row loaded by the editor's own query", () => {
       ],
     });
 
-    await drained(() =>
+    await settledInAct(() =>
       result.current.updateItem({ id: 'item-9', servings: 6 }),
     );
 
@@ -468,7 +470,7 @@ describe("a row loaded by the editor's own query", () => {
     });
 
     let saved: boolean | undefined;
-    saved = await drained(() =>
+    saved = await settledInAct(() =>
       result.current.updateItem({
         id: 'item-9',
         meal: { recipeId: 'recipe-1' },
@@ -534,7 +536,7 @@ describe("a row loaded by the editor's own query", () => {
     });
 
     let saved: boolean | undefined;
-    saved = await drained(() =>
+    saved = await settledInAct(() =>
       result.current.updateItem({
         id: 'item-9',
         meal: { customMealName: 'Leftovers' },
@@ -576,7 +578,9 @@ describe("a row loaded by the editor's own query", () => {
     });
 
     let removed: boolean | undefined;
-    removed = await drained(() => result.current.removeItem('item-9', 'tpl-9'));
+    removed = await settledInAct(() =>
+      result.current.removeItem('item-9', 'tpl-9'),
+    );
 
     expect(removed).toBe(false);
     // The row the user can still see must be the row that still exists.
@@ -605,7 +609,7 @@ describe("a row loaded by the editor's own query", () => {
     });
 
     let removed: boolean | undefined;
-    await drained(async () => {
+    await settledInAct(async () => {
       const pending = result.current.removeItem('item-9', 'tpl-9');
       // Local-first: gone before the request settles.
       expect(mealsInEditor(cache)).toEqual([]);
@@ -631,7 +635,7 @@ describe("a row loaded by the editor's own query", () => {
     });
 
     let added: boolean | undefined;
-    added = await drained(() =>
+    added = await settledInAct(() =>
       result.current.addItem({
         templateId: 'tpl-9',
         dayOffset: 2,
@@ -664,7 +668,7 @@ describe("a row loaded by the editor's own query", () => {
     });
 
     let added: boolean | undefined;
-    added = await drained(() =>
+    added = await settledInAct(() =>
       result.current.addItem({
         templateId: 'tpl-9',
         dayOffset: 2,

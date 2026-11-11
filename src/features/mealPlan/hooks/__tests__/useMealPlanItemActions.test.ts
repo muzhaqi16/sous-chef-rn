@@ -13,7 +13,8 @@ import {
   renderHookWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
-import { drained, drainTimers } from '#/test-utils/drainTimers';
+import { settledInAct } from '#/test-utils/settledInAct';
+import { cacheShows } from '#/test-utils/cacheWaits';
 import {
   CreateMealPlanItemDocument,
   UpdateMealPlanItemDocument,
@@ -179,14 +180,6 @@ const mockToastSuccess = jest.mocked(toastService.success);
 const mockToastError = jest.mocked(toastService.error);
 
 beforeEach(() => {
-  jest.useFakeTimers();
-});
-
-afterEach(() => {
-  jest.useRealTimers();
-});
-
-beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -208,7 +201,7 @@ describe('useMealPlanItemActions', () => {
       const { result } = renderActions([create.mock], cache);
 
       let created!: Awaited<ReturnType<typeof result.current.createItem>>;
-      created = await drained(() =>
+      created = await settledInAct(() =>
         result.current.createItem({
           ...DINNER,
           date: '2026-09-23',
@@ -241,7 +234,7 @@ describe('useMealPlanItemActions', () => {
         const create = createdAsSent();
         const { result } = renderActions([create.mock], seedPlan());
 
-        await drained(() =>
+        await settledInAct(() =>
           result.current.createItem({ ...DINNER, date: day }),
         );
 
@@ -260,7 +253,7 @@ describe('useMealPlanItemActions', () => {
         const cache = seedPlan();
         const { result } = renderActions([create.mock], cache);
 
-        await drained(() =>
+        await settledInAct(() =>
           result.current.createItem({ ...DINNER, date: picked }),
         );
 
@@ -274,7 +267,7 @@ describe('useMealPlanItemActions', () => {
       const create = createdAsSent();
       const { result } = renderActions([create.mock]);
 
-      await drained(() =>
+      await settledInAct(() =>
         result.current.createItem({ ...DINNER, date: '2026-09-30' }),
       );
 
@@ -290,7 +283,7 @@ describe('useMealPlanItemActions', () => {
       const { result } = renderActions([create.mock], cache);
 
       let created: boolean | undefined;
-      created = await drained(() =>
+      created = await settledInAct(() =>
         result.current.createItem({
           mealPlanId: PLAN_ID,
           meal: { customMealName: 'Leftovers' },
@@ -336,7 +329,7 @@ describe('useMealPlanItemActions', () => {
       const { result } = renderActions([create.mock], cache);
 
       let created!: Awaited<ReturnType<typeof result.current.createItem>>;
-      created = await drained(() =>
+      created = await settledInAct(() =>
         result.current.createItem({
           ...DINNER,
           date: '2026-09-23',
@@ -374,7 +367,9 @@ describe('useMealPlanItemActions', () => {
       const { result } = renderActions([update.mock], cache);
 
       let toggled: boolean | undefined;
-      toggled = await drained(() => result.current.toggleCompleted('mpi-1'));
+      toggled = await settledInAct(() =>
+        result.current.toggleCompleted('mpi-1'),
+      );
 
       expect(toggled).toBe(true);
       expect(update.fired).toEqual([
@@ -387,7 +382,18 @@ describe('useMealPlanItemActions', () => {
           },
         },
       ]);
-      // The answer's version is the row's from here on.
+      // The answer's version is the row's from here on, once the write's
+      // layer gives way.
+      await cacheShows(
+        cache,
+        {
+          fragment: MealPlanItem_RowFragmentDoc,
+          fragmentName: 'mealPlanItem_row',
+          from: 'MealPlanItem:mpi-1',
+        },
+        () => readItem(cache)?.version,
+        version => version === 4,
+      );
       expect(readItem(cache)).toMatchObject({ isCompleted: true, version: 4 });
       expect(mockToastSuccess).toHaveBeenCalledWith('Meal completed!');
     });
@@ -397,7 +403,7 @@ describe('useMealPlanItemActions', () => {
       const cache = seedPlan([fullItem({ version: 3 })]);
       const { result } = renderActions([update.mock], cache);
 
-      await drained(() =>
+      await settledInAct(() =>
         result.current.toggleCompleted('mpi-1', {
           deductFromPantry: true,
           servings: 3,
@@ -425,7 +431,7 @@ describe('useMealPlanItemActions', () => {
       const cache = seedPlan([fullItem()]);
       const { result } = renderActions([update.mock], cache);
 
-      await drained(() =>
+      await settledInAct(() =>
         result.current.toggleCompleted('mpi-1', {
           deductFromPantry: true,
         }),
@@ -447,7 +453,7 @@ describe('useMealPlanItemActions', () => {
       ]);
       const { result } = renderActions([update.mock], cache);
 
-      await drained(() => result.current.toggleCompleted('mpi-1'));
+      await settledInAct(() => result.current.toggleCompleted('mpi-1'));
 
       expect(update.fired).toEqual([
         {
@@ -539,12 +545,22 @@ describe('useMealPlanItemActions', () => {
           operationMocks: [screenRead.mock, reRead.mock, update.mock],
           cache,
         });
-        await drainTimers();
-        expect(readItem(cache)?.version).toBe(3);
+        await cacheShows(
+          cache,
+          {
+            fragment: MealPlanItem_RowFragmentDoc,
+            fragmentName: 'mealPlanItem_row',
+            from: 'MealPlanItem:mpi-1',
+          },
+          () => readItem(cache)?.version,
+          version => version === 3,
+        );
         expect(reRead.fired).toHaveLength(0);
 
         let toggled: boolean | undefined;
-        toggled = await drained(() => result.current.toggleCompleted('mpi-1'));
+        toggled = await settledInAct(() =>
+          result.current.toggleCompleted('mpi-1'),
+        );
 
         expect(toggled).toBe(false);
         expect(update.fired).toEqual([
@@ -562,7 +578,17 @@ describe('useMealPlanItemActions', () => {
           t('errors.changedElsewhereLatestShown'),
         );
         expect(mockToastSuccess).not.toHaveBeenCalled();
-        await drainTimers();
+        // The conflict re-reads the plan, whose newer copy then shows.
+        await cacheShows(
+          cache,
+          {
+            fragment: MealPlanItem_RowFragmentDoc,
+            fragmentName: 'mealPlanItem_row',
+            from: 'MealPlanItem:mpi-1',
+          },
+          () => readItem(cache)?.version,
+          version => version === 4,
+        );
         expect(reRead.fired).toEqual([
           {
             id: PLAN_ID,
@@ -570,7 +596,6 @@ describe('useMealPlanItemActions', () => {
             ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
           },
         ]);
-        await drainTimers();
         expect(readItem(cache)).toMatchObject({
           isCompleted: false,
           completedAt: null,
@@ -598,11 +623,21 @@ describe('useMealPlanItemActions', () => {
         operationMocks: [get.mock, update.mock],
         cache,
       });
-      await drainTimers();
-      expect(readItem(cache)?.version).toBe(3);
+      await cacheShows(
+        cache,
+        {
+          fragment: MealPlanItem_RowFragmentDoc,
+          fragmentName: 'mealPlanItem_row',
+          from: 'MealPlanItem:mpi-1',
+        },
+        () => readItem(cache)?.version,
+        version => version === 3,
+      );
 
       let toggled: boolean | undefined;
-      toggled = await drained(() => result.current.toggleCompleted('mpi-1'));
+      toggled = await settledInAct(() =>
+        result.current.toggleCompleted('mpi-1'),
+      );
 
       expect(toggled).toBe(false);
       expect(readItem(cache)).toMatchObject({ isCompleted: false, version: 3 });
@@ -650,7 +685,7 @@ describe('useMealPlanItemActions', () => {
       );
       expect(MEAL_PLAN_ITEMS_FIELD).toBe('mealPlanItemsConnection');
 
-      await drained(async () => {
+      await settledInAct(async () => {
         del.release();
         await pending;
       });
@@ -672,7 +707,7 @@ describe('useMealPlanItemActions', () => {
       expect(planMeals(cache)).toEqual([['mpi-2', '2026-09-22']]);
 
       let removed: boolean | undefined;
-      await drained(async () => {
+      await settledInAct(async () => {
         del.release();
         removed = await pending;
       });
@@ -697,7 +732,7 @@ describe('useMealPlanItemActions', () => {
       const { result } = renderActions([del.mock], cache);
 
       let removed: boolean | undefined;
-      removed = await drained(() => result.current.deleteItem('mpi-1'));
+      removed = await settledInAct(() => result.current.deleteItem('mpi-1'));
 
       expect(removed).toBe(true);
       expect(mockToastError).not.toHaveBeenCalled();
@@ -718,7 +753,7 @@ describe('useMealPlanItemActions', () => {
       const { result } = renderActions([del.mock], cache);
 
       let removed: boolean | undefined;
-      removed = await drained(() => result.current.deleteItem('mpi-1'));
+      removed = await settledInAct(() => result.current.deleteItem('mpi-1'));
 
       expect(removed).toBe(false);
       expect(mockToastError).toHaveBeenCalledTimes(1);
