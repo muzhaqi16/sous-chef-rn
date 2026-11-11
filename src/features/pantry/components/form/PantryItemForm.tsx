@@ -39,11 +39,7 @@ import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
 import { editedAmount } from './editedAmount';
 import { usePantryUnitChange } from '#features/pantry/hooks/usePantryUnitChange';
 import { reportValidationErrors } from '#utils/validation/common';
-import {
-  TAB_FIELDS,
-  INVENTORY_ADVANCED_FIELDS,
-  editItemSchema,
-} from './pantryItemFormConfig';
+import { TAB_FIELDS, editItemSchema } from './pantryItemFormConfig';
 import {
   PAGES,
   PAGE_LABEL_KEYS,
@@ -427,19 +423,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     },
   ];
 
-  // Drives the red dot on PageIndicator, and auto-expands "More options" when
-  // an errored field lives inside it.
-  const fieldHasError = (name: keyof PantryItemFormData) => !!errors[name];
-  const tabHasError = (page: PageName) => {
-    const fields =
-      page === 'Inventory'
-        ? [...TAB_FIELDS.Inventory, ...INVENTORY_ADVANCED_FIELDS]
-        : TAB_FIELDS[page];
-    return fields.some(fieldHasError);
-  };
-  const inventoryAdvancedHasError =
-    INVENTORY_ADVANCED_FIELDS.some(fieldHasError);
-  const showTags = tagsExpanded || inventoryAdvancedHasError;
+  // Drives the red dot on PageIndicator.
+  const tabHasError = (page: PageName) =>
+    TAB_FIELDS[page].some(name => !!errors[name]);
   // `page` is the identifier, not the copy — resolve it to a label key.
   const indicatorPages = PAGES.map(page => ({
     label: t(PAGE_LABEL_KEYS[page]),
@@ -506,7 +492,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
             <CollapsibleSection
               title={t('labels.moreOptions')}
-              expanded={showTags}
+              expanded={tagsExpanded}
               onToggle={() => setTagsExpanded(prev => !prev)}
             >
               <View style={styles.advancedContent}>
