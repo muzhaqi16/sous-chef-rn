@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
@@ -228,6 +228,17 @@ export const useListSettings = (listId: string | undefined) => {
     syncListFormState(shoppingList, listId, setName, setIsDefault);
   }, [shoppingList, listId]);
 
+  // The list is gone for this person: deleted or left here, or every access
+  // path lost elsewhere. A delete or leave also loses access once it lands, so
+  // the screen is left once, whichever notices first.
+  const leftList = useRef(false);
+  const leaveGoneList = () => {
+    if (leftList.current) return;
+    leftList.current = true;
+    setSelectedShoppingListId(null);
+    goBack();
+  };
+
   // Leaving a home evicts only the Home, not a home-linked ShoppingList a
   // non-owner reached through it, so with every access path gone this pops back
   // and clears the selection rather than land on a list they cannot open.
@@ -239,10 +250,7 @@ export const useListSettings = (listId: string | undefined) => {
     !isHomeMember;
 
   useScreenFocusEffect(() => {
-    if (hasLostListAccess) {
-      setSelectedShoppingListId(null);
-      goBack();
-    }
+    if (hasLostListAccess) leaveGoneList();
   });
 
   // What Save would write differs from the list; a new list has nothing to compare.
@@ -325,11 +333,10 @@ export const useListSettings = (listId: string | undefined) => {
       return;
     }
 
-    // useShoppingListSelection then auto-selects the next list.
-    setSelectedShoppingListId(null);
-    // Unmounts this screen's query watcher, so a late subscription
-    // update cannot trigger a refetch of the deleted list.
-    goBack();
+    // useShoppingListSelection then auto-selects the next list; leaving
+    // unmounts this screen's query watcher, so a late subscription update
+    // cannot trigger a refetch of the deleted list.
+    leaveGoneList();
   };
 
   const handleDelete = () => {
@@ -496,10 +503,7 @@ export const useListSettings = (listId: string | undefined) => {
         }
 
         void leaveList(currentUserCollaborator.id, {
-          onSuccess: () => {
-            setSelectedShoppingListId(null);
-            goBack();
-          },
+          onSuccess: leaveGoneList,
           onError: () =>
             toastService.error(t('shoppingListScreens.failedToLeave')),
         });
