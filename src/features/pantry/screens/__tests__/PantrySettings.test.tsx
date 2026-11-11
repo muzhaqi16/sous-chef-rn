@@ -2,53 +2,44 @@
 
 import { todayKey } from '#/utils/dateUtils';
 import React from 'react';
-import type { BarAction } from '#components/molecules/BarActions';
-import { makeCache } from '#/apollo/cache';
-import type { InMemoryCache } from '@apollo/client';
+import { gql, type InMemoryCache } from '@apollo/client';
+import type { DocumentNode } from 'graphql';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import {
+  type MockDataFor,
   recordMock,
   renderWithApollo,
+  seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { drainTimers } from '#/test-utils/drainTimers';
+import { operationLog } from '#/test-utils/operationLog';
+import { makeCache } from '#/apollo/cache';
+import { isRecord } from '#/utils/isRecord';
+import { useStore } from '#store';
 import {
+  CreatePantryDocument,
   DeletePantryDocument,
   GetPantryDocument,
+  MarkPantryAsDefaultDocument,
+  UpdatePantryDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { removeOptimisticPantry } from '#features/pantry/cache/pantry';
+import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   pantryData,
   type PantryFixture,
 } from '../../../../../__tests__/helpers/fixtures/pantryFixtures';
 import { alertService } from '#/services/alertService';
+import { errorService } from '#/services/errorService';
+import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { Text as AppText } from '#components/atoms/Text';
 import { PantrySettings } from '../PantrySettings';
 
-// Its midnight timer re-arms itself, so a mounted watch never drains.
+// The day stays fixed: the hook's midnight timer re-arms itself.
 jest.mock('#hooks/app/useToday', () => ({
   useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
 }));
-
 jest.mock('#hooks/navigation/useAppNavigation');
-
-jest.mock('#store/useAppStore', () => {
-  const mockState = {
-    selectedHomeId: 'h1',
-    setSelectedPantryId: jest.fn(),
-  };
-  const fn = (selector: (state: typeof mockState) => unknown) =>
-    selector(mockState);
-  fn.getState = () => ({});
-  fn.setState = jest.fn();
-  fn.subscribe = jest.fn();
-  return {
-    useAppStore: fn,
-    useSelectedHomeId: jest.fn(() => mockState.selectedHomeId),
-    useSetSelectedPantryId: jest.fn(() => mockState.setSelectedPantryId),
-  };
-});
-
 jest.mock('#/services/errorService');
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
@@ -58,79 +49,85 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 }));
 jest.mock('#features/pantry/hooks/usePantryPermissions');
 
-// Spread the real module: the screen imports several of its writers, and a
-// trimmed factory fails at import rather than at the assertion.
-jest.mock('#features/pantry/cache/pantry', () => ({
-  ...jest.requireActual('#features/pantry/cache/pantry'),
-  removeOptimisticPantry: jest.fn(),
-}));
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
-jest.mock('#components/templates/Screen', () => ({
-  Screen: ({
-    header,
-    children,
-  }: {
-    header?: { title?: string; actions?: BarAction[] };
-    children: React.ReactNode;
-  }) => {
-    const { View, Text } = require('react-native');
-    const { BarActions } = require('#components/molecules/BarActions');
-    return (
-      <View>
-        <View testID="screen-header">
-          <Text>{header?.title}</Text>
-          <BarActions actions={header?.actions} />
-        </View>
-        {children}
-      </View>
-    );
-  },
-}));
-jest.mock('#components/molecules/Loading', () => ({
-  Loading: () => null,
-}));
-jest.mock('#components/atoms/InfoRow', () => ({
-  InfoRow: ({ label, value }: { label?: string; value?: string }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View>
-        <Text>{label}</Text>
-        <Text>{value}</Text>
-      </View>
-    );
-  },
-}));
-jest.mock('#components/molecules/BaseInput/BaseInput', () => ({
-  BaseInput: ({
-    label,
-    ...props
-  }: {
-    label?: string;
-    [key: string]: unknown;
-  }) => {
-    const { View, Text, TextInput } = require('react-native');
-    return (
-      <View>
-        {label ? <Text>{label}</Text> : null}
-        <TextInput {...props} />
-      </View>
-    );
-  },
-}));
-jest.mock('#/styles/commonStyles', () => ({
-  commonStyles: {
-    settingsSection: {},
-    settingsSectionTitle: {},
-    settingsInputGroup: {},
-    settingsLabel: {},
-    settingsRow: {},
-    settingsRowInfo: {},
-    settingsRowLabel: {},
-    settingsRowDescription: {},
-  },
-}));
+const HOME = gql`
+  fragment PantrySettingsTestHome on Home {
+    pantries {
+      id
+    }
+  }
+`;
 
-function cacheWithPantry(pantry: PantryFixture): InMemoryCache {
+const PANTRY = gql`
+  fragment PantrySettingsTestPantry on Pantry {
+    name
+    description
+    isDefault
+  }
+`;
+
+const ALL_PERMISSIONS = {
+  canAddItems: true,
+  canEditItems: true,
+  canRemoveItems: true,
+  canCreatePantry: true,
+  canDeletePantry: true,
+};
+
+const kitchen: PantryFixture = {
+  id: 'p1',
+  name: 'Kitchen Pantry',
+  description: 'Main pantry',
+  isDefault: false,
+  items: [{ id: 'i1' }, { id: 'i2' }],
+};
+
+const editing = { params: { pantryId: 'p1' } };
+const creating = { params: undefined };
+
+let log = operationLog();
+
+/** Waits for the operation's nth answer, then lets what it started render. */
+const answered = (document: DocumentNode, nth = 1) =>
+  act(async () => {
+    await log.answered(document, nth);
+  });
+
+function seedHome(cache: InMemoryCache, pantryIds: string[]) {
+  seedFragment(cache, {
+    fragment: HOME,
+    data: {
+      __typename: 'Home',
+      id: 'h1',
+      pantries: pantryIds.map(id => ({ __typename: 'Pantry', id })),
+    },
+  });
+}
+
+const homePantries = (cache: InMemoryCache) =>
+  cache
+    .readFragment<{ pantries: { id: string }[] }>({
+      id: 'Home:h1',
+      fragment: HOME,
+      optimistic: true,
+    })
+    ?.pantries.map(({ id }) => id);
+
+const pantryRow = (cache: InMemoryCache, id: string) =>
+  cache.readFragment<{
+    name: string;
+    description: string | null;
+    isDefault: boolean;
+  }>({ id: `Pantry:${id}`, fragment: PANTRY, optimistic: true });
+
+/** The edit screen over a seeded pantry, its read answered as the cache holds it. */
+async function renderEditing(
+  pantry: PantryFixture = kitchen,
+  answers: ReturnType<typeof recordMock>[] = [],
+) {
   const cache = makeCache();
   seedQuery(cache, {
     query: GetPantryDocument,
@@ -142,108 +139,87 @@ function cacheWithPantry(pantry: PantryFixture): InMemoryCache {
     },
     data: pantryData(pantry),
   });
+  seedHome(cache, [pantry.id]);
+  renderWithApollo(<PantrySettings route={editing} />, {
+    cache,
+    links: [log.link],
+    operationMocks: [
+      recordMock(GetPantryDocument, { data: pantryData(pantry) }).mock,
+      ...answers.map(answer => answer.mock),
+    ],
+  });
+  await answered(GetPantryDocument);
   return cache;
 }
 
-const editRoute = { params: { pantryId: 'p1' } };
-const createRoute = { params: undefined };
+/** The create screen, over a home that has no pantry yet. */
+function renderCreating(answers: ReturnType<typeof recordMock>[] = []) {
+  const cache = makeCache();
+  seedHome(cache, []);
+  renderWithApollo(<PantrySettings route={creating} />, {
+    cache,
+    links: [log.link],
+    operationMocks: answers.map(answer => answer.mock),
+  });
+  return cache;
+}
 
-const defaultPantry: PantryFixture = {
-  id: 'p1',
-  name: 'Kitchen Pantry',
-  description: 'Main pantry',
-  isDefault: true,
-  items: [{ id: 'i1' }, { id: 'i2' }],
-};
+/** Resolves with the next pantry the store selects. */
+const nextSelectedPantry = () =>
+  new Promise<string | null>(resolve => {
+    const unsubscribe = useStore.subscribe(
+      state => state.selectedPantryId,
+      id => {
+        unsubscribe();
+        resolve(id);
+      },
+    );
+  });
+
+/** The destructive button of the last alert. */
+const destructiveButton = () =>
+  jest
+    .mocked(alertService.alert)
+    .mock.calls.at(-1)?.[2]
+    ?.find(button => button.style === 'destructive');
 
 beforeEach(() => {
-  jest.useFakeTimers();
+  jest.clearAllMocks();
+  jest.mocked(usePantryPermissions).mockReturnValue(ALL_PERMISSIONS);
+  useStore.setState({ selectedHomeId: 'h1', selectedPantryId: 'p1' });
+  log = operationLog();
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+describe('editing a pantry', () => {
+  it('shows its settings, item count and danger zone', async () => {
+    await renderEditing();
 
-describe('PantrySettings', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('renders settings title when editing', () => {
-    renderWithApollo(<PantrySettings route={editRoute} />, {
-      cache: cacheWithPantry(defaultPantry),
-    });
     expect(screen.getByText('Pantry Settings')).toBeTruthy();
-  });
-
-  it('renders create title when creating', () => {
-    renderWithApollo(<PantrySettings route={createRoute} />, {
-      cache: makeCache(),
-    });
-    expect(screen.getByText('Create New Pantry')).toBeTruthy();
-  });
-
-  it('shows pantry name input', () => {
-    renderWithApollo(<PantrySettings route={editRoute} />, {
-      cache: cacheWithPantry(defaultPantry),
-    });
-    expect(screen.getByText('Pantry Name')).toBeTruthy();
-  });
-
-  it('shows default pantry toggle', () => {
-    renderWithApollo(<PantrySettings route={editRoute} />, {
-      cache: cacheWithPantry(defaultPantry),
-    });
-    expect(screen.getByText('Default Pantry')).toBeTruthy();
-  });
-
-  it('shows information section when editing', () => {
-    renderWithApollo(<PantrySettings route={editRoute} />, {
-      cache: cacheWithPantry(defaultPantry),
-    });
-    expect(screen.getByText('Information')).toBeTruthy();
-    expect(screen.getByText('Items in pantry')).toBeTruthy();
-  });
-
-  it('shows danger zone when editing', () => {
-    renderWithApollo(<PantrySettings route={editRoute} />, {
-      cache: cacheWithPantry(defaultPantry),
-    });
+    expect(screen.getByDisplayValue('Kitchen Pantry')).toBeTruthy();
+    expect(screen.getByDisplayValue('Main pantry')).toBeTruthy();
+    expect(screen.getByText('Items in pantry:')).toBeTruthy();
+    expect(screen.getByText('2 items')).toBeTruthy();
     expect(screen.getByText('Danger Zone')).toBeTruthy();
-    expect(screen.getByText('Delete Pantry')).toBeTruthy();
-  });
-
-  it('hides danger zone when creating', () => {
-    renderWithApollo(<PantrySettings route={createRoute} />, {
-      cache: makeCache(),
-    });
-    expect(screen.queryByText('Danger Zone')).toBeNull();
-    expect(screen.queryByText('Delete Pantry')).toBeNull();
-  });
-
-  it('shows save button text correctly for editing', () => {
-    renderWithApollo(<PantrySettings route={editRoute} />, {
-      cache: cacheWithPantry(defaultPantry),
-    });
     expect(screen.getByText('Save')).toBeTruthy();
+  });
+
+  it('hides the danger zone from someone who cannot delete it', async () => {
+    jest
+      .mocked(usePantryPermissions)
+      .mockReturnValue({ ...ALL_PERMISSIONS, canDeletePantry: false });
+
+    await renderEditing();
+
+    expect(screen.queryByText('Danger Zone')).toBeNull();
   });
 
   // The accent says there is something to save; with nothing, Save still saves.
   it('reads Save in plain text until the name or description changes', async () => {
-    renderWithApollo(<PantrySettings route={editRoute} />, {
-      cache: cacheWithPantry(defaultPantry),
-      // The read answers as the cache holds it, so the pantry stays to compare with.
-      operationMocks: [
-        recordMock(GetPantryDocument, { data: pantryData(defaultPantry) }).mock,
-      ],
-    });
+    await renderEditing();
     const saveTone = () =>
       screen
         .UNSAFE_getAllByType(AppText)
         .find(node => node.props.children === 'Save')?.props.tone;
-
-    await drainTimers();
-    expect(screen.getByDisplayValue('Kitchen Pantry')).toBeTruthy();
     expect(saveTone()).toBe('primary');
 
     fireEvent.changeText(
@@ -254,67 +230,87 @@ describe('PantrySettings', () => {
     expect(saveTone()).toBe('accent');
   });
 
-  it('shows Create button text when creating new pantry', () => {
-    renderWithApollo(<PantrySettings route={createRoute} />, {
-      cache: makeCache(),
+  it('shows the name trimmed while it saves', async () => {
+    const update = recordMock(UpdatePantryDocument, { held: true });
+    const cache = await renderEditing(kitchen, [update]);
+
+    fireEvent.changeText(
+      screen.getByDisplayValue('Kitchen Pantry'),
+      '  Garage  ',
+    );
+    fireEvent.press(screen.getByText('Save'));
+    await log.requested(UpdatePantryDocument);
+
+    expect(pantryRow(cache, 'p1')).toMatchObject({
+      name: 'Garage',
+      description: 'Main pantry',
     });
-    expect(screen.getByText('Create')).toBeTruthy();
   });
 
-  it('hides information section when creating', () => {
-    renderWithApollo(<PantrySettings route={createRoute} />, {
-      cache: makeCache(),
-    });
-    expect(screen.queryByText('Information')).toBeNull();
-  });
-
-  it('calls handleSave and shows error when name is empty', async () => {
-    renderWithApollo(<PantrySettings route={editRoute} />, {
-      cache: cacheWithPantry({
-        id: 'p1',
-        name: '',
-        description: '',
-        isDefault: false,
-        items: [],
-      }),
-    });
+  it('refuses an empty name', async () => {
+    await renderEditing({ ...kitchen, name: '' });
 
     fireEvent.press(screen.getByText('Save'));
+
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       'Pantry name cannot be empty',
     );
   });
 
-  it('asks before deleting, naming the pantry', async () => {
-    renderWithApollo(<PantrySettings route={editRoute} />, {
-      cache: cacheWithPantry(defaultPantry),
+  it('puts the Default switch back when the server refuses it', async () => {
+    const markDefault = recordMock(MarkPantryAsDefaultDocument, {
+      held: true,
+      data: {
+        markPantryAsDefault: {
+          __typename: 'ForbiddenError',
+          code: ErrorCode.Forbidden,
+          message: 'Not yours',
+        },
+      },
     });
+    await renderEditing(kitchen, [markDefault]);
+    const isOn = () => screen.getByLabelText('Default Pantry').props.value;
 
-    fireEvent.press(screen.getByText('Delete Pantry'));
-    expect(alertService.alert).toHaveBeenCalledWith(
-      `Delete ${defaultPantry.name}?`,
-      expect.stringContaining('Are you sure'),
-      expect.any(Array),
-    );
+    fireEvent(screen.getByLabelText('Default Pantry'), 'valueChange', true);
+    await log.requested(MarkPantryAsDefaultDocument);
+    expect(isOn()).toBe(true);
+
+    markDefault.release();
+    await answered(MarkPantryAsDefaultDocument);
+    expect(isOn()).toBe(false);
   });
 
-  describe('deleting is local-first', () => {
-    /** Press Delete Pantry, then the destructive button in its confirmation. */
-    async function confirmDelete() {
-      fireEvent.press(screen.getByText('Delete Pantry'));
-      const buttons = (alertService.alert as jest.Mock).mock.calls.at(
-        -1,
-      )?.[2] as { style?: string; onPress?: () => void }[] | undefined;
-      const destructive = buttons?.find(b => b.style === 'destructive');
-      await act(async () => {
-        destructive?.onPress?.();
-      });
-    }
+  it('reports a pantry that fails to load', async () => {
+    renderWithApollo(<PantrySettings route={editing} />, {
+      cache: makeCache(),
+      links: [log.link],
+      operationMocks: [
+        recordMock(GetPantryDocument, { error: new Error('offline') }).mock,
+      ],
+    });
+    await answered(GetPantryDocument);
 
-    it('removes the pantry from the home before the mutation resolves', async () => {
-      // Offline no payload arrives, so the layer is what takes it off the home.
+    expect(errorService.reportError).toHaveBeenCalled();
+    expect(alertService.alert).toHaveBeenCalled();
+  });
+
+  describe('deleting it', () => {
+    it('asks first, naming the pantry', async () => {
+      await renderEditing();
+
+      fireEvent.press(screen.getByText('Delete Pantry'));
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Delete Kitchen Pantry?',
+        expect.stringContaining('Are you sure'),
+        expect.any(Array),
+      );
+    });
+
+    it('takes it off the home at once, then clears the selection and goes back', async () => {
       const remove = recordMock(DeletePantryDocument, {
+        held: true,
         data: {
           deletePantry: {
             __typename: 'DeletePantryPayload',
@@ -322,79 +318,89 @@ describe('PantrySettings', () => {
           },
         },
       });
+      const cache = await renderEditing(kitchen, [remove]);
 
-      renderWithApollo(<PantrySettings route={editRoute} />, {
-        cache: cacheWithPantry(defaultPantry),
-        operationMocks: [remove.mock],
+      fireEvent.press(screen.getByText('Delete Pantry'));
+      act(() => {
+        destructiveButton()?.onPress?.();
       });
+      await log.requested(DeletePantryDocument);
 
-      await confirmDelete();
-
-      expect(removeOptimisticPantry).toHaveBeenCalledWith(
-        expect.anything(),
-        'h1',
+      expect(subscriptionService.registerParentDeletion).toHaveBeenCalledWith(
         'p1',
-        { evictEntity: false },
       );
+      expect(homePantries(cache)).toEqual([]);
+
+      remove.release();
+      await answered(DeletePantryDocument);
+
+      expect(useStore.getState().selectedPantryId).toBeNull();
+      expect(mockNav.goBack).toHaveBeenCalled();
     });
   });
+});
 
-  it('toggles default pantry switch without mutation for new pantry', () => {
-    renderWithApollo(<PantrySettings route={createRoute} />, {
-      cache: makeCache(),
-    });
-    expect(screen.getByText('Default Pantry')).toBeTruthy();
+describe('creating a pantry', () => {
+  it('shows a create form without information or danger zone', () => {
+    renderCreating();
+
+    expect(screen.getByText('Create New Pantry')).toBeTruthy();
+    expect(screen.getByText('Create')).toBeTruthy();
+    expect(screen.queryByText('Information')).toBeNull();
+    expect(screen.queryByText('Danger Zone')).toBeNull();
   });
 
-  it('syncs form state from loaded pantry data', () => {
-    renderWithApollo(<PantrySettings route={editRoute} />, {
-      cache: cacheWithPantry({
-        id: 'p1',
-        name: 'Kitchen Pantry',
-        description: 'Main pantry',
-        isDefault: true,
-        items: [{ id: 'i1' }, { id: 'i2' }],
+  it('adds it to the home as typed, selects it and goes back', async () => {
+    const create = recordMock(CreatePantryDocument, {
+      held: true,
+      dataFor: (vars): MockDataFor<typeof CreatePantryDocument> => ({
+        createPantry: {
+          __typename: 'CreatePantryPayload',
+          pantry: {
+            __typename: 'Pantry',
+            id: isRecord(vars.input) ? String(vars.input.id) : '',
+          },
+        },
       }),
     });
-    expect(screen.getByText('2 items')).toBeTruthy();
-  });
+    const cache = renderCreating([create]);
 
-  it('shows item count as 0 when pantry has no items', () => {
-    renderWithApollo(<PantrySettings route={editRoute} />, {
-      cache: cacheWithPantry({
-        id: 'p1',
-        name: 'Empty Pantry',
-        description: '',
-        isDefault: false,
-        items: [],
-      }),
-    });
-    expect(screen.getByText('0 items')).toBeTruthy();
-  });
-
-  it('shows no home selected error when saving without selectedHomeId', () => {
-    const storeModule = require('#store/useAppStore');
-    const noHomeState = {
-      selectedHomeId: null,
-      setSelectedPantryId: jest.fn(),
-    };
-    jest
-      .spyOn(storeModule, 'useAppStore')
-      .mockImplementation((selector: unknown) =>
-        typeof selector === 'function' ? selector(noHomeState) : undefined,
-      );
-    jest.spyOn(storeModule, 'useSelectedHomeId').mockReturnValue(null);
-
-    renderWithApollo(<PantrySettings route={createRoute} />, {
-      cache: makeCache(),
-    });
-
-    const nameInput = screen.getByPlaceholderText(
-      'Enter pantry name (e.g., Kitchen Pantry)',
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Enter pantry name (e.g., Kitchen Pantry)'),
+      '  Garage  ',
     );
-    fireEvent.changeText(nameInput, 'New Pantry');
-
+    fireEvent(screen.getByLabelText('Default Pantry'), 'valueChange', true);
     fireEvent.press(screen.getByText('Create'));
+    await log.requested(CreatePantryDocument);
+
+    const [created] = homePantries(cache) ?? [];
+    expect(created).toBeDefined();
+    expect(pantryRow(cache, created ?? '')).toMatchObject({
+      name: 'Garage',
+      description: 'User created pantry',
+      isDefault: true,
+    });
+
+    const selected = nextSelectedPantry();
+    create.release();
+    await act(async () => {
+      await selected;
+    });
+
+    expect(await selected).toBe(created);
+    expect(mockNav.goBack).toHaveBeenCalled();
+  });
+
+  it('refuses with no home selected', () => {
+    useStore.setState({ selectedHomeId: null });
+    renderCreating();
+
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Enter pantry name (e.g., Kitchen Pantry)'),
+      'Garage',
+    );
+    fireEvent.press(screen.getByText('Create'));
+
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       'No home selected',
