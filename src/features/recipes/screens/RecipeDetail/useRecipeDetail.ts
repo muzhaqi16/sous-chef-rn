@@ -27,13 +27,21 @@ const MIN_REFRESH_MS = 500;
 const hintKey = (hint: CatalogRecipeHint): string =>
   catalogKey({ provider: hint.provider, providerRecipeId: hint.externalId });
 
-/** The backend id behind a catalog hint, opened once per recipe. */
-function useOpenedCatalogRecipe(hint: CatalogRecipeHint | undefined) {
+const failureOf = (
+  hint: CatalogRecipeHint,
+  result: OpenedCatalogRecipe,
+): { key: string; failure: string } | null =>
+  result.opened ? null : { key: hintKey(hint), failure: result.failure };
+
+/**
+ * Opens a catalog hint, once per recipe. An open records the recipe's id in
+ * the opened-recipes store, which the screen reads, so only a failure is kept.
+ */
+function useCatalogOpen(hint: CatalogRecipeHint | undefined) {
   const { openCatalogRecipe } = useOpenCatalogRecipe();
-  const [opened, setOpened] = useState<{
-    key: string;
-    result: OpenedCatalogRecipe;
-  } | null>(null);
+  const [failed, setFailed] = useState<{ key: string; failure: string } | null>(
+    null,
+  );
 
   // Through a ref, so the effect keys on the recipe alone and cannot re-fire
   // the mutation on a render that only rebuilt the function.
@@ -46,29 +54,22 @@ function useOpenedCatalogRecipe(hint: CatalogRecipeHint | undefined) {
     if (!hint) return;
     let current = true;
     void openRef.current(hint).then(result => {
-      if (current) setOpened({ key: hintKey(hint), result });
+      if (current) setFailed(failureOf(hint, result));
     });
     return () => {
       current = false;
     };
   }, [hint]);
 
-  // A pull asks again. A retry that fails keeps a recipe already opened on
-  // screen rather than replacing it with the failure.
+  // A pull asks again.
   const reopen = async () => {
     if (!hint) return;
-    const result = await openRef.current(hint);
-    const key = hintKey(hint);
-    setOpened(previous =>
-      !result.opened && previous?.key === key && previous.result.opened
-        ? previous
-        : { key, result },
-    );
+    setFailed(failureOf(hint, await openRef.current(hint)));
   };
 
   return {
-    result:
-      opened && hint && opened.key === hintKey(hint) ? opened.result : null,
+    failure:
+      failed && hint && failed.key === hintKey(hint) ? failed.failure : null,
     reopen,
   };
 }
@@ -86,18 +87,17 @@ export function useRecipeDetail() {
   const { goBack } = useNavigationIntents();
 
   const catalogHint = routeRecipeId ? undefined : catalog;
-  const catalogOpen = useOpenedCatalogRecipe(catalogHint);
-  const opened = catalogOpen.result;
-  const openedBefore = useOpenedRecipeId(catalogHint);
-  const recipeId =
-    routeRecipeId ?? (opened?.opened ? opened.recipeId : openedBefore);
+  const catalogOpen = useCatalogOpen(catalogHint);
+  const openedRecipeId = useOpenedRecipeId(catalogHint);
+  const recipeId = routeRecipeId ?? openedRecipeId;
 
   const cookingActions = useRecipeCookingActions({ recipeId });
 
   const data = useRecipeData({
     recipeId,
     hint: catalog ?? row,
-    openFailure: !recipeId && opened && !opened.opened ? opened.failure : null,
+    // Once a recipe is known, a failed open (a pull's included) leaves it shown.
+    openFailure: recipeId ? null : catalogOpen.failure,
   });
 
   const recheckTimers = useRef<ReturnType<typeof setTimeout>[]>([]);

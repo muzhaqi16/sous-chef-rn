@@ -1,1080 +1,958 @@
-'use no memo';
-
 import React from 'react';
-import { t } from '#/i18n';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { ModerationContentType } from '#/graphql/generated/schemaTypes';
+import { RefreshControl } from 'react-native';
+import {
+  act,
+  fireEvent,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
+import {
+  inputOf,
+  recordMock,
+  renderWithApollo,
+  type MockDataFor,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
+import { homesWithRole } from '#/test-utils/fixtures/homeFixtures';
+import {
+  recipeIngredientRead,
+  recipeRead,
+} from '#/test-utils/fixtures/recipeFixtures';
+import {
+  listsRead,
+  ownShoppingList,
+} from '#/test-utils/fixtures/shoppingListFixtures';
 import { useStore } from '#store';
-import { RecipeDetail } from '../index';
-import { recipesTestIDs } from '#features/recipes/testIDs';
-import { kitTestIDs } from '#components/testIDs';
-import type { ReportContentSheet } from '#features/profile/ui/ReportContentSheet';
+import { resetSessionScopedStores } from '#store/sessionScopedStores';
+import { recordOpenedCatalogRecipe } from '#features/recipes/store/openedCatalogRecipes';
+import { t } from '#/i18n';
+import { alertService } from '#/services/alertService';
+import {
+  Diet,
+  DietaryAlertState,
+  ExternalSource,
+  ExternalSyncStatus,
+  MembershipRole,
+  RecipeStatus,
+} from '#/graphql/generated/schemaTypes';
+import { hasTipFact } from '#hooks/settings/useFeatureHint';
 import { formatMonthDayYear } from '#/utils/formatters/date';
-
-/** A header action, in the bar or in the "more" menu it overflowed into. */
-const headerAction = (testID: string) => {
-  const more = screen.queryByTestId(kitTestIDs.headerMoreButton);
-  if (more) fireEvent.press(more);
-  return screen.queryByTestId(testID);
-};
-
-/** Presses an overflowed action: its row runs once the menu has closed. */
-const pressMenuAction = (testID: string) => {
-  fireEvent.press(screen.getByTestId(kitTestIDs.headerMoreButton));
-  fireEvent.press(screen.getByTestId(testID));
-  const { onDismiss } = screen.UNSAFE_getByProps({ detached: true }).props as {
-    onDismiss: () => void;
-  };
-  act(() => onDismiss());
-};
-
-// Capture's review banner has its own suite; this one renders without Apollo.
-jest.mock('#hooks/settings/useFeatureFlag', () => ({
-  useFeatureFlag: () => false,
-}));
-
-jest.mock('@react-navigation/native', () => ({
-  ...jest.requireActual<object>('@react-navigation/native'),
-  useNavigation: jest.fn(() => ({
-    navigate: jest.fn(),
-    goBack: jest.fn(),
-    dispatch: jest.fn(),
-  })),
-  useRoute: jest.fn(() => ({
-    params: {},
-  })),
-}));
+import { GetHomesDocument } from '#operations/home/home.generated';
+import { GetDietaryProfileDocument } from '#operations/user/user.generated';
+import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
+import {
+  AddRecipeToFavoritesDocument,
+  ForkRecipeDocument,
+  OpenCatalogRecipeDocument,
+  GetRecipeDocument,
+  MarkRecipeAsCookedDocument,
+  GetRecipeReviewsDocument,
+  SavedRecipeFoldersDocument,
+  UpdateFavoriteRecipeDocument,
+  UpdateRecipeDocument,
+} from '#features/recipes/graphql/recipe.generated';
+import { SaveRecipeSheet } from '#features/recipes/components/modals/SaveRecipeSheet/SaveRecipeSheet';
+import { ManageRecipeSheet } from '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet';
+import { MarkCookedModal } from '#features/recipes/ui/MarkCookedModal';
+import { RecipeDietaryAlertsDocument } from '#features/recipes/hooks/useRecipeDietaryAlerts.generated';
+import { RecipeSubstitutesDocument } from '#features/recipes/hooks/useRecipeSubstitutes.generated';
+import { MySavedRecipesDocument } from '#features/recipes/screens/useSavedRecipes.generated';
+import { recipesTestIDs } from '#features/recipes/testIDs';
+import { RecipeMissingIngredientsDocument } from '#features/recipes/hooks/useRecipeMissingIngredients.generated';
+import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
+import { isRecord } from '#/utils/isRecord';
+import { kitTestIDs } from '#components/testIDs';
+import { RecipeDetail } from '../index';
 
 jest.mock('#hooks/navigation/useAppNavigation');
-
-jest.mock('#hooks/performance/useScreenTransition');
-
-jest.mock('#features/recipes/screens/RecipeDetail/useRecipeDetail', () => ({
-  useRecipeDetail: jest.fn(),
-}));
-
-jest.mock('#features/recipes/hooks/useRecipeFolders', () => ({
-  useRecipeFolders: jest.fn(() => ({ folders: [] })),
-}));
-
-jest.mock('#features/recipes/screens/useRecipeTags', () => ({
-  useRecipeTags: jest.fn(() => ({ tags: [] })),
-}));
-
-jest.mock('#features/recipes/hooks/useRecipeReviews', () => ({
-  useRecipeReviews: () => ({ state: {}, actions: {} }),
-}));
-
-const mockHousehold: {
-  check: string;
-  flagged: boolean;
-  rows: Record<string, unknown[]>;
-} = { check: 'none', flagged: false, rows: {} };
-jest.mock('#features/recipes/hooks/useRecipeDietaryAlerts', () => ({
-  useRecipeDietaryAlerts: () => ({
-    check: mockHousehold.check,
-    flagged: mockHousehold.flagged,
-    alertsFor: (id: string) => mockHousehold.rows[id] ?? [],
-  }),
-}));
-
-// The swaps' own wording is pinned in their hook and sheet tests; here, which
-// rows offer them.
-const mockSubstitutes: Record<string, { id: string }[]> = {};
-const mockSubstitutesWanted: boolean[] = [];
-jest.mock('#features/recipes/hooks/useRecipeSubstitutes', () => ({
-  useRecipeSubstitutes: (_recipeId: string, wanted: boolean) => {
-    mockSubstitutesWanted.push(wanted);
-    return { substitutesFor: (id: string) => mockSubstitutes[id] ?? [] };
-  },
-}));
-jest.mock(
-  '#features/recipes/components/recipeDetail/IngredientAlertsSheet',
-  () => {
-    const { Pressable, Text } = require('react-native');
-    return {
-      IngredientAlertsSheet: ({
-        visible,
-        ingredientName,
-        alerts,
-        options,
-        onAdd,
-      }: {
-        visible: boolean;
-        ingredientName: string;
-        alerts: unknown[];
-        options: unknown[];
-        onAdd: () => void;
-      }) =>
-        visible ? (
-          <Pressable accessibilityLabel="sheet add" onPress={onAdd}>
-            <Text>{`${ingredientName}: ${alerts.length} alerts, ${options.length} swaps`}</Text>
-          </Pressable>
-        ) : null,
-    };
-  },
-);
-
-jest.mock('#features/recipes/hooks/useForkRecipe', () => ({
-  useForkRecipe: jest.fn(() => ({ forkRecipe: jest.fn(), forking: false })),
-}));
-
-jest.mock('#features/recipes/hooks/usePublishRecipe', () => ({
-  usePublishRecipe: jest.fn(() => ({
-    setSubmitted: jest.fn(),
-    publishing: false,
-  })),
-}));
-
-jest.mock('#components/providers/ScreenErrorBoundary', () => ({
-  RecipeDetailErrorBoundary: ({ children }: { children: React.ReactNode }) =>
-    children,
-}));
-
-jest.mock('#components/atoms/SousChefLoader', () => ({
-  SousChefLoader: () => 'SousChefLoader',
-}));
-
-jest.mock('#features/recipes/components/FolderPicker', () => ({
-  FolderPicker: () => null,
-}));
-
-// The picker pulls in gorhom's scrollable creator through the sheet shell,
-// which this suite's mock set does not stand up.
-jest.mock('#features/shoppingList/ui/ShoppingListPickerSheet', () => ({
-  ShoppingListPickerSheet: () => null,
-}));
-
-let mockCookDialog: { defaultServings?: number } = {};
-jest.mock('#features/recipes/ui/MarkCookedModal', () => ({
-  MarkCookedModal: (props: { defaultServings: number }) => {
-    mockCookDialog = props;
-    return null;
-  },
-}));
-
-let mockCooksFor: number | null = null;
-jest.mock('#features/profile/hooks/useCooksFor', () => ({
-  useCooksFor: () => mockCooksFor,
-}));
-
-jest.mock(
-  '#features/recipes/components/modals/IngredientMatchingSheet',
-  () => ({
-    IngredientMatchingSheet: () => null,
-  }),
-);
-
-jest.mock(
-  '#features/recipes/components/modals/SaveRecipeSheet/SaveRecipeSheet',
-  () => ({
-    SaveRecipeSheet: () => null,
-  }),
-);
-
-jest.mock(
-  '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet',
-  () => ({
-    ManageRecipeSheet: () => null,
-  }),
-);
-
-jest.mock(
-  '#features/mealPlan/components/AddToMealPlanSheet/AddToMealPlanSheet',
-  () => ({
-    AddToMealPlanSheet: () => null,
-  }),
-);
-
-jest.mock('#features/recipes/components/ReviewSection', () => ({
-  ReviewSection: () => null,
-}));
-
-// Stands in for the sheet, showing what the screen opened it with.
-jest.mock('#features/profile/ui/ReportContentSheet', () => {
-  const { Text } = require('#components/atoms/Text');
-  const Probe: typeof ReportContentSheet = ({ visible, target }) =>
-    visible ? (
-      <Text testID="report-sheet">{JSON.stringify(target)}</Text>
-    ) : null;
-  return { ReportContentSheet: Probe };
+// The route is the boundary: the screen reads which recipe from it.
+const mockRoute: { params: Record<string, unknown> } = { params: {} };
+jest.mock('@react-navigation/native', () => {
+  const { useEffect: useMountEffect } = jest.requireActual('react');
+  return {
+    ...jest.requireActual('@react-navigation/native'),
+    useFocusEffect: (effect: () => undefined | (() => void)) =>
+      useMountEffect(effect, [effect]),
+    useIsFocused: () => true,
+    useRoute: () => mockRoute,
+  };
 });
 
-jest.mock('react-native-turbo-image', () => 'TurboImage');
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
-// The screen reads its params through `useRecipeDetail`, which is mocked here.
-const route = { params: {} };
+const ME = 'user-1';
 
-// The offline predicate `useOfflineAwareError` consults.
-const mockApiUnavailable = jest.fn(() => false);
-jest.mock('#hooks/app/useIsApiUnavailable', () => ({
-  useIsApiUnavailable: () => mockApiUnavailable(),
-}));
+let log = operationLog();
 
-/** Renders the screen over a `useRecipeDetail` holding no recipe and no error, but for `overrides`. */
-function renderDetail(overrides: Record<string, unknown> = {}) {
-  const { useRecipeDetail } = jest.requireMock<{ useRecipeDetail: jest.Mock }>(
-    '#features/recipes/screens/RecipeDetail/useRecipeDetail',
-  );
-  useRecipeDetail.mockReturnValue({
-    goBack: jest.fn(),
-    recipeId: null,
-    catalogExternalId: undefined,
-    loading: false,
-    error: null,
-    displayData: null,
-    backendRecipe: null,
-    saving: false,
-    isSaved: false,
-    handleSaveRecipe: jest.fn(),
-    shoppingLists: [],
-    addingToList: false,
-    listedIngredients: new Set(),
-    handleAddSingleIngredient: jest.fn(),
-    handleAddAllIngredientsToList: jest.fn(),
-    handleAddAllIngredients: jest.fn(),
-    handleListSelected: jest.fn(),
-    listPickerVisible: false,
-    handleSheetDismiss: jest.fn(),
-    cookedModalVisible: false,
-    setCookedModalVisible: jest.fn(),
-    markingAsCooked: false,
-    handleMarkAsCooked: jest.fn(),
-    handleSkipReview: jest.fn(),
-    ingredientMatching: {
-      isSheetVisible: false,
-      editableMatches: [],
-      matchSummary: null,
-      updateMatch: jest.fn(),
-      confirmConsumption: jest.fn(),
-      confirmLoading: false,
-      hasPantry: false,
-      closeSheet: jest.fn(),
-    },
-    showFolderPicker: false,
-    setShowFolderPicker: jest.fn(),
-    updatingFolderTags: false,
-    handleUpdateFolder: jest.fn(),
-    handleUpdateTags: jest.fn(),
-    handleUpdateNotes: jest.fn(),
-    handleUpdateRating: jest.fn(),
-    savedFolder: null,
-    savedTags: [],
-    savedNotes: null,
-    savedRating: null,
-    cookedCount: 0,
-    handleUnfavoriteRecipe: jest.fn(),
-    ...overrides,
+interface Visit {
+  recipe?: ReturnType<typeof recipeRead> | null;
+  /** The recipe cannot be read. */
+  readFails?: boolean;
+  answers?: ReturnType<typeof recordMock>[];
+  /** Answers to the recipe's later reads; the first is answered once. */
+  rereads?: ReturnType<typeof recordMock>[];
+  /** How the screen was reached; recipe-1 by its id unless stated. */
+  params?: Record<string, unknown>;
+  /** Whether to wait for the recipe's read. */
+  awaitRead?: boolean;
+}
+
+/** The detail screen opened on recipe-1, its reads answered. */
+async function openRecipe({
+  recipe = recipeRead(),
+  readFails = false,
+  answers = [],
+  rereads = [],
+  params = { recipeId: 'recipe-1' },
+  awaitRead = true,
+}: Visit = {}) {
+  mockRoute.params = params;
+  const cache = makeCache();
+  seedQuery(cache, {
+    query: GetHomesDocument,
+    data: homesWithRole(
+      [
+        {
+          id: 'h1',
+          name: 'Home',
+          pantries: [{ id: 'p1', name: 'Kitchen', isDefault: true }],
+        },
+      ],
+      MembershipRole.Owner,
+    ),
   });
-  return render(<RecipeDetail route={route} />);
+  const read = readFails
+    ? recordMock(GetRecipeDocument, {
+        error: new Error('Network request failed'),
+        maxUsageCount: 1,
+      })
+    : recordMock(GetRecipeDocument, {
+        data: { recipe },
+        maxUsageCount: rereads.length > 0 ? 1 : 10,
+      });
+  const view = renderWithApollo(
+    <RecipeDetail route={{ params: mockRoute.params }} />,
+    {
+      cache,
+      links: [log.link],
+      operationMocks: [
+        ...answers.map(answer => answer.mock),
+        read.mock,
+        ...rereads.map(answer => answer.mock),
+        recordMock(GetRecipeReviewsDocument, { held: true }).mock,
+        recordMock(RecipeDietaryAlertsDocument, { held: true }).mock,
+        recordMock(RecipeSubstitutesDocument, { held: true }).mock,
+        recordMock(SavedRecipeFoldersDocument, { held: true }).mock,
+        recordMock(RecipeMissingIngredientsDocument, { held: true }).mock,
+        recordMock(MySavedRecipesDocument, { held: true }).mock,
+        recordMock(GetDietaryProfileDocument, { held: true }).mock,
+        recordMock(MyFeatureFlagsDocument, { data: { myFeatureFlags: [] } })
+          .mock,
+        listsRead([ownShoppingList('list-1', 'Groceries')]).mock,
+      ],
+    },
+  );
+  if (awaitRead) await log.landed(GetRecipeDocument);
+  return { ...view, cache, read };
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockApiUnavailable.mockReturnValue(false);
-});
-
-describe('RecipeDetail', () => {
-  it('renders error state when error exists', () => {
-    const tree = renderDetail({ error: 'Recipe not found' });
-    expect(tree.getByText('Recipe not found')).toBeTruthy();
-  });
-
-  // A recipe never opened before has nothing cached to show offline; that is
-  // not a failure, and the screen says so rather than "Couldn't load".
-  it('shows the offline state for a recipe it has not downloaded', () => {
-    mockApiUnavailable.mockReturnValue(true);
-    const tree = renderDetail({
-      recipeId: 'r-1',
-      error: "Couldn't load this recipe",
-    });
-
-    expect(tree.getByTestId('state-offline')).toBeTruthy();
-    expect(tree.queryByText("Couldn't load this recipe")).toBeNull();
-  });
-
-  it('renders loading state when loading', () => {
-    const tree = renderDetail({
-      loading: true,
-    });
-    // SousChefLoader is rendered during loading
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it("renders recipe content, with its provider's notice", () => {
-    const tree = renderDetail({
-      displayData: {
-        dataAttributions: [
-          {
-            source: 'SPOONACULAR',
-            notice: 'Recipe data from Spoonacular.',
-            licenseUrl: null,
-            sourceUrl: 'https://spoonacular.com/recipes/carbonara-1',
-          },
-        ],
-        details: 'complete',
-        title: 'Spaghetti Carbonara',
-        image: 'https://example.com/image.jpg',
-        servings: 4,
-        readyInMinutes: 25,
-        summary: 'A classic Italian dish',
-        ingredients: [
-          { id: 'ing-1', name: 'Pasta', amount: 200, measures: {} },
-        ],
-        instructions: [],
-        vegetarian: false,
-        vegan: false,
-        glutenFree: false,
-        dairyFree: false,
-      },
-    });
-    expect(tree.getAllByText('Spaghetti Carbonara')[0]).toBeTruthy();
-    expect(tree.getByText('A classic Italian dish')).toBeTruthy();
-    expect(tree.getByText('Recipe data from Spoonacular.')).toBeTruthy();
-  });
-
-  it('keeps a cached recipe on screen when the refresh fails', () => {
-    const tree = renderDetail({
-      // Offline, a cached recipe's refresh fails. Checking `error` before
-      // `displayData` blanked the screen and called it "recipe not found".
-      error: 'Network request failed',
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Spaghetti Carbonara',
-        image: 'https://example.com/image.jpg',
-        servings: 4,
-        readyInMinutes: 25,
-        summary: 'A classic Italian dish',
-        ingredients: [
-          { id: 'ing-1', name: 'Pasta', amount: 200, measures: {} },
-        ],
-        instructions: [],
-        vegetarian: false,
-        vegan: false,
-        glutenFree: false,
-        dairyFree: false,
-      },
-    });
-    expect(tree.getAllByText('Spaghetti Carbonara')[0]).toBeTruthy();
-    expect(tree.getByText('A classic Italian dish')).toBeTruthy();
-  });
-
-  it('renders wrapped in error boundary', () => {
-    const tree = renderDetail();
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  // A screen reader spells an emoji out by name, so the metadata carries none.
-  it('shows servings, time and health score with no glyph in the copy', () => {
-    const tree = renderDetail({
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Quick Soup',
-        servings: 6,
-        readyInMinutes: 15,
-        healthScore: 72.4,
-        ingredients: [],
-        instructions: [],
-      },
-    });
-    expect(tree.getByText('6 servings')).toBeTruthy();
-    expect(tree.getByText('15 min')).toBeTruthy();
-    expect(tree.getByText('72% healthy')).toBeTruthy();
-  });
-
-  it('reads each nutrient as one item, its label before its value', () => {
-    const tree = renderDetail({
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Quick Soup',
-        servings: 6,
-        caloriesPerServing: 380,
-        nutrition: {
-          calories: 380,
-          protein: 44,
-          totalCarbs: null,
-          totalFat: 12.6,
-          dietaryFiber: null,
-          totalSugars: null,
-          sodium: 640,
-        },
-        ingredients: [],
-        instructions: [],
-      },
-    });
-    expect(tree.getByLabelText('Cal / serving, 380')).toBeTruthy();
-    expect(tree.getByLabelText('Protein, 44 g')).toBeTruthy();
-    expect(tree.getByLabelText('Fat, 13 g')).toBeTruthy();
-    expect(tree.getByLabelText('Sodium, 640 mg')).toBeTruthy();
-  });
-
-  // --- Branch coverage tests ---
-
-  it('renders the hook error as the title', () => {
-    const tree = renderDetail({
-      recipeId: 'r1',
-      error: "Couldn't load this recipe",
-    });
-    expect(tree.getByText("Couldn't load this recipe")).toBeTruthy();
-  });
-
-  it('renders "Recipe not found in database" when recipeId but no backendRecipe and no error', () => {
-    const tree = renderDetail({
-      recipeId: 'r1',
-    });
-    expect(tree.getByText('Recipe not found in database')).toBeTruthy();
-  });
-
-  it("renders the provider's dietary tags", () => {
-    const tree = renderDetail({
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Vegan Bowl',
-        image: null,
-        servings: 2,
-        readyInMinutes: 15,
-        healthScore: 85,
-        summary: null,
-        ingredients: [],
-        instructions: [],
-        vegetarian: true,
-        vegan: true,
-        glutenFree: true,
-        dairyFree: true,
-      },
-    });
-    expect(tree.getByText('Vegetarian')).toBeTruthy();
-    expect(tree.getByText('Vegan')).toBeTruthy();
-    expect(tree.getByText('Gluten Free')).toBeTruthy();
-    expect(tree.getByText('Dairy Free')).toBeTruthy();
-    expect(tree.getByText(/85% healthy/)).toBeTruthy();
-  });
-
-  it('renders saved recipe folder, tags, and notes for backend recipes', () => {
-    const tree = renderDetail({
-      recipeId: 'r1',
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Saved Recipe',
-        image: 'https://example.com/img.jpg',
-        servings: 4,
-        readyInMinutes: 30,
-        ingredients: [],
-        instructions: [],
-      },
-      backendRecipe: { createdBy: { id: 'user-1' } },
-      isSaved: true,
-      savedFolder: 'Dinner',
-      savedTags: ['quick', 'easy'],
-      savedNotes: 'My notes here',
-      savedRating: 3,
-      cookedCount: 5,
-    });
-    expect(tree.getByText('Dinner')).toBeTruthy();
-    expect(tree.getByText('quick')).toBeTruthy();
-    expect(tree.getByText('easy')).toBeTruthy();
-    expect(tree.getByText('My notes here')).toBeTruthy();
-    expect(tree.getByText('Rating')).toBeTruthy();
-    expect(tree.getByText('Folder')).toBeTruthy();
-    expect(tree.getByText('Tags')).toBeTruthy();
-    expect(tree.getByText('Notes')).toBeTruthy();
-    expect(tree.getByText('Cooked 5x')).toBeTruthy();
-  });
-
-  it('renders "Mark cooked" text when cookedCount is 0', () => {
-    const tree = renderDetail({
-      recipeId: 'r1',
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'A Recipe',
-        image: null,
-        servings: 2,
-        ingredients: [],
-        instructions: [],
-      },
-      backendRecipe: { createdBy: { id: 'other' } },
-      isSaved: true,
-    });
-    expect(tree.getByText('Mark cooked')).toBeTruthy();
-  });
-
-  it('renders source attribution with sourceName', () => {
-    const tree = renderDetail({
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Test',
-        image: null,
-        servings: null,
-        readyInMinutes: null,
-        healthScore: null,
-        ingredients: [],
-        instructions: [],
-        sourceName: 'AllRecipes',
-        sourceUrl: 'https://allrecipes.com/r/1',
-      },
-    });
-    expect(tree.getByText('Recipe from AllRecipes')).toBeTruthy();
-    expect(tree.getByText('View Original Recipe')).toBeTruthy();
-  });
-
-  it('credits the author once, in the attribution at the foot', () => {
-    const tree = renderDetail({
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Test',
-        image: null,
-        servings: null,
-        readyInMinutes: null,
-        healthScore: null,
-        ingredients: [],
-        instructions: [],
-        originalAuthor: 'Jen West',
-        sourceName: 'Pink When',
-      },
-    });
-    expect(tree.getAllByText('By Jen West')).toHaveLength(1);
-    expect(tree.getByText('Recipe from Pink When')).toBeTruthy();
-  });
-
-  it('renders "Recipe not found" when no recipeId and no error', () => {
-    const tree = renderDetail();
-    expect(tree.getByText('Recipe not found')).toBeTruthy();
-  });
-
-  it('does not render image section when no image', () => {
-    const tree = renderDetail({
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'No Image Recipe',
-        image: null,
-        servings: 2,
-        ingredients: [],
-        instructions: [],
-      },
-    });
-    // Title is rendered but there's no BackButton in image container
-    expect(tree.getAllByText('No Image Recipe')[0]).toBeTruthy();
-  });
-
-  it('renders "Adding..." when addingToList is true', () => {
-    const tree = renderDetail({
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Recipe',
-        image: null,
-        servings: 2,
-        ingredients: [{ id: 'i1', name: 'Salt' }],
-        instructions: [],
-      },
-      addingToList: true,
-    });
-    expect(tree.getByText('Adding...')).toBeTruthy();
-  });
-
-  it('renders "None" for folder when savedFolder is null', () => {
-    const tree = renderDetail({
-      recipeId: 'r1',
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Recipe',
-        image: null,
-        servings: 2,
-        ingredients: [],
-        instructions: [],
-      },
-      backendRecipe: { createdBy: { id: 'other' } },
-      isSaved: true,
-    });
-    expect(tree.getByText('None')).toBeTruthy();
-  });
-
-  it('renders with saving state', () => {
-    const tree = renderDetail({
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Saving Recipe',
-        image: 'https://example.com/img.jpg',
-        servings: 4,
-        readyInMinutes: 20,
-        ingredients: [{ id: 'i1', name: 'Salt' }],
-        instructions: [{ number: 1, step: 'Add salt' }],
-      },
-      saving: true,
-      shoppingLists: [{ id: 'sl-1', name: 'My List' }],
-    });
-    expect(tree.getAllByText('Saving Recipe')[0]).toBeTruthy();
-  });
-
-  it('renders with instructions present', () => {
-    const tree = renderDetail({
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'With Instructions',
-        image: null,
-        servings: 2,
-        readyInMinutes: 10,
-        ingredients: [],
-        instructions: [
-          { number: 1, step: 'First step' },
-          { number: 2, step: 'Second step' },
-        ],
-      },
-    });
-    expect(tree.getAllByText('With Instructions')[0]).toBeTruthy();
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  describe('ingredients', () => {
-    const NAMES = ['Flour', 'Sugar', 'Eggs', 'Milk', 'Butter', 'Salt'];
-    const renderIngredients = (overrides: Record<string, unknown> = {}) =>
-      renderDetail({
-        displayData: {
-          dataAttributions: [],
-          details: 'complete',
-          title: 'Recipe With Ingredients',
-          image: null,
-          servings: 2,
-          ingredients: NAMES.map((name, index) => ({ id: `i${index}`, name })),
-          instructions: [],
-        },
-        shoppingLists: [{ id: 'sl-1', name: 'Weekly' }],
-        ...overrides,
-      });
-
-    it('lays every ingredient out as a tile in one sideways row', () => {
-      renderIngredients();
-
-      NAMES.forEach((name, index) => {
-        expect(screen.getByText(name)).toBeTruthy();
-        expect(
-          screen.getByTestId(recipesTestIDs.ingredientTile(index)),
-        ).toBeTruthy();
-      });
-    });
-
-    it('adds a plain ingredient on a tap', () => {
-      const handleAddSingleIngredient = jest.fn();
-      renderIngredients({ handleAddSingleIngredient });
-
-      fireEvent.press(screen.getByTestId(recipesTestIDs.ingredientTile(2)));
-
-      expect(handleAddSingleIngredient).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'i2', name: 'Eggs' }),
-      );
-    });
-
-    describe('for the household', () => {
-      const BUTTER = {
-        id: 'r-vegan',
-        memberName: 'You',
-        what: 'Vegan',
-        state: 'CONTAINS',
-        severity: 'PREFERENCE',
-        isDiet: true,
-      };
-      afterEach(() => {
-        mockHousehold.check = 'none';
-        mockHousehold.flagged = false;
-        mockHousehold.rows = {};
-        for (const id of Object.keys(mockSubstitutes)) {
-          delete mockSubstitutes[id];
-        }
-        mockSubstitutesWanted.length = 0;
-      });
-
-      it('opens a flagged ingredient’s sheet, with its alerts and swaps, instead of adding it', () => {
-        mockHousehold.check = 'checked';
-        mockHousehold.flagged = true;
-        mockHousehold.rows = { i4: [BUTTER] };
-        mockSubstitutes.i0 = [{ id: 's-flour' }];
-        mockSubstitutes.i4 = [{ id: 's-oil' }, { id: 's-applesauce' }];
-        const handleAddSingleIngredient = jest.fn();
-        renderIngredients({ handleAddSingleIngredient });
-
-        expect(mockSubstitutesWanted.at(-1)).toBe(true);
-        fireEvent.press(screen.getByTestId(recipesTestIDs.ingredientTile(4)));
-        expect(handleAddSingleIngredient).not.toHaveBeenCalled();
-        expect(screen.getByText('Butter: 1 alerts, 2 swaps')).toBeTruthy();
-
-        // Added anyway, from the sheet, once its alerts have been read.
-        fireEvent.press(screen.getByLabelText('sheet add'));
-        expect(handleAddSingleIngredient).toHaveBeenCalledWith(
-          expect.objectContaining({ id: 'i4', name: 'Butter' }),
-        );
-      });
-
-      it('asks for no swaps while nothing is flagged', () => {
-        mockSubstitutes.i0 = [{ id: 's-flour' }];
-        renderIngredients();
-
-        expect(mockSubstitutesWanted.at(-1)).toBe(false);
-      });
-
-      it('says it once, on the flagged tile, with nothing above the ingredients', () => {
-        mockHousehold.check = 'checked';
-        mockHousehold.flagged = true;
-        mockHousehold.rows = { i4: [BUTTER] };
-        renderIngredients();
-
-        expect(
-          screen.getAllByText(
-            t('dietaryAlerts.reason.notDiet', { what: 'Vegan' }),
-          ),
-        ).toHaveLength(1);
-        expect(screen.queryByText(t('dietaryAlerts.title'))).toBeNull();
-      });
-    });
-
-    it('marks an ingredient on the list and stops adding it again', () => {
-      const handleAddSingleIngredient = jest.fn();
-      renderIngredients({
-        listedIngredients: new Set(['i0']),
-        handleAddSingleIngredient,
-      });
-
-      const tile = screen.getByTestId(recipesTestIDs.ingredientTile(0));
-      expect(tile).toBeDisabled();
-      expect(tile.props.accessibilityLabel).toContain(t('labels.onYourList'));
-      fireEvent.press(tile);
-      expect(handleAddSingleIngredient).not.toHaveBeenCalled();
-    });
-
-    it('names the ingredient the pantry lacks, and counts it in the add', () => {
-      renderIngredients({ missingIngredients: new Set(['i1']) });
-
-      expect(screen.getAllByText(t('labels.missing'))).toHaveLength(1);
-      expect(
-        screen.getByTestId(recipesTestIDs.ingredientTile(1)).props
-          .accessibilityLabel,
-      ).toContain(t('labels.missing'));
-      expect(
-        screen.getByText(t('recipes.addMissing', { count: 1 })),
-      ).toBeTruthy();
-    });
-
-    it('offers no add once what the pantry lacks is on the list', () => {
-      renderIngredients({ missingIngredients: new Set() });
-
-      expect(screen.queryByText(t('labels.missing'))).toBeNull();
-      expect(screen.queryByText(t('recipes.addAll'))).toBeNull();
-    });
-  });
-
-  describe('the cook dialog', () => {
-    const cooking = {
-      recipeId: 'r1',
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Cooking Recipe',
-        image: null,
-        servings: 6,
-        ingredients: [],
-        instructions: [],
-      },
-      backendRecipe: { createdBy: { id: 'user-1' } },
-      cookedModalVisible: true,
-    };
-
-    afterEach(() => {
-      mockCooksFor = null;
-    });
-
-    it('starts at who the user cooks for', () => {
-      mockCooksFor = 4;
-      renderDetail(cooking);
-
-      expect(mockCookDialog.defaultServings).toBe(4);
-    });
-
-    it("starts at the recipe's servings when that was not answered", () => {
-      renderDetail(cooking);
-
-      expect(mockCookDialog.defaultServings).toBe(6);
-    });
-  });
-
-  it('renders marking as cooked state', () => {
-    const tree = renderDetail({
-      recipeId: 'r1',
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Cooking Recipe',
-        image: null,
-        servings: 2,
-        ingredients: [],
-        instructions: [],
-      },
-      backendRecipe: { createdBy: { id: 'user-1' } },
-      isSaved: true,
-      cookedModalVisible: true,
-      markingAsCooked: true,
-      cookedCount: 2,
-    });
-    expect(tree.getAllByText('Cooking Recipe')[0]).toBeTruthy();
-  });
-
-  it('renders backend instructions with step/text format correctly', () => {
-    const tree = renderDetail({
-      recipeId: 'r1',
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'My Pasta Recipe',
-        image: null,
-        servings: 2,
-        readyInMinutes: 30,
-        ingredients: [],
-        instructions: [
-          { step: 1, text: 'Boil the water' },
-          { step: 2, text: 'Cook the pasta' },
-        ],
-      },
-      backendRecipe: { createdBy: { id: 'user-1' } },
-    });
-    expect(tree.getByText('Boil the water')).toBeTruthy();
-    expect(tree.getByText('Cook the pasta')).toBeTruthy();
-  });
-
-  it('renders no-image header with back button when image is missing', () => {
-    const tree = renderDetail({
-      recipeId: 'r1',
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'No Image Recipe',
-        image: null,
-        servings: 2,
-        ingredients: [],
-        instructions: [],
-      },
-      backendRecipe: { createdBy: { id: 'user-1' } },
-    });
-    expect(tree.getAllByText('No Image Recipe')[0]).toBeTruthy();
-    // No-image header renders with accessible meal plan button
-    expect(tree.getByLabelText('Add to meal plan')).toBeTruthy();
-  });
-
-  it('does not show "0 min" when readyInMinutes is 0', () => {
-    const tree = renderDetail({
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Zero Time Recipe',
-        image: null,
-        servings: 2,
-        readyInMinutes: 0,
-        ingredients: [],
-        instructions: [],
-      },
-    });
-    expect(tree.getAllByText('Zero Time Recipe')[0]).toBeTruthy();
-    expect(tree.queryByText(/0 min/)).toBeNull();
-  });
-
-  describe('a catalog recipe the API has not fully fetched', () => {
-    const renderWithDetails = (details: string, { isSaved = false } = {}) =>
-      renderDetail({
-        recipeId: details === 'opening' ? null : 'catalog-1',
-        isSaved,
-        displayData: {
-          dataAttributions: [],
-          details,
-          title: 'Spinach Strata',
-          image: null,
-          ingredients: [],
-        },
-        // A catalog recipe has no author.
-        backendRecipe:
-          details === 'opening' ? null : { id: 'catalog-1', createdBy: null },
-      });
-
-    it("shows the row's title while the API opens it", () => {
-      const tree = renderWithDetails('opening');
-      expect(tree.getAllByText('Spinach Strata')[0]).toBeTruthy();
-      expect(tree.getByTestId('recipe-detail-skeleton')).toBeTruthy();
-    });
-
-    it('says a save will fetch its ingredients and steps', () => {
-      const tree = renderWithDetails('pending');
-      expect(tree.getByText("Details aren't here yet")).toBeTruthy();
-      expect(
-        tree.getByText(
-          'Save it to have its ingredients and steps fetched, or pull down to try again.',
-        ),
-      ).toBeTruthy();
-    });
-
-    it('does not ask to save a recipe already saved', () => {
-      const tree = renderWithDetails('pending', { isSaved: true });
-      expect(
-        tree.getByText(
-          'Its ingredients and steps are on their way. Pull down to check.',
-        ),
-      ).toBeTruthy();
-      expect(tree.queryByText(/^Save it/)).toBeNull();
-    });
-
-    it('says its source could not find it, without calling that final', () => {
-      const tree = renderWithDetails('unavailable');
-      expect(tree.getByText('Not available right now')).toBeTruthy();
-    });
-
-    it('offers no fork until its content is fetched', () => {
-      renderWithDetails('pending');
-      expect(headerAction(recipesTestIDs.forkButton)).toBeNull();
-      renderWithDetails('unavailable');
-      expect(headerAction(recipesTestIDs.forkButton)).toBeNull();
-      renderWithDetails('complete');
-      expect(headerAction(recipesTestIDs.forkButton)).toBeTruthy();
-    });
-
-    it('shows no notice once it is complete', () => {
-      const tree = renderWithDetails('complete');
-      expect(tree.queryByText("Details aren't here yet")).toBeNull();
-      expect(tree.queryByText('Not available right now')).toBeNull();
-    });
-  });
-
-  describe('cooking history', () => {
-    const LAST_COOKED_AT = '2026-10-11T12:00:00.000Z';
-    const DATE = formatMonthDayYear(new Date(LAST_COOKED_AT));
-
-    const renderCooked = (cooked: {
-      isSaved: boolean;
-      cookedCount: number;
-      lastCookedAt: string | null;
-    }) =>
-      renderDetail({
-        recipeId: 'r1',
-        displayData: {
-          dataAttributions: [],
-          details: 'complete',
-          title: 'Shakshuka',
-          image: null,
-          servings: 2,
-          ingredients: [],
-          instructions: [],
-        },
-        backendRecipe: { id: 'r1', createdBy: { id: 'other' } },
-        ...cooked,
-      });
-
-    it('shows the count and the last date on one line', () => {
-      const tree = renderCooked({
-        isSaved: true,
-        cookedCount: 3,
-        lastCookedAt: LAST_COOKED_AT,
-      });
-
-      expect(tree.getByText(`Cooked 3 times, last on ${DATE}`)).toBeTruthy();
-      expect(tree.queryByText(/Last cooked/)).toBeNull();
-    });
-
-    it('says once for a single cook', () => {
-      const tree = renderCooked({
-        isSaved: true,
-        cookedCount: 1,
-        lastCookedAt: LAST_COOKED_AT,
-      });
-
-      expect(tree.getByText(`Cooked once, last on ${DATE}`)).toBeTruthy();
-    });
-
-    it('offers to mark a recipe never cooked', () => {
-      const tree = renderCooked({
-        isSaved: true,
-        cookedCount: 0,
-        lastCookedAt: null,
-      });
-
-      expect(tree.getByText('Mark cooked')).toBeTruthy();
-    });
-
-    // Any recipe can be cooked; only a saved one keeps the count.
-    it('offers to mark a recipe not saved as cooked', () => {
-      const tree = renderCooked({
-        isSaved: false,
-        cookedCount: 0,
-        lastCookedAt: null,
-      });
-
-      expect(tree.getByRole('button', { name: 'Mark cooked' })).toBeTruthy();
-    });
+  log = operationLog();
+  // A fresh session: no catalog recipe was opened on this device before.
+  resetSessionScopedStores();
+  useStore.setState({
+    user: {
+      id: ME,
+      email: 'cook@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    selectedHomeId: 'h1',
+    selectedPantryId: 'p1',
+    isHomeSelectionReady: true,
+    isOnline: true,
+    apiReachable: true,
   });
 });
 
-describe('reporting a recipe from its detail screen', () => {
-  const VIEWER = {
-    id: 'viewer',
-    email: 'viewer@example.com',
-    emailVerified: true,
-    onBoarded: true,
-    preferredCurrency: 'USD',
-  };
-
-  const renderRecipe = (createdBy: { id: string } | null) =>
-    renderDetail({
-      recipeId: 'recipe-1',
-      displayData: {
-        dataAttributions: [],
-        details: 'complete',
-        title: 'Spinach Strata',
-        image: null,
-        ingredients: [],
-        instructions: [],
-      },
-      backendRecipe: { id: 'recipe-1', createdBy },
-    });
-
-  beforeEach(() => {
-    useStore.setState({ user: VIEWER });
+/** Presses a header action, through the "more" menu when it overflowed there. */
+async function pressHeaderAction(testID: string) {
+  const shown = screen.queryByTestId(testID);
+  if (shown) {
+    await userEvent.setup().press(shown);
+    return;
+  }
+  // An overflowed action runs once the menu has closed.
+  fireEvent.press(screen.getByTestId(kitTestIDs.headerMoreButton));
+  fireEvent.press(screen.getByTestId(testID));
+  const onDismiss: unknown = screen.UNSAFE_getByProps({ detached: true }).props
+    .onDismiss;
+  if (typeof onDismiss !== 'function') throw new Error('no menu to close');
+  act(() => {
+    onDismiss();
   });
+}
 
-  afterEach(() => {
-    useStore.setState({ user: null });
+/** Whether the header offers an action, shown or in its "more" menu. */
+function headerOffers(testID: string) {
+  if (screen.queryByTestId(testID)) return true;
+  const more = screen.queryByTestId(kitTestIDs.headerMoreButton);
+  if (!more) return false;
+  fireEvent.press(more);
+  return screen.queryByTestId(testID) !== null;
+}
+
+/** Pulls the screen down to refresh it. */
+function pull() {
+  act(() => {
+    screen.UNSAFE_getByType(RefreshControl).props.onRefresh();
   });
+}
 
-  it("opens the report for another user's recipe, naming it and its owner", () => {
-    renderRecipe({ id: 'owner' });
+type SavedDetails = NonNullable<ReturnType<typeof recipeRead>['savedDetails']>;
 
-    expect(screen.queryByTestId('report-sheet')).toBeNull();
-    pressMenuAction(recipesTestIDs.reportButton);
+/** A save in no folder, untagged, unrated and never cooked, unless stated. */
+const savedDetails = (overrides: SavedDetails = {}): SavedDetails => ({
+  __typename: 'SavedRecipe',
+  id: 'saved-1',
+  folder: null,
+  tags: [],
+  notes: null,
+  personalRating: null,
+  cookedCount: 0,
+  lastCookedAt: null,
+  ...overrides,
+});
 
-    expect(screen.getByTestId('report-sheet')).toHaveTextContent(
-      JSON.stringify({
-        reportedUserId: 'owner',
-        contentType: ModerationContentType.Recipe,
-        contentId: 'recipe-1',
+const MINE: ReturnType<typeof recipeRead>['createdBy'] = {
+  __typename: 'User',
+  id: ME,
+  email: 'cook@example.com',
+  displayName: 'Sam',
+};
+
+describe('a recipe', () => {
+  it('shows its title, servings, time and diets', async () => {
+    await openRecipe({
+      recipe: recipeRead({
+        diets: [Diet.Vegetarian],
+        description: 'A classic.',
       }),
+    });
+
+    expect(screen.getAllByText('Lasagna').length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(t('labels.servingsCount', { count: 4 })),
+    ).toBeTruthy();
+    expect(screen.getByText(t('labels.min', { count: 45 }))).toBeTruthy();
+    expect(screen.getByText(t('labels.vegetarian'))).toBeTruthy();
+    expect(screen.getByText('A classic.')).toBeTruthy();
+  });
+
+  it("shows its row's name offline when the device does not hold it", async () => {
+    useStore.setState({ apiReachable: false });
+    await openRecipe({
+      params: { recipeId: 'recipe-1', row: { name: 'Lasagna, from the row' } },
+      readFails: true,
+    });
+
+    expect(screen.getAllByText('Lasagna, from the row').length).toBeGreaterThan(
+      0,
     );
   });
 
-  it("offers no report on the viewer's own recipe", () => {
-    renderRecipe({ id: VIEWER.id });
+  it('names no time when it takes none', async () => {
+    await openRecipe({ recipe: recipeRead({ totalTimeMinutes: 0 }) });
 
-    expect(headerAction(recipesTestIDs.editButton)).toBeTruthy();
-    expect(headerAction(recipesTestIDs.reportButton)).toBeNull();
+    expect(
+      screen.queryByText(t('labels.min', { count: 0 })),
+    ).not.toBeOnTheScreen();
   });
 
-  it('offers no report on a catalog recipe, which nobody owns', () => {
-    renderRecipe(null);
+  it("shows its provider's notice", async () => {
+    await openRecipe({
+      recipe: recipeRead({
+        dataAttributions: [
+          {
+            __typename: 'DataAttribution',
+            source: ExternalSource.Spoonacular,
+            notice: 'Recipe data by Spoonacular',
+            licenseUrl: null,
+            sourceUrl: null,
+          },
+        ],
+      }),
+    });
 
-    expect(headerAction(recipesTestIDs.forkButton)).toBeTruthy();
-    expect(headerAction(recipesTestIDs.reportButton)).toBeNull();
+    expect(screen.getByText('Recipe data by Spoonacular')).toBeTruthy();
+  });
+
+  it('says a recipe with no record is not found', async () => {
+    await openRecipe({ recipe: null });
+
+    expect(screen.getByText(t('recipes.recipeNotFoundDb'))).toBeTruthy();
+  });
+
+  it('notes it was opened, for the tips', async () => {
+    await openRecipe();
+
+    expect(hasTipFact('recipeOpened', ME)).toBe(true);
+  });
+});
+
+describe('cooking it', () => {
+  const saved = (cookedCount: number, lastCookedAt: string | null) =>
+    recipeRead({
+      savedDetails: savedDetails({
+        folder: 'Weeknights',
+        tags: ['quick'],
+        notes: 'double cheese',
+        personalRating: 4,
+        cookedCount,
+        lastCookedAt,
+      }),
+    });
+
+  it('offers to mark a recipe never cooked', async () => {
+    await openRecipe();
+
+    expect(screen.getByText(t('recipes.markCooked'))).toBeTruthy();
+  });
+
+  it('says how often it was cooked, and when last', async () => {
+    await openRecipe({ recipe: saved(3, '2026-10-05T12:00:00.000Z') });
+
+    expect(
+      screen.getByText(
+        t('recipes.cookedSummary', {
+          count: 3,
+          date: formatMonthDayYear(new Date('2026-10-05T12:00:00.000Z')),
+        }),
+      ),
+    ).toBeTruthy();
+  });
+
+  it('says how often with no date on record', async () => {
+    await openRecipe({ recipe: saved(1, null) });
+
+    expect(
+      screen.getByText(t('recipes.cookedCount', { count: 1 })),
+    ).toBeTruthy();
+  });
+
+  // The sheet stand-in renders a closed dialog too; its confirm is what counts.
+  it('is marked cooked from its dialog, for who the person cooks for', async () => {
+    const cooked = recordMock(MarkRecipeAsCookedDocument, { held: true });
+    await openRecipe({
+      answers: [
+        cooked,
+        recordMock(GetDietaryProfileDocument, {
+          data: {
+            me: {
+              __typename: 'User',
+              id: ME,
+              dietaryProfile: {
+                __typename: 'DietaryProfile',
+                id: 'profile-1',
+                cooksFor: 2,
+              },
+            },
+          },
+        }),
+      ],
+    });
+    await log.landed(GetDietaryProfileDocument);
+    const user = userEvent.setup();
+
+    await user.press(screen.getByText(t('recipes.markCooked')));
+    // The stand-in renders a closed sheet too, so that it was presented.
+    expect(screen.UNSAFE_getByType(MarkCookedModal).props.visible).toBe(true);
+    const confirm = screen.getAllByText(t('markCookedModal.markCooked')).at(-1);
+    if (!confirm) throw new Error('no confirm in the cook dialog');
+    await user.press(confirm);
+    await log.requested(MarkRecipeAsCookedDocument);
+
+    expect(cooked.fired[0]).toMatchObject({
+      input: { recipeId: 'recipe-1', servings: 2 },
+    });
+  });
+
+  it('clears its rating when its own star is pressed again', async () => {
+    const rated = recordMock(UpdateFavoriteRecipeDocument, { held: true });
+    await openRecipe({ recipe: saved(0, null), answers: [rated] });
+    const [fourth] = screen.getAllByLabelText(
+      t('a11y.rateStars', { count: 4 }),
+    );
+    if (!fourth) throw new Error('no fourth star');
+
+    await userEvent.setup().press(fourth);
+    await log.requested(UpdateFavoriteRecipeDocument);
+
+    expect(rated.fired[0]).toMatchObject({
+      input: { recipeId: 'recipe-1', personalRating: null },
+    });
+  });
+
+  it("shows a saved recipe's folder, tags and notes", async () => {
+    await openRecipe({ recipe: saved(0, null) });
+
+    expect(screen.getByText('Weeknights')).toBeTruthy();
+    expect(screen.getAllByText('quick').length).toBeGreaterThan(0);
+    expect(screen.getByText('double cheese')).toBeTruthy();
+  });
+
+  it('shows no saved details for a recipe not saved', async () => {
+    await openRecipe();
+
+    expect(screen.queryByText(t('recipes.none'))).not.toBeOnTheScreen();
+  });
+});
+
+describe("one's own recipe", () => {
+  it('is edited and published from its header, and never forked or reported', async () => {
+    const published = recordMock(UpdateRecipeDocument, { held: true });
+    await openRecipe({
+      recipe: recipeRead({ createdBy: MINE, status: RecipeStatus.Draft }),
+      answers: [published],
+    });
+
+    await pressHeaderAction(recipesTestIDs.editButton);
+    expect(mockNav.toRecipeEdit).toHaveBeenCalledWith({ recipeId: 'recipe-1' });
+    await pressHeaderAction(recipesTestIDs.publishButton);
+    await log.requested(UpdateRecipeDocument);
+
+    expect(published.fired[0]).toMatchObject({
+      input: { status: RecipeStatus.Published },
+    });
+    expect(headerOffers(recipesTestIDs.forkButton)).toBe(false);
+    expect(headerOffers(recipesTestIDs.reportButton)).toBe(false);
+  });
+});
+
+describe("someone else's recipe", () => {
+  it('is forked into a recipe of ones own, which opens', async () => {
+    const forked = recordMock(ForkRecipeDocument, {
+      dataFor: (variables): MockDataFor<typeof ForkRecipeDocument> => ({
+        forkRecipe: {
+          __typename: 'ForkRecipePayload',
+          recipe: {
+            __typename: 'Recipe',
+            id: String(inputOf(variables).newRecipeId),
+          },
+        },
+      }),
+    });
+    await openRecipe({ answers: [forked] });
+
+    await pressHeaderAction(recipesTestIDs.forkButton);
+    await log.landed(ForkRecipeDocument);
+
+    // The fork mints its id, so the copy opens before the server answers.
+    const [sent] = forked.fired;
+    expect(mockNav.toRecipeDetail).toHaveBeenCalledWith({
+      recipeId: sent && inputOf(sent).newRecipeId,
+    });
+    expect(headerOffers(recipesTestIDs.editButton)).toBe(false);
+  });
+
+  it('can be reported', async () => {
+    await openRecipe();
+
+    expect(headerOffers(recipesTestIDs.reportButton)).toBe(true);
+  });
+});
+
+describe('saving it', () => {
+  it('saves to Favorites from the heart, once while that save is out', async () => {
+    const saved = recordMock(AddRecipeToFavoritesDocument, { held: true });
+    await openRecipe({ answers: [saved] });
+    const heart = screen.getByLabelText(t('recipes.favoriteA11y'));
+
+    fireEvent.press(heart);
+    await log.requested(AddRecipeToFavoritesDocument);
+    fireEvent.press(heart);
+
+    expect(saved.fired).toEqual([
+      {
+        input: expect.objectContaining({
+          recipeId: 'recipe-1',
+          folder: 'Favorites',
+        }),
+      },
+    ]);
+  });
+
+  it.each([
+    ['saves one not saved, with a folder', null, 'save'],
+    ['manages a saved one', savedDetails({ folder: 'Weeknights' }), 'manage'],
+  ] as const)('from its folder, %s', async (_, saved, sheet) => {
+    await openRecipe({ recipe: recipeRead({ savedDetails: saved }) });
+
+    await pressHeaderAction(recipesTestIDs.folderButton);
+
+    // The stand-in renders every sheet, so which one was presented.
+    expect({
+      save: screen.UNSAFE_getByType(SaveRecipeSheet).props.visible,
+      manage: screen.UNSAFE_getByType(ManageRecipeSheet).props.visible,
+    }).toEqual({ save: sheet === 'save', manage: sheet === 'manage' });
+  });
+
+  it('manages a favorite from its heart rather than saving it again', async () => {
+    const saved = recordMock(AddRecipeToFavoritesDocument, { held: true });
+    await openRecipe({
+      recipe: recipeRead({
+        savedDetails: savedDetails({ folder: 'Favorites' }),
+      }),
+      answers: [saved],
+    });
+
+    await userEvent
+      .setup()
+      .press(screen.getByLabelText(t('recipes.unfavoriteA11y')));
+
+    expect(saved.fired).toEqual([]);
+  });
+});
+
+describe('a recipe it cannot read', () => {
+  it('says so, offering a retry that reads it again', async () => {
+    await openRecipe({
+      readFails: true,
+      rereads: [recordMock(GetRecipeDocument, { held: true })],
+    });
+
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+
+    await expect(log.requested(GetRecipeDocument, 2)).resolves.toBeUndefined();
+  });
+
+  it('says offline that it needs the connection', async () => {
+    useStore.setState({ apiReachable: false });
+    await openRecipe({ readFails: true });
+
+    expect(screen.getByTestId(kitTestIDs.stateOffline)).toBeTruthy();
+  });
+
+  it('keeps one on screen while it is read again', async () => {
+    await openRecipe({
+      rereads: [recordMock(GetRecipeDocument, { held: true })],
+    });
+
+    pull();
+    await log.requested(GetRecipeDocument, 2);
+
+    expect(screen.getAllByText('Lasagna').length).toBeGreaterThan(0);
+  });
+});
+
+describe('its source', () => {
+  it('says so when its link cannot be opened', async () => {
+    await openRecipe({
+      recipe: recipeRead({ source: 'Grandma', sourceUrl: 'notaurl' }),
+    });
+
+    expect(
+      screen.getByText(t('recipes.recipeFrom', { source: 'Grandma' })),
+    ).toBeTruthy();
+    await userEvent
+      .setup()
+      .press(screen.getByText(t('recipes.viewOriginalRecipe')));
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('errors.linkNotOpenable'),
+    );
+  });
+});
+
+describe('its ingredients', () => {
+  const GARLIC = recipeIngredientRead('ing-1', 'Garlic');
+  const ONION = recipeIngredientRead('ing-2', 'Onion');
+  const WITH_BOTH = recipeRead({ ingredients: [GARLIC, ONION] });
+
+  const lineIdsOf = (variables: Record<string, unknown>) => {
+    const items: unknown = inputOf(variables).items;
+    return Array.isArray(items)
+      ? items.flatMap(item =>
+          isRecord(item) && typeof item.id === 'string' ? [item.id] : [],
+        )
+      : [];
+  };
+  const listedAnswer = () =>
+    recordMock(AddItemsToShoppingListFromRecipeDocument, {
+      dataFor: (
+        variables,
+      ): MockDataFor<typeof AddItemsToShoppingListFromRecipeDocument> => ({
+        addItemsToShoppingList: {
+          __typename: 'AddItemsToShoppingListPayload',
+          results: lineIdsOf(variables).map(id => ({
+            __typename: 'BatchAddShoppingListItemResult',
+            success: true,
+            item: { __typename: 'ShoppingListItem', id },
+          })),
+        },
+      }),
+    });
+
+  beforeEach(() => {
+    useStore.setState({ selectedShoppingListId: 'list-1' });
+  });
+
+  it('adds one to the list on a tap, then says it is on the list', async () => {
+    const added = listedAnswer();
+    await openRecipe({ recipe: WITH_BOTH, answers: [added] });
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(recipesTestIDs.ingredientTile(0)));
+    await log.landed(AddItemsToShoppingListFromRecipeDocument);
+
+    expect(added.fired).toHaveLength(1);
+    expect(
+      screen.getByTestId(recipesTestIDs.ingredientTile(0)).props
+        .accessibilityLabel,
+    ).toContain(t('labels.onYourList'));
+  });
+
+  it('opens what a flagged one means for the household instead of adding it', async () => {
+    const added = recordMock(AddItemsToShoppingListFromRecipeDocument, {
+      held: true,
+    });
+    await openRecipe({
+      recipe: WITH_BOTH,
+      answers: [
+        added,
+        recordMock(RecipeDietaryAlertsDocument, {
+          data: {
+            recipe: {
+              __typename: 'Recipe',
+              version: 1,
+              id: 'recipe-1',
+              ingredientsConnection: {
+                __typename: 'RecipeIngredientConnection',
+                edges: [
+                  {
+                    __typename: 'RecipeIngredientEdge',
+                    node: {
+                      __typename: 'RecipeIngredient',
+                      id: 'ing-1',
+                      dietaryAlerts: [
+                        {
+                          __typename: 'DietaryAlert',
+                          state: DietaryAlertState.Contains,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        }),
+      ],
+    });
+    await log.landed(RecipeDietaryAlertsDocument);
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(recipesTestIDs.ingredientTile(0)));
+
+    expect(added.fired).toEqual([]);
+  });
+
+  it.each([
+    [
+      'only what the pantry lacks',
+      ['ing-2'],
+      t('recipes.addMissing', { count: 1 }),
+    ],
+    ['all of them when it lacks all', ['ing-1', 'ing-2'], t('recipes.addAll')],
+  ])('offers to add %s', async (_, lacked, offered) => {
+    await openRecipe({
+      recipe: WITH_BOTH,
+      answers: [missing(lacked)],
+    });
+    await log.landed(RecipeMissingIngredientsDocument);
+
+    expect(screen.getByText(offered)).toBeTruthy();
+  });
+
+  it('names a new list after the recipe', async () => {
+    await openRecipe({
+      recipe: WITH_BOTH,
+      answers: [missing(['ing-1', 'ing-2'])],
+    });
+    await log.landed(RecipeMissingIngredientsDocument);
+    const user = userEvent.setup();
+
+    await user.press(screen.getByText(t('recipes.addAll')));
+    await user.press(screen.getByText(t('shoppingListPicker.newList')));
+
+    expect(
+      screen.getByPlaceholderText(
+        t('shoppingListPicker.newListNamePlaceholder'),
+      ).props.value,
+    ).toBe('Lasagna');
+  });
+
+  it('offers no add when the pantry holds them all', async () => {
+    await openRecipe({ recipe: WITH_BOTH, answers: [missing([])] });
+    await log.landed(RecipeMissingIngredientsDocument);
+
+    expect(screen.queryByText(t('recipes.addAll'))).not.toBeOnTheScreen();
+    expect(
+      screen.queryByText(t('recipes.addMissing', { count: 0 })),
+    ).not.toBeOnTheScreen();
+  });
+});
+
+/** The ingredients the pantry lacks, as the API answers. */
+const missing = (ids: string[]) =>
+  recordMock(RecipeMissingIngredientsDocument, {
+    data: missingAnswer(ids),
+  });
+
+const missingAnswer = (
+  ids: string[],
+): MockDataFor<typeof RecipeMissingIngredientsDocument> => ({
+  recipe: {
+    __typename: 'Recipe',
+    version: 1,
+    id: 'recipe-1',
+    missingIngredientsConnection: {
+      __typename: 'RecipeIngredientConnection',
+      edges: ids.map(id => ({
+        __typename: 'RecipeIngredientEdge',
+        node: { __typename: 'RecipeIngredient', id },
+      })),
+    },
+  },
+});
+
+describe('a catalog recipe', () => {
+  const PHO = {
+    provider: ExternalSource.Spoonacular,
+    externalId: '999',
+    name: 'Pho',
+    imageUrl: null,
+  };
+  const opened = (
+    recipe: ReturnType<typeof recipeRead>,
+    options: { held?: boolean; maxUsageCount?: number } = {},
+  ) =>
+    recordMock(OpenCatalogRecipeDocument, {
+      ...options,
+      data: {
+        upsertExternalRecipe: {
+          __typename: 'UpsertExternalRecipePayload',
+          recipe,
+          created: true,
+        },
+      },
+    });
+  const PHO_READ = recipeRead({
+    id: 'recipe-9',
+    name: 'Pho',
+    isExternal: true,
+    createdBy: null,
+  });
+  const awaitingFetch = (syncStatus: ExternalSyncStatus) =>
+    recipeRead({
+      ...PHO_READ,
+      sourceMapping: {
+        __typename: 'RecipeSourceMapping',
+        id: 'map-1',
+        syncStatus,
+      },
+    });
+  const cannotOpen = () =>
+    recordMock(OpenCatalogRecipeDocument, {
+      error: new Error('Network request failed'),
+    });
+
+  it('shows its row while the API opens it, then reads the recipe it opened', async () => {
+    const open = opened(PHO_READ, { held: true });
+    await openRecipe({
+      params: { catalog: PHO },
+      recipe: PHO_READ,
+      answers: [open],
+      awaitRead: false,
+    });
+    await log.requested(OpenCatalogRecipeDocument);
+    expect(screen.getAllByText('Pho').length).toBeGreaterThan(0);
+    // Reviews belong to a recipe the API holds.
+    expect(screen.queryByText(t('recipes.reviews'))).not.toBeOnTheScreen();
+
+    open.release();
+    await log.landed(OpenCatalogRecipeDocument);
+    // The open settles a few promise turns after its answer lands.
+    await act(async () => undefined);
+
+    // The open answers with the recipe, which the screen then reads by its id.
+    expect(
+      screen.getByText(t('labels.servingsCount', { count: 4 })),
+    ).toBeTruthy();
+    expect(open.fired).toHaveLength(1);
+  });
+
+  it('says why it could not be opened', async () => {
+    await openRecipe({
+      params: { catalog: PHO },
+      answers: [cannotOpen()],
+      awaitRead: false,
+    });
+    await log.landed(OpenCatalogRecipeDocument);
+    // The open settles a few promise turns after its answer lands.
+    await act(async () => undefined);
+
+    expect(screen.getByText(t('labels.tryAgain'))).toBeTruthy();
+    expect(
+      screen.queryByText(t('recipes.recipeNotFound')),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('reads the recipe this device opened before while the API opens it again', async () => {
+    recordOpenedCatalogRecipe(PHO, 'recipe-9');
+    await openRecipe({
+      params: { catalog: PHO },
+      recipe: PHO_READ,
+      answers: [opened(PHO_READ, { held: true })],
+    });
+
+    expect(
+      screen.getByText(t('labels.servingsCount', { count: 4 })),
+    ).toBeTruthy();
+  });
+
+  it('reads the recipe this device opened before when the API cannot open it now', async () => {
+    recordOpenedCatalogRecipe(PHO, 'recipe-9');
+    await openRecipe({
+      params: { catalog: PHO },
+      recipe: PHO_READ,
+      answers: [cannotOpen()],
+    });
+    await log.landed(OpenCatalogRecipeDocument);
+    await act(async () => undefined);
+
+    expect(
+      screen.getByText(t('labels.servingsCount', { count: 4 })),
+    ).toBeTruthy();
+    expect(screen.queryByText(t('labels.tryAgain'))).not.toBeOnTheScreen();
+  });
+
+  it("never reads another provider's recipe with the same id for it", async () => {
+    recordOpenedCatalogRecipe(
+      { provider: ExternalSource.Edamam, externalId: PHO.externalId },
+      'recipe-9',
+    );
+    const { read } = await openRecipe({
+      params: { catalog: PHO },
+      recipe: PHO_READ,
+      answers: [opened(PHO_READ, { held: true })],
+      awaitRead: false,
+    });
+    await log.requested(OpenCatalogRecipeDocument);
+
+    // A recipe the device found would be read as the screen mounts.
+    expect(read.fired).toEqual([]);
+  });
+
+  it("carries the row's photo into its hero while it opens", async () => {
+    await openRecipe({
+      params: { catalog: { ...PHO, imageUrl: 'https://img.example/pho.jpg' } },
+      answers: [opened(PHO_READ, { held: true })],
+      awaitRead: false,
+    });
+    await log.requested(OpenCatalogRecipeDocument);
+
+    expect(
+      screen.UNSAFE_getByProps({ sharedTransitionTag: 'recipe-image-999' }),
+    ).toBeTruthy();
+  });
+
+  it.each([
+    [
+      'saved, waits without being asked to save',
+      true,
+      'recipes.catalogPendingSavedSubtitle',
+    ],
+    ['not saved, asks to be saved', false, 'recipes.catalogPendingSubtitle'],
+  ] as const)('not yet fetched and %s', async (_, isSaved, said) => {
+    await openRecipe({
+      recipe: recipeRead({
+        isExternal: true,
+        createdBy: null,
+        sourceMapping: {
+          __typename: 'RecipeSourceMapping',
+          id: 'map-1',
+          syncStatus: ExternalSyncStatus.Pending,
+        },
+        savedDetails: isSaved ? savedDetails() : null,
+      }),
+    });
+
+    expect(screen.getByText(t(said))).toBeTruthy();
+    // Only a whole recipe can be forked.
+    expect(headerOffers(recipesTestIDs.forkButton)).toBe(false);
+  });
+
+  it.each([
+    ['not yet fetched', ExternalSyncStatus.Pending],
+    ['its source could not find', ExternalSyncStatus.NotFound],
+  ])('is opened again on a pull while %s', async (_, syncStatus) => {
+    await openRecipe({
+      params: { catalog: PHO },
+      recipe: awaitingFetch(syncStatus),
+      answers: [opened(awaitingFetch(syncStatus))],
+      awaitRead: false,
+    });
+    await log.landed(OpenCatalogRecipeDocument);
+    // The open settles a few promise turns after its answer lands.
+    await act(async () => undefined);
+
+    pull();
+
+    await log.landed(OpenCatalogRecipeDocument, 2);
+    await act(async () => undefined);
+  });
+
+  it('keeps one not yet fetched on screen when opening it again fails', async () => {
+    const stub = awaitingFetch(ExternalSyncStatus.Pending);
+    await openRecipe({
+      params: { catalog: PHO },
+      recipe: stub,
+      answers: [opened(stub, { maxUsageCount: 1 }), cannotOpen()],
+      awaitRead: false,
+    });
+    await log.landed(OpenCatalogRecipeDocument);
+    await act(async () => undefined);
+
+    pull();
+    await log.landed(OpenCatalogRecipeDocument, 2);
+    await act(async () => undefined);
+
+    expect(screen.getByText(t('recipes.catalogPendingSubtitle'))).toBeTruthy();
+    expect(screen.queryByText(t('labels.tryAgain'))).not.toBeOnTheScreen();
+  });
+
+  it('reads one opened by its id again on a pull, never opening it from its row', async () => {
+    const stub = awaitingFetch(ExternalSyncStatus.Pending);
+    const open = recordMock(OpenCatalogRecipeDocument, { held: true });
+    await openRecipe({
+      params: { recipeId: 'recipe-9', catalog: PHO },
+      recipe: stub,
+      answers: [open],
+      rereads: [recordMock(GetRecipeDocument, { data: { recipe: stub } })],
+    });
+
+    pull();
+    await log.landed(GetRecipeDocument, 2);
+
+    expect(open.fired).toEqual([]);
   });
 });
