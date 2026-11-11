@@ -2,7 +2,12 @@
  * Shopping lists and their lines as the list reads state them, typed by those
  * reads: a fixture fails to build when a read gains a field it omits.
  */
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import {
+  CollaboratorRole,
+  CollaboratorStatus,
+  MembershipRole,
+  type StoreDepartment,
+} from '#/graphql/generated/schemaTypes';
 import {
   GetShoppingListDetailsDocument,
   GetShoppingListItemsFilteredDocument,
@@ -51,6 +56,69 @@ export const homeShoppingList = (
   ownerships: [],
 });
 
+type Collaborators = NonNullable<ShoppingListNode['collaboratorsConnection']>;
+export type ListCollaborator = NonNullable<
+  NonNullable<NonNullable<Collaborators['edges']>[number]>['node']
+>;
+type Ownership = NonNullable<
+  NonNullable<ShoppingListNode['ownerships']>[number]
+>;
+
+/** Whose list it is, as its reads name its owner. */
+export const listOwner = (userId: string, displayName: string): Ownership => ({
+  __typename: 'ShoppingListOwnership',
+  id: `own-${userId}`,
+  userId,
+  user: {
+    __typename: 'User',
+    id: userId,
+    email: null,
+    displayName,
+    profile: null,
+  },
+});
+
+/** Someone the list is shared with: a viewer holding no flags, unless told. */
+export const listCollaborator = (
+  userId: string,
+  overrides: ListCollaborator = {},
+): ListCollaborator => ({
+  __typename: 'ShoppingListCollaborator',
+  id: `c-${userId}`,
+  email: `${userId}@example.com`,
+  role: CollaboratorRole.Viewer,
+  status: CollaboratorStatus.Active,
+  collaboratorId: userId,
+  canEdit: false,
+  canAddItems: false,
+  canEditItems: false,
+  canRemoveItems: false,
+  canMarkPurchased: false,
+  canInviteOthers: false,
+  invitedAt: null,
+  collaborator: {
+    __typename: 'User',
+    id: userId,
+    email:
+      overrides.email === undefined ? `${userId}@example.com` : overrides.email,
+    displayName: null,
+    profile: null,
+  },
+  ...overrides,
+});
+
+/** A list's collaborators, as its detail read pages them. */
+export const collaboratorsOf = (
+  ...members: ListCollaborator[]
+): Collaborators => ({
+  __typename: 'ShoppingListCollaboratorConnection',
+  edges: members.map(node => ({
+    __typename: 'ShoppingListCollaboratorEdge',
+    cursor: node.id ?? '',
+    node,
+  })),
+});
+
 /** A list of the person's own, in no home: nothing on it can go to a pantry. */
 export const ownShoppingList = (
   id: string,
@@ -72,10 +140,13 @@ export const listLine = (
     bought = false,
     movedToPantryAt = null,
     quantity,
+    storeDepartment,
   }: {
     bought?: boolean;
     movedToPantryAt?: string | null;
     quantity?: number;
+    /** The aisle store mode files it under. */
+    storeDepartment?: StoreDepartment;
   } = {},
 ): ListLine => ({
   __typename: 'ShoppingListItem',
@@ -83,6 +154,10 @@ export const listLine = (
   itemName,
   sortOrder: id,
   ...(quantity !== undefined && { quantity }),
+  ...(storeDepartment !== undefined && {
+    storeDepartment,
+    storeDepartmentOverride: null,
+  }),
   purchaseInfo: {
     __typename: 'ShoppingListItemPurchaseInfo',
     isPurchased: bought,
@@ -117,9 +192,17 @@ export const listDetailsRead = (
     held,
   });
 
-/** Answers both of a list's line reads, to buy and bought, from `lines`. */
-export const listLinesRead = (listId: string, lines: ListLine[]) =>
+/**
+ * Answers both of a list's line reads, to buy and bought, from `lines`; with
+ * `maxUsageCount`, only that many times.
+ */
+export const listLinesRead = (
+  listId: string,
+  lines: ListLine[],
+  { maxUsageCount }: { maxUsageCount?: number } = {},
+) =>
   recordMock(GetShoppingListItemsFilteredDocument, {
+    maxUsageCount,
     dataFor: ({
       isPurchased,
     }): MockDataFor<typeof GetShoppingListItemsFilteredDocument> => {

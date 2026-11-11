@@ -4,12 +4,12 @@ import {
   fireEvent,
   screen,
   userEvent,
-  within,
 } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { screenShows, withDeadline } from '#/test-utils/cacheWaits';
+import { controlNear } from '#/test-utils/controlNear';
 import {
   homeShoppingList,
   listDetailsRead,
@@ -144,18 +144,6 @@ const rowAction = (lineId: string, actionName: string) =>
 
 const menuEntry = (key: string) =>
   shell.addMenu?.find(action => action.key === key);
-
-/** The control labelled `label` nearest `inside`, as a sheet's Save beside its title. */
-function controlNear(
-  inside: ReturnType<typeof screen.getByText>,
-  label: string,
-) {
-  for (let node = inside.parent; node; node = node.parent) {
-    const [control] = within(node).queryAllByLabelText(label);
-    if (control) return control;
-  }
-  throw new Error(`nothing labelled ${label} near the element given`);
-}
 
 const purchasedTab = () =>
   screen.getByTestId(

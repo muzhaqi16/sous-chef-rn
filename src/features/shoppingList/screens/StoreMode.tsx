@@ -40,12 +40,12 @@ const StoreModeBody: React.FC<{
   const showImages = useShowShoppingListImages();
   const [refreshing, setRefreshing] = useState(false);
 
-  const failure = useOfflineAwareError(
-    state.error,
-    state.rows.length > 0 || state.cartCount > 0,
-  );
+  // A failed read leaves the lines the trip holds on screen: in a store with
+  // weak signal, a refresh that fails must not take the list away.
+  const holdsLines = state.items.length > 0;
+  const failure = useOfflineAwareError(state.error, holdsLines);
   if (state.loading) return <Loading />;
-  if (failure.offline || failure.error) {
+  if (!holdsLines && (failure.offline || failure.error)) {
     return (
       <DataStateView
         state={failure.offline ? 'offline' : 'error'}
