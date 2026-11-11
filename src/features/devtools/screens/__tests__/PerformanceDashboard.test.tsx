@@ -1,446 +1,476 @@
-'use no memo';
-
 import React from 'react';
-import { render, userEvent } from '@testing-library/react-native';
-import type { RootState } from '#store/index';
-import type { PerformanceState } from '#/services/performance/performanceSlice';
+import DeviceInfo from 'react-native-device-info';
+import performance from 'react-native-performance';
+import type {
+  EntryType,
+  PerformanceReactNativeMark,
+} from 'react-native-performance';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { useStore } from '#store';
 import { alertService } from '#/services/alertService';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
+import { usePerformanceStore } from '#/services/performance/performanceStore';
+import type {
+  MemorySnapshot,
+  RenderMetrics,
+  ScreenMetrics,
+} from '#/services/performance/types';
+import { Environment } from '#/utils/environment';
+import { SubScreen } from '#components/templates/SubScreen';
+import { useFPSMonitor } from '#features/devtools/hooks/useFPSMonitor';
+import { withDeadline } from '#/test-utils/cacheWaits';
 import { PerformanceDashboard } from '../PerformanceDashboard';
 
-jest.mock('#/services/performance/MemoryMonitor', () => ({
-  MemoryMonitor: {
-    start: jest.fn(),
-    stop: jest.fn(),
-    takeSnapshot: jest.fn().mockResolvedValue(null),
-    isEnabled: jest.fn().mockReturnValue(false),
-  },
-}));
+// Jest draws no frames, so the meter's readings are stated.
+jest.mock('#features/devtools/hooks/useFPSMonitor');
 
-const mockFPSStats = {
-  current: 58,
-  min: 42,
-  max: 60,
-  avg: 55,
-  lowFPSCount: 3,
-};
+const MB = 1024 * 1024;
 
-jest.mock('#features/devtools/hooks/useFPSMonitor', () => ({
-  useFPSMonitor: () => ({
-    fps: 58,
-    isLowFPS: false,
-    stats: mockFPSStats,
-  }),
-}));
+const component = (componentName: string, ms: number): RenderMetrics => ({
+  componentName,
+  renderCount: 1,
+  lastRenderTime: ms,
+  avgRenderTime: ms,
+  maxRenderTime: ms,
+  totalRenderTime: ms,
+  lastRenderTimestamp: 0,
+});
 
-const mockSetPerformanceEnabled = jest.fn();
-const mockSetTrackRenders = jest.fn();
-const mockSetTrackMemory = jest.fn();
-const mockSetTrackScreens = jest.fn();
-const mockClearPerformanceData = jest.fn();
+const screenMetric = (screenName: string, ms: number): ScreenMetrics => ({
+  screenName,
+  transitionCount: 1,
+  lastInteractiveTime: ms,
+  avgInteractiveTime: ms,
+  maxInteractiveTime: ms,
+  totalInteractiveTime: ms,
+  lastTransitionTimestamp: 0,
+});
 
-jest.mock('#/services/performance/performanceStore', () => ({
-  usePerformanceStore: jest.fn(
-    (selector: (state: Partial<PerformanceState>) => unknown) =>
-      selector({
-        isEnabled: true,
-        trackRenders: true,
-        trackMemory: true,
-        trackScreens: true,
-        setPerformanceEnabled: mockSetPerformanceEnabled,
-        setTrackRenders: mockSetTrackRenders,
-        setTrackMemory: mockSetTrackMemory,
-        setTrackScreens: mockSetTrackScreens,
-        componentMetrics: new Map(),
-        screenMetrics: new Map(),
-        memorySnapshots: [],
-        clearPerformanceData: mockClearPerformanceData,
-      }),
-  ),
-}));
+const reading = (usagePercent: number, timestamp: number): MemorySnapshot => ({
+  timestamp,
+  usedBytes: usagePercent * MB,
+  limitBytes: 100 * MB,
+  usagePercent,
+});
 
-// Environment is auto-mocked via jest.setup.js; the default
-// `shouldEnableDebugFeatures` returns true, which is what this suite expects.
+/** The tracking settings and collected metrics, written to the real store. */
+function held({
+  components = [],
+  screens = [],
+  readings = [],
+  ...tracking
+}: {
+  isEnabled?: boolean;
+  trackRenders?: boolean;
+  trackMemory?: boolean;
+  trackScreens?: boolean;
+  components?: RenderMetrics[];
+  screens?: ScreenMetrics[];
+  readings?: MemorySnapshot[];
+}) {
+  usePerformanceStore.setState({
+    ...tracking,
+    componentMetrics: new Map(components.map(m => [m.componentName, m])),
+    screenMetrics: new Map(screens.map(m => [m.screenName, m])),
+    memorySnapshots: readings,
+  });
+}
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn((selector: (state: Partial<RootState>) => unknown) =>
-    selector({}),
-  ),
-  useCanAccessDevTools: jest.fn(() => true),
-}));
-
-jest.mock('#components/molecules/SettingSwitch', () => ({
-  SettingSwitch: ({
-    title,
-    value,
-    onValueChange,
-    disabled,
-  }: {
-    title: string;
-    value: boolean;
-    onValueChange: (value: boolean) => void;
-    disabled?: boolean;
-  }) => {
-    const { View, Text, Pressable } = require('react-native');
-    return (
-      <View>
-        <Text>{title}</Text>
-        <Pressable
-          testID={`switch-${title}`}
-          onPress={() => onValueChange(!value)}
-          disabled={disabled}
-        >
-          <Text>{value ? 'On' : 'Off'}</Text>
-        </Pressable>
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/organisms/SettingsSection', () => ({
-  SettingsSection: ({
-    title,
-    children,
-  }: {
-    title: string;
-    children: React.ReactNode;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View>
-        <Text>{title}</Text>
-        {children}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/templates/SubScreen', () => ({
-  SubScreen: ({
-    title,
-    children,
-  }: {
-    title?: string;
-    children: React.ReactNode;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID="profile-wrapper">
-        <Text>{title}</Text>
-        {children}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#/utils/finallyHelpers', () => ({
-  executeRefreshWithFinally: jest.fn(
-    async (fn: () => Promise<unknown>, setRefreshing: (v: boolean) => void) => {
-      setRefreshing(true);
-      await fn();
-      setRefreshing(false);
+/** Who is looking: a debug build, and whether the account may use dev tools. */
+function viewer({
+  debugBuild,
+  devTools,
+}: {
+  debugBuild: boolean;
+  devTools: boolean;
+}) {
+  jest
+    .mocked(Environment.shouldEnableDebugFeatures)
+    .mockReturnValue(debugBuild);
+  useStore.setState({
+    user: {
+      id: 'me',
+      email: 'cook@example.com',
+      emailVerified: true,
+      onBoarded: true,
+      canAccessDevTools: devTools,
     },
-  ),
-}));
+  });
+}
+
+const entry = (
+  name: string,
+  entryType: EntryType,
+  startTime: number,
+  duration = 0,
+): PerformanceReactNativeMark => ({
+  name,
+  entryType,
+  startTime,
+  duration,
+  detail: undefined,
+  toJSON: () => ({ name, entryType, startTime, duration, detail: undefined }),
+});
+
+/** What the native performance API holds, by entry type. */
+function recorded(
+  byType: Partial<Record<EntryType, PerformanceReactNativeMark[]>>,
+) {
+  jest
+    .mocked(performance.getEntriesByType)
+    .mockImplementation(type => byType[type] ?? []);
+}
+
+/** The device's memory as the native module reads it. */
+function deviceMemory(usedBytes: number, totalBytes: number) {
+  Object.assign(DeviceInfo, {
+    getUsedMemory: jest.fn().mockResolvedValue(usedBytes),
+    getTotalMemory: jest.fn().mockResolvedValue(totalBytes),
+  });
+}
+
+/** Resolves once the store holds a memory reading taken for `context`. */
+const readingLands = (context: string) =>
+  act(() =>
+    withDeadline(
+      done => {
+        const has = () =>
+          usePerformanceStore
+            .getState()
+            .memorySnapshots.some(snapshot => snapshot.context === context);
+        if (has()) done();
+        return usePerformanceStore.subscribe(() => {
+          if (has()) done();
+        });
+      },
+      () =>
+        `no "${context}" reading; the store holds ${JSON.stringify(
+          usePerformanceStore.getState().memorySnapshots,
+        )}`,
+    ),
+  );
+
+const switchNamed = (name: string) => screen.getByRole('switch', { name });
+
+const toggle = (name: string, value: boolean) =>
+  fireEvent(switchNamed(name), 'valueChange', value);
+
+/** Presses a button of the last alert raised; a cancel has no handler. */
+async function answerAlert(text: string) {
+  const [, , buttons] = jest.mocked(alertService.alert).mock.lastCall ?? [];
+  const button = buttons?.find(candidate => candidate.text === text);
+  if (!button) throw new Error(`no "${text}" in the last alert`);
+  await act(async () => {
+    button.onPress?.();
+  });
+}
+
+const pullToRefresh = () =>
+  act(async () => {
+    screen.UNSAFE_getByType(SubScreen).props.refresh?.onRefresh();
+  });
+
+const EMPTY = 'No performance data collected yet.';
+const CLEAR = 'Clear Performance Data';
 
 beforeEach(() => {
   jest.clearAllMocks();
-  // Restore default mock implementations after clearAllMocks
-  const { Environment } = require('#/utils/environment');
-  Environment.shouldEnableDebugFeatures.mockReturnValue(true);
-
-  const { useAppStore } = require('#store/useAppStore');
-  useAppStore.mockImplementation(
-    (selector: (state: Partial<RootState>) => unknown) => selector({}),
-  );
-
-  const {
-    usePerformanceStore,
-  } = require('#/services/performance/performanceStore');
-  usePerformanceStore.mockImplementation(
-    (selector: (state: Partial<PerformanceState>) => unknown) =>
-      selector({
-        isEnabled: true,
-        trackRenders: true,
-        trackMemory: true,
-        trackScreens: true,
-        setPerformanceEnabled: mockSetPerformanceEnabled,
-        setTrackRenders: mockSetTrackRenders,
-        setTrackMemory: mockSetTrackMemory,
-        setTrackScreens: mockSetTrackScreens,
-        componentMetrics: new Map(),
-        screenMetrics: new Map(),
-        memorySnapshots: [],
-        clearPerformanceData: mockClearPerformanceData,
-      }),
-  );
+  usePerformanceStore.setState(usePerformanceStore.getInitialState(), true);
+  held({
+    isEnabled: true,
+    trackRenders: true,
+    trackMemory: false,
+    trackScreens: true,
+  });
+  viewer({ debugBuild: true, devTools: false });
+  recorded({});
+  deviceMemory(512 * MB, 1024 * MB);
+  jest.mocked(useFPSMonitor).mockReturnValue({
+    fps: 58,
+    isLowFPS: false,
+    stats: { current: 58, min: 42, max: 60, avg: 55, lowFPSCount: 3 },
+  });
 });
 
-describe('PerformanceDashboard', () => {
-  it('renders dashboard title', () => {
-    const { getByText } = render(<PerformanceDashboard />);
-    expect(getByText('Performance Dashboard')).toBeTruthy();
-  });
+afterEach(() => {
+  MemoryMonitor.stop();
+  jest.restoreAllMocks();
+});
 
-  it('renders performance tracking section', () => {
-    const { getByText } = render(<PerformanceDashboard />);
-    expect(getByText('Performance Tracking')).toBeTruthy();
-  });
+describe('who may open it', () => {
+  it.each([
+    { who: 'a debug build', debugBuild: true, devTools: false, opens: true },
+    {
+      who: 'an admin in a release build',
+      debugBuild: false,
+      devTools: true,
+      opens: true,
+    },
+    {
+      who: 'anyone else in a release build',
+      debugBuild: false,
+      devTools: false,
+      opens: false,
+    },
+  ])('$who: opens $opens', ({ debugBuild, devTools, opens }) => {
+    viewer({ debugBuild, devTools });
+    render(<PerformanceDashboard />);
 
-  it('renders all toggle switches', () => {
-    const { getByText } = render(<PerformanceDashboard />);
-    expect(getByText('Enable Performance Tracking')).toBeTruthy();
-    expect(getByText('Track Component Renders')).toBeTruthy();
-    expect(getByText('Track Memory Usage')).toBeTruthy();
-    expect(getByText('Track Screen Transitions')).toBeTruthy();
-  });
-
-  it('shows empty state when no data', () => {
-    const { getByText } = render(<PerformanceDashboard />);
-    expect(getByText('No performance data collected yet.')).toBeTruthy();
-  });
-
-  it('shows not available for non-admin in production', () => {
-    const { Environment } = require('#/utils/environment');
-    Environment.shouldEnableDebugFeatures.mockReturnValue(false);
-
-    const storeModule = require('#store/useAppStore');
-    storeModule.useAppStore.mockImplementation(
-      (selector: (state: Partial<RootState>) => unknown) => selector({}),
-    );
-    storeModule.useCanAccessDevTools.mockReturnValue(false);
-
-    const { getByText } = render(<PerformanceDashboard />);
+    expect(screen.queryByText('Performance Tracking') !== null).toBe(opens);
     expect(
-      getByText('Performance dashboard is only available to administrators.'),
-    ).toBeTruthy();
+      screen.queryByText(
+        'Performance dashboard is only available to administrators.',
+      ) !== null,
+    ).toBe(!opens);
+  });
+});
+
+describe('the tracking switches', () => {
+  it('turn the other three off while tracking is off', () => {
+    held({ isEnabled: false });
+    render(<PerformanceDashboard />);
+
+    for (const name of [
+      'Track Component Renders',
+      'Track Memory Usage',
+      'Track Screen Transitions',
+    ]) {
+      expect(switchNamed(name)).toBeDisabled();
+    }
+    expect(switchNamed('Enable Performance Tracking')).toBeEnabled();
   });
 
-  it('shows clear button when metrics exist', () => {
-    const {
-      usePerformanceStore,
-    } = require('#/services/performance/performanceStore');
-    const metrics = new Map();
-    metrics.set('TestComponent', {
-      componentName: 'TestComponent',
-      avgRenderTime: 10,
-      maxRenderTime: 20,
-      totalRenderTime: 50,
-      renderCount: 5,
-    });
+  it.each([
+    { name: 'Enable Performance Tracking', field: 'isEnabled' },
+    { name: 'Track Component Renders', field: 'trackRenders' },
+    { name: 'Track Screen Transitions', field: 'trackScreens' },
+  ] as const)('$name saves $field alone', ({ name, field }) => {
+    held({ trackRenders: false, trackMemory: false, trackScreens: false });
+    render(<PerformanceDashboard />);
+    const before = usePerformanceStore.getState();
 
-    usePerformanceStore.mockImplementation(
-      (selector: (state: Partial<PerformanceState>) => unknown) =>
-        selector({
-          isEnabled: true,
-          trackRenders: true,
-          trackMemory: false,
-          trackScreens: false,
-          setPerformanceEnabled: mockSetPerformanceEnabled,
-          setTrackRenders: mockSetTrackRenders,
-          setTrackMemory: mockSetTrackMemory,
-          setTrackScreens: mockSetTrackScreens,
-          componentMetrics: metrics,
-          screenMetrics: new Map(),
-          memorySnapshots: [],
-          clearPerformanceData: mockClearPerformanceData,
-        }),
-    );
+    toggle(name, field === 'isEnabled' ? false : true);
 
-    const { getByText } = render(<PerformanceDashboard />);
-    expect(getByText('Clear Performance Data')).toBeTruthy();
+    const after = usePerformanceStore.getState();
+    for (const key of [
+      'isEnabled',
+      'trackRenders',
+      'trackMemory',
+      'trackScreens',
+    ] as const) {
+      expect(after[key]).toBe(key === field ? !before[key] : before[key]);
+    }
   });
 
-  it('shows component metrics in table with Total column', () => {
-    const {
-      usePerformanceStore,
-    } = require('#/services/performance/performanceStore');
-    const metrics = new Map();
-    metrics.set('TestComponent', {
-      componentName: 'TestComponent',
-      avgRenderTime: 10,
-      maxRenderTime: 20,
-      totalRenderTime: 50,
-      renderCount: 5,
-    });
+  it('start memory sampling every ten seconds, with a first reading', async () => {
+    const start = jest.spyOn(MemoryMonitor, 'start');
+    render(<PerformanceDashboard />);
 
-    usePerformanceStore.mockImplementation(
-      (selector: (state: Partial<PerformanceState>) => unknown) =>
-        selector({
-          isEnabled: true,
-          trackRenders: true,
-          trackMemory: false,
-          trackScreens: false,
-          setPerformanceEnabled: mockSetPerformanceEnabled,
-          setTrackRenders: mockSetTrackRenders,
-          setTrackMemory: mockSetTrackMemory,
-          setTrackScreens: mockSetTrackScreens,
-          componentMetrics: metrics,
-          screenMetrics: new Map(),
-          memorySnapshots: [],
-          clearPerformanceData: mockClearPerformanceData,
-        }),
-    );
+    toggle('Track Memory Usage', true);
+    await readingLands('monitor_start');
 
-    const { getByText } = render(<PerformanceDashboard />);
-    expect(getByText('TestComponent')).toBeTruthy();
-    expect(getByText('Slowest Components')).toBeTruthy();
-    // Verify Total column header exists
-    expect(getByText('Total')).toBeTruthy();
-    // Verify total render time is displayed (50ms formatted)
-    expect(getByText('50.00ms')).toBeTruthy();
+    expect(start).toHaveBeenCalledWith(10000);
+    expect(MemoryMonitor.isEnabled()).toBe(true);
+    expect(screen.getByText('Memory Usage')).toBeTruthy();
+    expect(screen.getAllByText('50.0%').length).toBeGreaterThan(0);
   });
 
-  it('triggers clear data confirmation alert', async () => {
-    const user = userEvent.setup();
-    const {
-      usePerformanceStore,
-    } = require('#/services/performance/performanceStore');
-    const metrics = new Map();
-    metrics.set('Test', {
-      componentName: 'Test',
-      avgRenderTime: 1,
-      maxRenderTime: 2,
-      totalRenderTime: 3,
-      renderCount: 1,
+  it('stop memory sampling when memory tracking goes off', async () => {
+    render(<PerformanceDashboard />);
+    toggle('Track Memory Usage', true);
+    await readingLands('monitor_start');
+
+    toggle('Track Memory Usage', false);
+
+    expect(MemoryMonitor.isEnabled()).toBe(false);
+  });
+
+  it('stop memory sampling when tracking goes off', async () => {
+    render(<PerformanceDashboard />);
+    toggle('Track Memory Usage', true);
+    await readingLands('monitor_start');
+
+    toggle('Enable Performance Tracking', false);
+
+    expect(MemoryMonitor.isEnabled()).toBe(false);
+  });
+});
+
+describe('what it shows', () => {
+  it('says nothing is collected yet, with nothing to clear', () => {
+    render(<PerformanceDashboard />);
+
+    expect(screen.getByText(EMPTY)).toBeTruthy();
+    expect(screen.queryByText(CLEAR)).toBeNull();
+  });
+
+  it('says nothing while tracking is off', () => {
+    held({ isEnabled: false });
+    render(<PerformanceDashboard />);
+
+    expect(screen.queryByText(EMPTY)).toBeNull();
+  });
+
+  it('counts memory readings alone as data', () => {
+    held({ trackMemory: true, readings: [reading(40, 1)] });
+    render(<PerformanceDashboard />);
+
+    expect(screen.queryByText(EMPTY)).toBeNull();
+    expect(screen.getByText(CLEAR)).toBeTruthy();
+  });
+
+  it.each([
+    { off: 'trackRenders', card: 'Slowest Components' },
+    { off: 'trackScreens', card: 'Slowest Screen Transitions' },
+    { off: 'trackMemory', card: 'Memory Usage' },
+  ] as const)('hides "$card" while $off is off', ({ off, card }) => {
+    held({
+      trackRenders: true,
+      trackMemory: true,
+      trackScreens: true,
+      [off]: false,
+      components: [component('Row', 4)],
+      screens: [screenMetric('Pantry', 120)],
+      readings: [reading(40, 1)],
     });
+    render(<PerformanceDashboard />);
 
-    usePerformanceStore.mockImplementation(
-      (selector: (state: Partial<PerformanceState>) => unknown) =>
-        selector({
-          isEnabled: true,
-          trackRenders: true,
-          trackMemory: false,
-          trackScreens: false,
-          setPerformanceEnabled: mockSetPerformanceEnabled,
-          setTrackRenders: mockSetTrackRenders,
-          setTrackMemory: mockSetTrackMemory,
-          setTrackScreens: mockSetTrackScreens,
-          componentMetrics: metrics,
-          screenMetrics: new Map(),
-          memorySnapshots: [],
-          clearPerformanceData: mockClearPerformanceData,
-        }),
+    expect(screen.queryByText(card)).toBeNull();
+  });
+
+  it('lists the ten slowest components, slowest first', () => {
+    held({
+      components: Array.from({ length: 11 }, (_, index) =>
+        component(`Component ${index + 1}`, index + 1),
+      ),
+    });
+    render(<PerformanceDashboard />);
+
+    const names = screen
+      .getAllByText(/^Component \d+$/)
+      .map(row => row.props.children);
+    expect(names).toEqual(
+      Array.from({ length: 10 }, (_, index) => `Component ${11 - index}`),
     );
+  });
 
-    const { getByText } = render(<PerformanceDashboard />);
-    await user.press(getByText('Clear Performance Data'));
+  it('lists screens slowest first', () => {
+    held({ screens: [screenMetric('Fast', 50), screenMetric('Slow', 900)] });
+    render(<PerformanceDashboard />);
 
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Clear Performance Data',
-      expect.any(String),
+    const names = screen
+      .getAllByText(/^(Fast|Slow)$/)
+      .map(row => row.props.children);
+    expect(names).toEqual(['Slow', 'Fast']);
+  });
+
+  it('reads memory from the last five readings, the newest as current', () => {
+    held({
+      trackMemory: true,
+      readings: [10, 20, 30, 40, 50, 60, 70].map((percent, index) =>
+        reading(percent, index),
+      ),
+    });
+    render(<PerformanceDashboard />);
+
+    expect(screen.getAllByText('70.0%').length).toBeGreaterThan(0);
+    expect(screen.queryByText('20.0%')).toBeNull();
+  });
+
+  it('shows the live frame rate in a debug build', () => {
+    render(<PerformanceDashboard />);
+
+    expect(screen.getByText('58')).toBeTruthy();
+    expect(screen.getByText('42 / 55 / 60')).toBeTruthy();
+  });
+
+  it('times the launch and the bundle load from their marks', () => {
+    recorded({
+      'react-native-mark': [
+        entry('nativeLaunchStart', 'react-native-mark', 0),
+        entry('nativeLaunchEnd', 'react-native-mark', 250),
+        entry('runJsBundleStart', 'react-native-mark', 300),
+        entry('runJsBundleEnd', 'react-native-mark', 420),
+      ],
+    });
+    render(<PerformanceDashboard />);
+
+    expect(screen.getByText('250.00ms')).toBeTruthy();
+    expect(screen.getByText('120.00ms')).toBeTruthy();
+  });
+
+  it('lists recent requests newest first', () => {
+    recorded({
+      resource: [
+        entry('https://first.example/a', 'resource', 1, 30),
+        entry('https://second.example/b', 'resource', 2, 40),
+      ],
+    });
+    render(<PerformanceDashboard />);
+
+    const hosts = screen
+      .getAllByText(/\.example$/)
+      .map(row => row.props.children);
+    expect(hosts).toEqual(['second.example', 'first.example']);
+  });
+
+  it('says when it last updated', () => {
+    render(<PerformanceDashboard />);
+
+    expect(screen.getByText(/^Last updated: \S/)).toBeTruthy();
+  });
+});
+
+describe('clearing', () => {
+  it('asks first, and cancelling keeps the metrics', async () => {
+    held({ components: [component('Row', 4)] });
+    render(<PerformanceDashboard />);
+
+    fireEvent.press(screen.getByText(CLEAR));
+    expect(alertService.alert).toHaveBeenLastCalledWith(
+      CLEAR,
+      'Are you sure you want to clear all performance metrics?',
       expect.any(Array),
     );
+    await answerAlert('Cancel');
+
+    expect(screen.getByText('Row')).toBeTruthy();
+    expect(usePerformanceStore.getState().componentMetrics.size).toBe(1);
   });
 
-  it('starts MemoryMonitor when memory toggle is turned on', async () => {
-    const user = userEvent.setup();
-    const {
-      usePerformanceStore,
-    } = require('#/services/performance/performanceStore');
-    usePerformanceStore.mockImplementation(
-      (selector: (state: Partial<PerformanceState>) => unknown) =>
-        selector({
-          isEnabled: true,
-          trackRenders: true,
-          trackMemory: false,
-          trackScreens: true,
-          setPerformanceEnabled: mockSetPerformanceEnabled,
-          setTrackRenders: mockSetTrackRenders,
-          setTrackMemory: mockSetTrackMemory,
-          setTrackScreens: mockSetTrackScreens,
-          componentMetrics: new Map(),
-          screenMetrics: new Map(),
-          memorySnapshots: [],
-          clearPerformanceData: mockClearPerformanceData,
-        }),
-    );
+  it('empties the metrics and the recorded marks once confirmed', async () => {
+    held({ components: [component('Row', 4)] });
+    render(<PerformanceDashboard />);
 
-    const { getByTestId } = render(<PerformanceDashboard />);
-    await user.press(getByTestId('switch-Track Memory Usage'));
+    fireEvent.press(screen.getByText(CLEAR));
+    await answerAlert('Clear');
 
-    expect(mockSetTrackMemory).toHaveBeenCalledWith(true);
-    expect(MemoryMonitor.start).toHaveBeenCalledWith(10000);
+    expect(screen.queryByText('Row')).toBeNull();
+    expect(screen.getByText(EMPTY)).toBeTruthy();
+    expect(performance.clearMarks).toHaveBeenCalled();
+  });
+});
+
+describe('pulling to refresh', () => {
+  it('takes a memory reading while memory is tracked', async () => {
+    held({ trackMemory: true });
+    const takeSnapshot = jest.spyOn(MemoryMonitor, 'takeSnapshot');
+    render(<PerformanceDashboard />);
+
+    await pullToRefresh();
+    await readingLands('manual_refresh');
+
+    expect(takeSnapshot).toHaveBeenCalledWith('manual_refresh');
+    expect(screen.getAllByText('50.0%').length).toBeGreaterThan(0);
   });
 
-  it('stops MemoryMonitor when memory toggle is turned off', async () => {
-    const user = userEvent.setup();
-    const { getByTestId } = render(<PerformanceDashboard />);
-    // trackMemory is true by default, pressing toggles it off
-    await user.press(getByTestId('switch-Track Memory Usage'));
+  it('takes none while tracking is off', async () => {
+    held({ isEnabled: false, trackMemory: true });
+    const takeSnapshot = jest.spyOn(MemoryMonitor, 'takeSnapshot');
+    render(<PerformanceDashboard />);
 
-    expect(mockSetTrackMemory).toHaveBeenCalledWith(false);
-    expect(MemoryMonitor.stop).toHaveBeenCalled();
-  });
+    await pullToRefresh();
 
-  it('stops MemoryMonitor when master toggle is disabled', async () => {
-    const user = userEvent.setup();
-    (MemoryMonitor.isEnabled as jest.Mock).mockReturnValue(true);
-
-    const { getByTestId } = render(<PerformanceDashboard />);
-    await user.press(getByTestId('switch-Enable Performance Tracking'));
-
-    expect(mockSetPerformanceEnabled).toHaveBeenCalledWith(false);
-    expect(MemoryMonitor.stop).toHaveBeenCalled();
-  });
-
-  it('shows current memory card when snapshots exist', () => {
-    const {
-      usePerformanceStore,
-    } = require('#/services/performance/performanceStore');
-    const snapshots = [
-      {
-        timestamp: 1000,
-        usedBytes: 524288000,
-        limitBytes: 1073741824,
-        usagePercent: 48.8,
-        context: 'periodic_sample',
-      },
-      {
-        timestamp: 2000,
-        usedBytes: 536870912,
-        limitBytes: 1073741824,
-        usagePercent: 50.0,
-        context: 'periodic_sample',
-      },
-    ];
-
-    usePerformanceStore.mockImplementation(
-      (selector: (state: Partial<PerformanceState>) => unknown) =>
-        selector({
-          isEnabled: true,
-          trackRenders: false,
-          trackMemory: true,
-          trackScreens: false,
-          setPerformanceEnabled: mockSetPerformanceEnabled,
-          setTrackRenders: mockSetTrackRenders,
-          setTrackMemory: mockSetTrackMemory,
-          setTrackScreens: mockSetTrackScreens,
-          componentMetrics: new Map(),
-          screenMetrics: new Map(),
-          memorySnapshots: snapshots,
-          clearPerformanceData: mockClearPerformanceData,
-        }),
-    );
-
-    const { getByText, getAllByText } = render(<PerformanceDashboard />);
-    expect(getByText('Memory Usage')).toBeTruthy();
-    expect(getByText('Current')).toBeTruthy();
-    expect(getByText('Recent History')).toBeTruthy();
-    // Verify current memory shows latest snapshot's usage percent (appears in card + history)
-    expect(getAllByText('50.0%').length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('renders FPS section in DEV mode', () => {
-    const { getByText } = render(<PerformanceDashboard />);
-    expect(getByText('Live FPS')).toBeTruthy();
-    expect(getByText('58')).toBeTruthy();
-    expect(getByText('42 / 55 / 60')).toBeTruthy();
-    expect(getByText('3')).toBeTruthy();
-  });
-
-  it('shows last updated timestamp', () => {
-    const { getByText } = render(<PerformanceDashboard />);
-    expect(getByText(/Last updated:/)).toBeTruthy();
+    expect(takeSnapshot).not.toHaveBeenCalled();
   });
 });
