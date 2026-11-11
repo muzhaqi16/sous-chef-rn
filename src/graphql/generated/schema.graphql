@@ -1445,21 +1445,14 @@ type ChangePantryItemUnitPayload {
     Sort order; newest first when omitted. Fields apply in declaration order, not request order
     """
     orderBy: PantryItemBatchOrderBy
-    """Only batches in this status"""
-    status: BatchStatus
   ): PantryItemBatchConnection!
   """
   True when this call was a replay of a write already applied: it wrote nothing,
   and this payload is read as it stands now. The canonical, API-wide replay flag.
   """
   converged: Boolean!
-  """True when the route was exact"""
-  exact: Boolean!
-  method: PantryUnitChangeMethod!
   pantry: Pantry
   pantryItem: PantryItem!
-  """True when a quantity was sent and an exact route made it unused"""
-  quantityIgnored: Boolean!
   storageLocation: StorageLocation
 }
 
@@ -1494,36 +1487,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union ChangePasswordResult = ChangePasswordPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-"""Source of the change for audit purposes"""
-enum ChangeSource {
-  API
-  BARCODE_SCAN
-  EXPIRATION_ALERT
-  MOBILE_APP
-  RECIPE_COOKING
-  SHOPPING_LIST
-  SYSTEM
-  USER
-  WEB_APP
-}
-
-"""Change types for pantry item modifications"""
-enum ChangeType {
-  CONSUMED
-  CREATED
-  DELETED
-  EXPIRATION_UPDATED
-  """The stack moved to another catalog item"""
-  ITEM_CHANGED
-  LOCATION_UPDATED
-  """The stack's portion definition or density override was edited"""
-  MEASUREMENT_PROFILE
-  MERGED
-  QUANTITY_UPDATED
-  RESTORED
-  WEIGHT_CORRECTED
-}
 
 """
 Someone accepted the recipient's invitation to a shared list (COLLABORATION_ACCEPTED).
@@ -1762,26 +1725,6 @@ enum ConversionSource {
   USER_DEFINED
 }
 
-"""The rule that produced one step of a usage's unit conversion."""
-enum ConversionStepSource {
-  """A density recorded for the item or the stack"""
-  DENSITY
-  """Water's density, assumed for want of a recorded one; an estimate"""
-  DENSITY_ASSUMED
-  """The catalog hierarchy"""
-  HIERARCHY
-  """No conversion: the amount was already in the stack's unit"""
-  IDENTITY
-  """A conversion recorded for the item"""
-  ITEM_CONVERSION
-  """The stack's net weight, bridging a count to a weight"""
-  NET_WEIGHT_BRIDGE
-  """The stack's own portion definition"""
-  PORTION
-  """A universal unit factor"""
-  STANDARD
-}
-
 """Type of conversion being performed"""
 enum ConversionType {
   """Volume and weight through a density"""
@@ -1828,8 +1771,6 @@ type ConvertExpiredToWastePayload {
     Sort order; newest first when omitted. Fields apply in declaration order, not request order
     """
     orderBy: PantryItemBatchOrderBy
-    """Only batches in this status"""
-    status: BatchStatus
   ): PantryItemBatchConnection!
   """
   True when this call was a replay of a write already applied: it wrote nothing,
@@ -2510,8 +2451,6 @@ type CreatePantryItemPayload {
   and this payload is read as it stands now. The canonical, API-wide replay flag.
   """
   converged: Boolean!
-  """MERGED when a forced add joined a stack the pantry already held"""
-  outcome: CreateOutcome!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -2587,7 +2526,6 @@ type CreatePantryItemUsagePayload {
   """
   converged: Boolean!
   pantry: Pantry
-  pantryItem: PantryItem
   pantryItemUsage: PantryItemUsage!
   storageLocation: StorageLocation
 }
@@ -2605,7 +2543,6 @@ type CreatePantryPayload {
   and this payload is read as it stands now. The canonical, API-wide replay flag.
   """
   converged: Boolean!
-  home: Home
   pantry: Pantry!
 }
 
@@ -2978,7 +2915,6 @@ type CreateStorageLocationPayload {
   and this payload is read as it stands now. The canonical, API-wide replay flag.
   """
   converged: Boolean!
-  home: Home
   storageLocation: StorageLocation!
 }
 
@@ -3660,7 +3596,6 @@ type DeletePantryPayload {
   The canonical, API-wide replay flag.
   """
   converged: Boolean!
-  home: Home
   """
   The deleted pantry, or null when it was already deleted — an idempotent
   replay (or second device) that converged as success. See converged.
@@ -3802,7 +3737,6 @@ type DeleteStorageLocationPayload {
   API-wide replay flag.
   """
   converged: Boolean!
-  home: Home
   """
   The deleted storage location, or null when it was already deleted — an
   idempotent replay (or second device) that converged as success. See
@@ -4419,8 +4353,6 @@ type DuplicatePantryItemError implements Error {
   """
   existingPantryItemIds: [ID!]!
   message: String!
-  """Suggested client action, e.g. `RESTOCK_EXISTING`."""
-  suggestion: String
 }
 
 interface Edge {
@@ -7520,7 +7452,6 @@ input MarkPantryAsDefaultInput {
 }
 
 type MarkPantryAsDefaultPayload {
-  home: Home
   pantry: Pantry!
 }
 
@@ -7646,7 +7577,6 @@ input MarkStorageLocationAsDefaultInput {
 }
 
 type MarkStorageLocationAsDefaultPayload {
-  home: Home
   storageLocation: StorageLocation!
 }
 
@@ -10639,7 +10569,7 @@ type Pantry {
     """
     orderBy: PantryItemOrderBy
   ): PantryItemConnection!
-  ledgerAnalytics(filters: AnalyticsFilters, granularity: PeriodGranularity, itemId: ID): LedgerAnalytics!
+  ledgerAnalytics(filters: AnalyticsFilters, granularity: PeriodGranularity): LedgerAnalytics!
   location: String
   name: String!
   """
@@ -10675,7 +10605,6 @@ type Pantry {
   recentlyDeleted, frequentlyAdded, popular. Each section holds up to limit.
   """
   suggestions(
-    expirationDays: Int = 7
     """
     At most this many per section: default 10, at most 50 (a larger value gives 50)
     """
@@ -10763,7 +10692,6 @@ type PantryEvent implements DomainEvent {
   """
   originatorClientId: ID
   pantryId: ID!
-  parents: PantryEventParents!
   subtype: PantrySubtype!
   timestamp: DateTime!
 }
@@ -10773,11 +10701,6 @@ The entity a pantry event refers to. Branch on __typename to learn which
 part of the pantry changed.
 """
 union PantryEventNode = ExpirationNotification | Pantry | PantryItem | PantryItemUsage
-
-"""Parent resource IDs for cache updates without refetch."""
-type PantryEventParents {
-  homeId: ID!
-}
 
 """One stack in a pantry: one catalog item, in one unit."""
 type PantryItem {
@@ -10806,21 +10729,6 @@ type PantryItem {
   This stack's own brand, independent of the catalog item's brands; null when none is set
   """
   brand: Brand
-  """
-  The id of this stack's own brand, independent of the catalog item's brands; null when none is set
-  """
-  brandId: ID
-  """The audit trail of changes to this stack, most recent first"""
-  changeHistoryConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-  ): PantryItemChangeConnection!
   """
   The stack's physical condition; GOOD unless set. A daily check marks it EXPIRED
   once expiresOn has passed everywhere, which can lag the viewer's own date, so
@@ -10871,8 +10779,6 @@ type PantryItem {
   displayUnit: Unit
   """The soonest expiry date among the active batches."""
   earliestBatchExpiresOn: LocalDate
-  """Whether expiry reminders are sent for this stack; true by default"""
-  expirationAlert: Boolean!
   """
   The expiry date, with no time and no timezone. An item is not expired on this date: it expires today. It is expired from the next day on, judged on the viewer's calendar.
   """
@@ -10892,10 +10798,6 @@ type PantryItem {
   """
   image: EntryImage
   """
-  Whether the wasted stock was composted, as reported with the latest waste or set directly; false by default
-  """
-  isComposted: Boolean!
-  """
   Whether this item is low on stock: heldQuantity at or below zero, or at or below
   minQuantity when a minimum is set. The same definition
   PantryStats.lowStockCount counts and the lowStock filter on
@@ -10904,10 +10806,6 @@ type PantryItem {
   Not lowStockAlert, which records only whether the user wants to be notified.
   """
   isLowStock: Boolean!
-  """
-  Whether the wasted stock was recycled, as reported with the latest waste or set directly; false by default
-  """
-  isRecycled: Boolean!
   """
   The catalog item this stack is of. When itemUpc matches one of its product
   variants, it carries that variant's details, such as its images.
@@ -10921,24 +10819,9 @@ type PantryItem {
   """
   itemName: String!
   """
-  The barcode of the product this stack holds; null when none is recorded. When it
-  matches one of the item's product variants, item carries that variant's details,
-  such as its images.
-  """
-  itemUpc: String
-  """The user who last changed this stack; null when unknown"""
-  lastModifiedBy: User
-  """
   When stock was last used, wasted or opened from this stack; null when it never has been
   """
   lastUsedAt: DateTime
-  """
-  Totals added, consumed and wasted for this stack, over the period filters selects
-  """
-  ledger(
-    """The period to total; the last 30 days when omitted"""
-    filters: AnalyticsFilters
-  ): LedgerSummary!
   """
   Opt-in for low-stock notifications on this stack (default false): with it on
   and a minQuantity set, falling to or below the minimum notifies the home.
@@ -10992,12 +10875,6 @@ type PantryItem {
   """
   purchase: Purchase
   """
-  The purchase behind this stack's FIRST acquisition. It does not move when
-  the stack is restocked — a later acquisition's purchase is on its own batch,
-  as PantryItemBatch.purchaseId.
-  """
-  purchaseId: ID
-  """
   Current amount, derived from the item's ACTIVE batches. Every path that adds
   or removes stock writes a batch and recomputes this; it is never set
   directly.
@@ -11034,10 +10911,6 @@ type PantryItem {
   minQuantity is the target.
   """
   restockQuantity: Float
-  """
-  The shopping-list line this stack was created from when a purchase was moved into the pantry; null for a stack added any other way
-  """
-  sourceShoppingListItemId: ID
   """Whole and partly used packages, batch by batch."""
   stockBreakdown: StockBreakdown!
   """
@@ -11060,18 +10933,8 @@ type PantryItem {
   The store this stack was bought at when it was added; null when none was given
   """
   store: Store
-  """
-  The store this stack was bought at when it was added; a later restock's store is on its batch. Null when none was given.
-  """
-  storeId: ID
   """Free-form labels on this stack; empty when none"""
   tags: [String!]!
-  """tareWeight in netWeightUnit, read in both unit systems; null with it."""
-  tare: Measure
-  """
-  The empty container's weight, in netWeightUnit: a recount by grossWeight records gross − tare. Null when none is recorded.
-  """
-  tareWeight: Float
   """
   Value of the REMAINING stock. Batches whose cost was never recorded are
   excluded rather than counted as free, so this is the value of the stock
@@ -11082,10 +10945,6 @@ type PantryItem {
   The tracking unit: quantity, heldQuantity and the low-stock thresholds are counted in it
   """
   unit: Unit!
-  """
-  The id of the tracking unit, the unit quantity and heldQuantity are counted in
-  """
-  unitId: ID!
   """When the stack last changed"""
   updatedAt: DateTime!
   """
@@ -11108,8 +10967,6 @@ type PantryItem {
   updatePantryItem; a stale value is refused as a conflict.
   """
   version: Int!
-  """When waste was last recorded on this stack; null when never"""
-  wasteDate: DateTime
   """
   The reason given with the most recent waste recorded on this stack; null when none has been recorded
   """
@@ -11126,7 +10983,6 @@ Each batch tracks its own expiration, cost, and remaining quantity.
 Consumed FIFO by expiration date.
 """
 type PantryItemBatch {
-  addedBy: User
   batchNumber: Int!
   """
   What was paid per unit of the amount ENTERED at intake — the shopper's
@@ -11170,20 +11026,12 @@ type PantryItemBatch {
   where createdAt is when the batch was recorded.
   """
   purchase: Purchase
-  """
-  The purchase this acquisition was recorded under, where one exists. A
-  restock's purchase belongs here rather than on the item, whose purchaseId
-  names only the acquisition that first stocked it.
-  """
-  purchaseId: ID
   quantity: Float!
   """
   remainingNetWeight in the stack's net-weight unit, read in both unit systems; null with it.
   """
   remaining: Measure
   remainingNetWeight: Float
-  """The RESTOCK ledger entry this batch was created alongside."""
-  sourceUsageId: ID
   status: BatchStatus!
   store: Store
   """
@@ -11244,56 +11092,6 @@ set a field to ASC or DESC.
 input PantryItemBatchOrderBy {
   batchNumber: SortOrder
   createdAt: SortOrder
-}
-
-"""Audit record of a change to a pantry item"""
-type PantryItemChange {
-  changeType: ChangeType!
-  """
-  Null for a catalog act no member made (a stack moved onto a product receipt intake adopted), or when the actor's account was permanently deleted. The audit entry is retained for the home.
-  """
-  changedBy: User
-  changedById: ID
-  createdAt: DateTime!
-  field: String
-  id: ID!
-  """The stack's item name when the change was recorded."""
-  itemName: String
-  newValue: String
-  oldValue: String
-  pantryId: ID
-  """
-  Null once the stack is destroyed by adminPurgePantryItems; pantryId and itemName still name it.
-  """
-  pantryItem: PantryItem
-  pantryItemId: ID
-  source: ChangeSource!
-}
-
-"""
-A page of PantryItemChange results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type PantryItemChangeConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [PantryItemChangeEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One PantryItemChange in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type PantryItemChangeEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The PantryItemChange this edge wraps."""
-  node: PantryItemChange!
 }
 
 """
@@ -11418,36 +11216,20 @@ type PantryItemSuggestion {
   unit for the item, the item's tracking or retail unit, else a count).
   """
   defaultUnitId: ID
-  """Expiry date (for EXPIRING_SOON source)"""
-  expiresOn: LocalDate
-  """
-  Frequency count - times user added this item to pantries (for FREQUENTLY_ADDED source)
-  """
-  frequencyCount: Int
   """Unique suggestion ID (itemId or pantryItemId depending on source)"""
   id: ID!
   """Primary image URL"""
   imageUrl: String
-  """Full item reference"""
-  item: SuggestionItem!
   """The catalog Item ID - always present"""
   itemId: ID!
   """Last quantity used (for RECENTLY_DELETED source)"""
   lastQuantity: Float
-  """Last unit ID used (for RECENTLY_DELETED source)"""
-  lastUnitId: ID
-  """Minimum quantity threshold (for LOW_STOCK source)"""
-  minQuantity: Float
   """Item name for display"""
   name: String!
   """
   Pantry item ID - present for LOW_STOCK, EXPIRING_SOON and RECENTLY_DELETED, where it names the removed stack
   """
   pantryItemId: ID
-  """Popularity ranking position (for POPULAR source)"""
-  popularityRank: Int
-  """Suggested restock quantity (for LOW_STOCK source)"""
-  restockQuantity: Float
   """Source of this suggestion"""
   source: PantrySuggestionSource!
 }
@@ -11469,19 +11251,6 @@ type PantryItemUsage {
   """
   adjustmentReason: String
   """
-  How the amount entered became the stack's own unit, step by step (¼ cup of
-  flour → grams through its density). Null when nothing was converted.
-  """
-  conversion: UsageConversion
-  """
-  The cooking log this use was recorded under; null when there is none or the caller does not own it
-  """
-  cookingLog: CookingLog
-  """
-  The id of the cooking log this use was recorded under (a confirmed recipe consumption, or one the client named); null otherwise
-  """
-  cookingLogId: ID
-  """
   On a purchase (a RESTOCK row with no adjustmentKind), the price paid per one usageUnit, in currency; never an estimate. Null when the price is unknown (0 is a known price) and on every other row.
   """
   costPerUnit: Float
@@ -11489,10 +11258,6 @@ type PantryItemUsage {
   What this row's cost figures are in; null on a row that carries no cost.
   """
   currency: Currency
-  """
-  How that currency was decided — observed from a purchase or list, or assumed.
-  """
-  currencyProvenance: CurrencyProvenance
   """Unique identifier of this ledger row"""
   id: ID!
   """
@@ -11503,40 +11268,12 @@ type PantryItemUsage {
   On a WASTE row recorded with createPantryItemUsage, whether the waste was recycled (false unless stated); null on every other row
   """
   isRecycled: Boolean
-  """
-  The id of the catalog item the stack held, kept after the stack is deleted; a catalog merge points it at the surviving item
-  """
-  itemId: ID
-  """
-  The stack's name when the row was recorded, kept after the stack is deleted
-  """
-  itemName: String
-  """
-  The planned meal this use cooked; null when there is none or the caller cannot view its meal plan
-  """
-  mealPlanItem: MealPlanItem
-  """
-  The id of the planned meal this use cooked: the meal whose completion deducted it, or the one the client named; null otherwise, and once that meal is deleted
-  """
-  mealPlanItemId: ID
   """Free text recorded with the row; null when none"""
   notes: String
-  """
-  The pantry this row was recorded in; null when the row names none or the caller cannot view that pantry
-  """
-  pantry: Pantry
-  """
-  The id of the pantry this row was recorded in; null when the row names none
-  """
-  pantryId: ID
   """
   The stack this row moved stock on, removed stacks included; null once it is permanently deleted, or when the caller cannot view the pantry it is in
   """
   pantryItem: PantryItem
-  """
-  The id of the stack this row moved stock on; null once that stack is permanently deleted. After stacks are merged it names the surviving stack.
-  """
-  pantryItemId: ID
   """
   Why the stock moved. RESTOCK adds stock (a purchase, or an upward correction when adjustmentKind is set); ADJUSTMENT is a downward correction; every other purpose takes stock out.
   """
@@ -11546,24 +11283,10 @@ type PantryItemUsage {
   """
   quantityUsed: Float!
   """
-  The recipe this use cooked; null when there is none or the caller may not see it
-  """
-  recipe: Recipe
-  """The id of the recipe this use cooked; null when none"""
-  recipeId: ID
-  """
   A recount's count as the person stated it, in their unit (2.5 lb on a gram
   stack). Null for every other row, and for a recount that named no unit.
   """
   statedAmount: Measure
-  """
-  On a purchase, the store it was bought at; null when none was given and on every other row
-  """
-  store: Store
-  """
-  On a purchase, the id of the store it was bought at; null when none was given and on every other row
-  """
-  storeId: ID
   """
   On a purchase, the total paid, in currency. Null when it is unknown (0 is a known price) and on every other row.
   """
@@ -11792,11 +11515,6 @@ type PantryUnitChangeBatch {
   Null for the stock the stack held outside its batches, carried into a new batch
   """
   batchId: ID
-  """
-  Net weight per new unit, in the stack's net-weight unit after the change
-  """
-  netWeightAfter: Float
-  portionsPerTrackingUnitAfter: Float
   quantityAfter: Float!
   quantityBefore: Float!
 }
@@ -11815,17 +11533,12 @@ enum PantryUnitChangeMethod {
 
 type PantryUnitChangePreview {
   batches: [PantryUnitChangeBatch!]!
-  confidence: Float
   """A held stack of the item in the new unit, which refuses the change"""
   conflictingPantryItemId: ID
   """
   What the stack holds after the change, as it will be shown (12 pc shown as 1 doz); null with no route
   """
   displayAmountAfter: DisplayAmount
-  """
-  The unit the stack is shown in after the change; null when shown in the unit it counts in
-  """
-  displayUnitAfter: Unit
   """The stack stops recording a net weight"""
   dropsNetWeight: Boolean!
   """The stack stops recording a portion definition"""
@@ -11844,9 +11557,6 @@ type PantryUnitChangePreview {
   """
   method: PantryUnitChangeMethod
   minQuantityAfter: Float
-  netWeightAfter: Float
-  netWeightUnitIdAfter: ID
-  portionsPerTrackingUnitAfter: Float
   quantityAfter: Float
   quantityBefore: Float!
   """True when a quantity was sent and an exact route makes it unused"""
@@ -11862,7 +11572,6 @@ type PantryUnitChangePreview {
 type PantryUnitChangeRefusal {
   code: ErrorCode!
   field: String!
-  message: String!
 }
 
 """The caller's choice where the route is an estimate, or there is none."""
@@ -11878,8 +11587,6 @@ Usage statistics for a Pantry.
 Included when admin requests resources with stats.
 """
 type PantryUsageStats {
-  """Total estimated value of items"""
-  estimatedValue: Float
   """Total number of items"""
   itemCount: Int!
   """Last activity timestamp"""
@@ -12027,23 +11734,6 @@ type ParsedReceiptMerchant {
   address: String
   name: String
   storeNumber: String
-}
-
-"""
-One partly used package: its batch, its size, and the fraction of it that remains.
-"""
-type PartialPackage {
-  """Null for stock the stack holds outside its batches."""
-  batchId: ID
-  """
-  This package's own size, in the stack's net-weight unit; null when it is not weighed.
-  """
-  netWeight: Float
-  """
-  The fraction of this package left, between 0 and 1 (0.25 = a quarter jar).
-  """
-  remaining: Float!
-  remainingNetWeight: Float
 }
 
 """
@@ -15871,7 +15561,6 @@ type RestockPantryItemPayload {
   """
   converged: Boolean!
   pantry: Pantry
-  pantryItem: PantryItem
   pantryItemUsage: PantryItemUsage!
   storageLocation: StorageLocation
 }
@@ -17356,7 +17045,6 @@ jar.
 """
 type StockBreakdown {
   fullPackages: Int!
-  partialPackages: [PartialPackage!]!
 }
 
 """A member's answer about a pantry stack they were asked to check"""
@@ -17421,26 +17109,18 @@ type StorageLocation {
   capacity: Float
   """Unit of measurement for capacity (e.g., 'liters', 'cubic feet')"""
   capacityUnit: String
-  """Child locations nested within this location"""
-  childLocations: [StorageLocation!]!
   """Optional color code (hex) for UI display"""
   color: String
-  """When this storage location was created"""
-  createdAt: DateTime!
   """Current count of items stored in this location"""
   currentItemCount: Int!
   """Optional description or notes about this location"""
   description: String
-  """The home this storage location belongs to"""
-  home: Home!
   """ID of the home this storage location belongs to"""
   homeId: ID!
   """Optional icon identifier for UI display"""
   icon: String
   """Unique identifier for the storage location"""
   id: ID!
-  """Whether this location is active and visible"""
-  isActive: Boolean!
   """Whether this location has climate control"""
   isClimateControlled: Boolean!
   """Whether this is the default storage location for the home"""
@@ -17461,8 +17141,6 @@ type StorageLocation {
   temperature: StorageState
   """Type of storage (REFRIGERATOR, FREEZER, PANTRY_SHELF, etc.)"""
   type: StorageType!
-  """When this storage location was last updated"""
-  updatedAt: DateTime!
   """
   The location's revision, advanced by every write. Send it back as version on
   updateStorageLocation; a stale value is refused as a conflict.
@@ -18252,16 +17930,6 @@ input SuggestibleItemChangesInput {
   type: ItemType
   unitConfig: ItemUnitConfigInput
   unitOps: UnitOpsInput
-}
-
-"""
-Lightweight item type for suggestion displays.
-Contains only the display fields needed for suggestion cards.
-"""
-type SuggestionItem {
-  id: ID!
-  imageUrl: String
-  name: String!
 }
 
 """Source of a shopping list suggestion"""
@@ -19738,8 +19406,6 @@ type UpdatePantryItemPayload {
     Sort order; newest first when omitted. Fields apply in declaration order, not request order
     """
     orderBy: PantryItemBatchOrderBy
-    """Only batches in this status"""
-    status: BatchStatus
   ): PantryItemBatchConnection!
   """
   True when this call was a replay of a write already applied: it wrote nothing,
@@ -19795,7 +19461,6 @@ Always include a __typename so the variant can be discriminated.
 union UpdatePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | UnitEligibilityError | UpdatePantryItemPayload | ValidationError
 
 type UpdatePantryPayload {
-  home: Home
   pantry: Pantry!
 }
 
@@ -20141,7 +19806,6 @@ input UpdateStorageLocationInput {
 }
 
 type UpdateStorageLocationPayload {
-  home: Home
   storageLocation: StorageLocation!
 }
 
@@ -20321,12 +19985,6 @@ input UsageAmountInput @oneOf {
 """Comprehensive usage analytics for a pantry"""
 type UsageAnalytics {
   averageUsagePerDay: Float!
-  """
-  What was consumed (cooked, eaten, given, moved out) was worth, per
-  currency, at the cost of the batches it came from. Stock with no known
-  cost adds nothing; currencies are never summed together.
-  """
-  consumedValueByCurrency: [CurrencyAmount!]!
   periodEnd: DateTime!
   periodStart: DateTime!
   topUsedItems: [UsageByItem!]!
@@ -20376,32 +20034,6 @@ type UsageByUnit {
   unitId: ID!
   unitName: String!
   unitSymbol: String!
-}
-
-"""
-The conversion a usage row recorded: every step from the unit entered to the
-stack's unit, and whether any step was an estimate (a density, an unverified
-item conversion).
-"""
-type UsageConversion {
-  """True when any step is an estimate"""
-  estimate: Boolean!
-  """Each step in order, from the unit entered to the stack's tracking unit"""
-  steps: [UsageConversionStep!]!
-  """Stack units per unit entered, all steps together"""
-  totalRatio: Float!
-}
-
-"""One step of a usage row's conversion."""
-type UsageConversionStep {
-  confidence: Float!
-  estimate: Boolean!
-  fromUnitId: ID!
-  """To-units per from-unit"""
-  ratio: Float!
-  """The rule that converted"""
-  source: ConversionStepSource!
-  toUnitId: ID!
 }
 
 """
@@ -21121,8 +20753,6 @@ type WasteByReason {
   percentage: Float!
   reason: WasteReason!
   totalQuantity: Float!
-  """What this reason's waste was worth, per currency"""
-  valueByCurrency: [CurrencyAmount!]!
 }
 
 """Input for wasting a specific batch"""
