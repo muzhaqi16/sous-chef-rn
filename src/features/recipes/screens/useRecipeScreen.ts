@@ -60,9 +60,10 @@ export function useRecipeScreen() {
   const apiUnavailable = useIsApiUnavailable();
 
   // ── Dietary profile (for filter defaults + discovery tags) ──
-  const { profile: dietaryProfile } = useDietaryProfile({
-    fetchPolicy: 'cache-first',
-  });
+  const { profile: dietaryProfile, loading: profileLoading } =
+    useDietaryProfile({
+      fetchPolicy: 'cache-first',
+    });
 
   // The profile's diets, one of each group. Discovery and the search filters'
   // seed share them, so the two agree.
@@ -74,10 +75,11 @@ export function useRecipeScreen() {
   ).flatMap(r => (r.intolerance ? [r.intolerance] : []));
 
   // ── Discovery (includes pantry data) ──
-  const discovery = useRecipeDiscovery({
-    diets: reconciledDiets,
-    intolerances: profileIntolerances,
-  });
+  const discovery = useRecipeDiscovery(
+    profileLoading && !dietaryProfile
+      ? null
+      : { diets: reconciledDiets, intolerances: profileIntolerances },
+  );
 
   // ── Search ──
   const recipeSearch = useRecipeSearch();

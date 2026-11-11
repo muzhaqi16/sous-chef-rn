@@ -29,6 +29,7 @@ import {
   FeatureFlagName,
   Intolerance,
   MembershipRole,
+  TopLevelErrorCode,
 } from '#/graphql/generated/schemaTypes';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
@@ -39,6 +40,13 @@ import {
   RandomCatalogRecipesDocument,
 } from '#features/recipes/hooks/useCatalogDiscovery.generated';
 import { SearchRecipesDocument } from '#features/recipes/hooks/useRecipeSearch.generated';
+import { CombinedGraphQLErrors } from '@apollo/client';
+import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
+import {
+  MAX_CATALOG_INGREDIENTS,
+  MAX_CATALOG_INGREDIENT_LENGTH,
+} from '#domain/catalogRecipes';
 import { noteTipFact } from '#hooks/settings/useFeatureHint';
 import {
   startTutorialSession,
@@ -195,6 +203,8 @@ interface Visit {
   answers?: ReturnType<typeof recordMock>[];
   /** Answers to discovery's later reads; the first read is answered once. */
   then?: ReturnType<typeof recordMock>[];
+  /** The dietary profile's read is held until released. */
+  profileHeld?: boolean;
 }
 
 /** The recipes tab as HomeTabs mounts it, its discovery read answered. */
@@ -206,6 +216,7 @@ async function openRecipes({
   flags = [],
   answers = [],
   then = [],
+  profileHeld = false,
 }: Visit = {}) {
   const cache = makeCache();
   // The app reads the homes before any tab mounts; the tabs read them cache-only.
@@ -245,6 +256,39 @@ async function openRecipes({
     }),
     maxUsageCount: 10,
   });
+  const profileRead = recordMock(GetDietaryProfileDocument, {
+    held: profileHeld,
+    data: {
+      me: {
+        __typename: 'User',
+        id: ME,
+        dietaryProfile: {
+          __typename: 'DietaryProfile',
+          id: 'profile-1',
+          userId: ME,
+          maxCookTimeMinutes: profile.maxCookTimeMinutes ?? null,
+          restrictions: [
+            ...(profile.diets ?? []).map(
+              (diet): Restriction => ({
+                __typename: 'DietaryRestriction',
+                id: `diet-${diet}`,
+                diet,
+                intolerance: null,
+              }),
+            ),
+            ...(profile.intolerances ?? []).map(
+              (intolerance): Restriction => ({
+                __typename: 'DietaryRestriction',
+                id: `intolerance-${intolerance}`,
+                diet: null,
+                intolerance,
+              }),
+            ),
+          ],
+        },
+      },
+    },
+  });
   renderWithApollo(
     <TabBarActionsProvider>
       <TabBar />
@@ -258,38 +302,7 @@ async function openRecipes({
         discovery.mock,
         ...then.map(answer => answer.mock),
         pantryRead.mock,
-        recordMock(GetDietaryProfileDocument, {
-          data: {
-            me: {
-              __typename: 'User',
-              id: ME,
-              dietaryProfile: {
-                __typename: 'DietaryProfile',
-                id: 'profile-1',
-                userId: ME,
-                maxCookTimeMinutes: profile.maxCookTimeMinutes ?? null,
-                restrictions: [
-                  ...(profile.diets ?? []).map(
-                    (diet): Restriction => ({
-                      __typename: 'DietaryRestriction',
-                      id: `diet-${diet}`,
-                      diet,
-                      intolerance: null,
-                    }),
-                  ),
-                  ...(profile.intolerances ?? []).map(
-                    (intolerance): Restriction => ({
-                      __typename: 'DietaryRestriction',
-                      id: `intolerance-${intolerance}`,
-                      diet: null,
-                      intolerance,
-                    }),
-                  ),
-                ],
-              },
-            },
-          },
-        }).mock,
+        profileRead.mock,
         recordMock(MyFeatureFlagsDocument, {
           data: {
             myFeatureFlags: flags.map(
@@ -304,6 +317,12 @@ async function openRecipes({
       ],
     },
   );
+  if (profileHeld) {
+    // Discovery waits for the pantry, so with it in, only the profile holds it.
+    await log.landed(GetPantryDocument);
+    await act(async () => undefined);
+    return { cache, discovery, profileRead };
+  }
   await log.requested(
     pantry.length > 0
       ? CatalogRecipesByIngredientsDocument
@@ -317,7 +336,7 @@ async function openRecipes({
         : RandomCatalogRecipesDocument,
     );
   }
-  return { cache, discovery };
+  return { cache, discovery, profileRead };
 }
 
 /**
@@ -356,7 +375,10 @@ const searchFor = (query: string) => {
 
 const searchAnswer = (
   names: string[],
-  { hasNextPage = false }: { hasNextPage?: boolean } = {},
+  {
+    hasNextPage = false,
+    catalogAvailable = true,
+  }: { hasNextPage?: boolean; catalogAvailable?: boolean } = {},
 ): MockDataFor<typeof SearchRecipesDocument> => ({
   findRecipes: {
     __typename: 'RecipeSearchConnection',
@@ -381,7 +403,7 @@ const searchAnswer = (
       hasNextPage,
       endCursor: hasNextPage ? `c-${names.length - 1}` : null,
     },
-    catalogAvailable: true,
+    catalogAvailable,
   },
 });
 
@@ -865,5 +887,307 @@ describe('captures', () => {
         t('recipes.captureReadingPage', { label: 'example.com' }),
       ),
     ).toBeTruthy();
+  });
+});
+
+describe('what a search says', () => {
+  /** Waits out the search's own settling after its answer lands. */
+  const searched = async (query: string, nth = 1) => {
+    searchFor(query);
+    await log.landed(SearchRecipesDocument, nth);
+    await act(async () => undefined);
+  };
+
+  it('says the catalog may hold more when it could not be searched', async () => {
+    await openRecipes({
+      answers: [
+        recordMock(SearchRecipesDocument, {
+          data: searchAnswer(['Lasagna'], { catalogAvailable: false }),
+        }),
+      ],
+    });
+
+    await searched('lasagna');
+
+    expect(screen.getByText('Lasagna')).toBeTruthy();
+    expect(toastService.info).toHaveBeenCalledWith(
+      t('recipes.catalogUnavailable'),
+    );
+  });
+
+  it.each([
+    [
+      'a failure',
+      () => new Error('boom'),
+      [t('errors.searchFailed'), t('recipes.searchErrorMessage')],
+    ],
+    [
+      'a rate limit in its own words',
+      () =>
+        new CombinedGraphQLErrors({
+          errors: [
+            {
+              message: 'limited',
+              extensions: { code: TopLevelErrorCode.RateLimitExceeded },
+            },
+          ],
+        }),
+      [t('recipes.rateLimitTitle'), t('recipes.rateLimitMessage')],
+    ],
+  ])('alerts %s', async (_, error, said) => {
+    await openRecipes({
+      answers: [recordMock(SearchRecipesDocument, { error: error() })],
+    });
+
+    await searched('pasta');
+
+    expect(alertService.alert).toHaveBeenCalledWith(...said);
+  });
+
+  it('searches nothing for a blank query', async () => {
+    const found = recordMock(SearchRecipesDocument, {
+      data: searchAnswer(['Lasagna']),
+    });
+    await openRecipes({ answers: [found] });
+
+    searchFor('   ');
+    await act(async () => undefined);
+
+    expect(found.fired).toEqual([]);
+  });
+
+  it('repeats the search on a pull, leaving the ideas be', async () => {
+    const { discovery } = await openRecipes({
+      answers: [
+        recordMock(SearchRecipesDocument, { data: searchAnswer(['Lasagna']) }),
+      ],
+    });
+    await searched('lasagna');
+
+    act(() => {
+      screen.UNSAFE_getByType(RefreshControl).props.onRefresh();
+    });
+    await log.requested(SearchRecipesDocument, 2);
+
+    expect(discovery.fired).toHaveLength(1);
+  });
+
+  describe('while the API is out', () => {
+    /** The tab with Tomato soup and Bean stew shown, the API then lost. */
+    const outage = async () => {
+      const answered = recordMock(SearchRecipesDocument, {
+        data: searchAnswer(['Tomato soup']),
+      });
+      await openRecipes({
+        answers: [
+          recordMock(SearchRecipesDocument, {
+            error: new Error('Network request failed'),
+            maxUsageCount: 1,
+          }),
+          answered,
+        ],
+      });
+      await act(async () => {
+        useStore.setState({ apiReachable: false });
+      });
+      return answered;
+    };
+
+    it('says so, and narrows the ideas on screen to what it names', async () => {
+      await outage();
+
+      await searched('soup');
+
+      expect(toastService.info).toHaveBeenCalledWith(
+        t('errors.offlineSearchUnavailable'),
+      );
+      expect(alertService.alert).not.toHaveBeenCalled();
+      expect(screen.getByText('Tomato soup')).toBeTruthy();
+      expect(screen.queryByText('Bean stew')).not.toBeOnTheScreen();
+    });
+
+    it('says a wider search needs the connection when nothing shown matches', async () => {
+      await outage();
+
+      await searched('lasagna');
+
+      expect(screen.getByText(t('errors.notAvailableOffline'))).toBeTruthy();
+    });
+
+    it('runs once the API is back', async () => {
+      const answered = await outage();
+      await searched('soup');
+      expect(answered.fired).toEqual([]);
+
+      await act(async () => {
+        useStore.setState({ apiReachable: true });
+      });
+
+      await log.landed(SearchRecipesDocument, 2);
+    });
+  });
+});
+
+describe('the filters', () => {
+  it("screen the ideas by the person's diets, one of each group, and intolerances", async () => {
+    const { discovery } = await openRecipes({
+      profile: {
+        diets: [Diet.Vegan, Diet.Pescetarian, Diet.GlutenFree],
+        intolerances: [Intolerance.Peanut],
+      },
+    });
+
+    expect(discovery.fired).toEqual([
+      expect.objectContaining({
+        diets: [Diet.Vegan, Diet.GlutenFree],
+        intolerances: [Intolerance.Peanut],
+      }),
+    ]);
+  });
+
+  it("wait for the person's diet before any idea is read", async () => {
+    const { discovery, profileRead } = await openRecipes({
+      profile: { diets: [Diet.Vegan] },
+      profileHeld: true,
+    });
+    expect(discovery.fired).toEqual([]);
+
+    profileRead.release();
+    await log.landed(RandomCatalogRecipesDocument);
+
+    expect(discovery.fired).toEqual([
+      expect.objectContaining({ diets: [Diet.Vegan] }),
+    ]);
+  });
+
+  it("send the person's diet and cook time with a search", async () => {
+    const found = recordMock(SearchRecipesDocument, {
+      data: searchAnswer(['Lasagna']),
+    });
+    await openRecipes({
+      profile: { diets: [Diet.Vegetarian], maxCookTimeMinutes: 30 },
+      answers: [found],
+    });
+
+    searchFor('lasagna');
+    await log.requested(SearchRecipesDocument);
+
+    expect(found.fired[0]).toMatchObject({
+      filters: { diets: [Diet.Vegetarian], maxReadyTime: 30 },
+    });
+  });
+
+  it('search again without one that is removed', async () => {
+    const found = recordMock(SearchRecipesDocument, {
+      data: searchAnswer(['Lasagna']),
+    });
+    await openRecipes({
+      profile: { diets: [Diet.Vegetarian] },
+      answers: [found],
+    });
+    searchFor('lasagna');
+    await log.landed(SearchRecipesDocument);
+    const user = userEvent.setup();
+
+    await user.press(screen.getByTestId(recipesTestIDs.activeFiltersSummary));
+    await user.press(
+      screen.getByLabelText(
+        t('recipes.removeFilterA11y', { filter: t('recipes.diet.VEGETARIAN') }),
+      ),
+    );
+    await log.requested(SearchRecipesDocument, 2);
+
+    expect(found.fired[1]).not.toHaveProperty('filters.diets');
+  });
+
+  it('are blamed for a search that found nothing, and cleared to search again', async () => {
+    const found = recordMock(SearchRecipesDocument, {
+      data: searchAnswer([]),
+    });
+    await openRecipes({
+      profile: { diets: [Diet.Vegetarian] },
+      answers: [found],
+    });
+    searchFor('lasagna');
+    await log.landed(SearchRecipesDocument);
+    await act(async () => undefined);
+
+    expect(
+      screen.getByText(t('recipes.noResultsFiltered', { count: 1 })),
+    ).toBeTruthy();
+    await userEvent
+      .setup()
+      .press(screen.getByText(t('recipes.clearFiltersAction')));
+    await log.requested(SearchRecipesDocument, 2);
+
+    expect(found.fired[1]).not.toHaveProperty('filters.diets');
+  });
+});
+
+describe('the ideas', () => {
+  it('say so when they cannot be read', async () => {
+    await openRecipes({
+      answers: [
+        recordMock(RandomCatalogRecipesDocument, {
+          error: new Error('boom'),
+        }),
+      ],
+    });
+
+    expect(screen.getByText(t('recipes.discoveryFailedTitle'))).toBeTruthy();
+  });
+});
+
+describe('the pantry picker', () => {
+  const openPicker = async (pantry: string[]) => {
+    await openRecipes({ pantry });
+    const user = userEvent.setup();
+    await user.press(
+      screen.getByTestId(recipesTestIDs.searchModeTab('ingredients')),
+    );
+    await user.press(screen.getByTestId(recipesTestIDs.ingredientPicker));
+    return user;
+  };
+
+  it('unpicks a picked ingredient', async () => {
+    const user = await openPicker(['Tomato', 'Beans']);
+
+    await user.press(screen.getByText('Tomato'));
+    await user.press(screen.getByText('Tomato'));
+
+    expect(screen.queryByLabelText('Tomato')).not.toBeOnTheScreen();
+  });
+
+  // A name with commas is the several names the API reads in it.
+  it('stops at what one search takes, and says so', async () => {
+    const half = MAX_CATALOG_INGREDIENTS / 2;
+    const names = [0, half].map(from =>
+      Array.from(
+        { length: half + 1 },
+        (_, index) => `spice ${from + index}`,
+      ).join(', '),
+    );
+    const user = await openPicker(names);
+
+    for (const name of names) await user.press(screen.getByText(name));
+
+    expect(toastService.info).toHaveBeenCalledWith(
+      t('recipes.ingredientLimitReached', { count: MAX_CATALOG_INGREDIENTS }),
+    );
+  });
+
+  it('asks for an ingredient when none picked can be searched', async () => {
+    const tooLong = 'x'.repeat(MAX_CATALOG_INGREDIENT_LENGTH + 1);
+    const user = await openPicker(['Tomato', tooLong]);
+
+    await user.press(screen.getByText(tooLong));
+    await user.press(
+      screen.getByText(t('recipes.searchWithCount', { count: 1 })),
+    );
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('recipes.noIngredientsSelectedTitle'),
+      t('recipes.selectAtLeastOneIngredient'),
+    );
   });
 });
