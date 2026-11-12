@@ -10,7 +10,6 @@ import type {
   OpenPantryItemBatchInput,
   RemoveRecipeFromFavoritesInput,
   UpdatePantryItemQuantityInput,
-  UpdateRecipeIngredientsInput,
   WastePantryItemBatchInput,
 } from '#/graphql/generated/schemaTypes';
 import type { QueuedMutation, RowAdoption } from './types';
@@ -27,7 +26,6 @@ interface SubjectInputs {
   OpenPantryItemBatchInput: OpenPantryItemBatchInput;
   RemoveRecipeFromFavoritesInput: RemoveRecipeFromFavoritesInput;
   UpdatePantryItemQuantityInput: UpdatePantryItemQuantityInput;
-  UpdateRecipeIngredientsInput: UpdateRecipeIngredientsInput;
   WastePantryItemBatchInput: WastePantryItemBatchInput;
 }
 
@@ -48,7 +46,6 @@ const SUBJECT_KEYS: {
   OpenPantryItemBatchInput: 'batchId',
   RemoveRecipeFromFavoritesInput: 'recipeId',
   UpdatePantryItemQuantityInput: 'pantryItemId',
-  UpdateRecipeIngredientsInput: 'recipeId',
   WastePantryItemBatchInput: 'batchId',
 };
 
