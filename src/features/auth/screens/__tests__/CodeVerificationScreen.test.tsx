@@ -1,630 +1,442 @@
-import { toastService } from '#/services/toastService';
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockAuthNav = {
+  navigateToLogin: jest.fn(),
+  navigateToForgotPassword: jest.fn(),
+};
+jest.mock('#features/auth/screens/useAuthNavigation', () => ({
+  useAuthNavigation: () => mockAuthNav,
+}));
+// Whether a mail app opens is the device's to say.
+let mockMailAppOpens = false;
+const mockOpenMailApp = jest.fn(() => Promise.resolve(true));
+jest.mock('#native/mailApp', () => ({
+  canOpenMailApp: () => Promise.resolve(mockMailAppOpens),
+  openMailApp: () => mockOpenMailApp(),
+}));
+
 import React from 'react';
-import { act, screen, userEvent } from '@testing-library/react-native';
-import { authTestIDs } from '#features/auth/testIDs';
-import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { drainTimers } from '#/test-utils/drainTimers';
-import {
-  VerifyEmailDocument,
-  ResendVerificationEmailDocument,
-} from '#operations/auth/auth.generated';
+import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
+import { ApolloProvider } from '@apollo/client/react';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { t } from '#/i18n';
+import { useStore } from '#store';
 import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
-import type { RootState } from '#store/index';
-import type * as UseAppStoreModule from '#store/useAppStore';
-import { CodeVerificationScreen } from '../CodeVerificationScreen';
+import { toastService } from '#/services/toastService';
+import { kitTestIDs } from '#components/testIDs';
+import { ErrorCode, ErrorDisposition } from '#/graphql/generated/schemaTypes';
+import {
+  ResendVerificationEmailDocument,
+  VerifyEmailDocument,
+} from '#operations/auth/auth.generated';
+import { recordMock, type RecordedMock } from '#/test-utils/apolloMockProvider';
+import { registerTestClient } from '#/test-utils/registeredClient';
+import { operationLog } from '#/test-utils/operationLog';
+import { authTestIDs } from '#features/auth/testIDs';
+import {
+  CodeVerificationScreen,
+  type VerificationContext,
+} from '../CodeVerificationScreen';
 
-// Typed view over the mocked module so `jest.spyOn` keeps the real signatures
-// (the `require` call still returns the runtime-mutable mock object).
-const storeModule: typeof UseAppStoreModule = require('#store/useAppStore');
-
-// --- Mocks ---
-
-const mockUpdateUser = jest.fn();
-const mockToastSuccess = jest.mocked(toastService.success);
-const mockToastError = jest.mocked(toastService.error);
-
-// Minimal prop shapes consumed by the mocked templates below.
-type MockAuthFormTemplateProps = {
-  title: string;
-  subtitle?: string | React.ReactNode;
-  headerAction?: { title: string; onPress: () => void; testID?: string };
-  linkText?: string;
-  linkTestID?: string;
-  onLinkPress?: () => void;
-  submitText: string;
-  onSubmit: () => void;
-  footerText?: string;
-  footerLinkText?: string;
-  onFooterLinkPress?: () => void;
-  footerLinkDisabled?: boolean;
-  footerLinkCountdown?: number;
-  footerLinkTestID?: string;
-  linkDisabled?: boolean;
-  linkCountdown?: number;
-  control?: unknown;
-  fields?: { name: string }[];
-};
-
-jest.mock('#store/useAppStore', () => {
-  const getState = () => ({
-    user: {
-      id: '1',
-      email: 'test@example.com',
-      emailVerified: false,
-      onBoarded: true,
-    },
-    updateUser: mockUpdateUser,
-  });
-  return {
-    useAppStore: <T,>(selector: (state: RootState) => T): T =>
-      selector(getState() as Partial<RootState> as RootState),
-    useUser: () => getState().user,
-    useUserId: () => getState().user.id,
-    useUpdateUser: () => getState().updateUser,
-  };
-});
-
-jest.mock('#/services/errorService');
-
-jest.mock('#/services/authService', () => ({
-  authService: { logout: jest.fn() },
-}));
-
-const mockSkipVerification = jest.fn();
-jest.mock('#hooks/auth/useEmailVerification', () => ({
-  useEmailVerificationActions: () => ({
-    skipVerification: mockSkipVerification,
-  }),
-}));
-
-jest.mock('#hooks/navigation/useAppNavigation');
 const mockNav = jest
   .requireMock('#hooks/navigation/useAppNavigation')
   .useAppNavigation();
 
-const mockNavigateToLogin = jest.fn();
-const mockNavigateToForgotPassword = jest.fn();
-jest.mock('#features/auth/screens/useAuthNavigation', () => ({
-  useAuthNavigation: () => ({
-    navigateToLogin: mockNavigateToLogin,
-    navigateToForgotPassword: mockNavigateToForgotPassword,
-  }),
-}));
+const COOK = {
+  id: 'u1',
+  email: 'cook@example.com',
+  emailVerified: false,
+  onBoarded: true,
+};
+const CODE = '123456';
 
-jest.mock('#features/auth/components/AuthWrapper', () => {
-  const { View, Pressable, Text } = require('react-native');
-  return {
-    AuthWrapper: ({
-      children,
-      onBack,
-    }: {
-      children?: React.ReactNode;
-      onBack?: () => void;
-    }) => (
-      <View testID="auth-wrapper">
-        {onBack ? (
-          <Pressable testID="back-button" onPress={onBack}>
-            <Text>Back</Text>
-          </Pressable>
-        ) : null}
-        {children}
-      </View>
-    ),
-  };
-});
-
-jest.mock('#features/auth/components/AuthFormTemplate', () => {
-  const { View, Text, Pressable, TextInput } = require('react-native');
-  const { Controller } = require('react-hook-form');
-  return {
-    AuthFormTemplate: ({
-      title,
-      subtitle,
-      headerAction,
-      linkText,
-      linkTestID,
-      onLinkPress,
-      submitText,
-      onSubmit,
-      footerText,
-      footerLinkText,
-      onFooterLinkPress,
-      footerLinkDisabled,
-      footerLinkCountdown,
-      footerLinkTestID,
-      linkDisabled,
-      linkCountdown,
-      control,
-      fields,
-    }: MockAuthFormTemplateProps) => (
-      <View testID="auth-form-template">
-        {(fields ?? []).map(field => (
-          <Controller
-            key={field.name}
-            control={control}
-            name={field.name}
-            render={({
-              field: { onChange },
-            }: {
-              field: { onChange: (v: string) => void };
-            }) => (
-              <TextInput
-                testID={`field-${field.name}`}
-                onChangeText={onChange}
-              />
-            )}
-          />
-        ))}
-        <Text>{title}</Text>
-        {typeof subtitle === 'string' ? (
-          <Text>{subtitle}</Text>
-        ) : (
-          <View testID="subtitle-container">{subtitle}</View>
-        )}
-        {headerAction ? (
-          <Pressable
-            testID={headerAction.testID}
-            onPress={headerAction.onPress}
-          >
-            <Text>{headerAction.title}</Text>
-          </Pressable>
-        ) : null}
-        {linkText ? (
-          <Pressable
-            testID={linkTestID}
-            onPress={onLinkPress}
-            disabled={linkDisabled}
-          >
-            <Text>{linkText}</Text>
-            {(linkCountdown ?? 0) > 0 ? (
-              <Text testID="link-countdown">{linkCountdown}</Text>
-            ) : null}
-          </Pressable>
-        ) : null}
-        <Pressable testID="submit-button" onPress={onSubmit}>
-          <Text>{submitText}</Text>
-        </Pressable>
-        {footerText ? <Text>{footerText}</Text> : null}
-        {footerLinkText ? (
-          <Pressable
-            testID={footerLinkTestID ?? 'footer-link'}
-            onPress={onFooterLinkPress}
-            disabled={footerLinkDisabled}
-          >
-            <Text>{footerLinkText}</Text>
-            {(footerLinkCountdown ?? 0) > 0 ? (
-              <Text testID="countdown">{footerLinkCountdown}</Text>
-            ) : null}
-          </Pressable>
-        ) : null}
-      </View>
-    ),
-  };
-});
-
-let mockMailAppOpens = false;
-let mockMailAppAsked: Promise<boolean> = Promise.resolve(false);
-const mockOpenMailApp = jest.fn().mockResolvedValue(true);
-jest.mock('#native/mailApp', () => ({
-  canOpenMailApp: () => {
-    mockMailAppAsked = Promise.resolve(mockMailAppOpens);
-    return mockMailAppAsked;
-  },
-  openMailApp: () => mockOpenMailApp(),
-}));
-
-/** Waits for the screen's question whether a mail app opens to be answered. */
-const mailAppAnswered = () =>
-  act(async () => {
-    await mockMailAppAsked;
+const verified = () =>
+  recordMock(VerifyEmailDocument, {
+    data: {
+      verifyEmail: {
+        __typename: 'VerifyEmailPayload',
+        user: { __typename: 'User', id: COOK.id, emailVerified: true },
+      },
+    },
   });
 
-jest.mock('#features/auth/components/CodeInputAdapter', () => ({
-  CodeInputAdapter: 'CodeInputAdapter',
-}));
-
-jest.mock('#components/atoms/SousChefLoader', () => ({
-  SousChefLoader: 'SousChefLoader',
-}));
-
-function buildResendMock(
-  recordedVariables: Record<string, unknown>[],
-): MockFor<typeof ResendVerificationEmailDocument> {
-  return {
-    request: {
-      query: ResendVerificationEmailDocument,
-      variables: variables => {
-        recordedVariables.push(variables);
-        return true;
+/** The server's ruling on a code: wrong, spent and expired read alike. */
+const refusedCode = () =>
+  recordMock(VerifyEmailDocument, {
+    data: {
+      verifyEmail: {
+        __typename: 'ValidationError',
+        code: ErrorCode.ValidationFailed,
+        disposition: ErrorDisposition.Fail,
+        message: 'Invalid code',
+        field: 'code',
       },
     },
-    result: {
-      data: {
-        resendVerificationEmail: {
-          // `UserPayload` is not a member of `ResendVerificationEmailResult`,
-          // and the operation selects `user { id }` on the payload — not
-          // `success`/`code`, which belong to no member of this union.
-          __typename: 'ResendVerificationEmailPayload',
-          user: { __typename: 'User', id: 'user-1' },
-        },
+  });
+
+const alreadyVerified = () =>
+  recordMock(VerifyEmailDocument, {
+    data: {
+      verifyEmail: {
+        __typename: 'ConflictError',
+        code: ErrorCode.EmailAlreadyVerified,
+        disposition: ErrorDisposition.Fail,
+        message: 'Already verified',
       },
     },
-  };
+  });
+
+const resent = () =>
+  recordMock(ResendVerificationEmailDocument, {
+    data: {
+      resendVerificationEmail: {
+        __typename: 'ResendVerificationEmailPayload',
+        user: { __typename: 'User', id: COOK.id },
+      },
+    },
+  });
+
+const unreachable = <TData, TVariables extends OperationVariables>(
+  document: TypedDocumentNode<TData, TVariables>,
+) => recordMock(document, { error: new Error('Network request failed') });
+
+let log = operationLog();
+
+interface Visit {
+  answers?: RecordedMock[];
+  email?: string;
+  /** Who is signed in; sign-up has no one. */
+  user?: typeof COOK | null;
 }
 
-function buildVerifyMock(
-  recordedVariables?: Record<string, unknown>[],
-): MockFor<typeof VerifyEmailDocument> {
-  return {
-    request: {
-      query: VerifyEmailDocument,
-      variables: variables => {
-        recordedVariables?.push(variables);
-        return true;
-      },
-    },
-    result: {
-      data: {
-        verifyEmail: {
-          __typename: 'VerifyEmailPayload',
-          user: null,
-        },
-      },
-    },
-  };
-}
-
-/** Point the store's user hooks at `user` for one test. */
-function mockStoreUser(user: Record<string, unknown> | null) {
-  jest.spyOn(storeModule, 'useAppStore').mockImplementation(
-    <T,>(selector: (state: RootState) => T): T =>
-      selector({
-        user,
-        updateUser: mockUpdateUser,
-      } as Partial<RootState> as RootState),
+async function openCodeEntry(
+  context: VerificationContext,
+  {
+    answers = [],
+    email,
+    user = context === 'signup' ? null : COOK,
+  }: Visit = {},
+) {
+  useStore.setState({ user, accessToken: user ? 'at' : null });
+  const client = registerTestClient(answers, [log.link]);
+  const view = render(
+    <ApolloProvider client={client}>
+      <CodeVerificationScreen context={context} email={email} />
+    </ApolloProvider>,
   );
-  jest.spyOn(storeModule, 'useUser').mockReturnValue(user as never);
+  // The question whether a mail app opens is answered.
+  await act(async () => undefined);
+  return view;
 }
+
+const typeCode = (code = CODE) =>
+  fireEvent.changeText(
+    screen.getByLabelText(t('auth.verificationCodeInputLabel')),
+    code,
+  );
+
+/** Presses the alert's button as the person would. */
+const answerAlert = (label: string) => {
+  const [, , buttons] = jest.mocked(alertService.alert).mock.lastCall ?? [];
+  const button = buttons?.find(each => each.text === label);
+  if (!button) throw new Error(`the alert offers no "${label}"`);
+  act(() => {
+    button.onPress?.();
+  });
+};
 
 beforeEach(() => {
-  jest.useFakeTimers();
+  jest.clearAllMocks();
+  jest.restoreAllMocks();
+  log = operationLog();
+  mockMailAppOpens = false;
+  useStore.getState().clearAuth();
+  useStore.setState({ isOnline: true, apiReachable: true });
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+describe('the sign-in gate', () => {
+  it('names the address the code went to, with a resend', async () => {
+    await openCodeEntry('gate');
 
-describe('CodeVerificationScreen', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    // `clearAllMocks` resets calls but NOT a spy's implementation, so a seeded
-    // store would leak into every test after it.
-    jest.restoreAllMocks();
-  });
-
-  it('renders the enter code title', () => {
-    renderWithApollo(<CodeVerificationScreen context="gate" />);
-    expect(screen.getByText('Enter Code')).toBeTruthy();
-  });
-
-  it('renders the user email in the subtitle', () => {
-    renderWithApollo(<CodeVerificationScreen context="gate" />);
-    expect(screen.getByText('test@example.com')).toBeTruthy();
+    expect(screen.getByText(t('auth.enterCode'))).toBeTruthy();
+    expect(screen.getByText(COOK.email)).toBeTruthy();
+    expect(screen.getByText(t('labels.submit'))).toBeTruthy();
+    expect(
+      screen.getByTestId(authTestIDs.codeVerificationResendLink),
+    ).toHaveTextContent(`${t('auth.didntGetEmail')} ${t('auth.resendCode')}`);
   });
 
   it('offers to open Mail where a mail app opens, the code being in the email', async () => {
     mockMailAppOpens = true;
-    const user = userEvent.setup();
-    renderWithApollo(<CodeVerificationScreen context="gate" />);
-    await mailAppAnswered();
+    await openCodeEntry('gate');
 
-    await user.press(screen.getByTestId(authTestIDs.codeVerificationOpenMail));
+    fireEvent.press(screen.getByTestId(authTestIDs.codeVerificationOpenMail));
 
     expect(mockOpenMailApp).toHaveBeenCalledTimes(1);
-    mockMailAppOpens = false;
   });
 
   it('offers no Open Mail where no mail app opens', async () => {
-    renderWithApollo(<CodeVerificationScreen context="gate" />);
-    await mailAppAnswered();
+    await openCodeEntry('gate');
 
     expect(
       screen.queryByTestId(authTestIDs.codeVerificationOpenMail),
-    ).toBeNull();
+    ).not.toBeOnTheScreen();
   });
 
-  it('renders the submit button', () => {
-    renderWithApollo(<CodeVerificationScreen context="gate" />);
-    expect(screen.getByText('Submit')).toBeTruthy();
+  it('verifies the code once all six digits are in, and lets the user through', async () => {
+    const verify = verified();
+    const view = await openCodeEntry('gate', { answers: [verify] });
+
+    typeCode();
+    await log.landed(VerifyEmailDocument);
+
+    expect(verify.fired).toEqual([
+      { input: { code: CODE, email: COOK.email } },
+    ]);
+    expect(useStore.getState().user?.emailVerified).toBe(true);
+    // The root navigator swaps the gate away; it draws nothing meanwhile.
+    expect(view.toJSON()).toBeNull();
   });
 
-  it('renders the resend code footer', () => {
-    renderWithApollo(<CodeVerificationScreen context="gate" />);
-    expect(screen.getByText("Didn't get the email?")).toBeTruthy();
-    expect(screen.getByText('Resend code')).toBeTruthy();
+  it('counts an address already verified as verified', async () => {
+    await openCodeEntry('gate', { answers: [alreadyVerified()] });
+
+    typeCode();
+    await log.landed(VerifyEmailDocument);
+
+    expect(useStore.getState().user?.emailVerified).toBe(true);
   });
 
-  it('fires resend when footer link is pressed', async () => {
-    const user = userEvent.setup();
-    const recordedVariables: Record<string, unknown>[] = [];
-    renderWithApollo(<CodeVerificationScreen context="gate" />, {
-      operationMocks: [buildResendMock(recordedVariables), buildVerifyMock()],
-    });
-    await user.press(screen.getByTestId('resend-code'));
-    await drainTimers();
-    expect(recordedVariables).toContainEqual({
-      input: { email: 'test@example.com' },
-    });
+  it('says a refused code under the field, and clears it for the next', async () => {
+    await openCodeEntry('gate', { answers: [refusedCode()] });
+
+    typeCode();
+    await log.landed(VerifyEmailDocument);
+
+    expect(screen.getByText(t('auth.codeInvalidOrExpired'))).toBeTruthy();
+    expect(
+      screen.getByLabelText(t('auth.verificationCodeInputLabel')),
+    ).toHaveDisplayValue('');
+    expect(useStore.getState().user?.emailVerified).toBe(false);
   });
 
-  it('reports a transport failure while verifying instead of doing nothing', async () => {
-    // Neither branch fires for this shape: `getTopLevelGraphQLError` returns
-    // null for anything that is not CombinedGraphQLErrors, and there is no
-    // payload — so without a terminal else the button reads as dead.
-    const user = userEvent.setup();
-    renderWithApollo(<CodeVerificationScreen context="gate" />, {
-      operationMocks: [
-        {
-          request: { query: VerifyEmailDocument, variables: () => true },
-          error: new Error('Network request failed'),
-        },
-      ],
-    });
-
-    await user.type(screen.getByTestId('field-code'), '123456');
-    await user.press(screen.getByTestId('submit-button'));
-
-    await drainTimers();
-    expect(mockToastError).toHaveBeenCalled();
-  });
-
-  it('reports a transport failure on resend rather than logging a send', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<CodeVerificationScreen context="gate" />, {
-      operationMocks: [
-        {
-          request: {
-            query: ResendVerificationEmailDocument,
-            variables: () => true,
-          },
-          error: new Error('Network request failed'),
-        },
-      ],
+  it('says a code that never reached the server failed, instead of doing nothing', async () => {
+    await openCodeEntry('gate', {
+      answers: [unreachable(VerifyEmailDocument)],
     });
 
-    await user.press(screen.getByTestId('resend-code'));
+    typeCode();
+    await log.landed(VerifyEmailDocument);
 
-    await drainTimers();
-    expect(mockToastError).toHaveBeenCalled();
-  });
-
-  it('offers a way back to sign in', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<CodeVerificationScreen context="gate" />);
-
-    await user.press(screen.getByTestId('back-button'));
-
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Go back to sign in?',
-      expect.any(String),
-      expect.arrayContaining([
-        expect.objectContaining({ text: 'Cancel', style: 'cancel' }),
-        expect.objectContaining({ text: 'Sign Out', style: 'destructive' }),
-      ]),
+    expect(toastService.error).toHaveBeenCalledWith(
+      t('errors.codes.genericRetry'),
     );
-    expect(authService.logout).not.toHaveBeenCalled();
   });
 
-  it('logs out once the sign-out confirmation is accepted', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<CodeVerificationScreen context="gate" />);
+  it('asks for six digits before sending anything', async () => {
+    const verify = verified();
+    await openCodeEntry('gate', { answers: [verify] });
 
-    await user.press(screen.getByTestId('back-button'));
+    typeCode('123');
+    fireEvent.press(screen.getByText(t('labels.submit')));
+    // The resolver checks the code asynchronously.
+    await act(async () => undefined);
 
-    const buttons = (alertService.alert as jest.Mock).mock.lastCall?.[2] as {
-      text: string;
-      onPress?: () => void;
-    }[];
-    buttons.find(b => b.text === 'Sign Out')?.onPress?.();
-
-    expect(authService.logout).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(t('auth.codeMustBeSixDigits'))).toBeTruthy();
+    expect(verify.fired).toHaveLength(0);
   });
 
-  it('warns about the collaboration limits before skipping', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<CodeVerificationScreen context="gate" />);
+  it('resends to the signed-in address, then waits out a cooldown', async () => {
+    const resend = resent();
+    await openCodeEntry('gate', { answers: [resend] });
+    const link = screen.getByTestId(authTestIDs.codeVerificationResendLink);
 
-    await user.press(screen.getByTestId('skip-verification'));
+    fireEvent.press(link);
+    await log.landed(ResendVerificationEmailDocument);
+    fireEvent.press(link);
 
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Skip verification?',
-      expect.stringContaining("won't be able to share"),
-      expect.any(Array),
-    );
-    expect(mockSkipVerification).not.toHaveBeenCalled();
+    expect(resend.fired).toEqual([{ input: { email: COOK.email } }]);
+    expect(link).toBeDisabled();
+    expect(link).toHaveTextContent(/\(\d+s\)/);
+    expect(toastService.error).not.toHaveBeenCalled();
   });
 
-  it('defers verification once the skip is confirmed', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<CodeVerificationScreen context="gate" />);
-
-    await user.press(screen.getByTestId('skip-verification'));
-
-    const buttons = (alertService.alert as jest.Mock).mock.lastCall?.[2] as {
-      text: string;
-      onPress?: () => void;
-    }[];
-    buttons.find(b => b.text === 'Skip for now')?.onPress?.();
-
-    expect(mockSkipVerification).toHaveBeenCalledTimes(1);
-  });
-
-  it('returns null when user is already verified', () => {
-    mockStoreUser({
-      id: '1',
-      email: 'test@example.com',
-      emailVerified: true,
-      onBoarded: true,
-    });
-
-    const { toJSON } = renderWithApollo(
-      <CodeVerificationScreen context="gate" />,
-    );
-    expect(toJSON()).toBeNull();
-  });
-
-  it('returns null on the gate when there is no user', () => {
-    mockStoreUser(null);
-
-    const { toJSON } = renderWithApollo(
-      <CodeVerificationScreen context="gate" />,
-    );
-    expect(toJSON()).toBeNull();
-  });
-
-  describe('opened from inside the app', () => {
-    it('goes back instead of signing the user out', async () => {
-      const user = userEvent.setup();
-      renderWithApollo(<CodeVerificationScreen context="inApp" />);
-
-      await user.press(screen.getByTestId('back-button'));
-
-      // The whole point of the pushed screen: changing your mind costs nothing.
-      expect(alertService.alert).not.toHaveBeenCalled();
-      expect(authService.logout).not.toHaveBeenCalled();
-      expect(mockNav.goBack).toHaveBeenCalledTimes(1);
-    });
-
-    it('offers no skip link — backing out is the skip', () => {
-      renderWithApollo(<CodeVerificationScreen context="inApp" />);
-      expect(screen.queryByTestId('skip-verification')).toBeNull();
-    });
-  });
-
-  describe('rendered from sign-up, with no session', () => {
-    it('renders and takes the address it was handed', () => {
-      mockStoreUser(null);
-
-      renderWithApollo(
-        <CodeVerificationScreen context="signup" email="new@example.com" />,
-      );
-
-      expect(screen.getByText('Enter Code')).toBeTruthy();
-      expect(screen.getByText('new@example.com')).toBeTruthy();
-    });
-
-    it('opens mid-cooldown so the first tap cannot resend', async () => {
-      mockStoreUser(null);
-      const user = userEvent.setup();
-      const recordedVariables: Record<string, unknown>[] = [];
-      renderWithApollo(
-        <CodeVerificationScreen context="signup" email="new@example.com" />,
-        {
-          operationMocks: [
-            buildResendMock(recordedVariables),
-            buildVerifyMock(),
-          ],
-        },
-      );
-
-      // Registration has just sent one, so the screen opens inside the first
-      // cooldown. Resend sits in the LINK slot here — the footer carries the
-      // way out to sign-in, which is the only exit this context has.
-      expect(screen.getByTestId('resend-code')).toBeDisabled();
-      expect(screen.getByTestId('link-countdown')).toBeTruthy();
-      expect(recordedVariables).toHaveLength(0);
-
-      await user.press(screen.getByTestId('resend-code'));
-      expect(recordedVariables).toHaveLength(0);
-    });
-
-    it('sends the user to sign in rather than skipping', async () => {
-      mockStoreUser(null);
-      const user = userEvent.setup();
-      renderWithApollo(
-        <CodeVerificationScreen context="signup" email="new@example.com" />,
-      );
-
-      expect(screen.queryByTestId('skip-verification')).toBeNull();
-      // In the FOOTER, not the small right-aligned link slot: with no back
-      // button and no skip, it is the only way off this screen.
-      await user.press(screen.getByTestId('code-verification-sign-in'));
-
-      expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
-    });
-
-    it('names the account password on the way to sign-in, with reset one tap away', async () => {
-      // A deleted account comes back under its ORIGINAL password, so the one
-      // typed at re-registration may not be the one that signs in.
-      mockStoreUser(null);
-      const user = userEvent.setup();
-      renderWithApollo(
-        <CodeVerificationScreen context="signup" email="new@example.com" />,
-        {
-          operationMocks: [
-            {
-              request: { query: VerifyEmailDocument, variables: () => true },
-              result: {
-                data: {
-                  verifyEmail: {
-                    __typename: 'VerifyEmailPayload',
-                    user: { __typename: 'User', id: 'user-1' },
-                  },
-                },
-              },
+  it('lets the user through when a resend finds the address already verified', async () => {
+    await openCodeEntry('gate', {
+      answers: [
+        recordMock(ResendVerificationEmailDocument, {
+          data: {
+            resendVerificationEmail: {
+              __typename: 'ConflictError',
+              code: ErrorCode.EmailAlreadyVerified,
+              disposition: ErrorDisposition.Fail,
+              message: 'Already verified',
             },
-          ],
-        },
-      );
-
-      await user.type(screen.getByTestId('field-code'), '123456');
-      await user.press(screen.getByTestId('submit-button'));
-
-      await drainTimers();
-      expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
-      expect(mockToastSuccess).toHaveBeenCalledTimes(1);
-      const [message, options] = mockToastSuccess.mock.calls[0] as [
-        string,
-        { action: { label: string; onPress: () => void } },
-      ];
-      expect(message).toBe(
-        'Email verified. Sign in with the password this account already has.',
-      );
-      expect(options.action.label).toBe('Forgot password?');
-      options.action.onPress();
-      expect(mockNavigateToForgotPassword).toHaveBeenCalledTimes(1);
+          },
+        }),
+      ],
     });
 
-    it('has no back button — the account already exists', () => {
-      mockStoreUser(null);
-      renderWithApollo(
-        <CodeVerificationScreen context="signup" email="new@example.com" />,
-      );
-      expect(screen.queryByTestId('back-button')).toBeNull();
+    fireEvent.press(screen.getByTestId(authTestIDs.codeVerificationResendLink));
+    await log.landed(ResendVerificationEmailDocument);
+
+    expect(useStore.getState().user?.emailVerified).toBe(true);
+    expect(toastService.error).not.toHaveBeenCalled();
+  });
+
+  it('says a resend that failed, the cooldown already running', async () => {
+    await openCodeEntry('gate', {
+      answers: [unreachable(ResendVerificationEmailDocument)],
     });
 
-    it('prefers the signed-in address over the one it was handed', async () => {
-      const user = userEvent.setup();
-      const recordedVariables: Record<string, unknown>[] = [];
-      // A session exists, so a stale hand-off must not redirect the resend.
-      renderWithApollo(
-        <CodeVerificationScreen context="inApp" email="stale@example.com" />,
-        {
-          operationMocks: [
-            buildResendMock(recordedVariables),
-            buildVerifyMock(),
-          ],
-        },
-      );
+    fireEvent.press(screen.getByTestId(authTestIDs.codeVerificationResendLink));
+    await log.landed(ResendVerificationEmailDocument);
 
-      await user.press(screen.getByTestId('resend-code'));
+    expect(toastService.error).toHaveBeenCalledTimes(1);
+  });
 
-      await drainTimers();
-      expect(recordedVariables).toContainEqual({
-        input: { email: 'test@example.com' },
-      });
+  it('asks before signing out, the only way back without a code', async () => {
+    const logout = jest.spyOn(authService, 'logout').mockResolvedValue();
+    await openCodeEntry('gate');
+
+    fireEvent.press(screen.getByTestId(kitTestIDs.headerBackButton));
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('auth.exitVerificationTitle'),
+      t('auth.exitVerificationMessage'),
+      expect.anything(),
+    );
+    expect(logout).not.toHaveBeenCalled();
+    answerAlert(t('auth.exitVerificationConfirm'));
+    expect(logout).toHaveBeenCalledTimes(1);
+  });
+
+  it('states the cost of skipping, and defers verification once confirmed', async () => {
+    await openCodeEntry('gate');
+
+    fireEvent.press(screen.getByTestId(authTestIDs.codeVerificationSkipLink));
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('auth.skipVerificationTitle'),
+      t('auth.skipVerificationMessage'),
+      expect.anything(),
+    );
+    expect(
+      useStore.getState().getUserNavigationState(COOK.id)?.verificationSkipped,
+    ).toBeFalsy();
+    answerAlert(t('auth.skipVerification'));
+    expect(
+      useStore.getState().getUserNavigationState(COOK.id)?.verificationSkipped,
+    ).toBe(true);
+  });
+
+  it('draws nothing for a verified user or with no one signed in', async () => {
+    const verifiedView = await openCodeEntry('gate', {
+      user: { ...COOK, emailVerified: true },
     });
+    expect(verifiedView.toJSON()).toBeNull();
+    verifiedView.unmount();
+
+    const signedOut = await openCodeEntry('gate', { user: null });
+    expect(signedOut.toJSON()).toBeNull();
+  });
+});
+
+describe('opened from inside the app', () => {
+  it('goes back instead of signing out, with no skip: backing out is the skip', async () => {
+    const logout = jest.spyOn(authService, 'logout').mockResolvedValue();
+    await openCodeEntry('inApp');
+
+    expect(
+      screen.queryByTestId(authTestIDs.codeVerificationSkipLink),
+    ).not.toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId(kitTestIDs.headerBackButton));
+
+    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(logout).not.toHaveBeenCalled();
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('says the address is verified and returns where the user was', async () => {
+    await openCodeEntry('inApp', { answers: [verified()] });
+
+    typeCode();
+    await log.landed(VerifyEmailDocument);
+
+    expect(useStore.getState().user?.emailVerified).toBe(true);
+    expect(toastService.success).toHaveBeenCalledWith(
+      t('auth.emailVerifiedToast'),
+    );
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('resends to the signed-in address, never a stale one it was handed', async () => {
+    const resend = resent();
+    await openCodeEntry('inApp', {
+      answers: [resend],
+      email: 'stale@example.com',
+    });
+
+    fireEvent.press(screen.getByTestId(authTestIDs.codeVerificationResendLink));
+    await log.landed(ResendVerificationEmailDocument);
+
+    expect(resend.fired).toEqual([{ input: { email: COOK.email } }]);
+  });
+});
+
+describe('rendered from sign-up, with no session', () => {
+  const NEW_ADDRESS = 'new@example.com';
+
+  it('takes the address it was handed, with no back and no skip', async () => {
+    await openCodeEntry('signup', { email: NEW_ADDRESS });
+
+    expect(screen.getByText(NEW_ADDRESS)).toBeTruthy();
+    expect(
+      screen.queryByTestId(kitTestIDs.headerBackButton),
+    ).not.toBeOnTheScreen();
+    expect(
+      screen.queryByTestId(authTestIDs.codeVerificationSkipLink),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('opens inside the first cooldown, so the first tap cannot resend', async () => {
+    const resend = resent();
+    await openCodeEntry('signup', { email: NEW_ADDRESS, answers: [resend] });
+    const link = screen.getByTestId(authTestIDs.codeVerificationResendLink);
+
+    fireEvent.press(link);
+
+    expect(link).toBeDisabled();
+    expect(link).toHaveTextContent(/\(\d+s\)/);
+    expect(resend.fired).toHaveLength(0);
+  });
+
+  it('leaves for sign in from the footer, its only way off', async () => {
+    await openCodeEntry('signup', { email: NEW_ADDRESS });
+
+    fireEvent.press(screen.getByTestId(authTestIDs.codeVerificationSignInLink));
+
+    expect(mockAuthNav.navigateToLogin).toHaveBeenCalledTimes(1);
+  });
+
+  // A deleted account comes back under its ORIGINAL password, so the one
+  // typed at re-registration may not be the one that signs in.
+  it('names the account password on the way to sign in, with reset one tap away', async () => {
+    const verify = verified();
+    await openCodeEntry('signup', { email: NEW_ADDRESS, answers: [verify] });
+
+    typeCode();
+    await log.landed(VerifyEmailDocument);
+
+    expect(verify.fired).toEqual([
+      { input: { code: CODE, email: NEW_ADDRESS } },
+    ]);
+    expect(mockAuthNav.navigateToLogin).toHaveBeenCalledTimes(1);
+    const [message, options] =
+      jest.mocked(toastService.success).mock.lastCall ?? [];
+    expect(message).toBe(t('auth.emailVerifiedToastSignIn'));
+    expect(options?.action?.label).toBe(t('auth.forgotPassword'));
+    options?.action?.onPress();
+    expect(mockAuthNav.navigateToForgotPassword).toHaveBeenCalledTimes(1);
   });
 });
