@@ -612,9 +612,18 @@ describe('a restock', () => {
       },
       data: pantryData({ id: PANTRY_ID, items: [{ id: 'emptied' }] }),
     });
+    device.cache.evict({ id: 'PantryItem:emptied' });
 
     answer(device, restock(device, 1, 'emptied'), restocked('emptied'));
 
+    expect(
+      device.cache.diff({
+        query: GetPantryDocument,
+        variables: pantryReadOf(PANTRY_ID),
+        optimistic: false,
+        returnPartialData: true,
+      }).complete,
+    ).toBe(true);
     expect(listed(device, false).ids).toContain('emptied');
   });
 });

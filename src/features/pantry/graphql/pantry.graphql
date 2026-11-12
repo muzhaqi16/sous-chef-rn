@@ -810,7 +810,7 @@ mutation RestockPantryItem(
         totalCost
         pantryItem {
           id
-          ...useRestockPantryItem_pantryItem
+          ...PantryItemReaders
         }
       }
     }
