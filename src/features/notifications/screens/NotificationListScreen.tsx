@@ -32,8 +32,7 @@ export const NotificationListScreen: React.FC = () => {
   const { t } = useTranslation();
   useScreenTransition('NotificationListScreen');
   const listInset = useScreenListInset();
-  const { toPantryMain, toNotificationDetail, toNotificationSettings } =
-    useAppNavigation();
+  const { toNotificationDetail, toNotificationSettings } = useAppNavigation();
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);
 
@@ -68,51 +67,20 @@ export const NotificationListScreen: React.FC = () => {
     isEmpty: notifications.length === 0,
   });
 
-  const handleNotificationPress = (
-    notification: NotificationType,
-    actionHandler?: (notification: NotificationType) => void,
-  ) => {
-    // Never awaited: the read shows at once, and a tap must not wait on the server.
-    if (!notification.isRead) {
-      void handleMarkAsRead(notification.id);
-    }
+  const handleNotificationPress = (notification: NotificationType) => {
+    // Never awaited: the read shows at once, and a tap must not wait on the
+    // server. A read row is left alone by the hook.
+    void handleMarkAsRead(notification.id);
 
-    // Handle actionable notifications first
-    if (
-      notification.requiresAction &&
-      notification.actionType &&
-      actionHandler
-    ) {
-      actionHandler(notification);
-      return;
-    }
-
-    // Navigate based on type and action
     if (notification.requiresAction && notification.actionType) {
-      switch (notification.actionType) {
-        case 'ACCEPT_HOME_INVITE':
-        case 'ACCEPT_SHOPPING_LIST_INVITE':
-          if (actionHandler) {
-            actionHandler(notification);
-          }
-          break;
-        case 'VIEW_EXPIRING_ITEMS':
-          if (actionHandler) {
-            actionHandler(notification);
-          } else {
-            toPantryMain();
-          }
-          break;
-        default:
-          toNotificationDetail({ id: notification.id, notification });
-      }
+      notificationActionRef.current?.(notification);
     } else if (
       notification.category !== NotificationCategory.Pantry &&
       notification.category !== NotificationCategory.Shopping
     ) {
       // Pantry/Shopping notifications have no dedicated destination to jump
-      // to — tapping just marks them read (handled above). Other categories
-      // open the detail screen, which has real content to show.
+      // to — tapping just marks them read. Other categories open the detail
+      // screen, which has real content to show.
       toNotificationDetail({ id: notification.id, notification });
     }
   };
@@ -135,12 +103,7 @@ export const NotificationListScreen: React.FC = () => {
     ) : (
       <NotificationItem
         notification={item.notification}
-        onPress={notification =>
-          handleNotificationPress(
-            notification,
-            notificationActionRef.current ?? undefined,
-          )
-        }
+        onPress={handleNotificationPress}
         onDismiss={handleRemoveNotification}
       />
     );
