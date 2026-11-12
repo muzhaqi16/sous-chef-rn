@@ -68,13 +68,13 @@ export const NotificationListScreen: React.FC = () => {
     isEmpty: notifications.length === 0,
   });
 
-  const handleNotificationPress = async (
+  const handleNotificationPress = (
     notification: NotificationType,
     actionHandler?: (notification: NotificationType) => void,
   ) => {
-    // Mark as read
+    // Never awaited: the read shows at once, and a tap must not wait on the server.
     if (!notification.isRead) {
-      await handleMarkAsRead(notification.id);
+      void handleMarkAsRead(notification.id);
     }
 
     // Handle actionable notifications first
