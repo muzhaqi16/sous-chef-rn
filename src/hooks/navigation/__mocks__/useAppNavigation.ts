@@ -10,6 +10,7 @@ const mockNavigation = {
     navigate: jest.fn(),
     getState: jest.fn(() => undefined),
     getParent: jest.fn(() => undefined),
+    addListener: jest.fn(() => jest.fn()),
   },
   goBack: jest.fn(),
   toAuth: jest.fn(),
