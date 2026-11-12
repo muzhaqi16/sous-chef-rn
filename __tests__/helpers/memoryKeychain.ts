@@ -87,8 +87,12 @@ const stood = {
   },
 };
 
-/** The module, its account-slot reads and writes held in memory. */
+/**
+ * The module, its account-slot reads and writes held in memory. An ES module,
+ * so a namespace import shares this object and a spy on it reaches callers.
+ */
 export const memoryKeychainModule = () => ({
+  __esModule: true,
   ...jest.requireActual<Record<string, unknown>>('#native/storage/keychain'),
   ...stood,
 });
