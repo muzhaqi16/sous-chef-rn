@@ -1164,8 +1164,6 @@ type CatalogRecipeHit {
   The intolerances the catalog says the recipe is free of: DAIRY and GLUTEN only
   """
   freeOf: [Intolerance!]!
-  """The catalog's health score, 0 to 100"""
-  healthScore: Int
   """An image the catalog hosts"""
   imageUrl: String
   """How many people liked the recipe in the catalog"""
@@ -1175,18 +1173,8 @@ type CatalogRecipeHit {
   provider: ExternalSource!
   """The recipe's id in that catalog"""
   providerRecipeId: String!
-  """
-  The API's copy of the recipe, when it holds one with content; null until
-  someone opens it or a search keeps it. A snapshot: after
-  upsertExternalRecipe, read the Recipe it returns.
-  """
-  recipe: Recipe
   """As the stored copy holds it: the catalog's count, else 4"""
   servings: Int!
-  """The site the recipe is from; credit it, with sourceUrl as the link"""
-  source: String
-  """The recipe's page on that site"""
-  sourceUrl: URL
   """Minutes from start to table"""
   totalTimeMinutes: Int
 }
@@ -1799,11 +1787,9 @@ type CookingLog {
   actualCookTime: Int
   actualPrepTime: Int
   cookedAt: DateTime!
-  deductionMethod: DeductionMethod
   difficulty: Difficulty
   id: ID!
   imageUrl: URL
-  ingredientsUsed: JSON
   notes: String
   pantryDeducted: Boolean!
   """The pantry uses this cook recorded, in the order they were recorded"""
@@ -1853,39 +1839,9 @@ type CookingLogEdge implements Edge {
   node: CookingLog!
 }
 
-"""
-Real-time event envelope for a single cooking log. Subscribe via
-cookingLogEvents(cookingLogId) and branch on mutation: UPDATED or DELETED,
-since a log must exist to be watched. Subscribers can only watch logs they
-own.
-"""
-type CookingLogEvent implements DomainEvent {
-  """The user who caused the change."""
-  actorUserId: ID
-  mutation: MutationType!
-  node: CookingLog!
-  """
-  Device/client that triggered the change (for echo suppression). Compare it
-  against your own device id: a match means this event is the echo of your
-  own write. Null when no device caused the change (a background job) or the
-  request sent no device id.
-  """
-  originatorClientId: ID
-  subtype: CookingLogSubtype!
-  timestamp: DateTime!
-  """Changed field names; empty for a create or a delete"""
-  updatedFields: [String!]!
-}
-
 """Order by options for cooking logs"""
 input CookingLogOrderBy {
   cookedAt: SortOrder
-}
-
-"""Subtype discriminator for cooking-log domain events."""
-enum CookingLogSubtype {
-  """A cooking log was created, updated, or deleted."""
-  COOKING_LOG_CHANGED
 }
 
 """It is time to start cooking a planned recipe (COOKING_REMINDER)."""
@@ -1906,8 +1862,6 @@ enum CookingSkillLevel {
 
 type CookingStats {
   averageRating: Float
-  favoriteRecipes: [Recipe!]!
-  recentCookingLogs: [CookingLog!]!
   totalCookingSessions: Int!
   totalRecipesCooked: Int!
 }
@@ -2289,7 +2243,6 @@ type CreateMealPlanPayload {
   and this payload is read as it stands now. The canonical, API-wide replay flag.
   """
   converged: Boolean!
-  home: Home
   mealPlan: MealPlan!
 }
 
@@ -2341,7 +2294,6 @@ type CreateMealTemplatePayload {
   and this payload is read as it stands now. The canonical, API-wide replay flag.
   """
   converged: Boolean!
-  home: Home
   mealTemplate: MealTemplate!
 }
 
@@ -3249,13 +3201,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union DeclineShoppingListInviteResult = ConflictError | DeclineShoppingListInvitePayload | ForbiddenError | NotFoundError | ValidationError
 
-"""Method used to deduct ingredients from pantry"""
-enum DeductionMethod {
-  AUTOMATIC
-  MANUAL
-  SKIPPED
-}
-
 type DeleteAccountPayload {
   user: User
 }
@@ -3291,35 +3236,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union DeleteBrandListResult = ConflictError | DeleteBrandListPayload | ForbiddenError | NotFoundError | ValidationError
-
-input DeleteCookingLogInput {
-  id: ID!
-}
-
-type DeleteCookingLogPayload {
-  """
-  True when this call CONVERGED on a log that was already deleted: a no-op
-  success that did not delete it, lower the count or publish again. The
-  canonical, API-wide replay flag.
-  """
-  converged: Boolean!
-  """
-  The deleted log, or null when it was already deleted: a replay, or a
-  second device, that converged as success. See converged.
-  """
-  cookingLog: CookingLog
-  """
-  The log's recipe, whose cook count the delete lowered; null on a converged replay
-  """
-  recipe: Recipe
-}
-
-"""
-Result of DeleteCookingLog. Select on DeleteCookingLogPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union DeleteCookingLogResult = ConflictError | DeleteCookingLogPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteDeviceInput {
   id: ID!
@@ -3470,7 +3386,6 @@ type DeleteMealPlanPayload {
   replay flag.
   """
   converged: Boolean!
-  home: Home
   """
   The deleted meal plan, or null when it was already deleted: a replay, or a
   second device, that converged as success. See converged.
@@ -3500,7 +3415,6 @@ type DeleteMealTemplatePayload {
   replay flag.
   """
   converged: Boolean!
-  home: Home
   """
   The deleted meal template, or null when it was already deleted: a replay, or a
   second device, that converged as success. See converged.
@@ -4227,7 +4141,7 @@ type DietaryProfile {
   """Meals a day the user plans for; 3 by default"""
   mealsPerDay: Int! @deprecated(reason: "Stored and decides nothing: no meal plan or suggestion reads it.")
   """Cuisines the user prefers; empty when none"""
-  preferredCuisines: [Cuisine!]! @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it. Narrow a recipe search with RecipeFilters.cuisines (searchRecipes).")
+  preferredCuisines: [Cuisine!]! @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it. Narrow a recipe search with RecipeFilters.cuisines (findRecipes).")
   """
   Daily protein goal in grams, measured as calorieTarget is; null or 0 when no goal is set
   """
@@ -4681,9 +4595,6 @@ type ExpiryReminderNotificationData {
   """The item's name when the reminder was sent."""
   itemName: String!
 }
-
-"""A catalog recipe's provider-specific data, one member per provider."""
-union ExternalRecipeDetails = SpoonacularRecipeDetails
 
 enum ExternalSource {
   ALDI
@@ -7851,14 +7762,10 @@ input MealPlanFilters {
 
 """Meal plan item linking recipes to meals"""
 type MealPlanItem {
-  """What the meal cost, in the plan owner's preferred currency."""
-  actualCost: Float
   """
   Calories (kcal) of one serving as entered for this meal; null when none was entered, and the plan's totals then read the recipe's
   """
   calories: Float
-  """Carbohydrates (g) of one serving, entered as calories is"""
-  carbs: Float
   """
   When the meal was marked done; null until then, and null once an update clears it
   """
@@ -7869,25 +7776,15 @@ type MealPlanItem {
   The day the meal is planned for: a calendar date, with no time or timezone
   """
   date: LocalDate!
-  """The meal's estimated cost, in the plan owner's preferred currency."""
-  estimatedCost: Float
-  """Fat (g) of one serving, entered as calories is"""
-  fat: Float
   id: ID!
   """
   Whether the meal was marked done. The first time a recipe meal is marked done, its ingredients are deducted from the pantry unless that update set deductFromPantry to false.
   """
   isCompleted: Boolean!
-  """The plan the meal is on"""
-  mealPlan: MealPlan!
   """Which meal of the day it is"""
   mealType: MealType!
   """Free text about the meal; null when none"""
   notes: String
-  """AUTO until a nutrition value is entered for this meal, then MANUAL"""
-  nutritionSource: NutritionSource!
-  """Protein (g) of one serving, entered as calories is"""
-  protein: Float
   """
   The recipe planned; null for a custom meal, and null when the caller may not view the recipe
   """
@@ -7896,8 +7793,6 @@ type MealPlanItem {
   Servings to cook; null when not set, and completing a recipe meal then deducts one serving
   """
   servings: Int
-  """When the item was last written."""
-  updatedAt: DateTime!
   """
   The pantry uses linked to this meal, oldest first: what completing it
   deducted, and any use recorded naming it (createPantryItemUsage
@@ -8112,7 +8007,6 @@ type MealTemplateItem {
   notes: String
   recipe: Recipe
   servings: Int
-  template: MealTemplate!
 }
 
 """
@@ -9071,13 +8965,6 @@ type Mutation {
   deleteAccount: DeleteAccountResult!
   """Delete a list and its entries. Converges on a list already gone."""
   deleteBrandList(input: DeleteBrandListInput!): DeleteBrandListResult!
-  """
-  Delete one of the caller's cooking logs; Recipe.totalCookingLogs drops by
-  one. Stock the cook deducted from the pantry stays deducted: deleting the
-  log does not give it back. A replay converges: a log the caller already
-  deleted answers converged, with a null cookingLog.
-  """
-  deleteCookingLog(input: DeleteCookingLogInput!): DeleteCookingLogResult!
   """Delete a device. The delete is a reversible soft delete."""
   deleteDevice(input: DeleteDeviceInput!): DeleteDeviceResult!
   """Delete an external source mapping."""
@@ -9442,8 +9329,6 @@ type Mutation {
   updateCollaboratorPermissions(input: UpdateCollaboratorPermissionsInput!): UpdateCollaboratorPermissionsResult!
   """Update a collaborator's role on a shopping list."""
   updateCollaboratorRole(input: UpdateCollaboratorRoleInput!): UpdateCollaboratorRoleResult!
-  """Update an existing cooking log entry."""
-  updateCookingLog(input: UpdateCookingLogInput!): UpdateCookingLogResult!
   """
   Update one of the caller's devices, in one write: its status (trust,
   verify, activate or deactivate), push token, location and reported
@@ -9518,13 +9403,6 @@ type Mutation {
   pending revision until an admin approves it.
   """
   updateRecipe(input: UpdateRecipeInput!): UpdateRecipeResult!
-  """
-  Replace a recipe's ingredient list; updateRecipe takes the list in the same
-  write as the fields. On a PUBLISHED recipe the list is held as its pending
-  revision, and the recipe stays live. A recipe edited, decided or given a
-  new list since it was read is refused (VERSION_CONFLICT): refetch and retry.
-  """
-  updateRecipeIngredients(input: UpdateRecipeIngredientsInput!): UpdateRecipeIngredientsResult!
   """Update an existing recipe review (author only)."""
   updateRecipeReview(input: UpdateRecipeReviewInput!): UpdateRecipeReviewResult!
   """Update settings for the current user."""
@@ -10239,8 +10117,6 @@ type NutritionFacts {
   id: ID!
   """Milligrams."""
   iron: Float
-  item: Item!
-  itemId: ID!
   """Milligrams."""
   potassium: Float
   """Grams."""
@@ -10385,13 +10261,6 @@ type NutritionGoalProgress {
 input NutritionInfoInput {
   caloriesPerServing: Float
   nutritionData: JSON
-}
-
-"""Source of nutrition data for a meal plan item"""
-enum NutritionSource {
-  AUTO
-  MANUAL
-  PARTIAL
 }
 
 """
@@ -10911,7 +10780,7 @@ type PantryItem {
   minQuantity is the target.
   """
   restockQuantity: Float
-  """Whole and partly used packages, batch by batch."""
+  """How many whole packages the stack holds."""
   stockBreakdown: StockBreakdown!
   """
   How sure the API is that this stack still holds what it records, for the
@@ -11279,7 +11148,7 @@ type PantryItemUsage {
   """
   purpose: UsagePurpose!
   """
-  How much stock moved, in usageUnit, before any conversion to the stack's tracking unit (see conversion). Greater than zero (a STACK_REMOVED row may record 0); purpose says which way it moved.
+  How much stock moved, in usageUnit, before any conversion to the stack's tracking unit . Greater than zero (a STACK_REMOVED row may record 0); purpose says which way it moved.
   """
   quantityUsed: Float!
   """
@@ -11490,7 +11359,7 @@ holds and items the viewer dismissed.
 """
 type PantrySuggestions {
   """
-  Stacks expiring within expirationDays, soonest first, that a restock has not
+  Stacks expiring within seven days of today, soonest first, that a restock has not
   answered: a stack leaves once its stock lasting past the window (batches
   expiring later, or never) is above zero and above its low-stock minimum when
   lowStockAlert is set. The pantry's expiringSoon filter, its stats and expiry
@@ -11623,12 +11492,11 @@ input ParseIngredientLinesInput {
 type ParseIngredientLinesPayload {
   """One parse per line sent, in order"""
   lines: [ParsedIngredientLine!]!
-  measurementRegion: MeasurementRegion!
 }
 
 """
 An ingredient line read into its parts, with the catalog items it may name.
-Nothing is stored: send the parts to createRecipe or updateRecipeIngredients.
+Nothing is stored: send the parts to createRecipe or updateRecipe.
 """
 type ParsedIngredientLine {
   """Best first; empty when the line names nothing close"""
@@ -11655,8 +11523,6 @@ type ParsedIngredientLine {
   is in pieces; null when the line states no amount or its unit is unknown.
   """
   unit: Unit
-  """The unit as the line spells it, when it named one"""
-  unitText: String
 }
 
 type ParsedReceipt {
@@ -12512,11 +12378,6 @@ type Query {
     """The unit to express it in"""
     toUnitId: ID!
   ): ConversionResult
-  """Fetch a single cooking log by its ID."""
-  cookingLog(
-    """The id of the CookingLog to read"""
-    id: ID!
-  ): CookingLog
   """List all currencies, optionally filtered by active status."""
   currencies(
     """Only active (true) or inactive (false) currencies; all when omitted"""
@@ -12524,13 +12385,11 @@ type Query {
   ): [Currency!]!
   """
   The meal plan whose days include today, in one read: the plan the Today
-  screen shows. Scoped as mealPlans is (that one home's with homeId, else the
-  caller's own plans and those of every home they belong to); the plan
-  starting latest when several cover the day; null when none does.
+  screen shows. Read from the caller's own plans and those of every home they
+  belong to; the plan starting latest when several cover the day; null when
+  none does.
   """
   currentMealPlan(
-    """Only this home's plans; every one the caller may read when omitted"""
-    homeId: ID
     """The caller's own calendar date, as YYYY-MM-DD"""
     today: LocalDate!
   ): MealPlan
@@ -12999,8 +12858,6 @@ type Query {
     after: String
     """Resume before this cursor: a previous page's startCursor"""
     before: String
-    """Narrows the list: every field given must match"""
-    filters: RecipeFilters
     """Page size, reading forward: default 20, at most 100"""
     first: Int
     """Page size, reading backward: default 20, at most 100"""
@@ -13128,27 +12985,6 @@ type Query {
     """What to search for, in plain words"""
     prompt: String!
   ): ItemConnection!
-  """
-  Search published recipes by text. Every caller, signed in or not, searches
-  the same published recipes; the caller's own unpublished ones are listed by
-  `recipes`. Every RecipeFilters field but includeDeleted applies.
-  """
-  searchRecipes(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Narrows the list: every field given must match"""
-    filters: RecipeFilters
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; newest first when omitted"""
-    orderBy: RecipeOrderBy
-    """The search text"""
-    query: String!
-  ): RecipeConnection!
   """
   Search units by name or symbol.
   Set prioritizeCommon to true for autocomplete behavior (common units first).
@@ -13729,12 +13565,6 @@ type Recipe {
   """
   difficulty: Difficulty!
   """
-  The provider's data for a catalog recipe that has no canonical field here,
-  read from the stored provider payload; null for a recipe created in the app
-  or a catalog recipe not fetched yet.
-  """
-  externalDetails: ExternalRecipeDetails
-  """
   The recipe's identifier in its external source, or null for a recipe created in the app.
   """
   externalId: String
@@ -13755,21 +13585,6 @@ type Recipe {
   ID of the recipe this one was forked from, or null for an original recipe.
   """
   forkedFromId: ID
-  """
-  Forks of this recipe the viewer may see (published ones plus the viewer's own), newest first by default.
-  """
-  forksConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; newest first when omitted"""
-    orderBy: RecipeOrderBy
-  ): RecipeForkConnection!
   """
   The intolerances the recipe's source says it is free of: DAIRY and GLUTEN
   only, from a catalog recipe's provider flags; empty when none are recorded.
@@ -13805,7 +13620,7 @@ type Recipe {
   instructions: JSON!
   """
   Food intolerances this recipe is flagged for, as recorded by its author or
-  import source. A searchRecipes intolerance filter excludes recipes flagged for
+  import source. A findRecipes intolerance filter excludes recipes flagged for
   any selected one. Empty when none are recorded.
   """
   intolerances: [Intolerance!]!
@@ -13827,36 +13642,10 @@ type Recipe {
   """
   latestRevision: RecipeRevision
   """
-  How much of this recipe you can already make from the pantries in scope,
-  0-100: the share of its non-optional ingredients held, pantry basics (water,
-  salt, pepper, a cooking oil, sugar, flour) left out. That home's pantries
-  with homeId, else every pantry you may view. Null when unauthenticated.
-  """
-  matchPercentage(
-    """
-    Only this home's pantries, those you may view; refused unless you are an active member. Every pantry you may view when omitted
-    """
-    homeId: ID
-  ): Float
-  """
-  The viewer's meal-plan items that use this recipe: from plans they own or
-  share through an active home membership, soonest first. Empty for an
-  anonymous viewer.
-  """
-  mealPlanItemsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-  ): MealPlanItemConnection!
-  """
-  The ingredients matchPercentage counts that the pantries in scope lack,
-  by the same matching and scope: non-optional, pantry basics left out, in
-  display order. What "add what's missing to the list" adds. Empty when
+  The recipe's non-optional ingredients that the pantries in scope lack,
+  pantry basics (water, salt, pepper, a cooking oil, sugar, flour) left out,
+  in display order: that home's pantries with homeId, else every pantry you
+  may view. What "add what's missing to the list" adds. Empty when
   unauthenticated.
   """
   missingIngredientsConnection(
@@ -13954,7 +13743,7 @@ type Recipe {
   """
   source: String
   """
-  The recipe's full external source record, with source metadata and sync time; null for a recipe created in the app.
+  The recipe's external source record, with where its copy stands against the provider; null for a recipe created in the app.
   """
   sourceMapping: RecipeSourceMapping
   """Web address of the recipe's original source, or null when not stated."""
@@ -14007,16 +13796,10 @@ type RecipeCapture {
   SAVED by finding the page among the caller's recipes: no second recipe was made
   """
   alreadySaved: Boolean!
-  completedAt: DateTime
-  createdAt: DateTime!
   """What was read; null while PENDING, or when nothing was"""
   draft: RecipeCaptureDraft
   """Why FAILED or UNAVAILABLE; null otherwise"""
   failure: RecipeCaptureFailure
-  """
-  What FAILED or UNAVAILABLE means for the user, in a fixed sentence; null otherwise
-  """
-  failureReason: String
   id: ID!
   """The region the source's units were read in; null until read"""
   measurementRegion: MeasurementRegion
@@ -14048,7 +13831,6 @@ type RecipeCaptureDraft {
   """The publisher or site"""
   sourceName: String
   steps: [RecipeCaptureStep!]!
-  totalTimeMinutes: Int
 }
 
 """Why a capture ended FAILED or UNAVAILABLE, as a closed code."""
@@ -14136,8 +13918,6 @@ type RecipeCaptureStep {
 
 type RecipeCaptureWarning {
   code: RecipeCaptureWarningCode!
-  """Free text: the dropped line, or what was cut"""
-  detail: String!
 }
 
 """Something a capture noticed about what it read."""
@@ -14205,15 +13985,11 @@ type RecipeContent {
   intolerances: [Intolerance!]!
   name: String!
   notes: String
-  nutritionData: JSON
   originalAuthor: String
   prepTimeMinutes: Int
   servings: Int!
-  source: String
-  sourceUrl: URL
   tags: [String!]!
   tips: String
-  totalTimeMinutes: Int
   videoUrl: URL
 }
 
@@ -14282,9 +14058,9 @@ type RecipeFieldChange {
 }
 
 """
-Filter criteria for recipe list queries (recipes, adminRecipes, searchRecipes).
-A field marked with queries applies to those only; the others apply to all
-three. The searchRecipes filters mirror the Spoonacular complexSearch parameters:
+Filter criteria for recipe list queries (adminRecipes, findRecipes). A field
+marked with queries applies to those only; the others apply to both. The
+findRecipes filters mirror the Spoonacular complexSearch parameters:
   - diets         -> recipe must match ALL selected
   - intolerances  -> exclude recipes containing ANY selected intolerance
   - category      -> meal type
@@ -14294,49 +14070,23 @@ three. The searchRecipes filters mirror the Spoonacular complexSearch parameters
 input RecipeFilters {
   """Filter by meal-type category"""
   category: RecipeCategory
-  """Cuisines to match any of (searchRecipes)"""
+  """Cuisines to match any of (findRecipes)"""
   cuisines: [Cuisine!]
-  """Dietary restrictions the recipe must match (searchRecipes)"""
+  """Dietary restrictions the recipe must match (findRecipes)"""
   diets: [Diet!]
   """Filter by difficulty"""
   difficulty: Difficulty
-  """Include soft-deleted recipes (recipes/adminRecipes)"""
+  """Include soft-deleted recipes (adminRecipes)"""
   includeDeleted: Boolean
-  """Intolerances to exclude (searchRecipes)"""
+  """Intolerances to exclude (findRecipes)"""
   intolerances: [Intolerance!]
-  """Maximum total ready time in minutes (searchRecipes)"""
+  """Maximum total ready time in minutes (findRecipes)"""
   maxReadyTime: Int
   """
   Filter by status. `adminRecipes` with PENDING_REVIEW is the moderation
-  queue; `searchRecipes` lists published recipes only.
+  queue.
   """
   status: RecipeStatus
-}
-
-"""
-A page of Recipe results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type RecipeForkConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [RecipeForkEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One Recipe in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type RecipeForkEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The Recipe this edge wraps."""
-  node: Recipe!
 }
 
 type RecipeIngredient {
@@ -14360,7 +14110,6 @@ type RecipeIngredient {
     homeId: ID!
   ): [DietaryAlert!]!
   estimatedPrice: Float
-  externalSources: [RecipeIngredientSourceMapping!]!
   id: ID!
   """
   The ingredient's image: an absolute http(s) address, or null. A catalog
@@ -14381,7 +14130,6 @@ type RecipeIngredient {
   carries it without a quantity.
   """
   quantity: Float
-  recipe: Recipe!
   section: String
   sortOrder: Int!
   """
@@ -14500,11 +14248,6 @@ type RecipeIngredientMatch {
   """
   isAvailable: Boolean!
   """
-  The match kind as a number: ITEM 1, CONCEPT 0.9, NAME 0.7, NONE 0.
-  Superseded by matchKind; read that instead.
-  """
-  matchConfidence: Float!
-  """
   How matchedPantryItem was found. An ingredient with a catalog item is
   matched only by ITEM or CONCEPT, its alternativeMatches included; one
   without is matched only by NAME.
@@ -14559,24 +14302,6 @@ input RecipeIngredientSourceInput {
   originalString: String
   source: ExternalSource!
   spoonacular: SpoonacularIngredientInput
-}
-
-type RecipeIngredientSourceMapping {
-  aisle: String
-  consistency: String
-  createdAt: DateTime!
-  data: JSON
-  externalId: String!
-  id: ID!
-  imageUrl: String
-  isPrimary: Boolean!
-  lastSyncedAt: DateTime!
-  metadata: JSON
-  originalName: String
-  originalString: String
-  recipeIngredient: RecipeIngredient!
-  source: ExternalSource!
-  updatedAt: DateTime!
 }
 
 """A recipe's media: its image, and a link to a video of it."""
@@ -14641,8 +14366,6 @@ type RecipeReview {
   helpful: Int!
   id: ID!
   rating: Int!
-  """Null when the viewer can no longer see the recipe (it was unpublished)"""
-  recipe: Recipe
   updatedAt: DateTime!
   """
   Null when the author's account was permanently deleted. The rating still counts toward the recipe's totals.
@@ -14771,26 +14494,9 @@ type RecipeSearchEdge {
 union RecipeSearchNode = CatalogRecipeHit | Recipe
 
 type RecipeSourceMapping {
-  createdAt: DateTime!
-  externalId: String!
-  externalType: String
   id: ID!
-  isPrimary: Boolean!
-  """When the provider's content was last fetched; null when it never was."""
-  lastSyncedAt: DateTime
-  metadata: JSON
-  """
-  The provider schema version the stored payload was validated against; null when the API never fetched it.
-  """
-  schemaVersion: Int
-  source: ExternalSource!
-  """
-  When the provider's supplementary data (Spoonacular: prices) was fetched; null until the recipe is first saved or planned.
-  """
-  supplementsSyncedAt: DateTime
   """Where the API's copy stands against the provider."""
   syncStatus: ExternalSyncStatus!
-  updatedAt: DateTime!
 }
 
 """
@@ -14822,8 +14528,7 @@ type RecipeSuggestionConnection {
 type RecipeSuggestionEdge {
   """
   The share of the recipe's non-optional ingredients the pantries in scope
-  hold, from 0 to 100, pantry basics left out: the figure
-  Recipe.matchPercentage reports for the same homeId.
+  hold, from 0 to 100, pantry basics left out.
   """
   coverage: Int!
   cursor: String!
@@ -14832,12 +14537,10 @@ type RecipeSuggestionEdge {
   the recipe would use; empty when today was not sent.
   """
   expiringStacks: [PantryItem!]!
-  """How many ingredients are left to buy: the length of missingIngredients"""
+  """
+  How many non-optional ingredients, pantry basics left out, the pantries in scope lack: what is left to buy
+  """
   missingIngredientCount: Int!
-  """
-  The non-optional ingredients, pantry basics left out, the pantries in scope lack: what is left to buy
-  """
-  missingIngredients: [RecipeIngredient!]!
   node: Recipe!
   """
   The non-optional ingredients, pantry basics left out, the pantries in scope hold
@@ -15618,9 +15321,7 @@ enum RestrictionSeverity {
 }
 
 type ReviewHelpful {
-  createdAt: DateTime!
   id: ID!
-  review: RecipeReview!
   """
   Null when the voter's account was permanently deleted. The vote still counts toward the review's helpful total.
   """
@@ -15726,7 +15427,6 @@ type SavedRecipe {
   recipeId: ID!
   tags: [String!]!
   updatedAt: DateTime!
-  user: User!
   userId: ID!
 }
 
@@ -16802,23 +16502,14 @@ stack's unit (nothing was deducted 1:1), or one stating no amount
 """
 type SkippedRecipeIngredient {
   """
-  Why this item failed, as the code a result-union member carries for the same
-  error. Branch on this, not on the reason text.
+  Why this item failed, as the code a result-union member carries for the same error.
   """
   code: ErrorCode!
-  """What to do with this item, as on any other error."""
-  disposition: ErrorDisposition!
-  """
-  Set only when the reason was masked. Names the log entry holding the real
-  error, so support can look it up.
-  """
-  errorId: String
   """
   The ingredient's unit, or null when neither the recipe nor the cook names one.
   """
   fromUnitId: ID
   itemName: String!
-  reason: String!
   toUnitId: ID!
 }
 
@@ -16900,21 +16591,6 @@ input SpoonacularIngredientInput {
   unitShort: String
 }
 
-type SpoonacularInstructionGroup {
-  """The group's heading, e.g. For the sauce; null for an unnamed group."""
-  name: String
-  steps: [SpoonacularInstructionStep!]!
-}
-
-type SpoonacularInstructionStep {
-  equipment: [SpoonacularStepEquipment!]!
-  ingredients: [SpoonacularStepIngredient!]!
-  """How long the step takes, as Spoonacular states it."""
-  length: SpoonacularQuantity
-  number: Int!
-  text: String!
-}
-
 input SpoonacularMeasureInput {
   amount: Float
   unitLong: String
@@ -16941,86 +16617,6 @@ input SpoonacularNutritionInput {
   weightPerServing: SpoonacularWeightPerServingInput
 }
 
-type SpoonacularPriceTotals {
-  """The whole recipe's cost, in US cents."""
-  totalCost: Float!
-  """Cost per serving, in US cents."""
-  totalCostPerServing: Float!
-}
-
-type SpoonacularQuantity {
-  number: Float!
-  unit: String!
-}
-
-"""
-A Spoonacular recipe's data that has no canonical recipe field, typed from
-Spoonacular's documented response. Prices are US cents, as Spoonacular reports
-them.
-"""
-type SpoonacularRecipeDetails {
-  aggregateLikes: Float
-  cheap: Boolean
-  creditsText: String
-  """
-  Cuisine names as Spoonacular writes them; the canonical cuisines are on the recipe.
-  """
-  cuisines: [String!]!
-  dairyFree: Boolean
-  """
-  Diet names as Spoonacular writes them; the canonical diets are on the recipe.
-  """
-  diets: [String!]!
-  dishTypes: [String!]!
-  """The recipe's Spoonacular id."""
-  externalId: String!
-  """GAPS diet compliance as Spoonacular states it, e.g. no."""
-  gaps: String
-  glutenFree: Boolean
-  healthScore: Float
-  instructionGroups: [SpoonacularInstructionGroup!]!
-  """
-  The instructions as Spoonacular's markup; the recipe's own steps come from the structured groups when there are any.
-  """
-  instructionsHtml: String
-  ketogenic: Boolean
-  language: String
-  """The licence the recipe is published under, which attribution follows."""
-  license: String
-  lowFodmap: Boolean
-  occasions: [String!]!
-  """
-  Price totals in US cents; null until the recipe is first saved or planned.
-  """
-  priceBreakdown: SpoonacularPriceTotals
-  """Estimated cost per serving, in US cents."""
-  pricePerServing: Float
-  sourceName: String
-  sourceUrl: String
-  spoonacularScore: Float
-  spoonacularSourceUrl: String
-  sustainable: Boolean
-  vegan: Boolean
-  vegetarian: Boolean
-  veryHealthy: Boolean
-  veryPopular: Boolean
-  weightWatcherSmartPoints: Float
-  whole30: Boolean
-}
-
-type SpoonacularStepEquipment {
-  id: Int
-  image: String
-  name: String!
-  temperature: SpoonacularQuantity
-}
-
-type SpoonacularStepIngredient {
-  id: Int
-  image: String
-  name: String!
-}
-
 input SpoonacularWeightPerServingInput {
   amount: Float
   unit: String
@@ -17039,9 +16635,8 @@ input StockAmountInput @oneOf {
 }
 
 """
-What a stack holds, package by package: whole packages and the partly used ones. Each
-batch is measured by its own package size, so a 22 oz jar and a 32 oz jar are each one
-jar.
+How many whole packages a stack holds. Each batch is measured by its own package size,
+so a 22 oz jar and a 32 oz jar are each one jar.
 """
 type StockBreakdown {
   fullPackages: Int!
@@ -17784,14 +17379,6 @@ type StoreTopItem {
 
 type Subscription {
   """
-  Subscribe to one cooking log's update and delete events. The log must
-  exist and belong to the caller.
-  """
-  cookingLogEvents(
-    """The cooking log to watch"""
-    cookingLogId: ID!
-  ): CookingLogEvent!
-  """
   Per-home event stream (membership changes + home-invite
   changes). Subscribe once per home and branch on subtype, then on node's
   __typename (Membership vs HomeInvite).
@@ -18211,7 +17798,6 @@ input ToggleReviewHelpfulInput {
 }
 
 type ToggleReviewHelpfulPayload {
-  recipeReview: RecipeReview
   reviewHelpful: ReviewHelpful!
 }
 
@@ -18791,30 +18377,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union UpdateCollaboratorRoleResult = ConflictError | ForbiddenError | NotFoundError | UpdateCollaboratorRolePayload | ValidationError
 
-input UpdateCookingLogInput {
-  actualCookTime: Int
-  actualPrepTime: Int
-  difficulty: Difficulty
-  id: ID!
-  imageUrl: URL
-  notes: String
-  rating: Int
-  servingsMade: Int
-  wouldMakeAgain: Boolean
-}
-
-type UpdateCookingLogPayload {
-  cookingLog: CookingLog!
-  recipe: Recipe
-}
-
-"""
-Result of UpdateCookingLog. Select on UpdateCookingLogPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union UpdateCookingLogResult = ConflictError | ForbiddenError | NotFoundError | UpdateCookingLogPayload | ValidationError
-
 """
 What updateDevice can change: status flags, location, push token and the
 device's reported details. An omitted field is left as it is, and the whole
@@ -18900,7 +18462,7 @@ input UpdateDietaryProfileInput {
   """
   Cuisines the user prefers, replacing the whole list; an empty list clears it, null is refused
   """
-  preferredCuisines: [Cuisine!] @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it. Narrow a recipe search with RecipeFilters.cuisines (searchRecipes).")
+  preferredCuisines: [Cuisine!] @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it. Narrow a recipe search with RecipeFilters.cuisines (findRecipes).")
   """
   Daily protein goal in grams, a non-negative integer, measured as calorieTarget is; 0 or null sets no goal
   """
@@ -18943,7 +18505,6 @@ type UpdateDietarySharingPayload {
   and this payload is read as it stands now. The canonical, API-wide replay flag.
   """
   converged: Boolean!
-  home: Home
   membership: Membership!
 }
 
@@ -19229,7 +18790,6 @@ Always include a __typename so the variant can be discriminated.
 union UpdateMealPlanItemResult = ConflictError | ForbiddenError | NotFoundError | UpdateMealPlanItemPayload | ValidationError
 
 type UpdateMealPlanPayload {
-  home: Home
   mealPlan: MealPlan!
 }
 
@@ -19267,7 +18827,6 @@ input UpdateMealTemplateInput {
 }
 
 type UpdateMealTemplatePayload {
-  home: Home
   mealTemplate: MealTemplate!
 }
 
@@ -19351,8 +18910,10 @@ input UpdatePantryItemInput {
   A CUID2 minted per edit for an offline queue: a resend under a spent key writes nothing and answers the stack as it stands with converged true, whatever version it names
   """
   idempotencyKey: ID
-  isComposted: Boolean
-  isRecycled: Boolean
+  """Ignored"""
+  isComposted: Boolean @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
+  """Ignored"""
+  isRecycled: Boolean @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   itemName: String
   """
   Opt-in for low-stock notifications on this stack (default false): with it on
@@ -19502,22 +19063,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union UpdateProfileResult = ConflictError | ForbiddenError | NotFoundError | UpdateProfilePayload | ValidationError
-
-input UpdateRecipeIngredientsInput {
-  ingredients: [RecipeIngredientInput!]!
-  recipeId: ID!
-}
-
-type UpdateRecipeIngredientsPayload {
-  recipe: Recipe!
-}
-
-"""
-Result of UpdateRecipeIngredients. Select on UpdateRecipeIngredientsPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union UpdateRecipeIngredientsResult = ConflictError | ForbiddenError | NotFoundError | UpdateRecipeIngredientsPayload | ValidationError
 
 input UpdateRecipeInput {
   attribution: RecipeAttributionInput
