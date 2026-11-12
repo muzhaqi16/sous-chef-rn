@@ -233,6 +233,7 @@ describe('a new recipe', () => {
     const { cache } = openForm({ answers: [create] });
     const user = userEvent.setup();
     await fillNew(user);
+    await user.press(screen.getByText(t('recipes.diets')));
     await user.press(screen.getByText(t('recipes.diet.VEGETARIAN')));
 
     await user.press(formSave());

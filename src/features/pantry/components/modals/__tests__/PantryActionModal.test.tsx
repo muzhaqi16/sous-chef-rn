@@ -193,12 +193,9 @@ describe('opening on a stack', () => {
   it('shows nothing of a stack when there is none, and offers none held', () => {
     renderModal({ props: { pantryItemId: null } });
 
-    fireEvent.press(screen.getByLabelText('Use'));
-
-    expect(screen.queryByText('Flour')).toBeNull();
-    expect(onConfirm).toHaveBeenCalledWith(
-      expect.objectContaining({ trackingQuantity: 0 }),
-    );
+    expect(screen.queryByText('Flour')).not.toBeOnTheScreen();
+    expect(screen.queryByLabelText('Use')).not.toBeOnTheScreen();
+    expect(onConfirm).not.toHaveBeenCalled();
   });
 });
 

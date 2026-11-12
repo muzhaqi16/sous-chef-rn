@@ -140,10 +140,7 @@ async function pick(
   document: Parameters<typeof log.landed>[0],
   nth = 1,
 ) {
-  fireEvent.changeText(
-    screen.getByTestId(catalogTestIDs.autocompleteSearch(fieldTestID)),
-    search,
-  );
+  fireEvent.changeText(screen.getByTestId(fieldTestID), search);
   await log.requested(document, nth);
   await log.landed(document, nth);
   fireEvent.press(
@@ -384,7 +381,7 @@ describe('an add', () => {
     fireEvent.changeText(screen.getByTestId(ADD.priceInput), '3.50');
     fireEvent.press(screen.getByText(t('shoppingListScreens.priorityHigh')));
     fireEvent.changeText(
-      screen.getByPlaceholderText(t('autocomplete.storeSearch')),
+      screen.getByPlaceholderText(t('shoppingListScreens.storePlaceholder')),
       'Cor',
     );
     await log.landed(SearchStoresDocument);
@@ -550,7 +547,6 @@ describe('an add', () => {
   it('closes without adding', () => {
     renderForm();
 
-    // Each closed sheet carries a Close of its own; the screen's comes first.
     const [close] = screen.getAllByLabelText(t('labels.close'));
     if (!close) throw new Error('no Close');
     fireEvent.press(close);

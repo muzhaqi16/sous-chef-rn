@@ -168,9 +168,8 @@ const purchasedTab = () =>
   );
 
 /**
- * Jest renders a closed sheet's content too, so a sheet is open when it asks
- * for what only an open one reads: the add sheet its suggestions, the move
- * sheet the line's purchase.
+ * A sheet asks for what only an open one reads: the add sheet its suggestions,
+ * the move sheet the line's purchase.
  */
 const addSheetOpened = () => log.requested(GetShoppingListSuggestionsDocument);
 const moveSheetOpened = () => log.requested(MoveToPantryPurchaseInfoDocument);

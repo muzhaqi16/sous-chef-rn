@@ -190,12 +190,6 @@ async function pressHeaderAction(testID: string) {
   // An overflowed action runs once the menu has closed.
   fireEvent.press(screen.getByTestId(kitTestIDs.headerMoreButton));
   fireEvent.press(screen.getByTestId(testID));
-  const onDismiss: unknown = screen.UNSAFE_getByProps({ detached: true }).props
-    .onDismiss;
-  if (typeof onDismiss !== 'function') throw new Error('no menu to close');
-  act(() => {
-    onDismiss();
-  });
 }
 
 /** Whether the header offers an action, shown or in its "more" menu. */
@@ -370,7 +364,7 @@ describe('cooking it', () => {
     const user = userEvent.setup();
 
     await user.press(screen.getByText(t('recipes.markCooked')));
-    // The stand-in renders a closed sheet too, so that it was presented.
+    // The cook sheet is presented with its form.
     expect(screen.UNSAFE_getByType(MarkCookedModal).props.visible).toBe(true);
     const confirm = screen.getAllByText(t('markCookedModal.markCooked')).at(-1);
     if (!confirm) throw new Error('no confirm in the cook dialog');

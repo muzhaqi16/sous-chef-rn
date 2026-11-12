@@ -909,7 +909,6 @@ describe('a new list', () => {
     expect(goBack).not.toHaveBeenCalled();
   });
 
-  // The picker's rows stay drawn in Jest, so the button is the second "Family".
   it('names the home picked, and goes back to none', async () => {
     const homes = recordMock(GetHomesDocument, {
       data: {
@@ -936,8 +935,9 @@ describe('a new list', () => {
     fireEvent.press(screen.getByText(t('shoppingListScreens.personalNoHome')));
     await log.landed(GetHomesDocument);
     fireEvent.press(screen.getByText('Family'));
-    expect(screen.getAllByText('Family')).toHaveLength(2);
+    expect(screen.getAllByText('Family')).toHaveLength(1);
 
+    fireEvent.press(screen.getByText('Family'));
     fireEvent.press(screen.getByText(t('shoppingListScreens.personalNoHome')));
     fireEvent.changeText(
       screen.getByPlaceholderText(t('shoppingListScreens.listNamePlaceholder')),
@@ -999,6 +999,7 @@ describe('a new list from a saved template', () => {
     expect(name().props.value).toBe('Weekly Staples');
 
     fireEvent.changeText(name(), 'Saturday');
+    fireEvent.press(screen.getByText('Weekly Staples'));
     fireEvent.press(screen.getByText('Party Supplies'));
     expect(name().props.value).toBe('Saturday');
   });

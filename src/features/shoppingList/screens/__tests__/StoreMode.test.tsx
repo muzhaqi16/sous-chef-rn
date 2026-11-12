@@ -19,7 +19,6 @@ import {
 import { useStore } from '#store';
 import { t } from '#/i18n';
 import { kitTestIDs } from '#components/testIDs';
-import { catalogTestIDs } from '#features/catalog/testIDs';
 import {
   StoreDepartment,
   StoreRouteSource,
@@ -415,11 +414,7 @@ describe('the store', () => {
       screen.getByTestId(shoppingListTestIDs.storeModeChooseStore),
     );
     fireEvent.changeText(
-      screen.getByTestId(
-        catalogTestIDs.autocompleteSearch(
-          shoppingListTestIDs.storeModeStoreField,
-        ),
-      ),
+      screen.getByTestId(shoppingListTestIDs.storeModeStoreField),
       'Mar',
     );
     await log.landed(SearchStoresDocument);

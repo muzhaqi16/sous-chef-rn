@@ -146,30 +146,27 @@ describe('the details step', () => {
 
     fireEvent.changeText(screen.getByTestId(NAME), 'Oat milk');
     fireEvent.changeText(screen.getByTestId(QUANTITY), '2');
-    fireEvent.changeText(
-      screen.getByTestId(catalogTestIDs.autocompleteSearch(UNIT)),
-      'li',
-    );
+    fireEvent.changeText(screen.getByTestId(UNIT), 'li');
     await log.requested(SearchUnitsDocument);
     await log.landed(SearchUnitsDocument);
     // The weight unit's picker lists the same search: the unit's own first row.
     fireEvent.press(screen.getByTestId(catalogTestIDs.suggestion(UNIT, 0)));
     await pick(
-      screen.getByPlaceholderText(t('autocomplete.brandSearch')),
+      screen.getByPlaceholderText(t('shoppingListScreens.brandPlaceholder')),
       'Hor',
       SearchBrandsDocument,
       'Horizon',
     );
     fireEvent.changeText(screen.getByPlaceholderText('e.g., 500'), '500');
     const [, weightUnitSearch] = screen.getAllByPlaceholderText(
-      t('labels.typeToSearchUnits'),
+      t('labels.pcsKgEtc'),
     );
     if (!weightUnitSearch) throw new Error('no weight unit search');
     await pick(weightUnitSearch, 'gr', SearchUnitsDocument, 'gram', 2);
     fireEvent.changeText(screen.getByPlaceholderText('e.g., 4.99'), '3.50');
     fireEvent.press(screen.getByText(t('shoppingListScreens.priorityHigh')));
     await pick(
-      screen.getByPlaceholderText(t('autocomplete.storeSearch')),
+      screen.getByPlaceholderText(t('shoppingListScreens.storePlaceholder')),
       'Cor',
       SearchStoresDocument,
       'Corner Shop',

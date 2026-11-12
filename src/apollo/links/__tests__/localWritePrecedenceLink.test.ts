@@ -8,6 +8,7 @@ import {
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { cacheShows, withDeadline } from '#/test-utils/cacheWaits';
 import {
   ErrorCode,
@@ -23,6 +24,7 @@ import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.gene
 import { UpdateUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
 import type { PinUsualStoreInputs } from '#features/catalog/offline/localWrites';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { readFenceOf } from '#/apollo/pendingWrites/readFence';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { createLocalWritePrecedenceLink } from '../localWritePrecedenceLink';
 
@@ -76,14 +78,18 @@ const pinAnswer = (stores: UsualStoreEntry[]): PinAnswer => ({
  */
 function open({
   refreshed = [banksville, market],
+  initial = [banksville, market],
   pin = pinAnswer([pinnedMarket, banksville]),
   pinHeld = false,
   rereads = [] as UsualStoreEntry[][],
   homeId = 'home-1',
   watchNow = true,
+  refreshError = undefined as Error | undefined,
 } = {}) {
   const refresh = recordMock(UsualStoresDocument, {
-    data: { usualStores: refreshed },
+    ...(refreshError
+      ? { error: refreshError }
+      : { data: { usualStores: refreshed } }),
     held: true,
     maxUsageCount: 1,
   });
@@ -98,13 +104,29 @@ function open({
     held: pinHeld,
   });
   const cache = makeCache();
-  writeUsualStores(cache, 'home-1', [banksville, market]);
+  writeUsualStores(cache, 'home-1', initial);
   const log = operationLog();
   /** Each operation the link passes on, as the rest of the chain sees it. */
   const forwarded: Array<{ name: string | undefined }> = [];
   const client = new ApolloClient({
     cache,
     link: ApolloLink.from([
+      new ApolloLink((operation, forward) => {
+        if (operation.operationName !== operationNameOf(UsualStoresDocument)) {
+          return forward(operation);
+        }
+        return new Observable(observer => {
+          const subscription = forward(operation).subscribe({
+            next: value => observer.next(value),
+            error: error => observer.error(error),
+            complete: () => {
+              completed += 1;
+              observer.complete();
+            },
+          });
+          return () => subscription.unsubscribe();
+        });
+      }),
       createLocalWritePrecedenceLink(),
       new ApolloLink((operation, forward) => {
         forwarded.push({ name: operation.operationName });
@@ -116,6 +138,8 @@ function open({
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
   });
   const delivered: Array<boolean | undefined> = [];
+  const failures: unknown[] = [];
+  let completed = 0;
   const onDelivery = new Set<() => void>();
   let subscription: { unsubscribe: () => void } | undefined;
   const watch = () => {
@@ -125,9 +149,12 @@ function open({
         variables: { homeId },
         fetchPolicy: 'cache-and-network',
       })
-      .subscribe(result => {
-        delivered.push(pinnedIn(result.data?.usualStores));
-        onDelivery.forEach(check => check());
+      .subscribe({
+        next: result => {
+          delivered.push(pinnedIn(result.data?.usualStores));
+          onDelivery.forEach(check => check());
+        },
+        error: error => failures.push(error),
       });
   };
   if (watchNow) watch();
@@ -140,6 +167,8 @@ function open({
     pinMock,
     forwarded,
     delivered,
+    failures,
+    completed: () => completed,
     cached: (home = 'home-1') => readUsualStores(cache, home) ?? undefined,
     /** Resolves once the watcher's latest delivery shows the pin as `pinned`. */
     delivers: (pinned: boolean) =>
@@ -218,8 +247,13 @@ describe('localWritePrecedenceLink', () => {
     await nextTask();
 
     expect(list.delivered.at(-1)).toBe(true);
+    expect(list.completed()).toBe(1);
+    expect(readFenceOf(list.cache).isClear).toBe(false);
     list.pinMock.release();
     await sent;
+    list.refresh.release();
+    await list.log.answered(UsualStoresDocument);
+    expect(readFenceOf(list.cache).isClear).toBe(true);
     list.close();
   });
 
@@ -230,9 +264,16 @@ describe('localWritePrecedenceLink', () => {
     await list.log.answered(UpdateUsualStoreDocument);
     expect(list.pinMock.fired).toHaveLength(1);
 
+    const written = jest.spyOn(list.cache, 'writeQuery');
     list.refresh.release();
+    await list.log.answered(UsualStoresDocument);
     await sent;
 
+    expect(written).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { usualStores: [banksville, market] },
+      }),
+    );
     expect(pinnedIn(list.cached())).toBe(true);
     expect(list.delivered.at(-1)).toBe(true);
     list.close();
@@ -278,28 +319,20 @@ describe('localWritePrecedenceLink', () => {
   });
 
   it('leaves a read alone when the write did not change its data', async () => {
-    const shadyside = entry('s4', 'Giant Eagle Shadyside');
-    const list = open({
-      homeId: 'home-2',
-      watchNow: false,
-      refreshed: [aldi, shadyside],
+    const list = await openWithRefreshInFlight({
+      initial: [banksville, pinnedMarket],
+      refreshed: [banksville, pinnedMarket],
     });
-    writeUsualStores(list.cache, 'home-2', [aldi]);
-    list.watch();
-    await list.log.requested(UsualStoresDocument);
-    expect(list.refresh.fired).toHaveLength(1);
 
     await list.pin();
+    await nextTask();
+    expect(list.completed()).toBe(0);
+
     list.refresh.release();
     await list.log.answered(UsualStoresDocument);
 
-    // Another home's list is no part of the pin: the server's answer stands.
-    await list.settlesTo(
-      stores =>
-        JSON.stringify(stores?.map(store => store.id)) ===
-        JSON.stringify([aldi.id, shadyside.id]),
-      'home-2',
-    );
+    expect(list.completed()).toBe(1);
+    await list.settlesTo(stores => pinnedIn(stores) === true);
     list.close();
   });
 
@@ -325,9 +358,11 @@ describe('localWritePrecedenceLink', () => {
     list.watch();
     await list.log.requested(UsualStoresDocument);
     expect(list.refresh.fired).toHaveLength(1);
+    expect(list.completed()).toBe(0);
 
     list.refresh.release();
     await list.log.answered(UsualStoresDocument);
+    expect(list.completed()).toBe(1);
     await list.settlesTo(stores => pinnedIn(stores) === false);
 
     // Not caught: its answer is delivered as usual.
@@ -353,14 +388,44 @@ describe('localWritePrecedenceLink', () => {
       rereads: [[aldi]],
     });
     await list.pin();
+    await nextTask();
+    expect(list.completed()).toBe(0);
 
     list.refresh.release();
     await list.log.answered(UsualStoresDocument);
     await nextTask();
+    expect(list.completed()).toBe(1);
 
     expect(list.reasks[0]?.fired).toHaveLength(0);
     expect(list.cached('home-2')?.map(store => store.id)).toEqual([aldi.id]);
     list.close();
+  });
+
+  it('releases the fence when a caught read fails after its early answer', async () => {
+    const list = await openWithRefreshInFlight({
+      refreshError: new Error('refresh failed'),
+    });
+    await list.pin();
+    await nextTask();
+    expect(list.completed()).toBe(1);
+    expect(readFenceOf(list.cache).isClear).toBe(false);
+
+    list.refresh.release();
+    await list.log.answered(UsualStoresDocument);
+
+    expect(readFenceOf(list.cache).isClear).toBe(true);
+    expect(list.failures).toEqual([]);
+    list.close();
+  });
+
+  it('releases the fence when a read closes before answering', async () => {
+    const list = await openWithRefreshInFlight();
+    expect(readFenceOf(list.cache).isClear).toBe(false);
+
+    list.close();
+
+    expect(readFenceOf(list.cache).isClear).toBe(true);
+    expect(list.completed()).toBe(0);
   });
 
   it('lets a page loading during a write land as the server sends it', async () => {
@@ -409,6 +474,9 @@ describe('localWritePrecedenceLink', () => {
     });
     page.release();
     await loading;
+    expect(readFenceOf(cache).isClear).toBe(false);
+    await readFenceOf(cache).passed();
+    expect(readFenceOf(cache).isClear).toBe(true);
 
     // The server's page, not the list the cache had merged.
     expect(rows).toEqual([aldi.id]);

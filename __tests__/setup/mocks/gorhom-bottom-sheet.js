@@ -17,25 +17,28 @@ jest.mock('@gorhom/bottom-sheet', () => {
       return React.createElement(View, props);
     }),
     BottomSheetModal: React.forwardRef((props, ref) => {
+      const [presented, setPresented] = React.useState(false);
+      const dismiss = () => {
+        if (!presented) return;
+        setPresented(false);
+        props.onDismiss?.();
+      };
       React.useImperativeHandle(ref, () => ({
-        present: jest.fn(),
-        dismiss: jest.fn(),
+        present: () => setPresented(true),
+        dismiss,
         snapToIndex: jest.fn(),
         expand: jest.fn(),
         collapse: jest.fn(),
-        close: jest.fn(),
-        forceClose: jest.fn(),
+        close: dismiss,
+        forceClose: dismiss,
       }));
-      // Render the handle/footer render-props so consumers that pin their
-      // header/footer through them (e.g. ActionTray) still show that content
-      // in tests. Remaining props (detached, onChange, onDismiss, …) stay on
-      // the View so tests can read them.
       const {
         handleComponent: Handle,
         footerComponent: Footer,
         children,
         ...rest
       } = props;
+      if (!presented) return null;
       return React.createElement(
         View,
         rest,

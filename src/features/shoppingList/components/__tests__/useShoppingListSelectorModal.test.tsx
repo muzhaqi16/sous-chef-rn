@@ -278,6 +278,7 @@ describe('the switcher', () => {
     fireEvent.press(
       screen.getByText(t('shoppingListSelector.shareCurrentList')),
     );
+    fireEvent.press(screen.getByTestId(shoppingListTestIDs.listSelectorButton));
     fireEvent.press(screen.getByText(t('shoppingListSelector.listSettings')));
 
     expect(mockNav.toShareList).toHaveBeenCalledWith({ listId: 'list-1' });
@@ -339,6 +340,7 @@ describe('deleting from the switcher', () => {
       ),
     ).not.toBeOnTheScreen();
 
+    fireEvent.press(screen.getByTestId(shoppingListTestIDs.listSelectorButton));
     longPress('Groceries');
     fireEvent.press(row('Party'));
 
