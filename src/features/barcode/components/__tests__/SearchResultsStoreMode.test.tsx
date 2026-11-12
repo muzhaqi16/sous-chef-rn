@@ -7,7 +7,7 @@
 import React from 'react';
 import { screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
-import { drained, drainTimers } from '#/test-utils/drainTimers';
+import { settledInAct } from '#/test-utils/settledInAct';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { UnitType } from '#/graphql/generated/schemaTypes';
@@ -188,13 +188,14 @@ const LINE = {
   estimatedPrice: 3.49,
 };
 
-beforeEach(() => {
-  jest.useFakeTimers();
-});
-
-afterEach(() => {
-  jest.useRealTimers();
-});
+/**
+ * Lets a press's promise chain run out inside `act`. The hooks it calls are
+ * stand-ins answering at once, so their answers are settled promises.
+ */
+const settled = () =>
+  settledInAct(async () => {
+    for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+  });
 
 describe('SearchResults from store mode', () => {
   beforeEach(() => {
@@ -301,7 +302,7 @@ describe('SearchResults from store mode', () => {
 
       await userEvent.setup().press(screen.getByTestId('primary-btn'));
 
-      await drainTimers();
+      await settled();
       expect(mockTick).toHaveBeenCalledWith('line-pb', null);
     });
   });
@@ -312,7 +313,7 @@ describe('SearchResults from store mode', () => {
 
     await userEvent.setup().press(screen.getByTestId('primary-btn'));
 
-    await drainTimers();
+    await settled();
     expect(mockTick).toHaveBeenCalledWith('line-pb', null);
     expect(mockAddToShoppingList).not.toHaveBeenCalled();
     expect(onScanAnother).toHaveBeenCalled();
@@ -327,7 +328,7 @@ describe('SearchResults from store mode', () => {
 
     await userEvent.setup().press(screen.getByTestId('primary-btn'));
 
-    await drainTimers();
+    await settled();
     expect(mockTick).toHaveBeenCalledWith('new-1', null);
     expect(mockAddToShoppingList).toHaveBeenCalledWith(props.item);
   });
@@ -342,7 +343,7 @@ describe('SearchResults from store mode', () => {
 
     await userEvent.setup().press(screen.getByTestId('primary-btn'));
 
-    await drainTimers();
+    await settled();
     expect(alert).toHaveBeenCalledWith(
       t('labels.error'),
       t('errors.addItemFailedRetry'),
@@ -366,9 +367,10 @@ describe('SearchResults from store mode', () => {
 
     await userEvent.setup().press(screen.getByTestId('primary-btn'));
 
-    await drainTimers();
+    await settled();
     expect(priceAction()).toEqual({ disabled: true });
-    await drained(() => finish({ outcome: 'kept', rowId: 'new-1' }));
+    await settledInAct(() => finish({ outcome: 'kept', rowId: 'new-1' }));
+    await settled();
     expect(mockTick).toHaveBeenCalledWith('new-1', null);
   });
 
@@ -382,7 +384,7 @@ describe('SearchResults from store mode', () => {
     expect(screen.getByText('Peanut butter hint 3.49')).toBeTruthy();
     await user.press(screen.getByTestId('price-sheet'));
 
-    await drainTimers();
+    await settled();
     expect(mockTick).toHaveBeenCalledWith('line-pb', {
       quantity: 2,
       totalPrice: 7,
@@ -401,7 +403,7 @@ describe('SearchResults from store mode', () => {
     expect(screen.getByText('Jif Creamy hint none')).toBeTruthy();
     await user.press(screen.getByTestId('price-sheet'));
 
-    await drainTimers();
+    await settled();
     expect(mockTick).toHaveBeenCalledWith('new-1', {
       quantity: 2,
       totalPrice: 7,
@@ -459,7 +461,7 @@ describe('SearchResults from store mode', () => {
 
       await confirmPrice();
 
-      await drainTimers();
+      await settled();
       expect(mockTick).toHaveBeenCalled();
       expect(screen.getByTestId('price-sheet')).toBeTruthy();
       expect(onScanAnother).not.toHaveBeenCalled();
@@ -475,7 +477,7 @@ describe('SearchResults from store mode', () => {
 
       await confirmPrice();
 
-      await drainTimers();
+      await settled();
       expect(alert).toHaveBeenCalledWith(
         t('labels.error'),
         t('errors.addItemFailedRetry'),
@@ -490,7 +492,7 @@ describe('SearchResults from store mode', () => {
 
       await confirmPrice();
 
-      await drainTimers();
+      await settled();
       expect(onScanAnother).toHaveBeenCalled();
       expect(screen.queryByTestId('price-sheet')).toBeNull();
     });
@@ -503,7 +505,7 @@ describe('SearchResults from store mode', () => {
 
     await userEvent.setup().press(screen.getByTestId('primary-btn'));
 
-    await drainTimers();
+    await settled();
     expect(mockTick).toHaveBeenCalled();
     expect(onScanAnother).not.toHaveBeenCalled();
     expect(screen.getByText(t('barcode.addToCart'))).toBeTruthy();
