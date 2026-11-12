@@ -83,6 +83,7 @@ import {
 } from '#/services/auth/deviceId';
 import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
+import * as backoff from '#/utils/backoff';
 
 // A sign-out revokes and drops the slot through the step the app registers.
 registerMobileSessionHost();
@@ -343,11 +344,21 @@ describe('registerDeviceInBackground — a session that ends', () => {
     ).length;
 
   afterEach(() => {
-    jest.useRealTimers();
+    jest.restoreAllMocks();
   });
 
   it('stops retrying once the session ends', async () => {
-    jest.useFakeTimers();
+    // The backoff ends when this test says, after the session has ended.
+    let wake = () => undefined;
+    jest.spyOn(backoff, 'sleep').mockImplementation(
+      () =>
+        new Promise<void>(resolve => {
+          wake = () => {
+            resolve();
+            return undefined;
+          };
+        }),
+    );
     refuse();
 
     registerDeviceInBackground();
@@ -355,7 +366,7 @@ describe('registerDeviceInBackground — a session that ends', () => {
     expect(registerCalls()).toBe(1);
 
     await require('#store/sessionTeardown').runSessionTeardown();
-    await jest.advanceTimersByTimeAsync(10_000);
+    wake();
     await flush();
 
     expect(registerCalls()).toBe(1);
@@ -375,12 +386,15 @@ describe('registerDeviceInBackground — a session that ends', () => {
   });
 
   it('still retries a refusal while the session lasts', async () => {
-    jest.useFakeTimers();
+    // The first backoff ends at once; the second never does.
+    jest
+      .spyOn(backoff, 'sleep')
+      .mockResolvedValueOnce(undefined)
+      .mockImplementation(() => new Promise<void>(() => undefined));
     refuse();
 
     registerDeviceInBackground();
     await flush();
-    await jest.advanceTimersByTimeAsync(2_000);
     await flush();
 
     expect(registerCalls()).toBe(2);

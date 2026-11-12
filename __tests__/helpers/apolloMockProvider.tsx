@@ -625,6 +625,31 @@ function rebuildOverServerWrites(cache: InMemoryCache): void {
   });
 }
 
+/**
+ * The mocks as a client serves them. Completion is applied HERE rather than
+ * only in `recordMock`, so a plain `{ request, result }` literal gets it too —
+ * the literal form is the one most likely to be written by hand and to omit a
+ * field. A test that opted into partial data writes incomplete records by
+ * definition, so the missing-field guard in `__tests__/setup/globals.js` is
+ * told which FIELDS that covers, and excuses those and nothing else.
+ *
+ * Schema drift is checked HERE, synchronously, before anything mounts. Raised
+ * from inside the `result` callback it was thrown from MockLink's `setTimeout`,
+ * where it escapes rxjs as an uncaught exception: the test failed as a 5s
+ * `waitFor` timeout with the real message relegated to a secondary trace.
+ */
+export function servedMocks(
+  operationMocks: readonly MockedResponse[],
+): MockedResponse[] {
+  for (const mock of operationMocks) {
+    if (isPartial(mock)) registerPartialFieldExemptions(mock);
+  }
+  for (const mock of operationMocks) {
+    assertDocumentMatchesSchema(mock.request.query);
+  }
+  return operationMocks.map(completeMockedResponse);
+}
+
 export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
   const {
     operationMocks,
@@ -664,29 +689,9 @@ export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
   // sites a link that answers every operation with generated data and writes it
   // into the cache, possibly after teardown.
   if (operationMocks !== undefined) {
-    // Completion is applied HERE rather than only in `recordMock`, so a plain
-    // `{ request, result }` literal gets it too — the literal form is the one
-    // most likely to be written by hand and to omit a field.
-    // A test that opted into partial data will write incomplete records by
-    // definition. Tell the missing-field guard in `__tests__/setup/globals.js`
-    // which FIELDS that covers, so it excuses those and nothing else.
-    for (const mock of operationMocks) {
-      if (isPartial(mock)) registerPartialFieldExemptions(mock);
-    }
-    // Schema drift is checked HERE, synchronously, before anything mounts.
-    // Raised from inside the `result` callback it was thrown from MockLink's
-    // `setTimeout`, where it escapes rxjs as an uncaught exception: the test
-    // failed as a 5s `waitFor` timeout with the real message relegated to a
-    // secondary trace — the exact "names the wrong thing" mode the missing-field
-    // guard restructured itself to avoid, and with `forceExit` it can vanish.
-    for (const mock of operationMocks) {
-      assertDocumentMatchesSchema(mock.request.query);
-    }
     const link = ApolloLink.from([
       ...links,
-      testMockLink(operationMocks.map(completeMockedResponse), {
-        showWarnings: false,
-      }),
+      testMockLink(servedMocks(operationMocks), { showWarnings: false }),
     ]);
     return function Wrapper({ children }: { children: ReactNode }) {
       return (
