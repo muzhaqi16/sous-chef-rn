@@ -1,39 +1,17 @@
-'use no memo';
-
-// Mock store
-const mockStoreState = {
-  accessToken: null as string | null,
-  refreshToken: null as string | null,
-  tokenRefreshFailed: jest.fn(),
-  setNeedsTokenRefresh: jest.fn(),
-  isOnline: true,
-};
-jest.mock('#store', () => ({
-  useStore: {
-    getState: jest.fn(() => mockStoreState),
-  },
-}));
-
 // Mock other dependencies that authLink imports
 jest.mock('#/config/env', () => ({
   env: { API_KEY: 'test-api-key' },
-}));
-jest.mock('#/services/auth/deviceId', () => ({
-  getDeviceId: jest.fn(() => 'test-device-id'),
-}));
-jest.mock('../../logoutCleanup', () => ({
-  LogoutCleanup: {
-    shouldSkipOperation: jest.fn(() => false),
-    isInLogoutProcess: jest.fn(() => false),
-  },
 }));
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { Observable, of } from 'rxjs';
 import { authLink } from '../authLink';
-import { LogoutCleanup } from '../../logoutCleanup';
 import { proactiveTokenRefresh } from '../refreshToken';
-import { getDeviceId } from '#/services/auth/deviceId';
+import * as deviceIdentity from '#/services/auth/deviceId';
+import { useStore } from '#store';
+import { isRecord } from '#/utils/isRecord';
+import { withDeadline } from '#/test-utils/cacheWaits';
+import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
 import {
   LoginDocument,
   RefreshTokenDocument,
@@ -49,8 +27,12 @@ import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/sho
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import type { DocumentNode } from 'graphql';
 
-const shouldSkipOperation = LogoutCleanup.shouldSkipOperation as jest.Mock;
-const mockedProactiveRefresh = proactiveTokenRefresh as jest.Mock;
+const mockedProactiveRefresh = jest.mocked(proactiveTokenRefresh);
+
+/** Holds a session end open, as a sign-out does while it runs. */
+const sessionEnding = () => {
+  void whileSessionEnds(() => new Promise<void>(() => undefined));
+};
 
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
@@ -94,7 +76,15 @@ const run = (
     const downstream = new ApolloLink(
       operation =>
         new Observable(observer => {
-          headers = (operation.getContext().headers ?? {}) as Headers;
+          const { headers: sent } = operation.getContext();
+          headers = isRecord(sent)
+            ? Object.fromEntries(
+                Object.entries(sent).map(([key, value]) => [
+                  key,
+                  String(value),
+                ]),
+              )
+            : {};
           observer.next({ data: null });
           observer.complete();
         }),
@@ -124,13 +114,27 @@ const runExpectingError = (document: DocumentNode): Promise<Error> =>
   });
 
 describe('authLink', () => {
+  let thisDevice: string | null = null;
+
+  beforeAll(async () => {
+    thisDevice = await deviceIdentity.ensureDeviceId();
+  });
+
   beforeEach(() => {
+    jest.restoreAllMocks();
     jest.clearAllMocks();
-    mockStoreState.accessToken = null;
-    mockStoreState.refreshToken = null;
-    mockStoreState.isOnline = true;
-    shouldSkipOperation.mockReturnValue(false);
+    resetSessionEndingGate();
+    useStore.setState({
+      accessToken: null,
+      refreshToken: null,
+      isOnline: true,
+      needsTokenRefresh: false,
+    });
     mockedProactiveRefresh.mockResolvedValue('new-token');
+  });
+
+  afterEach(() => {
+    resetSessionEndingGate();
   });
 
   describe('headers', () => {
@@ -138,7 +142,7 @@ describe('authLink', () => {
       const headers = await run(GetPantryDocument);
 
       expect(headers['x-api-key']).toBe('test-api-key');
-      expect(headers['x-device-id']).toBe('test-device-id');
+      expect(headers['x-device-id']).toBe(thisDevice);
     });
 
     it('names the write, the same on a first send and a replay', async () => {
@@ -161,7 +165,7 @@ describe('authLink', () => {
     // a freshly generated value, which the server would read as a NEW device on
     // every launch; absent is not an error, it is an unattributed request.
     it('omits the device id when storage has not opened', async () => {
-      (getDeviceId as jest.Mock).mockReturnValueOnce(null);
+      jest.spyOn(deviceIdentity, 'getDeviceId').mockReturnValueOnce(null);
 
       const headers = await run(GetPantryDocument);
 
@@ -170,12 +174,12 @@ describe('authLink', () => {
     });
 
     it('attaches the bearer token when one is held', async () => {
-      mockStoreState.accessToken = makeToken(3600);
+      useStore.setState({ accessToken: makeToken(3600) });
 
       const headers = await run(GetPantryDocument);
 
       expect(headers.authorization).toBe(
-        `Bearer ${mockStoreState.accessToken}`,
+        `Bearer ${useStore.getState().accessToken}`,
       );
     });
 
@@ -189,14 +193,14 @@ describe('authLink', () => {
     });
 
     it('never lets a sign-in token outrank the stored one', async () => {
-      mockStoreState.accessToken = makeToken(3600);
+      useStore.setState({ accessToken: makeToken(3600) });
 
       const headers = await run(GetPantryDocument, {
         signInToken: makeToken(7200),
       });
 
       expect(headers.authorization).toBe(
-        `Bearer ${mockStoreState.accessToken}`,
+        `Bearer ${useStore.getState().accessToken}`,
       );
     });
 
@@ -218,20 +222,20 @@ describe('authLink', () => {
     )(
       'omits the authorization header on the public operation %s',
       async (_name, document) => {
-        mockStoreState.accessToken = makeToken(3600);
+        useStore.setState({ accessToken: makeToken(3600) });
 
         const headers = await run(document);
 
         expect(headers).not.toHaveProperty('authorization');
         expect(headers['x-api-key']).toBe('test-api-key');
-        expect(headers['x-device-id']).toBe('test-device-id');
+        expect(headers['x-device-id']).toBe(thisDevice);
       },
     );
 
     it('treats operation names as exact, not as prefixes', async () => {
       // 'LoginHistory' merely starts with a public operation name; it is a
       // normal authenticated query and must carry the token.
-      mockStoreState.accessToken = makeToken(3600);
+      useStore.setState({ accessToken: makeToken(3600) });
 
       const headers = await run(gql`
         query LoginHistory {
@@ -242,48 +246,50 @@ describe('authLink', () => {
       `);
 
       expect(headers.authorization).toBe(
-        `Bearer ${mockStoreState.accessToken}`,
+        `Bearer ${useStore.getState().accessToken}`,
       );
     });
   });
 
   describe('logout in progress', () => {
     it('cancels the operation instead of sending it', async () => {
-      shouldSkipOperation.mockReturnValue(true);
+      sessionEnding();
 
       const error = await runExpectingError(GetPantryDocument);
 
       expect(error.message).toContain('Operation cancelled');
     });
 
-    it('consults the cleanup gate with the operation name', async () => {
-      await run(GetPantryDocument);
+    // The refresh is the one call a session end must still make.
+    it('lets a token refresh through, and nothing else', async () => {
+      sessionEnding();
 
-      expect(shouldSkipOperation).toHaveBeenCalledWith(
-        operationNameOf(GetPantryDocument),
+      await expect(run(RefreshTokenDocument)).resolves.toBeDefined();
+      expect((await runExpectingError(GetPantryDocument)).message).toContain(
+        'Operation cancelled',
       );
     });
 
     // The sign-out's own device delete dispatches before the gate closes and
     // resolves after it; without the opt-in the logout cancels its own cleanup.
     it('lets a call opted in with allowDuringLogout through', async () => {
-      shouldSkipOperation.mockReturnValue(true);
-      mockStoreState.accessToken = makeToken(3600);
+      sessionEnding();
+      useStore.setState({ accessToken: makeToken(3600) });
 
       const headers = await run(UpdateDeviceDocument, {
         allowDuringLogout: true,
       });
 
       expect(headers.authorization).toBe(
-        `Bearer ${mockStoreState.accessToken}`,
+        `Bearer ${useStore.getState().accessToken}`,
       );
     });
 
     // Rotating here would write a fresh pair into the store and Keychain right
     // after resetStore cleared them, re-arming the session being ended.
     it('never rotates a token for an opted-in call', async () => {
-      shouldSkipOperation.mockReturnValue(true);
-      mockStoreState.accessToken = makeToken(120); // inside the 5-minute buffer
+      sessionEnding();
+      useStore.setState({ accessToken: makeToken(120) }); // inside the 5-minute buffer
 
       await run(UpdateDeviceDocument, { allowDuringLogout: true });
 
@@ -293,40 +299,44 @@ describe('authLink', () => {
 
   describe('a token approaching expiry, while online', () => {
     it('fires a server refresh', async () => {
-      mockStoreState.accessToken = makeToken(120); // inside the 5-minute buffer
+      useStore.setState({ accessToken: makeToken(120) }); // inside the 5-minute buffer
 
       await run(GetPantryDocument);
 
       expect(mockedProactiveRefresh).toHaveBeenCalled();
-      expect(mockStoreState.setNeedsTokenRefresh).not.toHaveBeenCalled();
+      expect(useStore.getState().needsTokenRefresh).toBe(false);
     });
 
     it('does not block the request on that refresh completing', async () => {
       // The refresh never settles. The token is still valid for the rest of the
       // buffer window, so the request must go out immediately carrying it —
       // awaiting here stalls every concurrent request behind one slow refresh.
-      // Racing a drained clock keeps the regression a fast, named failure
-      // rather than a suite timeout: the request takes no timer to go out.
+      // A deadline keeps the regression a fast, named failure rather than a
+      // suite timeout: the request takes no timer to go out.
       mockedProactiveRefresh.mockReturnValue(new Promise(() => {}));
-      mockStoreState.accessToken = makeToken(120);
+      useStore.setState({ accessToken: makeToken(120) });
 
-      const stalled = Symbol('stalled');
-      jest.useFakeTimers();
-      const outcome = await Promise.race([
-        run(GetPantryDocument),
-        jest.runAllTimersAsync().then(() => stalled),
-      ]);
-      jest.useRealTimers();
+      let outcome: Headers = {};
+      await withDeadline(
+        done => {
+          void run(GetPantryDocument).then(headers => {
+            outcome = headers;
+            done();
+          });
+          return () => undefined;
+        },
+        () => 'the request waited on the refresh',
+        1000,
+      );
 
-      expect(outcome).not.toBe(stalled);
-      expect((outcome as Headers).authorization).toBe(
-        `Bearer ${mockStoreState.accessToken}`,
+      expect(outcome.authorization).toBe(
+        `Bearer ${useStore.getState().accessToken}`,
       );
     });
 
     it('sends the token it currently holds, not one the refresh will produce', async () => {
       const current = makeToken(120);
-      mockStoreState.accessToken = current;
+      useStore.setState({ accessToken: current });
 
       const headers = await run(GetPantryDocument);
 
@@ -337,25 +347,25 @@ describe('authLink', () => {
 
   describe('a token approaching expiry, while offline', () => {
     beforeEach(() => {
-      mockStoreState.isOnline = false;
+      useStore.setState({ isOnline: false });
     });
 
     it('defers the refresh rather than attempting one', async () => {
-      mockStoreState.accessToken = makeToken(120);
+      useStore.setState({ accessToken: makeToken(120) });
 
       await run(GetPantryDocument);
 
-      expect(mockStoreState.setNeedsTokenRefresh).toHaveBeenCalledWith(true);
+      expect(useStore.getState().needsTokenRefresh).toBe(true);
       expect(mockedProactiveRefresh).not.toHaveBeenCalled();
     });
 
     it('still sends the expiring token so a cached read can proceed', async () => {
-      mockStoreState.accessToken = makeToken(120);
+      useStore.setState({ accessToken: makeToken(120) });
 
       const headers = await run(GetPantryDocument);
 
       expect(headers.authorization).toBe(
-        `Bearer ${mockStoreState.accessToken}`,
+        `Bearer ${useStore.getState().accessToken}`,
       );
     });
 
@@ -366,34 +376,36 @@ describe('authLink', () => {
       ['expiring', 120],
       ['already expired', -60],
     ])('never invalidates the session for an %s token', async (_case, ttl) => {
-      mockStoreState.accessToken = makeToken(ttl);
+      useStore.setState({ accessToken: makeToken(ttl) });
 
       await run(GetPantryDocument);
 
-      expect(mockStoreState.tokenRefreshFailed).not.toHaveBeenCalled();
+      expect(useStore.getState().accessToken).not.toBeNull();
     });
 
     it('never invalidates the session for an undecodable token', async () => {
-      mockStoreState.accessToken = 'not-a-jwt';
+      useStore.setState({ accessToken: 'not-a-jwt' });
 
       await run(GetPantryDocument);
 
-      expect(mockStoreState.tokenRefreshFailed).not.toHaveBeenCalled();
+      expect(useStore.getState().accessToken).not.toBeNull();
     });
   });
 
   describe('token expiry classification', () => {
     it('leaves a token outside the buffer alone', async () => {
-      mockStoreState.accessToken = makeToken(3600);
+      useStore.setState({ accessToken: makeToken(3600) });
 
       await run(GetPantryDocument);
 
       expect(mockedProactiveRefresh).not.toHaveBeenCalled();
-      expect(mockStoreState.setNeedsTokenRefresh).not.toHaveBeenCalled();
+      expect(useStore.getState().needsTokenRefresh).toBe(false);
     });
 
     it('leaves a token just outside the buffer alone', async () => {
-      mockStoreState.accessToken = makeToken(REFRESH_BUFFER_MS / 1000 + 60);
+      useStore.setState({
+        accessToken: makeToken(REFRESH_BUFFER_MS / 1000 + 60),
+      });
 
       await run(GetPantryDocument);
 
@@ -401,7 +413,9 @@ describe('authLink', () => {
     });
 
     it('refreshes a token just inside the buffer', async () => {
-      mockStoreState.accessToken = makeToken(REFRESH_BUFFER_MS / 1000 - 60);
+      useStore.setState({
+        accessToken: makeToken(REFRESH_BUFFER_MS / 1000 - 60),
+      });
 
       await run(GetPantryDocument);
 
@@ -409,7 +423,7 @@ describe('authLink', () => {
     });
 
     it('refreshes an already-expired token', async () => {
-      mockStoreState.accessToken = makeToken(-60);
+      useStore.setState({ accessToken: makeToken(-60) });
 
       await run(GetPantryDocument);
 
@@ -417,7 +431,7 @@ describe('authLink', () => {
     });
 
     it('treats an undecodable token as expiring', async () => {
-      mockStoreState.accessToken = 'not-a-jwt';
+      useStore.setState({ accessToken: 'not-a-jwt' });
 
       await run(GetPantryDocument);
 
@@ -428,14 +442,14 @@ describe('authLink', () => {
       await run(GetPantryDocument);
 
       expect(mockedProactiveRefresh).not.toHaveBeenCalled();
-      expect(mockStoreState.setNeedsTokenRefresh).not.toHaveBeenCalled();
+      expect(useStore.getState().needsTokenRefresh).toBe(false);
     });
   });
 
   describe('a token that has already expired, while online', () => {
     it('sends the refreshed token, never the dead one', async () => {
       const expired = makeToken(-60);
-      mockStoreState.accessToken = expired;
+      useStore.setState({ accessToken: expired });
       mockedProactiveRefresh.mockResolvedValue('rotated-token');
 
       const headers = await run(GetPantryDocument);
@@ -451,7 +465,7 @@ describe('authLink', () => {
           releaseRefresh = resolve;
         }),
       );
-      mockStoreState.accessToken = makeToken(-60);
+      useStore.setState({ accessToken: makeToken(-60) });
 
       const inFlight = run(GetPantryDocument);
       let settled = false;
@@ -469,7 +483,7 @@ describe('authLink', () => {
 
     it('never lets a concurrent batch go out on the dead token', async () => {
       const expired = makeToken(-60);
-      mockStoreState.accessToken = expired;
+      useStore.setState({ accessToken: expired });
       mockedProactiveRefresh.mockResolvedValue('rotated-token');
 
       const batch = await Promise.all(
@@ -495,13 +509,13 @@ describe('authLink', () => {
       // a recoverable expiry into an unauthenticated request; the reactive 401
       // path is what decides whether the session is actually over.
       const expired = makeToken(-60);
-      mockStoreState.accessToken = expired;
+      useStore.setState({ accessToken: expired });
       mockedProactiveRefresh.mockResolvedValue(null);
 
       const headers = await run(GetPantryDocument);
 
       expect(headers.authorization).toBe(`Bearer ${expired}`);
-      expect(mockStoreState.tokenRefreshFailed).not.toHaveBeenCalled();
+      expect(useStore.getState().accessToken).not.toBeNull();
     });
 
     it('falls back to the held token when the refresh REJECTS', async () => {
@@ -510,20 +524,20 @@ describe('authLink', () => {
       // every path `performTokenRefresh` throws on — a rotation lost to a flaky
       // network among them. A joiner must land here, not fail its operation.
       const expired = makeToken(-60);
-      mockStoreState.accessToken = expired;
+      useStore.setState({ accessToken: expired });
       mockedProactiveRefresh.mockRejectedValue(new Error('Refresh failed'));
 
       const headers = await run(GetPantryDocument);
 
       expect(headers.authorization).toBe(`Bearer ${expired}`);
-      expect(mockStoreState.tokenRefreshFailed).not.toHaveBeenCalled();
+      expect(useStore.getState().accessToken).not.toBeNull();
     });
 
     it('keeps a concurrent batch alive when the shared refresh rejects', async () => {
       // Five joiners behind one owner: the owner converts its own failure to
       // null, so a rejection reaching the link is by definition a joiner's.
       const expired = makeToken(-60);
-      mockStoreState.accessToken = expired;
+      useStore.setState({ accessToken: expired });
       mockedProactiveRefresh.mockRejectedValue(new Error('Refresh failed'));
 
       const batch = await Promise.all(
