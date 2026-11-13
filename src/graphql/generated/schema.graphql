@@ -2188,8 +2188,8 @@ input CreateMealPlanItemInput {
   The day of the meal, as YYYY-MM-DD; must fall within the plan's days (ValidationError on date)
   """
   date: LocalDate!
-  """The meal's estimated cost, in the plan owner's preferred currency"""
-  estimatedCost: Float
+  """Ignored"""
+  estimatedCost: Float @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   """Fat (g) of one serving, entered as calories is"""
   fat: Float
   """
@@ -2627,11 +2627,6 @@ input CreateReceiptParseInput {
 }
 
 type CreateReceiptParsePayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   receiptParse: ReceiptParse!
 }
 
@@ -2917,11 +2912,6 @@ input CreateStoreInput {
 }
 
 type CreateStorePayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   """CREATED for a new store; MERGED when the shop was already on file"""
   outcome: CreateOutcome!
   """The store added, or the one already on file it merged into"""
@@ -5300,10 +5290,6 @@ type HouseholdPaidPrice {
   normalizedPrice: Float
   onSale: Boolean!
   paidAt: DateTime!
-  """How many units were bought; null when not known"""
-  quantity: Float
-  """The regular price per unit, when the source recorded one beside a sale"""
-  regularPrice: Float
   """Where it was bought; null when no store was recorded"""
   store: Store
   unit: Unit!
@@ -5317,8 +5303,6 @@ type HouseholdPriceSummary {
   currency: Currency!
   """The household's newest paid price, however old; null when it has none"""
   lastPaid: HouseholdPaidPrice
-  """The fewest days usual rests on"""
-  minimumObservations: Int!
   """Null below minimumObservations days; a sale price never counts"""
   usual: HouseholdUsualPrice
 }
@@ -5357,7 +5341,6 @@ type HouseholdUsualPrice {
   basis: PriceBasis!
   """The median price per basis; each day counts once, as that day's median"""
   medianPrice: Float!
-  observations: Int!
   """
   The usual price per one of a unit; null when the unit normalizes to another basis, or only by an assumed density or package size
   """
@@ -5367,7 +5350,6 @@ type HouseholdUsualPrice {
     """
     unitId: ID
   ): Float
-  windowDays: Int!
 }
 
 """
@@ -5874,15 +5856,7 @@ type Item {
   """
   What the household paid for this item. The caller must be an ACTIVE member of the home.
   """
-  householdPriceSummary(
-    """The currency read; the caller's own when omitted"""
-    currency: CurrencyCode
-    """One barcode of the item; all of them when omitted"""
-    gtin: String
-    homeId: ID!
-    """How far back usual counts: default 180 days, at most 365"""
-    windowDays: Int
-  ): HouseholdPriceSummary!
+  householdPriceSummary(homeId: ID!): HouseholdPriceSummary!
   """Unique identifier of the catalog item."""
   id: ID!
   """
@@ -6038,29 +6012,7 @@ type Item {
   answers for it, by the same rules, defaults and bounds, so a barcode lookup
   carries it. The items of one request are compared in one read.
   """
-  priceComparison(
-    """The currency compared; the caller's own when omitted"""
-    currency: CurrencyCode
-    """One barcode of the item; all of them when omitted"""
-    gtin: String
-    """How far back observations count: default 90 days, at most 365"""
-    windowDays: Int
-  ): ItemPriceComparison!
-  """Price observations recorded for this item, newest first by default."""
-  priceHistoryConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: ItemPriceHistoryOrderBy
-  ): ItemPriceHistoryConnection!
+  priceComparison: ItemPriceComparison!
   """The item's main UPC barcode, or null when it has none."""
   primaryUpc: String
   """A concept's products, most popular first. Empty for a product."""
@@ -6114,10 +6066,6 @@ type Item {
   similarStorePrices(
     """How many stores: 20 when omitted, at most 50"""
     first: Int
-    """
-    The household whose stores are read; the caller's only household when omitted, else their own
-    """
-    homeId: ID
   ): [SimilarStorePrice!]!
   """
   Lifecycle state of the catalog entry. Barcode lookups and curated lists return
@@ -6144,19 +6092,6 @@ type Item {
     """How many stores: 20 when omitted, at most 100"""
     first: Int
   ): ItemStorePriceConnection!
-  """This item's SKUs at individual stores, oldest first by default."""
-  storeSkusConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; oldest first when omitted"""
-    orderBy: ItemStoreSkuOrderBy
-  ): ItemStoreSkuConnection!
   """
   The unit households use this product in (a stack's consume unit, or a use
   stated in another unit than its stack's), by the same rule as
@@ -6564,108 +6499,11 @@ cheapest first within each basis. Sale and regular prices both count.
 """
 type ItemPriceComparison {
   currency: Currency!
-  item: Item!
   rows: [PriceComparisonRow!]!
-  windowDays: Int!
 }
 
 input ItemPriceComparisonInput {
-  """The currency compared; the caller's own when omitted"""
-  currency: CurrencyCode
-  """One barcode of the item; all of them when omitted"""
-  gtin: String
   itemId: ID!
-  """How far back observations count: default 90 days, at most 365"""
-  windowDays: Int
-}
-
-"""
-One price observation. Individual observations are visible to the household
-that made them, plus those no user made (store catalogs, imports).
-"""
-type ItemPriceHistory {
-  """0 to 1: how far the price is trusted"""
-  confidence: Float
-  createdAt: DateTime!
-  currency: Currency!
-  """The day the price was observed"""
-  effectiveDate: DateTime!
-  """The barcode bought, as a GTIN-14"""
-  gtin: String
-  id: ID!
-  item: Item!
-  normalizedBasis: PriceBasis
-  """
-  The price per one kg, L or piece; null when the facts did not allow it without an assumption
-  """
-  normalizedPrice: Float
-  """The net weight (or volume) of one unit, when known"""
-  packageNetWeight: Float
-  packageNetWeightUnit: Unit
-  """The price per one unit"""
-  price: Float!
-  """How many units were bought at this price"""
-  quantity: Float
-  """Where this price came from."""
-  source: PriceSource!
-  store: Store
-  """The unit the price is per"""
-  unit: Unit!
-}
-
-"""
-A page of ItemPriceHistory results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type ItemPriceHistoryConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [ItemPriceHistoryEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One ItemPriceHistory in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type ItemPriceHistoryEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The ItemPriceHistory this edge wraps."""
-  node: ItemPriceHistory!
-}
-
-input ItemPriceHistoryOrderBy {
-  createdAt: SortOrder
-  """The day observed; the default, newest first"""
-  effectiveDate: SortOrder
-  price: SortOrder
-}
-
-"""
-An item's median price per month. Months with no observations are absent.
-"""
-type ItemPriceTrend {
-  currency: Currency!
-  item: Item!
-  months: Int!
-  points: [PriceTrendPoint!]!
-}
-
-input ItemPriceTrendInput {
-  """One chain; every store when omitted"""
-  chainId: ID
-  """The currency; the caller's own when omitted"""
-  currency: CurrencyCode
-  """One barcode of the item; all of them when omitted"""
-  gtin: String
-  itemId: ID!
-  """How many months back: default 12, at most 24"""
-  months: Int
 }
 
 """
@@ -6766,51 +6604,7 @@ type ItemStorePriceConnection {
 }
 
 type ItemStorePriceEdge {
-  cursor: String!
   node: ItemStorePrice!
-}
-
-"""Store SKU mapping for items"""
-type ItemStoreSku {
-  createdAt: DateTime!
-  id: ID!
-  item: Item!
-  metadata: JSON
-  price: Float
-  sku: String!
-  store: Store!
-  updatedAt: DateTime!
-  version: Int!
-}
-
-"""
-A page of ItemStoreSku results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type ItemStoreSkuConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [ItemStoreSkuEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One ItemStoreSku in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type ItemStoreSkuEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The ItemStoreSku this edge wraps."""
-  node: ItemStoreSku!
-}
-
-input ItemStoreSkuOrderBy {
-  createdAt: SortOrder
 }
 
 type ItemSuggestion {
@@ -9226,15 +9020,6 @@ type Mutation {
   stack is published to pantry subscribers after the check commits.
   """
   recordPantryStockCheck(input: RecordPantryStockCheckInput!): RecordPantryStockCheckResult!
-  """Record a price observation for historical tracking"""
-  recordPriceObservation(input: RecordPriceObservationInput!): RecordPriceObservationResult!
-  """
-  Remember the household's confirmed items for a receipt's lines, so the same
-  line at the same chain resolves by ALIAS next time. A household's later
-  choice for a line replaces its earlier one; a line becomes a shared alias
-  once enough households agree.
-  """
-  recordReceiptMatches(input: RecordReceiptMatchesInput!): RecordReceiptMatchesResult!
   """Refresh an expired access token using a refresh token."""
   refresh(input: RefreshInput!): RefreshResult!
   """
@@ -11526,8 +11311,6 @@ type ParsedIngredientLine {
 }
 
 type ParsedReceipt {
-  """ISO 4217, when the receipt shows it"""
-  currency: String
   """
   The receipt's lines. They add up as: every ITEM, FEE and DEPOSIT amount
   less every DISCOUNT amount, over the lines before the first PAYMENT line
@@ -11545,14 +11328,6 @@ type ParsedReceipt {
   """
   purchaseTime: String
   purchasedOn: LocalDate
-  """
-  The amount of the receipt's last printed SUBTOTAL line; null when it prints none
-  """
-  subtotal: Float
-  """Its printed TAX lines added up; null when it prints none"""
-  tax: Float
-  """The amount of its last printed TOTAL line; null when it prints none"""
-  total: Float
 }
 
 """One printed line, every amount as printed and never corrected."""
@@ -11682,16 +11457,12 @@ type PriceComparisonRow {
   basis: PriceBasis!
   """Set when scope is CHAIN"""
   chain: StoreChain
-  lastObservedAt: DateTime!
-  """The most recent observation's price per basis"""
-  latestPrice: Float!
   """The median price per basis over the window"""
   medianPrice: Float!
   """
   Whether the row has the minimum observations a household's usual price needs, to show as a range
   """
   meetsMinimumSample: Boolean!
-  observations: Int!
   scope: PriceComparisonScope!
   """Set when scope is STORE"""
   store: Store
@@ -11705,8 +11476,6 @@ enum PriceComparisonScope {
 
 """Price estimate information for a shopping list item"""
 type PriceEstimate {
-  """User-provided budget limit"""
-  budget: Float
   """User-provided estimated price"""
   estimated: Float
 }
@@ -11718,26 +11487,8 @@ recordedPrices at least 10, with knownStores at least 1; or pricedLines at
 least half of comparableLines.
 """
 type PriceReadiness {
-  """
-  The list's lines not yet bought that a price can be compared for, as ShoppingListStoreComparison.comparableLines (at most 200)
-  """
-  comparableLines: Int!
   """Whether price data is enough, by the rule above"""
   enough: Boolean!
-  """
-  The household's compared usual stores (see usualStores), and the list's own store
-  """
-  knownStores: Int!
-  """
-  Of comparableLines, those priced by the household, or collected at a store among knownStores; a similar product's price counts, other households' prices never do
-  """
-  pricedLines: Int!
-  """Days with a receipt the household checked in"""
-  receiptDays: Int!
-  """
-  Prices the household recorded: paid, scanned or typed. Estimates and collected prices do not count
-  """
-  recordedPrices: Int!
 }
 
 """Where a price came from."""
@@ -11797,14 +11548,6 @@ enum PriceSuggestionScope {
   CHAIN
   """The line's own store"""
   STORE
-}
-
-type PriceTrendPoint {
-  basis: PriceBasis!
-  medianPrice: Float!
-  """The first day of the month"""
-  month: DateTime!
-  observations: Int!
 }
 
 """Sub-input for pricing estimates"""
@@ -11901,25 +11644,15 @@ enum ProfileVisibility {
 }
 
 """
-A store the receipt names that is not on file: send it to createStore when the
-user confirms, or to createStoreFromPlace when placeId is set, with its chain's
-id and its storeNumber either way, so the branch's next receipt finds it.
+A store the receipt names that is not on file, for the client to create.
 """
 type ProposedStore {
-  """As printed, else OpenStreetMap's when placeId is set"""
+  """The merchant's address as printed"""
   address: String
   """The chain the header names"""
   chain: StoreChain
-  """
-  The merchant's printed name, else the header's chain name; OpenStreetMap's when placeId is set
-  """
+  """The merchant's printed name, else the header's chain name"""
   name: String!
-  """
-  The OpenStreetMap place the receipt's shop is, when the search knows it: name
-  and address are then its spelling, so the receipt and a store picker agree.
-  Null when the search doesn't know the shop, or is down.
-  """
-  placeId: ID
   """
   The store number the receipt prints, without padding; null when no chain is named
   """
@@ -12508,8 +12241,6 @@ type Query {
   ): [ItemUnitConversion!]!
   """Where an item is cheaper, by store and by chain."""
   itemPriceComparison(input: ItemPriceComparisonInput!): ItemPriceComparison!
-  """How an item's price has moved, month by month."""
-  itemPriceTrend(input: ItemPriceTrendInput!): ItemPriceTrend!
   """
   List items with filtering and cursor-based pagination (Relay spec).
   Use filters for UPC or SKU lookups:
@@ -13094,11 +12825,6 @@ type Query {
     """
     orderBy: StorageLocationOrderBy
   ): StorageLocationConnection!
-  """Get a single store by ID"""
-  store(
-    """The id of the Store to read"""
-    id: ID!
-  ): Store
   """
   The places to shop near a zip or a point, nearest first, one row per place:
   the stores on file, and the OpenStreetMap places around them. A store row is
@@ -13222,23 +12948,7 @@ type RankedUnit {
 
 """A receipt checked into a household in one call."""
 type ReceiptCheckIn {
-  createdAt: DateTime!
-  homeId: ID!
   id: ID!
-  """How many lines the call that created it carried"""
-  lineCount: Int!
-  """
-  The saving the receipt took off the whole order; null when none was stated
-  """
-  orderDiscount: Float
-  pantryId: ID!
-  """The moment of the sale the first send stated; null when it stated none"""
-  purchasedAt: DateTime
-  """The day on the receipt"""
-  purchasedOn: LocalDate!
-  receiptNumber: String
-  shoppingListId: ID
-  storeId: ID
 }
 
 """One confirmed line of a receipt being checked in."""
@@ -13313,11 +13023,6 @@ type ReceiptCheckInLineResult {
   alreadyRecorded: Boolean! @deprecated(reason: "Use converged, which states the same fact.")
   """The line's clientId, as sent"""
   clientId: String!
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   """Why the line failed; set exactly when success is false"""
   failure: BatchElementFailure
   """The line's position in the input"""
@@ -13343,14 +13048,8 @@ type ReceiptCheckInLineResult {
 
 """A catalog item proposed for a receipt line."""
 type ReceiptLineCandidate {
-  """The pantry given has a stack of this item"""
-  inPantry: Boolean!
   item: Item!
   method: ReceiptMatchMethod!
-  """
-  How well the item fits the line, 0 to 1; comparable within one line only
-  """
-  score: Float!
 }
 
 """One line of a receipt, as the client's parser read it."""
@@ -13440,12 +13139,6 @@ input ReceiptMerchantInput {
 A receipt queued for the server to read, for phones that cannot read one themselves.
 """
 type ReceiptParse {
-  completedAt: DateTime
-  createdAt: DateTime!
-  """
-  What FAILED or UNAVAILABLE means for the user, in a sentence; null otherwise
-  """
-  failureReason: String
   id: ID!
   """The receipt once PARSED"""
   receipt: ParsedReceipt
@@ -13472,8 +13165,6 @@ type ReceiptParseWarning {
   code: ReceiptParseWarningCode!
   """On TOTALS_MISMATCH: what the lines add up to; null otherwise"""
   counted: Float
-  """Free text for logs; read the figures from counted and printed"""
-  detail: String!
   """
   On TOTALS_MISMATCH: the printed subtotal, or total less tax, they were checked against; null otherwise
   """
@@ -14581,108 +14272,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union RecordPantryStockCheckResult = ConflictError | ForbiddenError | NotFoundError | RecordPantryStockCheckPayload | ValidationError
 
-"""Input for recording a price observation (historical tracking)"""
-input RecordPriceObservationInput {
-  """The price's currency; the user's own when omitted"""
-  currency: CurrencyCode
-  itemId: ID!
-  """When the price was seen: now when omitted, and never later than today"""
-  observedAt: DateTime
-  """
-  The net weight of one unitId (a can, a jar), so the price compares per kg or L
-  """
-  packageSize: PackageSizeInput
-  """The price per one unitId"""
-  price: Float!
-  storeId: ID!
-  """The unit the price is per; the item's default unit when omitted"""
-  unitId: ID
-}
-
-type RecordPriceObservationPayload {
-  item: Item
-  priceHistory: ItemPriceHistory!
-  store: Store
-}
-
-"""
-Result of RecordPriceObservation. Select on RecordPriceObservationPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union RecordPriceObservationResult = ConflictError | ForbiddenError | NotFoundError | RecordPriceObservationPayload | ValidationError
-
-"""One confirmed line of a receipt."""
-input RecordReceiptMatchLineInput {
-  """
-  The user changed or chose the item rather than accepting the proposal. An
-  item accepted as proposed, by any step, is remembered as kept: weaker
-  evidence, which answers the household once kept on two receipts.
-  """
-  edited: Boolean!
-  """The item the household chose for it"""
-  itemId: ID!
-  """The line's product text as printed"""
-  rawText: String!
-  """
-  The step that proposed the item the user saw; null when nothing was proposed
-  """
-  resolvedBy: ReceiptMatchMethod
-}
-
-input RecordReceiptMatchesInput {
-  """The household the corrections are remembered for"""
-  homeId: ID!
-  """
-  Client-minted CUID2 for this receipt's confirmation. A replay changes
-  nothing and answers with converged true.
-  """
-  idempotencyKey: ID!
-  """The confirmed lines, at most 100"""
-  lines: [RecordReceiptMatchLineInput!]!
-  """
-  The receipt's locale, e.g. en-US; corrections are remembered per language, the user's own when omitted
-  """
-  locale: String
-  """The receipt's merchant header, when no store is given"""
-  merchantHeader: String
-  """
-  The receipt's store; its chain, else the store itself, keys the corrections
-  """
-  storeId: ID
-}
-
-type RecordReceiptMatchesPayload {
-  """
-  The chain they were remembered under; null for a store with no chain, or no known store
-  """
-  chain: StoreChain
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
-  """The household the corrections were remembered for"""
-  home: Home!
-  """Lines remembered"""
-  recorded: Int!
-  """
-  Lines not remembered: no chain or store is known, no text is left once prices and codes are set aside, or the line kept an answer households share, which it does not add to
-  """
-  skipped: Int!
-  """
-  The receipt's store; corrections are remembered under it when it has no chain
-  """
-  store: Store
-}
-
-"""
-Result of RecordReceiptMatches. Select on RecordReceiptMatchesPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union RecordReceiptMatchesResult = ConflictError | ForbiddenError | NotFoundError | RecordReceiptMatchesPayload | ValidationError
-
 enum RecurringPattern {
   BIWEEKLY
   CUSTOM
@@ -15168,8 +14757,6 @@ input ResolveReceiptLinesInput {
 }
 
 type ResolveReceiptLinesPayload {
-  """The chain the merchant header names"""
-  chain: StoreChain
   """
   When no store is placed, the household's own label that proposedStore
   would duplicate: its store of the proposed name with no address or
@@ -15191,8 +14778,6 @@ type ResolveReceiptLinesPayload {
   when one store alone has it
   """
   store: Store
-  """The store number the merchant header prints"""
-  storeNumber: String
 }
 
 """
@@ -16480,8 +16065,6 @@ type SimilarStorePrice {
   The basis every price in the list is compared at: the one most of them are sold by
   """
   basis: PriceBasis!
-  """When the store last listed it, within the last 8 days"""
-  confirmedAt: DateTime!
   currency: Currency!
   normalizedPrice: Float!
   """The net quantity one unit holds, in packageNetWeightUnit"""
@@ -16859,7 +16442,6 @@ enum StorageType {
 """Store type for retail locations"""
 type Store {
   address: String
-  averageShelfLife: JSON
   """
   The chain this store belongs to; null for an independent or unmatched store.
   """
@@ -16872,41 +16454,8 @@ type Store {
   """
   hasCollectedPrices: Boolean!
   id: ID!
-  """
-  When a store import last wrote the store's price details. Whether prices are collected here is hasCollectedPrices.
-  """
-  lastPriceUpdate: DateTime
   name: String!
-  """Pantry items sourced from this store that you can see."""
-  pantryItemsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in the order createdAt, addedAt, itemName, currentQuantity, expiresOn, not request order
-    """
-    orderBy: PantryItemOrderBy
-  ): PantryItemConnection!
   priceAccuracy: Float
-  priceHistoryConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: ItemPriceHistoryOrderBy
-  ): ItemPriceHistoryConnection!
   """
   The nearest branch of this store's chain, within 24 km, with a shelf price
   collected in the last 8 days, when this store has none of its own. Null
@@ -16916,22 +16465,9 @@ type Store {
   """
   priceStandIn: PriceStandIn
   qualityRating: Float
-  stats: StoreStats
   storeInfo: StoreInfo
   """The store's number within its chain, as its receipts print it."""
   storeNumber: String
-  storeSkusConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; newest first when omitted"""
-    orderBy: ItemStoreSkuOrderBy
-  ): ItemStoreSkuConnection!
   """
   An admin's or a store import's mark that the store's chain offers a price API. Whether prices are collected here is hasCollectedPrices.
   """
@@ -16964,8 +16500,6 @@ type StoreComparisonCandidate {
   isTarget: Boolean!
   """The newest observation behind the lines it prices itself"""
   newestObservedAt: DateTime
-  """The oldest observation behind the lines it prices itself"""
-  oldestObservedAt: DateTime
   """Lines priced from this branch's or chain's own observations"""
   pricedLines: Int!
   """
@@ -17038,33 +16572,6 @@ type StoreEdge implements Edge {
   cursor: String!
   """The Store this edge wraps."""
   node: Store!
-}
-
-"""
-Real-time event envelope for one store's changes, from
-storeEvents(storeId). A store must exist to be watched, so the stream
-delivers its updates (mutation UPDATED).
-"""
-type StoreEvent implements DomainEvent {
-  """
-  The caller's own id when the caller made the change; null for anyone else's change
-  """
-  actorUserId: ID
-  mutation: MutationType!
-  node: Store!
-  """
-  The device that made the change, when the caller made it (for echo
-  suppression): a match with your own device id means this event is the echo
-  of your own write. Null for anyone else's change, and when the request sent
-  no device id.
-  """
-  originatorClientId: ID
-  """The affected store's id (subscription scope)."""
-  storeId: ID!
-  subtype: StoreSubtype!
-  timestamp: DateTime!
-  """Changed field names; empty for a create or a delete"""
-  updatedFields: [String!]!
 }
 
 """Sub-input for store-related filters"""
@@ -17151,16 +16658,12 @@ nobody has picked yet. Exactly one of store and placeId is set.
 """
 type StorePlace {
   address: String
-  """The kind of shop, for a place that came from OpenStreetMap"""
-  category: StorePlaceCategory
   """
   The credit to show beside this place. Null for one not from OpenStreetMap.
   """
   credit: String
   """In kilometres, to one decimal"""
   distanceKm: Float!
-  lat: Float!
-  lng: Float!
   name: String!
   """Pick it with createStoreFromPlace. Null once the place is a store."""
   placeId: ID
@@ -17327,56 +16830,6 @@ input StoreSkuOpsInput {
   storeSkus: [StoreSkuInput!]
 }
 
-"""One currency's share of the caller's spend at a store."""
-type StoreSpend {
-  currency: Currency!
-  """Purchases paid in this currency, priced or not."""
-  purchaseCount: Int!
-  """Sum of the priced purchases, rounded to the currency's minor unit."""
-  totalSpend: Float!
-}
-
-"""
-A store's statistics for the calling user. Every purchase-derived figure
-counts the caller's own purchases only, never another shopper's. There is no
-revenue or unique-customer figure.
-"""
-type StoreStats {
-  """
-  Mean value of the CALLER's priced purchases at this store. Null when those
-  purchases were paid in more than one currency — one figure across
-  currencies is not an amount — or when none carries a price.
-  """
-  averagePurchaseAmount: Float
-  priceAccuracy: Float
-  qualityRating: Float
-  """The CALLER's most recent purchases at this store."""
-  recentActivity: [Purchase!]!
-  """
-  The CALLER's spend at this store, one entry per currency it was paid in.
-  """
-  spendByCurrency: [StoreSpend!]!
-  """The CALLER's most-purchased items at this store."""
-  topItems: [StoreTopItem!]!
-  """Count of the CALLER's purchases at this store."""
-  totalPurchases: Int!
-}
-
-"""Subtype discriminator for store domain events."""
-enum StoreSubtype {
-  """A store (or its store-info) was created or updated."""
-  STORE_CHANGED
-}
-
-type StoreTopItem {
-  count: Int!
-  itemName: String!
-  """
-  Spend on this item. Null when the caller's purchases here span more than one currency.
-  """
-  revenue: Float
-}
-
 type Subscription {
   """
   Per-home event stream (membership changes + home-invite
@@ -17435,15 +16888,6 @@ type Subscription {
     """The pantry to watch"""
     pantryId: ID!
   ): PantryEvent!
-  """
-  Subscribe to one store's changes. A store's name and place are not
-  secret, so anyone signed in may watch one that exists; an unknown
-  storeId is refused.
-  """
-  storeEvents(
-    """The store to watch"""
-    storeId: ID!
-  ): StoreEvent!
   """
   Per-user event stream (account update, profile change,
   home/shopping-list membership and moderation lifecycle transitions, and a
@@ -18728,10 +18172,8 @@ input UpdateMealPlanInput {
 
 """Changes to a planned meal. An omitted field is left as it is."""
 input UpdateMealPlanItemInput {
-  """
-  What the meal cost, in the plan owner's preferred currency; null clears it
-  """
-  actualCost: Float
+  """Ignored"""
+  actualCost: Float @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   """Manual nutrition override"""
   calories: Float
   """Carbohydrates (g) of one serving; null clears it"""
@@ -18748,10 +18190,8 @@ input UpdateMealPlanItemInput {
   Whether to auto-deduct recipe ingredients from pantry on completion (default: true)
   """
   deductFromPantry: Boolean
-  """
-  A new estimated cost, in the plan owner's preferred currency; null clears it
-  """
-  estimatedCost: Float
+  """Ignored"""
+  estimatedCost: Float @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   """Fat (g) of one serving; null clears it"""
   fat: Float
   """The meal to update"""
@@ -19279,11 +18719,6 @@ type UpdateShoppingListPayload {
     """Compare store branches (the default) or whole chains"""
     scope: PriceComparisonScope
   ): ShoppingListStoreComparison! @deprecated(reason: "Use storeSavings, as shoppingListStoreSavings reads them.")
-  """
-  The list's savings after this write, as shoppingListStoreSavings reads
-  them: a change of store changes them. Computed only when selected.
-  """
-  storeSavings: ShoppingListStoreSavings!
 }
 
 input UpdateShoppingListReminderInput {
