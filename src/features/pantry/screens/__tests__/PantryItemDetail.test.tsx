@@ -246,7 +246,7 @@ const headerAction = (testID: string) => {
 
 /**
  * Runs a header action. One in the "more" menu runs once the menu's sheet has
- * closed; the gorhom stand-in never closes, so its dismissal is delivered.
+ * closed, so its dismissal is delivered.
  */
 const pressHeaderAction = (testID: string) => {
   const action = headerAction(testID);
@@ -477,6 +477,7 @@ describe('what a member may do', () => {
     await openDetail();
 
     pressHeaderAction(pantryTestIDs.itemEditButton);
+    await act(() => Promise.resolve());
 
     expect(mockNav.toPantryItem).toHaveBeenCalledWith({ itemId: 'pi1' });
   });
@@ -701,6 +702,7 @@ describe('photos', () => {
   const pickOffered = async (item: PantryItemFixture) => {
     await openDetail({ item });
     fireEvent.press(headerAction(catalogTestIDs.entryPhotoChangeButton)!);
+    await act(() => Promise.resolve());
     expect(screen.getByTestId(catalogTestIDs.entryPhotoSheet)).toBeTruthy();
     return (
       screen.queryByTestId(catalogTestIDs.entryPhotoPickItemPhoto) !== null

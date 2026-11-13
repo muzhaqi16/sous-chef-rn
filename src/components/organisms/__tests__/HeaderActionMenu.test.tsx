@@ -62,13 +62,7 @@ describe('a bar with more actions than fit', () => {
       />,
     );
 
-  const closeMenu = () => {
-    const { onDismiss } = screen.UNSAFE_getByProps({ detached: true })
-      .props as {
-      onDismiss: () => void;
-    };
-    act(() => onDismiss());
-  };
+  const finishDismissal = () => act(() => Promise.resolve());
 
   it('shows the leading actions and "more", not the rest', () => {
     renderBar();
@@ -79,23 +73,25 @@ describe('a bar with more actions than fit', () => {
     expect(screen.queryByTestId('edit')).toBeNull();
   });
 
-  it('runs a menu action once the menu has closed', () => {
+  it('runs a menu action only once the menu has finished closing', async () => {
     renderBar();
 
     fireEvent.press(screen.getByTestId(kitTestIDs.headerMoreButton));
     fireEvent.press(screen.getByTestId('delete'));
     expect(remove.onPress).not.toHaveBeenCalled();
 
-    closeMenu();
+    await finishDismissal();
     expect(remove.onPress).toHaveBeenCalledTimes(1);
     expect(edit.onPress).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('delete')).not.toBeOnTheScreen();
   });
 
-  it('runs nothing when the menu is closed without a choice', () => {
+  it('runs nothing when the menu is closed without a choice', async () => {
     renderBar();
 
     fireEvent.press(screen.getByTestId(kitTestIDs.headerMoreButton));
-    closeMenu();
+    fireEvent(screen.UNSAFE_getByProps({ detached: true }), 'dismiss');
+    await finishDismissal();
 
     expect(edit.onPress).not.toHaveBeenCalled();
     expect(remove.onPress).not.toHaveBeenCalled();

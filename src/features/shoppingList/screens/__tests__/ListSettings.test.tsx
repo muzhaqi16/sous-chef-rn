@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   inputOf,
@@ -935,6 +935,7 @@ describe('a new list', () => {
     fireEvent.press(screen.getByText(t('shoppingListScreens.personalNoHome')));
     await log.landed(GetHomesDocument);
     fireEvent.press(screen.getByText('Family'));
+    await act(() => Promise.resolve());
     expect(screen.getAllByText('Family')).toHaveLength(1);
 
     fireEvent.press(screen.getByText('Family'));
@@ -996,10 +997,12 @@ describe('a new list from a saved template', () => {
       screen.getByText(t('shoppingListScreens.noTemplateBlankList')),
     );
     fireEvent.press(screen.getByText('Weekly Staples'));
+    await act(() => Promise.resolve());
     expect(name().props.value).toBe('Weekly Staples');
 
     fireEvent.changeText(name(), 'Saturday');
     fireEvent.press(screen.getByText('Weekly Staples'));
+    await act(() => Promise.resolve());
     fireEvent.press(screen.getByText('Party Supplies'));
     expect(name().props.value).toBe('Saturday');
   });
@@ -1039,6 +1042,7 @@ describe('a new list from a saved template', () => {
       screen.getByText(t('shoppingListScreens.noTemplateBlankList')),
     );
     fireEvent.press(screen.getByText('Weekly Staples'));
+    await act(() => Promise.resolve());
     fireEvent.press(screen.getByText(t('shoppingListScreens.personalNoHome')));
     await log.landed(GetHomesDocument);
     fireEvent.press(screen.getByText('Family'));

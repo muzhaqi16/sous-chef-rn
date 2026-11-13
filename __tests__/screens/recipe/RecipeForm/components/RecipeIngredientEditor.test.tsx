@@ -94,24 +94,32 @@ jest.mock('../../../../../src/components/organisms/Header', () => ({
 describe('RecipeIngredientEditor', () => {
   const onSave = jest.fn();
 
+  const renderEditor = () => {
+    const ref =
+      React.createRef<React.ComponentRef<typeof RecipeIngredientEditor>>();
+    const view = render(<RecipeIngredientEditor ref={ref} onSave={onSave} />);
+    act(() => ref.current?.open());
+    return view;
+  };
+
   it('renders without crashing', () => {
-    const { toJSON } = render(<RecipeIngredientEditor onSave={onSave} />);
+    const { toJSON } = renderEditor();
     expect(toJSON()).toBeTruthy();
   });
 
   it('shows Add Ingredient title by default', () => {
-    const { getByText } = render(<RecipeIngredientEditor onSave={onSave} />);
+    const { getByText } = renderEditor();
     expect(getByText('Add Ingredient')).toBeTruthy();
   });
 
   it('renders form fields', () => {
-    const { getByText } = render(<RecipeIngredientEditor onSave={onSave} />);
+    const { getByText } = renderEditor();
     expect(getByText('Ingredient Name')).toBeTruthy();
     expect(getByText(/^Quantity:/)).toBeTruthy();
   });
 
   it('renders Optional switch label', () => {
-    const { getByText } = render(<RecipeIngredientEditor onSave={onSave} />);
+    const { getByText } = renderEditor();
     expect(getByText('Optional')).toBeTruthy();
   });
 

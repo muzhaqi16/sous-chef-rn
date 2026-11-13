@@ -190,6 +190,7 @@ async function pressHeaderAction(testID: string) {
   // An overflowed action runs once the menu has closed.
   fireEvent.press(screen.getByTestId(kitTestIDs.headerMoreButton));
   fireEvent.press(screen.getByTestId(testID));
+  await act(() => Promise.resolve());
 }
 
 /** Whether the header offers an action, shown or in its "more" menu. */
@@ -339,7 +340,7 @@ describe('cooking it', () => {
     ).toBeTruthy();
   });
 
-  // The sheet stand-in renders a closed dialog too; its confirm is what counts.
+  // The dialog is opened through the cook control before its confirm is pressed.
   it('is marked cooked from its dialog, for who the person cooks for', async () => {
     const cooked = recordMock(MarkRecipeAsCookedDocument, { held: true });
     await openRecipe({
@@ -489,7 +490,7 @@ describe('saving it', () => {
 
     await pressHeaderAction(recipesTestIDs.folderButton);
 
-    // The stand-in renders every sheet, so which one was presented.
+    // Only the sheet belonging to the recipe's current saved state opens.
     expect({
       save: screen.UNSAFE_getByType(SaveRecipeSheet).props.visible,
       manage: screen.UNSAFE_getByType(ManageRecipeSheet).props.visible,

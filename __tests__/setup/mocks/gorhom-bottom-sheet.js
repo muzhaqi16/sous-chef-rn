@@ -18,13 +18,20 @@ jest.mock('@gorhom/bottom-sheet', () => {
     }),
     BottomSheetModal: React.forwardRef((props, ref) => {
       const [presented, setPresented] = React.useState(false);
+      const dismissalVersion = React.useRef(0);
       const dismiss = () => {
         if (!presented) return;
         setPresented(false);
-        props.onDismiss?.();
+        const version = ++dismissalVersion.current;
+        Promise.resolve().then(() => {
+          if (version === dismissalVersion.current) props.onDismiss?.();
+        });
       };
       React.useImperativeHandle(ref, () => ({
-        present: () => setPresented(true),
+        present: () => {
+          dismissalVersion.current += 1;
+          setPresented(true);
+        },
         dismiss,
         snapToIndex: jest.fn(),
         expand: jest.fn(),

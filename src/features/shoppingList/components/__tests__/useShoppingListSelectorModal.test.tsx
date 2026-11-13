@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
@@ -278,6 +278,7 @@ describe('the switcher', () => {
     fireEvent.press(
       screen.getByText(t('shoppingListSelector.shareCurrentList')),
     );
+    await act(() => Promise.resolve());
     fireEvent.press(screen.getByTestId(shoppingListTestIDs.listSelectorButton));
     fireEvent.press(screen.getByText(t('shoppingListSelector.listSettings')));
 
@@ -340,6 +341,8 @@ describe('deleting from the switcher', () => {
       ),
     ).not.toBeOnTheScreen();
 
+    fireEvent.press(screen.getByTestId(shoppingListTestIDs.listSelectorButton));
+    await act(() => Promise.resolve());
     fireEvent.press(screen.getByTestId(shoppingListTestIDs.listSelectorButton));
     longPress('Groceries');
     fireEvent.press(row('Party'));
@@ -451,7 +454,7 @@ describe('deleting from the switcher', () => {
     expect(screen.queryByText(t('labels.accept'))).not.toBeOnTheScreen();
   });
 
-  // The stand-in sheet never closes itself: its dismiss is fired as gorhom would.
+  // Fire the sheet's dismissal completion as gorhom would.
   it('is left when the switcher closes', async () => {
     await openSwitcher();
     longPress('Groceries');

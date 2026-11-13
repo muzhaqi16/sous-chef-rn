@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 import { RecipeStepEditor } from '../RecipeStepEditor';
 
 jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
@@ -37,18 +37,24 @@ jest.mock('#/utils/generateId', () => ({ generateId: () => 'test-id' }));
 describe('RecipeStepEditor', () => {
   const onSave = jest.fn();
 
+  const renderEditor = () => {
+    const ref = React.createRef<React.ComponentRef<typeof RecipeStepEditor>>();
+    render(<RecipeStepEditor ref={ref} onSave={onSave} />);
+    act(() => ref.current?.open());
+  };
+
   it('renders without crashing', () => {
-    const { toJSON } = render(<RecipeStepEditor onSave={onSave} />);
-    expect(toJSON()).toBeTruthy();
+    renderEditor();
+    expect(screen.toJSON()).toBeTruthy();
   });
 
   it('shows Add Step title by default', () => {
-    render(<RecipeStepEditor onSave={onSave} />);
+    renderEditor();
     expect(screen.getByText('Add Step')).toBeTruthy();
   });
 
   it('renders the instruction text area', () => {
-    render(<RecipeStepEditor onSave={onSave} />);
+    renderEditor();
     expect(screen.getByTestId('instruction-input')).toBeTruthy();
   });
 });
