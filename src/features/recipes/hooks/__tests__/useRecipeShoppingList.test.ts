@@ -17,7 +17,13 @@ import {
   seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { drained, drainTimers } from '#/test-utils/drainTimers';
+import { operationLog } from '#/test-utils/operationLog';
+import { recipeRead } from '#/test-utils/fixtures/recipeFixtures';
+import { useStore } from '#store';
+import { isRecord } from '#/utils/isRecord';
+import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import { UseRecipeData_RecipeFragmentDoc } from '#features/recipes/hooks/useRecipeData.generated';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import {
   CreateShoppingListDocument,
   GetShoppingListItemsFilteredDocument,
@@ -30,16 +36,9 @@ import type { DisplayIngredient, MaterializedRecipe } from '../useRecipeData';
 import { useRecipeShoppingList } from '../useRecipeShoppingList';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (s: unknown) => unknown) =>
-    selector({ setSelectedShoppingListId: jest.fn() }),
-  useSelectedShoppingListId: jest.fn(() => undefined),
-  useSelectedHomeId: jest.fn(() => 'home-1'),
-  useUser: jest.fn(() => ({ id: 'user-1', email: 'cook@example.com' })),
-}));
-
 const mockToastSuccess = jest.mocked(toastService.success);
 const mockToastError = jest.mocked(toastService.error);
+const mockToastInfo = jest.mocked(toastService.info);
 
 // `gen-id-1`, `gen-id-2`, … in the order they are minted: a batch mints one id
 // per row, and a constant would fold every row onto one cache record.
@@ -51,14 +50,24 @@ jest.mock('#/utils/generateEntityId', () => ({
   }),
 }));
 
+let log = operationLog();
+
 beforeEach(() => {
-  jest.useFakeTimers();
   jest.clearAllMocks();
   mockMinted = 0;
-});
-
-afterEach(() => {
-  jest.useRealTimers();
+  log = operationLog();
+  useStore.setState({
+    user: {
+      id: 'user-1',
+      email: 'cook@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    selectedHomeId: 'home-1',
+    selectedShoppingListId: null,
+    isOnline: true,
+    apiReachable: true,
+  });
 });
 
 const range = (from: number, to: number) =>
@@ -115,20 +124,37 @@ const ingredients = (count: number) =>
 const recipeWith = (
   nodes: DisplayIngredient[],
   { hasNextPage = false }: { hasNextPage?: boolean } = {},
-): MaterializedRecipe =>
-  ({
-    id: 'recipe-1',
-    ingredientsConnection: {
-      __typename: 'RecipeIngredientConnection',
-      edges: nodes.map(node => ({ __typename: 'RecipeIngredientEdge', node })),
-      pageInfo: {
-        __typename: 'PageInfo',
-        hasNextPage,
-        endCursor: hasNextPage ? 'cursor-next' : null,
-      },
-      totalCount: nodes.length,
+): MaterializedRecipe => {
+  const cache = makeCache();
+  const recipe = recipeRead({ ingredients: nodes });
+  seedQuery(cache, {
+    query: GetRecipeDocument,
+    variables: {
+      id: 'recipe-1',
+      ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
     },
-  } as Partial<MaterializedRecipe> as MaterializedRecipe);
+    data: {
+      recipe: {
+        ...recipe,
+        ingredientsConnection: {
+          ...recipe.ingredientsConnection,
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage,
+            endCursor: hasNextPage ? 'cursor-next' : null,
+          },
+        },
+      },
+    },
+  });
+  const read = cache.readFragment({
+    fragment: UseRecipeData_RecipeFragmentDoc,
+    fragmentName: 'useRecipeData_recipe',
+    id: 'Recipe:recipe-1',
+  });
+  if (!read) throw new Error('the recipe did not read back whole');
+  return read;
+};
 
 type Hook = { current: ReturnType<typeof useRecipeShoppingList> };
 
@@ -142,6 +168,8 @@ async function renderShopping(
     listIds = ['sl-1'],
     missing = [],
     listedItemIds = [],
+    listsHeld = false,
+    also = [],
   }: {
     cache?: InMemoryCache;
     /** The ingredients the server says the home's pantries lack. */
@@ -152,6 +180,10 @@ async function renderShopping(
     /** A recipe still loading: the screen has no id to hand the hook. */
     withoutRecipeId?: boolean;
     listIds?: string[];
+    /** The lists read stays out. */
+    listsHeld?: boolean;
+    /** Further answers, such as a new list's. */
+    also?: MockedResponse[];
   } = {},
 ) {
   const recipeId = withoutRecipeId ? undefined : 'recipe-1';
@@ -161,8 +193,11 @@ async function renderShopping(
       useRecipeShoppingList({ recipeId, backendRecipe }),
     {
       operationMocks: [
-        shoppingListsMock(listIds),
+        listsHeld
+          ? recordMock(GetShoppingListsLiteDocument, { held: true }).mock
+          : shoppingListsMock(listIds),
         add,
+        ...also,
         recordMock(RecipeMissingIngredientsDocument, {
           data: {
             recipe: {
@@ -187,18 +222,16 @@ async function renderShopping(
         }).mock,
       ],
       cache,
+      links: [log.link],
       initialProps: recipe,
     },
   );
-  // Read off the cache, not the hook: no lists yet and no lists at all both
-  // read as an empty array.
-  await drainTimers();
-  expect(
-    Object.keys(cache.extract().ROOT_QUERY ?? {}).some(key =>
-      key.startsWith('shoppingLists'),
-    ),
-  ).toBe(true);
-  await drainTimers();
+  if (listsHeld) {
+    await log.requested(GetShoppingListsLiteDocument);
+    return { ...rendered, cache };
+  }
+  await log.landed(GetShoppingListsLiteDocument);
+  if (recipeId) await log.landed(RecipeMissingIngredientsDocument);
   expect(rendered.result.current.shoppingLists).toHaveLength(listIds.length);
   return { ...rendered, cache };
 }
@@ -239,8 +272,14 @@ const batchOf = (items: object[]) => ({
   input: { shoppingListId: 'sl-1', items },
 });
 
-const itemsOf = (vars: Record<string, unknown>) =>
-  inputOf(vars).items as { id: string }[];
+const itemsOf = (vars: Record<string, unknown>) => {
+  const items: unknown = inputOf(vars).items;
+  return Array.isArray(items)
+    ? items.flatMap(item =>
+        isRecord(item) && typeof item.id === 'string' ? [{ id: item.id }] : [],
+      )
+    : [];
+};
 
 /** One accepted entry: the line it landed on, still to buy. */
 const accepted = (
@@ -335,8 +374,10 @@ const cachedRowIds = (cache: InMemoryCache) =>
     .flatMap(key => /^ShoppingListItem:(.+)$/.exec(key)?.[1] ?? [])
     .sort();
 
-const cachedTotal = (cache: InMemoryCache) =>
-  (shown(cache)['ShoppingList:sl-1'] as { totalItems: number }).totalItems;
+const cachedTotal = (cache: InMemoryCache) => {
+  const list: unknown = shown(cache)['ShoppingList:sl-1'];
+  return isRecord(list) ? list.totalItems : undefined;
+};
 
 /** Every toast shown, by kind. */
 const toasts = () => ({
@@ -353,9 +394,9 @@ const missingIds = (result: Hook) => [
 
 /** Adds one ingredient on its own, as its row's add button does. */
 const addOne = (result: Hook, overrides: Partial<DisplayIngredient> = {}) =>
-  drained(() =>
-    result.current.handleAddSingleIngredient(ingredient(overrides)),
-  );
+  act(async () => {
+    await result.current.handleAddSingleIngredient(ingredient(overrides));
+  });
 
 /** Taps "Add All", which opens the list picker. */
 const openPicker = (result: Hook) => {
@@ -364,19 +405,22 @@ const openPicker = (result: Hook) => {
   });
 };
 
-async function pickList(result: Hook) {
+/** Picks the list; the add sends `requests` batches, then settles. */
+async function pickList(result: Hook, requests = 1) {
   await act(async () => {
     result.current.handleListSelected('sl-1');
   });
-  // The add runs unawaited and marks its rows outside `act`, just before its
-  // toast; it is over, with every update committed, once it stops adding.
-  await drainTimers();
+  if (requests > 0) {
+    await log.landed(AddItemsToShoppingListFromRecipeDocument, requests);
+  }
+  // The add runs unawaited; it settles a few promise turns after its answer.
+  await act(async () => undefined);
   expect(result.current.addingToList).toBe(false);
 }
 
-async function addAllTo(result: Hook) {
+async function addAllTo(result: Hook, requests = 1) {
   openPicker(result);
-  await pickList(result);
+  await pickList(result, requests);
 }
 
 describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
@@ -676,6 +720,14 @@ describe('useRecipeShoppingList — Add All', () => {
       marks: ['ing-1'],
     },
     {
+      name: 'reports a failure when the service refused every entry',
+      add: () => appliedAdd([refusedEntry(0), refusedEntry(1)]),
+      rows: [],
+      total: 0,
+      said: failed('Failed to add ingredients to shopping list.'),
+      marks: [],
+    },
+    {
       name: 'reports a refused add as a failure, takes its rows back and marks nothing',
       add: refusedAdd,
       rows: [],
@@ -696,6 +748,33 @@ describe('useRecipeShoppingList — Add All', () => {
     expect(marked(result)).toEqual(marks);
   });
 
+  it('says the lists are still loading rather than open the picker', async () => {
+    const { result } = await renderShopping(queuedAdd().mock, {
+      recipe: recipeWith(ingredients(1)),
+      listsHeld: true,
+    });
+
+    openPicker(result);
+
+    expect(result.current.listPickerVisible).toBe(false);
+    expect(mockToastInfo).toHaveBeenCalledWith('Loading shopping lists...');
+  });
+
+  it('adds nothing to a list it no longer holds, and says so', async () => {
+    const add = queuedAdd();
+    const { result } = await renderShopping(add.mock, {
+      recipe: recipeWith(ingredients(1)),
+    });
+    openPicker(result);
+
+    await act(async () => {
+      result.current.handleListSelected('sl-gone');
+    });
+
+    expect(add.fired).toEqual([]);
+    expect(toasts()).toEqual(failed('Shopping list not found.'));
+  });
+
   it('sends a recipe of 51 ingredients read whole as two requests, 50 and 1', async () => {
     // Each request is answered for the rows IT carried, so the toast's count
     // is the two answers added together.
@@ -710,7 +789,7 @@ describe('useRecipeShoppingList — Add All', () => {
       recipe: recipeWith(ingredients(51)),
     });
 
-    await addAllTo(result);
+    await addAllTo(result, 2);
 
     expect(add.fired).toEqual([
       batchOf(range(1, 50).map(n => sentRow(n))),
@@ -734,7 +813,7 @@ describe('useRecipeShoppingList — Add All', () => {
       recipe: recipeWith(ingredients(51)),
     });
 
-    await addAllTo(result);
+    await addAllTo(result, 2);
 
     expect(toasts()).toEqual(failed(QUANTITY_COPY));
     // The 50 that landed are on the list and marked; the refused one is neither.
@@ -754,7 +833,7 @@ describe('useRecipeShoppingList — Add All', () => {
     openPicker(result);
     // Refused before the picker: no list is picked or created for nothing.
     expect(result.current.listPickerVisible).toBe(false);
-    await pickList(result);
+    await pickList(result, 0);
 
     expect(add.fired).toEqual([]);
     expect(toasts()).toEqual(failed(OVER_LIMIT));
@@ -774,7 +853,7 @@ describe('useRecipeShoppingList — Add All', () => {
     // The recipe grew past the limit elsewhere, and a refresh restated its
     // one page.
     rerender(recipeWith(ingredients(2), { hasNextPage: true }));
-    await pickList(result);
+    await pickList(result, 0);
 
     expect(add.fired).toEqual([]);
     expect(toasts()).toEqual(failed(OVER_LIMIT));
@@ -790,7 +869,7 @@ describe('useRecipeShoppingList — Add All', () => {
     const add = queuedAdd();
     const { result } = await renderShopping(add.mock, { recipe });
 
-    await addAllTo(result);
+    await addAllTo(result, 0);
 
     expect(add.fired).toEqual([]);
     expect(toasts()).toEqual(failed(NOTHING_TO_ADD));
@@ -858,7 +937,7 @@ describe('useRecipeShoppingList — Add what is missing', () => {
       missing: ['ing-2', 'ing-3'],
       listedItemIds: ['item-vanilla'],
     });
-    await drainTimers();
+    await log.landed(GetShoppingListItemsFilteredDocument);
 
     expect(missingIds(result)).toEqual(['ing-3']);
     expect(marked(result)).toEqual(['ing-2']);
@@ -936,13 +1015,77 @@ describe('useRecipeShoppingList — handleCreateListAndAddIngredients', () => {
     await act(async () => {
       result.current.handleCreateListAndAddIngredients('Dinner');
     });
+    await log.landed(CreateShoppingListDocument);
+    await act(async () => undefined);
 
-    await drainTimers();
     expect(variants.map(variables => readIds(cache, variables))).toEqual([
       ['gen-id-1'],
       [],
       ['gen-id-1'],
       [],
     ]);
+  });
+
+  /** A new list, answered with the id and name it was sent. */
+  const createdList = () =>
+    recordMock(CreateShoppingListDocument, {
+      dataFor: (variables): MockDataFor<typeof CreateShoppingListDocument> => ({
+        createShoppingList: {
+          __typename: 'CreateShoppingListPayload',
+          shoppingList: {
+            id: String(inputOf(variables).id),
+            name: 'Dinner',
+            homeId: 'home-1',
+            home: { id: 'home-1' },
+          },
+        },
+      }),
+    });
+
+  it('refuses a blank name, creating nothing', async () => {
+    const created = createdList();
+    const { result } = await renderShopping(created.mock);
+
+    await act(async () => {
+      result.current.handleCreateListAndAddIngredients('   ');
+    });
+
+    expect(created.fired).toEqual([]);
+    expect(toasts()).toEqual(failed('List name cannot be empty'));
+  });
+
+  it('makes the new list the selected one, and adds the recipe to it', async () => {
+    const add = queuedAdd();
+    const { result } = await renderShopping(add.mock, {
+      recipe: recipeWith(ingredients(1)),
+      also: [createdList().mock],
+    });
+    openPicker(result);
+
+    await act(async () => {
+      result.current.handleCreateListAndAddIngredients('Dinner');
+    });
+    await log.landed(AddItemsToShoppingListFromRecipeDocument);
+    await act(async () => undefined);
+
+    const selected = useStore.getState().selectedShoppingListId;
+    expect(selected).toEqual(expect.any(String));
+    expect(inputOf(add.fired[0] ?? {})).toMatchObject({
+      shoppingListId: selected,
+    });
+  });
+
+  it('says why a new list could not be made', async () => {
+    const { result } = await renderShopping(
+      recordMock(CreateShoppingListDocument, { error: new Error('boom') }).mock,
+    );
+
+    await act(async () => {
+      result.current.handleCreateListAndAddIngredients('Dinner');
+    });
+    await log.landed(CreateShoppingListDocument);
+    await act(async () => undefined);
+
+    expect(toasts()).toEqual(failed('Failed to create shopping list'));
   });
 });

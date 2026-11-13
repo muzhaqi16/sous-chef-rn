@@ -17,14 +17,12 @@ describe('SortableListActionsContext', () => {
     onQuantityPress: jest.fn(),
     onSwipeableWillOpen: jest.fn(),
     onSwipeableClose: jest.fn(),
-    onSortOrderUpdate: jest.fn(),
   };
 
   const defaultPermissions: SortableListPermissions = {
     canRemoveItems: true,
     canEditItems: true,
     canMarkPurchased: true,
-    canReorderItems: true,
     disabled: false,
   };
 
@@ -125,22 +123,6 @@ describe('SortableListActionsContext', () => {
     });
   });
 
-  it('delegates onSortOrderUpdate with all parameters', () => {
-    const { result } = renderHook(() => useSortableListActions(), {
-      wrapper: wrapper(),
-    });
-
-    act(() => {
-      result.current.actions.onSortOrderUpdate?.('item-1', 'item-0', 'item-2');
-    });
-
-    expect(defaultActions.onSortOrderUpdate).toHaveBeenCalledWith(
-      'item-1',
-      'item-0',
-      'item-2',
-    );
-  });
-
   it('exposes permissions via context and ref', () => {
     const { result } = renderHook(() => useSortableListActions(), {
       wrapper: wrapper(),
@@ -149,13 +131,11 @@ describe('SortableListActionsContext', () => {
     // Permissions available directly from context (for render-time reads)
     expect(result.current.permissions.canRemoveItems).toBe(true);
     expect(result.current.permissions.canEditItems).toBe(true);
-    expect(result.current.permissions.canReorderItems).toBe(true);
     expect(result.current.permissions.disabled).toBe(false);
 
     // Also available via ref (for event handlers)
     expect(result.current.permissionsRef.current.canRemoveItems).toBe(true);
     expect(result.current.permissionsRef.current.canEditItems).toBe(true);
-    expect(result.current.permissionsRef.current.canReorderItems).toBe(true);
     expect(result.current.permissionsRef.current.disabled).toBe(false);
   });
 
@@ -164,7 +144,6 @@ describe('SortableListActionsContext', () => {
       canRemoveItems: true,
       canEditItems: true,
       canMarkPurchased: true,
-      canReorderItems: true,
       disabled: false,
     };
 
@@ -218,7 +197,6 @@ describe('SortableListActionsContext', () => {
       canRemoveItems: false,
       canEditItems: false,
       canMarkPurchased: false,
-      canReorderItems: false,
       disabled: false,
     };
 
@@ -230,7 +208,6 @@ describe('SortableListActionsContext', () => {
       expect(result.current.actions.onQuantityPress).toBeUndefined();
       expect(result.current.actions.onTogglePurchase).toBeUndefined();
       expect(result.current.actions.onMoveToPantry).toBeUndefined();
-      expect(result.current.actions.onSortOrderUpdate).toBeUndefined();
     });
 
     it('still hands over the read-only handlers', () => {
@@ -264,7 +241,6 @@ describe('SortableListActionsContext', () => {
       expect(result.current.actions.onQuantityPress).toBeDefined();
       expect(result.current.actions.onTogglePurchase).toBeDefined();
       expect(result.current.actions.onMoveToPantry).toBeDefined();
-      expect(result.current.actions.onSortOrderUpdate).toBeDefined();
     });
   });
 

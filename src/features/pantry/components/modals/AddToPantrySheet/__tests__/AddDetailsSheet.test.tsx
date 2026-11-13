@@ -1,462 +1,462 @@
-'use no memo';
 import React from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
-import { render, screen, userEvent } from '@testing-library/react-native';
-import { AddDetailsSheet } from '../AddDetailsSheet';
-import type { StoragePageProps } from '../StoragePage';
-import type { StorageState as StorageStateType } from '#/graphql/generated/schemaTypes';
-import { drainTimers } from '#/test-utils/drainTimers';
-import { requirePlatform } from '#platform/install';
-import { alertService } from '#/services/alertService';
+
+import { fireEvent, screen, userEvent } from '@testing-library/react-native';
+import {
+  type MockDataFor,
+  recordMock,
+  renderWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { useStore } from '#store';
 import { t } from '#/i18n';
+import { requirePlatform } from '#platform/install';
+import {
+  StorageState,
+  StorageType,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { SearchUnitsDocument } from '#operations/item/unit.generated';
+import { pantryTestIDs } from '#features/pantry/testIDs';
+import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
+import { AddDetailsSheet } from '../AddDetailsSheet';
 
-type PagerViewMockProps = {
-  children?: React.ReactNode;
-  style?: StyleProp<ViewStyle>;
-};
-type PagerViewMockRef = React.Ref<{ setPage: (page: number) => void }>;
+type Props = React.ComponentProps<typeof AddDetailsSheet>;
+type SearchedUnit = NonNullable<
+  MockDataFor<typeof SearchUnitsDocument>['searchUnits']
+>[number];
 
-jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
-  useStandardBottomSheet: jest.fn(() => ({
-    ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
-    modalProps: {},
-    contentContainerStyle: {},
-    insets: { top: 0, bottom: 0, left: 0, right: 0 },
-  })),
-  BottomSheetModal: ({ children }: { children?: React.ReactNode }) => children,
-}));
-
-jest.mock('#components/atoms/Icon', () => ({
-  Icon: () => null,
-}));
-
-jest.mock('react-native-pager-view', () => {
-  const R = require('react');
-  const { View } = require('react-native');
-  return {
-    __esModule: true,
-    default: R.forwardRef(
-      ({ children, style }: PagerViewMockProps, ref: PagerViewMockRef) => {
-        R.useImperativeHandle(ref, () => ({
-          setPage: jest.fn(),
-        }));
-        return <View style={style}>{children}</View>;
-      },
-    ),
-  };
+const unit = (
+  id: string,
+  name: string,
+  symbol: string,
+  type: UnitType,
+): SearchedUnit => ({
+  ...asAbbreviation({ __typename: 'Unit', id, name, symbol, type }),
+  localizedNameForms: { __typename: 'PluralForms', one: name, other: name },
 });
 
-jest.mock('#features/pantry/hooks/usePantryItemSubmission', () => ({
-  usePantryItemSubmission: jest.fn(() => ({
-    handleConfirm: jest.fn(),
-    loading: false,
-  })),
-}));
+/** What the unit search finds: cans and packs to count by, ounces to size them. */
+const SEARCHED = [
+  unit('can', 'can', 'can', UnitType.Count),
+  unit('pack', 'pack', 'pack', UnitType.Count),
+  unit('oz', 'ounce', 'oz', UnitType.Weight),
+];
 
-const mockFocusItemName = jest.fn();
+const location = (
+  id: string,
+  name: string,
+  temperature: StorageState | null,
+): StorageLocationOption => ({
+  id,
+  name,
+  type: StorageType.Cabinet,
+  isDefault: false,
+  temperature,
+});
+const LOCATIONS = [
+  location('loc-freezer', 'Chest freezer', StorageState.Frozen),
+  location('loc-shelf', 'Garage shelf', StorageState.None),
+];
 
-// Stands in for Item Name's input: react-hook-form focuses a field through the
-// ref its `Controller` hands out, so this is what a failed submit reaches.
-function MockFocusProbe({ ref }: { ref: React.Ref<{ focus: () => void }> }) {
-  const { useImperativeHandle } = require('react');
-  useImperativeHandle(ref, () => ({ focus: mockFocusItemName }));
-  return null;
+let log = operationLog();
+
+const onClose = jest.fn();
+const onSuccess = jest.fn();
+
+function renderSheet(
+  over: Partial<Props> = {},
+  answers: ReturnType<typeof recordMock>[] = [],
+) {
+  return renderWithApollo(
+    <AddDetailsSheet
+      pantryId="pantry-1"
+      storageLocations={LOCATIONS}
+      onClose={onClose}
+      onSuccess={onSuccess}
+      {...over}
+    />,
+    {
+      links: [log.link],
+      operationMocks: [
+        ...answers.map(answer => answer.mock),
+        recordMock(SearchUnitsDocument, {
+          dataFor: ({ query }) => ({
+            searchUnits: SEARCHED.filter(
+              searched =>
+                typeof query === 'string' && !!searched.name?.startsWith(query),
+            ),
+          }),
+        }).mock,
+      ],
+    },
+  );
 }
 
-jest.mock('../MainDetailsPage', () => ({
-  // Renders the name field through the sheet's own `control`, so the contract
-  // with the page (a validation failure reaches the field, and focus can) is
-  // assertable here. Whether the page paints the message is FormInput's test.
-  MainDetailsPage: ({
-    control,
-    storageState,
-  }: {
-    control: import('react-hook-form').Control<
-      import('#features/pantry/types').AddPantryItemFormData
-    >;
-    storageState: string;
-  }) => {
-    const { View, Text, Pressable } = require('react-native');
-    const { Controller } = require('react-hook-form');
-    return (
-      <View testID="main-details-page">
-        <Text>Main Details Page</Text>
-        <Controller
-          control={control}
-          name="itemName"
-          render={({
-            field,
-            fieldState,
-          }: {
-            field: {
-              onChange: (value: string) => void;
-              ref: React.Ref<{ focus: () => void }>;
-            };
-            fieldState: { error?: { message?: string } };
-          }) => (
-            <>
-              <MockFocusProbe ref={field.ref} />
-              <Pressable
-                testID="main-details-page-type-name"
-                onPress={() => field.onChange('Milk')}
-              />
-              {fieldState.error ? (
-                <Text testID="main-details-page-name-error">
-                  {fieldState.error.message}
-                </Text>
-              ) : null}
-            </>
-          )}
-        />
-        <Text testID="main-details-page-storage-state">{storageState}</Text>
-      </View>
-    );
-  },
-}));
+const tab = (title: string) => screen.getByRole('tab', { name: title });
+const submit = () =>
+  userEvent
+    .setup()
+    .press(screen.getByTestId(pantryTestIDs.addDetailsSubmitButton));
 
-jest.mock('../DetailsPage', () => ({
-  // Exposes what one package holds: the rule on its unit reads the size and
-  // the resolved unit id, so only a test that writes both can see it clear.
-  DetailsPage: ({
-    setSizeInput,
-    handleSizeUnitSelected,
-    sizeUnitError,
-  }: {
-    setSizeInput: (value: string) => void;
-    handleSizeUnitSelected: (
-      unitId: string | null,
-      unitName: string | null,
-    ) => void;
-    sizeUnitError?: string;
-  }) => {
-    const { View, Text, Pressable } = require('react-native');
-    return (
-      <View testID="details-page">
-        <Text>Details Page</Text>
-        <Pressable testID="type-size" onPress={() => setSizeInput('500')}>
-          <Text>Type size</Text>
-        </Pressable>
-        <Pressable
-          testID="pick-size-unit"
-          onPress={() => handleSizeUnitSelected('unit-g', 'g')}
-        >
-          <Text>Pick unit</Text>
-        </Pressable>
-        <Pressable
-          testID="type-size-unit"
-          onPress={() => handleSizeUnitSelected(null, 'ca')}
-        >
-          <Text>Type unit</Text>
-        </Pressable>
-        {sizeUnitError ? (
-          <Text testID="details-page-unit-error">{sizeUnitError}</Text>
-        ) : null}
-      </View>
-    );
-  },
-}));
+let searches = 0;
 
-jest.mock('../StoragePage', () => ({
-  // Picks a location the way the autocomplete does: its id, then the option.
-  StoragePage: ({
-    handleStorageLocationSelected,
-  }: Pick<StoragePageProps, 'handleStorageLocationSelected'>) => {
-    const { View, Text, Pressable } = require('react-native');
-    const {
-      StorageState,
-      StorageType,
-    } = require('#/graphql/generated/schemaTypes');
-    const pick = (id: string, temperature: StorageStateType | null) =>
-      handleStorageLocationSelected(id, {
-        id,
-        name: id,
-        type: StorageType.Freezer,
-        isDefault: false,
-        temperature,
-      });
-    return (
-      <View testID="storage-page">
-        <Text>Storage Page</Text>
-        <Pressable
-          testID="pick-frozen-location"
-          onPress={() => pick('loc-freezer', StorageState.Frozen)}
-        >
-          <Text>Pick freezer</Text>
-        </Pressable>
-        <Pressable
-          testID="pick-unrated-location"
-          onPress={() => pick('loc-shelf', StorageState.None)}
-        >
-          <Text>Pick shelf</Text>
-        </Pressable>
-      </View>
-    );
-  },
-}));
-
-jest.mock('../StockSettingsPage', () => ({
-  StockSettingsPage: () => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID="stock-settings-page">
-        <Text>Stock Settings Page</Text>
-      </View>
-    );
-  },
-}));
-
-const defaultProps = {
-  visible: true,
-  pantryId: 'pantry-1',
-  onClose: jest.fn(),
-  onSuccess: jest.fn(),
-};
+/** Types a unit into a unit field and picks it from the search. */
+async function pickUnit(fieldTestID: string, typed: string, name: string) {
+  searches += 1;
+  fireEvent.changeText(screen.getByTestId(fieldTestID), typed);
+  await log.requested(SearchUnitsDocument, searches);
+  await log.landed(SearchUnitsDocument, searches);
+  // Through `userEvent`, whose act settles the validation the pick starts.
+  await userEvent.setup().press(screen.getByText(name));
+}
 
 beforeEach(() => {
-  jest.useFakeTimers();
+  jest.clearAllMocks();
+  log = operationLog();
+  searches = 0;
+  useStore.setState({
+    isOnline: true,
+    apiReachable: true,
+    cachedUnits: [],
+    lastUnitsFetchedAt: Date.now(),
+  });
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+describe('the sheet', () => {
+  it('starts on the main page of four', () => {
+    renderSheet();
 
-describe('AddDetailsSheet', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('renders the title', () => {
-    render(<AddDetailsSheet {...defaultProps} />);
-    expect(screen.getByText('Add Item Details')).toBeTruthy();
-  });
-
-  it('renders the Cancel button', () => {
-    render(<AddDetailsSheet {...defaultProps} />);
-    expect(screen.getByText('Cancel')).toBeTruthy();
-  });
-
-  it('renders the Add/save button', () => {
-    render(<AddDetailsSheet {...defaultProps} />);
-    expect(screen.getByText('Add')).toBeTruthy();
-  });
-
-  it('shows Adding... when loading', () => {
-    const usePantryItemSubmission =
-      require('#features/pantry/hooks/usePantryItemSubmission').usePantryItemSubmission;
-    // `mockReturnValue`, not `…Once`: the form re-renders more than once now
-    // that react-hook-form owns its state, and a one-shot mock would be
-    // consumed by the first render and report `loading: false` thereafter.
-    usePantryItemSubmission.mockReturnValue({
-      handleConfirm: jest.fn(),
-      loading: true,
-    });
-    render(<AddDetailsSheet {...defaultProps} />);
-    expect(screen.getByText('Adding...')).toBeTruthy();
-  });
-
-  it('renders page indicator labels', () => {
-    render(<AddDetailsSheet {...defaultProps} />);
-    expect(screen.getByText('Main')).toBeTruthy();
-    expect(screen.getByText('Details')).toBeTruthy();
-    expect(screen.getByText('Storage')).toBeTruthy();
-    expect(screen.getByText('Stock')).toBeTruthy();
-  });
-
-  it('renders all pages', () => {
-    render(<AddDetailsSheet {...defaultProps} />);
-    expect(screen.getByTestId('main-details-page')).toBeTruthy();
-    expect(screen.getByTestId('details-page')).toBeTruthy();
-    expect(screen.getByTestId('storage-page')).toBeTruthy();
-    expect(screen.getByTestId('stock-settings-page')).toBeTruthy();
-  });
-
-  it('calls onClose when Cancel is pressed', async () => {
-    const user = userEvent.setup();
-    render(<AddDetailsSheet {...defaultProps} />);
-    await user.press(screen.getByText('Cancel'));
-    expect(defaultProps.onClose).toHaveBeenCalled();
-  });
-
-  it('does NOT submit an empty form, and says so on the name field', async () => {
-    // The item name is required. It reports as a field message rather than an
-    // alert covering the form, and `handleSubmit` gates the mutation on it.
-    const user = userEvent.setup();
-    const mockHandleConfirm = jest.fn();
-    const usePantryItemSubmission =
-      require('#features/pantry/hooks/usePantryItemSubmission').usePantryItemSubmission;
-    usePantryItemSubmission.mockReturnValue({
-      handleConfirm: mockHandleConfirm,
-      loading: false,
-    });
-
-    render(<AddDetailsSheet {...defaultProps} />);
-    await user.press(screen.getByTestId('add-pantry-item-submit-button'));
-
-    expect(mockHandleConfirm).not.toHaveBeenCalled();
-    await drainTimers();
+    expect(screen.getByText(t('addToPantry.addItemDetails'))).toBeTruthy();
     expect(
-      screen.getByTestId('main-details-page-name-error'),
-    ).toHaveTextContent('Please enter an item name');
+      tab(t('addToPantry.pageMain')).props.accessibilityState,
+    ).toMatchObject({ selected: true });
+    for (const title of [
+      t('labels.details'),
+      t('labels.storage'),
+      t('addToPantry.pageStock'),
+    ]) {
+      expect(tab(title)).toBeTruthy();
+    }
   });
 
-  it('focuses Item Name on an empty submit and speaks its message', async () => {
-    const user = userEvent.setup();
+  it('moves to a page from its tab', () => {
+    renderSheet();
+
+    fireEvent.press(tab(t('labels.storage')));
+
+    expect(tab(t('labels.storage')).props.accessibilityState).toMatchObject({
+      selected: true,
+    });
+  });
+
+  it('carries in the name that was searched for', () => {
+    renderSheet({ prefilledItemName: 'Olive Oil' });
+
+    expect(
+      screen.getByTestId(pantryTestIDs.addDetailsNameInput),
+    ).toHaveDisplayValue('Olive Oil');
+  });
+});
+
+describe('adding', () => {
+  it('refuses an unnamed item on its field, from any page, and says so aloud', async () => {
     const announce = jest.spyOn(requirePlatform('screenReader'), 'announce');
-    mockFocusItemName.mockClear();
+    const create = recordMock(CreatePantryItemDocument, { held: true });
+    renderSheet({}, [create]);
+    fireEvent.press(tab(t('addToPantry.pageStock')));
 
-    render(<AddDetailsSheet {...defaultProps} />);
-    await user.press(screen.getByTestId('add-pantry-item-submit-button'));
-    await drainTimers();
+    await submit();
 
-    expect(mockFocusItemName).toHaveBeenCalled();
-    expect(announce).toHaveBeenCalledWith('Please enter an item name');
+    expect(screen.getByText(t('errors.itemNameRequired'))).toBeTruthy();
+    expect(
+      tab(t('addToPantry.pageMain')).props.accessibilityState,
+    ).toMatchObject({ selected: true });
+    expect(announce).toHaveBeenCalledWith(t('errors.itemNameRequired'));
+    expect(create.fired).toEqual([]);
     announce.mockRestore();
   });
 
-  describe('Cancel', () => {
-    it('closes an untouched form at once', async () => {
-      const user = userEvent.setup();
-      const alert = jest.spyOn(alertService, 'alert');
-      const onClose = jest.fn();
+  it('says it is adding while the item is created, and reports success once it lands', async () => {
+    const create = recordMock(CreatePantryItemDocument, {
+      held: true,
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { id: 'stack-1' },
+        },
+      },
+    });
+    renderSheet({ prefilledItemName: 'Olive Oil' }, [create]);
 
-      render(<AddDetailsSheet {...defaultProps} onClose={onClose} />);
-      await user.press(screen.getByTestId('add-pantry-item-cancel-button'));
+    await submit();
+    await log.requested(CreatePantryItemDocument);
 
-      expect(onClose).toHaveBeenCalledTimes(1);
-      expect(alert).not.toHaveBeenCalled();
-      alert.mockRestore();
+    expect(screen.getByText(t('labels.adding'))).toBeTruthy();
+    expect(create.fired[0]).toMatchObject({
+      input: { item: { inline: { name: 'Olive Oil' } } },
     });
 
-    it('asks before dropping what was typed, and holds the sheet open', async () => {
-      const user = userEvent.setup();
-      const alert = jest.spyOn(alertService, 'alert');
-      const onClose = jest.fn();
-      const onHoldOpen = jest.fn();
-
-      render(
-        <AddDetailsSheet
-          {...defaultProps}
-          onClose={onClose}
-          onHoldOpen={onHoldOpen}
-        />,
-      );
-      await user.press(screen.getByTestId('main-details-page-type-name'));
-      await drainTimers();
-      await user.press(screen.getByTestId('add-pantry-item-cancel-button'));
-
-      expect(onHoldOpen).toHaveBeenLastCalledWith(true);
-      expect(onClose).not.toHaveBeenCalled();
-      expect(alert).toHaveBeenCalledWith(
-        t('confirmations.discardChangesTitle'),
-        t('confirmations.discardChanges'),
-        expect.any(Array),
-      );
-      alert.mockRestore();
-    });
-  });
-
-  it('submits once the required fields are filled', async () => {
-    const user = userEvent.setup();
-    const mockHandleConfirm = jest.fn();
-    const usePantryItemSubmission =
-      require('#features/pantry/hooks/usePantryItemSubmission').usePantryItemSubmission;
-    usePantryItemSubmission.mockReturnValue({
-      handleConfirm: mockHandleConfirm,
-      loading: false,
-    });
-
-    render(<AddDetailsSheet {...defaultProps} prefilledItemName="Olive Oil" />);
-    await user.press(screen.getByTestId('add-pantry-item-submit-button'));
-
-    await drainTimers();
-    expect(mockHandleConfirm).toHaveBeenCalled();
-  });
-
-  it('uses prefilledItemName when provided', () => {
-    render(
-      <AddDetailsSheet {...defaultProps} prefilledItemName="Preloaded Item" />,
-    );
-    expect(screen.getByText('Add Item Details')).toBeTruthy();
+    create.release();
+    await log.landed(CreatePantryItemDocument);
+    expect(onSuccess).toHaveBeenCalledTimes(1);
   });
 });
 
-describe('AddDetailsSheet — what one package holds', () => {
-  it('reports a size typed with no unit on the unit field', async () => {
+describe('as it is typed', () => {
+  it('reports a quantity that is no amount', async () => {
+    renderSheet({ prefilledItemName: 'Oats' });
+    fireEvent.press(tab(t('labels.details')));
     const user = userEvent.setup();
-    render(<AddDetailsSheet {...defaultProps} />);
+    const quantity = screen.getByTestId(pantryTestIDs.addDetailsQuantityInput);
 
-    await user.press(screen.getByTestId('type-size'));
-    await user.press(screen.getByTestId('add-pantry-item-submit-button'));
+    await user.clear(quantity);
+    await user.type(quantity, 'abc');
 
-    await drainTimers();
-    expect(screen.getByTestId('details-page-unit-error')).toHaveTextContent(
-      'Pick the size’s unit from the list.',
-    );
-  });
-
-  it('says nothing while the unit is still to come', async () => {
-    const user = userEvent.setup();
-    render(<AddDetailsSheet {...defaultProps} />);
-
-    await user.press(screen.getByTestId('type-size'));
-
-    await drainTimers();
-    expect(screen.queryByTestId('details-page-unit-error')).toBeNull();
-  });
-
-  it('says nothing while the unit is being typed', async () => {
-    const user = userEvent.setup();
-    render(<AddDetailsSheet {...defaultProps} />);
-
-    await user.press(screen.getByTestId('type-size'));
-    await user.press(screen.getByTestId('type-size-unit'));
-
-    await drainTimers();
-    expect(screen.queryByTestId('details-page-unit-error')).toBeNull();
-  });
-
-  it('clears that message once a unit is picked', async () => {
-    const user = userEvent.setup();
-    render(<AddDetailsSheet {...defaultProps} />);
-
-    await user.press(screen.getByTestId('type-size'));
-    await user.press(screen.getByTestId('add-pantry-item-submit-button'));
-    await drainTimers();
-    expect(screen.getByTestId('details-page-unit-error')).toBeTruthy();
-
-    await user.press(screen.getByTestId('pick-size-unit'));
-
-    await drainTimers();
-    expect(screen.queryByTestId('details-page-unit-error')).toBeNull();
+    expect(screen.getByText(t('errors.invalidQuantity'))).toBeTruthy();
   });
 });
 
-describe('AddDetailsSheet — a picked location seeds the storage state', () => {
-  it("takes the location's temperature", async () => {
-    const user = userEvent.setup();
-    render(<AddDetailsSheet {...defaultProps} />);
-    expect(
-      screen.getByTestId('main-details-page-storage-state'),
-    ).toHaveTextContent('AMBIENT');
+describe('cancelling', () => {
+  it('closes an untouched form at once', () => {
+    renderSheet();
 
-    await user.press(screen.getByTestId('pick-frozen-location'));
+    fireEvent.press(screen.getByTestId(pantryTestIDs.addDetailsCancelButton));
 
-    await drainTimers();
-    expect(
-      screen.getByTestId('main-details-page-storage-state'),
-    ).toHaveTextContent('FROZEN');
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
-  it('leaves the chosen state alone for a location with no temperature control', async () => {
-    const user = userEvent.setup();
-    render(<AddDetailsSheet {...defaultProps} />);
+  it('asks before dropping what was typed, and holds the sheet open', async () => {
+    const onHoldOpen = jest.fn();
+    renderSheet({ onHoldOpen });
+    await userEvent
+      .setup()
+      .type(screen.getByTestId(pantryTestIDs.addDetailsNameInput), 'Oats');
 
-    await user.press(screen.getByTestId('pick-frozen-location'));
-    await user.press(screen.getByTestId('pick-unrated-location'));
+    fireEvent.press(screen.getByTestId(pantryTestIDs.addDetailsCancelButton));
 
-    await drainTimers();
+    expect(onHoldOpen).toHaveBeenLastCalledWith(true);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('confirmations.discardChangesTitle'),
+      t('confirmations.discardChanges'),
+      expect.any(Array),
+    );
+  });
+});
+
+describe('what one package holds', () => {
+  const SIZE_UNIT_REQUIRED = () => t('packageSize.unitRequired');
+
+  /** Counts the item in cans, which asks what one holds. */
+  const countInCans = async () => {
+    fireEvent.press(tab(t('labels.details')));
+    await pickUnit(pantryTestIDs.addDetailsUnitPicker, 'can', 'can');
+  };
+
+  it('shows a picked size unit as its symbol, as every unit field does', async () => {
+    renderSheet({ prefilledItemName: 'Tuna' });
+    await countInCans();
+    fireEvent.changeText(
+      screen.getByTestId(pantryTestIDs.addDetailsSizeInput),
+      '5',
+    );
+    await pickUnit(pantryTestIDs.addDetailsSizeUnitPicker, 'oun', 'ounce');
+
     expect(
-      screen.getByTestId('main-details-page-storage-state'),
-    ).toHaveTextContent('FROZEN');
+      screen.getByTestId(pantryTestIDs.addDetailsSizeUnitPicker).props.value,
+    ).toBe('oz');
+  });
+
+  it('is asked of a count, and not of an item measured by weight', async () => {
+    renderSheet({ prefilledItemName: 'Flour' });
+    fireEvent.press(tab(t('labels.details')));
+    expect(screen.getByTestId(pantryTestIDs.addDetailsSizeInput)).toBeTruthy();
+
+    await pickUnit(pantryTestIDs.addDetailsUnitPicker, 'oun', 'ounce');
+
+    expect(screen.queryByTestId(pantryTestIDs.addDetailsSizeInput)).toBeNull();
+    expect(
+      screen.getByTestId(pantryTestIDs.addDetailsUnitPicker).props.value,
+    ).toBe('oz');
+  });
+
+  it('asks for the size’s unit on its field, once a size is typed', async () => {
+    renderSheet({ prefilledItemName: 'Tuna' });
+    await countInCans();
+
+    fireEvent.changeText(
+      screen.getByTestId(pantryTestIDs.addDetailsSizeInput),
+      '5',
+    );
+    expect(screen.queryByText(SIZE_UNIT_REQUIRED())).toBeNull();
+    await submit();
+
+    expect(screen.getByText(SIZE_UNIT_REQUIRED())).toBeTruthy();
+  });
+
+  it('says nothing while the size’s unit is being typed', async () => {
+    renderSheet({ prefilledItemName: 'Tuna' });
+    await countInCans();
+
+    fireEvent.changeText(
+      screen.getByTestId(pantryTestIDs.addDetailsSizeInput),
+      '5',
+    );
+    await userEvent
+      .setup()
+      .type(screen.getByTestId(pantryTestIDs.addDetailsSizeUnitPicker), 'ou');
+
+    expect(screen.queryByText(SIZE_UNIT_REQUIRED())).toBeNull();
+  });
+
+  it('clears that message once the size’s unit is picked', async () => {
+    renderSheet({ prefilledItemName: 'Tuna' });
+    await countInCans();
+    fireEvent.changeText(
+      screen.getByTestId(pantryTestIDs.addDetailsSizeInput),
+      '5',
+    );
+    await submit();
+    expect(screen.getByText(SIZE_UNIT_REQUIRED())).toBeTruthy();
+
+    await pickUnit(pantryTestIDs.addDetailsSizeUnitPicker, 'oun', 'ounce');
+
+    expect(screen.queryByText(SIZE_UNIT_REQUIRED())).toBeNull();
+  });
+
+  it('drops that message once the size is cleared', async () => {
+    renderSheet({ prefilledItemName: 'Tuna' });
+    await countInCans();
+    fireEvent.changeText(
+      screen.getByTestId(pantryTestIDs.addDetailsSizeInput),
+      '5',
+    );
+    await submit();
+    expect(screen.getByText(SIZE_UNIT_REQUIRED())).toBeTruthy();
+
+    await userEvent
+      .setup()
+      .clear(screen.getByTestId(pantryTestIDs.addDetailsSizeInput));
+
+    expect(screen.queryByText(SIZE_UNIT_REQUIRED())).toBeNull();
+  });
+
+  it('sends the size in the unit it was picked in', async () => {
+    const create = recordMock(CreatePantryItemDocument, { held: true });
+    renderSheet({ prefilledItemName: 'Tuna' }, [create]);
+    await countInCans();
+    fireEvent.changeText(
+      screen.getByTestId(pantryTestIDs.addDetailsSizeInput),
+      '5',
+    );
+    await pickUnit(pantryTestIDs.addDetailsSizeUnitPicker, 'oun', 'ounce');
+
+    await submit();
+    await log.requested(CreatePantryItemDocument);
+
+    expect(create.fired[0]).toMatchObject({
+      input: { netWeight: { netWeight: 5, netWeightUnitId: 'oz' } },
+    });
+  });
+
+  it('sends a count inside a count as portions of it', async () => {
+    const create = recordMock(CreatePantryItemDocument, { held: true });
+    renderSheet({ prefilledItemName: 'Soda' }, [create]);
+    fireEvent.press(tab(t('labels.details')));
+    await pickUnit(pantryTestIDs.addDetailsUnitPicker, 'pa', 'pack');
+    fireEvent.changeText(
+      screen.getByTestId(pantryTestIDs.addDetailsSizeInput),
+      '6',
+    );
+    await pickUnit(pantryTestIDs.addDetailsSizeUnitPicker, 'can', 'can');
+
+    await submit();
+    await log.requested(CreatePantryItemDocument);
+
+    expect(create.fired[0]).toMatchObject({
+      input: {
+        measurementProfile: {
+          portionUnitId: 'can',
+          portionsPerTrackingUnit: 6,
+        },
+      },
+    });
+  });
+});
+
+describe('where it is kept', () => {
+  const stateChosen = (state: StorageState) =>
+    screen.getByRole('radio', {
+      name: t(`storageState.${state}`),
+      checked: true,
+    });
+
+  /** Types a location and picks it from the pantry's. */
+  const pickLocation = (typed: string, name: string) => {
+    fireEvent.press(tab(t('labels.storage')));
+    fireEvent.changeText(
+      screen.getByPlaceholderText(t('addToPantry.storageLocationPlaceholder')),
+      typed,
+    );
+    fireEvent.press(screen.getByText(name));
+  };
+
+  it("takes a picked location's temperature", () => {
+    renderSheet();
+    expect(stateChosen(StorageState.Ambient)).toBeTruthy();
+
+    pickLocation('Chest', 'Chest freezer');
+
+    expect(stateChosen(StorageState.Frozen)).toBeTruthy();
+  });
+
+  it('leaves the chosen state alone for a location with no temperature control', () => {
+    renderSheet();
+    pickLocation('Chest', 'Chest freezer');
+
+    pickLocation('Gar', 'Garage shelf');
+
+    expect(stateChosen(StorageState.Frozen)).toBeTruthy();
+  });
+
+  // Typing reached the form only after a pause, so a location saved straight
+  // after typing it was dropped.
+  it('keeps a location typed and saved at once', async () => {
+    const create = recordMock(CreatePantryItemDocument, { held: true });
+    renderSheet({ prefilledItemName: 'Oats' }, [create]);
+    fireEvent.press(tab(t('labels.storage')));
+    fireEvent.changeText(
+      screen.getByPlaceholderText(t('addToPantry.storageLocationPlaceholder')),
+      'Attic',
+    );
+
+    await submit();
+    await log.requested(CreatePantryItemDocument);
+
+    expect(create.fired[0]).toMatchObject({
+      input: { storage: { location: { name: 'Attic' } } },
+    });
+  });
+
+  it('sends a new location by its name, not the last one picked', async () => {
+    const create = recordMock(CreatePantryItemDocument, { held: true });
+    renderSheet({ prefilledItemName: 'Oats' }, [create]);
+    pickLocation('Chest', 'Chest freezer');
+    fireEvent.changeText(
+      screen.getByPlaceholderText(t('addToPantry.storageLocationPlaceholder')),
+      'Attic',
+    );
+    fireEvent.press(screen.getByText(t('labels.addNamed', { name: 'Attic' })));
+
+    await submit();
+    await log.requested(CreatePantryItemDocument);
+
+    expect(create.fired[0]).toMatchObject({
+      input: { storage: { location: { name: 'Attic' } } },
+    });
   });
 });

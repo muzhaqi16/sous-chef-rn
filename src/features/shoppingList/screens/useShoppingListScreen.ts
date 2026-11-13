@@ -33,15 +33,9 @@ export function useShoppingListScreen() {
     () => new Set(),
   );
 
-  const {
-    optimisticListId,
-    currentListId,
-    currentList,
-    setSelectedShoppingListId,
-  } = useShoppingListSelection(lists, deniedListIds);
+  const { currentListId, currentList, setSelectedShoppingListId } =
+    useShoppingListSelection(lists, deniedListIds);
 
-  // `optimisticListId` (the persisted Zustand id) rather than `currentListId`, so
-  // the item queries fire without waiting on the lists query.
   const {
     unpurchasedItems: filteredUnpurchasedItems,
     purchasedItems: filteredPurchasedItems,
@@ -67,7 +61,7 @@ export function useShoppingListScreen() {
     toggleItem,
     recordPurchase,
     refetch,
-  } = useShoppingListManagement(optimisticListId);
+  } = useShoppingListManagement(currentListId);
 
   // Access loss arrives two ways: revoked access is a FORBIDDEN `error`, while a
   // deleted/unshared list resolves to null data (`listNotFound`). Recording the
@@ -75,11 +69,11 @@ export function useShoppingListScreen() {
   // previousData fallback holding a stale, inaccessible one on screen.
   // Adjusting state during render, not an effect.
   if (
-    optimisticListId &&
-    !deniedListIds.has(optimisticListId) &&
+    currentListId &&
+    !deniedListIds.has(currentListId) &&
     (listNotFound || isResourceAccessLostError(error))
   ) {
-    const deniedId = optimisticListId;
+    const deniedId = currentListId;
     setDeniedListIds(prev => new Set(prev).add(deniedId));
   }
 

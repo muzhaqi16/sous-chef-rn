@@ -1,15 +1,18 @@
 import { ApolloLink } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
 import { Observable } from 'rxjs';
+import { act } from '@testing-library/react-native';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { withDeadline } from './cacheWaits';
 
 type Stage = 'requested' | 'answered';
 
 /**
  * A link a test puts ahead of its mocks (`links`) to await an operation
  * itself, never a clock: its nth request, or its nth answer handed to the
- * client. Await one inside `act`, which then lets what the answer started
- * finish rendering.
+ * client. Await an answer inside `act` (`landed` does), which then lets what
+ * it started finish rendering; a request a render sends is awaited outside,
+ * as `act` holds that render. A wait that is never met fails with a count.
  */
 export function operationLog() {
   const counts = new Map<string, number>();
@@ -26,11 +29,20 @@ export function operationLog() {
   };
 
   const until = (stage: Stage, document: DocumentNode, nth: number) => {
-    const key = `${stage}:${operationNameOf(document)}`;
+    const name = operationNameOf(document);
+    const key = `${stage}:${name}`;
     if ((counts.get(key) ?? 0) >= nth) return Promise.resolve();
-    return new Promise<void>(resolve => {
-      waiters.push({ key, nth, resolve });
-    });
+    return withDeadline(
+      done => {
+        const waiter = { key, nth, resolve: done };
+        waiters.push(waiter);
+        return () => {
+          const at = waiters.indexOf(waiter);
+          if (at >= 0) waiters.splice(at, 1);
+        };
+      },
+      () => `${name} was ${stage} ${counts.get(key) ?? 0} time(s), not ${nth}`,
+    );
   };
 
   const link = new ApolloLink(
@@ -65,5 +77,15 @@ export function operationLog() {
     /** Resolves once the operation's `nth` answer has reached the client. */
     answered: (document: DocumentNode, nth = 1) =>
       until('answered', document, nth),
+    /**
+     * Waits for the `nth` answer inside `act`, so what it started renders. A
+     * real promise: `act`'s thenable returns nothing from `then`, so a chained
+     * wait (`expect(…).resolves`) would move on with the scope still open.
+     */
+    landed: async (document: DocumentNode, nth = 1) => {
+      await act(async () => {
+        await until('answered', document, nth);
+      });
+    },
   };
 }

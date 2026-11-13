@@ -1,703 +1,361 @@
-import { alertService } from '#/services/alertService';
 import { act } from '@testing-library/react-native';
-import { gql } from '@apollo/client';
+import type { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import {
+  type MockDataFor,
   recordMock,
   renderHookWithApollo,
-  seedCache,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
-import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
-import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
+import { displayedLine } from '#/test-utils/fixtures/shoppingListFixtures';
 import {
-  DisplayFormat,
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
+import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+import { t } from '#/i18n';
+import { alertService } from '#/services/alertService';
+import { Telemetry } from '#services/telemetry';
+import {
   EntryImageSource,
   ErrorCode,
   UnitSystem,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
-import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
-import { useQuantityEditModal } from '../useQuantityEditModal';
-import { resolveImageUrl } from '#utils/imageUtils';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import {
-  asAbbreviation,
-  readingAsAbbreviation,
-} from '#/test-utils/fixtures/unitLabels';
+  UseQuantityEditModal_ItemFragmentDoc,
+  type UseQuantityEditModal_ItemFragment,
+} from '../useQuantityEditModal.generated';
+import { useQuantityEditModal } from '../useQuantityEditModal';
 
-function updateMock() {
-  return recordMock(UpdateShoppingListItemDocument, {
-    data: {
-      updateShoppingListItem: {
-        __typename: 'UpdateShoppingListItemPayload',
-        shoppingListItem: { id: 'item-1' },
-      },
-    },
-  });
-}
-
-const mockAlert = jest.mocked(alertService.alert);
-
-const QUANTITY = gql`
-  fragment QuantityEditProbe on ShoppingListItem {
-    id
-    quantity
-    quantityInput
-  }
-`;
-
-jest.mock('#utils/imageUtils', () => ({
-  resolveImageUrl: jest.fn(() => null),
-}));
-
-beforeEach(() => {
-  jest.clearAllMocks();
-});
-
-function createItem(
-  overrides: Partial<ShoppingListItemDisplayFragment> = {},
-): ShoppingListItemDisplayFragment {
-  return {
-    __typename: 'ShoppingListItem',
-    id: 'item-1',
-    shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
-    itemName: 'Milk',
-    quantity: 2,
-    quantityInput: '2',
-    displayFormat: DisplayFormat.Auto,
-    version: 3,
-    updatedAt: '2025-01-01T00:00:00.000Z',
-    category: 'Dairy',
-    notes: null,
-    unitName: 'gallon',
-    sortOrder: 'aaa',
-    purchaseInfo: {
-      __typename: 'ShoppingListItemPurchaseInfo',
-      movedToPantryAt: null,
-      isPurchased: false,
-    },
-    unit: asAbbreviation({
-      __typename: 'Unit',
-      id: 'unit-1',
-      name: 'gallon',
-      symbol: 'gal',
-      type: UnitType.Volume,
-    }),
-    item: null,
-    ...overrides,
-  };
-}
-
+// The device's decimal separator is the device's.
 jest.mock('#/utils/deviceLocale', () => ({
   ...jest.requireActual('#/utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
 
-describe('useQuantityEditModal', () => {
-  it('returns initial state with modal closed', () => {
-    const { result } = renderHookWithApollo(() =>
-      useQuantityEditModal({ items: [createItem()] }),
-    );
+type Answer = MockDataFor<
+  typeof UpdateShoppingListItemDocument
+>['updateShoppingListItem'];
 
-    expect(result.current.visible).toBe(false);
-    expect(result.current.selectedItem).toBeNull();
-    expect(result.current.isLoading).toBe(false);
+const GALLON = asAbbreviation({
+  __typename: 'Unit',
+  id: 'unit-1',
+  name: 'gallon',
+  symbol: 'gal',
+  type: UnitType.Volume,
+});
+
+/** Two gallons of milk, as the list hands the sheet a line. */
+const listed = (overrides: Partial<ShoppingListItemDisplayFragment> = {}) =>
+  displayedLine({ unitName: 'gallon', unit: GALLON, ...overrides });
+
+/** The same line as the cache holds it, which the open sheet reads live. */
+function cachedLine(
+  cache: InMemoryCache,
+  overrides: Partial<UseQuantityEditModal_ItemFragment> = {},
+) {
+  seedFragment(cache, {
+    fragment: UseQuantityEditModal_ItemFragmentDoc,
+    fragmentName: 'useQuantityEditModal_item',
+    data: {
+      __typename: 'ShoppingListItem',
+      id: 'line-1',
+      itemName: 'Milk',
+      quantity: 2,
+      category: 'Dairy',
+      unitName: 'gallon',
+      version: 3,
+      unit: GALLON,
+      amount: null,
+      image: null,
+      item: null,
+      ...overrides,
+    },
   });
+}
 
-  it('opens modal for an item', () => {
-    const items = [createItem()];
+const quantityOf = (cache: InMemoryCache) =>
+  cache.readFragment({
+    id: cache.identify({ __typename: 'ShoppingListItem', id: 'line-1' }),
+    fragment: UseQuantityEditModal_ItemFragmentDoc,
+    fragmentName: 'useQuantityEditModal_item',
+    optimistic: true,
+  })?.quantity;
 
-    const { result } = renderHookWithApollo(() =>
-      useQuantityEditModal({ items }),
-    );
+const applied: Answer = {
+  __typename: 'UpdateShoppingListItemPayload',
+  shoppingListItem: { __typename: 'ShoppingListItem', id: 'line-1' },
+};
 
-    act(() => {
-      result.current.openForItem('item-1');
-    });
+interface Sheet {
+  items?: ShoppingListItemDisplayFragment[];
+  answer?: Answer;
+  error?: Error;
+  held?: boolean;
+  cache?: InMemoryCache;
+  open?: string | null;
+}
 
-    expect(result.current.visible).toBe(true);
-    expect(result.current.selectedItem).not.toBeNull();
-    expect(result.current.selectedItem!.id).toBe('item-1');
-    expect(result.current.selectedItem!.itemName).toBe('Milk');
-  });
-
-  it('does not open modal when item not found', () => {
-    const items = [createItem()];
-
-    const { result } = renderHookWithApollo(() =>
-      useQuantityEditModal({ items }),
-    );
-
-    act(() => {
-      result.current.openForItem('non-existent');
-    });
-
-    expect(result.current.visible).toBe(false);
-    expect(result.current.selectedItem).toBeNull();
-  });
-
-  it('transforms item to QuantityEditItem format', () => {
-    const items = [createItem()];
-
-    const { result } = renderHookWithApollo(() =>
-      useQuantityEditModal({ items }),
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
-    });
-
-    const item = result.current.selectedItem!;
-    expect(item.id).toBe('item-1');
-    expect(item.itemName).toBe('Milk');
-    expect(item.quantity).toBe(2);
-    expect(item.unitName).toBe('gal'); // uses unit.symbol
-    expect(item.unitId).toBe('unit-1');
-    expect(item.category).toBe('Dairy');
-    expect(item.version).toBe(3);
-  });
-
-  // The household's own photo leads the entry's row, so the sheet shows it too.
-  describe('with the real image resolver', () => {
-    beforeEach(() => {
-      jest
-        .mocked(resolveImageUrl)
-        .mockImplementation(
-          jest.requireActual<typeof import('#utils/imageUtils')>(
-            '#utils/imageUtils',
-          ).resolveImageUrl,
-        );
-    });
-    afterEach(() => {
-      jest.mocked(resolveImageUrl).mockImplementation(() => null);
-    });
-
-    it("shows the household's photo rather than the catalog's", () => {
-      const cache = seedCache([
-        {
-          __typename: 'ShoppingListItem',
-          id: 'item-1',
-          itemName: 'Milk',
-          quantity: 2,
-          category: 'Dairy',
-          unitName: 'gallon',
-          version: 3,
-          unit: asAbbreviation({
-            __typename: 'Unit',
-            id: 'unit-1',
-            name: 'gallon',
-            symbol: 'gal',
-          }),
-          amount: null,
-          image: {
-            __typename: 'EntryImage',
-            url: 'https://cdn.example.com/household/milk.jpg',
-            source: EntryImageSource.Household,
-            catalogImageId: null,
-          },
-          item: {
-            __typename: 'Item',
-            id: 'milk',
-            imageUrl: 'https://cdn.example.com/catalog/milk.jpg',
-            images: [],
-          },
-        },
-      ]);
-
-      const { result } = renderHookWithApollo(
-        () => useQuantityEditModal({ items: [createItem()] }),
-        { cache },
-      );
-      act(() => {
-        result.current.openForItem('item-1');
+/** The quantity sheet over a list, opened on a line. */
+function openSheet({
+  items = [listed()],
+  answer = applied,
+  error,
+  held = false,
+  cache = makeCache(),
+  open = 'line-1',
+}: Sheet = {}) {
+  const sent = error
+    ? recordMock(UpdateShoppingListItemDocument, { error, held })
+    : recordMock(UpdateShoppingListItemDocument, {
+        data: { updateShoppingListItem: answer },
+        held,
       });
+  const { result } = renderHookWithApollo(
+    () => useQuantityEditModal({ items }),
+    { cache, operationMocks: [sent.mock] },
+  );
+  if (open) {
+    act(() => {
+      result.current.openForItem(open);
+    });
+  }
+  return { sheet: result, sent, cache };
+}
 
-      expect(result.current.selectedItem?.imageUrl).toBe(
-        'https://cdn.example.com/household/milk.jpg',
-      );
+beforeEach(() => {
+  jest.clearAllMocks();
+  jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
+});
+
+describe('the quantity sheet', () => {
+  it('opens on the line as the list shows it, its unit the one offered', () => {
+    const { sheet } = openSheet();
+
+    expect(sheet.current.visible).toBe(true);
+    expect(sheet.current.isLoading).toBe(false);
+    expect(sheet.current.selectedItem).toEqual({
+      id: 'line-1',
+      itemName: 'Milk',
+      quantity: 2,
+      unitName: 'gal',
+      unitId: 'unit-1',
+      category: 'Dairy',
+      imageUrl: null,
+      version: 3,
+      itemUnits: [
+        {
+          id: 'unit-1',
+          unit: expect.objectContaining({ symbol: 'gal' }),
+          isDefault: true,
+          isPreferred: true,
+        },
+      ],
     });
   });
 
-  it('includes itemUnits when unit exists', () => {
-    const items = [createItem()];
+  it('opens on nothing for a line it was not given', () => {
+    const { sheet } = openSheet({ open: 'line-9' });
 
-    const { result } = renderHookWithApollo(() =>
-      useQuantityEditModal({ items }),
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
-    });
-
-    expect(result.current.selectedItem!.itemUnits).toHaveLength(1);
-    expect(result.current.selectedItem!.itemUnits[0]).toEqual(
-      expect.objectContaining({
-        id: 'unit-1',
-        unit: expect.objectContaining({ symbol: 'gal', name: 'gallon' }),
-        isDefault: true,
-        isPreferred: true,
-      }),
-    );
+    expect(sheet.current.visible).toBe(false);
+    expect(sheet.current.selectedItem).toBeNull();
   });
 
-  it('returns empty itemUnits when item has no unit', () => {
-    const items = [createItem({ unit: null })];
+  it.each([
+    ['no quantity, as none', { quantity: null }, { quantity: 0 }],
+    ['no name, as an item', { itemName: '' }, { itemName: t('labels.item') }],
+    [
+      'no unit, by the name typed, offering none',
+      { unit: null, unitName: 'kilogram' },
+      { unitName: 'kilogram', unitId: null, itemUnits: [] },
+    ],
+  ])('opens a line with %s', (_, line, opened) => {
+    const { sheet } = openSheet({ items: [listed(line)] });
 
-    const { result } = renderHookWithApollo(() =>
-      useQuantityEditModal({ items }),
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
-    });
-
-    expect(result.current.selectedItem!.itemUnits).toEqual([]);
+    expect(sheet.current.selectedItem).toMatchObject(opened);
   });
 
-  it('closes the modal', () => {
-    const items = [createItem()];
-
-    const { result } = renderHookWithApollo(() =>
-      useQuantityEditModal({ items }),
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
-    });
-
-    expect(result.current.visible).toBe(true);
-
-    act(() => {
-      result.current.close();
-    });
-
-    expect(result.current.visible).toBe(false);
-    expect(result.current.selectedItem).toBeNull();
-  });
-
-  it('saves quantity changes via mutation', async () => {
-    const m = updateMock();
-    const items = [createItem()];
-
-    const { result } = renderHookWithApollo(
-      () => useQuantityEditModal({ items }),
-      { operationMocks: [m.mock] },
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
-    });
-
-    await act(async () => {
-      await result.current.save('5', 'gal', 'unit-1');
-    });
-
-    expect(m.fired).toContainEqual({
-      input: {
-        idempotencyKey: expect.any(String),
-        id: 'item-1',
-        quantity: '5',
-        unit: { id: 'unit-1' },
-        version: 3,
+  it("shows the household's photo rather than the catalog's", () => {
+    const cache = makeCache();
+    cachedLine(cache, {
+      image: {
+        __typename: 'EntryImage',
+        url: 'https://cdn.example.com/household/milk.jpg',
+        source: EntryImageSource.Household,
+        catalogImageId: null,
+      },
+      item: {
+        __typename: 'Item',
+        id: 'milk',
+        imageUrl: 'https://cdn.example.com/catalog/milk.jpg',
+        images: [],
       },
     });
+
+    const { sheet } = openSheet({ cache });
+
+    expect(sheet.current.selectedItem?.imageUrl).toBe(
+      'https://cdn.example.com/household/milk.jpg',
+    );
   });
 
-  // An omitted unit is left as it is; a null one would clear it.
-  it('leaves the unit out of the update when none is chosen', async () => {
-    const m = updateMock();
-    const items = [createItem()];
-
-    const { result } = renderHookWithApollo(
-      () => useQuantityEditModal({ items }),
-      { operationMocks: [m.mock] },
-    );
+  it('closes', () => {
+    const { sheet } = openSheet();
 
     act(() => {
-      result.current.openForItem('item-1');
+      sheet.current.close();
     });
+
+    expect(sheet.current.visible).toBe(false);
+    expect(sheet.current.selectedItem).toBeNull();
+  });
+});
+
+describe('saving a quantity', () => {
+  it.each([
+    [
+      'in the unit picked',
+      '5',
+      'unit-1',
+      { quantity: '5', unit: { id: 'unit-1' } },
+    ],
+    // An omitted unit is left as it is; a null one would clear it.
+    [
+      'leaving the unit alone when none is picked',
+      '5',
+      null,
+      { quantity: '5' },
+    ],
+    [
+      'with a comma decimal made a point',
+      '1,5',
+      'unit-1',
+      { quantity: '1.5', unit: { id: 'unit-1' } },
+    ],
+    [
+      'with a mixed number as typed',
+      '2 1/3',
+      'unit-1',
+      { quantity: '2 1/3', unit: { id: 'unit-1' } },
+    ],
+  ])('sends it %s, at the line’s version', async (_, typed, unitId, input) => {
+    const { sheet, sent } = openSheet();
 
     await act(async () => {
-      await result.current.save('5', null, null);
+      await sheet.current.save(typed, unitId);
     });
 
-    expect(m.fired).toEqual([
+    expect(sent.fired).toEqual([
       {
         input: {
-          id: 'item-1',
-          quantity: '5',
-          version: 3,
           idempotencyKey: expect.any(String),
-        },
-      },
-    ]);
-  });
-
-  it('sends a comma decimal to the API with the separator normalized', async () => {
-    const m = recordMock(UpdateShoppingListItemDocument, {
-      data: {
-        updateShoppingListItem: {
-          __typename: 'UpdateShoppingListItemPayload',
-          shoppingListItem: { id: 'item-1' },
-        },
-      },
-    });
-    const items = [createItem()];
-
-    const { result } = renderHookWithApollo(
-      () => useQuantityEditModal({ items }),
-      { operationMocks: [m.mock] },
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
-    });
-
-    await act(async () => {
-      await result.current.save('1,5', 'gal', 'unit-1');
-    });
-
-    expect(m.fired[0]).toEqual({
-      input: {
-        idempotencyKey: expect.any(String),
-        id: 'item-1',
-        quantity: '1.5',
-        unit: { id: 'unit-1' },
-        version: 3,
-      },
-    });
-  });
-
-  // `normalizeNumericTextForApi` is not idempotent on a comma device: it turns
-  // `1,125` into `1.125`, and a second pass reads that period as grouping. The
-  // parsed value goes to the cache AND to offline persistence, so a wrong one
-  // survives a restart.
-  it('stores the quantity the person typed, not a thousand-fold of it', async () => {
-    (getDeviceDecimalSeparator as jest.Mock).mockReturnValue(',');
-
-    const m = recordMock(UpdateShoppingListItemDocument, {
-      data: {
-        updateShoppingListItem: {
-          __typename: 'UpdateShoppingListItemPayload',
-          shoppingListItem: { id: 'item-1' },
-        },
-      },
-    });
-    const items = [createItem()];
-
-    const cache = seedCache([
-      {
-        __typename: 'ShoppingListItem',
-        id: 'item-1',
-        version: 3,
-        quantity: 1,
-        quantityInput: '1',
-      },
-    ]);
-    const { result } = renderHookWithApollo(
-      () => useQuantityEditModal({ items }),
-      { operationMocks: [m.mock], cache },
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
-    });
-
-    let shown: unknown;
-    await act(async () => {
-      const pending = result.current.save('1,125', 'gal', 'unit-1');
-      shown = cache.extract(true)['ShoppingListItem:item-1']?.quantity;
-      await pending;
-    });
-
-    expect(shown).toBeCloseTo(1.125, 3);
-    expect(m.fired[0]).toEqual({
-      input: {
-        idempotencyKey: expect.any(String),
-        id: 'item-1',
-        quantity: '1.125',
-        unit: { id: 'unit-1' },
-        version: 3,
-      },
-    });
-  });
-
-  it('passes a mixed number through untouched', async () => {
-    const m = recordMock(UpdateShoppingListItemDocument, {
-      data: {
-        updateShoppingListItem: {
-          __typename: 'UpdateShoppingListItemPayload',
-          shoppingListItem: { id: 'item-1' },
-        },
-      },
-    });
-    const items = [createItem()];
-
-    const { result } = renderHookWithApollo(
-      () => useQuantityEditModal({ items }),
-      { operationMocks: [m.mock] },
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
-    });
-
-    await act(async () => {
-      await result.current.save('2 1/3', 'gal', 'unit-1');
-    });
-
-    expect(m.fired[0]).toEqual({
-      input: {
-        idempotencyKey: expect.any(String),
-        id: 'item-1',
-        quantity: '2 1/3',
-        unit: { id: 'unit-1' },
-        version: 3,
-      },
-    });
-  });
-
-  it('keeps the sheet open and alerts when the server refuses the quantity', async () => {
-    const m = recordMock(UpdateShoppingListItemDocument, {
-      data: {
-        updateShoppingListItem: {
-          __typename: 'ValidationError',
-          code: ErrorCode.ValidationFailed,
-          message: 'Invalid fraction format',
-          field: 'quantity',
-        },
-      },
-    });
-    const items = [createItem()];
-
-    const { result } = renderHookWithApollo(
-      () => useQuantityEditModal({ items }),
-      { operationMocks: [m.mock] },
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
-    });
-
-    await act(async () => {
-      await result.current.save('nonsense', null, null);
-    });
-
-    expect(result.current.visible).toBe(true);
-    expect(result.current.selectedItem).not.toBeNull();
-    // A refusal payload resolves with no `error`, so `onError` never fires and
-    // this hook is the only alerter — again exactly one.
-    expect(mockAlert).toHaveBeenCalledTimes(1);
-    // Copy for the field the refusal named, in the app's own words — the
-    // server's "Invalid fraction format" is English and is never shown.
-    expect(mockAlert).toHaveBeenCalledWith(
-      'Error',
-      "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
-    );
-  });
-
-  // A failure the server gave no verdict on still gets exactly ONE message: the
-  // caller's copy, since there is no code to say anything more specific.
-  it('alerts a transport failure once and keeps the sheet open', async () => {
-    const m = recordMock(UpdateShoppingListItemDocument, {
-      error: new Error('network down'),
-    });
-    const items = [createItem()];
-
-    const { result } = renderHookWithApollo(
-      () => useQuantityEditModal({ items }),
-      { operationMocks: [m.mock] },
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
-    });
-
-    await act(async () => {
-      await result.current.save('5', null, null);
-    });
-
-    expect(mockAlert).toHaveBeenCalledTimes(1);
-    expect(mockAlert).toHaveBeenCalledWith(
-      'Error',
-      'Could not adjust the quantity.',
-    );
-    // Still a failure: the sheet stays open with the typed value intact.
-    expect(result.current.visible).toBe(true);
-  });
-
-  // Offline, the mutation resolves with the field null — queueLink's shape for
-  // "queued for replay". That is an acceptance, not a failure: the queue
-  // replays it later, so the sheet must close silently rather than alert.
-  it('closes without alerting when the write is queued offline', async () => {
-    const m = recordMock(UpdateShoppingListItemDocument, {
-      data: { updateShoppingListItem: null },
-    });
-    const items = [createItem()];
-
-    const { result } = renderHookWithApollo(
-      () => useQuantityEditModal({ items }),
-      { operationMocks: [m.mock] },
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
-    });
-
-    await act(async () => {
-      await result.current.save('5', null, null);
-    });
-
-    expect(mockAlert).not.toHaveBeenCalled();
-    expect(result.current.visible).toBe(false);
-    expect(result.current.selectedItem).toBeNull();
-  });
-
-  describe('the quantity is written locally before the server answers', () => {
-    function setup(member: object | null) {
-      const cache = seedCache([
-        {
-          __typename: 'ShoppingListItem',
-          id: 'item-1',
-          quantity: 2,
-          quantityInput: '2',
+          id: 'line-1',
           version: 3,
+          ...input,
         },
-      ]);
-      const m = recordMock(UpdateShoppingListItemDocument, {
-        data: { updateShoppingListItem: member },
-      });
-      const rendered = renderHookWithApollo(
-        () => useQuantityEditModal({ items: [createItem()] }),
-        { cache, operationMocks: [m.mock] },
-      );
-      const readQuantity = () =>
-        cache.readFragment<{ quantity: number; quantityInput: string }>({
-          id: cache.identify({ __typename: 'ShoppingListItem', id: 'item-1' }),
-          fragment: QUANTITY,
-          optimistic: true,
-        });
-      return { ...rendered, readQuantity };
-    }
+      },
+    ]);
+  });
 
-    // Offline the write is queued: the list must show the new quantity until
-    // the replay lands.
-    it('shows a queued quantity at once', async () => {
-      const { result, readQuantity } = setup(null);
-      act(() => {
-        result.current.openForItem('item-1');
-      });
+  it.each([
+    ['saved', applied],
+    ['queued', null],
+  ])('closes once %s, saying nothing, and records it', async (_, answer) => {
+    const { sheet } = openSheet({ answer });
 
-      await act(async () => {
-        await result.current.save('1 1/2', null, 'unit-1');
-      });
-
-      expect(readQuantity()).toMatchObject({
-        quantity: 1.5,
-        quantityInput: '1 1/2',
-      });
+    await act(async () => {
+      await sheet.current.save('5', null);
     });
 
-    it('puts the previous quantity back when the server refuses', async () => {
-      const { result, readQuantity } = setup({
+    expect(sheet.current.visible).toBe(false);
+    expect(sheet.current.selectedItem).toBeNull();
+    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(Telemetry.trackEvent).toHaveBeenCalledWith(
+      'shopping_item_quantity_updated',
+      { item_id: 'line-1', quantity: '5' },
+    );
+  });
+
+  // A comma device turns `1,125` into `1.125`, and a second pass would read
+  // that point as grouping: the line would hold a thousand-fold.
+  it('shows what was typed at once, and says it is saving until it is', async () => {
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
+    const cache = makeCache();
+    cachedLine(cache);
+    const { sheet, sent } = openSheet({ cache, held: true });
+
+    let saving: Promise<void> = Promise.resolve();
+    await act(async () => {
+      saving = sheet.current.save('1,125', 'unit-1');
+    });
+
+    expect(quantityOf(cache)).toBeCloseTo(1.125, 3);
+    expect(sheet.current.isLoading).toBe(true);
+    await act(async () => {
+      sent.release();
+      await saving;
+    });
+    expect(sheet.current.isLoading).toBe(false);
+  });
+
+  it('stays open on a refusal, saying why in its own words, and puts the quantity back', async () => {
+    const cache = makeCache();
+    cachedLine(cache);
+    const { sheet } = openSheet({
+      cache,
+      answer: {
         __typename: 'ValidationError',
         code: ErrorCode.ValidationFailed,
-        message: 'refused',
+        message: 'Invalid fraction format',
         field: 'quantity',
-      });
-      act(() => {
-        result.current.openForItem('item-1');
-      });
-
-      await act(async () => {
-        await result.current.save('5', null, 'unit-1');
-      });
-
-      expect(readQuantity()).toMatchObject({ quantity: 2, quantityInput: '2' });
-    });
-  });
-
-  it('closes modal after successful save', async () => {
-    const m = updateMock();
-    const items = [createItem()];
-
-    const { result } = renderHookWithApollo(
-      () => useQuantityEditModal({ items }),
-      { operationMocks: [m.mock] },
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
+      },
     });
 
     await act(async () => {
-      await result.current.save('5', null, null);
+      await sheet.current.save('5', null);
     });
 
-    expect(result.current.visible).toBe(false);
-    expect(result.current.selectedItem).toBeNull();
+    expect(sheet.current.visible).toBe(true);
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('errors.field.quantity'),
+    );
+    expect(quantityOf(cache)).toBe(2);
   });
 
-  it('does nothing when save called without selected item', async () => {
-    const m = updateMock();
-    const items = [createItem()];
-
-    const { result } = renderHookWithApollo(
-      () => useQuantityEditModal({ items }),
-      { operationMocks: [m.mock] },
-    );
+  it('stays open when it cannot be sent, saying so once', async () => {
+    const { sheet } = openSheet({ error: new Error('network down') });
 
     await act(async () => {
-      await result.current.save('5', null, null);
+      await sheet.current.save('5', null);
     });
 
-    expect(m.fired).toEqual([]);
+    expect(sheet.current.visible).toBe(true);
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('errors.adjustQuantityFailed'),
+    );
   });
 
-  it('defaults quantity to 0 when item.quantity is null', () => {
-    const items = [createItem({ quantity: null })];
+  it('sends nothing with no line open', async () => {
+    const { sheet, sent } = openSheet({ open: null });
 
-    const { result } = renderHookWithApollo(() =>
-      useQuantityEditModal({ items }),
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
+    await act(async () => {
+      await sheet.current.save('5', null);
     });
 
-    expect(result.current.selectedItem!.quantity).toBe(0);
-  });
-
-  it('defaults itemName to "Item" when missing', () => {
-    const items = [createItem({ itemName: '' })];
-
-    const { result } = renderHookWithApollo(() =>
-      useQuantityEditModal({ items }),
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
-    });
-
-    expect(result.current.selectedItem!.itemName).toBe('Item');
-  });
-
-  it('uses unitName when unit.symbol is not available', () => {
-    const items = [createItem({ unit: null, unitName: 'kilogram' })];
-
-    const { result } = renderHookWithApollo(() =>
-      useQuantityEditModal({ items }),
-    );
-
-    act(() => {
-      result.current.openForItem('item-1');
-    });
-
-    expect(result.current.selectedItem!.unitName).toBe('kilogram');
+    expect(sent.fired).toEqual([]);
   });
 });
 
 // The sheet opens on what the row shows, and saves what is typed in that unit.
-describe('useQuantityEditModal — the amount as the row reads it', () => {
+describe('a line the reader sees in another unit', () => {
   const reading = (value: number, unitId: string, symbol: string) =>
     readingAsAbbreviation({
       __typename: 'MeasureReading',
@@ -708,59 +366,39 @@ describe('useQuantityEditModal — the amount as the row reads it', () => {
       type: UnitType.Weight,
     });
 
-  // A 2 lb line, which a metric reader sees as 0.91 kg.
-  const twoPounds = (system: UnitSystem) => {
-    const cache = seedCache([
-      {
-        __typename: 'ShoppingListItem',
-        id: 'item-1',
-        itemName: 'Beef',
-        quantity: 2,
-        quantityInput: '2',
-        category: 'Meat',
-        unitName: 'lb',
-        version: 3,
-        unit: asAbbreviation({
-          __typename: 'Unit',
-          id: 'unit-lb',
-          name: 'pound',
-          symbol: 'lb',
-        }),
-        amount: {
-          __typename: 'Measure',
-          value: 2,
-          unitId: 'unit-lb',
-          metric: reading(0.91, 'unit-kg', 'kg'),
-          imperial: reading(2, 'unit-lb', 'lb'),
-        },
-        image: null,
-        item: null,
+  /** A 2 lb line, which a metric reader sees as 0.91 kg; its answer held. */
+  function twoPounds(system: UnitSystem) {
+    const cache = makeCache();
+    cachedLine(cache, {
+      itemName: 'Beef',
+      quantity: 2,
+      unitName: 'lb',
+      unit: asAbbreviation({
+        __typename: 'Unit',
+        id: 'unit-lb',
+        name: 'pound',
+        symbol: 'lb',
+      }),
+      amount: {
+        __typename: 'Measure',
+        value: 2,
+        unitId: 'unit-lb',
+        metric: reading(0.91, 'unit-kg', 'kg'),
+        imperial: reading(2, 'unit-lb', 'lb'),
       },
-    ]);
-    writeUnitSystemSettings(cache, system, system);
-    const m = updateMock();
-    const { result } = renderHookWithApollo(
-      () =>
-        useQuantityEditModal({
-          items: [createItem({ itemName: 'Beef', unitName: 'lb' })],
-        }),
-      { cache, operationMocks: [m.mock] },
-    );
-    act(() => {
-      result.current.openForItem('item-1');
     });
-    const readQuantity = () =>
-      cache.readFragment<{ quantity: number }>({
-        id: 'ShoppingListItem:item-1',
-        fragment: QUANTITY,
-        optimistic: true,
-      })?.quantity;
-    return { result, m, readQuantity };
-  };
+    writeUnitSystemSettings(cache, system, system);
+    return openSheet({
+      cache,
+      held: true,
+      items: [listed({ itemName: 'Beef', unitName: 'lb' })],
+    });
+  }
 
-  it('opens a metric reader on 0.91 kg', () => {
-    const { result } = twoPounds(UnitSystem.Metric);
-    expect(result.current.selectedItem).toMatchObject({
+  it('opens on the reading a metric reader sees', () => {
+    const { sheet } = twoPounds(UnitSystem.Metric);
+
+    expect(sheet.current.selectedItem).toMatchObject({
       quantity: 0.91,
       unitName: 'kg',
       unitId: 'unit-kg',
@@ -773,36 +411,27 @@ describe('useQuantityEditModal — the amount as the row reads it', () => {
     });
   });
 
-  // Written here, 1 would read "1 lb" until the server answers with the line.
-  it('saves 1 kg as typed and writes nothing ahead of the server', async () => {
-    const { result, m, readQuantity } = twoPounds(UnitSystem.Metric);
-    let ahead: number | undefined;
-    await act(async () => {
-      const pending = result.current.save('1', 'kg', 'unit-kg');
-      ahead = readQuantity();
-      await pending;
-    });
-    expect(ahead).toBe(2);
-    expect(m.fired[0]).toEqual({
-      input: {
-        idempotencyKey: expect.any(String),
-        id: 'item-1',
-        quantity: '1',
-        unit: { id: 'unit-kg' },
-        version: 3,
-      },
-    });
-  });
+  // Written ahead, 1 would read "1 lb" until the server answers.
+  it.each([
+    [
+      'in another unit only once the server answers',
+      UnitSystem.Metric,
+      'unit-kg',
+      2,
+    ],
+    ['in its own unit at once', UnitSystem.Imperial, 'unit-lb', 3],
+  ])('writes a figure %s', async (_, system, unitId, shown) => {
+    const { sheet, sent, cache } = twoPounds(system);
 
-  it('writes a figure in the line’s own unit at once', async () => {
-    const { result, readQuantity } = twoPounds(UnitSystem.Imperial);
-    expect(result.current.selectedItem?.unitId).toBe('unit-lb');
-    let ahead: number | undefined;
+    let saving: Promise<void> = Promise.resolve();
     await act(async () => {
-      const pending = result.current.save('3', 'lb', 'unit-lb');
-      ahead = readQuantity();
-      await pending;
+      saving = sheet.current.save(unitId === 'unit-kg' ? '1' : '3', unitId);
     });
-    expect(ahead).toBe(3);
+
+    expect(quantityOf(cache)).toBe(shown);
+    await act(async () => {
+      sent.release();
+      await saving;
+    });
   });
 });

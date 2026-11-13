@@ -48,11 +48,7 @@ export interface UseQuantityEditModalResult {
   isLoading: boolean;
   openForItem: (itemId: string) => void;
   close: () => void;
-  save: (
-    quantity: string,
-    unitName: string | null,
-    unitId: string | null,
-  ) => Promise<void>;
+  save: (quantity: string, unitId: string | null) => Promise<void>;
 }
 
 /**
@@ -137,11 +133,7 @@ export function useQuantityEditModal(
     setSelectedItemId(null);
   };
 
-  const save = async (
-    quantity: string,
-    _unitName: string | null,
-    unitId: string | null,
-  ) => {
+  const save = async (quantity: string, unitId: string | null) => {
     if (!selectedItemRaw) return;
 
     setIsLoading(true);

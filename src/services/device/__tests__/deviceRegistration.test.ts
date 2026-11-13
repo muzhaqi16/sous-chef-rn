@@ -10,18 +10,36 @@
 // dependency is mocked at its module edge (the pattern in
 // authService.register.test.ts).
 
-const mockMutate = jest.fn();
-const mockQuery = jest.fn().mockResolvedValue({ data: {} });
-const mockCache = { evict: jest.fn(), gc: jest.fn() };
+import { ApolloClient, ApolloLink } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+
+const client = new ApolloClient({
+  cache: makeCache(),
+  link: ApolloLink.empty(),
+  defaultOptions: APOLLO_DEFAULT_OPTIONS,
+});
+const mockMutate = jest.spyOn(client, 'mutate');
+const mockQuery = jest.spyOn(client, 'query').mockResolvedValue({ data: {} });
+const mockCache = {
+  evict: jest.spyOn(client.cache, 'evict').mockReturnValue(true),
+  gc: jest.spyOn(client.cache, 'gc').mockReturnValue([]),
+};
 jest.mock('#/apollo/client', () => ({
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
 
-const mockStoreState: Record<string, unknown> = {};
-jest.mock('#store', () => ({
-  useStore: { getState: () => mockStoreState },
-}));
+const mockStoreState = jest
+  .requireActual<typeof import('#store')>('#store')
+  .useStore.getState();
+jest.mock('#store', () => {
+  const actual = jest.requireActual<typeof import('#store')>('#store');
+  return {
+    ...actual,
+    useStore: { ...actual.useStore, getState: () => mockStoreState },
+  };
+});
 
 const mockCollect = jest.fn().mockResolvedValue({ deviceId: 'local-1' });
 jest.mock('#native/deviceInfo', () => ({
@@ -70,7 +88,6 @@ jest.mock('#native/storage/keychain', () => ({
 import type { RootState } from '#store';
 import { createResetManager } from '#store/resetManager';
 import { registerApolloClient } from '#/apollo/clientRegistry';
-import type { ApolloClient } from '@apollo/client';
 import { authService } from '#/services/authService';
 import { biometricService } from '#/services/biometric/deviceCredential';
 import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
@@ -83,19 +100,13 @@ import {
 } from '#/services/auth/deviceId';
 import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
+import * as backoff from '#/utils/backoff';
 
 // A sign-out revokes and drops the slot through the step the app registers.
 registerMobileSessionHost();
 
 // The client the code under test reads from the registry.
-registerApolloClient({
-  mutate: (...args: unknown[]) => mockMutate(...args),
-  query: (...args: unknown[]) => mockQuery(...args),
-  // A getter: the factory runs before `mockCache` is initialised.
-  get cache() {
-    return mockCache;
-  },
-} as unknown as ApolloClient);
+registerApolloClient(client);
 
 /** Route client.mutate: RegisterDevice by the `deviceId` it carries. */
 const routeMutate = () =>
@@ -143,8 +154,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   // `clearAllMocks` clears calls, not implementations, so a case that stands the
   // identity down has to be undone here or it leaks into every case after it.
-  (ensureDeviceId as jest.Mock).mockResolvedValue(MOCK_DEVICE_ID);
-  (recordRegisteredLocale as jest.Mock).mockReturnValue(false);
+  jest.mocked(ensureDeviceId).mockResolvedValue(MOCK_DEVICE_ID);
+  jest.mocked(recordRegisteredLocale).mockReturnValue(false);
   mockCollect.mockResolvedValue({ deviceId: 'local-1' });
   routeMutate();
   Object.assign(mockStoreState, {
@@ -159,7 +170,7 @@ beforeEach(() => {
     endSession: (...args: Parameters<RootState['endSession']>) =>
       createResetManager(
         partial => Object.assign(mockStoreState, partial),
-        () => mockStoreState as unknown as RootState,
+        () => mockStoreState,
       ).endSession(...args),
     setNavigationState: jest.fn(),
     getUserNavigationState: jest.fn(() => ({})),
@@ -233,7 +244,7 @@ describe('registerDeviceInBackground — the unit pickers', () => {
       deviceId: 'local-1',
       language: 'en-US',
     });
-    (recordRegisteredLocale as jest.Mock).mockReturnValueOnce(true);
+    jest.mocked(recordRegisteredLocale).mockReturnValueOnce(true);
 
     registerDeviceInBackground();
     await flush();
@@ -248,7 +259,7 @@ describe('registerDeviceInBackground — the unit pickers', () => {
   // Over the cached settings, never by evicting a field of them: a settings
   // read left incomplete falls back to metric until the answer lands.
   it("re-reads what the new locale means for the device's unit system", async () => {
-    (recordRegisteredLocale as jest.Mock).mockReturnValueOnce(true);
+    jest.mocked(recordRegisteredLocale).mockReturnValueOnce(true);
 
     registerDeviceInBackground();
     await flush();
@@ -296,6 +307,15 @@ describe('registerDeviceInBackground — the unit pickers', () => {
     // Nor a country it never read.
     expect(location).not.toHaveProperty('ipCountry');
   });
+
+  // A LAN address says nothing about where the device is; the API records the
+  // public address it sees.
+  it("sends no address of the device's own", async () => {
+    registerDeviceInBackground();
+    await flush();
+
+    expect(registerCall()?.location).not.toHaveProperty('ipAddress');
+  });
 });
 
 // The collection is ~34 native round trips, one of them instantiating a WebView
@@ -303,7 +323,7 @@ describe('registerDeviceInBackground — the unit pickers', () => {
 // an exponential backoff, spends all of that on a guaranteed refusal.
 describe('registerDeviceInBackground — no identity to register under', () => {
   it('collects nothing and does not retry', async () => {
-    (ensureDeviceId as jest.Mock).mockResolvedValue(null);
+    jest.mocked(ensureDeviceId).mockResolvedValue(null);
 
     registerDeviceInBackground();
     await flush();
@@ -334,11 +354,23 @@ describe('registerDeviceInBackground — a session that ends', () => {
     ).length;
 
   afterEach(() => {
-    jest.useRealTimers();
+    if (jest.isMockFunction(backoff.sleep)) {
+      jest.mocked(backoff.sleep).mockRestore();
+    }
   });
 
   it('stops retrying once the session ends', async () => {
-    jest.useFakeTimers();
+    // The backoff ends when this test says, after the session has ended.
+    let wake = () => undefined;
+    jest.spyOn(backoff, 'sleep').mockImplementation(
+      () =>
+        new Promise<void>(resolve => {
+          wake = () => {
+            resolve();
+            return undefined;
+          };
+        }),
+    );
     refuse();
 
     registerDeviceInBackground();
@@ -346,7 +378,7 @@ describe('registerDeviceInBackground — a session that ends', () => {
     expect(registerCalls()).toBe(1);
 
     await require('#store/sessionTeardown').runSessionTeardown();
-    await jest.advanceTimersByTimeAsync(10_000);
+    wake();
     await flush();
 
     expect(registerCalls()).toBe(1);
@@ -366,12 +398,15 @@ describe('registerDeviceInBackground — a session that ends', () => {
   });
 
   it('still retries a refusal while the session lasts', async () => {
-    jest.useFakeTimers();
+    // The first backoff ends at once; the second never does.
+    jest
+      .spyOn(backoff, 'sleep')
+      .mockResolvedValueOnce(undefined)
+      .mockImplementation(() => new Promise<void>(() => undefined));
     refuse();
 
     registerDeviceInBackground();
     await flush();
-    await jest.advanceTimersByTimeAsync(2_000);
     await flush();
 
     expect(registerCalls()).toBe(2);
@@ -412,14 +447,24 @@ describe('logout — session teardown and pacing', () => {
     const step = jest.fn();
     registerSessionTeardown('probe', step);
 
-    mockStoreState.user = { id: 'u1', email: 'u1@example.com' };
+    mockStoreState.user = {
+      id: 'u1',
+      email: 'u1@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    };
     await authService.logout();
 
     expect(step).toHaveBeenCalledTimes(1);
   });
 
   it('does not hold the sign-out behind a revoke while offline', async () => {
-    mockStoreState.user = { id: 'u1', email: 'u1@example.com' };
+    mockStoreState.user = {
+      id: 'u1',
+      email: 'u1@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    };
     mockStoreState.isOnline = false;
     mockQuery.mockClear();
 
@@ -566,7 +611,12 @@ describe('logout — push/notification teardown', () => {
     await flush();
     expect(mockOnRefresh).toHaveBeenCalledTimes(1);
 
-    mockStoreState.user = { id: 'u1', email: 'u1@example.com' };
+    mockStoreState.user = {
+      id: 'u1',
+      email: 'u1@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    };
     mockMutate.mockClear();
     mockUnsubscribe.mockClear(); // count only logout's unsubscribe
 

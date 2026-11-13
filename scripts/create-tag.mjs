@@ -36,17 +36,29 @@ if (!tagPrefix) {
   process.exit(1);
 }
 
+// playstore-v is not here: only a promotion writes it (promote-android.yml),
+// on the commit production runs.
+const PREFIXES = ['dev', 'stg', 'prod'];
+if (!PREFIXES.includes(tagPrefix)) {
+  console.error(
+    `❌ Error: Unknown tag prefix "${tagPrefix}". Use ${PREFIXES.join(', ')}.`,
+  );
+  if (tagPrefix === 'playstore') {
+    console.error(
+      'A playstore-v tag is written by a promotion: run Actions → Promote Android on main.',
+    );
+  }
+  process.exit(1);
+}
+
 // Android tag: {prefix}-v{version}; iOS tag: ios-v{version}, prod only —
 // iOS has no dev or stg builds. So `prod` with no flag tags both, `dev`/`stg`
-// tag Android alone, `playstore` is always Android, and the two platform flags
-// narrow to one side.
-const isPlaystore = tagPrefix === 'playstore';
+// tag Android alone, and the two platform flags narrow to one side.
 const iosProdOnly = tagPrefix === 'prod';
 
-const buildAndroid = platformFlag !== '--ios-only' || isPlaystore;
+const buildAndroid = platformFlag !== '--ios-only';
 const buildIos =
-  !isPlaystore &&
-  (platformFlag === '--ios-only' || (iosProdOnly && !platformFlag));
+  platformFlag === '--ios-only' || (iosProdOnly && !platformFlag);
 
 const tags = [];
 if (buildAndroid) tags.push(`${tagPrefix}-v${version}`);

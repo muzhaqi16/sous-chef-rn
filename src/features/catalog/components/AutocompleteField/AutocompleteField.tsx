@@ -34,7 +34,6 @@ interface InlineVariantProps<TItem> extends SharedProps<TItem> {
   variant: 'inline';
   minSearchLength?: number;
   maxResults?: number;
-  debounceMs?: number;
   /** See `InlineAutocomplete`: for hosts sized to their own content. */
   reserveDropdownSpace?: boolean;
   holdsEverything?: boolean;
@@ -113,7 +112,6 @@ export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
         loading={props.loading}
         minSearchLength={props.minSearchLength}
         maxResults={props.maxResults}
-        debounceMs={props.debounceMs}
         renderItem={props.renderItem}
         keyExtractor={props.keyExtractor}
         onSelect={props.onSelect}

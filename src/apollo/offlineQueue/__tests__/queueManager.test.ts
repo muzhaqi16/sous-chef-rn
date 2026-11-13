@@ -39,7 +39,6 @@ import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.gene
 import {
   AddItemToShoppingListDocument,
   CreateShoppingListDocument,
-  MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
   UpdateShoppingListDocument,
   UpdateShoppingListItemDocument,
@@ -2844,12 +2843,6 @@ describe('QueueManager', () => {
           UpdatePantryItemQuantityDocument,
           { input: { pantryItemId: 'pid-1', quantity: '2' } },
           'pid-1',
-        ],
-        [
-          'MoveShoppingListItemInput.id',
-          MoveShoppingListItemDocument,
-          { input: { id: 'iid-1', afterItemId: 'iid-0' } },
-          'iid-1',
         ],
         [
           'UpdateShoppingListItemInput.id',

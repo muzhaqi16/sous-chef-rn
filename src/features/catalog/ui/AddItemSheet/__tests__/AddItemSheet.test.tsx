@@ -1,522 +1,353 @@
-'use no memo';
-
 import React from 'react';
-import { act, screen, userEvent } from '@testing-library/react-native';
-// The report step renders ReportItemForm, whose useReportItem calls useMutation,
-// so the tree needs an Apollo context even though this suite mocks the data hooks.
-import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
-import { AddItemSheet } from '../AddItemSheet';
-import { pantrySheetConfig } from '#features/pantry/components/modals/AddToPantrySheet/pantrySheetConfig';
+import {
+  act,
+  fireEvent,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
+import {
+  recordMock,
+  renderWithApollo,
+  type MockDataFor,
+} from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
+import { useStore } from '#store';
+import { t } from '#/i18n';
+import {
+  AutocompleteItemsDocument,
+  SearchItemsSemanticDocument,
+} from '#operations/item/item.generated';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 import { kitTestIDs } from '#components/testIDs';
-import type { AddItemSheetConfig } from '../types';
+import { Text } from '#components/atoms/Text';
+import { pantrySheetConfig } from '#features/pantry/components/modals/AddToPantrySheet/pantrySheetConfig';
 import type {
   BaseSuggestionItem,
   SuggestionsHookResult,
 } from '#features/catalog/types';
+import type { AddItemSheetConfig } from '../types';
+import { AddItemSheet } from '../AddItemSheet';
+import { SuggestionDrilldown } from '../SuggestionDrilldown';
 
-// Mock useSharedBottomSheetConfigs
-jest.mock('#hooks/ui/useSharedBottomSheetConfigs', () => ({
-  useSharedBottomSheetConfigs: jest.fn(() => ({})),
-}));
+let log = operationLog();
 
-// Mock useBottomSheetBackHandler
-jest.mock('#hooks/ui/useBottomSheetBackHandler', () => ({
-  useBottomSheetBackHandler: jest.fn(),
-}));
+const PREFIX = pantrySheetConfig.testIDPrefix;
 
-// Mock SearchBar
-jest.mock('#components/molecules/SearchBar', () => {
-  const R = require('react');
-  const RN = require('react-native');
-  return {
-    SearchBar: R.forwardRef(
-      (
-        props: {
-          placeholder?: string;
-          onChangeText?: (text: string) => void;
-          rightActions?: Array<{ icon: string; onPress: () => void }>;
-        },
-        ref: React.Ref<unknown>,
-      ) => {
-        R.useImperativeHandle(ref, () => ({
-          clear: jest.fn(),
-          focus: jest.fn(),
-          blur: jest.fn(),
-          getValue: jest.fn(() => 'search value'),
-          setValue: jest.fn(),
-        }));
-        return R.createElement(
-          RN.View,
-          null,
-          R.createElement(RN.TextInput, {
-            testID: 'search-bar',
-            placeholder: props.placeholder,
-            onChangeText: props.onChangeText,
-          }),
-          // The barcode affordance now lives here rather than on a card below.
-          ...(props.rightActions ?? []).map(action =>
-            R.createElement(RN.Pressable, {
-              key: action.icon,
-              testID: `search-bar-${action.icon}`,
-              onPress: action.onPress,
-            }),
-          ),
-        );
-      },
-    ),
-  };
-});
-
-// Mock ItemSuggestionsList. The report footer is exposed as a pressable so the
-// morph to the report step can be driven without the real list's data shape.
-jest.mock('#features/catalog/ui/ItemSuggestionsList', () => {
-  const R = require('react');
-  const RN = require('react-native');
-  return {
-    ItemSuggestionsList: ({
-      onReportItem,
-      onAddManually,
-      testIDPrefix,
-    }: {
-      onReportItem?: () => void;
-      onAddManually: () => void;
-      testIDPrefix: string;
-    }) =>
-      R.createElement(
-        RN.View,
-        { testID: 'item-suggestions-list' },
-        R.createElement(RN.Pressable, {
-          testID: 'report-item-footer',
-          onPress: onReportItem,
-        }),
-        R.createElement(RN.Pressable, {
-          testID: `${testIDPrefix}-add-manually-button`,
-          onPress: onAddManually,
-        }),
-      ),
-  };
-});
-
-// Mock SuggestionListItem
-jest.mock('#features/catalog/components/SuggestionListItem', () => {
-  const R = require('react');
-  const RN = require('react-native');
-  return {
-    SuggestionListItem: (props: { title?: string; onQuickAdd?: () => void }) =>
-      R.createElement(
-        RN.Pressable,
-        { testID: `suggestion-${props.title}`, onPress: props.onQuickAdd },
-        R.createElement(RN.Text, {}, props.title),
-      ),
-  };
-});
-
-// Mock useItemAutocomplete
-const mockHandleSearchTermChange = jest.fn();
-const mockResetAutocomplete = jest.fn();
-const mockSearchTerm = { current: '' };
-jest.mock('#features/catalog/hooks/useItemAutocomplete', () => ({
-  useItemAutocomplete: jest.fn(() => ({
-    searchTerm: mockSearchTerm.current,
-    displayItems: [],
-    isLoading: false,
-    handleSearchTermChange: mockHandleSearchTermChange,
-    reset: mockResetAutocomplete,
-  })),
-}));
-
-/** Two characters is what `hasSearchQuery` needs to show the results step. */
-const withSearchTerm = (term: string) => {
-  mockSearchTerm.current = term;
-};
-
-// Mock useAddItemSheetState
-jest.mock('../useAddItemSheetState', () => ({
-  useAddItemSheetState: jest.fn(() => ({
-    searchQuery: '',
-    setSearchQuery: jest.fn(),
-    shouldFetch: true,
-    shouldRenderSuggestions: true,
-  })),
-}));
-
-// Mock iconUtils
-jest.mock('#components/atoms/Icon', () => {
-  const R = require('react');
-  const RN = require('react-native');
-  return {
-    Icon: ({ name }: { name: string }) =>
-      R.createElement(RN.Text, { testID: `icon-${name}` }, name),
-  };
-});
-
-// The prefix must be one a production config actually uses. It was
-// `'add-pantry'`, which no config has — so every testID this suite asserted was
-// one the app never renders, and the e2e page objects were written against
-// those fictional IDs and timed out on device. Imported rather than retyped so
-// the two cannot drift again.
-const createConfig = (
-  overrides: Partial<AddItemSheetConfig> = {},
-): AddItemSheetConfig => ({
-  titleKey: 'addItemSheet.addToPantry',
-  testIDPrefix: pantrySheetConfig.testIDPrefix,
-  searchPlaceholderKey: 'addItemSheet.searchPlaceholder',
+const CONFIG: AddItemSheetConfig = {
+  ...pantrySheetConfig,
   suggestionGroups: [
-    {
-      key: 'low_stock',
-      titleKey: 'addItemSheet.sections.lowStock',
-      accessor: (grouped: Record<string, BaseSuggestionItem[]>) =>
-        grouped.lowStock ?? [],
-      priority: 1,
-    },
     {
       key: 'add_again',
       titleKey: 'addItemSheet.sections.addAgain',
-      accessor: (grouped: Record<string, BaseSuggestionItem[]>) =>
-        grouped.addAgain ?? [],
+      accessor: grouped => grouped.addAgain ?? [],
       priority: 2,
     },
+    {
+      key: 'low_stock',
+      titleKey: 'addItemSheet.sections.lowStock',
+      accessor: grouped => grouped.lowStock ?? [],
+      priority: 1,
+      dismissible: true,
+    },
   ],
-  quickAdd: {
-    toastMessageKey: 'addItemSheet.added',
-  },
-  addDetails: { enabled: true },
-  deferFetch: true,
-  barcodeSource: 'pantry',
-  addManuallyPosition: 'bottom',
-  emptyStateMessageKey: 'addItemSheet.emptyTitle',
-  emptyStateSubtextKey: 'addItemSheet.emptyPantrySubtext',
-  ...overrides,
+};
+
+const item = (name: string): BaseSuggestionItem => ({
+  id: `s-${name}`,
+  itemId: `item-${name}`,
+  name,
+  category: 'Dairy',
 });
 
-const createSuggestions = (
-  overrides: Partial<SuggestionsHookResult> = {},
+const suggestionsOf = (
+  over: Partial<SuggestionsHookResult> = {},
 ): SuggestionsHookResult => ({
   grouped: {},
   state: 'empty',
   refetch: jest.fn(),
-  ...overrides,
+  ...over,
 });
 
-describe('AddItemSheet', () => {
-  const defaultProps = {
-    visible: true,
-    contextId: 'pantry-1',
-    onClose: jest.fn(),
-    config: createConfig(),
-    suggestions: createSuggestions(),
-    onQuickAddSearchSuggestion: jest.fn(),
-    onQuickAddSuggestion: jest.fn(),
-    onAddManually: jest.fn(),
-  };
+type Found = NonNullable<
+  MockDataFor<typeof AutocompleteItemsDocument>['autocompleteItems']
+>;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockSearchTerm.current = '';
+const found = (...names: string[]): Found => ({
+  __typename: 'AutocompleteResult',
+  suggestions: names.map(name => ({
+    __typename: 'ItemSuggestion',
+    id: `found-${name}`,
+    name,
+    brands: [],
+  })),
+});
+
+const props = {
+  visible: true,
+  contextId: 'pantry-1',
+  onClose: jest.fn(),
+  onQuickAddSearchSuggestion: jest.fn(),
+  onQuickAddSuggestion: jest.fn(),
+  onDismissSuggestion: jest.fn(),
+  onAddManually: jest.fn(),
+};
+
+async function openSheet(
+  over: Partial<React.ComponentProps<typeof AddItemSheet>> = {},
+  answers: ReturnType<typeof recordMock>[] = [],
+) {
+  renderWithApollo(
+    <AddItemSheet
+      {...props}
+      config={CONFIG}
+      suggestions={suggestionsOf()}
+      {...over}
+    />,
+    {
+      links: [log.link],
+      operationMocks: [
+        ...answers.map(answer => answer.mock),
+        recordMock(SearchItemsSemanticDocument, { held: true }).mock,
+      ],
+    },
+  );
+  // The suggestions paint once the sheet's opening has gone idle.
+  await act(
+    () =>
+      new Promise<void>(resolve => {
+        requestIdleCallback(() => resolve());
+      }),
+  );
+}
+
+/**
+ * Types a search and waits for the answer it asked for. The request is awaited
+ * outside `act`: the search bar's debounce fires on a timer, and a held `act`
+ * scope keeps back the render that sends it.
+ */
+async function search(text: string) {
+  fireEvent.changeText(
+    screen.getByTestId(catalogTestIDs.addItemSheetSearchInput(PREFIX)),
+    text,
+  );
+  await log.requested(AutocompleteItemsDocument);
+  await log.landed(AutocompleteItemsDocument);
+}
+
+const searching = (...names: string[]) =>
+  recordMock(AutocompleteItemsDocument, {
+    data: { autocompleteItems: found(...names) },
   });
 
-  it('renders the sheet title', () => {
-    render(<AddItemSheet {...defaultProps} />);
-    expect(screen.getByText('Add to Pantry')).toBeTruthy();
-  });
+beforeEach(() => {
+  jest.clearAllMocks();
+  log = operationLog();
+  useStore.setState({ isOnline: true, apiReachable: true });
+});
 
-  it('renders the search bar', () => {
-    render(<AddItemSheet {...defaultProps} />);
-    expect(screen.getByTestId('search-bar')).toBeTruthy();
-  });
+describe('the add-item sheet', () => {
+  it('lists each source by priority, skipping empty ones, a long one capped behind More', async () => {
+    await openSheet({
+      suggestions: suggestionsOf({
+        state: 'ready',
+        grouped: {
+          lowStock: ['Milk', 'Eggs', 'Butter', 'Cream', 'Yogurt', 'Kefir'].map(
+            item,
+          ),
+          addAgain: [item('Bread')],
+          recentlyDeleted: [],
+        },
+      }),
+    });
 
-  // Scanning a barcode or a receipt is in the tab's + menu.
-  it('keeps nothing beside its search', () => {
-    render(<AddItemSheet {...defaultProps} />);
-    expect(screen.queryByTestId('search-bar-barcode-outline')).toBeNull();
-    expect(screen.queryByTestId('search-bar-receipt-outline')).toBeNull();
+    const titles = [
+      t('addItemSheet.sections.lowStock'),
+      t('addItemSheet.sections.addAgain'),
+    ];
+    const order = screen
+      .getAllByText(new RegExp(titles.join('|')))
+      .map(node => node.props.children);
+    expect(order).toEqual(titles);
+    expect(screen.queryByText('Kefir')).not.toBeOnTheScreen();
+
+    await userEvent
+      .setup()
+      .press(
+        screen.getByLabelText(
+          `${t('labels.more')} ${t('addItemSheet.sections.lowStock')}`,
+        ),
+      );
+    // The stand-in's sheet list paints no rows, so the list it is handed tells.
     expect(
-      screen.queryByTestId(
-        `${pantrySheetConfig.testIDPrefix}-add-manually-button`,
-      ),
-    ).toBeNull();
+      screen
+        .UNSAFE_getByType(SuggestionDrilldown)
+        .props.items.map((each: BaseSuggestionItem) => each.name),
+    ).toContain('Kefir');
   });
 
-  it('renders empty state when no suggestions', () => {
-    render(<AddItemSheet {...defaultProps} />);
-    expect(screen.getByText('No suggestions yet')).toBeTruthy();
+  it('shows no heading for a source with nothing in it', async () => {
+    await openSheet({
+      suggestions: suggestionsOf({
+        state: 'ready',
+        grouped: { lowStock: [item('Milk')], addAgain: [] },
+      }),
+    });
+
     expect(
-      screen.getByText(
-        'Add items to your pantry to get personalized suggestions',
+      screen.queryByText(t('addItemSheet.sections.addAgain')),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('comes back from a source drilled into', async () => {
+    await openSheet({
+      suggestions: suggestionsOf({
+        state: 'ready',
+        grouped: {
+          lowStock: ['Milk', 'Eggs', 'Butter', 'Cream', 'Yogurt', 'Kefir'].map(
+            item,
+          ),
+          addAgain: [item('Bread')],
+        },
+      }),
+    });
+    const user = userEvent.setup();
+    await user.press(
+      screen.getByLabelText(
+        `${t('labels.more')} ${t('addItemSheet.sections.lowStock')}`,
       ),
+    );
+
+    await user.press(screen.getByLabelText(t('labels.back')));
+
+    expect(screen.getByText('Bread')).toBeTruthy();
+  });
+
+  it('adds a suggestion pressed, and offers dismiss only where a source may', async () => {
+    await openSheet({
+      suggestions: suggestionsOf({
+        state: 'ready',
+        grouped: { lowStock: [item('Milk')], addAgain: [item('Bread')] },
+      }),
+    });
+    const [addBread] = screen.getAllByLabelText(
+      t('labels.addNamed', { name: 'Bread' }),
+    );
+    if (!addBread) throw new Error('no add for Bread');
+
+    await userEvent.setup().press(addBread);
+
+    expect(props.onQuickAddSuggestion).toHaveBeenCalledWith(item('Bread'));
+    expect(
+      screen.getByLabelText(t('labels.dismissNamed', { name: 'Milk' })),
+    ).toBeTruthy();
+    expect(
+      screen.queryByLabelText(t('labels.dismissNamed', { name: 'Bread' })),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('says a failed read failed, offering a retry, not that there are none', async () => {
+    const suggestions = suggestionsOf({ state: 'error' });
+    await openSheet({ suggestions });
+
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+
+    expect(suggestions.refetch).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByText(t(CONFIG.emptyStateMessageKey)),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('says an offline miss is offline', async () => {
+    await openSheet({ suggestions: suggestionsOf({ state: 'offline' }) });
+
+    expect(screen.getByTestId(kitTestIDs.stateOffline)).toBeTruthy();
+  });
+
+  it('says when there is nothing to suggest', async () => {
+    await openSheet();
+
+    expect(screen.getByText(t(CONFIG.emptyStateMessageKey))).toBeTruthy();
+  });
+});
+
+describe('its search', () => {
+  it('waits for two letters', async () => {
+    const answer = searching('Milk');
+    await openSheet({}, [answer]);
+
+    fireEvent.changeText(
+      screen.getByTestId(catalogTestIDs.addItemSheetSearchInput(PREFIX)),
+      'm',
+    );
+    await search('mi');
+
+    expect(answer.fired).toHaveLength(1);
+    expect(
+      screen.getByLabelText(t('a11y.quickAdd', { name: 'Milk' })),
     ).toBeTruthy();
   });
 
-  it('renders loading state for suggestions', () => {
-    render(
-      <AddItemSheet
-        {...defaultProps}
-        suggestions={createSuggestions({ state: 'loading' })}
-      />,
+  it('adds a result picked, and clears for the next', async () => {
+    await openSheet({}, [searching('Milk')]);
+    await search('milk');
+
+    await userEvent
+      .setup()
+      .press(screen.getByLabelText(t('a11y.quickAdd', { name: 'Milk' })));
+
+    expect(props.onQuickAddSearchSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'found-Milk', name: 'Milk' }),
     );
-    expect(screen.queryByText('No suggestions yet')).toBeNull();
-    expect(screen.queryByTestId(kitTestIDs.stateError)).toBeNull();
+    expect(
+      screen.queryByLabelText(t('a11y.quickAdd', { name: 'Milk' })),
+    ).not.toBeOnTheScreen();
   });
 
-  it('shows a failed read as a failure with a retry, not as no suggestions', async () => {
-    const user = userEvent.setup();
-    const refetch = jest.fn();
-    render(
-      <AddItemSheet
-        {...defaultProps}
-        suggestions={createSuggestions({ state: 'error', refetch })}
-      />,
+  it('hands what was typed to a manual add, and turns to the details', async () => {
+    await openSheet(
+      { renderDetails: () => <Text role="body">Details step</Text> },
+      [searching('Oat drink')],
     );
+    await search('oat milk');
 
-    expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
-    expect(screen.getByText("Couldn't load this")).toBeTruthy();
-    expect(screen.queryByText('No suggestions yet')).toBeNull();
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(catalogTestIDs.addManuallyButton(PREFIX)));
 
-    await user.press(screen.getByText('Try again'));
-    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(props.onAddManually).toHaveBeenCalledWith('oat milk');
+    expect(screen.getByText('Details step')).toBeTruthy();
   });
 
-  it('shows an offline miss as offline, not as no suggestions', () => {
-    render(
-      <AddItemSheet
-        {...defaultProps}
-        suggestions={createSuggestions({ state: 'offline' })}
-      />,
-    );
+  it('turns to a report in place', async () => {
+    await openSheet({}, [searching('Milk')]);
+    await search('milk');
 
-    expect(screen.getByTestId(kitTestIDs.stateOffline)).toBeTruthy();
-    expect(screen.getByText('Not available offline')).toBeTruthy();
-    expect(screen.queryByText('No suggestions yet')).toBeNull();
+    await userEvent
+      .setup()
+      .press(screen.getByLabelText(t('reportItem.footer')));
+
+    expect(
+      screen.queryByTestId(catalogTestIDs.addItemSheetSearchInput(PREFIX)),
+    ).not.toBeOnTheScreen();
   });
+});
 
-  it('renders suggestion sections when data is available', () => {
-    const items: BaseSuggestionItem[] = [
-      { id: 's1', itemId: 'item-1', name: 'Milk', category: 'Dairy' },
-      { id: 's2', itemId: 'item-2', name: 'Eggs', category: 'Dairy' },
-    ];
-
-    render(
-      <AddItemSheet
-        {...defaultProps}
-        suggestions={createSuggestions({
-          state: 'ready',
-          grouped: { lowStock: items, addAgain: [] },
-        })}
-      />,
-    );
-
-    expect(screen.getByText('Low Stock')).toBeTruthy();
-    expect(screen.getByText('Milk')).toBeTruthy();
-    expect(screen.getByText('Eggs')).toBeTruthy();
-  });
-
-  it('skips empty suggestion groups', () => {
-    render(
-      <AddItemSheet
-        {...defaultProps}
-        suggestions={createSuggestions({
-          state: 'ready',
-          grouped: { lowStock: [], addAgain: [] },
-        })}
-      />,
-    );
-
-    // Section titles should not render if groups are empty
-    expect(screen.queryByText('Low Stock')).toBeNull();
-    expect(screen.queryByText('Add Again')).toBeNull();
-  });
-
-  it('calls onAddManually with search value', async () => {
-    const user = userEvent.setup();
-    withSearchTerm('mil');
-    render(<AddItemSheet {...defaultProps} />);
-
-    await user.press(
-      screen.getByTestId(
-        `${pantrySheetConfig.testIDPrefix}-add-manually-button`,
-      ),
-    );
-
-    expect(defaultProps.onAddManually).toHaveBeenCalledWith('search value');
-  });
-
-  it('calls onQuickAddSuggestion when suggestion is pressed', async () => {
-    const user = userEvent.setup();
-    const item: BaseSuggestionItem = {
-      id: 's1',
-      itemId: 'item-1',
-      name: 'Milk',
-      category: 'Dairy',
-    };
-
-    render(
-      <AddItemSheet
-        {...defaultProps}
-        suggestions={createSuggestions({
-          state: 'ready',
-          grouped: { lowStock: [item], addAgain: [] },
-        })}
-      />,
-    );
-
-    await user.press(screen.getByTestId('suggestion-Milk'));
-    expect(defaultProps.onQuickAddSuggestion).toHaveBeenCalledWith(item);
-  });
-
-  it('morphs to the in-place details step when Add Manually is pressed', async () => {
-    const user = userEvent.setup();
-    withSearchTerm('mil');
-    render(
-      <AddItemSheet
-        {...defaultProps}
-        renderDetails={() =>
-          React.createElement('View', { testID: 'details-step' })
-        }
-      />,
-    );
-
-    // Search step initially — the details content is not rendered yet.
-    expect(screen.queryByTestId('details-step')).toBeNull();
-
-    // Pressing Add Manually preps the consumer and morphs this same sheet to
-    // the details step (no second modal).
-    await user.press(
-      screen.getByTestId(
-        `${pantrySheetConfig.testIDPrefix}-add-manually-button`,
-      ),
-    );
-
-    expect(defaultProps.onAddManually).toHaveBeenCalled();
-    expect(screen.getByTestId('details-step')).toBeTruthy();
-  });
-
-  it("opens on its details form for the + menu's Add manually", () => {
-    const onAddManually = jest.fn();
-    render(
-      <AddItemSheet
-        {...defaultProps}
-        onAddManually={onAddManually}
-        startStep="details"
-        renderDetails={() =>
-          React.createElement('View', { testID: 'details-step' })
-        }
-      />,
-    );
-
-    expect(screen.getByTestId('details-step')).toBeTruthy();
-    // The owner preps the form as "Add manually" does, with no name typed.
-    expect(onAddManually).toHaveBeenCalledWith('');
-  });
-
-  // Back from a form the sheet opened on would land on a search never shown.
-  it('closes, rather than going back to search, when it opened on the form', () => {
-    const onClose = jest.fn();
-    let goBack: () => void = () => {};
-    render(
-      <AddItemSheet
-        {...defaultProps}
-        onClose={onClose}
-        startStep="details"
-        renderDetails={step => {
-          goBack = step.goBack;
-          return React.createElement('View', { testID: 'details-step' });
-        }}
-      />,
-    );
-
-    act(() => goBack());
-
-    expect(onClose).toHaveBeenCalled();
-    expect(screen.getByTestId('details-step')).toBeTruthy();
-  });
-
-  it('sorts suggestion groups by priority', () => {
-    const config = createConfig({
-      suggestionGroups: [
-        {
-          key: 'add_again',
-          titleKey: 'addItemSheet.sections.addAgain',
-          accessor: grouped => grouped.addAgain ?? [],
-          priority: 2,
-        },
-        {
-          key: 'low_stock',
-          titleKey: 'addItemSheet.sections.lowStock',
-          accessor: grouped => grouped.lowStock ?? [],
-          priority: 1,
-        },
-      ],
+describe('opened on its details', () => {
+  it('readies the owner, and closes on back', async () => {
+    let goBack: () => void = () => undefined;
+    await openSheet({
+      startStep: 'details',
+      renderDetails: step => {
+        goBack = step.goBack;
+        return <Text role="body">Details step</Text>;
+      },
     });
 
-    const { toJSON } = render(
-      <AddItemSheet
-        {...defaultProps}
-        config={config}
-        suggestions={createSuggestions({
-          state: 'ready',
-          grouped: {
-            lowStock: [
-              { id: 's1', itemId: 'i1', name: 'Milk', category: 'Dairy' },
-            ],
-            addAgain: [
-              { id: 's2', itemId: 'i2', name: 'Eggs', category: 'Dairy' },
-            ],
-          },
-        })}
-      />,
-    );
-    expect(toJSON()).toBeTruthy();
-    // Both sections should be present
-    expect(screen.getByText('Low Stock')).toBeTruthy();
-    expect(screen.getByText('Add Again')).toBeTruthy();
-  });
-
-  it('shows search results when autocomplete has data', () => {
-    const {
-      useItemAutocomplete,
-    } = require('#features/catalog/hooks/useItemAutocomplete');
-    useItemAutocomplete.mockReturnValue({
-      searchTerm: 'mi',
-      displayItems: [{ id: '1', name: 'Milk', brands: [] }],
-      isLoading: false,
-      handleSearchTermChange: mockHandleSearchTermChange,
-      reset: mockResetAutocomplete,
+    expect(props.onAddManually).toHaveBeenCalledWith('');
+    act(() => {
+      goBack();
     });
 
-    render(<AddItemSheet {...defaultProps} />);
-    // When search results show, action buttons should be hidden
-    // The ItemSuggestionsList is rendered
-    expect(screen.getByTestId('item-suggestions-list')).toBeTruthy();
-  });
-
-  it('morphs to the report step in place instead of stacking a second sheet', async () => {
-    const {
-      useItemAutocomplete,
-    } = require('#features/catalog/hooks/useItemAutocomplete');
-    useItemAutocomplete.mockReturnValue({
-      searchTerm: 'mi',
-      displayItems: [{ id: '1', name: 'Milk', brands: [] }],
-      isLoading: false,
-      handleSearchTermChange: mockHandleSearchTermChange,
-      reset: mockResetAutocomplete,
-    });
-
-    render(<AddItemSheet {...defaultProps} />);
-    await userEvent.press(screen.getByTestId('report-item-footer'));
-
-    // The report form replaced the search step inside the SAME sheet — a
-    // stacked BottomSheetModal here would minimize this one (gorhom's default
-    // stackBehavior: 'switch') and strand the global backdrop.
-    expect(screen.getByTestId('report-item-submit-button')).toBeTruthy();
-    expect(screen.queryByTestId('item-suggestions-list')).toBeNull();
-
-    await userEvent.press(screen.getByTestId('report-item-cancel-button'));
-    expect(screen.getByTestId('item-suggestions-list')).toBeTruthy();
-  });
-
-  it('does not render suggestions when not visible', () => {
-    render(<AddItemSheet {...defaultProps} visible={false} />);
-    // Still renders the modal structure, but sheet behavior is controlled by ref
-    expect(screen.getByText('Add to Pantry')).toBeTruthy();
+    expect(props.onClose).toHaveBeenCalledTimes(1);
   });
 });

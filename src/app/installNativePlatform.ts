@@ -4,7 +4,7 @@ import {
   Platform,
   type AppStateStatus,
 } from 'react-native';
-import { getVersion, isEmulatorSync } from 'react-native-device-info';
+import { getVersion, isEmulatorSync, isTablet } from 'react-native-device-info';
 import NetInfo from '@react-native-community/netinfo';
 import { installPlatform } from '#platform/install';
 import type { AppLifecycleState } from '#platform/ports';
@@ -44,6 +44,9 @@ installPlatform({
     },
     get isEmulator() {
       return isEmulatorSync();
+    },
+    get isTablet() {
+      return isTablet();
     },
   },
   appLifecycle: {

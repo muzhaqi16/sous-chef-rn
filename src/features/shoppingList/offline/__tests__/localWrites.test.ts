@@ -8,14 +8,15 @@ import {
   seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { drainTimers } from '#/test-utils/drainTimers';
+import { cacheShows } from '#/test-utils/cacheWaits';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import {
   AddItemToShoppingListDocument,
   CreateShoppingListDocument,
   DeleteShoppingListDocument,
   GetShoppingListItemsFilteredDocument,
   MoveShoppingItemToPantryDocument,
-  MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
   RemoveItemsFromShoppingListDocument,
   UpdateShoppingListItemDocument,
@@ -27,13 +28,11 @@ import {
   moveToPantry,
   removeList,
   removeRows,
-  reorderRow,
   updateRow,
   type AddRowsInputs,
   type CreateListInputs,
   type MoveToPantryInputs,
   type RemoveRowsInputs,
-  type ReorderRowInputs,
   type UpdateRowInputs,
 } from '../localWrites';
 
@@ -96,7 +95,6 @@ function setup() {
       UpdateShoppingListItem: updateRow,
       RemoveItemFromShoppingList: removeRows,
       RemoveItemsFromShoppingList: removeRows,
-      MoveShoppingListItem: reorderRow,
     }),
   };
 }
@@ -291,6 +289,33 @@ describe('an answered add', () => {
   });
 });
 
+describe('an edit', () => {
+  const QUANTITY = gql`
+    fragment LocalWritesQuantity on ShoppingListItem {
+      quantity
+    }
+  `;
+
+  it('shows its fields on the row at once', () => {
+    const list = setup();
+    const inputs: UpdateRowInputs = { fields: { quantity: 3 } };
+
+    list.writes.begin(
+      UpdateShoppingListItemDocument,
+      { input: { id: 'held', version: 5, quantity: '3' } },
+      inputs,
+    );
+
+    expect(
+      list.cache.readFragment<{ quantity: number }>({
+        id: 'ShoppingListItem:held',
+        fragment: QUANTITY,
+        optimistic: true,
+      })?.quantity,
+    ).toBe(3);
+  });
+});
+
 describe('with a list of both kinds of row', () => {
   const COUNTS = gql`
     fragment LocalWritesCounts on ShoppingList {
@@ -350,6 +375,46 @@ describe('with a list of both kinds of row', () => {
       })
       ?.shoppingList?.itemsConnection.edges.map(({ node }) => node.id);
 
+  /** Resolves once the server's data for a page satisfies `ok`. */
+  const serverShows = (
+    { cache }: Setup,
+    variables: typeof listVariables,
+    ok: (ids: string[]) => boolean,
+  ) => {
+    const read = () =>
+      cache
+        .readQuery({
+          query: GetShoppingListItemsFilteredDocument,
+          variables,
+          optimistic: false,
+        })
+        ?.shoppingList?.itemsConnection.edges.map(({ node }) => node.id) ?? [];
+    return cacheShows(
+      cache,
+      {
+        query: GetShoppingListItemsFilteredDocument,
+        variables,
+        optimistic: false,
+      },
+      read,
+      ok,
+    );
+  };
+
+  const TICKED = gql`
+    fragment LocalWritesTicked on ShoppingListItem {
+      purchaseInfo {
+        isPurchased
+      }
+    }
+  `;
+  const isTicked = ({ cache }: Setup, id: string) =>
+    cache.readFragment<{ purchaseInfo: { isPurchased: boolean } }>({
+      id: cache.identify({ __typename: 'ShoppingListItem', id }),
+      fragment: TICKED,
+      optimistic: true,
+    })?.purchaseInfo.isPurchased;
+
   const allCounts = ({ cache }: Setup) =>
     cache.readFragment({
       id: 'ShoppingList:list-1',
@@ -384,7 +449,17 @@ describe('with a list of both kinds of row', () => {
         completedItems: 2,
         remainingItems: 0,
       });
+      expect(isTicked(list, 'held')).toBe(true);
       expect(boughtIds(list, false)).toEqual(['bought']);
+    });
+
+    // A page already places the row, which is all its answer would do.
+    it('is settled by a read that brings its row', () => {
+      expect(
+        bothKinds().writes.settlesFromFeed(
+          operationNameOf(UpdateShoppingListItemDocument),
+        ),
+      ).toBe(true);
     });
 
     it('moves nothing when the row is already in that state', () => {
@@ -482,6 +557,24 @@ describe('with a list of both kinds of row', () => {
           },
         },
       };
+      const unticked = {
+        updateShoppingListItem: {
+          __typename: 'UpdateShoppingListItemPayload',
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            totalItems: 2,
+            completedItems: 0,
+            remainingItems: 2,
+          },
+          shoppingListItem: {
+            __typename: 'ShoppingListItem',
+            id: 'bought',
+            version: 3,
+            purchaseInfo: { isPurchased: false },
+          },
+        },
+      };
       const answered = { totalItems: 2, completedItems: 2, remainingItems: 0 };
 
       it('stays moved, and takes its counts from the answer', () => {
@@ -516,7 +609,6 @@ describe('with a list of both kinds of row', () => {
       });
 
       it('reaches the server’s data once the read lands', async () => {
-        jest.useFakeTimers();
         const list = bothKinds();
         const land = answeredWithReadInFlight(
           list,
@@ -526,9 +618,10 @@ describe('with a list of both kinds of row', () => {
         expect(boughtIds(list, false)).toEqual(['bought']);
 
         land();
-        await drainTimers();
-        jest.useRealTimers();
 
+        await expect(
+          serverShows(list, purchasedVariables, ids => ids.includes('held')),
+        ).resolves.toBeUndefined();
         expect(shownIds(list, false)).toEqual([]);
         expect(boughtIds(list, false)).toEqual(['held', 'bought']);
       });
@@ -545,20 +638,29 @@ describe('with a list of both kinds of row', () => {
       });
 
       it('commits nothing after the session ends', async () => {
-        jest.useFakeTimers();
         const list = bothKinds();
         const land = answeredWithReadInFlight(
           list,
           tick(list, 'held', true),
           ticked,
         );
-
         list.writes.clear();
-        land();
-        await drainTimers();
-        jest.useRealTimers();
+        // The next session's write, held by the same read, commits after the
+        // cleared one would have: its landing marks that moment.
+        const landNext = answeredWithReadInFlight(
+          list,
+          tick(list, 'bought', false),
+          unticked,
+        );
 
-        expect(boughtIds(list, false)).toEqual(['bought']);
+        land();
+        landNext();
+
+        await expect(
+          serverShows(list, listVariables, ids => ids.includes('bought')),
+        ).resolves.toBeUndefined();
+        // The cleared tick never moved `held` into the server's bought lines.
+        expect(boughtIds(list, false)).toEqual([]);
       });
     });
 
@@ -671,6 +773,11 @@ describe('with a list of both kinds of row', () => {
       expect(list.cache.extract(true)).not.toHaveProperty([
         'ShoppingListItem:held',
       ]);
+      // An answer that found the row gone states no totals, so it counts out here.
+      expect(allCounts(list)).toMatchObject({
+        totalItems: 1,
+        remainingItems: 0,
+      });
     });
 
     it('counts a row out once while a read holds the answer', () => {
@@ -715,102 +822,6 @@ describe('with a list of both kinds of row', () => {
         completedItems: 0,
         remainingItems: 0,
       });
-    });
-  });
-
-  describe('reordering a row', () => {
-    const SORT = gql`
-      fragment LocalWritesSort on ShoppingListItem {
-        sortOrder
-      }
-    `;
-
-    const sorted = (list: Setup, id: string, sortOrder: string) =>
-      seedFragment(list.cache, {
-        fragment: SORT,
-        data: { __typename: 'ShoppingListItem', id, sortOrder },
-      });
-
-    const move = ({ writes }: Setup, id: string, sortOrder: string) => {
-      const inputs: ReorderRowInputs = {
-        listId: 'list-1',
-        sortOrder,
-        now: NOW,
-      };
-      return writes.begin(
-        MoveShoppingListItemDocument,
-        { input: { id } },
-        inputs,
-      );
-    };
-
-    function ordered() {
-      const list = setup();
-      seedQuery(list.cache, {
-        query: GetShoppingListItemsFilteredDocument,
-        variables: listVariables,
-        data: {
-          shoppingList: {
-            __typename: 'ShoppingList',
-            id: 'list-1',
-            version: 1,
-            itemsConnection: {
-              totalCount: 2,
-              edges: [
-                {
-                  cursor: 'c-held',
-                  node: {
-                    __typename: 'ShoppingListItem',
-                    id: 'held',
-                    version: 1,
-                    sortOrder: 'a',
-                  },
-                },
-                {
-                  cursor: 'c-later',
-                  node: {
-                    __typename: 'ShoppingListItem',
-                    id: 'later',
-                    version: 1,
-                    sortOrder: 'c',
-                  },
-                },
-              ],
-            },
-          },
-        },
-      });
-      return list;
-    }
-
-    it('puts the row in its place, however often it is rebuilt', () => {
-      const list = ordered();
-
-      move(list, 'later', '0');
-      list.writes.rebuild();
-
-      expect(shownIds(list)).toEqual(['later', 'held']);
-      expect(shownIds(list, false)).toEqual(['held', 'later']);
-    });
-
-    it('goes back when refused', () => {
-      const list = ordered();
-
-      list.writes.drop(move(list, 'later', '0').id);
-
-      expect(shownIds(list)).toEqual(['held', 'later']);
-    });
-
-    it('takes the order the server answered', () => {
-      const list = ordered();
-      const { id } = move(list, 'later', 'b');
-      // Apollo writes the answer's row before the write commits.
-      sorted(list, 'later', '0');
-
-      list.writes.confirm(id, {});
-      list.writes.rebuild();
-
-      expect(shownIds(list, false)).toEqual(['later', 'held']);
     });
   });
 });
@@ -926,6 +937,8 @@ describe('moving a line to the pantry', () => {
 
     expect(stacks(moved)).toEqual({ ids: ['minted', 'stack'], total: 2 });
     expect(shownIds(moved)).toEqual([]);
+    // Off the list, not kept on it bought.
+    expect(counts(moved)).toMatchObject({ totalItems: 0 });
     expect(stacks(moved, false)).toEqual({ ids: ['stack'], total: 1 });
     expect(shownIds(moved, false)).toEqual(['held']);
   });
@@ -949,6 +962,21 @@ describe('moving a line to the pantry', () => {
       isPurchased: true,
       movedToPantryAt: NOW,
     });
+  });
+
+  it('keeps a line kept on the list bought once answered', () => {
+    const moved = withPantry();
+    const { id } = move(moved, false);
+
+    moved.writes.confirm(id, {
+      moveShoppingItemToPantry: {
+        __typename: 'MoveShoppingItemToPantryPayload',
+        pantryItem: { __typename: 'PantryItem', id: 'minted' },
+      },
+    });
+    moved.writes.rebuild();
+
+    expect(shownIds(moved, false)).toEqual([]);
   });
 
   it('leaves the held stack alone when the server restocked it', () => {
@@ -1033,11 +1061,11 @@ describe('a list', () => {
 
   type Overview = ReturnType<typeof overview>;
 
-  const listIds = ({ cache }: Overview, optimistic = true) =>
+  const listIds = ({ cache }: Overview, optimistic = true, homeId = 'home-a') =>
     cache
       .readQuery<{ shoppingLists: { edges: { node: { id: string } }[] } }>({
         query: OVERVIEW,
-        variables: { homeId: 'home-a' },
+        variables: { homeId },
         optimistic,
       })
       ?.shoppingLists.edges.map(({ node }) => node.id);
@@ -1069,6 +1097,81 @@ describe('a list', () => {
     ]);
   });
 
+  it('waits for its answer when no one is signed in to own it', () => {
+    const list = overview();
+    const inputs: CreateListInputs = {
+      list: { id: 'minted-list', name: 'Dinner', homeId: 'home-a' },
+      owner: null,
+      rows: [],
+      now: NOW,
+    };
+
+    list.writes.begin(
+      CreateShoppingListDocument,
+      { input: { id: 'minted-list', name: 'Dinner' } },
+      inputs,
+    );
+
+    expect(listIds(list)).toEqual(['held-list']);
+  });
+
+  it('keeps the lines its answer kept', () => {
+    const list = overview();
+    const { id } = create(list);
+    const linesVariables = {
+      id: 'minted-list',
+      first: PAGINATION.ITEMS_PAGE_SIZE,
+      isPurchased: false,
+    };
+    seedQuery(list.cache, {
+      query: GetShoppingListItemsFilteredDocument,
+      variables: linesVariables,
+      data: {
+        shoppingList: {
+          __typename: 'ShoppingList',
+          id: 'minted-list',
+          version: 1,
+          itemsConnection: { totalCount: 0, edges: [] },
+        },
+      },
+    });
+    // The row is held; only the answer puts it on the list's page.
+    seedFragment(list.cache, {
+      fragment: Items_RowFragmentDoc,
+      fragmentName: 'items_row',
+      data: {
+        __typename: 'ShoppingListItem',
+        id: 'line-1',
+        version: 1,
+        purchaseInfo: { isPurchased: false },
+      },
+    });
+
+    list.writes.confirm(id, {
+      createShoppingList: {
+        __typename: 'CreateShoppingListPayload',
+        shoppingList: { id: 'minted-list', homeId: 'home-a' },
+        itemResults: [
+          {
+            success: true,
+            item: { __typename: 'ShoppingListItem', id: 'line-1' },
+          },
+        ],
+      },
+    });
+    list.writes.rebuild();
+
+    expect(
+      list.cache
+        .readQuery({
+          query: GetShoppingListItemsFilteredDocument,
+          variables: linesVariables,
+          optimistic: false,
+        })
+        ?.shoppingList?.itemsConnection.edges.map(({ node }) => node.id),
+    ).toEqual(['line-1']);
+  });
+
   it('leaves nothing of a refused list', () => {
     const list = overview();
 
@@ -1082,6 +1185,17 @@ describe('a list', () => {
 
   it('files an answered list under the home the server chose', () => {
     const list = overview();
+    seedQuery(list.cache, {
+      query: OVERVIEW,
+      variables: { homeId: 'home-b' },
+      data: {
+        shoppingLists: {
+          __typename: 'ShoppingListConnection',
+          totalCount: 0,
+          edges: [],
+        },
+      },
+    });
     const { id } = create(list, null);
 
     list.writes.confirm(id, {
@@ -1093,6 +1207,7 @@ describe('a list', () => {
     list.writes.rebuild();
 
     expect(listIds(list)).toEqual(['held-list']);
+    expect(listIds(list, false, 'home-b')).toEqual(['minted-list']);
   });
 
   it('stays listed while a read holds the answer', () => {

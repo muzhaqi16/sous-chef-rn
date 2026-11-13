@@ -7,6 +7,7 @@ import {
   renderHookWithApollo,
   type QueryDataFor,
   seedQuery,
+  inputOf,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateMealTemplateDocument,
@@ -245,13 +246,14 @@ describe('useMealTemplateActions', () => {
       });
 
       expect(response?.mealPlanId).toBeTruthy();
-      const sent = item.fired as Array<{
-        input: { date: string; mealPlanId: string };
-      }>;
-      expect(sent.map(f => f.input.date)).toEqual(['2026-02-02', '2026-02-04']);
-      expect(sent.every(f => f.input.mealPlanId === response?.mealPlanId)).toBe(
-        true,
-      );
+      const sent = item.fired.map(inputOf);
+      expect(sent.map(input => input.date)).toEqual([
+        '2026-02-02',
+        '2026-02-04',
+      ]);
+      expect(
+        sent.every(input => input.mealPlanId === response?.mealPlanId),
+      ).toBe(true);
     });
 
     it('creates the plan over the template days, naming the template it came from', async () => {
@@ -305,9 +307,7 @@ describe('useMealTemplateActions', () => {
         startDate: '2026-02-02',
       });
 
-      const sentIds = (
-        queuedItem.fired as Array<{ input: { id: string } }>
-      ).map(fired => fired.input.id);
+      const sentIds = queuedItem.fired.map(fired => inputOf(fired).id);
       expect(sentIds).toHaveLength(2);
       // The detail screen reads the new plan complete, an edge per meal.
       expect(mealsOnScreen(cache, response?.mealPlanId ?? null)).toEqual(

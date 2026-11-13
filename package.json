@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "4.10.0",
+  "version": "4.10.2",
   "private": true,
   "scripts": {
     "android": "bash scripts/run-android.sh",
@@ -46,7 +46,7 @@
     "e2e:prune": "node scripts/prune-e2e-artifacts.mjs",
     "build:prune": "node scripts/prune-build-output.mjs",
     "codegen:watch": "graphql-codegen --watch --config codegen.ts",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.core.json && tsc --noEmit -p __tests__/tsconfig.json && tsc --noEmit -p e2e/tsconfig.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.core.json && tsc --noEmit -p e2e/tsconfig.json",
     "i18n:check": "node scripts/check-i18n.mjs",
     "watchman": "watchman watch-del-all && watchman shutdown-server",
     "test": "NODE_OPTIONS=--max-old-space-size=3072 jest",
@@ -69,7 +69,6 @@
     "tag:dev": "node scripts/create-tag.mjs dev",
     "tag:stg": "node scripts/create-tag.mjs stg",
     "tag:prod": "node scripts/create-tag.mjs prod",
-    "tag:playstore": "node scripts/create-tag.mjs playstore",
     "tag:android:prod": "node scripts/create-tag.mjs prod --android-only",
     "tag:ios": "node scripts/create-tag.mjs prod --ios-only",
     "bundle:ios": "npx react-native bundle --entry-file index.js --bundle-output output.js --platform ios --sourcemap-output output.js.map --dev false --minify true",
@@ -112,7 +111,6 @@
     "chroma-js": "^3.2.0",
     "date-fns": "^4.1.0",
     "fraction.js": "^5.3.4",
-    "fractional-indexing": "^3.2.0",
     "fuse.js": "^7.3.0",
     "graphql": "^16.12.0",
     "graphql-ws": "^6.0.6",

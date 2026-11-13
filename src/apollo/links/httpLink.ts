@@ -5,6 +5,7 @@ import { env } from '#/config/env';
 import { Environment } from '#/utils/environment';
 import { TimeoutError } from '#/utils/errors/timeoutError';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { clientSourceHeaders } from '#/apollo/clientIdentity';
 
 /**
  * A fetch with timeout support. Apollo's HttpLink passes its own `signal`,
@@ -65,7 +66,10 @@ export function createHttpLink(): ApolloLink {
   const apiConfig = Environment.getApiConfig();
   const baseOptions = {
     uri: env.API_URL ?? apiConfig.baseUrl,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...clientSourceHeaders(),
+    },
     fetch: createTimeoutFetch(apiConfig.timeout),
   };
 

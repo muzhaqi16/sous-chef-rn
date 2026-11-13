@@ -110,8 +110,6 @@
     "resultSingular": "{{count}} result",
     "resultPlural": "{{count}} results",
     "clearSearch": "Clear search results",
-    "searchingTitle": "Searching...",
-    "searchingDescription": "Finding recipes for you",
     "noRecipesFoundTitle": "No recipes found",
     "noRecipesFoundDescription": "Try a different search term or different ingredients",
     "discoverTitle": "Discover Recipes",

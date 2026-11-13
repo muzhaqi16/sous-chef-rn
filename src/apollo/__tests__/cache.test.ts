@@ -1,9 +1,3 @@
-'use no memo';
-
-jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
-  possibleTypes: {},
-}));
-
 import { InMemoryCache } from '@apollo/client';
 import { parse, type DocumentNode } from 'graphql';
 import { makeCache } from '../cache';

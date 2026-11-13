@@ -57,11 +57,6 @@ interface ShoppingListTabsProps {
   onTogglePurchase?: (id: string, opts?: { withDetails?: boolean }) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
-  onSortOrderUpdate?: (
-    itemId: string,
-    afterItemId: string | null,
-    beforeItemId: string | null,
-  ) => void;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   loading?: boolean;
@@ -120,7 +115,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   onTogglePurchase,
   onMoveToPantry,
   onQuantityPress,
-  onSortOrderUpdate,
   onRefresh,
   refreshing,
   loading,
@@ -202,7 +196,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     onTogglePurchase,
     onMoveToPantry,
     onQuantityPress,
-    onSortOrderUpdate,
     onSwipeableWillOpen,
     onSwipeableClose,
   };
@@ -325,7 +318,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     onEndReached: onEndReachedUnpurchased,
     hasMore: hasMoreUnpurchased,
     isLoadingMore: isLoadingMoreUnpurchased,
-    reorderable: true,
     isTransitioning,
     // Only the visible tab drives the tab bar. `lazy` keeps both scenes mounted
     // once visited, so a hidden list's layout or restore scroll would otherwise
@@ -348,8 +340,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     onEndReached: onEndReachedPurchased,
     hasMore: hasMorePurchased,
     isLoadingMore: isLoadingMorePurchased,
-    // The purchased tab is not reorderable, whatever the user may do.
-    reorderable: false,
     isTransitioning,
     onScroll: shoppingTabActive ? undefined : onScroll,
     onScrollBeginDrag: shoppingTabActive ? undefined : onScrollBeginDrag,

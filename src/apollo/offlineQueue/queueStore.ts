@@ -9,11 +9,8 @@ import {
   holdsBack,
   queuedSubject,
 } from './queuedSubject';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { MUTATION_DOCUMENTS } from '#/graphql/generated/mutationDocuments.generated';
-import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { isOwnKey } from '#/utils/isOwnKey';
-import { isRecord } from '#/utils/isRecord';
 import type { PendingWrite } from '#/apollo/pendingWrites/types';
 import { replayWindowMs } from './replayWindow';
 
@@ -24,14 +21,6 @@ const CURRENT_USER_KEY = 'apollo-queue-current-user';
 // (SUCCESS/FAILED) entries are evicted first; a queue full of un-synced work
 // rejects the enqueue rather than dropping a PENDING op mid dependency chain.
 const MAX_QUEUE_SIZE = 500;
-
-const MOVE_SHOPPING_LIST_ITEM = operationNameOf(MoveShoppingListItemDocument);
-
-/** The item a queued move targets; entries are persisted JSON, read structurally. */
-const movedItemIdOf = (mutation: QueuedMutation): string | undefined => {
-  const input: unknown = mutation.variables.input;
-  return isRecord(input) && typeof input.id === 'string' ? input.id : undefined;
-};
 
 /**
  * Not replayed as things stand. AUTH_ERROR is terminal for bookkeeping only
@@ -216,43 +205,8 @@ export class QueueStore {
     this.notifyListeners();
   }
 
-  /**
-   * Repeated MoveShoppingListItem ops for one item coalesce into the last. Its
-   * age goes in `agedFrom`, not the drain-ordering `createdAt`, so it never
-   * sorts ahead of a row created between the two moves that it names.
-   */
   addMutation(mutation: QueuedMutation): void {
     const queue = this.loadQueue();
-
-    if (mutation.operationName === MOVE_SHOPPING_LIST_ITEM) {
-      const itemId = movedItemIdOf(mutation);
-
-      if (itemId) {
-        const existingIndex = queue.findIndex(
-          m =>
-            m.operationName === MOVE_SHOPPING_LIST_ITEM &&
-            movedItemIdOf(m) === itemId &&
-            m.userId === mutation.userId &&
-            m.status === QueueStatus.PENDING, // Only coalesce pending mutations
-        );
-
-        const [superseded] =
-          existingIndex === -1 ? [] : queue.splice(existingIndex, 1);
-        if (superseded) {
-          logger.debug(
-            `🔄 Queue: Coalescing move mutations for item ${itemId} - keeping final position`,
-          );
-          // Appended, not written into the old slot: the drain replays in queue
-          // order, and the final position can name a row created since.
-          queue.push({
-            ...mutation,
-            agedFrom: superseded.agedFrom ?? superseded.createdAt,
-          });
-          this.saveQueue(queue);
-          return;
-        }
-      }
-    }
 
     if (
       deletesItsSubject(mutation) &&

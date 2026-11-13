@@ -1,744 +1,513 @@
 import { act } from '@testing-library/react-native';
-import type { InMemoryCache } from '@apollo/client';
+import { gql, type InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
 import {
   inputOf,
   recordMock,
   renderHookWithApollo,
-  seedCache,
+  seedFragment,
   type MockDataFor,
   type RecordedMock,
-  seedFragment,
-  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import {
+  displayedLine,
+  listLine,
+  listLineIds,
+  seedListLines,
+} from '#/test-utils/fixtures/shoppingListFixtures';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import {
   ErrorCode,
+  PriceSource,
   StorageState,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
-import { removeItemFromShoppingListForMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { useStore } from '#store';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { onTutorialEvent } from '#domain/tutorialEvents';
 import { alertService } from '#/services/alertService';
+import { Telemetry } from '#services/telemetry';
 import { t } from '#/i18n';
-import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
+import { cacheShows } from '#/test-utils/cacheWaits';
 import { useMoveToPantry, type MoveToPantryInput } from '../useMoveToPantry';
-import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
-jest.mock('#features/shoppingList/cache/moveToPantry', () => ({
-  ...jest.requireActual('#features/shoppingList/cache/moveToPantry'),
-  removeItemFromShoppingListForMoveToPantry: jest.fn(),
-}));
+type Answer = MockDataFor<
+  typeof MoveShoppingItemToPantryDocument
+>['moveShoppingItemToPantry'];
 
-const { gql } = require('@apollo/client');
-
-beforeEach(() => {
-  jest.clearAllMocks();
+/** A bought line, as the list hands it to the move sheet. */
+const BOUGHT = displayedLine({
+  purchaseInfo: {
+    __typename: 'ShoppingListItemPurchaseInfo',
+    isPurchased: true,
+    movedToPantryAt: null,
+  },
 });
 
-function createItem(
-  overrides: Partial<ShoppingListItemDisplayFragment> = {},
-): ShoppingListItemDisplayFragment {
-  return {
-    __typename: 'ShoppingListItem',
-    id: 'item-1',
-    itemName: 'Milk',
-    quantity: 2,
-    // Complete, because production is: the list query caches the whole
-    // purchase record, and `writePurchaseInfo` carries forward exactly what
-    // the cache holds. Seeding only `isPurchased` makes the carry-forward
-    // write a partial record no server response could produce.
-    purchaseInfo: {
-      __typename: 'ShoppingListItemPurchaseInfo',
-      isPurchased: true,
-      movedToPantryAt: null,
-      purchaseDate: null,
-      purchasedById: null,
-      purchasedPrice: null,
-      purchasedQuantity: null,
-      purchasedBy: null,
-    },
-    version: 1,
-    ...overrides,
-  } as Partial<ShoppingListItemDisplayFragment> as ShoppingListItemDisplayFragment;
-}
-
-const MOVE_INPUT: MoveToPantryInput = {
+const MOVE: MoveToPantryInput = {
   pantryId: 'pantry-1',
   amount: { measured: { quantity: 2 } },
   removeFromList: true,
 };
 
-const moveMock = () =>
-  recordMock(MoveShoppingItemToPantryDocument, {
-    data: {
-      moveShoppingItemToPantry: {
-        __typename: 'MoveShoppingItemToPantryPayload',
-        pantryItem: { id: 'pantry-item-1' },
+/** The server's answer, echoing the pantry row the move minted. */
+const echoed =
+  ({ expiresOn }: { expiresOn?: string } = {}) =>
+  (
+    variables: Record<string, unknown>,
+  ): MockDataFor<typeof MoveShoppingItemToPantryDocument> => ({
+    moveShoppingItemToPantry: {
+      __typename: 'MoveShoppingItemToPantryPayload',
+      pantryItem: {
+        __typename: 'PantryItem',
+        id: String(inputOf(variables).pantryItemId),
+        ...(expiresOn && { expiresOn }),
       },
     },
   });
 
-// The answer states the line it kept on the list.
-const keptMoveMock = () =>
-  recordMock(MoveShoppingItemToPantryDocument, {
+const REFUSED: Answer = {
+  __typename: 'ConflictError',
+  code: ErrorCode.Conflict,
+  message: 'Pantry item was modified',
+};
+
+/** What a pantry holds: 63 stacks counted, none of them on the page. */
+const PANTRY = gql`
+  fragment MovePantryProbe on Pantry {
+    id
+    stats {
+      totalItems
+    }
+    itemsConnection {
+      edges {
+        node {
+          id
+        }
+      }
+    }
+  }
+`;
+
+function pantryWith63(cache: InMemoryCache) {
+  seedFragment(cache, {
+    fragment: PANTRY,
     data: {
-      moveShoppingItemToPantry: {
-        __typename: 'MoveShoppingItemToPantryPayload',
-        pantryItem: { id: 'pantry-item-1' },
-        shoppingList: { id: 'list-1', completedItems: 1 },
-        shoppingListItem: {
-          id: 'item-1',
-          purchaseInfo: {
-            isPurchased: true,
-            movedToPantryAt: '2026-10-30T10:00:00.000Z',
-          },
-        },
-      },
+      __typename: 'Pantry',
+      id: 'pantry-1',
+      stats: { __typename: 'PantryStats', totalItems: 63 },
+      itemsConnection: { __typename: 'PantryItemConnection', edges: [] },
     },
   });
+}
 
-// Queued: no response lands, so what the screens read is the local write.
-const queuedMoveMock = () =>
-  recordMock(MoveShoppingItemToPantryDocument, {
-    data: { moveShoppingItemToPantry: null },
+const pantryTotal = (cache: InMemoryCache) =>
+  cache.readFragment<{ stats: { totalItems: number } }>({
+    id: 'Pantry:pantry-1',
+    fragment: PANTRY,
+    optimistic: true,
+  })?.stats.totalItems;
+
+const rowOf = <T>(
+  cache: InMemoryCache,
+  id: string,
+  fragment: ReturnType<typeof gql>,
+) =>
+  cache.readFragment<T>({
+    id: cache.identify({ __typename: 'PantryItem', id }),
+    fragment,
+    optimistic: true,
   });
 
-const conflictMock = () =>
-  recordMock(MoveShoppingItemToPantryDocument, {
-    data: {
-      moveShoppingItemToPantry: {
-        __typename: 'ConflictError',
-        message: 'Pantry item was modified',
-        code: ErrorCode.Conflict,
-      },
-    },
-  });
+const isCached = (cache: InMemoryCache, typename: string, id: string) =>
+  `${typename}:${id}` in cache.extract(true);
 
-const refusedMock = () =>
-  recordMock(MoveShoppingItemToPantryDocument, {
-    data: { moveShoppingItemToPantry: { __typename: 'ValidationError' } },
-  });
+/** A stack as the pantry shows it, its expiry included. */
+const STACK = gql`
+  fragment MoveStackProbe on PantryItem {
+    id
+    expiresOn
+  }
+`;
 
-interface MoveWith {
-  cache?: InMemoryCache;
-  item?: ShoppingListItemDisplayFragment;
+/**
+ * Resolves once the stack reads as `ok` says. An answer reaches what the
+ * pantry shows when the move's layer is next rebuilt.
+ */
+const stackShows = (
+  cache: InMemoryCache,
+  id: string,
+  ok: (stack: { expiresOn: string | null } | null) => boolean,
+) =>
+  cacheShows(
+    cache,
+    { fragment: STACK, from: `PantryItem:${id}` },
+    () => rowOf<{ expiresOn: string | null }>(cache, id, STACK),
+    ok,
+  );
+
+interface Move {
+  /** The answer, or a function of what was sent; `null` is a queued move. */
+  answer?:
+    | Answer
+    | ((
+        variables: Record<string, unknown>,
+      ) => MockDataFor<typeof MoveShoppingItemToPantryDocument>);
+  error?: Error;
+  held?: boolean;
+  line?: ShoppingListItemDisplayFragment;
   input?: Partial<MoveToPantryInput>;
+  cache?: InMemoryCache;
 }
 
-/** Renders the hook over `move` and moves `item` once. */
-async function moveWith(
-  move: RecordedMock,
-  { cache, item = createItem(), input }: MoveWith = {},
-) {
+function renderMove({
+  answer = echoed(),
+  error,
+  held = false,
+  cache = makeCache(),
+}: Move = {}) {
+  const sent: RecordedMock = error
+    ? recordMock(MoveShoppingItemToPantryDocument, { error, held })
+    : typeof answer === 'function'
+    ? recordMock(MoveShoppingItemToPantryDocument, { dataFor: answer, held })
+    : recordMock(MoveShoppingItemToPantryDocument, {
+        data: { moveShoppingItemToPantry: answer },
+        held,
+      });
+  const onSuccess = jest.fn();
   const { result } = renderHookWithApollo(
-    () => useMoveToPantry({ currentListId: 'list-1' }),
-    { operationMocks: [move.mock], cache },
+    () => useMoveToPantry({ currentListId: 'list-1', onSuccess }),
+    { cache, operationMocks: [sent.mock] },
   );
-  const moved = await act(() =>
-    result.current.moveToPantry(item, { ...MOVE_INPUT, ...input }),
-  );
-  // What a server write schedules, so a read here sees the answer.
-  if (cache) pendingWritesOf(cache).rebuild();
-  return moved;
+  return { mover: result, sent, onSuccess, cache };
 }
 
-function mintedIdOf({ fired }: RecordedMock): string {
+/** Moves a line once and lets the answer settle. */
+async function moveLine(move: Move = {}) {
+  const rendered = renderMove(move);
+  let moved: boolean | undefined;
+  await act(async () => {
+    moved = await rendered.mover.current.moveToPantry(move.line ?? BOUGHT, {
+      ...MOVE,
+      ...move.input,
+    });
+  });
+  return { ...rendered, moved };
+}
+
+function mintedId({ fired }: RecordedMock): string {
   const [first] = fired;
-  if (!first) throw new Error('The move never fired');
+  if (!first) throw new Error('nothing was moved');
   return String(inputOf(first).pantryItemId);
 }
 
-describe('useMoveToPantry', () => {
-  it('calls mutation with correct variables', async () => {
-    const move = moveMock();
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
-    const outcome = await moveWith(move);
+describe('moving a line to the pantry', () => {
+  it('sends the line, the pantry, what was bought and the day, under a pantry id of its own', async () => {
+    const { sent, moved } = await moveLine();
 
-    expect(move.fired).toContainEqual({
-      // objectContaining: the input also carries a minted `pantryItemId` and an
-      // `idempotencyKey`, both generated, both asserted separately below.
+    expect(moved).toBe(true);
+    const [variables] = sent.fired;
+    expect(variables).toEqual({
+      today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       input: expect.objectContaining({
-        shoppingListItemId: 'item-1',
+        shoppingListItemId: 'line-1',
         pantryId: 'pantry-1',
-        amount: { measured: { quantity: 2, unitId: undefined } },
-        storageState: undefined,
-        expiresOn: undefined,
+        pantryItemId: expect.any(String),
+        idempotencyKey: expect.any(String),
+        amount: { measured: { quantity: 2 } },
         removeFromList: true,
-        totalCost: undefined,
-        notes: undefined,
+        // Kept by a queued replay, so an expiry counts from the day of the move.
+        today: variables?.today,
       }),
-      today: expect.any(String),
     });
-    expect(outcome).toBe(true);
   });
 
-  it('passes optional fields to mutation', async () => {
-    const move = moveMock();
-
-    // Seeded because the row being moved is one the list query already
-    // cached; `writePurchaseInfo` carries the cached record forward, so an
-    // unseeded cache makes it write a purchase record with three of its
-    // eight fields.
-    await moveWith(move, {
-      cache: seedCache([createItem()]),
+  it('sends everything else that was said about it', async () => {
+    const { sent } = await moveLine({
       input: {
-        amount: { measured: { quantity: 3, unitId: 'unit-2' } },
+        amount: { packages: { count: 2 } },
+        measurementProfile: { portionsPerTrackingUnit: 10 },
         storageState: StorageState.Frozen,
         expiresOn: '2024-12-31',
         removeFromList: false,
         totalCost: 5.99,
         notes: 'Keep frozen',
+        receipt: { purchasedOn: '2024-12-01', storeId: 'store-1' },
+        priceSource: PriceSource.ReceiptScan,
       },
     });
 
-    expect(move.fired).toContainEqual({
-      input: expect.objectContaining({
-        amount: { measured: { quantity: 3, unitId: 'unit-2' } },
-        storageState: 'FROZEN',
-        expiresOn: '2024-12-31',
-        removeFromList: false,
-        totalCost: 5.99,
-        notes: 'Keep frozen',
-      }),
-      today: expect.any(String),
+    expect(sent.fired[0]?.input).toMatchObject({
+      amount: { packages: { count: 2 } },
+      measurementProfile: { portionsPerTrackingUnit: 10 },
+      storageState: StorageState.Frozen,
+      expiresOn: '2024-12-31',
+      removeFromList: false,
+      totalCost: 5.99,
+      notes: 'Keep frozen',
+      receipt: { purchasedOn: '2024-12-01', storeId: 'store-1' },
+      priceSource: PriceSource.ReceiptScan,
     });
   });
 
-  it('sends the day of the move on the input, for its default expiry', async () => {
-    const move = moveMock();
+  it('closes, tells the guide, and records it once it is done', async () => {
+    const heard = jest.fn();
+    const stop = onTutorialEvent(heard);
 
-    await moveWith(move);
+    const { onSuccess } = await moveLine();
+    stop();
 
-    const [fired] = move.fired;
-    expect(fired?.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(fired?.input).toMatchObject({ today: fired?.today });
-  });
-
-  // `errorPolicy: 'all'` resolves a transport failure with `error` set rather
-  // than rejecting, so this drives the outcome the app actually gets.
-  it('returns false when the move fails', async () => {
-    const failing = recordMock(MoveShoppingItemToPantryDocument, {
-      error: new Error('network down'),
-    });
-
-    expect(await moveWith(failing)).toBe(false);
-  });
-
-  it('tells the shopper when the server refuses the move', async () => {
-    // A refusal resolves 200 with no `error`, so nothing else surfaces it — and
-    // a target whose unit changed mid-move now comes back exactly this way.
-    const alert = jest.mocked(alertService.alert);
-
-    expect(await moveWith(conflictMock())).toBe(false);
-    // `CONFLICT` is a state refusal, not a stale version: one alert, described
-    // by its code rather than as "changed somewhere else".
-    expect(alert).toHaveBeenCalledTimes(1);
-    expect(alert).toHaveBeenCalledWith(t('labels.error'), expect.any(String));
-    expect(alert).not.toHaveBeenCalledWith(
-      expect.anything(),
-      getVersionConflictMessage(),
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(heard).toHaveBeenCalledWith('list.movedToPantry');
+    expect(Telemetry.trackEvent).toHaveBeenCalledWith(
+      'shopping_item_moved_to_pantry',
+      {
+        shopping_list_id: 'list-1',
+        pantry_id: 'pantry-1',
+        remove_from_list: true,
+      },
     );
-    expect(alert).not.toHaveBeenCalledWith(
+  });
+
+  // The sheet closes on `onSuccess`, so a refusal keeps what was typed. A
+  // conflict is a state refusal, not a stale version: one alert, by its code.
+  it('keeps the sheet open on a refusal, saying why in its own words', async () => {
+    const { moved, onSuccess } = await moveLine({ answer: REFUSED });
+
+    expect(moved).toBe(false);
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(alertService.alert).not.toHaveBeenCalledWith(
       expect.anything(),
       'Pantry item was modified',
     );
   });
 
-  it('tracks telemetry event on successful move', async () => {
-    const { Telemetry } = require('#/services/telemetry');
+  it('reads as not done when it cannot be sent', async () => {
+    const { moved } = await moveLine({ error: new Error('network down') });
 
-    await moveWith(moveMock());
-
-    expect(Telemetry.trackEvent).toHaveBeenCalledWith(
-      'shopping_item_moved_to_pantry',
-      expect.objectContaining({
-        shopping_list_id: 'list-1',
-        pantry_id: 'pantry-1',
-        remove_from_list: true,
-      }),
+    expect(moved).toBe(false);
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('labels.error'),
+      expect.any(String),
     );
   });
 
-  describe('when the API is unavailable', () => {
-    afterEach(() => {
-      useStore.setState({ apiReachable: true, isOnline: true });
+  // A detail read on an id the server has not seen yet 404s.
+  it('holds the new stack back from detail reads until the server has it', async () => {
+    const { mover, sent } = renderMove({ held: true });
+
+    let moving: Promise<boolean> = Promise.resolve(false);
+    await act(async () => {
+      moving = mover.current.moveToPantry(BOUGHT, MOVE);
     });
+    const minted = mintedId(sent);
+    expect(unconfirmedCreates.has(minted)).toBe(true);
 
-    /**
-     * The move is local-first, not an offline refusal with a toast: the client
-     * mints `input.pantryItemId`, so the row it writes to the cache and the row
-     * the server writes are the same entity, and the queue can replay.
-     */
-    it('still fires the mutation, so the queue can replay it', async () => {
-      useStore.setState({ apiReachable: false });
-      const move = moveMock();
-
-      await moveWith(move);
-
-      expect(move.fired).toHaveLength(1);
-      expect(jest.mocked(toastService.error)).not.toHaveBeenCalledWith(
-        'Not available offline',
-      );
+    await act(async () => {
+      sent.release();
+      await moving;
     });
-
-    it('mints the pantry row id and opts into the offline queue', async () => {
-      const move = moveMock();
-
-      await moveWith(move);
-
-      const [fired] = move.fired;
-      // Without a client-minted id the optimistic row and the server row would
-      // be two different entities, which is what kept this online-only.
-      expect(fired && inputOf(fired)).toMatchObject({
-        pantryItemId: expect.any(String),
-        idempotencyKey: expect.any(String),
-      });
-    });
-
-    it('unlinks the shopping row eagerly, without evicting it', async () => {
-      // Offline neither the mutation's `update` callback nor the replay runs
-      // one, so a removal left to `update` never happened: the server deleted
-      // the line while the client kept rendering it in the list and in both
-      // counters until a full refetch. It has to be unlinked here — and NOT
-      // evicted, because a permanently-refused replay has to put it back.
-      useStore.setState({ apiReachable: false });
-
-      await moveWith(moveMock());
-
-      expect(removeItemFromShoppingListForMoveToPantry).toHaveBeenCalledWith(
-        expect.anything(),
-        'list-1',
-        'item-1',
-        expect.any(Boolean),
-        { evictEntity: false },
-      );
-    });
-
-    it('leaves the row alone when the move keeps it on the list', async () => {
-      useStore.setState({ apiReachable: false });
-
-      await moveWith(moveMock(), {
-        cache: seedCache([createItem()]),
-        input: { removeFromList: false },
-      });
-
-      expect(removeItemFromShoppingListForMoveToPantry).not.toHaveBeenCalled();
-    });
-
-    it('fires the mutation normally when online', async () => {
-      const move = moveMock();
-
-      await moveWith(move);
-
-      expect(move.fired).toHaveLength(1);
-    });
+    expect(unconfirmedCreates.has(minted)).toBe(false);
   });
 });
 
-describe('useMoveToPantry pantry item count', () => {
-  /**
-   * The eager write publishes a pantry row before the server answers. The count
-   * beside those rows has to move with it: offline the mutation's `update`
-   * callback never runs, so nothing else will correct it and the header then
-   * contradicts the rows underneath. `usePantryScreen` also branches on this
-   * value to choose server vs client sorting.
-   */
-  const STATS_FRAGMENT = gql`
-    fragment PantryStatsProbe on Pantry {
-      id
-      stats {
-        totalItems
-      }
-    }
-  `;
-
-  // The rows the count describes: a row is counted when it joins them.
-  const ROWS_FRAGMENT = gql`
-    fragment PantryRowsProbe on Pantry {
-      id
-      itemsConnection {
-        edges {
-          node {
-            id
-          }
-        }
-      }
-    }
-  `;
-
-  function seededCache(): InMemoryCache {
-    const { makeCache } = require('#/apollo/cache');
+describe('the pantry, as the move shows it', () => {
+  it('counts the stack it adds, under the id it sent', async () => {
     const cache = makeCache();
-    seedFragment(cache, {
-      id: 'Pantry:pantry-1',
-      fragment: STATS_FRAGMENT,
-      data: {
-        __typename: 'Pantry',
-        id: 'pantry-1',
-        stats: { __typename: 'PantryStats', totalItems: 63 },
-      },
-    });
-    seedFragment(cache, {
-      id: 'Pantry:pantry-1',
-      fragment: ROWS_FRAGMENT,
-      data: {
-        __typename: 'Pantry',
-        id: 'pantry-1',
-        itemsConnection: { __typename: 'PantryItemConnection', edges: [] },
-      },
-    });
-    return cache;
-  }
+    pantryWith63(cache);
 
-  function readTotal(cache: InMemoryCache) {
-    return cache.readFragment<{ stats: { totalItems: number } }>({
-      optimistic: true,
-      id: 'Pantry:pantry-1',
-      fragment: STATS_FRAGMENT,
-    })?.stats.totalItems;
-  }
+    const { sent } = await moveLine({ cache, answer: null });
 
-  function isCached(cache: InMemoryCache, id: string) {
-    const key = cache.identify({ __typename: 'PantryItem', id });
-    if (!key) throw new Error('A PantryItem must normalize');
-    return cache.extract(true)[key] !== undefined;
-  }
-
-  /**
-   * Echoes the client-minted id, which is the ordinary case: the server accepted
-   * the row we published. When it answers with a DIFFERENT id it restocked an
-   * existing stack instead, and the hook evicts its optimistic row — that path
-   * has its own expectation below.
-   */
-  const echoingMoveMock = () =>
-    recordMock(MoveShoppingItemToPantryDocument, {
-      dataFor: (
-        vars,
-      ): MockDataFor<typeof MoveShoppingItemToPantryDocument> => ({
-        moveShoppingItemToPantry: {
-          __typename: 'MoveShoppingItemToPantryPayload',
-          pantryItem: {
-            id: String(inputOf(vars).pantryItemId),
-          },
-        },
-      }),
-    });
-
-  it('increments the pantry item count alongside the row it adds', async () => {
-    const cache = seededCache();
-
-    await moveWith(echoingMoveMock(), { cache });
-
-    expect(readTotal(cache)).toBe(64);
+    expect(pantryTotal(cache)).toBe(64);
+    expect(isCached(cache, 'PantryItem', mintedId(sent))).toBe(true);
   });
 
-  it('detail-shapes the row it publishes, so it reads offline', async () => {
-    const cache = seededCache();
-    const move = queuedMoveMock();
+  it('shows the stack as a detail screen reads it, offline', async () => {
+    const cache = makeCache();
+    pantryWith63(cache);
 
-    await moveWith(move, {
+    const { sent } = await moveLine({
       cache,
+      answer: null,
       input: { amount: { measured: { quantity: 5 } }, totalCost: 0.59 },
     });
 
-    const DETAIL_FRAGMENT = gql`
-      fragment PantryDetailProbe on PantryItem {
-        id
-        acquisitionMethod
-        costPerUnit
-        totalCost
-      }
-    `;
-    // The row's own arithmetic is pinned in writeLocalPantryItem.test.ts.
     expect(
-      cache.readFragment({
-        optimistic: true,
-        id: `PantryItem:${mintedIdOf(move)}`,
-        fragment: DETAIL_FRAGMENT,
-      }),
+      rowOf<{ acquisitionMethod: string }>(
+        cache,
+        mintedId(sent),
+        gql`
+          fragment MoveDetailProbe on PantryItem {
+            acquisitionMethod
+          }
+        `,
+      ),
     ).toMatchObject({ acquisitionMethod: 'SHOPPING_LIST' });
   });
 
-  describe('a count of packages', () => {
-    const ROW_FRAGMENT = gql`
-      fragment PackagesRowProbe on PantryItem {
-        id
-        quantity
-        unit {
-          id
-        }
-        costPerUnit
-      }
-    `;
+  // Only the server converts a package of a weighed line.
+  it.each([
+    ['that many of a counted line', UnitType.Count, 2],
+    ["a weighed line's own amount", UnitType.Weight, 1],
+  ])(
+    'shows two packages as %s until the server answers',
+    async (_, type, shown) => {
+      const cache = makeCache();
+      pantryWith63(cache);
 
-    async function moveTwoPackages(unitType: UnitType) {
-      const cache = seededCache();
-      const move = queuedMoveMock();
-
-      await moveWith(move, {
+      const { sent } = await moveLine({
         cache,
-        item: createItem({
+        answer: null,
+        line: displayedLine({
           quantity: 1,
           unit: asAbbreviation({
             __typename: 'Unit',
             id: 'unit-line',
             name: 'line unit',
             symbol: 'lu',
-            type: unitType,
+            type,
           }),
         }),
         input: { amount: { packages: { count: 2 } }, totalCost: 3.98 },
       });
 
-      expect(move.fired[0]?.input).toMatchObject({
-        amount: { packages: { count: 2 } },
-        totalCost: 3.98,
-      });
-      return cache.readFragment({
-        optimistic: true,
-        id: `PantryItem:${mintedIdOf(move)}`,
-        fragment: ROW_FRAGMENT,
-      });
-    }
+      expect(
+        rowOf<{ quantity: number; unit: { id: string } }>(
+          cache,
+          mintedId(sent),
+          gql`
+            fragment MovePackagesProbe on PantryItem {
+              quantity
+              unit {
+                id
+              }
+            }
+          `,
+        ),
+      ).toMatchObject({ quantity: shown, unit: { id: 'unit-line' } });
+    },
+  );
 
-    it('stands as that many of a counted line until the server answers', async () => {
-      expect(await moveTwoPackages(UnitType.Count)).toMatchObject({
-        quantity: 2,
-        unit: { id: 'unit-line' },
-        costPerUnit: null,
-      });
-    });
+  it('takes back the stack and its count when refused', async () => {
+    const cache = makeCache();
+    pantryWith63(cache);
 
-    it("stands as a weighed line's own amount, which only the server converts", async () => {
-      expect(await moveTwoPackages(UnitType.Weight)).toMatchObject({
-        quantity: 1,
-        unit: { id: 'unit-line' },
-        costPerUnit: null,
-      });
-    });
+    const { sent } = await moveLine({ cache, answer: REFUSED });
+
+    expect(pantryTotal(cache)).toBe(63);
+    expect(isCached(cache, 'PantryItem', mintedId(sent))).toBe(false);
   });
 
-  it('withdraws the count when the move is refused', async () => {
-    const cache = seededCache();
+  // A different id means the server restocked a stack it held.
+  it('drops the stack it showed, and takes the count from the answer, when the server restocks another', async () => {
+    const cache = makeCache();
+    pantryWith63(cache);
 
-    await moveWith(refusedMock(), { cache });
-
-    expect(readTotal(cache)).toBe(63);
-  });
-
-  it('evicts the pantry row it published when the move is refused', async () => {
-    const cache = seededCache();
-    const rejected = refusedMock();
-
-    await moveWith(rejected, { cache });
-
-    // An unlinked but cached row is persisted and read back by any detail query.
-    expect(isCached(cache, mintedIdOf(rejected))).toBe(false);
-  });
-
-  it('evicts the pantry row it published when the server restocks another', async () => {
-    const cache = seededCache();
-    const move = moveMock();
-
-    await moveWith(move, { cache });
-
-    expect(isCached(cache, mintedIdOf(move))).toBe(false);
-  });
-
-  it('takes the count from the response when the server restocks another row', async () => {
-    const cache = seededCache();
-    // A different id means the server restocked an existing stack; the hook
-    // evicts the row it published, and the response states the pantry's count.
-    const move = recordMock(MoveShoppingItemToPantryDocument, {
-      data: {
-        moveShoppingItemToPantry: {
-          __typename: 'MoveShoppingItemToPantryPayload',
-          pantryItem: { id: 'pantry-item-1' },
-          pantry: { id: 'pantry-1', stats: { totalItems: 63 } },
+    const { sent } = await moveLine({
+      cache,
+      answer: {
+        __typename: 'MoveShoppingItemToPantryPayload',
+        pantryItem: { __typename: 'PantryItem', id: 'held-stack' },
+        pantry: {
+          __typename: 'Pantry',
+          id: 'pantry-1',
+          stats: { __typename: 'PantryStats', totalItems: 63 },
         },
       },
     });
 
-    await moveWith(move, { cache });
+    await expect(
+      stackShows(cache, mintedId(sent), stack => stack === null),
+    ).resolves.toBeUndefined();
+    expect(pantryTotal(cache)).toBe(63);
+  });
 
-    expect(readTotal(cache)).toBe(63);
+  it("shows the server's default expiry once the answer lands", async () => {
+    const { sent, cache } = await moveLine({
+      answer: echoed({ expiresOn: '2026-10-12' }),
+      input: { removeFromList: false },
+    });
+
+    await expect(
+      stackShows(
+        cache,
+        mintedId(sent),
+        stack => stack?.expiresOn === '2026-10-12',
+      ),
+    ).resolves.toBeUndefined();
   });
 });
 
-describe('useMoveToPantry keeping the row on the list', () => {
-  const LIST_QUERY = gql`
-    query KeepOnListSeed($listId: ID!, $isPurchased: Boolean) {
-      shoppingList(id: $listId) {
-        __typename
-        id
-        totalItems
-        completedItems
-        itemsConnection(filters: { isPurchased: $isPurchased }) {
-          __typename
-          totalCount
-          edges {
-            __typename
-            cursor
-            node {
-              __typename
-              id
-              purchaseInfo {
-                __typename
-                isPurchased
-                movedToPantryAt
-                purchaseDate
-                purchasedById
-                purchasedPrice
-                purchasedQuantity
-                purchasedBy {
-                  __typename
-                  id
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  `;
-
-  const unpurchased = createItem({
-    purchaseInfo: { ...createItem().purchaseInfo, isPurchased: false },
-  });
-  const purchased = createItem();
-
-  function seededList(row: ShoppingListItemDisplayFragment): InMemoryCache {
-    const { makeCache } = require('#/apollo/cache');
+describe('the list, as the move shows it', () => {
+  /** The list holding the line, ticked or not, on its two pages. */
+  function listWith(bought: boolean) {
     const cache = makeCache();
-    const rowIsPurchased = row.purchaseInfo?.isPurchased === true;
-    const edge = {
-      __typename: 'ShoppingListItemEdge',
-      cursor: row.id,
-      node: {
-        __typename: 'ShoppingListItem',
-        id: row.id,
-        purchaseInfo: row.purchaseInfo,
-      },
-    };
-    const write = (isPurchased: boolean, edges: unknown[]) =>
-      seedQuery(cache, {
-        query: LIST_QUERY,
-        variables: { listId: 'list-1', isPurchased },
-        data: {
-          shoppingList: {
-            __typename: 'ShoppingList',
-            id: 'list-1',
-            totalItems: 1,
-            completedItems: rowIsPurchased ? 1 : 0,
-            itemsConnection: {
-              __typename: 'ShoppingListItemConnection',
-              totalCount: edges.length,
-              edges,
-            },
-          },
-        },
-      });
-    write(false, rowIsPurchased ? [] : [edge]);
-    write(true, rowIsPurchased ? [edge] : []);
+    seedListLines(cache, 'list-1', [listLine('line-1', 'Milk', { bought })]);
     return cache;
   }
 
-  const read = (cache: InMemoryCache, isPurchased: boolean) =>
-    cache.readQuery({
-      optimistic: true,
-      query: LIST_QUERY,
-      variables: { listId: 'list-1', isPurchased },
-    }) as {
-      shoppingList: {
-        completedItems: number;
-        itemsConnection: {
-          edges: {
-            node: {
-              id: string;
-              purchaseInfo: {
-                isPurchased: boolean;
-                movedToPantryAt: string | null;
-              };
-            };
-          }[];
-        };
-      };
-    };
+  // Offline neither an answer nor a replay takes the line off; the move does,
+  // and keeps the row so a refused replay can put it back.
+  it('takes the line off at once, keeping its row', async () => {
+    const cache = listWith(true);
 
-  // The API marks a kept line purchased and stamps it, whatever its state. The
-  // stamp is what stops the row offering the move, so a queued move shows it
-  // too. A refusal leaves the row where it was, unstamped.
+    await moveLine({ cache, answer: null });
+
+    expect(listLineIds(cache, 'list-1', true)).toEqual([]);
+    expect(isCached(cache, 'ShoppingListItem', 'line-1')).toBe(true);
+  });
+
+  // The API marks a kept line bought and stamps it, whatever its state; the
+  // stamp stops the row offering the move. A refusal leaves it where it was.
   it.each([
-    ['an unpurchased', 'online', true, true, keptMoveMock],
-    ['an unpurchased', 'queued', true, true, queuedMoveMock],
-    ['a purchased', 'online', true, true, keptMoveMock],
-    ['a purchased', 'queued', true, true, queuedMoveMock],
-    ['a purchased', 'refused', true, false, conflictMock],
-    ['an unpurchased', 'refused', false, false, conflictMock],
-  ])(
-    'keeps %s row on the list, %s: purchased=%s, stamped=%s',
-    async (state, _how, landsPurchased, stamped, mock) => {
-      const row = state === 'a purchased' ? purchased : unpurchased;
-      const cache = seededList(row);
+    ['an open line', false, 'done', echoed(), true],
+    ['an open line', false, 'queued', null, true],
+    ['a bought line', true, 'done', echoed(), true],
+    ['a bought line', true, 'queued', null, true],
+    ['a bought line', true, 'refused', REFUSED, false],
+    ['an open line', false, 'refused', REFUSED, false],
+  ] as const)(
+    'keeps %s on the list once %s',
+    async (_, bought, _how, answer, stamped) => {
+      const cache = listWith(bought);
+      const lands = stamped || bought;
 
-      await moveWith(mock(), {
+      await moveLine({
         cache,
-        item: row,
+        answer,
+        line: displayedLine({
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: bought,
+            movedToPantryAt: null,
+          },
+        }),
         input: { removeFromList: false },
       });
 
-      const list = read(cache, landsPurchased).shoppingList;
-      expect(list.itemsConnection.edges.map(e => e.node.id)).toEqual([
-        'item-1',
-      ]);
-      expect(list.itemsConnection.edges[0]?.node.purchaseInfo).toMatchObject({
-        isPurchased: landsPurchased,
-        movedToPantryAt: stamped ? expect.any(String) : null,
-      });
-      expect(list.completedItems).toBe(landsPurchased ? 1 : 0);
+      expect(listLineIds(cache, 'list-1', lands)).toEqual(['line-1']);
+      expect(listLineIds(cache, 'list-1', !lands)).toEqual([]);
       expect(
-        read(cache, !landsPurchased).shoppingList.itemsConnection.edges,
-      ).toEqual([]);
+        cache.readFragment<{
+          purchaseInfo: { movedToPantryAt: string | null };
+        }>({
+          id: 'ShoppingListItem:line-1',
+          fragment: gql`
+            fragment MoveStampProbe on ShoppingListItem {
+              purchaseInfo {
+                movedToPantryAt
+              }
+            }
+          `,
+          optimistic: true,
+        })?.purchaseInfo.movedToPantryAt,
+      ).toEqual(stamped ? expect.any(String) : null);
     },
   );
-});
-
-describe('useMoveToPantry default expiry', () => {
-  const EXPIRY = gql`
-    fragment MovedRowExpiryProbe on PantryItem {
-      id
-      expiresOn
-    }
-  `;
-
-  it("shows the server's default expiry on the moved row once the response lands", async () => {
-    const { makeCache } = require('#/apollo/cache');
-    const cache: InMemoryCache = makeCache();
-    const move = recordMock(MoveShoppingItemToPantryDocument, {
-      dataFor: (
-        vars,
-      ): MockDataFor<typeof MoveShoppingItemToPantryDocument> => ({
-        moveShoppingItemToPantry: {
-          __typename: 'MoveShoppingItemToPantryPayload',
-          pantryItem: {
-            id: String(inputOf(vars).pantryItemId),
-            expiresOn: '2026-10-12',
-          },
-        },
-      }),
-    });
-
-    await moveWith(move, { cache, input: { removeFromList: false } });
-
-    expect(
-      cache.readFragment<{ expiresOn: string | null }>({
-        optimistic: true,
-        id: `PantryItem:${mintedIdOf(move)}`,
-        fragment: EXPIRY,
-      })?.expiresOn,
-    ).toBe('2026-10-12');
-  });
 });

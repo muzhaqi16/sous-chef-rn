@@ -1,5 +1,3 @@
-'use no memo';
-
 // React Navigation officially recommends testing navigation-dependent components
 // against a REAL navigator rather than fabricating `state` / `descriptors` /
 // `navigation` props (https://reactnavigation.org/docs/testing/). Doing so here
@@ -21,6 +19,7 @@ jest.mock(
 
 import React from 'react';
 import { toastService } from '#/services/toastService';
+import { t } from '#/i18n';
 
 // RN's `useWindowDimensions` export is a getter over this module.
 const mockWindow = { width: 411, height: 915, scale: 2, fontScale: 1 };
@@ -28,9 +27,15 @@ jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
   __esModule: true,
   default: () => mockWindow,
 }));
-import type { ViewStyle } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { act, render, screen, userEvent } from '@testing-library/react-native';
+import {
+  act,
+  render,
+  screen,
+  userEvent,
+  within,
+} from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
 import { NavigationContainer } from '@react-navigation/native';
 import {
@@ -43,109 +48,14 @@ import { useStore } from '#store';
 import { TAB_BAR_HEIGHT, getTabBarBottomOffset } from '#constants/layout';
 import { withTiming } from 'react-native-reanimated';
 import { SHEET } from '#/constants/animations';
-import { drainTimers } from '#/test-utils/drainTimers';
-
-// Mock TabBarActionsContext
-const mockSetActiveTab = jest.fn();
-const mockSetAddMenuOpen = jest.fn();
-interface MockMenuEntry {
-  key: string;
-  label: string;
-  icon: string;
-  onPress: () => void;
-  testID?: string;
-  disabledReason?: string;
-}
-let mockTabBarState: {
-  showAddButton: boolean;
-  addButtonConfig: { icon: string; iconLibrary: string };
-  isOverlayOpen: boolean;
-  addMenu?: MockMenuEntry[];
-  isAddMenuOpen: boolean;
-} = {
-  showAddButton: true,
-  addButtonConfig: { icon: 'add', iconLibrary: 'Ionicons' },
-  isOverlayOpen: false,
-  isAddMenuOpen: false,
-};
-
-jest.mock('#context/TabBarActionsContext', () => ({
-  useTabBarState: jest.fn(() => mockTabBarState),
-  useTabBarSetters: jest.fn(() => ({
-    setActiveTab: mockSetActiveTab,
-    setScannerProps: jest.fn(),
-    setOverlayOpen: jest.fn(),
-    setAddMenuOpen: mockSetAddMenuOpen,
-  })),
-}));
-
-// Mock HapticService
-jest.mock('#services/haptic/HapticService', () => ({
-  HapticService: {
-    selection: jest.fn(),
-    impact: jest.fn(),
-    notification: jest.fn(),
-  },
-}));
-
-// Mock animations constants
-jest.mock('#/constants/animations', () => ({
-  SHEET: {
-    BACKDROP_OPACITY: 0.5,
-    BACKDROP_FADE_IN: 100,
-    BACKDROP_FADE_OUT: 300,
-  },
-}));
-
-// Mock iconUtils
-jest.mock('#components/atoms/Icon', () => {
-  const R = require('react');
-  const RN = require('react-native');
-  return {
-    Icon: ({ name }: { name: string }) =>
-      R.createElement(RN.Text, { testID: `icon-${name}` }, name),
-  };
-});
-
-// Mock AddButton — NOTE: do NOT pass disabled to Pressable since it blocks await user.press
-jest.mock('../AddButton', () => {
-  const R = require('react');
-  const RN = require('react-native');
-  return {
-    AddButton: ({ onPress }: { onPress: () => void }) =>
-      R.createElement(
-        RN.Pressable,
-        { testID: 'add-button', onPress },
-        R.createElement(RN.Text, {}, 'Add'),
-      ),
-  };
-});
-
-// Mock TabItem
-jest.mock('../TabItem', () => {
-  const R = require('react');
-  const RN = require('react-native');
-  return {
-    TabItem: ({
-      route,
-      isFocused,
-      onPress,
-    }: {
-      route: { name: string };
-      isFocused: boolean;
-      onPress: () => void;
-    }) =>
-      R.createElement(
-        RN.Pressable,
-        {
-          testID: `tab-${route.name}`,
-          onPress,
-          accessibilityState: { selected: isFocused },
-        },
-        R.createElement(RN.Text, {}, route.name),
-      ),
-  };
-});
+import { HapticService } from '#services/haptic/HapticService';
+import { kitTestIDs } from '#components/testIDs';
+import {
+  TabBarActionsProvider,
+  useTabBarSetters,
+  useTabBarState,
+  type TabBarAddAction,
+} from '#context/TabBarActionsContext';
 
 const DEFAULT_ROUTES = ['Pantry', 'ShoppingList', 'Recipe', 'MealPlan'];
 
@@ -191,41 +101,69 @@ type ScreenListeners = React.ComponentProps<
 // assert exact `navigate` call shapes can spy on it.
 let tabBarNavigation: BottomTabBarProps['navigation'];
 
+/** Puts a tab's add menu up, as the tab's screen does. */
+function AddMenuOf({
+  tab,
+  actions,
+}: {
+  tab: string;
+  actions: readonly TabBarAddAction[];
+}) {
+  const { setAddMenu } = useTabBarSetters();
+  React.useEffect(() => {
+    setAddMenu(tab, actions);
+  }, [setAddMenu, tab, actions]);
+  return null;
+}
+
+/** The tab the bar recorded as active, as the provider holds it. */
+function ActiveTab() {
+  const { activeTab } = useTabBarState();
+  return <Text testID="active-tab">{activeTab}</Text>;
+}
+
 function renderTabBar(
   options: {
     routeNames?: string[];
     initialRouteName?: string;
     screenListeners?: ScreenListeners;
+    menu?: readonly TabBarAddAction[];
   } = {},
 ) {
   const routeNames = options.routeNames ?? DEFAULT_ROUTES;
+  const initial = options.initialRouteName ?? routeNames[0] ?? '';
   return render(
-    <NavigationContainer>
-      <Tab.Navigator
-        initialRouteName={options.initialRouteName}
-        screenOptions={{ headerShown: false }}
-        screenListeners={options.screenListeners}
-        tabBar={props => {
-          tabBarNavigation = props.navigation;
-          return <FloatingTabBar {...props} tabs={TAB_APPEARANCE} />;
-        }}
-      >
-        {routeNames.map(name => (
-          <Tab.Screen key={name} name={name} component={makeScreen(name)} />
-        ))}
-      </Tab.Navigator>
-    </NavigationContainer>,
+    <TabBarActionsProvider>
+      {options.menu ? <AddMenuOf tab={initial} actions={options.menu} /> : null}
+      <ActiveTab />
+      <NavigationContainer>
+        <Tab.Navigator
+          initialRouteName={options.initialRouteName}
+          screenOptions={{ headerShown: false }}
+          screenListeners={options.screenListeners}
+          tabBar={props => {
+            tabBarNavigation = props.navigation;
+            return <FloatingTabBar {...props} tabs={TAB_APPEARANCE} />;
+          }}
+        >
+          {routeNames.map(name => (
+            <Tab.Screen key={name} name={name} component={makeScreen(name)} />
+          ))}
+        </Tab.Navigator>
+      </NavigationContainer>
+    </TabBarActionsProvider>,
   );
 }
 
-const flat = (style: unknown): ViewStyle =>
-  StyleSheet.flatten(style as ViewStyle) ?? {};
+const flat = (style: StyleProp<ViewStyle>): ViewStyle =>
+  StyleSheet.flatten(style) ?? {};
 
-const barHeight = () => flat(screen.getByTestId('tab-bar').props.style).height;
+const barHeight = () =>
+  flat(screen.getByTestId(kitTestIDs.tabBar).props.style).height;
 
 /** The add button's positioned container: its nearest ancestor with a `bottom`. */
 const addButtonBottom = () => {
-  let current = screen.getByTestId('add-button').parent;
+  let current = screen.getByTestId(kitTestIDs.tabBarAddButton).parent;
   while (current) {
     const { bottom } = flat(current.props.style);
     if (typeof bottom === 'number') return bottom;
@@ -234,98 +172,78 @@ const addButtonBottom = () => {
   throw new Error('no add button ancestor declares a bottom');
 };
 
-beforeEach(() => {
-  jest.useFakeTimers();
-});
-
-afterEach(() => {
-  jest.useRealTimers();
-});
-
 describe('FloatingTabBar', () => {
   beforeEach(() => {
+    jest.restoreAllMocks();
     jest.clearAllMocks();
-    mockTabBarState = {
-      showAddButton: true,
-      addButtonConfig: { icon: 'add', iconLibrary: 'Ionicons' },
-      isOverlayOpen: false,
-      isAddMenuOpen: false,
-    };
   });
 
   it('renders with testID tab-bar', () => {
     renderTabBar();
-    expect(screen.getByTestId('tab-bar')).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.tabBar)).toBeTruthy();
   });
 
   it('renders all tab items', () => {
     renderTabBar();
-    expect(screen.getByTestId('tab-Pantry')).toBeTruthy();
-    expect(screen.getByTestId('tab-ShoppingList')).toBeTruthy();
-    expect(screen.getByTestId('tab-Recipe')).toBeTruthy();
-    expect(screen.getByTestId('tab-MealPlan')).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.tab('Pantry'))).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.tab('ShoppingList'))).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.tab('Recipe'))).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.tab('MealPlan'))).toBeTruthy();
   });
 
   it('renders add button when showAddButton is true', () => {
     renderTabBar();
-    expect(screen.getByTestId('add-button')).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.tabBarAddButton)).toBeTruthy();
   });
 
-  it('renders no add button when showAddButton is false', () => {
-    mockTabBarState.showAddButton = false;
-    renderTabBar();
-    expect(screen.queryByTestId('add-button')).toBeNull();
+  it('renders no add button on a tab that has none', () => {
+    renderTabBar({ routeNames: ['Profile'] });
+    expect(screen.queryByTestId(kitTestIDs.tabBarAddButton)).toBeNull();
   });
 
   describe('with an add menu', () => {
-    const entry = (key: string): MockMenuEntry => ({
+    const entry = (key: string): TabBarAddAction => ({
       key,
       label: key,
       icon: 'add',
       onPress: jest.fn(),
       testID: `entry-${key}`,
     });
+    const addButton = () => screen.getByTestId(kitTestIDs.tabBarAddButton);
+    const menuReadsOpen = () =>
+      addButton().props.accessibilityLabel === t('labels.close');
 
-    it('opens the menu instead of running a handler', async () => {
-      mockTabBarState.addMenu = [entry('Link'), entry('Photo')];
+    it('opens the menu instead of running a handler, and closes it again', async () => {
+      const menu = [entry('Link'), entry('Photo')];
       const user = userEvent.setup();
-      renderTabBar();
+      renderTabBar({ menu });
 
-      await user.press(screen.getByTestId('add-button'));
+      await user.press(addButton());
+      expect(menuReadsOpen()).toBe(true);
+      expect(menu[0]?.onPress).not.toHaveBeenCalled();
 
-      expect(mockSetAddMenuOpen).toHaveBeenCalledWith(true);
+      await user.press(addButton());
+      expect(menuReadsOpen()).toBe(false);
     });
 
-    it('closes the open menu from the +', async () => {
-      mockTabBarState.addMenu = [entry('Link'), entry('Photo')];
-      mockTabBarState.isAddMenuOpen = true;
-      const user = userEvent.setup();
-      renderTabBar();
-
-      await user.press(screen.getByTestId('add-button'));
-
-      expect(mockSetAddMenuOpen).toHaveBeenCalledWith(false);
-    });
-
-    it('shows the entries while open and runs a picked one', async () => {
+    it('shows the entries while open and runs a picked one, closing', async () => {
       const link = entry('Link');
-      mockTabBarState.addMenu = [link, entry('Photo')];
-      mockTabBarState.isAddMenuOpen = true;
       const user = userEvent.setup();
-      renderTabBar();
+      renderTabBar({ menu: [link, entry('Photo')] });
 
+      await user.press(addButton());
       await user.press(screen.getByTestId('entry-Link'));
 
-      expect(mockSetAddMenuOpen).toHaveBeenCalledWith(false);
       expect(link.onPress).toHaveBeenCalledTimes(1);
+      expect(menuReadsOpen()).toBe(false);
     });
 
     // The `+` rotates on an under-damped spring; a scrim on that spring would
     // swing past open and back, flickering until it settled.
-    it('fades its scrim in on a timing, never the spring the + turns on', () => {
-      mockTabBarState.addMenu = [entry('Link'), entry('Photo')];
-      mockTabBarState.isAddMenuOpen = true;
-      renderTabBar();
+    it('fades its scrim in on a timing, never the spring the + turns on', async () => {
+      renderTabBar({ menu: [entry('Link'), entry('Photo')] });
+
+      await userEvent.setup().press(addButton());
 
       expect(withTiming).toHaveBeenCalledWith(1, {
         duration: SHEET.BACKDROP_FADE_IN,
@@ -334,23 +252,19 @@ describe('FloatingTabBar', () => {
 
     it('runs a menu of one directly', async () => {
       const only = entry('Write it myself');
-      mockTabBarState.addMenu = [only];
-      const user = userEvent.setup();
-      renderTabBar();
+      renderTabBar({ menu: [only] });
 
-      await user.press(screen.getByTestId('add-button'));
+      await userEvent.setup().press(addButton());
 
       expect(only.onPress).toHaveBeenCalledTimes(1);
-      expect(mockSetAddMenuOpen).not.toHaveBeenCalled();
+      expect(menuReadsOpen()).toBe(false);
     });
 
     it('says why a menu of one cannot run, and runs nothing', async () => {
       const only = { ...entry('Link'), disabledReason: 'Needs a connection' };
-      mockTabBarState.addMenu = [only];
-      const user = userEvent.setup();
-      renderTabBar();
+      renderTabBar({ menu: [only] });
 
-      await user.press(screen.getByTestId('add-button'));
+      await userEvent.setup().press(addButton());
 
       expect(toastService.info).toHaveBeenCalledWith('Needs a connection');
       expect(only.onPress).not.toHaveBeenCalled();
@@ -362,10 +276,9 @@ describe('FloatingTabBar', () => {
     renderTabBar();
     expect(screen.getByText('Pantry screen')).toBeTruthy();
 
-    await user.press(screen.getByTestId('tab-ShoppingList'));
+    await user.press(screen.getByTestId(kitTestIDs.tab('ShoppingList')));
 
     // tabPress emits + (not prevented) navigates → the target screen mounts.
-    await drainTimers();
     expect(screen.getByText('ShoppingList screen')).toBeTruthy();
   });
 
@@ -374,10 +287,9 @@ describe('FloatingTabBar', () => {
     renderTabBar();
     const navigateSpy = jest.spyOn(tabBarNavigation, 'navigate');
 
-    await user.press(screen.getByTestId('tab-Recipe'));
+    await user.press(screen.getByTestId(kitTestIDs.tab('Recipe')));
 
     // Switching tabs navigates by name only — no nested-screen reset payload.
-    await drainTimers();
     expect(navigateSpy).toHaveBeenCalledWith('Recipe');
   });
 
@@ -386,9 +298,8 @@ describe('FloatingTabBar', () => {
     renderTabBar({ initialRouteName: 'Recipe' });
     const navigateSpy = jest.spyOn(tabBarNavigation, 'navigate');
 
-    await user.press(screen.getByTestId('tab-Recipe'));
+    await user.press(screen.getByTestId(kitTestIDs.tab('Recipe')));
 
-    await drainTimers();
     expect(navigateSpy).toHaveBeenCalledWith('Recipe', {
       screen: 'RecipeMain',
       initial: false,
@@ -402,7 +313,7 @@ describe('FloatingTabBar', () => {
     });
     const navigateSpy = jest.spyOn(tabBarNavigation, 'navigate');
 
-    await user.press(screen.getByTestId('tab-ShoppingList'));
+    await user.press(screen.getByTestId(kitTestIDs.tab('ShoppingList')));
 
     // Stays on the original screen; the prevented event blocks navigation.
     expect(screen.getByText('Pantry screen')).toBeTruthy();
@@ -410,29 +321,29 @@ describe('FloatingTabBar', () => {
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
-  it('sets active tab on mount', () => {
+  it('records the active tab on mount', () => {
     renderTabBar();
-    expect(mockSetActiveTab).toHaveBeenCalledWith('Pantry');
+    expect(screen.getByTestId('active-tab')).toHaveTextContent('Pantry');
   });
 
   it('renders every route, plus the floating add button', () => {
     renderTabBar();
     // One row holds every tab; the button is a sibling of the bar, not a
     // member of the row, so the tab count cannot shift it.
-    expect(screen.getByTestId('tab-Pantry')).toBeTruthy();
-    expect(screen.getByTestId('tab-ShoppingList')).toBeTruthy();
-    expect(screen.getByTestId('tab-Recipe')).toBeTruthy();
-    expect(screen.getByTestId('tab-MealPlan')).toBeTruthy();
-    expect(screen.getByTestId('add-button')).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.tab('Pantry'))).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.tab('ShoppingList'))).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.tab('Recipe'))).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.tab('MealPlan'))).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.tabBarAddButton)).toBeTruthy();
   });
 
   it('triggers HapticService.selection on tab press', async () => {
     const user = userEvent.setup();
-    const { HapticService } = require('#services/haptic/HapticService');
+    const felt = jest.spyOn(HapticService, 'selection');
     renderTabBar();
 
-    await user.press(screen.getByTestId('tab-Recipe'));
-    expect(HapticService.selection).toHaveBeenCalled();
+    await user.press(screen.getByTestId(kitTestIDs.tab('Recipe')));
+    expect(felt).toHaveBeenCalled();
   });
 
   it('navigates to a non-mainScreen tab (Profile) on press', async () => {
@@ -441,9 +352,8 @@ describe('FloatingTabBar', () => {
       routeNames: ['Pantry', 'ShoppingList', 'Recipe', 'Profile'],
     });
 
-    await user.press(screen.getByTestId('tab-Profile'));
+    await user.press(screen.getByTestId(kitTestIDs.tab('Profile')));
 
-    await drainTimers();
     expect(screen.getByText('Profile screen')).toBeTruthy();
   });
 
@@ -455,17 +365,29 @@ describe('FloatingTabBar', () => {
     });
     const navigateSpy = jest.spyOn(tabBarNavigation, 'navigate');
 
-    await user.press(screen.getByTestId('tab-Profile'));
+    await user.press(screen.getByTestId(kitTestIDs.tab('Profile')));
 
     // Profile is focused and not in the mainScreen map → no navigation.
-    await drainTimers();
-    expect(mockSetActiveTab).toHaveBeenCalledWith('Profile');
+    expect(screen.getByTestId('active-tab')).toHaveTextContent('Profile');
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
   describe('height', () => {
     afterEach(() => {
       useStore.setState({ showNavigationLabels: true });
+    });
+
+    it('shows the tab labels, and hides them when asked', () => {
+      renderTabBar();
+      const pantryTab = () =>
+        within(screen.getByTestId(kitTestIDs.tab('Pantry')));
+      expect(pantryTab().getByText(t('labels.pantry'))).toBeTruthy();
+
+      act(() => {
+        useStore.setState({ showNavigationLabels: false });
+      });
+
+      expect(pantryTab().queryByText(t('labels.pantry'))).not.toBeOnTheScreen();
     });
 
     it('keeps its height when labels are hidden, and the add button stays put', () => {

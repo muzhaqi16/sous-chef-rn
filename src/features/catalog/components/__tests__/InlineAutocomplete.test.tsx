@@ -15,8 +15,7 @@ interface Row {
 /**
  * Mirrors the entry-list shape (`NetWeightEntryList` / `UnitEntryList`): the
  * `onChangeText` handed to the autocomplete closes over the CURRENT rows
- * array, and a sibling control can replace that array while a keystroke is
- * still sitting in the debounce window.
+ * array, and a sibling control can replace that array right after a keystroke.
  */
 const EntryListHarness: React.FC<{ onRows: (rows: Row[]) => void }> = ({
   onRows,
@@ -61,20 +60,12 @@ describe('InlineAutocomplete', () => {
     jest.useRealTimers();
   });
 
-  it('does not revert a concurrent state change made during the debounce window', () => {
+  it('keeps a row a sibling control adds right after a keystroke', () => {
     const onRows = jest.fn();
     render(<EntryListHarness onRows={onRows} />);
 
-    // Keystroke starts the 250ms debounce toward the parent.
     fireEvent.changeText(screen.getByTestId('unit-input'), 'oz');
-
-    // Before it fires, a sibling control replaces the rows array. The pending
-    // timer still closes over the pre-add array.
     fireEvent.press(screen.getByTestId('add-row'));
-
-    act(() => {
-      jest.advanceTimersByTime(300);
-    });
 
     const finalRows = onRows.mock.calls.at(-1)?.[0] as Row[];
     // The added row must survive, and the typed text must still land.
@@ -82,16 +73,12 @@ describe('InlineAutocomplete', () => {
     expect(finalRows[0]!.unitName).toBe('oz');
   });
 
-  it('forwards typed text to the parent after the debounce elapses', () => {
+  // A form saved straight after typing must hold what was typed.
+  it('forwards typed text to the parent at once', () => {
     const onRows = jest.fn();
     render(<EntryListHarness onRows={onRows} />);
 
     fireEvent.changeText(screen.getByTestId('unit-input'), 'kg');
-    expect(onRows).not.toHaveBeenCalled();
-
-    act(() => {
-      jest.advanceTimersByTime(300);
-    });
 
     expect(onRows).toHaveBeenCalledTimes(1);
     expect((onRows.mock.calls[0][0] as Row[])[0]!.unitName).toBe('kg');
@@ -229,15 +216,6 @@ describe('InlineAutocomplete offline', () => {
     expect(
       screen.getByText(t('empty.noHeldMatchFor', { query: 'kale' })),
     ).toBeTruthy();
-  });
-
-  it('waits for the parent to answer before saying so', () => {
-    render(<Picker />);
-    fireEvent.changeText(screen.getByTestId('picker'), 'kale');
-
-    expect(
-      screen.queryByText(t('empty.noHeldMatchFor', { query: 'kale' })),
-    ).toBeNull();
   });
 
   it('lists what matches, with no note', () => {

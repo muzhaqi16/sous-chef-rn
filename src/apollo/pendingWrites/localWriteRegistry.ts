@@ -169,7 +169,6 @@ import {
   MarkShoppingListActiveDocument,
   MarkShoppingListAsDefaultDocument,
   MoveShoppingItemToPantryDocument,
-  MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
   RemoveItemsFromShoppingListDocument,
   UpdateShoppingListDocument,
@@ -182,7 +181,6 @@ import {
   moveToPantry,
   removeList,
   removeRows,
-  reorderRow,
   updateRow,
 } from '#features/shoppingList/offline/localWrites';
 import { entityFields } from './entityFields';
@@ -205,7 +203,6 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [UpdateShoppingListItemDocument, updateRow],
   [RemoveItemFromShoppingListDocument, removeRows],
   [RemoveItemsFromShoppingListDocument, removeRows],
-  [MoveShoppingListItemDocument, reorderRow],
   [UpdateShoppingListDocument, entityFields],
   [CompleteShoppingListDocument, entityFields],
   [MarkShoppingListActiveDocument, entityFields],

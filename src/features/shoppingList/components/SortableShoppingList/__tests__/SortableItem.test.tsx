@@ -1,947 +1,624 @@
-'use no memo';
 import React from 'react';
-import { StyleSheet } from 'react-native-unistyles';
-import { fireEvent, screen, within } from '@testing-library/react-native';
-import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
-
-/**
- * Row tests for `SwipeableListItem`.
- *
- * The row receives a `ShoppingListRowItem` (`id`, `isPurchased`, `sortOrder`,
- * `itemRef`) and calls `useFragment(SortableItem_item, itemRef)` internally.
- * The Apollo test wrapper provides a real `InMemoryCache` pre-seeded with the
- * `ShoppingListItem` record the ref points at, so `useFragment` resolves the
- * full SortableItem_item selection without any per-test mocking of the
- * Apollo client.
- */
-
-// Records what the row passes down. The previous mock dropped every action
-// prop, which is why a row rendering NO swipe actions looked identical to one
-// rendering working ones.
-const swipeableProps: {
-  leftActions?: unknown[];
-  rightActions?: unknown[];
-}[] = [];
-
-jest.mock('#components/organisms/SwipeableItem/SwipeableItem', () => ({
-  SwipeableItem: ({
-    children,
-    accessibilityLabel,
-    leftActions,
-    rightActions,
-  }: {
-    children?: React.ReactNode;
-    accessibilityLabel: string;
-    leftActions?: unknown[];
-    rightActions?: unknown[];
-  }) => {
-    const { View } = require('react-native');
-    swipeableProps.push({ leftActions, rightActions });
-    return (
-      <View testID="swipeable-item" accessibilityLabel={accessibilityLabel}>
-        {children}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/molecules/ListItem', () => ({
-  ListItem: ({
-    title,
-    subtitle,
-    checkboxElement,
-    leftElement,
-    rightElement,
-  }: {
-    title?: React.ReactNode;
-    subtitle?: React.ReactNode;
-    checkboxElement?: React.ReactNode;
-    leftElement?: React.ReactNode;
-    rightElement?: React.ReactNode;
-  }) => {
-    const { Text, View } = require('react-native');
-    return (
-      <View testID="list-item">
-        {checkboxElement}
-        {leftElement}
-        <Text>{title}</Text>
-        {typeof subtitle === 'string' ? <Text>{subtitle}</Text> : subtitle}
-        {rightElement}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#features/shoppingList/components/AnimatedCheckbox', () => ({
-  AnimatedCheckbox: ({
-    checked,
-    testID,
-  }: {
-    checked?: boolean;
-    testID?: string;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID={testID}>
-        <Text>{checked ? 'checked' : 'unchecked'}</Text>
-      </View>
-    );
-  },
-}));
-
-// Carries `testID`, `onPress` and `disabled` through, so a test can assert what
-// the row wires to the chip rather than only what it displays on it.
-jest.mock('#features/shoppingList/components/QuantityBadge', () => ({
-  QuantityBadge: ({
-    quantity,
-    unit,
-    testID,
-    onPress,
-    disabled,
-  }: {
-    quantity?: number;
-    unit?: string | null;
-    testID?: string;
-    onPress?: () => void;
-    disabled?: boolean;
-  }) => {
-    const { Text, Pressable } = require('react-native');
-    return (
-      <Pressable
-        testID={testID ?? 'quantity-badge'}
-        onPress={onPress}
-        disabled={disabled}
-      >
-        <Text>{`${quantity} ${unit ?? ''}`}</Text>
-      </Pressable>
-    );
-  },
-}));
-
-jest.mock('#components/atoms/CachedImage', () => ({
-  CachedImage: ({ uri }: { uri?: string | null }) => {
-    const { View } = require('react-native');
-    return <View testID="cached-image" accessibilityLabel={uri ?? undefined} />;
-  },
-}));
-
-jest.mock('#/styles/commonStyles', () => ({
-  commonStyles: {
-    shadow: {},
-    listItemImageContainerCompact: {},
-    listItemImageCompact: {},
-  },
-}));
-
-jest.mock('#components/atoms/Icon', () => ({
-  Icon: () => null,
-}));
-
-jest.mock('#components/atoms/RowCard', () => ({
-  RowCard: ({ children }: { children?: React.ReactNode }) => {
-    const { View } = require('react-native');
-    return <View testID="row-card">{children}</View>;
-  },
-}));
-
-jest.mock('#components/atoms/ThemeEpochSentinel', () => ({
-  ThemeEpochSentinel: () => {
-    const { View } = require('react-native');
-    return <View testID="theme-epoch-sentinel" />;
-  },
-}));
-
-jest.mock('#hooks/animations/useSlideAnimation', () => ({
-  useSlideAnimation: jest.fn(() => ({
-    animatedSlideStyle: {},
-    triggerSlide: jest.fn(),
-  })),
-}));
-
-jest.mock('#constants/animations', () => ({
-  staggeredEntryAnimation: { duration: 300 },
-}));
-
-// The row reads its swipe-action factory from this context now: it is a
-// derivation the row calls while rendering, not a command.
-jest.mock('#components/organisms/itemSwipeActionsContext', () => ({
-  useItemSwipeActions: jest.fn(() => undefined),
-  ItemSwipeActionsProvider: ({ children }: { children?: React.ReactNode }) =>
-    children,
-}));
-
-jest.mock('../SortableListActionsContext', () => ({
-  useSortableListActions: jest.fn(() => ({
-    actions: {
-      onItemPress: jest.fn(),
-      onTogglePurchase: jest.fn(),
-      onMoveToPantry: jest.fn(),
-      onQuantityPress: jest.fn(),
-      onSwipeableWillOpen: jest.fn(),
-      onSwipeableClose: jest.fn(),
-    },
-    permissions: {
-      canRemoveItems: true,
-      canEditItems: true,
-      canMarkPurchased: true,
-    },
-    permissionsRef: {
-      current: {
-        canRemoveItems: true,
-        canEditItems: true,
-        canMarkPurchased: true,
-      },
-    },
-  })),
-}));
-
-jest.mock('../SortableListThemeContext', () => ({
-  useSortableListTheme: jest.fn(() => ({
-    primary: '#007AFF',
-    textPrimary: '#000',
-    textSecondary: '#666',
-    screenWidth: 375,
-  })),
-  useShoppingListRowOptions: jest.fn(() => ({
-    showImages: true,
-    readingSystem: 'METRIC',
-    showPrices: true,
-  })),
-}));
-
-jest.mock('#features/shoppingList/context/FirstShopTourContext', () => ({
-  useFirstShopRowTargets: jest.fn(),
-}));
-
-// Import after mocks
-import { SwipeableListItem } from '../SortableItem';
-import { SortableItem_ItemFragmentDoc } from '../SortableItem.generated';
+import { fireEvent, screen } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
+import {
+  renderWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
+import { withDeadline } from '#/test-utils/cacheWaits';
 import { shoppingListRowItem } from '#/test-utils/fixtures/shoppingListRowItem';
-import { useSortableListActions } from '../SortableListActionsContext';
-import { useItemSwipeActions } from '#components/organisms/itemSwipeActionsContext';
-import { useFirstShopRowTargets } from '#features/shoppingList/context/FirstShopTourContext';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
+import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { QueueStatus } from '#/apollo/offlineQueue/types';
-import { queuedMutationFor } from '#/test-utils/queuedMutation';
-import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { useStore } from '#store';
+import { t } from '#/i18n';
+import { Telemetry } from '#services/telemetry';
+import { markFeatureHintShown } from '#hooks/settings/useFeatureHint';
+import {
+  startTutorialSession,
+  tutorialSession,
+} from '#hooks/ui/tutorialSession';
+import { GUIDE_TOURS } from '#domain/guides';
+import { onTutorialEvent } from '#domain/tutorialEvents';
 import {
   EntryImageSource,
   UnitSystem,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
-import { useShoppingListRowOptions } from '../SortableListThemeContext';
 import {
-  asAbbreviation,
-  readingAsAbbreviation,
-} from '#/test-utils/fixtures/unitLabels';
+  deleteAction,
+  editAction,
+} from '#components/organisms/SwipeableItem/commonActions';
+import { ItemSwipeActionsProvider } from '#components/organisms/itemSwipeActionsContext';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { FIRST_SHOP_STEP } from '#features/shoppingList/context/useFirstShopTour';
+import {
+  FirstShopTourProvider,
+  useFirstShopTourContext,
+} from '#features/shoppingList/context/FirstShopTourContext';
+import { SwipeableListItem } from '../SortableItem';
+import {
+  SortableItem_ItemFragmentDoc,
+  type SortableItem_ItemFragment,
+} from '../SortableItem.generated';
+import type { DeepPartial } from '@apollo/client/utilities';
+import type { Unmasked } from '@apollo/client/masking';
+import {
+  SortableListActionsProvider,
+  type SortableListActions,
+  type SortableListPermissions,
+} from '../SortableListActionsContext';
+import { ShoppingListRowOptionsContext } from '../SortableListThemeContext';
 
-// Build a ShoppingListItem cache entry that satisfies the SortableItem_item
-// fragment selection. Passing the entry's `__typename`/`id` ref as `itemRef`
-// lets `useFragment` resolve the seeded entity.
-function seedItem(overrides: Record<string, unknown> = {}) {
-  const entry: { __typename: 'ShoppingListItem'; id: string } & Record<
-    string,
-    unknown
-  > = {
-    __typename: 'ShoppingListItem',
-    id: 'item-1',
-    image: null,
-    itemName: 'Milk',
-    quantity: 1,
-    quantityInput: null,
-    category: '2 liters',
-    unitName: null,
-    unit: null,
-    amount: null,
-    purchaseInfo: {
-      __typename: 'ShoppingListItemPurchaseInfo',
-      isPurchased: false,
-      movedToPantryAt: null,
+// Jest lays nothing out, so a measured tip target reports a fixed rect.
+jest.mock('#hooks/ui/useMeasuredRect', () => {
+  const { useEffect: useMountEffect } = jest.requireActual('react');
+  return {
+    useMeasuredRect: (
+      onMeasure?: (rect: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }) => void,
+    ) => {
+      useMountEffect(() => {
+        onMeasure?.({ x: 16, y: 120, width: 300, height: 56 });
+      }, [onMeasure]);
+      return { ref: { current: null }, measure: () => undefined };
     },
-    suggestedPrice: null,
-    item: null,
-    ...overrides,
   };
-  return entry;
-}
+});
 
-/**
- * Seeded against the row's OWN fragment, so a fixture too thin for what
- * `SortableItem` reads fails here rather than rendering a blank row.
- */
-const seedRow = (
-  entry: Record<string, unknown> & { __typename: string; id: string },
-) => seedCache([{ fragment: SortableItem_ItemFragmentDoc, data: entry }]);
+const USER_ID = 'user-1';
+const ID = 'item-1';
 
-/** Seeds `entry` and renders its row, ticked or not. */
-const renderRow = (
-  entry: ReturnType<typeof seedItem>,
-  isPurchased = false,
-  readingSystem: UnitSystem.Metric | UnitSystem.Imperial = UnitSystem.Metric,
-  showPrices = true,
-) => {
-  (useShoppingListRowOptions as jest.Mock).mockReturnValue({
-    showImages: true,
-    readingSystem,
-    showPrices,
-  });
-  return renderWithApollo(
-    <SwipeableListItem
-      item={shoppingListRowItem(entry.id, { isPurchased })}
-      index={0}
-      target="Cell"
-    />,
-    { cache: seedRow(entry) },
-  );
+type Line = DeepPartial<Unmasked<SortableItem_ItemFragment>>;
+
+/** The line as its row reads it: a litre of milk, to buy. */
+const milk = (overrides: Line = {}): Line => ({
+  __typename: 'ShoppingListItem',
+  id: ID,
+  image: null,
+  itemName: 'Milk',
+  quantity: 1,
+  quantityInput: null,
+  category: 'Dairy',
+  unitName: null,
+  unit: null,
+  amount: null,
+  purchaseInfo: {
+    __typename: 'ShoppingListItemPurchaseInfo',
+    isPurchased: false,
+    movedToPantryAt: null,
+  },
+  suggestedPrice: null,
+  item: null,
+  ...overrides,
+});
+
+const bought = (
+  movedToPantryAt: string | null = null,
+): Line['purchaseInfo'] => ({
+  __typename: 'ShoppingListItemPurchaseInfo',
+  isPurchased: true,
+  movedToPantryAt,
+});
+
+const EVERYTHING: SortableListPermissions = {
+  canRemoveItems: true,
+  canEditItems: true,
+  canMarkPurchased: true,
+};
+const VIEWER: SortableListPermissions = {
+  canRemoveItems: false,
+  canEditItems: false,
+  canMarkPurchased: false,
 };
 
-const mockRegisterRect = jest.fn();
-/** The tour waiting on these parts of the first row. */
-const tourWants = (wanted: Partial<Record<string, boolean>> = {}) =>
-  (useFirstShopRowTargets as jest.Mock).mockReturnValue({
-    wanted: { checkbox: false, archiveIcon: false, itemCard: false, ...wanted },
-    registerRect: mockRegisterRect,
-  });
+const actions = {
+  onItemPress: jest.fn(),
+  onTogglePurchase: jest.fn(),
+  onMoveToPantry: jest.fn(),
+  onQuantityPress: jest.fn(),
+  onEdit: jest.fn(),
+  onDelete: jest.fn(),
+};
 
-describe('SwipeableListItem (SortableItem)', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    tourWants();
-  });
+interface Row {
+  entry?: Line | null;
+  isPurchased?: boolean;
+  index?: number;
+  permissions?: SortableListPermissions;
+  readingSystem?: UnitSystem.Metric | UnitSystem.Imperial;
+  showPrices?: boolean;
+  showImages?: boolean;
+}
 
-  it('renders an empty cell while the entity is not in the cache', () => {
-    renderWithApollo(
-      <SwipeableListItem
-        item={shoppingListRowItem(seedItem().id)}
-        index={0}
-        target="Cell"
-      />,
-    );
-    expect(screen.queryByTestId('list-item')).toBeNull();
-    expect(screen.queryByTestId('swipeable-item')).toBeNull();
-  });
+/** The row as its list renders it, inside the list's providers. */
+function RowUnderTest({
+  isPurchased = false,
+  index = 0,
+  permissions = EVERYTHING,
+  readingSystem = UnitSystem.Metric,
+  showPrices = true,
+  showImages = true,
+}: Omit<Row, 'entry'>) {
+  const listActions: SortableListActions = {
+    onItemPress: actions.onItemPress,
+    onTogglePurchase: actions.onTogglePurchase,
+    onMoveToPantry: actions.onMoveToPantry,
+    onQuantityPress: actions.onQuantityPress,
+  };
+  return (
+    <SortableListActionsProvider
+      actions={listActions}
+      permissions={permissions}
+    >
+      <ItemSwipeActionsProvider
+        value={id => ({
+          left: [editAction(() => actions.onEdit(id))],
+          right: [deleteAction(() => actions.onDelete(id))],
+        })}
+      >
+        <ShoppingListRowOptionsContext.Provider
+          value={{ showImages, readingSystem, showPrices }}
+        >
+          <SwipeableListItem
+            item={shoppingListRowItem(ID, { isPurchased })}
+            index={index}
+            target="Cell"
+          />
+        </ShoppingListRowOptionsContext.Provider>
+      </ItemSwipeActionsProvider>
+    </SortableListActionsProvider>
+  );
+}
 
-  it('renders the item title from the fragment', () => {
-    const entry = seedItem();
-    renderRow(entry);
+function renderRow({ entry = milk(), ...row }: Row = {}) {
+  const cache = makeCache();
+  if (entry) {
+    seedFragment(cache, {
+      fragment: SortableItem_ItemFragmentDoc,
+      data: entry,
+    });
+  }
+  return renderWithApollo(<RowUnderTest {...row} />, { cache });
+}
+
+const row = () => screen.getByTestId(shoppingListTestIDs.itemRow(ID));
+
+/** Runs a swipe action as a screen reader offers it. */
+const swipe = (actionName: 'edit' | 'delete') =>
+  fireEvent(row(), 'accessibilityAction', { nativeEvent: { actionName } });
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  queueStore.removeMutation(`mut-${ID}`);
+});
+
+describe('a line to buy', () => {
+  it('shows its name and the first of its categories', () => {
+    renderRow({ entry: milk({ category: 'Dairy, Breakfast' }) });
+
     expect(screen.getByText('Milk')).toBeTruthy();
+    expect(screen.getByText('Dairy')).toBeTruthy();
   });
 
-  // The household overrides the item photo on its own entries.
-  it("shows the household's photo over the catalog's", () => {
-    renderRow(
-      seedItem({
-        image: {
-          __typename: 'EntryImage',
-          url: 'https://cdn.example.com/our-milk.jpg',
-          source: EntryImageSource.Household,
-          catalogImageId: null,
-        },
-        item: {
-          __typename: 'Item',
-          id: 'milk',
-          imageUrl: 'https://cdn.example.com/catalog-milk.jpg',
-          images: [],
-        },
-      }),
-    );
-    expect(screen.getByTestId('cached-image').props.accessibilityLabel).toBe(
-      'https://cdn.example.com/our-milk.jpg',
-    );
+  it('shows the unit it was typed with', () => {
+    renderRow({ entry: milk({ quantity: 2, unitName: 'bunches' }) });
+
+    expect(screen.getByLabelText('Milk, Dairy, 2 bunches')).toBeTruthy();
   });
 
-  it('renders the item subtitle derived from category', () => {
-    const entry = seedItem();
-    renderRow(entry);
-    expect(screen.getByText('2 liters')).toBeTruthy();
-  });
-
-  describe('the price recorded prices suggest', () => {
-    const suggestedPrice = {
-      __typename: 'PriceSuggestion',
-      amount: 1.25,
-      substitute: false,
-      currency: {
-        __typename: 'Currency',
-        id: 'cur-usd',
-        code: 'USD',
-        decimalPlaces: 2,
+  // The household overrides the catalog's photo on its own entries.
+  it("shows the household's photo, and none with photos off", () => {
+    const entry = milk({
+      image: {
+        __typename: 'EntryImage',
+        url: 'https://cdn.example.com/our-milk.jpg',
+        source: EntryImageSource.Household,
+        catalogImageId: null,
       },
-    };
-
-    // Per one of the line's unit, so the line costs that times its quantity.
-    it('shows what the line would cost beside its category', () => {
-      const entry = seedItem({ quantity: 2, suggestedPrice });
-      renderRow(entry);
-      expect(screen.getByText(/^2 liters · ≈ .*2\.50/)).toBeTruthy();
     });
+    const photos = () =>
+      screen.UNSAFE_root.findAll(
+        node =>
+          node.props.source?.uri === 'https://cdn.example.com/our-milk.jpg',
+      );
 
-    it("says when it is similar products' price, not the line's own", () => {
-      const entry = seedItem({
-        suggestedPrice: { ...suggestedPrice, substitute: true },
-      });
-      renderRow(entry);
-      expect(
-        screen.getByText(/^2 liters · ≈ .*1\.25, similar products$/),
-      ).toBeTruthy();
-    });
+    const { unmount } = renderRow({ entry });
+    expect(photos().length).toBeGreaterThan(0);
+    unmount();
 
-    // Budget & prices off: a plain list, the line's name, amount and category.
-    it('shows none with budget and prices turned off', () => {
-      const entry = seedItem({ quantity: 2, suggestedPrice });
-      renderRow(entry, false, UnitSystem.Metric, false);
-      expect(screen.getByText('2 liters')).toBeTruthy();
-      expect(screen.queryByText(/≈/)).toBeNull();
-    });
+    renderRow({ entry, showImages: false });
+    expect(photos()).toEqual([]);
+  });
 
-    it('shows none on a bought line', () => {
-      const entry = seedItem({
-        suggestedPrice,
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
-          isPurchased: true,
-          movedToPantryAt: null,
-        },
-      });
-      renderRow(entry, true);
-      expect(screen.getByText('2 liters')).toBeTruthy();
-      expect(screen.queryByText(/≈/)).toBeNull();
+  it('is ticked from its checkbox, which carries its name', () => {
+    renderRow();
+
+    fireEvent.press(screen.getByLabelText('Milk'));
+
+    expect(actions.onTogglePurchase).toHaveBeenCalledWith(ID);
+  });
+
+  it('opens on a press, and records an amount on a long-press', () => {
+    renderRow();
+
+    fireEvent.press(row());
+    fireEvent(row(), 'longPress');
+
+    expect(actions.onItemPress).toHaveBeenCalledWith(ID);
+    expect(actions.onTogglePurchase).toHaveBeenCalledWith(ID, {
+      withDetails: true,
     });
   });
 
-  it('renders a swipeable wrapper', () => {
-    const entry = seedItem();
-    renderRow(entry);
-    expect(screen.getByTestId('swipeable-item')).toBeTruthy();
+  it('opens its quantity', () => {
+    renderRow();
+
+    fireEvent.press(screen.getByTestId(shoppingListTestIDs.itemQuantity(ID)));
+
+    expect(actions.onQuantityPress).toHaveBeenCalledWith(ID);
   });
 
-  // A card left outside the slide stays on screen, empty, as its row leaves.
-  it('slides the whole card, its theme kept by a sentinel', () => {
-    const slide = { transform: [{ translateX: 7 }] };
-    const { useSlideAnimation } = jest.requireMock(
-      '#hooks/animations/useSlideAnimation',
+  it('is edited and deleted from its swipe', () => {
+    renderRow();
+
+    swipe('edit');
+    swipe('delete');
+
+    expect(actions.onEdit).toHaveBeenCalledWith(ID);
+    expect(actions.onDelete).toHaveBeenCalledWith(ID);
+  });
+
+  // The swipe is the gesture library's; its will-open stands for the finger.
+  it('tells the List’s tips when it is swiped open', () => {
+    const heard: string[] = [];
+    const stop = onTutorialEvent(event => heard.push(event));
+    renderRow();
+
+    const [swipeable] = screen.UNSAFE_root.findAll(
+      node => typeof node.props.onSwipeableWillOpen === 'function',
     );
-    useSlideAnimation.mockReturnValueOnce({
-      animatedSlideStyle: slide,
-      triggerSlide: jest.fn(),
-    });
-    renderRow(seedItem());
+    swipeable?.props.onSwipeableWillOpen('right');
+    stop();
 
-    let node = screen.getByTestId('row-card').parent;
-    while (
-      node &&
-      StyleSheet.flatten(node.props.style)?.transform !== slide.transform
-    ) {
-      node = node.parent;
-    }
-    expect(node).not.toBeNull();
-    expect(within(node!).getByTestId('theme-epoch-sentinel')).toBeTruthy();
+    expect(heard).toEqual(['list.rowSwiped']);
   });
 
-  it('renders a list item', () => {
-    const entry = seedItem();
-    renderRow(entry);
-    expect(screen.getByTestId('list-item')).toBeTruthy();
-  });
+  it('gives a viewer no checkbox, quantity or swipe', () => {
+    renderRow({ permissions: VIEWER });
 
-  it('renders checkbox with unchecked state for unpurchased items', () => {
-    const entry = seedItem();
-    renderRow(entry);
-    expect(screen.getByTestId('shopping-item-checkbox-item-1')).toBeTruthy();
-    expect(screen.getByText('unchecked')).toBeTruthy();
-  });
-
-  it('renders checkbox with checked state for purchased items', () => {
-    const entry = seedItem();
-    renderRow(entry, true);
-    expect(screen.getByText('checked')).toBeTruthy();
-  });
-
-  // RNGH's button would derive the label from the children: the checkbox's
-  // label is the name too, so the name was read twice.
-  it('names the row once, with its details and quantity', () => {
-    renderRow(seedItem({ quantity: 3, unitName: 'pcs' }));
-
-    expect(screen.getByTestId('swipeable-item').props.accessibilityLabel).toBe(
-      'Milk, 2 liters, 3 pcs',
-    );
-  });
-
-  it('says a purchased line is purchased, and stocked once it is', () => {
-    renderRow(
-      seedItem({
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
-          isPurchased: true,
-          movedToPantryAt: '2026-08-28T10:00:00.000Z',
-        },
-      }),
-      true,
-    );
-
-    expect(screen.getByTestId('swipeable-item').props.accessibilityLabel).toBe(
-      'Milk, Purchased, 2 liters, 1, Already in your pantry',
-    );
-  });
-
-  it('renders the quantity badge with the cached quantity + unit', () => {
-    const entry = seedItem({ quantity: 3, unitName: 'pcs' });
-    renderRow(entry);
+    expect(screen.queryByLabelText('Milk')).not.toBeOnTheScreen();
     expect(
-      screen.getByTestId(`shopping-list-item-${entry.id}-quantity`),
+      screen.getByTestId(shoppingListTestIDs.itemQuantity(ID)),
+    ).toBeDisabled();
+    swipe('edit');
+    swipe('delete');
+    expect(actions.onEdit).not.toHaveBeenCalled();
+    expect(actions.onDelete).not.toHaveBeenCalled();
+  });
+
+  it('draws an empty slot while the line is not cached', () => {
+    renderRow({ entry: null });
+
+    expect(
+      screen.queryByTestId(shoppingListTestIDs.itemRow(ID)),
+    ).not.toBeOnTheScreen();
+  });
+});
+
+describe('its price', () => {
+  const suggestedPrice: NonNullable<Line['suggestedPrice']> = {
+    __typename: 'PriceSuggestion',
+    amount: 1.25,
+    substitute: false,
+    currency: {
+      __typename: 'Currency',
+      id: 'cur-usd',
+      code: 'USD',
+      decimalPlaces: 2,
+    },
+  };
+
+  // Per one of the line's unit, so the line costs that times its quantity.
+  it('is what the line would cost, beside its category', () => {
+    renderRow({ entry: milk({ quantity: 2, suggestedPrice }) });
+
+    expect(screen.getByText(/^Dairy · ≈ .*2\.50$/)).toBeTruthy();
+  });
+
+  it("says when it is similar products' price, not the line's own", () => {
+    renderRow({
+      entry: milk({ suggestedPrice: { ...suggestedPrice, substitute: true } }),
+    });
+
+    expect(
+      screen.getByText(/^Dairy · ≈ .*1\.25, similar products$/),
     ).toBeTruthy();
-    expect(screen.getByText('3 pcs')).toBeTruthy();
   });
 
-  describe('an edit still waiting in the offline queue', () => {
-    afterEach(() => {
-      queueStore.clearAllQueues();
-      queueStore.clearCurrentUserId();
-    });
+  it('is not shown with budget and prices turned off', () => {
+    renderRow({ entry: milk({ suggestedPrice }), showPrices: false });
 
-    const queueEdit = (itemId: string) => {
-      queueStore.setCurrentUserId('user-1');
-      queueStore.addMutation({
-        id: `mut-${itemId}`,
-        userId: 'user-1',
-        ...queuedMutationFor(UpdateShoppingListItemDocument),
-        variables: { input: { id: itemId, quantity: 4 } },
-        status: QueueStatus.PENDING,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        retryCount: 0,
-        maxRetries: 3,
-        requiresAuth: true,
-      });
-    };
-
-    it('marks the row as pending delivery', () => {
-      const entry = seedItem();
-      queueEdit(entry.id);
-      renderRow(entry);
-
-      expect(
-        screen.getByTestId(shoppingListTestIDs.itemPendingSync(entry.id)),
-      ).toBeTruthy();
-    });
-
-    it('leaves a row with nothing queued unmarked', () => {
-      const entry = seedItem();
-      queueEdit('another-item');
-      renderRow(entry);
-
-      expect(
-        screen.queryByTestId(shoppingListTestIDs.itemPendingSync(entry.id)),
-      ).toBeNull();
-      expect(screen.getByText('2 liters')).toBeTruthy();
-    });
+    expect(screen.queryByText(/≈/)).not.toBeOnTheScreen();
   });
 
-  describe('swipe actions reach the row', () => {
-    const setActions = (
-      itemSwipeActions: unknown,
-      permissions = {
-        canRemoveItems: true,
-        canEditItems: true,
-        canMarkPurchased: true,
-      },
-    ) => {
-      (useItemSwipeActions as jest.Mock).mockReturnValue(itemSwipeActions);
-      (useSortableListActions as jest.Mock).mockReturnValue({
-        actions: {
-          onItemPress: jest.fn(),
-          onTogglePurchase: jest.fn(),
-          onMoveToPantry: jest.fn(),
-          onQuantityPress: jest.fn(),
-          onSwipeableWillOpen: jest.fn(),
-          onSwipeableClose: jest.fn(),
-        },
-        permissions,
-        permissionsRef: { current: permissions },
-      });
-    };
-
-    beforeEach(() => {
-      swipeableProps.length = 0;
+  it('is not shown on a bought line', () => {
+    renderRow({
+      entry: milk({ suggestedPrice, purchaseInfo: bought() }),
+      isPurchased: true,
     });
 
-    it('renders the edit and delete descriptors the screen supplies', () => {
-      const onEdit = jest.fn();
-      const onDelete = jest.fn();
-      setActions((id: string) => ({
-        left: [
-          { key: 'edit', labelKey: 'labels.edit', onPress: () => onEdit(id) },
-        ],
-        right: [
-          {
-            key: 'delete',
-            labelKey: 'labels.delete',
-            onPress: () => onDelete(id),
-            removesRow: true,
-          },
-        ],
-      }));
+    expect(screen.queryByText(/≈/)).not.toBeOnTheScreen();
+  });
+});
 
-      const entry = seedItem();
-      renderRow(entry);
-
-      const last = swipeableProps[swipeableProps.length - 1];
-      expect(last!.leftActions).toHaveLength(1);
-      expect(last!.rightActions).toHaveLength(1);
-
-      // The descriptor must carry the screen's handler, not a wrapper that
-      // silently no-ops — that is the shape the dead buttons had.
-      (last!.leftActions as { onPress: () => void }[])[0]!.onPress();
-      expect(onEdit).toHaveBeenCalledWith(entry.id);
-      (last!.rightActions as { onPress: () => void }[])[0]!.onPress();
-      expect(onDelete).toHaveBeenCalledWith(entry.id);
+describe('a line waiting to sync', () => {
+  it('says so, beside it and to a screen reader', () => {
+    // The queue reports only the signed-in person's writes.
+    queueStore.setCurrentUserId(USER_ID);
+    queueStore.addMutation({
+      id: `mut-${ID}`,
+      userId: USER_ID,
+      ...queuedMutationFor(UpdateShoppingListItemDocument),
+      variables: { input: { id: ID, quantity: 4 } },
+      status: QueueStatus.PENDING,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      retryCount: 0,
+      maxRetries: 3,
+      requiresAuth: true,
     });
 
-    it('renders no actions when the screen supplies no factory', () => {
-      setActions(undefined);
+    renderRow();
 
-      const entry = seedItem();
-      renderRow(entry);
+    expect(
+      screen.getByTestId(shoppingListTestIDs.itemPendingSync(ID)),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(`Milk, ${t('status.syncing')}, 1`),
+    ).toBeTruthy();
+  });
+});
 
-      const last = swipeableProps[swipeableProps.length - 1];
-      expect(last!.leftActions).toBeUndefined();
-      expect(last!.rightActions).toBeUndefined();
-    });
+describe('a bought line', () => {
+  it('says it is bought, and is put away from its archive', () => {
+    renderRow({ entry: milk({ purchaseInfo: bought() }), isPurchased: true });
 
-    it('withholds edit and delete that the permissions forbid', () => {
-      setActions(
-        () => ({
-          left: [{ key: 'edit', labelKey: 'labels.edit', onPress: jest.fn() }],
-          right: [
-            { key: 'delete', labelKey: 'labels.delete', onPress: jest.fn() },
-          ],
-        }),
-        { canRemoveItems: false, canEditItems: false, canMarkPurchased: true },
-      );
+    expect(
+      screen.getByLabelText(`Milk, ${t('labels.purchased')}, Dairy, 1`),
+    ).toBeTruthy();
+    fireEvent.press(
+      screen.getByTestId(shoppingListTestIDs.itemMoveToPantry(ID)),
+    );
 
-      const entry = seedItem();
-      renderRow(entry);
-
-      const last = swipeableProps[swipeableProps.length - 1];
-      expect(last!.leftActions).toBeUndefined();
-      expect(last!.rightActions).toBeUndefined();
-    });
+    expect(actions.onMoveToPantry).toHaveBeenCalledWith(ID);
   });
 
-  describe('the quantity chip', () => {
-    // The sheet it opens is fully interactive and its Save arms as soon as the
-    // value changes, so a viewer reaching it can edit somebody else's list. The
-    // swipe actions were gated on `canEditItems`; this control was not.
-    const setPermissions = (permissions: {
-      canRemoveItems: boolean;
-      canEditItems: boolean;
-      canMarkPurchased: boolean;
-    }) => {
-      const onQuantityPress = jest.fn();
-      // The real hook withholds a handler the permissions forbid, so the double
-      // withholds it too — a double that hands one over tests a path the row
-      // cannot reach.
-      (useSortableListActions as jest.Mock).mockReturnValue({
-        actions: {
-          onItemPress: jest.fn(),
-          onTogglePurchase: permissions.canMarkPurchased
-            ? jest.fn()
-            : undefined,
-          onMoveToPantry:
-            permissions.canEditItems && permissions.canRemoveItems
-              ? jest.fn()
-              : undefined,
-          onQuantityPress: permissions.canEditItems
-            ? onQuantityPress
-            : undefined,
-          onSwipeableWillOpen: jest.fn(),
-          onSwipeableClose: jest.fn(),
-        },
-        permissions,
-        permissionsRef: { current: permissions },
-      });
-      return onQuantityPress;
-    };
-
-    it('does not open the editor for someone who may not edit', () => {
-      const onQuantityPress = setPermissions({
-        canRemoveItems: false,
-        canEditItems: false,
-        canMarkPurchased: true,
-      });
-
-      const entry = seedItem();
-      renderRow(entry);
-
-      fireEvent.press(
-        screen.getByTestId(`shopping-list-item-${entry.id}-quantity`),
-      );
-
-      expect(onQuantityPress).not.toHaveBeenCalled();
+  it('shows as stocked once it is in the pantry, with no move', () => {
+    renderRow({
+      entry: milk({ purchaseInfo: bought('2026-11-01T10:00:00.000Z') }),
+      isPurchased: true,
     });
 
-    it('opens the editor for someone who may', () => {
-      const onQuantityPress = setPermissions({
-        canRemoveItems: true,
-        canEditItems: true,
-        canMarkPurchased: true,
-      });
-
-      const entry = seedItem();
-      renderRow(entry);
-
-      fireEvent.press(
-        screen.getByTestId(`shopping-list-item-${entry.id}-quantity`),
-      );
-
-      expect(onQuantityPress).toHaveBeenCalledWith(entry.id);
-    });
+    expect(
+      screen.getByTestId(shoppingListTestIDs.itemStocked(ID)),
+    ).toBeTruthy();
+    expect(
+      screen.queryByTestId(shoppingListTestIDs.itemMoveToPantry(ID)),
+    ).not.toBeOnTheScreen();
+    expect(
+      screen.getByLabelText(
+        `Milk, ${t('labels.purchased')}, Dairy, 1, ${t(
+          'shoppingList.alreadyInPantry',
+        )}`,
+      ),
+    ).toBeTruthy();
   });
 
-  describe('a line already stocked in the pantry', () => {
-    const setMoveAction = () => {
-      (useSortableListActions as jest.Mock).mockReturnValue({
-        actions: {
-          onItemPress: jest.fn(),
-          onTogglePurchase: jest.fn(),
-          onMoveToPantry: jest.fn(),
-          onQuantityPress: jest.fn(),
-          onSwipeableWillOpen: jest.fn(),
-          onSwipeableClose: jest.fn(),
-        },
-        permissions: {
-          canRemoveItems: true,
-          canEditItems: true,
-          canMarkPurchased: true,
-        },
-        permissionsRef: {
-          current: {
-            canRemoveItems: true,
-            canEditItems: true,
-            canMarkPurchased: true,
-          },
-        },
-      });
-    };
+  it('keeps its quantity, and opens on a long-press rather than recording', () => {
+    renderRow({ entry: milk({ purchaseInfo: bought() }), isPurchased: true });
 
-    beforeEach(setMoveAction);
+    expect(
+      screen.getByTestId(shoppingListTestIDs.itemQuantity(ID)),
+    ).toBeDisabled();
+    fireEvent(row(), 'longPress');
 
-    it('offers move-to-pantry on a purchased line that has not been moved', () => {
-      const entry = seedItem({
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
-          isPurchased: true,
-          movedToPantryAt: null,
-        },
-      });
-      renderRow(entry, true);
-
-      expect(
-        screen.getByTestId(`shopping-list-item-${entry.id}-move-to-pantry`),
-      ).toBeTruthy();
-      expect(
-        screen.queryByTestId(`shopping-list-item-${entry.id}-stocked`),
-      ).toBeNull();
-    });
-
-    it('shows it as stocked instead once the line carries the stamp', () => {
-      const entry = seedItem({
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
-          isPurchased: true,
-          movedToPantryAt: '2026-08-28T10:00:00.000Z',
-        },
-      });
-      renderRow(entry, true);
-
-      // The bulk move filters its working set on this same stamp, so offering
-      // the action would promise something that does nothing.
-      expect(
-        screen.getByTestId(`shopping-list-item-${entry.id}-stocked`),
-      ).toBeTruthy();
-      expect(
-        screen.queryByTestId(`shopping-list-item-${entry.id}-move-to-pantry`),
-      ).toBeNull();
-    });
+    expect(actions.onItemPress).toHaveBeenCalledWith(ID);
+    expect(actions.onTogglePurchase).not.toHaveBeenCalled();
   });
+});
 
-  describe('tour rect cleanup', () => {
-    // registerRect only ever sets a value — nothing else clears a rect once
-    // its owning row stops being the tour's target (item purchased/
-    // removed, step advances). Without an explicit clear, the coach mark can
-    // render pointing at a target that is gone — the root cause
-    // behind several reported "spotlight stuck on the wrong thing" bugs.
-
-    it('clears the checkbox rect once the spotlighted item is purchased', () => {
-      const entry = seedItem();
-      tourWants({ checkbox: true });
-      const { rerender } = renderRow(entry);
-      expect(mockRegisterRect).not.toHaveBeenCalledWith('checkbox', null);
-
-      rerender(
-        <SwipeableListItem
-          item={shoppingListRowItem(entry.id, { isPurchased: true })}
-          index={0}
-          target="Cell"
-        />,
-      );
-      expect(mockRegisterRect).toHaveBeenCalledWith('checkbox', null);
+// The server reads a line's weight or volume in each unit system; the row
+// shows the user's while that reading still describes the line.
+describe('the amount in the user’s unit system', () => {
+  const unit = (id: string, symbol: string, type: UnitType) =>
+    readingAsAbbreviation({
+      unitId: id,
+      symbol,
+      displayAsFraction: false,
+      type,
     });
-
-    it('clears the archiveIcon rect once the spotlighted item leaves the purchased tab', () => {
-      const entry = seedItem();
-      tourWants({ archiveIcon: true });
-      const { rerender } = renderRow(entry, true);
-      expect(mockRegisterRect).not.toHaveBeenCalledWith('archiveIcon', null);
-
-      rerender(
-        <SwipeableListItem
-          item={shoppingListRowItem(entry.id)}
-          index={0}
-          target="Cell"
-        />,
-      );
-      expect(mockRegisterRect).toHaveBeenCalledWith('archiveIcon', null);
-    });
-
-    // The context's value changes as the tips move on; the rect must survive
-    // that while the row is still the target, or the tip times out.
-    it('keeps the rect while the row stays the target', () => {
-      const entry = seedItem();
-      tourWants({ itemCard: true });
-      const { rerender } = renderRow(entry);
-
-      tourWants({ itemCard: true });
-      rerender(
-        <SwipeableListItem
-          item={shoppingListRowItem(entry.id)}
-          index={0}
-          target="Cell"
-        />,
-      );
-
-      expect(mockRegisterRect).not.toHaveBeenCalledWith('itemCard', null);
-    });
-
-    it('clears the itemCard rect once the swipe tip is done', () => {
-      const entry = seedItem();
-      tourWants({ itemCard: true });
-      const { rerender } = renderRow(entry);
-      expect(mockRegisterRect).not.toHaveBeenCalledWith('itemCard', null);
-
-      tourWants();
-      rerender(
-        <SwipeableListItem
-          item={shoppingListRowItem(entry.id)}
-          index={0}
-          target="Cell"
-        />,
-      );
-      expect(mockRegisterRect).toHaveBeenCalledWith('itemCard', null);
-    });
-  });
-
-  // The server reads a line's weight or volume in each unit system; the row
-  // shows the user's while that reading still describes the line.
-  describe('the amount in the user\u2019s unit system', () => {
-    const unit = (id: string, symbol: string, type: UnitType) =>
-      readingAsAbbreviation({
-        unitId: id,
-        symbol,
-        displayAsFraction: false,
-        type,
-      });
-    const twoPounds = seedItem({
-      quantity: 2,
+  const pounds = (typed: number, kilograms: number) =>
+    milk({
+      quantity: typed,
+      quantityInput: String(typed),
       unit: asAbbreviation({ __typename: 'Unit', id: 'unit-lb', symbol: 'lb' }),
       amount: {
         __typename: 'Measure',
-        value: 2,
+        value: typed,
         unitId: 'unit-lb',
         metric: {
           __typename: 'MeasureReading',
-          value: 0.91,
+          value: kilograms,
           ...unit('unit-kg', 'kg', UnitType.Weight),
         },
         imperial: {
           __typename: 'MeasureReading',
-          value: 2,
+          value: typed,
           ...unit('unit-lb', 'lb', UnitType.Weight),
         },
       },
     });
 
-    it('reads a line typed in pounds in kilograms for a metric user', () => {
-      renderRow(twoPounds, false, UnitSystem.Metric);
-      expect(screen.getByLabelText('Milk, 2 liters, 0.91 kg')).toBeTruthy();
+  it('reads a line typed in pounds in kilograms for a metric user', () => {
+    renderRow({ entry: pounds(2, 0.91) });
+
+    expect(screen.getByLabelText('Milk, Dairy, 0.91 kg')).toBeTruthy();
+  });
+
+  it('reads it in pounds for an imperial user', () => {
+    renderRow({ entry: pounds(2, 0.91), readingSystem: UnitSystem.Imperial });
+
+    expect(screen.getByLabelText('Milk, Dairy, 2 lb')).toBeTruthy();
+  });
+
+  // A kilogram is a unit nobody halves, as the pantry writes it too.
+  it('writes a reading in its unit’s notation, never "1/2 kg"', () => {
+    renderRow({ entry: pounds(1.1, 0.5) });
+
+    expect(screen.getByLabelText('Milk, Dairy, 0.5 kg')).toBeTruthy();
+  });
+});
+
+/** Resolves once the tour reports `event` for `featureId`. */
+const tourReports = (event: string, featureId: string) =>
+  withDeadline(
+    done => {
+      jest.spyOn(Telemetry, 'trackEvent').mockImplementation((name, props) => {
+        if (name === event && props?.feature_id === featureId) done();
+      });
+      return () => undefined;
+    },
+    () => `the tour never reported ${event} for ${featureId}`,
+  );
+
+/** Tells the tour which tab shows, as the list's tabs do. */
+function TabShown({ tab }: { tab: 'shopping' | 'purchased' }) {
+  const noteTab = useFirstShopTourContext()?.noteTab;
+  React.useEffect(() => noteTab?.(tab), [noteTab, tab]);
+  return null;
+}
+
+interface Tour {
+  unpurchasedCount: number;
+  hasPurchasedToMove?: boolean;
+  tab?: 'shopping' | 'purchased';
+}
+
+/** The row first in its list, under the List's tips. */
+function TourRow({
+  unpurchasedCount,
+  hasPurchasedToMove = false,
+  tab = 'shopping',
+  ...rowProps
+}: Tour & Omit<Row, 'entry'>) {
+  return (
+    <FirstShopTourProvider
+      hasList
+      unpurchasedCount={unpurchasedCount}
+      hasPurchasedToMove={hasPurchasedToMove}
+      addButtonRect={{ x: 300, y: 760, width: 56, height: 56 }}
+      isPaused={false}
+    >
+      <TabShown tab={tab} />
+      <RowUnderTest {...rowProps} />
+    </FirstShopTourProvider>
+  );
+}
+
+function renderTourRow(entry: Line, tour: Tour & Row) {
+  const cache = makeCache();
+  seedFragment(cache, { fragment: SortableItem_ItemFragmentDoc, data: entry });
+  return renderWithApollo(<TourRow {...tour} />, { cache });
+}
+
+/** The first-shop guide started from Getting started, `done` steps behind it. */
+const guideAt = (...done: string[]) => {
+  done.forEach(step => markFeatureHintShown(step, USER_ID));
+  tutorialSession.startGuide(GUIDE_TOURS.shop);
+};
+
+// A tip's target that is gone must say so, or the tip spotlights nothing: the
+// tour then gives up on it, which is what each test waits for.
+describe('the first row under the List’s tips', () => {
+  beforeEach(() => {
+    useStore.setState({
+      user: {
+        id: USER_ID,
+        email: 'cook@example.com',
+        emailVerified: true,
+        onBoarded: true,
+      },
+      showTutorials: true,
+      featureHintsShown: {},
+      lastUnpromptedTipAt: {},
+    });
+    markFeatureHintShown('shopping_interactive_tutorial', USER_ID);
+    tutorialSession.endGuide(GUIDE_TOURS.shop);
+    startTutorialSession();
+  });
+
+  it('is never the check step’s target once bought', async () => {
+    guideAt(FIRST_SHOP_STEP.add, FIRST_SHOP_STEP.pick);
+    const gaveUp = tourReports('tour_target_timeout', FIRST_SHOP_STEP.check);
+
+    renderTourRow(milk({ purchaseInfo: bought() }), {
+      unpurchasedCount: 1,
+      isPurchased: true,
     });
 
-    it('reads it in pounds for an imperial user', () => {
-      renderRow(twoPounds, false, UnitSystem.Imperial);
-      expect(screen.getByLabelText('Milk, 2 liters, 2 lb')).toBeTruthy();
-    });
+    await expect(gaveUp).resolves.toBeUndefined();
+  });
 
-    // A kilogram is a unit nobody halves, as the pantry writes it too.
-    it('writes a reading in its unit’s notation, never "1/2 kg"', () => {
-      renderRow(
-        seedItem({
-          quantity: 1.1,
-          unit: asAbbreviation({
-            __typename: 'Unit',
-            id: 'unit-lb',
-            symbol: 'lb',
-          }),
-          amount: {
-            __typename: 'Measure',
-            value: 1.1,
-            unitId: 'unit-lb',
-            metric: {
-              __typename: 'MeasureReading',
-              value: 0.5,
-              ...unit('unit-kg', 'kg', UnitType.Weight),
-            },
-            imperial: {
-              __typename: 'MeasureReading',
-              value: 1.1,
-              ...unit('unit-lb', 'lb', UnitType.Weight),
-            },
-          },
-        }),
-        false,
-        UnitSystem.Metric,
-      );
-      expect(screen.getByLabelText('Milk, 2 liters, 0.5 kg')).toBeTruthy();
-    });
+  it('lets the check step go once it is ticked', async () => {
+    guideAt(FIRST_SHOP_STEP.add, FIRST_SHOP_STEP.pick);
+    const viewed = tourReports('tour_step_viewed', FIRST_SHOP_STEP.check);
+    const view = renderTourRow(milk(), { unpurchasedCount: 1 });
+    await viewed;
+    const gaveUp = tourReports('tour_target_timeout', FIRST_SHOP_STEP.check);
 
-    it('keeps a count’s own label', () => {
-      renderRow(
-        seedItem({
-          quantity: 3,
-          unitName: 'cans',
-          unit: asAbbreviation({
-            __typename: 'Unit',
-            id: 'unit-pc',
-            symbol: 'pc',
-          }),
-          amount: {
-            __typename: 'Measure',
-            value: 3,
-            unitId: 'unit-pc',
-            metric: {
-              __typename: 'MeasureReading',
-              value: 3,
-              ...unit('unit-pc', 'pc', UnitType.Count),
-            },
-            imperial: {
-              __typename: 'MeasureReading',
-              value: 3,
-              ...unit('unit-pc', 'pc', UnitType.Count),
-            },
-          },
-        }),
-      );
-      expect(screen.getByLabelText('Milk, 2 liters, 3 cans')).toBeTruthy();
+    view.rerender(<TourRow unpurchasedCount={1} isPurchased />);
+
+    await expect(gaveUp).resolves.toBeUndefined();
+  });
+
+  it('lets the put-away step go once it is back on the list', async () => {
+    guideAt(FIRST_SHOP_STEP.add, FIRST_SHOP_STEP.pick, FIRST_SHOP_STEP.check);
+    const viewed = tourReports('tour_step_viewed', FIRST_SHOP_STEP.putAway);
+    const view = renderTourRow(milk({ purchaseInfo: bought() }), {
+      unpurchasedCount: 0,
+      hasPurchasedToMove: true,
+      tab: 'purchased',
+      isPurchased: true,
     });
+    await viewed;
+    const gaveUp = tourReports('tour_target_timeout', FIRST_SHOP_STEP.putAway);
+
+    view.rerender(
+      <TourRow unpurchasedCount={0} hasPurchasedToMove tab="purchased" />,
+    );
+
+    await expect(gaveUp).resolves.toBeUndefined();
+  });
+
+  it('lets the swipe tip go once it is ticked', async () => {
+    tutorialSession.startGuide('list_swipe');
+    const viewed = tourReports('tour_step_viewed', 'shopping_list_swipe');
+    const view = renderTourRow(milk(), { unpurchasedCount: 3 });
+    await viewed;
+    const gaveUp = tourReports('tour_target_timeout', 'shopping_list_swipe');
+
+    view.rerender(<TourRow unpurchasedCount={3} isPurchased />);
+
+    await expect(gaveUp).resolves.toBeUndefined();
   });
 });

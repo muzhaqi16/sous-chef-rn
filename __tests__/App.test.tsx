@@ -1,20 +1,26 @@
 /**
- * Minimal App smoke test.
- *
- * The App component has deep native-module dependencies that make full rendering
- * impractical in a Jest environment. Real integration testing is covered by the
- * Detox E2E suite. This test verifies the module is importable.
- *
- * We mock App.tsx's direct imports that transitively load native modules so the
- * require() below resolves without hitting TurboModule/NativeModule bindings.
+ * The app's shell: the splash until the core is ready, then the navigation
+ * inside the app's providers. The screens behind the navigator, the network
+ * client and the native services are its boundary; Detox drives the rest.
  */
 
-// Navigation tree → all screens → dozens of native modules
-jest.mock('../src/navigation/RootNavigator', () => ({
-  Navigation: () => null,
-}));
+// What the navigator renders stands in for every screen behind it, reading
+// the form renderers the shell supplies.
+jest.mock('../src/navigation/RootNavigator', () => {
+  const { Text } = jest.requireActual('react-native');
+  const { useFieldRenderers } = jest.requireActual(
+    '../src/components/molecules/fieldRenderers',
+  );
+  return {
+    Navigation: () => (
+      <Text testID="navigation">
+        {Object.keys(useFieldRenderers()).sort().join(',')}
+      </Text>
+    ),
+  };
+});
 
-// Hooks / services that pull in native SDKs
+// Native SDKs and the network client: the app's boundary.
 jest.mock('../src/hooks/app/useNetworkStatusSync', () => ({
   useNetworkStatusSync: jest.fn(),
 }));
@@ -22,47 +28,62 @@ jest.mock('../src/services/performance/MemoryMonitor', () => ({
   MemoryMonitor: { start: jest.fn(), stop: jest.fn() },
 }));
 jest.mock('../src/services/performance/NativePerformanceService', () => ({
-  NativePerformanceService: { initialize: jest.fn(), cleanup: jest.fn() },
+  NativePerformanceService: {
+    initialize: jest.fn(),
+    cleanup: jest.fn(),
+    noteInteractiveGate: jest.fn(),
+  },
 }));
 jest.mock('react-native-screens', () => ({
   enableScreens: jest.fn(),
   enableFreeze: jest.fn(),
 }));
-
-// Apollo client creates WebSocket links / polling timers that keep Jest alive
+// The persisted cache and the app's client open sockets and timers that keep
+// Jest alive; an offline client stands in.
 jest.mock('../src/apollo/client', () => ({
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
-jest.mock('../src/app/apolloClient', () => ({
-  client: {
-    watchQuery: jest.fn(),
-    query: jest.fn(),
-    mutate: jest.fn(),
-    subscribe: jest.fn(),
-    readQuery: jest.fn(),
-    writeQuery: jest.fn(),
-    cache: { reset: jest.fn() },
-  },
-}));
-jest.mock('../src/apollo/offlineQueue/queueManager', () => ({
-  queueManager: {
-    onOnline: jest.fn(),
-    onOffline: jest.fn(),
-    processQueue: jest.fn(),
-    setFailureHandler: jest.fn(),
-  },
-}));
-jest.mock('../src/apollo/offlineQueue/queueStore', () => ({
-  queueStore: { removeMutation: jest.fn() },
-}));
+jest.mock('../src/app/apolloClient', () => {
+  const { ApolloClient, ApolloLink, InMemoryCache } =
+    jest.requireActual('@apollo/client');
+  return {
+    client: new ApolloClient({
+      cache: new InMemoryCache(),
+      link: ApolloLink.empty(),
+    }),
+  };
+});
 
-describe('App module', () => {
-  it('exports a default component', () => {
-    const mod = require('../App');
-    expect(mod).toBeDefined();
-    expect(typeof mod.default === 'function' || typeof mod === 'function').toBe(
-      true,
+import React from 'react';
+import { act, render, screen } from '@testing-library/react-native';
+import { useStore } from '../src/store';
+import { kitTestIDs } from '../src/components/testIDs';
+import { catalogFieldRenderers } from '../src/features/catalog/ui/catalogFieldRenderers';
+import App from '../App';
+
+beforeEach(() => {
+  useStore.setState({ isHydrated: false });
+});
+
+describe('the app', () => {
+  it('shows the splash until the core is ready', () => {
+    render(<App />);
+
+    expect(screen.getByTestId(kitTestIDs.splashScreen)).toBeTruthy();
+    expect(screen.queryByTestId('navigation')).not.toBeOnTheScreen();
+  });
+
+  it('opens the navigation once ready, with the named form fields supplied', () => {
+    render(<App />);
+
+    act(() => {
+      useStore.setState({ isHydrated: true });
+    });
+
+    expect(screen.queryByTestId(kitTestIDs.splashScreen)).not.toBeOnTheScreen();
+    expect(screen.getByTestId('navigation')).toHaveTextContent(
+      Object.keys(catalogFieldRenderers).sort().join(','),
     );
   });
 });

@@ -59,12 +59,6 @@ export interface SortableShoppingListProps
   onTogglePurchase?: (id: string, opts?: { withDetails?: boolean }) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void; // Opens quantity edit sheet
-  /** Drag-to-reorder. The neighbour ids are null at the ends of the list. */
-  onSortOrderUpdate?: (
-    itemId: string,
-    afterItemId: string | null,
-    beforeItemId: string | null,
-  ) => void;
   itemHeight?: number;
   disabled?: boolean;
   groupByPurchased?: boolean;
@@ -76,12 +70,6 @@ export interface SortableShoppingListProps
   refreshing?: boolean;
   onEndReached?: () => void;
   onEndReachedThreshold?: number;
-  /**
-   * Whether this list offers drag-to-reorder (unpurchased items only). A tab
-   * affordance, not a permission: those come from
-   * `ShoppingListPermissionsProvider`.
-   */
-  reorderable: boolean;
   ListEmptyComponent?: FlashListProps<ShoppingListEntry>['ListEmptyComponent'];
   /** Defaults to true. Threaded through context to keep one list-level
    * subscription on the user preference. */

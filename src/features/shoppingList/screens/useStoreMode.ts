@@ -143,7 +143,8 @@ export function useStoreMode(listId: string) {
       permissions,
       /** Every loaded line, for the sheets the rows open. */
       items: [...rawUnpurchasedItems, ...rawPurchasedItems],
-      loading: loading && lines.length === 0,
+      // False once any line is held.
+      loading,
       error,
     },
     actions: {

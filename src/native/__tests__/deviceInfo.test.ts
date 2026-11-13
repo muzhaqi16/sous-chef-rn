@@ -35,7 +35,6 @@ jest.mock('react-native-device-info', () => ({
   getFreeDiskStorage: jest.fn(() => Promise.resolve(128000000)),
   supportedAbis: jest.fn(() => Promise.resolve(['arm64'])),
   getCarrier: jest.fn(() => Promise.resolve('T-Mobile')),
-  getIpAddress: jest.fn(() => Promise.resolve('192.168.1.1')),
   isAirplaneMode: jest.fn(() => Promise.resolve(false)),
   isLocationEnabled: jest.fn(() => Promise.resolve(true)),
   getAvailableLocationProviders: jest.fn(() =>
@@ -115,7 +114,6 @@ describe('deviceInfo', () => {
     (DeviceInfo.getFreeDiskStorage as jest.Mock).mockResolvedValue(128000000);
     (DeviceInfo.supportedAbis as jest.Mock).mockResolvedValue(['arm64']);
     (DeviceInfo.getCarrier as jest.Mock).mockResolvedValue('T-Mobile');
-    (DeviceInfo.getIpAddress as jest.Mock).mockResolvedValue('192.168.1.1');
     (DeviceInfo.isAirplaneMode as jest.Mock).mockResolvedValue(false);
     (DeviceInfo.isLocationEnabled as jest.Mock).mockResolvedValue(true);
     (DeviceInfo.getAvailableLocationProviders as jest.Mock).mockResolvedValue({
@@ -390,7 +388,6 @@ describe('deviceInfo', () => {
     it('collects network info', async () => {
       const info = await collectDeviceInformation();
       expect(info.carrier).toBe('T-Mobile');
-      expect(info.deviceIpAddress).toBe('192.168.1.1');
     });
 
     it('collects battery info', async () => {
@@ -454,9 +451,17 @@ describe('deviceInfo', () => {
       expect(info.deviceName).toBe('ios Device');
     });
 
-    it('handles location providers as object', async () => {
+    // The API stores the platform's provider→availability map, so a provider
+    // that is switched off reads as off, not as one the device has.
+    it('reports each location provider with whether it is available', async () => {
+      jest
+        .mocked(DeviceInfo.getAvailableLocationProviders)
+        .mockResolvedValue({ gps: true, network: false });
       const info = await collectDeviceInformation();
-      expect(info.availableLocationProviders).toEqual(['gps', 'network']);
+      expect(info.availableLocationProviders).toEqual({
+        gps: true,
+        network: false,
+      });
     });
 
     it('returns fallback device info on complete failure', async () => {

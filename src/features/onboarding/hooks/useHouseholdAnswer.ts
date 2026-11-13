@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { COOKS_FOR_MAX } from '#domain/servings';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useRecordOnboardingProgress } from '#features/onboarding/store/onboardingProgressStore';
@@ -11,6 +12,7 @@ export function useHouseholdAnswer() {
     fetchPolicy: 'cache-first',
   });
   const { recordCooksFor } = useRecordOnboardingProgress();
+  const latest = useRef<number | null>(null);
 
   /**
    * Resolves once the write landed or queued, or failed and was alerted. The
@@ -19,7 +21,10 @@ export function useHouseholdAnswer() {
    */
   const answer = async (count: number): Promise<void> => {
     if (!Number.isInteger(count) || count < 1 || count > COOKS_FOR_MAX) return;
-    if (await updateDietaryProfile({ cooksFor: count })) recordCooksFor(count);
+    latest.current = count;
+    const saved = await updateDietaryProfile({ cooksFor: count });
+    // An earlier save can resolve after a later one: only the last asked counts.
+    if (saved && latest.current === count) recordCooksFor(count);
   };
 
   return {

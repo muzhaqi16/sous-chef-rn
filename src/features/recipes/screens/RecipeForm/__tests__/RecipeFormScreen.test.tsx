@@ -1,280 +1,520 @@
-'use no memo';
-
 import React from 'react';
-import { userEvent } from '@testing-library/react-native';
-import type { StaticScreenProps } from '@react-navigation/native';
+import { act, screen, userEvent, within } from '@testing-library/react-native';
+import { usePreventRemove } from '@react-navigation/native';
+import { makeCache } from '#/apollo/cache';
 import {
+  inputOf,
   recordMock,
   renderWithApollo,
   seedQuery,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
-import { drainTimers } from '#/test-utils/drainTimers';
+import { operationLog } from '#/test-utils/operationLog';
+import {
+  recipeIngredientRead,
+  recipeRead,
+} from '#/test-utils/fixtures/recipeFixtures';
+import { useStore } from '#store';
+import { resetSessionScopedStores } from '#store/sessionScopedStores';
+import { t } from '#/i18n';
+import { alertService } from '#/services/alertService';
+import { requirePlatform } from '#platform/install';
+import {
+  Diet,
+  ErrorCode,
+  ErrorDisposition,
+  FeatureFlagName,
+  RecipeCaptureStatus,
+} from '#/graphql/generated/schemaTypes';
+import {
+  MAX_RECIPE_INGREDIENTS,
+  RECIPE_INGREDIENTS_PAGE_SIZE,
+} from '#domain/recipeIngredientsPaging';
+import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
 import {
   CreateRecipeDocument,
   GetRecipeDocument,
   UpdateRecipeDocument,
 } from '#features/recipes/graphql/recipe.generated';
-import { alertService } from '#/services/alertService';
-import {
-  MAX_RECIPE_INGREDIENTS,
-  RECIPE_INGREDIENTS_PAGE_SIZE,
-} from '#domain/recipeIngredientsPaging';
-import { t } from '#/i18n';
-import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { recipesTestIDs } from '#features/recipes/testIDs';
-import { RecipeCaptureStatus } from '#/graphql/generated/schemaTypes';
+import { UseRecipeData_RecipeFragmentDoc } from '#features/recipes/hooks/useRecipeData.generated';
 import { RecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';
+import { ParseIngredientLinesDocument } from '#features/recipes/hooks/useIngredientPaste.generated';
 import { useRecipeCaptureStore } from '#features/recipes/store/recipeCaptureStore';
+import { recipesTestIDs } from '#features/recipes/testIDs';
+import { kitTestIDs } from '#components/testIDs';
+import { FormScreen } from '#components/templates/FormScreen';
+import { RecipeIngredientEditor } from '#features/recipes/components/recipeForm/RecipeIngredientEditor';
+import { RecipeIngredientList } from '#features/recipes/components/recipeForm/RecipeIngredientList';
+import { RecipeStepEditor } from '#features/recipes/components/recipeForm/RecipeStepEditor';
+import { RecipeStepList } from '#features/recipes/components/recipeForm/RecipeStepList';
 import { RecipeFormScreen } from '../index';
 
-type RecipeFormScreenProps = StaticScreenProps<
-  { recipeId?: string } | undefined
->;
-
 jest.mock('#hooks/navigation/useAppNavigation');
-jest.mock('#hooks/settings/useFeatureFlag', () => ({
-  useFeatureFlag: jest.fn(() => true),
-}));
 
-// The three field components render their refusal so the screen test can see
-// WHERE each message landed, which an alert-based check could not tell apart.
-jest.mock('#features/recipes/components/recipeForm/RecipeBasicFields', () => ({
-  RecipeBasicFields: ({
-    errors,
-    updateField,
-  }: {
-    errors?: { name?: { message?: string } };
-    updateField: (field: 'description', value: string) => void;
-  }) => {
-    const { Text, Pressable } = require('react-native');
-    return (
-      <>
-        <Pressable
-          testID="edit-description"
-          onPress={() => updateField('description', 'Edited')}
-        />
-        {errors?.name?.message ? <Text>{errors.name.message}</Text> : null}
-      </>
-    );
-  },
-}));
-jest.mock(
-  '#features/recipes/components/recipeForm/RecipeCategoryFields',
-  () => ({
-    RecipeCategoryFields: () => null,
-  }),
-);
-jest.mock(
-  '#features/recipes/components/recipeForm/RecipeIngredientList',
-  () => ({
-    RecipeIngredientList: ({
-      error,
-      ingredients,
-      onPasteIngredients,
-    }: {
-      error?: string;
-      ingredients: unknown[];
-      onPasteIngredients?: () => void;
-    }) => {
-      const { Text } = require('react-native');
-      return (
-        <>
-          <Text testID="ingredient-count">{ingredients.length}</Text>
-          {error ? <Text>{error}</Text> : null}
-          {onPasteIngredients ? <Text testID="paste-offered" /> : null}
-        </>
-      );
-    },
-  }),
-);
-jest.mock(
-  '#features/recipes/components/recipeForm/RecipeIngredientEditor',
-  () => ({
-    RecipeIngredientEditor: require('react').forwardRef(() => null),
-  }),
-);
-jest.mock('#features/recipes/components/recipeForm/RecipeStepList', () => ({
-  RecipeStepList: ({ error }: { error?: string }) => {
-    const { Text } = require('react-native');
-    return error ? <Text>{error}</Text> : null;
-  },
-}));
-jest.mock('#features/recipes/components/recipeForm/RecipeStepEditor', () => ({
-  RecipeStepEditor: require('react').forwardRef(() => null),
-}));
-jest.mock('#features/recipes/components/recipeForm/RecipeTagsSection', () => ({
-  RecipeTagsSection: () => null,
-}));
-jest.mock('#components/templates/FormScreen', () => ({
-  FormScreen: ({
-    children,
-    onSave,
-    title,
-    testID,
-    unsavedChanges,
-  }: {
-    children?: React.ReactNode;
-    onSave: () => void;
-    title: string;
-    testID?: string;
-    unsavedChanges?: boolean;
-  }) => {
-    const { View, Text, Pressable } = require('react-native');
-    return (
-      <View testID={testID}>
-        <Text>{title}</Text>
-        <Text testID="unsaved-changes">{String(unsavedChanges)}</Text>
-        <Pressable testID="save-button" onPress={onSave}>
-          <Text>Save</Text>
-        </Pressable>
-        {children}
-      </View>
-    );
-  },
-}));
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
-beforeEach(() => {
-  jest.useFakeTimers();
+// The navigator holds the discard guard: its first argument is whether leaving
+// asks first.
+const navigation = jest.requireMock<{
+  usePreventRemove: typeof usePreventRemove;
+}>('@react-navigation/native');
+const guardOn = () => jest.mocked(usePreventRemove).mock.lastCall?.[0];
+
+/** The input of the first request a write sent. */
+const firstInput = (write: ReturnType<typeof recordMock>) => {
+  const [first] = write.fired;
+  if (!first) throw new Error('the write was never sent');
+  return inputOf(first);
+};
+
+let log = operationLog();
+
+interface Visit {
+  params?: { recipeId?: string; captureId?: string };
+  answers?: ReturnType<typeof recordMock>[];
+  cache?: ReturnType<typeof makeCache>;
+  /** Whether the server turns ingredient paste on for this person. */
+  paste?: boolean;
+}
+
+function openForm({
+  params,
+  answers = [],
+  cache = makeCache(),
+  paste = true,
+}: Visit = {}) {
+  const view = renderWithApollo(<RecipeFormScreen route={{ params }} />, {
+    cache,
+    links: [log.link],
+    operationMocks: [
+      ...answers.map(answer => answer.mock),
+      recordMock(MyFeatureFlagsDocument, {
+        data: {
+          myFeatureFlags: paste
+            ? [
+                {
+                  __typename: 'FeatureFlagState',
+                  flag: FeatureFlagName.IngredientPaste,
+                  enabled: true,
+                },
+              ]
+            : [],
+        },
+      }).mock,
+    ],
+  });
+  return { ...view, cache };
+}
+
+const FEAST = recipeRead({
+  name: 'Feast',
+  version: 3,
+  instructions: [{ __typename: 'RecipeInstruction', step: 1, text: 'Cook' }],
+  ingredients: [recipeIngredientRead('ri-1', 'Salt')],
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+/** An edit of recipe-1: the first read answers `recipe`, later ones `rereads`. */
+async function openEdit({
+  recipe = FEAST,
+  rereads = [],
+  answers = [],
+}: {
+  recipe?: typeof FEAST;
+  rereads?: ReturnType<typeof recordMock>[];
+  answers?: ReturnType<typeof recordMock>[];
+} = {}) {
+  const view = openForm({
+    params: { recipeId: 'recipe-1' },
+    answers: [
+      recordMock(GetRecipeDocument, {
+        data: { recipe },
+        maxUsageCount: rereads.length > 0 ? 1 : 10,
+      }),
+      ...rereads,
+      ...answers,
+    ],
+  });
+  await log.landed(GetRecipeDocument);
+  return view;
+}
+
+const formSave = () =>
+  within(screen.UNSAFE_getByType(FormScreen)).getByLabelText(t('labels.save'));
+const ingredients = () => within(screen.UNSAFE_getByType(RecipeIngredientList));
+const ingredientEditor = () =>
+  within(screen.UNSAFE_getByType(RecipeIngredientEditor));
+const steps = () => within(screen.UNSAFE_getByType(RecipeStepList));
+const stepEditor = () => within(screen.UNSAFE_getByType(RecipeStepEditor));
+
+type User = ReturnType<typeof userEvent.setup>;
+
+async function addIngredient(user: User, name: string) {
+  await user.press(ingredients().getByText(t('recipes.addIngredient')));
+  await user.type(
+    ingredientEditor().getByPlaceholderText(
+      t('recipes.ingredientNamePlaceholder'),
+    ),
+    name,
+  );
+  await user.press(ingredientEditor().getByLabelText(t('labels.save')));
+}
+
+async function addStep(user: User, instruction: string) {
+  await user.press(steps().getByText(t('recipes.addStep')));
+  await user.type(
+    stepEditor().getByPlaceholderText(t('recipes.stepInstructionPlaceholder')),
+    instruction,
+  );
+  await user.press(stepEditor().getByLabelText(t('labels.save')));
+}
+
+/** A new recipe with a name, a line and a step: all it needs to save. */
+async function fillNew(user: User) {
+  await user.type(
+    screen.getByPlaceholderText(t('recipes.namePlaceholder')),
+    'Miso salmon',
+  );
+  await addIngredient(user, 'Salmon');
+  await addStep(user, 'Roast');
+}
+
+/** Presses a button of the last alert raised. */
+async function answerAlert(text: string) {
+  const [, , buttons] = jest.mocked(alertService.alert).mock.lastCall ?? [];
+  const onPress = buttons?.find(button => button.text === text)?.onPress;
+  if (!onPress) throw new Error(`no "${text}" in the last alert`);
+  await act(async () => {
+    onPress();
+  });
+}
 
 beforeEach(() => {
-  jest.mocked(useFeatureFlag).mockReturnValue(true);
   jest.clearAllMocks();
+  jest
+    .spyOn(navigation, 'usePreventRemove')
+    .mockImplementation(() => undefined);
+  log = operationLog();
+  resetSessionScopedStores();
+  useStore.setState({
+    user: {
+      id: 'user-1',
+      email: 'cook@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    isOnline: true,
+    apiReachable: true,
+  });
 });
 
-describe('RecipeFormScreen', () => {
-  const defaultProps: RecipeFormScreenProps = {
-    route: { params: undefined },
-  };
+describe('a new recipe', () => {
+  it('says on each field what it lacks, and saves nothing', async () => {
+    const create = recordMock(CreateRecipeDocument, { held: true });
+    const announce = jest.spyOn(requirePlatform('screenReader'), 'announce');
+    openForm({ answers: [create] });
 
-  it('renders in create mode', () => {
-    const { getByText } = renderWithApollo(
-      <RecipeFormScreen {...defaultProps} />,
-    );
-    expect(getByText('Create Recipe')).toBeTruthy();
-  });
+    await userEvent.setup().press(formSave());
 
-  it('offers pasting ingredients while the capability ships', () => {
-    const { getByTestId } = renderWithApollo(
-      <RecipeFormScreen {...defaultProps} />,
-    );
-    expect(getByTestId('paste-offered')).toBeTruthy();
-  });
-
-  it('is the form as it was without the capability', () => {
-    jest.mocked(useFeatureFlag).mockReturnValue(false);
-    const { queryByTestId } = renderWithApollo(
-      <RecipeFormScreen {...defaultProps} />,
-    );
-    expect(queryByTestId('paste-offered')).toBeNull();
-    expect(queryByTestId(recipesTestIDs.pasteIngredientsInput)).toBeNull();
-  });
-
-  it('renders in edit mode with recipeId', () => {
-    const props: RecipeFormScreenProps = {
-      route: { params: { recipeId: 'recipe-1' } },
-    };
-    const { getByText } = renderWithApollo(<RecipeFormScreen {...props} />);
-    expect(getByText('Edit Recipe')).toBeTruthy();
-  });
-
-  // A field the user can fix is reported ON the field. An alert covers the form,
-  // and a dismissed alert cannot say which input it meant.
-  it('reports an empty form on its fields, not through an alert', async () => {
-    const user = userEvent.setup();
-    const { getByTestId, getByText } = renderWithApollo(
-      <RecipeFormScreen {...defaultProps} />,
-    );
-
-    await user.press(getByTestId('save-button'));
-
-    await drainTimers();
-    expect(getByText('Recipe name is required')).toBeTruthy();
-    await drainTimers();
-    expect(getByText('At least one ingredient is required')).toBeTruthy();
-    await drainTimers();
-    expect(getByText('At least one instruction step is required')).toBeTruthy();
+    expect(screen.getByText(t('recipes.createRecipe'))).toBeTruthy();
+    expect(screen.getByText(t('recipes.nameRequired'))).toBeTruthy();
+    expect(screen.getByText(t('recipes.ingredientRequired'))).toBeTruthy();
+    expect(screen.getByText(t('recipes.stepRequired'))).toBeTruthy();
+    // A screen reader hears the first.
+    expect(announce).toHaveBeenCalledWith(t('recipes.nameRequired'));
     expect(alertService.alert).not.toHaveBeenCalled();
+    expect(create.fired).toEqual([]);
+    announce.mockRestore();
   });
 
-  it('renders with test ID', () => {
-    const { getByTestId } = renderWithApollo(
-      <RecipeFormScreen {...defaultProps} />,
-    );
-    expect(getByTestId('recipe-form-screen')).toBeTruthy();
-  });
-
-  it('does not call create mutation when validation fails', async () => {
+  it('sends what was typed and picked, written by the person', async () => {
+    const create = recordMock(CreateRecipeDocument, { held: true });
+    const { cache } = openForm({ answers: [create] });
     const user = userEvent.setup();
-    const create = recordMock(CreateRecipeDocument, {
+    await fillNew(user);
+    await user.press(screen.getByText(t('recipes.diets')));
+    await user.press(screen.getByText(t('recipes.diet.VEGETARIAN')));
+
+    await user.press(formSave());
+    await log.requested(CreateRecipeDocument);
+
+    const sent = firstInput(create);
+    expect(sent).toMatchObject({
+      name: 'Miso salmon',
+      ingredients: [expect.objectContaining({ name: 'Salmon' })],
+      instructions: [expect.objectContaining({ text: 'Roast' })],
+      dietary: expect.objectContaining({ diets: [Diet.Vegetarian] }),
+    });
+    // The new recipe shows at once, as the person's own.
+    const shown = cache.readFragment({
+      fragment: UseRecipeData_RecipeFragmentDoc,
+      fragmentName: 'useRecipeData_recipe',
+      id: `Recipe:${String(sent.id)}`,
+      optimistic: true,
+    });
+    expect(shown?.createdBy?.id).toBe('user-1');
+  });
+
+  it('leaves once the save lands, without asking about what it saved', async () => {
+    const guardAtLeave: unknown[] = [];
+    mockNav.goBack.mockImplementation(() => {
+      guardAtLeave.push(guardOn());
+    });
+    openForm({
+      answers: [
+        recordMock(CreateRecipeDocument, {
+          data: {
+            createRecipe: {
+              __typename: 'CreateRecipePayload',
+              recipe: { id: 'recipe-new' },
+            },
+          },
+        }),
+      ],
+    });
+    const user = userEvent.setup();
+    await fillNew(user);
+    expect(guardOn()).toBe(true);
+
+    await user.press(formSave());
+    await log.landed(CreateRecipeDocument);
+
+    expect(guardAtLeave).toEqual([false]);
+  });
+
+  it('takes no second save while one is out', async () => {
+    const create = recordMock(CreateRecipeDocument, { held: true });
+    openForm({ answers: [create] });
+    const user = userEvent.setup();
+    await fillNew(user);
+
+    await user.press(formSave());
+    await log.requested(CreateRecipeDocument);
+    await user.press(formSave());
+
+    expect(create.fired).toHaveLength(1);
+  });
+
+  it('shows a refusal naming a field on that field, not in an alert', async () => {
+    openForm({
+      answers: [
+        recordMock(CreateRecipeDocument, {
+          data: {
+            createRecipe: {
+              __typename: 'ValidationError',
+              code: ErrorCode.ValidationFailed,
+              disposition: ErrorDisposition.Fail,
+              message: 'Name is too long',
+              field: 'input.name',
+            },
+          },
+        }),
+      ],
+    });
+    const user = userEvent.setup();
+    await fillNew(user);
+
+    await user.press(formSave());
+    await log.landed(CreateRecipeDocument);
+
+    // The refusal settles a few promise turns after its answer lands.
+    await act(async () => undefined);
+
+    expect(screen.getByText(t('recipes.createRecipeFailed'))).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(mockNav.goBack).not.toHaveBeenCalled();
+  });
+
+  it('closes from its header', async () => {
+    openForm();
+
+    await userEvent
+      .setup()
+      .press(
+        within(screen.UNSAFE_getByType(FormScreen)).getByTestId(
+          kitTestIDs.headerCloseButton,
+        ),
+      );
+
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('its lists', () => {
+  it('edit a line in place, remove it, and add the next from empty', async () => {
+    openForm();
+    const user = userEvent.setup();
+    await addIngredient(user, 'Salt');
+    const name = () =>
+      ingredientEditor().getByPlaceholderText(
+        t('recipes.ingredientNamePlaceholder'),
+      );
+
+    await user.press(ingredients().getByText('Salt'));
+    expect(
+      ingredientEditor().getByText(t('recipes.editIngredient')),
+    ).toBeTruthy();
+    expect(name().props.value).toBe('Salt');
+    await user.clear(name());
+    await user.type(name(), 'Sea salt');
+    await user.press(ingredientEditor().getByLabelText(t('labels.save')));
+
+    expect(ingredients().queryByText('Salt')).not.toBeOnTheScreen();
+    expect(ingredients().getByText('Sea salt')).toBeTruthy();
+
+    await user.press(
+      ingredients().getByLabelText(t('a11y.removeNamed', { name: 'Sea salt' })),
+    );
+    expect(ingredients().queryByText('Sea salt')).not.toBeOnTheScreen();
+
+    await user.press(ingredients().getByText(t('recipes.addIngredient')));
+    expect(
+      ingredientEditor().getByText(t('recipes.addIngredient')),
+    ).toBeTruthy();
+    expect(name().props.value).toBe('');
+  });
+
+  it('edit a step in place, remove it, and add the next from empty', async () => {
+    openForm();
+    const user = userEvent.setup();
+    await addStep(user, 'Roast');
+    const instruction = () =>
+      stepEditor().getByPlaceholderText(
+        t('recipes.stepInstructionPlaceholder'),
+      );
+
+    await user.press(steps().getByText('Roast'));
+    expect(stepEditor().getByText(t('recipes.editStep'))).toBeTruthy();
+    expect(instruction().props.value).toBe('Roast');
+    await user.clear(instruction());
+    await user.type(instruction(), 'Roast for 20 minutes');
+    await user.press(stepEditor().getByLabelText(t('labels.save')));
+
+    expect(steps().queryByText('Roast')).not.toBeOnTheScreen();
+    expect(steps().getByText('Roast for 20 minutes')).toBeTruthy();
+
+    await user.press(
+      steps().getByLabelText(
+        t('a11y.removeNamed', { name: 'Roast for 20 minutes' }),
+      ),
+    );
+    expect(steps().queryByText('Roast for 20 minutes')).not.toBeOnTheScreen();
+
+    await user.press(steps().getByText(t('recipes.addStep')));
+    expect(stepEditor().getByText(t('recipes.addStep'))).toBeTruthy();
+    expect(instruction().props.value).toBe('');
+  });
+});
+
+describe('pasting ingredients', () => {
+  it('reads pasted lines into the list, offering only the room it has', async () => {
+    openForm({
+      answers: [
+        recordMock(ParseIngredientLinesDocument, {
+          data: {
+            parseIngredientLines: {
+              lines: [
+                {
+                  originalText: '2 cups flour',
+                  name: 'flour',
+                  quantity: 2,
+                  unit: null,
+                  preparation: null,
+                  note: null,
+                  isOptional: false,
+                  section: null,
+                  item: null,
+                },
+              ],
+            },
+          },
+        }),
+      ],
+    });
+    await log.landed(MyFeatureFlagsDocument);
+    const user = userEvent.setup();
+    await addIngredient(user, 'Salt');
+
+    await user.press(screen.getByTestId(recipesTestIDs.pasteIngredientsButton));
+    expect(
+      screen.getByText(
+        t('recipes.pasteIngredientsRoom', {
+          count: MAX_RECIPE_INGREDIENTS - 1,
+        }),
+      ),
+    ).toBeTruthy();
+    await user.type(
+      screen.getByTestId(recipesTestIDs.pasteIngredientsInput),
+      '2 cups flour',
+    );
+    await user.press(screen.getByTestId(recipesTestIDs.pasteIngredientsAdd));
+    await log.landed(ParseIngredientLinesDocument);
+
+    expect(ingredients().getByText('flour')).toBeTruthy();
+  });
+
+  it('is not offered without the capability', async () => {
+    openForm({ paste: false });
+    await log.landed(MyFeatureFlagsDocument);
+
+    expect(
+      screen.queryByTestId(recipesTestIDs.pasteIngredientsButton),
+    ).not.toBeOnTheScreen();
+  });
+});
+
+describe('a capture', () => {
+  type Draft = NonNullable<
+    NonNullable<
+      MockDataFor<typeof RecipeCaptureDocument>['recipeCapture']
+    >['draft']
+  >;
+  const line = (text: string) => ({
+    originalText: text,
+    name: text,
+    quantity: null,
+    unit: null,
+    item: null,
+    candidates: [],
+  });
+  const captured = (id: string, draft: Draft) =>
+    recordMock(RecipeCaptureDocument, {
       data: {
-        createRecipe: {
-          __typename: 'CreateRecipePayload',
+        recipeCapture: {
+          id,
+          status: RecipeCaptureStatus.Incomplete,
+          recipe: null,
+          draft,
         },
       },
     });
-    const { getByTestId } = renderWithApollo(
-      <RecipeFormScreen {...defaultProps} />,
-      { operationMocks: [create.mock] },
-    );
-
-    await user.press(getByTestId('save-button'));
-
-    expect(create.fired).toEqual([]);
-  });
 
   // A caption that lists ingredients and no method ends INCOMPLETE.
   it('opens filled with what an incomplete capture read, saving nothing', async () => {
-    const lines = ['2 tbsp white miso', '1 tbsp honey', 'salt, to taste'].map(
-      originalText => ({
-        originalText,
-        name: originalText,
-        quantity: null,
-        unit: null,
-        item: null,
-        candidates: [],
-      }),
-    );
-    const capture = recordMock(RecipeCaptureDocument, {
-      data: {
-        recipeCapture: {
-          id: 'capture-1',
-          status: RecipeCaptureStatus.Incomplete,
-          recipe: null,
-          draft: {
-            name: 'Miso salmon',
-            lines,
-            steps: [],
-          },
-        },
-      },
+    const create = recordMock(CreateRecipeDocument, { held: true });
+    openForm({
+      params: { captureId: 'capture-1' },
+      answers: [
+        captured('capture-1', {
+          name: 'Miso salmon',
+          lines: ['2 tbsp white miso', '1 tbsp honey', 'salt, to taste'].map(
+            line,
+          ),
+          steps: [],
+        }),
+        create,
+      ],
     });
-    const create = recordMock(CreateRecipeDocument, {
-      data: { createRecipe: { __typename: 'CreateRecipePayload' } },
-    });
+    await log.landed(RecipeCaptureDocument);
 
-    const { getByTestId, getByText } = renderWithApollo(
-      <RecipeFormScreen route={{ params: { captureId: 'capture-1' } }} />,
-      { operationMocks: [capture.mock, create.mock] },
-    );
-
-    await drainTimers();
-    expect(getByTestId('ingredient-count')).toHaveTextContent('3');
-    await drainTimers();
-    expect(getByText('At least one instruction step is required')).toBeTruthy();
+    expect(screen.getByDisplayValue('Miso salmon')).toBeTruthy();
+    expect(ingredients().getByText('1 tbsp honey')).toBeTruthy();
+    expect(screen.getByText(t('recipes.stepRequired'))).toBeTruthy();
     expect(create.fired).toEqual([]);
   });
 
-  // The server's own save of a complete capture records its site and link.
-  it('saves a finished capture with the site and link it was read from', async () => {
-    const user = userEvent.setup();
+  it('saves a finished capture with the site and link it was read from, then clears it', async () => {
     useRecipeCaptureStore.getState().addReading({
       id: 'capture-2',
       source: 'text',
@@ -282,292 +522,290 @@ describe('RecipeFormScreen', () => {
       link: 'https://www.instagram.com/p/abc/',
       createdAt: new Date().toISOString(),
     });
-    const capture = recordMock(RecipeCaptureDocument, {
+    const create = recordMock(CreateRecipeDocument, {
       data: {
-        recipeCapture: {
-          id: 'capture-2',
-          status: RecipeCaptureStatus.Incomplete,
-          recipe: null,
-          draft: {
-            name: 'Miso salmon',
-            imageUrl: null,
-            author: 'Ana',
-            sourceName: 'instagram.com',
-            lines: [
-              {
-                originalText: 'salmon',
-                name: 'salmon',
-                quantity: null,
-                unit: null,
-                item: null,
-                candidates: [],
-              },
-            ],
-            steps: [{ step: 1, text: 'Roast', section: null }],
-          },
+        createRecipe: {
+          __typename: 'CreateRecipePayload',
+          recipe: { id: 'recipe-new' },
         },
       },
     });
-    const create = recordMock(CreateRecipeDocument, {
-      data: { createRecipe: { __typename: 'CreateRecipePayload' } },
-    });
-    const { getByTestId } = renderWithApollo(
-      <RecipeFormScreen route={{ params: { captureId: 'capture-2' } }} />,
-      { operationMocks: [capture.mock, create.mock] },
-    );
-    await drainTimers();
-    expect(getByTestId('ingredient-count')).toHaveTextContent('1');
-
-    await user.press(getByTestId('save-button'));
-
-    await drainTimers();
-    expect(create.fired).toHaveLength(1);
-    expect(create.fired).toEqual([
-      expect.objectContaining({
-        input: expect.objectContaining({
-          attribution: {
-            originalAuthor: 'Ana',
-            source: 'instagram.com',
-            sourceUrl: 'https://www.instagram.com/p/abc/',
-          },
+    openForm({
+      params: { captureId: 'capture-2' },
+      answers: [
+        captured('capture-2', {
+          name: 'Miso salmon',
+          imageUrl: null,
+          author: 'Ana',
+          sourceName: 'instagram.com',
+          lines: [line('salmon')],
+          steps: [{ step: 1, text: 'Roast', section: null }],
         }),
-      }),
-    ]);
+        create,
+      ],
+    });
+    await log.landed(RecipeCaptureDocument);
+
+    await userEvent.setup().press(formSave());
+    await log.landed(CreateRecipeDocument);
+
+    expect(firstInput(create)).toMatchObject({
+      attribution: {
+        originalAuthor: 'Ana',
+        source: 'instagram.com',
+        sourceUrl: 'https://www.instagram.com/p/abc/',
+      },
+    });
+    // It leaves the Recipes tab, where it waited.
+    expect(
+      useRecipeCaptureStore.getState().entries.map(entry => entry.id),
+    ).not.toContain('capture-2');
   });
 
-  // A save replaces the recipe's whole ingredient list with the form's.
-  describe('saving an edit', () => {
-    const editProps: RecipeFormScreenProps = {
-      route: { params: { recipeId: 'recipe-1' } },
-    };
+  it('offers to read a capture again rather than a blank form', async () => {
+    openForm({
+      params: { captureId: 'capture-3' },
+      answers: [
+        recordMock(RecipeCaptureDocument, {
+          error: new Error('Network request failed'),
+          maxUsageCount: 1,
+        }),
+        captured('capture-3', {
+          name: 'Miso salmon',
+          lines: [line('salmon')],
+          steps: [],
+        }),
+      ],
+    });
+    await log.landed(RecipeCaptureDocument);
 
-    /** A recipe that passes the form's validation as it loads. */
-    const loadedRecipe = (
-      hasNextPage: boolean,
-    ): MockDataFor<typeof GetRecipeDocument> => ({
-      recipe: {
+    expect(screen.getByText(t('dataState.errorTitle'))).toBeTruthy();
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+    await log.landed(RecipeCaptureDocument, 2);
+
+    expect(screen.getByDisplayValue('Miso salmon')).toBeTruthy();
+  });
+});
+
+describe('an edit', () => {
+  it('opens filled from the recipe, and sends the form it read', async () => {
+    const update = recordMock(UpdateRecipeDocument, { held: true });
+    await openEdit({ answers: [update] });
+
+    expect(screen.getByText(t('recipes.editRecipe'))).toBeTruthy();
+    expect(screen.getByDisplayValue('Feast')).toBeTruthy();
+    await userEvent.setup().press(formSave());
+    await log.requested(UpdateRecipeDocument);
+
+    expect(update.fired[0]).toEqual({
+      input: expect.objectContaining({
         id: 'recipe-1',
         version: 3,
         name: 'Feast',
-        // Unstated, the mocked schema fills these with text that is no URL.
-        imageUrl: null,
-        videoUrl: null,
-        instructions: [{ step: 1, text: 'Cook' }],
-        pendingRevision: null,
-        ingredientsConnection: {
-          edges: [
-            {
-              node: {
-                id: 'ri-1',
-                name: 'Salt',
-                quantity: 1,
-              },
+        ingredients: [expect.objectContaining({ name: 'Salt', quantity: 1 })],
+      }),
+      ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+    });
+  });
+
+  it('asks before leaving once edited, and leaves without asking once saved', async () => {
+    const guardAtLeave: unknown[] = [];
+    mockNav.goBack.mockImplementation(() => {
+      guardAtLeave.push(guardOn());
+    });
+    await openEdit({
+      answers: [
+        recordMock(UpdateRecipeDocument, {
+          data: {
+            updateRecipe: {
+              __typename: 'UpdateRecipePayload',
+              recipe: { id: 'recipe-1' },
             },
-          ],
-          pageInfo: {
-            hasNextPage,
-            endCursor: hasNextPage ? 'cursor-100' : null,
           },
-          totalCount: hasNextPage ? 150 : 1,
+        }),
+      ],
+    });
+    expect(guardOn()).toBe(false);
+    const user = userEvent.setup();
+
+    await user.type(screen.getByDisplayValue('Feast'), ' night');
+    expect(guardOn()).toBe(true);
+    await user.press(formSave());
+    await log.landed(UpdateRecipeDocument);
+
+    expect(guardAtLeave).toEqual([false]);
+  });
+
+  it('offers to read the recipe again in place of a blank form', async () => {
+    openForm({
+      params: { recipeId: 'recipe-1' },
+      answers: [
+        recordMock(GetRecipeDocument, {
+          error: new Error('Network request failed'),
+          maxUsageCount: 1,
+        }),
+        recordMock(GetRecipeDocument, { data: { recipe: FEAST } }),
+      ],
+    });
+    await log.landed(GetRecipeDocument);
+
+    expect(screen.getByText(t('dataState.errorTitle'))).toBeTruthy();
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+    await log.landed(GetRecipeDocument, 2);
+
+    expect(screen.getByDisplayValue('Feast')).toBeTruthy();
+  });
+
+  it('keeps the form when a read fails over the recipe it holds', async () => {
+    const cache = makeCache();
+    seedQuery(cache, {
+      query: GetRecipeDocument,
+      variables: {
+        id: 'recipe-1',
+        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+      },
+      data: { recipe: FEAST },
+    });
+    openForm({
+      params: { recipeId: 'recipe-1' },
+      cache,
+      answers: [
+        recordMock(GetRecipeDocument, {
+          error: new Error('Network request failed'),
+        }),
+      ],
+    });
+    await log.landed(GetRecipeDocument);
+
+    expect(screen.getByDisplayValue('Feast')).toBeTruthy();
+    expect(screen.queryByText(t('dataState.errorTitle'))).not.toBeOnTheScreen();
+  });
+
+  it('reloads the form from an edit made elsewhere when the save is refused for it', async () => {
+    await openEdit({
+      rereads: [
+        recordMock(GetRecipeDocument, {
+          data: { recipe: { ...FEAST, name: 'Feast for six', version: 4 } },
+        }),
+      ],
+      answers: [
+        recordMock(UpdateRecipeDocument, {
+          data: {
+            updateRecipe: {
+              __typename: 'ConflictError',
+              code: ErrorCode.VersionConflict,
+              message: 'Stale',
+            },
+          },
+        }),
+      ],
+    });
+    await userEvent.setup().press(formSave());
+    await log.landed(UpdateRecipeDocument);
+
+    await answerAlert(t('labels.refresh'));
+    await log.landed(GetRecipeDocument, 2);
+
+    expect(screen.getByDisplayValue('Feast for six')).toBeTruthy();
+  });
+
+  it('keeps what was typed and says so when that reload fails', async () => {
+    await openEdit({
+      rereads: [
+        recordMock(GetRecipeDocument, {
+          error: new Error('Network request failed'),
+        }),
+      ],
+      answers: [
+        recordMock(UpdateRecipeDocument, {
+          data: {
+            updateRecipe: {
+              __typename: 'ConflictError',
+              code: ErrorCode.VersionConflict,
+              message: 'Stale',
+            },
+          },
+        }),
+      ],
+    });
+    await userEvent.setup().press(formSave());
+    await log.landed(UpdateRecipeDocument);
+
+    await answerAlert(t('labels.refresh'));
+    await log.landed(GetRecipeDocument, 2);
+
+    expect(alertService.alert).toHaveBeenLastCalledWith(
+      t('recipes.loadFailed'),
+      t('errors.codes.genericRetry'),
+    );
+    expect(screen.getByDisplayValue('Feast')).toBeTruthy();
+  });
+
+  // `hasNextPage` on the one page the form reads: the form holds part of the
+  // list, and no field of it can be fixed to make the save whole.
+  it('sends nothing for a recipe over the ingredient limit, and says why', async () => {
+    const update = recordMock(UpdateRecipeDocument, { held: true });
+    await openEdit({
+      recipe: {
+        ...FEAST,
+        ingredientsConnection: {
+          ...FEAST.ingredientsConnection,
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: true,
+            endCursor: 'cursor-100',
+          },
+          totalCount: 150,
         },
       },
+      answers: [update],
     });
 
-    it('offers to read the recipe again in place of a blank form', async () => {
-      const failed = recordMock(GetRecipeDocument, {
-        error: new Error('network down'),
-        maxUsageCount: 1,
-      });
-      const read = recordMock(GetRecipeDocument, {
-        data: loadedRecipe(false),
-      });
-      const tree = renderWithApollo(<RecipeFormScreen {...editProps} />, {
-        operationMocks: [failed.mock, read.mock],
-      });
+    await userEvent.setup().press(formSave());
 
-      await drainTimers();
-      expect(tree.getByText(t('dataState.errorTitle'))).toBeTruthy();
-      expect(tree.queryByTestId('save-button')).toBeNull();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('recipes.editIngredientsOverLimit', { count: MAX_RECIPE_INGREDIENTS }),
+    );
+    expect(update.fired).toEqual([]);
+  });
 
-      await userEvent.setup().press(tree.getByText(t('labels.tryAgain')));
-      await drainTimers();
-      expect(tree.getByTestId('save-button')).toBeTruthy();
-      expect(tree.getByTestId('ingredient-count')).toHaveTextContent('1');
-    });
-
-    it('keeps the form when a read fails over the recipe it holds', async () => {
-      const cache = makeCache();
-      seedQuery(cache, {
-        query: GetRecipeDocument,
-        variables: {
-          id: 'recipe-1',
-          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
-        },
-        data: loadedRecipe(false),
-      });
-      const failed = recordMock(GetRecipeDocument, {
-        error: new Error('network down'),
-      });
-      const tree = renderWithApollo(<RecipeFormScreen {...editProps} />, {
-        cache,
-        operationMocks: [failed.mock],
-      });
-
-      await drainTimers();
-      expect(failed.fired).toHaveLength(1);
-      expect(tree.getByTestId('ingredient-count')).toHaveTextContent('1');
-      expect(tree.queryByText(t('dataState.errorTitle'))).toBeNull();
-    });
-
-    const renderEdit = async (hasNextPage: boolean) => {
-      const update = recordMock(UpdateRecipeDocument, {
-        data: {
-          updateRecipe: {
-            __typename: 'UpdateRecipePayload',
-            recipe: { id: 'recipe-1' },
+  // A pending edit made elsewhere can propose more than the form allows.
+  it('reports a list over the ingredient limit on its section, not in an alert', async () => {
+    const update = recordMock(UpdateRecipeDocument, { held: true });
+    await openEdit({
+      recipe: {
+        ...FEAST,
+        pendingRevision: {
+          __typename: 'RecipeRevision',
+          id: 'rev-1',
+          proposed: {
+            name: 'Feast',
+            imageUrl: null,
+            videoUrl: null,
+            instructions: [{ step: 1, text: 'Cook' }],
+            ingredients: Array.from(
+              { length: MAX_RECIPE_INGREDIENTS + 1 },
+              (_, sortOrder) => ({
+                name: `Ingredient ${sortOrder}`,
+                quantity: 1,
+                sortOrder,
+              }),
+            ),
           },
         },
-      });
-      const rendered = renderWithApollo(<RecipeFormScreen {...editProps} />, {
-        operationMocks: [
-          recordMock(GetRecipeDocument, { data: loadedRecipe(hasNextPage) })
-            .mock,
-          update.mock,
-        ],
-      });
-      // The form is filled once the recipe has arrived.
-      await drainTimers();
-      expect(rendered.getByTestId('ingredient-count')).toHaveTextContent('1');
-      return { ...rendered, sent: update.fired };
-    };
-
-    it('sends the form of a recipe read whole', async () => {
-      const user = userEvent.setup();
-      const { sent, getByTestId } = await renderEdit(false);
-
-      await user.press(getByTestId('save-button'));
-
-      await drainTimers();
-      expect(sent).toHaveLength(1);
-      expect(sent[0]).toEqual({
-        input: expect.objectContaining({
-          id: 'recipe-1',
-          version: 3,
-          ingredients: [expect.objectContaining({ name: 'Salt', quantity: 1 })],
-        }),
-        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
-      });
-      expect(alertService.alert).not.toHaveBeenCalled();
+      },
+      answers: [update],
     });
 
-    it('asks before leaving only once the loaded recipe is edited', async () => {
-      const user = userEvent.setup();
-      const { getByTestId } = await renderEdit(false);
-      expect(getByTestId('unsaved-changes')).toHaveTextContent('false');
+    await userEvent.setup().press(formSave());
 
-      await user.press(getByTestId('edit-description'));
-
-      expect(getByTestId('unsaved-changes')).toHaveTextContent('true');
-    });
-
-    // The guard is off by the time the screen leaves, or it would ask about
-    // changes that were just saved.
-    it('leaves without asking once the save lands', async () => {
-      const user = userEvent.setup();
-      const { goBack } = useAppNavigation();
-      const guardAtLeave: string[] = [];
-      const { sent, getByTestId } = await renderEdit(false);
-      jest.mocked(goBack).mockImplementation(() => {
-        guardAtLeave.push(
-          String(getByTestId('unsaved-changes').props.children),
-        );
-      });
-
-      await user.press(getByTestId('edit-description'));
-      await user.press(getByTestId('save-button'));
-
-      await drainTimers();
-      expect(goBack).toHaveBeenCalledTimes(1);
-      expect(sent).toHaveLength(1);
-      expect(guardAtLeave).toEqual(['false']);
-    });
-
-    // `hasNextPage` on the one page the form reads: the form holds part of
-    // the list, and no field of it can be fixed to make the save whole.
-    it('sends nothing for a recipe over the ingredient limit, and says why', async () => {
-      const user = userEvent.setup();
-      const { sent, getByTestId } = await renderEdit(true);
-
-      await user.press(getByTestId('save-button'));
-
-      await drainTimers();
-      expect(alertService.alert).toHaveBeenCalledTimes(1);
-      expect(alertService.alert).toHaveBeenCalledWith(
-        t('labels.error'),
-        t('recipes.editIngredientsOverLimit', {
-          count: MAX_RECIPE_INGREDIENTS,
-        }),
-      );
-      expect(sent).toEqual([]);
-    });
-
-    // A pending edit made elsewhere can propose more than the form allows.
-    it('reports a list over the ingredient limit on the ingredients section, not through an alert', async () => {
-      const user = userEvent.setup();
-      const update = recordMock(UpdateRecipeDocument, {
-        data: {
-          updateRecipe: {
-            __typename: 'UpdateRecipePayload',
-            recipe: { id: 'recipe-1' },
-          },
-        },
-      });
-      const proposedCount = MAX_RECIPE_INGREDIENTS + 1;
-      const { getByTestId, getByText } = renderWithApollo(
-        <RecipeFormScreen {...editProps} />,
-        {
-          operationMocks: [
-            recordMock(GetRecipeDocument, {
-              data: {
-                recipe: {
-                  ...loadedRecipe(false).recipe,
-                  pendingRevision: {
-                    id: 'rev-1',
-                    proposed: {
-                      name: 'Feast',
-                      imageUrl: null,
-                      videoUrl: null,
-                      instructions: [{ step: 1, text: 'Cook' }],
-                      ingredients: Array.from(
-                        { length: proposedCount },
-                        (_, sortOrder) => ({
-                          name: `Ingredient ${sortOrder}`,
-                          quantity: 1,
-                          sortOrder,
-                        }),
-                      ),
-                    },
-                  },
-                },
-              },
-            }).mock,
-            update.mock,
-          ],
-        },
-      );
-      await drainTimers();
-      expect(getByTestId('ingredient-count')).toHaveTextContent(
-        String(proposedCount),
-      );
-
-      await user.press(getByTestId('save-button'));
-
-      await drainTimers();
-      expect(
-        getByText('A recipe can have at most 100 ingredients'),
-      ).toBeTruthy();
-      expect(alertService.alert).not.toHaveBeenCalled();
-      expect(update.fired).toEqual([]);
-    });
+    expect(
+      screen.getByText(
+        t('recipes.ingredientsTooMany', { count: MAX_RECIPE_INGREDIENTS }),
+      ),
+    ).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(update.fired).toEqual([]);
   });
 });

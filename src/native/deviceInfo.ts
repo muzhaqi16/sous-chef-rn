@@ -16,7 +16,6 @@ export interface DeviceInformation {
   appVersion: string;
   userAgent?: string;
   browserName?: string;
-  browserVersion?: string;
   screenResolution?: string;
   timezone: string;
   /**
@@ -63,7 +62,6 @@ export interface DeviceInformation {
 
   // Network & connectivity
   carrier?: string;
-  deviceIpAddress?: string;
   isAirplaneMode?: boolean;
   isLocationEnabled?: boolean;
 
@@ -78,7 +76,8 @@ export interface DeviceInformation {
   isMouseConnected?: boolean;
 
   // Additional tracking
-  availableLocationProviders?: string[];
+  /** The platform's provider→availability map (Android). */
+  availableLocationProviders?: Record<string, boolean>;
   hostNames?: string[];
   supportedMediaTypes?: string[];
 }
@@ -257,9 +256,6 @@ const collectNetworkInfo = async () => {
   try {
     // Basic network info
     networkInfo.carrier = await DeviceInfo.getCarrier().catch(() => undefined);
-    networkInfo.deviceIpAddress = await DeviceInfo.getIpAddress().catch(
-      () => undefined,
-    );
 
     // Connectivity states
     networkInfo.isAirplaneMode = await DeviceInfo.isAirplaneMode().catch(
@@ -269,12 +265,10 @@ const collectNetworkInfo = async () => {
       () => undefined,
     );
 
-    // Available location providers for geolocation analysis
     const locationProviders =
       await DeviceInfo.getAvailableLocationProviders().catch(() => undefined);
     if (locationProviders && typeof locationProviders === 'object') {
-      // Convert location provider object to string array
-      networkInfo.availableLocationProviders = Object.keys(locationProviders);
+      networkInfo.availableLocationProviders = locationProviders;
     }
 
     // Host names for network analysis
@@ -409,7 +403,6 @@ const getScreenResolution = async (): Promise<string> => {
  */
 const getBrowserInfo = async (): Promise<{
   browserName?: string;
-  browserVersion?: string;
   userAgent?: string;
 }> => {
   try {
@@ -425,7 +418,6 @@ const getBrowserInfo = async (): Promise<{
       return {
         userAgent,
         browserName,
-        browserVersion: 'unknown',
       };
     }
 

@@ -40,12 +40,12 @@ const StoreModeBody: React.FC<{
   const showImages = useShowShoppingListImages();
   const [refreshing, setRefreshing] = useState(false);
 
-  const failure = useOfflineAwareError(
-    state.error,
-    state.rows.length > 0 || state.cartCount > 0,
-  );
+  // A failed read leaves the lines the trip holds on screen: in a store with
+  // weak signal, a refresh that fails must not take the list away.
+  const holdsLines = state.items.length > 0;
+  const failure = useOfflineAwareError(state.error, holdsLines);
   if (state.loading) return <Loading />;
-  if (failure.offline || failure.error) {
+  if (!holdsLines && (failure.offline || failure.error)) {
     return (
       <DataStateView
         state={failure.offline ? 'offline' : 'error'}
@@ -81,20 +81,21 @@ const StoreModeBody: React.FC<{
         perfName="StoreModeList"
         items={state.rows}
         showImages={showImages}
-        reorderable={false}
         onItemPress={id => toShoppingListItemDetail({ listId, itemId: id })}
         itemSwipeActions={id =>
           inCart ? undefined : { left: [moveToAisle(id)] }
         }
         onTogglePurchase={(id, opts) => {
-          // A long-press records what the line cost; the cart has nothing to record.
+          // A long-press records what the line cost; a cart row, bought,
+          // opens its detail instead.
           if (opts?.withDetails) {
-            if (!inCart) openPurchaseAmount(id);
+            openPurchaseAmount(id);
             return;
           }
           void actions.toggleLine(id);
         }}
-        onQuantityPress={inCart ? undefined : openQuantityEdit}
+        // A cart row's badge, bought, disables itself.
+        onQuantityPress={openQuantityEdit}
         onEndReached={inCart ? actions.loadMoreCart : undefined}
         ListFooterComponent={
           <PaginationFooter
@@ -136,7 +137,7 @@ const StoreModeBody: React.FC<{
 export const StoreMode: React.FC<StoreModeProps> = ({ route }) => {
   const { listId } = route.params;
   const { t } = useTranslation();
-  const { goBack, toListSettings, toBarcode } = useAppNavigation();
+  const { goBack, toBarcode } = useAppNavigation();
   useKeepAwake();
 
   const storeMode = useStoreMode(listId);
@@ -187,7 +188,6 @@ export const StoreMode: React.FC<StoreModeProps> = ({ route }) => {
           recordPurchase={actions.recordPurchase}
           searchQuery=""
           onSearchQueryClear={noop}
-          onNavigateToListSettings={() => toListSettings({ listId })}
         >
           <StoreModeBody listId={listId} storeMode={storeMode} />
         </ShoppingListModalsProvider>

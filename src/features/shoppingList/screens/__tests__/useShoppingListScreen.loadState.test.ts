@@ -41,7 +41,6 @@ jest.mock('../../hooks/useShoppingListSelection', () => ({
   useShoppingListSelection: () => ({
     selectedListId: 'list-1',
     currentListId: 'list-1',
-    optimisticListId: 'list-1',
     setSelectedShoppingListId: jest.fn(),
   }),
 }));

@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   type LayoutChangeEvent,
@@ -52,7 +52,6 @@ export interface InlineAutocompleteProps<T> {
 
   // Config
   minSearchLength?: number;
-  debounceMs?: number;
   maxResults?: number;
 
   // Rendering
@@ -92,7 +91,6 @@ export function InlineAutocomplete<T>({
   items,
   loading = false,
   minSearchLength = 1,
-  debounceMs = 250,
   maxResults = 6,
   renderItem,
   keyExtractor,
@@ -112,8 +110,6 @@ export function InlineAutocomplete<T>({
     DROPDOWN_MAX_HEIGHT + DROPDOWN_GAP,
   );
   const [hasMeasuredDropdown, setHasMeasuredDropdown] = useState(false);
-
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const slicedItems = items.slice(0, maxResults);
 
@@ -160,51 +156,23 @@ export function InlineAutocomplete<T>({
     );
   };
 
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, []);
-
   const [prevValue, setPrevValue] = useState(value);
   if (value !== prevValue) {
     setPrevValue(value);
     setSearchTerm(value);
   }
 
-  // The debounced notify calls the latest `onChangeText`, rebuilt since the
-  // keystroke. A LAYOUT effect: a passive one flushes in a later task, and a due
-  // debounce timer can run in that gap and read the stale callback.
-  const onChangeTextRef = useRef(onChangeText);
-  useLayoutEffect(() => {
-    onChangeTextRef.current = onChangeText;
-  });
-
+  // The host hears every keystroke at once, as from any text field: a form
+  // saved straight after typing holds what was typed. Searches debounce in
+  // their own hooks.
   const handleTextChange = (text: string) => {
     setSearchTerm(text);
     setShowDropdown(true);
-
-    // Clear existing timer
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    // Notify parent after debounce
-    debounceTimerRef.current = setTimeout(() => {
-      onChangeTextRef.current(text);
-      debounceTimerRef.current = null;
-    }, debounceMs);
+    onChangeText(text);
   };
 
-  // Drops a pending debounce too, so the value sync lands the pick at once.
   const closeList = () => {
     setShowDropdown(false);
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
   };
 
   const handleSelect = (item: T) => {

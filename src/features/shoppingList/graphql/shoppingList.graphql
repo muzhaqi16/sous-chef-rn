@@ -798,35 +798,6 @@ mutation RemoveItemFromShoppingList($input: RemoveItemFromShoppingListInput!) {
   }
 }
 
-mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
-  moveShoppingListItem(input: $input) {
-    __typename
-    ... on MoveShoppingListItemPayload {
-      shoppingListItem {
-        id
-        ...ShoppingListItemReaders
-        ...useItemReordering_moveResult
-      }
-      shoppingList {
-        id
-        ...ShoppingListReaders
-      }
-    }
-    ... on Error {
-      code
-      disposition
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
 mutation UpdateCollaboratorRole($input: UpdateCollaboratorRoleInput!) {
   updateCollaboratorRole(input: $input) {
     __typename

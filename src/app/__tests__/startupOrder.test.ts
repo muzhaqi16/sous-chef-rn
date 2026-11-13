@@ -1,5 +1,26 @@
-import { renderHook } from '@testing-library/react-native';
-import { mockAppStore } from '#/test-utils/mockAppStore';
+jest.mock('#native/storage/keychain', () =>
+  jest.requireActual('#/test-utils/memoryKeychain').memoryKeychainModule(),
+);
+// Registering the device runs in the background over native device APIs;
+// `deviceRegistration.test.ts` covers it.
+jest.mock('#/services/device/deviceRegistration', () => ({
+  registerDeviceInBackground: jest.fn(),
+}));
+jest.mock('react-native-launch-arguments', () => ({
+  LaunchArguments: { value: jest.fn() },
+}));
+
+import { act, renderHook } from '@testing-library/react-native';
+import { LaunchArguments } from 'react-native-launch-arguments';
+import { useStore } from '#store';
+import { Environment } from '#/utils/environment';
+import { Telemetry } from '#services/telemetry';
+import { HapticService } from '#services/haptic/HapticService';
+import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
+import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
+import * as deviceIdentity from '#/services/auth/deviceId';
+import * as queueFailures from '#/apollo/offlineQueue/queueFailureHandler';
+import * as keychain from '#native/storage/keychain';
 import { useCoreStartup } from '#bootstrap/useCoreStartup';
 import { useMobileStartupHost } from '../mobileStartupHost';
 
@@ -14,8 +35,8 @@ const useStartupInit = () => useCoreStartup(useMobileStartupHost());
  */
 const calls: string[] = [];
 const record =
-  (name: string, result?: unknown) =>
-  (...args: unknown[]) => {
+  <T>(name: string, result: T) =>
+  (...args: unknown[]): T => {
     const [first] = args;
     calls.push(
       typeof first === 'string' && name.endsWith('.') ? name + first : name,
@@ -23,102 +44,65 @@ const record =
     return result;
   };
 
-jest.mock('#store/useAppStore', () =>
-  mockAppStore({
-    isHydrated: true,
-    setHasStoredCredentials: jest.fn(),
-    getTelemetryConfig: jest.fn(() => ({})),
-  }),
-);
-
-jest.mock('#store', () => ({
-  useStore: {
-    getState: jest.fn(() => ({
-      user: { id: 'u-1' },
-      accessToken: 'token-1',
-      setAuth: jest.fn(),
-      setNavigationState: jest.fn(),
-    })),
-  },
-}));
-
-jest.mock('react-native-launch-arguments', () => ({
-  LaunchArguments: { value: jest.fn() },
-}));
-jest.mock('#/services/auth/deviceId', () => ({ ensureDeviceId: jest.fn() }));
-jest.mock('#/apollo/offlineQueue/queueFailureHandler', () => ({
-  registerQueueFailureHandler: jest.fn(),
-  setChangesNotSavedOpener: jest.fn(),
-}));
-jest.mock('#native/storage/keychain', () => ({
-  getLastBiometricEmail: jest.fn(),
-  hasCredentials: jest.fn(),
-}));
-jest.mock('#services/haptic/HapticService', () => ({
-  HapticService: { initialize: jest.fn() },
-}));
-jest.mock('#/services/performance/NativePerformanceService', () => ({
-  NativePerformanceService: { initialize: jest.fn(), cleanup: jest.fn() },
-}));
-jest.mock('#/services/performance/MemoryMonitor', () => ({
-  MemoryMonitor: { start: jest.fn(), stop: jest.fn() },
-}));
-jest.mock('#/services/device/deviceRegistration', () => ({
-  registerDeviceInBackground: jest.fn(),
-}));
-
-const mocked = <T extends object>(path: string): T => jest.requireMock<T>(path);
-
 beforeEach(() => {
+  jest.restoreAllMocks();
+  jest.clearAllMocks();
   calls.length = 0;
-  const { LaunchArguments } = mocked<{
-    LaunchArguments: { value: jest.Mock };
-  }>('react-native-launch-arguments');
-  LaunchArguments.value.mockImplementation(record('launchArguments', {}));
-  mocked<{ Environment: { allowsLaunchArgAuth: jest.Mock } }>(
-    '#/utils/environment',
-  ).Environment.allowsLaunchArgAuth.mockReturnValue(true);
-  mocked<{ ensureDeviceId: jest.Mock }>(
-    '#/services/auth/deviceId',
-  ).ensureDeviceId.mockImplementation(
-    record('deviceId', Promise.resolve('device-1')),
-  );
-  mocked<{ registerQueueFailureHandler: jest.Mock }>(
-    '#/apollo/offlineQueue/queueFailureHandler',
-  ).registerQueueFailureHandler.mockImplementation(
-    record('queueFailureHandler'),
-  );
-  const keychain = mocked<Record<string, jest.Mock>>(
-    '#native/storage/keychain',
-  );
-  keychain.getLastBiometricEmail!.mockImplementation(
-    record('storedCredentialCheck', Promise.resolve(null)),
-  );
-  const { Telemetry } = mocked<{ Telemetry: Record<string, jest.Mock> }>(
-    '#services/telemetry',
-  );
-  Telemetry.updateConfig!.mockImplementation(record('telemetry.configure'));
-  Telemetry.initialize!.mockImplementation(record('telemetry.start'));
-  Telemetry.increment!.mockImplementation(record('telemetry.'));
-  Telemetry.histogram!.mockImplementation(record('telemetry.'));
-  Telemetry.trackEvent!.mockImplementation(record('telemetry.'));
-  mocked<{ HapticService: { initialize: jest.Mock } }>(
-    '#services/haptic/HapticService',
-  ).HapticService.initialize.mockImplementation(record('haptics'));
-  mocked<{ NativePerformanceService: { initialize: jest.Mock } }>(
-    '#/services/performance/NativePerformanceService',
-  ).NativePerformanceService.initialize.mockImplementation(
-    record('nativePerformance'),
-  );
-  mocked<{ registerDeviceInBackground: jest.Mock }>(
-    '#/services/device/deviceRegistration',
-  ).registerDeviceInBackground.mockImplementation(record('deviceRegistration'));
-  (
-    globalThis as { requestIdleCallback?: (callback: () => void) => number }
-  ).requestIdleCallback = callback => {
-    callback();
+  useStore.setState({
+    isHydrated: true,
+    user: {
+      id: 'u-1',
+      email: 'cook@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    accessToken: 'token-1',
+    refreshToken: 'refresh-1',
+  });
+  jest
+    .mocked(LaunchArguments.value)
+    .mockImplementation(record('launchArguments', {}));
+  jest.mocked(Environment.allowsLaunchArgAuth).mockReturnValue(true);
+  jest
+    .spyOn(deviceIdentity, 'ensureDeviceId')
+    .mockImplementation(record('deviceId', Promise.resolve('device-1')));
+  jest
+    .spyOn(queueFailures, 'registerQueueFailureHandler')
+    .mockImplementation(record('queueFailureHandler', undefined));
+  jest
+    .spyOn(keychain, 'getLastBiometricEmail')
+    .mockImplementation(record('storedCredentialCheck', Promise.resolve(null)));
+  jest
+    .mocked(Telemetry.updateConfig)
+    .mockImplementation(record('telemetry.configure', undefined));
+  jest
+    .mocked(Telemetry.initialize)
+    .mockImplementation(record('telemetry.start', undefined));
+  jest
+    .mocked(Telemetry.increment)
+    .mockImplementation(record('telemetry.', undefined));
+  jest
+    .mocked(Telemetry.histogram)
+    .mockImplementation(record('telemetry.', undefined));
+  jest
+    .mocked(Telemetry.trackEvent)
+    .mockImplementation(record('telemetry.', undefined));
+  jest
+    .spyOn(HapticService, 'initialize')
+    .mockImplementation(record('haptics', undefined));
+  jest
+    .spyOn(NativePerformanceService, 'initialize')
+    .mockImplementation(record('nativePerformance', undefined));
+  jest
+    .spyOn(NativePerformanceService, 'cleanup')
+    .mockImplementation(record('nativePerformance.stop', undefined));
+  jest
+    .mocked(registerDeviceInBackground)
+    .mockImplementation(record('deviceRegistration', undefined));
+  jest.spyOn(globalThis, 'requestIdleCallback').mockImplementation(callback => {
+    callback({ didTimeout: false, timeRemaining: () => 50 });
     return 0;
-  };
+  });
 });
 
 const before = (first: string, second: string) => {
@@ -132,24 +116,63 @@ const before = (first: string, second: string) => {
 const steps = () =>
   calls.filter(call => call !== 'telemetry.app_startup_duration_ms');
 
+const START_UP = [
+  'launchArguments',
+  'deviceId',
+  'queueFailureHandler',
+  'storedCredentialCheck',
+  'telemetry.configure',
+  'telemetry.start',
+  'telemetry.app_starts_total',
+  'telemetry.app_launched',
+  'haptics',
+  'nativePerformance',
+  'deviceRegistration',
+].sort();
+
 it('runs each start-up step once', () => {
   renderHook(() => useStartupInit());
 
-  expect([...steps()].sort()).toEqual(
-    [
-      'launchArguments',
-      'deviceId',
-      'queueFailureHandler',
-      'storedCredentialCheck',
-      'telemetry.configure',
-      'telemetry.start',
-      'telemetry.app_starts_total',
-      'telemetry.app_launched',
-      'haptics',
-      'nativePerformance',
-      'deviceRegistration',
-    ].sort(),
-  );
+  expect([...steps()].sort()).toEqual(START_UP);
+});
+
+it('waits for the store to hydrate', () => {
+  useStore.setState({ isHydrated: false });
+  renderHook(() => useStartupInit());
+  expect(steps()).toEqual([]);
+
+  act(() => {
+    useStore.setState({ isHydrated: true });
+  });
+
+  // The pre-hydration run's cleanup stops a host that never started, which
+  // stops nothing: hydration never resets, so no stop follows a start.
+  expect(
+    steps()
+      .filter(step => step !== 'nativePerformance.stop')
+      .sort(),
+  ).toEqual(START_UP);
+});
+
+it('starts once, however often hydration is re-reported', () => {
+  renderHook(() => useStartupInit());
+
+  act(() => {
+    useStore.setState({ isHydrated: false });
+  });
+  act(() => {
+    useStore.setState({ isHydrated: true });
+  });
+
+  expect(steps().filter(step => step === 'telemetry.start')).toHaveLength(1);
+});
+
+it('stops the host when the root goes', () => {
+  const { unmount } = renderHook(() => useStartupInit());
+
+  unmount();
+
+  expect(steps()).toContain('nativePerformance.stop');
 });
 
 it('injects launch arguments before the core reads the session or telemetry', () => {

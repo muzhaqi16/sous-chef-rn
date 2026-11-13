@@ -232,6 +232,47 @@ describe('useFirstShopTour', () => {
     act(() => tutorialSession.endGuide(GUIDE_TOURS.shop));
   });
 
+  // A tour that cannot start shows nothing; only one showing holds the others.
+  describe('a tip waits only for a tour that can show', () => {
+    const shown = (...ids: string[]) =>
+      useStore.setState({
+        featureHintsShown: Object.fromEntries(
+          ids.map(id => [featureHintKey('user-1', id), true]),
+        ),
+      });
+
+    it('shows the swipe tip to someone who finished the earlier tutorial', () => {
+      shown('shopping_interactive_tutorial');
+      const { result } = renderTour({ unpurchasedCount: 3 });
+      act(() => result.current.registerRect('itemCard', rect));
+
+      expect(result.current.swipeTip.currentStep?.demo).toBe('swipe');
+    });
+
+    it('offers the receipt to someone who finished the earlier tutorial', () => {
+      shown('shopping_interactive_tutorial', 'shopping_list_swipe');
+
+      const { result } = renderTour({ hasPurchasedToMove: true });
+
+      expect(result.current.receiptTip.currentStep?.featureId).toBe(
+        'list_receipt_offer',
+      );
+    });
+
+    it('offers the receipt while the list is too short for the swipe tip', () => {
+      shown(...Object.values(FIRST_SHOP_STEP));
+
+      const { result } = renderTour({
+        unpurchasedCount: 1,
+        hasPurchasedToMove: true,
+      });
+
+      expect(result.current.receiptTip.currentStep?.featureId).toBe(
+        'list_receipt_offer',
+      );
+    });
+  });
+
   it('walks no one through the list again who finished its earlier tutorial', () => {
     useStore.setState({
       featureHintsShown: {

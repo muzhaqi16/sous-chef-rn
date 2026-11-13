@@ -27,7 +27,6 @@ import type { useShoppingListScreen } from '#features/shoppingList/screens/useSh
 import { useShoppingListActions } from '#features/shoppingList/hooks/useShoppingListActions';
 import { useBatchMoveToPantry } from '#features/shoppingList/hooks/useBatchMoveToPantry';
 import { useShoppingListSelectorModal } from '#features/shoppingList/components/useShoppingListSelectorModal';
-import { useItemReordering } from '#features/shoppingList/hooks/useItemReordering';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import {
   useTabBarSetters,
@@ -49,7 +48,6 @@ import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEna
 import { useStoreModeEnabled } from '#features/shoppingList/hooks/useStoreModeEnabled';
 import { Telemetry } from '#/services/telemetry';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import { errorService } from '#/services/errorService';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { ShoppingListPermissionsProvider } from '#features/shoppingList/context/ShoppingListPermissionsContext';
 import { useDataState } from '#hooks/data/useDataState';
@@ -218,27 +216,6 @@ export const ShoppingListMainContent: React.FC<
   const { batchMoveToPantry, loading: batchMoveToPantryLoading } =
     useBatchMoveToPantry({ currentListId, purchasedItems: rawPurchasedItems });
 
-  // --- Reordering Hook ---
-  const { handleSortOrderUpdate: reorderItem } = useItemReordering({
-    listId: currentListId,
-    items: rawUnpurchasedItems,
-    refetch: () => {
-      void refetchItems().catch(error =>
-        errorService.reportError(error, {
-          operation: 'ShoppingListMainContent.reorderRefetch',
-        }),
-      );
-    },
-  });
-
-  const handleSortOrderUpdate = (
-    itemId: string,
-    afterItemId: string | null,
-    beforeItemId: string | null,
-  ) => {
-    void reorderItem(itemId, afterItemId, beforeItemId);
-  };
-
   // --- Selector Hook ---
   const {
     selectorRef,
@@ -369,7 +346,6 @@ export const ShoppingListMainContent: React.FC<
     onTogglePurchase: handleTogglePurchaseAction,
     onMoveToPantry: openMoveToPantry,
     onQuantityPress: openQuantityEdit,
-    onSortOrderUpdate: handleSortOrderUpdate,
     // `onRefresh` is NOT here: the template injects it from its own prop.
     onClearAllPurchased: handleClearAllPurchased,
     onClearAllShopping: handleClearAllShopping,
@@ -503,7 +479,8 @@ export const ShoppingListMainContent: React.FC<
   // No lists on screen. Only a fetch that actually succeeded and returned
   // nothing may offer to create one — after a failure we do not know whether
   // this person already has lists, and "Create a list" would duplicate them.
-  if (!isLoadingInitial && lists.length === 0) {
+  // The remembered list's lines can land first: they stay up meanwhile.
+  if (!isLoadingInitial && listsState !== 'loading' && lists.length === 0) {
     return (
       <Screen
         testID={shoppingListTestIDs.screen}

@@ -47,10 +47,7 @@ const PARENT_FIELDS = {
   ShoppingListItem: ['shoppingList'],
   ShoppingListCollaborator: ['shoppingList'],
   PantryItem: ['pantry', 'storageLocation'],
-  RecipeReview: ['recipe'],
   SavedRecipe: ['recipe'],
-  MealPlanItem: ['mealPlan'],
-  MealTemplateItem: ['template'],
 };
 
 /** The payload types a mutation answers with on success. */
@@ -202,9 +199,15 @@ function parentType(member, fieldName) {
 
 /**
  * Aggregates a payload states that no member reaches: the caller's badge, which
- * every notification write returns, removals included.
+ * every notification write returns, removals included; and the recipe, plan or
+ * template whose totals a review or item write moves, which the item does not name.
  */
-const PAYLOAD_PARENTS = ['NotificationSummary'];
+const PAYLOAD_PARENTS = [
+  'NotificationSummary',
+  'Recipe',
+  'MealPlan',
+  'MealTemplate',
+];
 
 const parentTypes = new Set([
   ...Object.entries(PARENT_FIELDS).flatMap(([member, fields]) =>

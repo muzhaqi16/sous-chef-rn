@@ -1,819 +1,593 @@
-// Biometric credentials must NOT survive a sign-out.
-//
-// This suite asserted the opposite. The reasoning behind that was recorded as
-// "reading the slot still costs a successful biometric prompt from that
-// account's owner" — and it does not hold. The credential slot is
-// `ACCESS_CONTROL.BIOMETRY_ANY` (`src/native/storage/keychain.ts`), which ANY biometric
-// enrolled on the device satisfies, and typically the device passcode as well;
-// the two slots the login screen reads to decide whether to OFFER the button
-// (`indicatorServiceFor`, `LAST_BIOMETRIC_EMAIL_KEY`) carry no access control at
-// all. On a shared device that produced: user A signs out, user B launches, the
-// biometric button appears for A's address, and B's own finger unlocks A's
-// stored password and signs in as A.
-//
-// The convenience this costs is real, and was the reason for the old default:
-// biometric login exists to get the user back in after a sign-out, and clearing
-// the slot means `LoginScreen` shows no biometric button until the account
-// enrols again. That trade is now made explicitly — a caller that wants the old
-// behaviour passes `keepBiometricCredentials: true` — instead of every sign-out
-// leaving a password behind for whoever picks the device up next.
-//
-// Nothing caught the original: `sessionEndLeavesNoData` classifies persisted
-// STORE keys on purpose, and the keychain is not in its inventory.
+// Biometric credentials must NOT survive a sign-out: the slot is
+// `ACCESS_CONTROL.BIOMETRY_ANY`, which any enrolled biometric satisfies, so on a
+// shared device the next person's finger would unlock the previous account. A
+// caller that wants the slot kept passes `keepBiometricCredentials: true`.
 
-const mockMutate = jest.fn();
-const mockQuery = jest.fn();
 jest.mock('#/apollo/client', () => ({
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
+jest.mock('#native/storage/keychain', () =>
+  jest.requireActual('#/test-utils/memoryKeychain').memoryKeychainModule(),
+);
 
-const mockResetStore = jest.fn().mockResolvedValue(undefined);
-const mockSetNavigationState = jest.fn();
-const mockEndSession = jest.fn().mockResolvedValue(undefined);
-const mockStoreState: Record<string, unknown> = {
-  user: { id: 'u1', email: 'chef@example.com' },
-  isOnline: true,
-  biometricRetryAt: 0,
-  biometricAttempts: 0,
-  registerBiometricRefusal: jest.fn(),
-  setHasStoredCredentials: jest.fn(),
-  clearBiometricBackoff: jest.fn(),
-  resetStore: (...a: unknown[]) => mockResetStore(...a),
-  endSession: (...a: unknown[]) => mockEndSession(...a),
-  setNavigationState: (...a: unknown[]) => mockSetNavigationState(...a),
-  setAuthIsLoading: jest.fn(),
-  getUserNavigationState: jest.fn().mockReturnValue({}),
-  setUserNavigationState: jest.fn(),
-};
-jest.mock('#store', () => ({
-  useStore: { getState: () => mockStoreState },
-}));
-
-const mockToastError = jest.mocked(toastService.error);
-const mockHasCredentials = jest.fn().mockResolvedValue(true);
-
-jest.mock('#/apollo/logoutCleanup', () => ({
-  LogoutCleanup: {
-    performLogoutCleanup: jest.fn().mockResolvedValue(undefined),
-    completeLogout: jest.fn(),
-  },
-}));
-
-jest.mock('#/apollo/offlineQueue/queueManager', () => ({
-  queueManager: { onLogout: jest.fn(), onUserChange: jest.fn() },
-}));
-
-jest.mock('#/apollo/offlineQueue/queueStore', () => ({
-  queueStore: { getCurrentUserId: jest.fn(), getPendingCount: () => 0 },
-}));
-
-const mockClearCredentials = jest.fn().mockResolvedValue(undefined);
-jest.mock('#/services/auth/deviceId');
-import { registerApolloClient } from '#/apollo/clientRegistry';
-import { CombinedGraphQLErrors, type ApolloClient } from '@apollo/client';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
-import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
-import { ensureDeviceId } from '#/services/auth/deviceId';
-import { RevokeDeviceCredentialDocument } from '#operations/auth/auth.generated';
-
-jest.mock('#native/storage/keychain', () => ({
-  clearCredentials: (...a: unknown[]) => mockClearCredentials(...a),
-  // The keychain's own shape; `dc1:` marks a slot holding a device credential
-  // rather than a password. Without a loadable slot the exchange is never
-  // reached and every case below passes without asserting anything.
-  loadCredentials: jest.fn().mockResolvedValue({
-    status: 'read',
-    username: 'chef@example.com',
-    password: 'dc1:secret',
-  }),
-  saveCredentials: jest.fn(),
-  hasCredentials: (...a: unknown[]) => mockHasCredentials(...a),
-  getBiometricCapability: jest
-    .fn()
-    .mockResolvedValue({ isAvailable: true, biometryType: 'Fingerprint' }),
-  getLastBiometricEmail: jest.fn().mockResolvedValue('chef@example.com'),
-}));
-
-jest.mock('#/services/push/pushTokenProvider', () => ({
-  acquirePushToken: jest.fn().mockResolvedValue(null),
-  getPushTokenProvider: () => ({ getToken: jest.fn() }),
-  onPushTokenRefresh: () => jest.fn(),
-}));
-
-jest.mock('#/hooks/settings/useFeatureHint', () => ({
-  incrementLoginCount: jest.fn(),
-}));
-
+import { ApolloLink } from '@apollo/client';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { recordMock, type MockDataFor } from '#/test-utils/apolloMockProvider';
+import { registerTestClient } from '#/test-utils/registeredClient';
+import { memoryKeychain } from '#/test-utils/memoryKeychain';
+import { operationLog } from '#/test-utils/operationLog';
+import { useStore } from '#store';
+import { t } from '#/i18n';
 import { logger } from '#/utils/environment';
+import { toastService } from '#/services/toastService';
+import * as deviceIdentity from '#/services/auth/deviceId';
+import {
+  ErrorCode,
+  ErrorDisposition,
+  TopLevelErrorCode,
+} from '#/graphql/generated/schemaTypes';
+import {
+  ExchangeDeviceCredentialDocument,
+  IssueDeviceCredentialDocument,
+  MyDeviceCredentialsDocument,
+  RevokeDeviceCredentialDocument,
+} from '#operations/auth/auth.generated';
 import { authService } from '#/services/authService';
 import {
   biometricService,
   renewStoredSignIn,
-  resolvePostSignInGate,
 } from '#/services/biometric/deviceCredential';
-import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
 import { registerMobileSessionHost } from '#/app/mobileSessionHost';
-import { drainTimers } from '#/test-utils/drainTimers';
 
 // A sign-out drops the slot through the step the app registers.
 registerMobileSessionHost();
 
-// The client the code under test reads from the registry.
-registerApolloClient({
-  mutate: (...args: unknown[]) => mockMutate(...args),
-  query: (...args: unknown[]) => mockQuery(...args),
-} as unknown as ApolloClient);
+const EMAIL = 'chef@example.com';
+const SLOT = 'dc1:secret';
 
-const keychainMock = () =>
-  jest.requireMock<{
-    loadCredentials: jest.Mock;
-    saveCredentials: jest.Mock;
-  }>('#native/storage/keychain');
-const STORED_SLOT = {
-  status: 'read',
-  username: 'chef@example.com',
-  password: 'dc1:secret',
-};
-const setHasStoredCredentials = () =>
-  mockStoreState.setHasStoredCredentials as jest.Mock;
+let log = operationLog();
+let thisDevice = '';
 
-beforeEach(() => {
-  jest.useFakeTimers();
-});
+type ListedCredential = NonNullable<
+  MockDataFor<typeof MyDeviceCredentialsDocument>['deviceCredentials']
+>[number];
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+const listing = (...deviceIds: string[]) =>
+  recordMock(MyDeviceCredentialsDocument, {
+    data: {
+      deviceCredentials: deviceIds.map(
+        (deviceId, index): ListedCredential => ({
+          __typename: 'DeviceCredential',
+          id: `dc-${index}`,
+          deviceId,
+        }),
+      ),
+    },
+  });
 
-describe('logout and biometric credentials', () => {
-  beforeEach(() => {
-    mockStoreState.biometricRetryAt = 0;
-    mockHasCredentials.mockResolvedValue(true);
-    mockClearCredentials.mockClear();
-    // Call records do not survive into the next case: several assertions here
-    // read "was this called at all", which a sibling's call would answer for.
-    mockQuery.mockClear();
-    mockMutate.mockClear();
-    mockToastError.mockClear();
-    mockMutate.mockResolvedValue({ data: {} });
-    // The lookup that finds THIS device's credential so it can be revoked.
-    mockQuery.mockResolvedValue({
-      data: {
-        deviceCredentials: [
-          {
-            id: 'dc-1',
-            deviceId: MOCK_DEVICE_ID,
-            __typename: 'DeviceCredential',
-          },
-        ],
+const revoking = () =>
+  recordMock(RevokeDeviceCredentialDocument, {
+    data: {
+      revokeDeviceCredential: { __typename: 'RevokeDeviceCredentialPayload' },
+    },
+  });
+
+const issuing = (credential = 'issued') =>
+  recordMock(IssueDeviceCredentialDocument, {
+    data: {
+      issueDeviceCredential: {
+        __typename: 'DeviceCredentialPayload',
+        credential,
       },
+    },
+  });
+
+const exchangeRefused = (
+  __typename: 'AuthenticationError' | 'ValidationError',
+  code: ErrorCode,
+) =>
+  recordMock(ExchangeDeviceCredentialDocument, {
+    data: {
+      exchangeDeviceCredential: {
+        __typename,
+        code,
+        disposition: ErrorDisposition.Fail,
+        message: 'Refused',
+      },
+    },
+  });
+
+/** Answers over a client registered as the app's, every operation logged. */
+const serve = (...answers: ReturnType<typeof recordMock>[]) =>
+  registerTestClient(answers, [log.link]);
+
+/** This device has no id, as when its storage is unavailable. */
+const noDeviceId = () =>
+  jest.spyOn(deviceIdentity, 'ensureDeviceId').mockResolvedValueOnce(null);
+
+/** Resolves when the logger warns with `text`. */
+const warned = (text: string) =>
+  new Promise<void>(resolve => {
+    jest.spyOn(logger, 'warn').mockImplementation(message => {
+      if (typeof message === 'string' && message.includes(text)) resolve();
     });
   });
 
-  it('clears the stored credentials on an ordinary sign-out', async () => {
-    await authService.logout();
+beforeAll(async () => {
+  thisDevice = (await deviceIdentity.ensureDeviceId()) ?? '';
+});
 
-    // The shared-device case: nothing of the previous account may be left
-    // unlockable by the next person to pick the phone up.
-    expect(mockClearCredentials).toHaveBeenCalledWith('chef@example.com');
+beforeEach(() => {
+  jest.restoreAllMocks();
+  jest.clearAllMocks();
+  log = operationLog();
+  memoryKeychain.reset();
+  memoryKeychain.hold(EMAIL, SLOT);
+  useStore.setState({
+    user: { id: 'u1', email: EMAIL, emailVerified: true, onBoarded: true },
+    isOnline: true,
+    apiReachable: true,
+    biometricRetryAt: 0,
+    hasStoredCredentials: true,
+  });
+});
+
+describe('a sign-out', () => {
+  // The session end is its own suite's; here only that it ran matters.
+  const endSession = jest.fn(async () => undefined);
+
+  beforeEach(() => {
+    endSession.mockClear();
+    useStore.setState({ endSession });
   });
 
-  it('keeps them only when the caller opts in', async () => {
-    await authService.logout({ keepBiometricCredentials: true });
+  it('clears the stored sign-in, revoking it first', async () => {
+    const revoke = revoking();
+    serve(listing('other-device', thisDevice), revoke);
 
-    expect(mockClearCredentials).not.toHaveBeenCalled();
-  });
-
-  it('still signs the user out of the session itself', async () => {
     await authService.logout();
 
-    // The one session-end body, as the person's own sign-out.
-    expect(mockEndSession).toHaveBeenCalledWith(
+    expect(memoryKeychain.slotOf(EMAIL)).toBeUndefined();
+    expect(revoke.fired).toEqual([{ input: { id: 'dc-1' } }]);
+    expect(endSession).toHaveBeenCalledWith(
       'signed_out',
       expect.objectContaining({ deliberate: expect.any(Object) }),
     );
   });
 
-  it('clears them when the account itself is going away', async () => {
-    // Account deletion passes nothing now — the default already clears.
-    await authService.logout();
+  it('keeps it, unrevoked, only when the caller opts in', async () => {
+    const revoke = revoking();
+    serve(listing(thisDevice), revoke);
 
-    expect(mockClearCredentials).toHaveBeenCalledWith('chef@example.com');
-  });
-
-  // The asymmetry, and getting it backwards is the failure mode: revoking on
-  // the sign-out that KEEPS the slot would leave a credential the exchange
-  // refuses, which is the opposite of what keeping it is for.
-  it('revokes server-side only when it also drops the local slot', async () => {
-    await authService.logout();
-    const revokedOnDrop = mockMutate.mock.calls.length;
-
-    mockMutate.mockClear();
     await authService.logout({ keepBiometricCredentials: true });
 
-    expect(revokedOnDrop).toBeGreaterThan(0);
-    expect(mockMutate).not.toHaveBeenCalled();
+    expect(memoryKeychain.slotOf(EMAIL)).toBe(SLOT);
+    expect(revoke.fired).toEqual([]);
   });
 
-  // `DeviceCredential.deviceId` is non-null, so a null identity matches no
-  // credential. Both callers destroy the only local handle to it immediately
-  // after, so a revoke that resolves without issuing one leaves it live.
-  it('says so when it cannot revoke, rather than resolving as though it had', async () => {
-    (ensureDeviceId as jest.Mock).mockResolvedValueOnce(null);
+  it('says so when the stored sign-in could not be deleted', async () => {
+    const error = jest.spyOn(logger, 'error');
+    memoryKeychain.failNextClear(new Error('keychain locked'));
+    serve(listing());
 
-    const revoked =
-      await biometricService.revokeDeviceCredentialForThisDevice();
+    await authService.logout();
 
-    expect(revoked).toBe(false);
-    expect(mockMutate).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining('could not be removed'),
+    );
   });
+});
 
-  // The sign-out's own cleanup has to reach the server: `authLink` refuses
-  // everything once the session-ending gate closes, and this revoke needs two
-  // sequential round trips, so without the opt-in a slow link cancels it.
-  it('opts its round trips out of the logout refusal', async () => {
-    await biometricService.revokeDeviceCredentialForThisDevice();
-
-    // `toEqual` drops undefined entries, so the opt-in is read as a boolean
-    // per call — an absent context has to be visible as `false`.
-    const optedIn = [
-      ...mockQuery.mock.calls.map(([options]) => ['query', options]),
-      ...mockMutate.mock.calls.map(([options]) => ['mutate', options]),
-    ].map(
-      ([kind, options]) =>
-        `${kind}:${
-          (options as { context?: { allowDuringLogout?: boolean } })?.context
-            ?.allowDuringLogout === true
-        }`,
+describe("revoking this device's credential", () => {
+  it('opts its round trips out of the sign-out refusal', async () => {
+    const contexts: Record<string, unknown>[] = [];
+    registerTestClient(
+      [listing(thisDevice), revoking()],
+      [
+        new ApolloLink((operation, forward) => {
+          contexts.push(operation.getContext());
+          return forward(operation);
+        }),
+      ],
     );
 
-    expect(optedIn.length).toBeGreaterThan(1);
-    expect(optedIn.filter(entry => entry.endsWith(':false'))).toStrictEqual([]);
+    expect(await biometricService.revokeDeviceCredentialForThisDevice()).toBe(
+      true,
+    );
+    expect(contexts).toHaveLength(2);
+    for (const context of contexts) {
+      expect(context).toMatchObject({ allowDuringLogout: true });
+    }
   });
 
-  // `RevokeDeviceCredentialResult` is a union and `errorPolicy: 'all'` resolves
-  // a refusal as data, so an unread result reports the credential dead when it
-  // is still exchangeable.
-  it('reports a refused revoke as a failure rather than a success', async () => {
-    mockMutate.mockResolvedValueOnce({
-      data: {
-        revokeDeviceCredential: {
-          __typename: 'ForbiddenError',
-          code: 'FORBIDDEN',
-          message: 'nope',
+  it('says it could not when this device has no id', async () => {
+    const revoke = revoking();
+    serve(listing(thisDevice), revoke);
+    noDeviceId();
+
+    expect(await biometricService.revokeDeviceCredentialForThisDevice()).toBe(
+      false,
+    );
+    expect(revoke.fired).toEqual([]);
+  });
+
+  it('reads a refusal as not revoked', async () => {
+    serve(
+      listing(thisDevice),
+      recordMock(RevokeDeviceCredentialDocument, {
+        data: {
+          revokeDeviceCredential: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            disposition: ErrorDisposition.Fail,
+            message: 'No',
+          },
         },
-      },
-    });
+      }),
+    );
 
     expect(await biometricService.revokeDeviceCredentialForThisDevice()).toBe(
       false,
     );
   });
 
-  it('treats a device with no credential of its own as nothing to revoke', async () => {
-    mockQuery.mockResolvedValueOnce({ data: { deviceCredentials: [] } });
+  it('finds nothing to revoke where this device holds none', async () => {
+    const revoke = revoking();
+    serve(listing('other-device'), revoke);
 
     expect(await biometricService.revokeDeviceCredentialForThisDevice()).toBe(
       true,
     );
-    expect(mockMutate).not.toHaveBeenCalled();
+    expect(revoke.fired).toEqual([]);
   });
 
-  // A tap that ends with the spinner stopping and nothing on screen reads as a
-  // broken button. Every outcome says what happened.
-  it('says why when the exchange cannot even be attempted', async () => {
-    (ensureDeviceId as jest.Mock).mockResolvedValueOnce(null);
+  it('is not tried while the API is unreachable', async () => {
+    useStore.setState({ apiReachable: false });
+    const asked = listing(thisDevice);
+    serve(asked);
 
-    expect(
-      await biometricService.signInWithDeviceCredential('chef@example.com'),
-    ).toBe(false);
-    expect(mockToastError).toHaveBeenCalledWith(
-      expect.stringContaining("isn't available on this device"),
+    expect(await biometricService.revokeDeviceCredentialForThisDevice()).toBe(
+      false,
     );
+    expect(asked.fired).toEqual([]);
   });
+});
 
-  // Each attempt spends one of the server's per-device budget, and the slot
-  // survives a refusal — so the button is offered again straight away.
-  it('holds the next attempt off after a refusal, rather than re-spending', async () => {
-    mockMutate.mockResolvedValueOnce({
+describe('a fingerprint sign-in', () => {
+  it('presents this device and signs in', async () => {
+    const exchange = recordMock(ExchangeDeviceCredentialDocument, {
       data: {
         exchangeDeviceCredential: {
-          __typename: 'AuthenticationError',
-          code: 'AUTH_CREDENTIALS_INVALID',
-          message: 'Invalid credentials',
+          __typename: 'DeviceCredentialSessionPayload',
+          accessToken: 'at',
+          refreshToken: 'rt',
+          user: {
+            __typename: 'User',
+            id: 'u1',
+            email: EMAIL,
+            emailVerified: true,
+            onBoarded: true,
+          },
         },
       },
     });
-    await biometricService.signInWithDeviceCredential('chef@example.com');
-    expect(mockStoreState.registerBiometricRefusal).toHaveBeenCalled();
+    serve(exchange);
+    useStore.setState({ biometricAttempts: 2 });
 
-    mockStoreState.biometricRetryAt = Date.now() + 30_000;
-    mockMutate.mockClear();
+    expect(await biometricService.signInWithDeviceCredential(EMAIL)).toBe(true);
+    expect(exchange.fired).toEqual([
+      { input: { credential: 'secret', deviceId: thisDevice } },
+    ]);
+    expect(useStore.getState().biometricAttempts).toBe(0);
+  });
 
-    expect(
-      await biometricService.signInWithDeviceCredential('chef@example.com'),
-    ).toBe(false);
-    expect(mockMutate).not.toHaveBeenCalled();
-    expect(mockToastError).toHaveBeenCalledWith(
+  it('says why when it cannot even be attempted', async () => {
+    serve();
+    noDeviceId();
+
+    expect(await biometricService.signInWithDeviceCredential(EMAIL)).toBe(
+      false,
+    );
+    expect(toastService.error).toHaveBeenCalledWith(
+      t('auth.biometricUnavailableOnDevice'),
+    );
+  });
+
+  it('holds the next attempt off after a refusal, rather than re-spending', async () => {
+    const exchange = exchangeRefused(
+      'AuthenticationError',
+      ErrorCode.AuthCredentialsInvalid,
+    );
+    serve(exchange);
+
+    await biometricService.signInWithDeviceCredential(EMAIL);
+    expect(useStore.getState().biometricRetryAt).toBeGreaterThan(Date.now());
+
+    expect(await biometricService.signInWithDeviceCredential(EMAIL)).toBe(
+      false,
+    );
+    expect(exchange.fired).toHaveLength(1);
+    expect(toastService.error).toHaveBeenLastCalledWith(
       expect.stringContaining('Too many attempts'),
     );
+    expect(memoryKeychain.slotOf(EMAIL)).toBe(SLOT);
   });
 
-  // A rate limit names its own deadline, and the server knows what is left of
-  // its budget: the hold-off is that deadline, not the client's own cooldown.
   it("holds the next attempt off until the server's own retry deadline", async () => {
-    mockMutate.mockResolvedValueOnce({
-      data: undefined,
-      error: new CombinedGraphQLErrors({
-        errors: [
-          {
-            message: 'Too many attempts',
-            extensions: {
-              code: TopLevelErrorCode.OperationRateLimited,
-              retryAfter: 90,
+    serve(
+      recordMock(ExchangeDeviceCredentialDocument, {
+        error: new CombinedGraphQLErrors({
+          data: null,
+          errors: [
+            {
+              message: 'Too many attempts',
+              extensions: {
+                code: TopLevelErrorCode.OperationRateLimited,
+                retryAfter: 90,
+              },
             },
-          },
-        ],
+          ],
+        }),
       }),
-    });
+    );
+    const before = Date.now();
 
-    expect(
-      await biometricService.signInWithDeviceCredential('chef@example.com'),
-    ).toBe(false);
-    expect(mockStoreState.registerBiometricRefusal).toHaveBeenCalledWith(
-      90_000,
+    expect(await biometricService.signInWithDeviceCredential(EMAIL)).toBe(
+      false,
+    );
+    expect(useStore.getState().biometricRetryAt).toBeGreaterThanOrEqual(
+      before + 90_000,
+    );
+    expect(memoryKeychain.slotOf(EMAIL)).toBe(SLOT);
+  });
+
+  it('takes the button down when the slot is empty, and says why', async () => {
+    memoryKeychain.reset();
+    serve();
+
+    expect(await biometricService.signInWithDeviceCredential(EMAIL)).toBe(
+      false,
+    );
+    expect(useStore.getState().hasStoredCredentials).toBe(false);
+    expect(toastService.error).toHaveBeenCalledWith(
+      t('auth.biometricNeedsSetupAgain'),
     );
   });
 
-  // The login screen renders the biometric button from `hasStoredCredentials`,
-  // which no clear path writes — so a slot that has just been dropped keeps
-  // offering a sign-in that can never work, and every tap is a dead end.
-  it('takes the affordance down when the slot is empty, and says why', async () => {
-    mockHasCredentials.mockResolvedValueOnce(false);
+  it('takes the button down when the read finds the slot unusable', async () => {
+    memoryKeychain.invalidateOnRead();
+    serve();
 
-    expect(
-      await biometricService.signInWithDeviceCredential('chef@example.com'),
-    ).toBe(false);
+    await biometricService.signInWithDeviceCredential(EMAIL);
 
-    expect(mockStoreState.setHasStoredCredentials).toHaveBeenCalledWith(false);
-    expect(mockToastError).toHaveBeenCalledWith(
-      expect.stringContaining('needs setting up again'),
+    expect(useStore.getState().hasStoredCredentials).toBe(false);
+  });
+
+  it('keeps the button when the read failed but the slot survived', async () => {
+    memoryKeychain.promptAnswers('unavailable');
+    serve();
+
+    await biometricService.signInWithDeviceCredential(EMAIL);
+
+    expect(useStore.getState().hasStoredCredentials).toBe(true);
+  });
+
+  it('ends quietly, slot and button kept, when the prompt is dismissed', async () => {
+    memoryKeychain.promptAnswers('cancelled');
+    const exchange = exchangeRefused(
+      'AuthenticationError',
+      ErrorCode.AuthCredentialsInvalid,
+    );
+    serve(exchange);
+
+    expect(await biometricService.signInWithDeviceCredential(EMAIL)).toBe(
+      false,
+    );
+    expect(toastService.error).not.toHaveBeenCalled();
+    expect(exchange.fired).toEqual([]);
+    expect(memoryKeychain.slotOf(EMAIL)).toBe(SLOT);
+    expect(useStore.getState().hasStoredCredentials).toBe(true);
+  });
+
+  it('clears a slot written before device credentials, and says why', async () => {
+    memoryKeychain.hold(EMAIL, 'a-plain-password');
+    serve();
+
+    await biometricService.signInWithDeviceCredential(EMAIL);
+
+    expect(memoryKeychain.slotOf(EMAIL)).toBeUndefined();
+    expect(toastService.error).toHaveBeenCalledWith(
+      t('auth.biometricNeedsSetupAgain'),
     );
   });
 
-  describe('the offered button', () => {
-    // A queued answer a case did not consume would otherwise answer for the
-    // next one.
-    afterEach(() => {
-      mockHasCredentials.mockReset().mockResolvedValue(true);
-      keychainMock().loadCredentials.mockReset().mockResolvedValue(STORED_SLOT);
-      keychainMock().saveCredentials.mockReset();
-    });
+  it('drops the slot when the server calls the credential dead', async () => {
+    serve(
+      exchangeRefused(
+        'AuthenticationError',
+        ErrorCode.AuthDeviceCredentialInvalid,
+      ),
+    );
 
-    // The keychain drops a slot the device can never open again (a screen-lock
-    // reset, an invalidated key), but the button is rendered from the flag — so
-    // the attempt that found it dead must take the button down itself.
-    it('takes the affordance down on the attempt that finds the slot unusable', async () => {
-      setHasStoredCredentials().mockClear();
-      keychainMock().loadCredentials.mockResolvedValueOnce({
-        status: 'unavailable',
-      });
-      mockHasCredentials
-        .mockResolvedValueOnce(true)
-        .mockResolvedValueOnce(false);
+    await biometricService.signInWithDeviceCredential(EMAIL);
 
-      expect(
-        await biometricService.signInWithDeviceCredential('chef@example.com'),
-      ).toBe(false);
+    expect(memoryKeychain.slotOf(EMAIL)).toBeUndefined();
+    expect(useStore.getState().hasStoredCredentials).toBe(false);
+  });
 
-      expect(setHasStoredCredentials()).toHaveBeenCalledWith(false);
-    });
+  it.each([
+    [
+      'fails on transport',
+      recordMock(ExchangeDeviceCredentialDocument, {
+        error: new Error('Network request failed'),
+      }),
+    ],
+    [
+      'is refused as credentials-invalid',
+      exchangeRefused('AuthenticationError', ErrorCode.AuthCredentialsInvalid),
+    ],
+  ])('keeps the slot when the exchange %s', async (_, answer) => {
+    serve(answer);
 
-    // "Use manual login" or the back gesture: the person chose the password.
-    it('ends quietly, button kept, when the person dismisses the prompt', async () => {
-      setHasStoredCredentials().mockClear();
-      keychainMock().loadCredentials.mockResolvedValueOnce({
-        status: 'cancelled',
-      });
+    await biometricService.signInWithDeviceCredential(EMAIL);
 
-      expect(
-        await biometricService.signInWithDeviceCredential('chef@example.com'),
-      ).toBe(false);
+    expect(memoryKeychain.slotOf(EMAIL)).toBe(SLOT);
+  });
+});
 
-      expect(mockToastError).not.toHaveBeenCalled();
-      expect(mockMutate).not.toHaveBeenCalled();
-      expect(setHasStoredCredentials()).not.toHaveBeenCalledWith(false);
-    });
+describe('an enrolment', () => {
+  it('stores the credential issued and offers the button', async () => {
+    memoryKeychain.reset();
+    useStore.setState({ hasStoredCredentials: false });
+    const issue = issuing('fresh');
+    serve(issue);
 
-    it('keeps it up when the attempt failed but the slot survived', async () => {
-      setHasStoredCredentials().mockClear();
-      keychainMock().loadCredentials.mockResolvedValueOnce({
-        status: 'unavailable',
-      });
+    expect(await biometricService.enrolDeviceCredential(EMAIL)).toBe(
+      'enrolled',
+    );
+    expect(issue.fired).toEqual([{ input: { deviceId: thisDevice } }]);
+    expect(memoryKeychain.slotOf(EMAIL)).toBe('dc1:fresh');
+    expect(useStore.getState().hasStoredCredentials).toBe(true);
+  });
 
-      await biometricService.signInWithDeviceCredential('chef@example.com');
+  it('reports an unsaved credential without a word, revoking it', async () => {
+    memoryKeychain.reset();
+    useStore.setState({ hasStoredCredentials: false });
+    memoryKeychain.failNextSave(new Error('keystore unavailable'));
+    const revoke = revoking();
+    serve(issuing(), listing(thisDevice), revoke);
 
-      expect(setHasStoredCredentials()).not.toHaveBeenCalledWith(false);
-    });
+    expect(await biometricService.enrolDeviceCredential(EMAIL)).toBe('unsaved');
+    await log.requested(RevokeDeviceCredentialDocument);
 
-    // Startup writes `false` when nothing is enrolled, so an enrolment later in
-    // the same session must write it back or the button stays hidden until a
-    // restart.
-    it('offers the button once an enrolment is stored', async () => {
-      setHasStoredCredentials().mockClear();
-      mockMutate.mockResolvedValueOnce({
+    expect(revoke.fired).toEqual([{ input: { id: 'dc-0' } }]);
+    expect(useStore.getState().hasStoredCredentials).toBe(false);
+    expect(toastService.error).not.toHaveBeenCalled();
+  });
+
+  it('notes a credential that may still be live when its revoke cannot reach the server', async () => {
+    memoryKeychain.failNextSave(new Error('keystore unavailable'));
+    const revoke = revoking();
+    serve(
+      issuing(),
+      recordMock(MyDeviceCredentialsDocument, {
+        error: new Error('Network request failed'),
+      }),
+      revoke,
+    );
+    const possiblyLive = warned('could not store may still be live');
+
+    expect(await biometricService.enrolDeviceCredential(EMAIL)).toBe('unsaved');
+    await possiblyLive;
+
+    expect(revoke.fired).toEqual([]);
+  });
+
+  it('reports a refused issue as refused, storing nothing', async () => {
+    memoryKeychain.reset();
+    serve(
+      recordMock(IssueDeviceCredentialDocument, {
         data: {
           issueDeviceCredential: {
-            __typename: 'DeviceCredentialPayload',
-            credential: 'secret',
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            disposition: ErrorDisposition.Fail,
+            message: 'No',
           },
         },
-      });
-
-      expect(
-        await biometricService.enrolDeviceCredential('chef@example.com'),
-      ).toBe('enrolled');
-      expect(setHasStoredCredentials()).toHaveBeenCalledWith(true);
-    });
-
-    it('does not offer it when the enrolment could not be stored', async () => {
-      setHasStoredCredentials().mockClear();
-      keychainMock().saveCredentials.mockRejectedValueOnce(
-        new Error('keystore unavailable'),
-      );
-      mockMutate.mockResolvedValueOnce({
-        data: {
-          issueDeviceCredential: {
-            __typename: 'DeviceCredentialPayload',
-            credential: 'secret',
-          },
-        },
-      });
-
-      expect(
-        await biometricService.enrolDeviceCredential('chef@example.com'),
-      ).toBe('unsaved');
-      expect(setHasStoredCredentials()).not.toHaveBeenCalled();
-    });
-
-    // `unsaved` is the caller's to report: biometric setup has its own alert,
-    // so a toast here would say it twice.
-    it('reports a keychain refusal as unsaved and shows nothing itself', async () => {
-      mockToastError.mockClear();
-      keychainMock().saveCredentials.mockRejectedValueOnce(
-        new Error('keystore unavailable'),
-      );
-      mockMutate.mockResolvedValueOnce({
-        data: {
-          issueDeviceCredential: {
-            __typename: 'DeviceCredentialPayload',
-            credential: 'secret',
-          },
-        },
-      });
-
-      expect(
-        await biometricService.enrolDeviceCredential('chef@example.com'),
-      ).toBe('unsaved');
-      expect(mockToastError).not.toHaveBeenCalled();
-    });
-
-    it('reports a missing device as unsaved without sending anything', async () => {
-      mockToastError.mockClear();
-      (ensureDeviceId as jest.Mock).mockResolvedValueOnce(null);
-
-      expect(
-        await biometricService.enrolDeviceCredential('chef@example.com'),
-      ).toBe('unsaved');
-      expect(mockMutate).not.toHaveBeenCalled();
-      expect(mockToastError).not.toHaveBeenCalled();
-    });
-  });
-
-  it('takes it down when the server calls the credential dead', async () => {
-    mockMutate.mockResolvedValueOnce({
-      data: {
-        exchangeDeviceCredential: {
-          __typename: 'AuthenticationError',
-          code: 'AUTH_DEVICE_CREDENTIAL_INVALID',
-          message: 'gone',
-        },
-      },
-    });
-
-    await biometricService.signInWithDeviceCredential('chef@example.com');
-
-    expect(mockClearCredentials).toHaveBeenCalledWith('chef@example.com');
-    expect(mockStoreState.setHasStoredCredentials).toHaveBeenCalledWith(false);
-  });
-
-  it('reports a keychain delete that did not succeed', async () => {
-    // A failed delete leaves the previous user's credential on the device. It
-    // must not be indistinguishable from success — the boolean was discarded.
-    mockClearCredentials.mockRejectedValueOnce(new Error('keychain locked'));
-
-    await authService.logout();
-
-    expect(logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('could not be removed'),
+      }),
     );
-  });
-  /**
-   * The other half of the same rule, from the opposite direction: a failure
-   * that does NOT establish the credentials are dead must leave them alone.
-   *
-   * Clearing on any `result.error`, or in the catch, would let a single
-   * network blip silently un-enrol the device — the next launch offering no
-   * biometric button, with nothing said. Only `isDeadCredentialCode` clears.
-   */
-  it('keeps stored credentials when a biometric sign-in fails on transport', async () => {
-    mockClearCredentials.mockClear();
-    mockMutate.mockRejectedValueOnce(new Error('Network request failed'));
 
-    await biometricService.signInWithDeviceCredential('chef@example.com');
-
-    expect(mockClearCredentials).not.toHaveBeenCalled();
-    // The person touched the sensor; a sign-in that ends silently reads as a
-    // dead button.
-    expect(mockToastError).toHaveBeenCalledWith(
-      'Something went wrong. Please try again.',
-    );
+    expect(await biometricService.enrolDeviceCredential(EMAIL)).toBe('refused');
+    expect(memoryKeychain.slotOf(EMAIL)).toBeUndefined();
   });
 
-  it('keeps them when a biometric sign-in resolves with a transport error', async () => {
-    mockClearCredentials.mockClear();
-    mockMutate.mockResolvedValueOnce({
-      data: { login: null },
-      error: new Error('Network request failed'),
-    });
+  it('sends nothing for a device with no id', async () => {
+    const issue = issuing();
+    serve(issue);
+    noDeviceId();
 
-    await biometricService.signInWithDeviceCredential('chef@example.com');
-
-    expect(mockClearCredentials).not.toHaveBeenCalled();
-  });
-
-  /**
-   * `exchangeDeviceCredential` names AUTH_DEVICE_CREDENTIAL_INVALID as its one
-   * clear-the-slot signal, so this code is not proof the stored secret is dead.
-   */
-  it('keeps them when the exchange is refused as credentials-invalid', async () => {
-    mockClearCredentials.mockClear();
-    mockMutate.mockResolvedValueOnce({
-      data: {
-        exchangeDeviceCredential: {
-          __typename: 'AuthenticationError',
-          code: 'AUTH_CREDENTIALS_INVALID',
-          message: 'Invalid credentials',
-        },
-      },
-    });
-
-    await biometricService.signInWithDeviceCredential('chef@example.com');
-
-    expect(mockClearCredentials).not.toHaveBeenCalled();
-  });
-
-  it('keeps them when the exchange is rate limited', async () => {
-    mockClearCredentials.mockClear();
-    mockMutate.mockResolvedValueOnce({
-      data: {
-        exchangeDeviceCredential: {
-          __typename: 'ValidationError',
-          code: 'OPERATION_RATE_LIMITED',
-          message: 'Too many attempts',
-        },
-      },
-    });
-
-    await biometricService.signInWithDeviceCredential('chef@example.com');
-
-    expect(mockClearCredentials).not.toHaveBeenCalled();
-  });
-
-  it('drops them when the exchange says the credential itself is dead', async () => {
-    mockClearCredentials.mockClear();
-    mockMutate.mockResolvedValueOnce({
-      data: {
-        exchangeDeviceCredential: {
-          __typename: 'AuthenticationError',
-          code: 'AUTH_DEVICE_CREDENTIAL_INVALID',
-          message: 'Credential is not usable',
-        },
-      },
-    });
-
-    await biometricService.signInWithDeviceCredential('chef@example.com');
-
-    expect(mockClearCredentials).toHaveBeenCalled();
+    expect(await biometricService.enrolDeviceCredential(EMAIL)).toBe('unsaved');
+    expect(issue.fired).toEqual([]);
   });
 });
 
 // Sign-out and Settings both remove the slot this way, so the login screen's
 // button follows the slot whichever of them ran.
 describe('removing a stored sign-in', () => {
-  beforeEach(() => {
-    mockClearCredentials.mockReset().mockResolvedValue(undefined);
-    setHasStoredCredentials().mockClear();
-    mockMutate.mockResolvedValue({ data: {} });
-    mockQuery.mockResolvedValue({ data: { deviceCredentials: [] } });
-  });
+  it('takes the button down once the slot is gone', async () => {
+    serve(listing());
 
-  it('takes the login button down once the slot is gone', async () => {
-    await expect(
-      biometricService.forgetStoredSignIn('chef@example.com'),
-    ).resolves.toBe(true);
-
-    expect(mockClearCredentials).toHaveBeenCalledWith('chef@example.com');
-    expect(setHasStoredCredentials()).toHaveBeenCalledWith(false);
+    expect(await biometricService.forgetStoredSignIn(EMAIL)).toBe(true);
+    expect(memoryKeychain.slotOf(EMAIL)).toBeUndefined();
+    expect(useStore.getState().hasStoredCredentials).toBe(false);
   });
 
   it('answers false, and keeps the button, while the slot is still there', async () => {
-    mockClearCredentials.mockRejectedValueOnce(new Error('keychain busy'));
+    memoryKeychain.failNextClear(new Error('keychain busy'));
+    serve(listing());
 
-    await expect(
-      biometricService.forgetStoredSignIn('chef@example.com'),
-    ).resolves.toBe(false);
-    expect(setHasStoredCredentials()).not.toHaveBeenCalled();
+    expect(await biometricService.forgetStoredSignIn(EMAIL)).toBe(false);
+    expect(useStore.getState().hasStoredCredentials).toBe(true);
   });
 
   it('removes the slot within its budget when the server never answers', async () => {
-    mockQuery.mockReturnValue(new Promise(() => undefined));
+    serve(recordMock(MyDeviceCredentialsDocument, { held: true }));
 
-    const removal = biometricService.forgetStoredSignIn('chef@example.com');
-    await jest.advanceTimersByTimeAsync(3000);
-
-    await expect(removal).resolves.toBe(true);
-    expect(mockClearCredentials).toHaveBeenCalledWith('chef@example.com');
+    expect(await biometricService.forgetStoredSignIn(EMAIL)).toBe(true);
+    expect(memoryKeychain.slotOf(EMAIL)).toBeUndefined();
   });
 });
 
 // A password change this session survived revoked every device credential, so
 // a slot left as it was would fail on the next fingerprint sign-in.
 describe('renewing a stored sign-in after a password change', () => {
-  const EMAIL = 'chef@example.com';
-
-  beforeEach(() => {
-    mockMutate.mockReset();
-    mockClearCredentials.mockClear();
-    mockToastError.mockClear();
-    mockHasCredentials.mockResolvedValue(true);
-    keychainMock().saveCredentials.mockClear();
-    setHasStoredCredentials().mockClear();
-  });
-
   it('issues nothing for an account with no slot', async () => {
-    mockHasCredentials.mockResolvedValueOnce(false);
+    memoryKeychain.reset();
+    const issue = issuing();
+    serve(issue);
 
     expect(await renewStoredSignIn(EMAIL)).toBe('none');
-    expect(mockMutate).not.toHaveBeenCalled();
-    expect(mockClearCredentials).not.toHaveBeenCalled();
+    expect(issue.fired).toEqual([]);
   });
 
   it('stores a freshly issued credential in the slot', async () => {
-    mockMutate.mockResolvedValueOnce({
-      data: {
-        issueDeviceCredential: {
-          __typename: 'DeviceCredentialPayload',
-          credential: 'renewed',
-        },
-      },
-    });
+    serve(issuing('renewed'));
 
     expect(await renewStoredSignIn(EMAIL)).toBe('renewed');
-    expect(keychainMock().saveCredentials).toHaveBeenCalled();
-    expect(mockClearCredentials).not.toHaveBeenCalled();
+    expect(memoryKeychain.slotOf(EMAIL)).toBe('dc1:renewed');
   });
 
-  it('drops the slot when no new credential can be issued', async () => {
-    mockMutate.mockResolvedValueOnce({
-      data: {
-        issueDeviceCredential: {
-          __typename: 'AuthenticationError',
-          code: 'UNAUTHENTICATED',
-          message: 'No live session',
-        },
-      },
-    });
-
-    expect(await renewStoredSignIn(EMAIL)).toBe('dropped');
-    expect(mockClearCredentials).toHaveBeenCalledWith(EMAIL);
-    expect(setHasStoredCredentials()).toHaveBeenCalledWith(false);
-    // The password change's own message says the sign-in is off; a second
-    // toast for the same refusal would stack under it.
-    expect(mockToastError).not.toHaveBeenCalled();
-  });
-});
-
-// Issued but not stored, a credential is live server-side with no holder.
-describe('a device credential the device could not store', () => {
-  const EMAIL = 'chef@example.com';
-  const revokes = () =>
-    mockMutate.mock.calls.filter(
-      ([options]) =>
-        (options as { mutation?: unknown }).mutation ===
-        RevokeDeviceCredentialDocument,
-    );
-  const issueSucceeds = () =>
-    mockMutate.mockResolvedValueOnce({
-      data: {
-        issueDeviceCredential: {
-          __typename: 'DeviceCredentialPayload',
-          credential: 'issued',
-        },
-      },
-    });
-
-  beforeEach(() => {
-    mockMutate.mockReset();
-    mockMutate.mockResolvedValue({ data: {} });
-    mockQuery.mockReset();
-    mockQuery.mockResolvedValue({
-      data: {
-        deviceCredentials: [
-          {
-            id: 'dc-new',
-            deviceId: MOCK_DEVICE_ID,
-            __typename: 'DeviceCredential',
+  it('drops the slot quietly when no new credential can be issued', async () => {
+    serve(
+      recordMock(IssueDeviceCredentialDocument, {
+        data: {
+          issueDeviceCredential: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            disposition: ErrorDisposition.Fail,
+            message: 'No live session',
           },
-        ],
-      },
-    });
-    mockHasCredentials.mockResolvedValue(true);
-    keychainMock().saveCredentials.mockReset();
-  });
-
-  it('is revoked when enrolment cannot save it', async () => {
-    keychainMock().saveCredentials.mockRejectedValueOnce(
-      new Error('keystore unavailable'),
+        },
+      }),
     );
-    issueSucceeds();
-
-    expect(await biometricService.enrolDeviceCredential(EMAIL)).toBe('unsaved');
-
-    await drainTimers();
-    expect(revokes()).toHaveLength(1);
-    expect(revokes()[0]?.[0]).toMatchObject({
-      variables: { input: { id: 'dc-new' } },
-    });
-  });
-
-  it('is revoked when the renewal after a password change cannot be saved', async () => {
-    keychainMock().saveCredentials.mockRejectedValueOnce(
-      new Error('save prompt cancelled'),
-    );
-    issueSucceeds();
 
     expect(await renewStoredSignIn(EMAIL)).toBe('dropped');
-
-    await drainTimers();
-    expect(revokes()).toHaveLength(1);
+    expect(memoryKeychain.slotOf(EMAIL)).toBeUndefined();
+    expect(useStore.getState().hasStoredCredentials).toBe(false);
+    // The password change's own message says the sign-in is off.
+    expect(toastService.error).not.toHaveBeenCalled();
   });
 
-  it('is logged as possibly live when the revoke cannot reach the server', async () => {
-    const warn = jest.spyOn(logger, 'warn');
-    mockQuery.mockResolvedValue({
-      data: undefined,
-      error: new Error('Network request failed'),
-    });
-    keychainMock().saveCredentials.mockRejectedValueOnce(
-      new Error('keystore unavailable'),
-    );
-    issueSucceeds();
+  it('revokes a renewal it could not save', async () => {
+    memoryKeychain.failNextSave(new Error('save prompt cancelled'));
+    const revoke = revoking();
+    serve(issuing(), listing(thisDevice), revoke);
 
-    expect(await biometricService.enrolDeviceCredential(EMAIL)).toBe('unsaved');
+    expect(await renewStoredSignIn(EMAIL)).toBe('dropped');
+    await log.requested(RevokeDeviceCredentialDocument);
 
-    await drainTimers();
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining('could not store may still be live'),
-    );
-    expect(revokes()).toHaveLength(0);
-    warn.mockRestore();
-  });
-
-  it('is kept when it was stored', async () => {
-    issueSucceeds();
-
-    expect(await biometricService.enrolDeviceCredential(EMAIL)).toBe(
-      'enrolled',
-    );
-    expect(revokes()).toHaveLength(0);
-  });
-});
-
-describe('the first sign-in after onboarding', () => {
-  // Onboarding has no biometric step, so nothing defers the offer to it.
-  it('offers enrolment to an account that has just finished onboarding', async () => {
-    mockHasCredentials.mockResolvedValueOnce(false);
-    const user = {
-      id: 'user-new',
-      email: 'chef@example.com',
-      onBoarded: true,
-    } as LoginUserFragment;
-
-    expect(
-      await resolvePostSignInGate(user, 'chef@example.com', false, 'token'),
-    ).toBe('biometricSetup');
+    expect(revoke.fired).toHaveLength(1);
   });
 });

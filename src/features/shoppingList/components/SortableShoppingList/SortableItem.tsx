@@ -247,9 +247,10 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           unit={unitDisplay}
           // The handler is withheld from a viewer who may not edit, so its
           // absence is the gate — the sheet it opens is fully interactive and
-          // its Save arms as soon as the value changes.
+          // its Save arms as soon as the value changes. A bought line's badge
+          // disables itself.
           onPress={() => onQuantityPress?.(itemId)}
-          disabled={isPurchased || !onQuantityPress}
+          disabled={!onQuantityPress}
           isPurchased={isPurchased}
           themeColors={themeColors}
         />

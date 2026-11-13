@@ -1,541 +1,367 @@
-'use no memo';
-
 import React from 'react';
-import { act, render } from '@testing-library/react-native';
-import { AppState, type AppStateStatus } from 'react-native';
-import NotificationSettingsScreen from '../NotificationSettingsScreen';
+import { Linking } from 'react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import { t } from '#/i18n';
+import { useStore } from '#store';
+import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
+import { PermissionService } from '#/services/permissions/PermissionService';
+import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { ModalPicker } from '#components/molecules/ModalPicker';
+import {
+  recordMock,
+  renderWithApollo,
+  type MockDataFor,
+} from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
+import {
+  ErrorCode,
+  ErrorDisposition,
+  ExpirationFrequency,
+} from '#/graphql/generated/schemaTypes';
+import {
+  GetNotificationPreferencesDocument,
+  UpdateNotificationPreferencesDocument,
+} from '#operations/user/user.generated';
+import { notificationsTestIDs } from '#features/notifications/testIDs';
+import { NotificationSettingsScreen } from '../NotificationSettingsScreen';
 
-const mockAddListener = jest.fn<() => void, [string, () => void]>(() =>
-  jest.fn(),
-);
+jest.mock('#hooks/navigation/useAppNavigation');
+// Registration carries the device's push token, read from the OS.
+jest.mock('#/services/device/deviceRegistration');
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: jest.fn(() => ({
-    addListener: mockAddListener,
-  })),
-}));
+const ME = 'user-1';
 
-jest.mock('#/services/device/deviceRegistration', () => ({
-  registerDeviceInBackground: jest.fn(),
-}));
+let log = operationLog();
 
-const { registerDeviceInBackground } = jest.requireMock(
-  '#/services/device/deviceRegistration',
-);
+type Preferences = NonNullable<
+  NonNullable<
+    MockDataFor<typeof GetNotificationPreferencesDocument>['me']
+  >['notificationPreferences']
+>;
 
-const mockUpdateNotificationSetting = jest.fn().mockResolvedValue(true);
-const mockResetToDefaults = jest.fn().mockResolvedValue(true);
-const mockIsQuietTime = jest.fn(() => false);
+const preferencesOf = (overrides: Partial<Preferences> = {}): Preferences => ({
+  __typename: 'NotificationPreferences',
+  id: 'prefs-1',
+  userId: ME,
+  pushEnabled: false,
+  expirationNotifications: true,
+  expirationNotificationFrequency: ExpirationFrequency.DailyMorning,
+  expirationDaysThreshold: 3,
+  quietHoursEnabled: false,
+  quietHoursStart: '22:00',
+  quietHoursEnd: '08:00',
+  quietHoursTimezone: null,
+  ...overrides,
+});
 
-jest.mock('#features/notifications/hooks/useNotificationSettings', () => ({
-  useNotificationSettings: jest.fn(() => ({
-    settings: {
-      pushEnabled: true,
-      emailEnabled: false,
-      expirationNotifications: true,
-      expirationNotificationFrequency: 'DAILY_MORNING',
-      expirationDaysThreshold: 3,
-      lowStockAlerts: false,
-      pantryChanges: false,
-      shoppingListUpdates: true,
-      sharedListUpdates: false,
-      collaborationInvites: true,
-      homeInvites: true,
-      recipeRecommendations: false,
-      mealPlanReminders: false,
-      cookingReminders: false,
-      weeklyDigest: false,
-      monthlyReport: false,
-      quietHoursEnabled: false,
-      quietHoursStart: '22:00',
-      quietHoursEnd: '08:00',
+const saved = () =>
+  recordMock(UpdateNotificationPreferencesDocument, {
+    data: {
+      updateNotificationPreferences: {
+        __typename: 'UpdateNotificationPreferencesPayload',
+        notificationPreferences: preferencesOf(),
+      },
     },
-    loading: false,
-    updateNotificationSetting: mockUpdateNotificationSetting,
-    resetToDefaults: mockResetToDefaults,
-    isQuietTime: mockIsQuietTime,
-  })),
-}));
-
-jest.mock('#features/notifications/screens/useNotificationPermissions', () => ({
-  useNotificationPermissions: jest.fn(() => ({
-    hasPermission: true,
-    requestPermissions: jest.fn().mockResolvedValue(true),
-    checkPermissions: jest.fn(),
-  })),
-}));
-
-jest.mock('#components/molecules/SettingSwitch', () => ({
-  SettingSwitch: ({ title }: { title: string }) => title,
-}));
-
-jest.mock('#components/organisms/SettingsSection', () => ({
-  SettingsSection: ({ children }: { children: React.ReactNode }) => children,
-}));
-
-jest.mock('#components/templates/SubScreen', () => ({
-  SubScreen: ({ children }: { children: React.ReactNode }) => children,
-}));
-
-jest.mock('#components/molecules/ModalPicker', () => ({
-  ModalPicker: () => null,
-}));
-
-jest.mock('#components/molecules/AlertBanner', () => ({
-  AlertBanner: () => null,
-}));
-
-describe('NotificationSettingsScreen', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
   });
 
-  it('renders settings sections', () => {
-    const tree = render(<NotificationSettingsScreen />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it('shows loading state when no preferences have loaded yet', () => {
-    const { useNotificationSettings } = jest.requireMock(
-      '#features/notifications/hooks/useNotificationSettings',
-    );
-    useNotificationSettings.mockReturnValue({
-      settings: {},
-      loading: true,
-      hasPreferences: false,
-      updateNotificationSetting: jest.fn(),
-      resetToDefaults: jest.fn(),
-      isQuietTime: jest.fn(() => false),
-    });
-
-    const tree = render(<NotificationSettingsScreen />);
-    expect(tree.getByTestId('notification-settings-state')).toBeTruthy();
-  });
-
-  /**
-   * The gate is `loading && !hasPreferences`, not `loading`. Under
-   * `cache-and-network` Apollo reports `loading: true` for the whole network
-   * leg on EVERY mount — `nextFetchPolicy` lives on the ObservableQuery and
-   * useQuery builds a new one each time — so gating on `loading` alone blanked
-   * this screen on every visit for as long as the request took, which against
-   * a stalled API is the 10s httpLink abort deadline.
-   */
-  it('renders the settings while a background refresh is in flight', () => {
-    const { useNotificationSettings } = jest.requireMock(
-      '#features/notifications/hooks/useNotificationSettings',
-    );
-    useNotificationSettings.mockReturnValue({
-      settings: { pushEnabled: true, emailEnabled: true },
-      loading: true,
-      hasPreferences: true,
-      updateNotificationSetting: jest.fn(),
-      resetToDefaults: jest.fn(),
-      isQuietTime: jest.fn(() => false),
-    });
-
-    const tree = render(<NotificationSettingsScreen />);
-    expect(tree.queryByText('Loading settings...')).toBeNull();
-    // The mocked SettingSwitch renders its title as a bare string child, not a
-    // <Text>, so it is reachable through the serialized tree rather than
-    // getByText.
-    expect(JSON.stringify(tree.toJSON())).toContain('Push Notifications');
-  });
-
-  it('renders when quiet time is active', () => {
-    const { useNotificationSettings } = jest.requireMock(
-      '#features/notifications/hooks/useNotificationSettings',
-    );
-    useNotificationSettings.mockReturnValue({
-      settings: {
-        pushEnabled: true,
-        emailEnabled: false,
-        expirationNotifications: false,
-        lowStockAlerts: false,
-        pantryChanges: false,
-        shoppingListUpdates: false,
-        sharedListUpdates: false,
-        collaborationInvites: false,
-        homeInvites: false,
-        recipeRecommendations: false,
-        mealPlanReminders: false,
-        cookingReminders: false,
-        weeklyDigest: false,
-        monthlyReport: false,
-        quietHoursEnabled: true,
-        quietHoursStart: '22:00',
-        quietHoursEnd: '08:00',
+const refused = () =>
+  recordMock(UpdateNotificationPreferencesDocument, {
+    data: {
+      updateNotificationPreferences: {
+        __typename: 'ValidationError',
+        code: ErrorCode.ValidationFailed,
+        disposition: ErrorDisposition.Fail,
+        message: 'Refused.',
+        field: null,
       },
-      loading: false,
-      updateNotificationSetting: jest.fn(),
-      resetToDefaults: jest.fn(),
-      isQuietTime: jest.fn(() => true),
-    });
-
-    const tree = render(<NotificationSettingsScreen />);
-    expect(tree.toJSON()).toBeTruthy();
+    },
   });
 
-  it('renders without permission warning when permissions granted', () => {
-    const tree = render(<NotificationSettingsScreen />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
+interface Visit {
+  preferences?: Partial<Preferences>;
+  readHeld?: boolean;
+  answers?: ReturnType<typeof recordMock>[];
+}
 
-  it('renders when push is enabled but permission denied', () => {
-    const { useNotificationPermissions } = jest.requireMock(
-      '#features/notifications/screens/useNotificationPermissions',
-    );
-    useNotificationPermissions.mockReturnValue({
-      hasPermission: false,
-      requestPermissions: jest.fn().mockResolvedValue(false),
-      checkPermissions: jest.fn(),
-    });
-
-    const tree = render(<NotificationSettingsScreen />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it('renders with all notification types enabled', () => {
-    const { useNotificationSettings } = jest.requireMock(
-      '#features/notifications/hooks/useNotificationSettings',
-    );
-    useNotificationSettings.mockReturnValue({
-      settings: {
-        pushEnabled: true,
-        emailEnabled: true,
-        expirationNotifications: true,
-        expirationNotificationFrequency: 'REAL_TIME',
-        expirationDaysThreshold: 7,
-        lowStockAlerts: true,
-        pantryChanges: true,
-        shoppingListUpdates: true,
-        sharedListUpdates: true,
-        collaborationInvites: true,
-        homeInvites: true,
-        recipeRecommendations: true,
-        mealPlanReminders: true,
-        cookingReminders: true,
-        weeklyDigest: true,
-        monthlyReport: true,
-        quietHoursEnabled: true,
-        quietHoursStart: '22:00',
-        quietHoursEnd: '08:00',
+/** The screen over the user's stored preferences. */
+async function openSettings({
+  preferences = {},
+  readHeld = false,
+  answers = [],
+}: Visit = {}) {
+  const read = recordMock(GetNotificationPreferencesDocument, {
+    held: readHeld,
+    data: {
+      me: {
+        __typename: 'User',
+        id: ME,
+        notificationPreferences: preferencesOf(preferences),
       },
-      loading: false,
-      updateNotificationSetting: mockUpdateNotificationSetting,
-      resetToDefaults: mockResetToDefaults,
-      isQuietTime: mockIsQuietTime,
-    });
+    },
+  });
+  renderWithApollo(<NotificationSettingsScreen />, {
+    links: [log.link],
+    operationMocks: [read.mock, ...answers.map(answer => answer.mock)],
+  });
+  if (!readHeld)
+    await act(() => log.landed(GetNotificationPreferencesDocument));
+  return read;
+}
 
-    const tree = render(<NotificationSettingsScreen />);
-    expect(tree.toJSON()).toBeTruthy();
+/** The screen comes into focus, which re-reads the OS permission. */
+async function focus() {
+  const [rendered] = jest.mocked(useAppNavigation).mock.results;
+  if (rendered?.type !== 'return')
+    throw new Error('the screen read no navigation');
+  const { addListener } = rendered.value.navigation;
+  await act(async () => {
+    for (const [event, listener] of jest.mocked(addListener).mock.calls) {
+      if (event === 'focus') listener({ type: 'focus' });
+    }
+  });
+}
+
+const switchFor = (key: string) =>
+  screen.getByTestId(notificationsTestIDs.settingSwitch(key));
+
+const toggle = (key: string, value: boolean) =>
+  fireEvent(switchFor(key), 'valueChange', value);
+
+/** Presses a button of the last alert raised; a cancel has no handler. */
+async function answerAlert(text: string) {
+  const [, , buttons] = jest.mocked(alertService.alert).mock.lastCall ?? [];
+  const button = buttons?.find(candidate => candidate.text === text);
+  if (!button) throw new Error(`no "${text}" in the last alert`);
+  await act(async () => {
+    button.onPress?.();
+  });
+}
+
+const pickerLabelled = (label: string) =>
+  screen
+    .UNSAFE_getAllByType(ModalPicker)
+    .find(picker => picker.props.label === label);
+
+/** Opens the picker a row names, and presses one of its options. */
+function pick(label: string, option: string) {
+  fireEvent.press(screen.getByText(label));
+  const picker = pickerLabelled(label);
+  if (!picker) throw new Error(`no picker labelled "${label}"`);
+  fireEvent.press(within(picker).getByText(option));
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  log = operationLog();
+  useStore.setState({
+    user: {
+      id: ME,
+      email: 'cook@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    isOnline: true,
+    apiReachable: null,
+  });
+  jest.spyOn(PermissionService, 'check').mockResolvedValue('granted');
+  jest.spyOn(PermissionService, 'request').mockResolvedValue('granted');
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
+describe('reading the preferences', () => {
+  it('shows their state, not the switches, until they are read', async () => {
+    const read = await openSettings({ readHeld: true });
+
+    expect(screen.getByTestId(notificationsTestIDs.settingsState)).toBeTruthy();
+    expect(
+      screen.queryByTestId(notificationsTestIDs.settingSwitch('pushEnabled')),
+    ).toBeNull();
+
+    read.release();
+    await act(() => log.landed(GetNotificationPreferencesDocument));
+    expect(switchFor('pushEnabled')).toBeTruthy();
   });
 
-  it('renders with push disabled', () => {
-    const { useNotificationSettings } = jest.requireMock(
-      '#features/notifications/hooks/useNotificationSettings',
+  it('shows each switch as stored', async () => {
+    await openSettings({
+      preferences: { pushEnabled: false, expirationNotifications: true },
+    });
+
+    expect(switchFor('expirationNotifications')).toBeChecked();
+    expect(switchFor('pushEnabled')).not.toBeChecked();
+  });
+});
+
+describe('push', () => {
+  it('asks the OS before saving push on, then registers the device', async () => {
+    const update = saved();
+    await openSettings({ answers: [update] });
+
+    toggle('pushEnabled', true);
+    await act(() => log.landed(UpdateNotificationPreferencesDocument));
+
+    expect(PermissionService.request).toHaveBeenCalledWith('notifications');
+    expect(update.fired).toEqual([
+      { input: { channels: { pushEnabled: true } } },
+    ]);
+    expect(registerDeviceInBackground).toHaveBeenCalled();
+  });
+
+  it('offers the system settings while push is on but the OS blocks it', async () => {
+    jest.mocked(PermissionService.check).mockResolvedValue('denied');
+    jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    await openSettings({ preferences: { pushEnabled: true } });
+    await focus();
+
+    fireEvent.press(screen.getByText(t('notifications.disabledTitle')));
+    await answerAlert(t('labels.openSettings'));
+
+    expect(Linking.openURL).toHaveBeenCalledWith('app-settings:');
+  });
+
+  it('shows no blocked-push banner while push is off', async () => {
+    jest.mocked(PermissionService.check).mockResolvedValue('denied');
+    await openSettings({ preferences: { pushEnabled: false } });
+    await focus();
+
+    expect(screen.queryByText(t('notifications.disabledTitle'))).toBeNull();
+  });
+});
+
+describe('a setting', () => {
+  it('says so when the server refuses it', async () => {
+    await openSettings({ answers: [refused()] });
+
+    toggle('lowStockAlerts', false);
+    await act(() => log.landed(UpdateNotificationPreferencesDocument));
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('notifications.updateFailed'),
     );
-    useNotificationSettings.mockReturnValue({
-      settings: {
-        pushEnabled: false,
-        emailEnabled: false,
-        expirationNotifications: false,
-        lowStockAlerts: false,
-        pantryChanges: false,
-        shoppingListUpdates: false,
-        sharedListUpdates: false,
-        collaborationInvites: false,
-        homeInvites: false,
-        recipeRecommendations: false,
-        mealPlanReminders: false,
-        cookingReminders: false,
-        weeklyDigest: false,
-        monthlyReport: false,
-        quietHoursEnabled: false,
-        quietHoursStart: '22:00',
-        quietHoursEnd: '08:00',
-      },
-      loading: false,
-      updateNotificationSetting: mockUpdateNotificationSetting,
-      resetToDefaults: mockResetToDefaults,
-      isQuietTime: jest.fn(() => false),
-    });
+  });
+});
 
-    const tree = render(<NotificationSettingsScreen />);
-    expect(tree.toJSON()).toBeTruthy();
+describe('expiry alerts', () => {
+  it('offer no frequency while they are off', async () => {
+    await openSettings({ preferences: { expirationNotifications: false } });
+
+    expect(
+      screen.queryByText(t('notifications.notificationFrequency')),
+    ).toBeNull();
   });
 
-  it('renders with WEEKLY_DIGEST frequency', () => {
-    const { useNotificationSettings } = jest.requireMock(
-      '#features/notifications/hooks/useNotificationSettings',
-    );
-    useNotificationSettings.mockReturnValue({
-      settings: {
-        pushEnabled: true,
-        emailEnabled: false,
-        expirationNotifications: true,
-        expirationNotificationFrequency: 'WEEKLY_DIGEST',
-        expirationDaysThreshold: 5,
-        lowStockAlerts: false,
-        pantryChanges: false,
-        shoppingListUpdates: false,
-        sharedListUpdates: false,
-        collaborationInvites: false,
-        homeInvites: false,
-        recipeRecommendations: false,
-        mealPlanReminders: false,
-        cookingReminders: false,
-        weeklyDigest: false,
-        monthlyReport: false,
-        quietHoursEnabled: false,
-        quietHoursStart: '22:00',
-        quietHoursEnd: '08:00',
-      },
-      loading: false,
-      updateNotificationSetting: mockUpdateNotificationSetting,
-      resetToDefaults: mockResetToDefaults,
-      isQuietTime: jest.fn(() => false),
-    });
+  it('save a picked frequency, and close the picker', async () => {
+    const update = saved();
+    await openSettings({ answers: [update] });
 
-    const tree = render(<NotificationSettingsScreen />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
+    pick(t('notifications.notificationFrequency'), t('labels.weeklyDigest'));
+    await act(() => log.landed(UpdateNotificationPreferencesDocument));
 
-  it('renders with NEVER frequency', () => {
-    const { useNotificationSettings } = jest.requireMock(
-      '#features/notifications/hooks/useNotificationSettings',
-    );
-    useNotificationSettings.mockReturnValue({
-      settings: {
-        pushEnabled: true,
-        emailEnabled: false,
-        expirationNotifications: true,
-        expirationNotificationFrequency: 'NEVER',
-        expirationDaysThreshold: 0,
-        lowStockAlerts: false,
-        pantryChanges: false,
-        shoppingListUpdates: false,
-        sharedListUpdates: false,
-        collaborationInvites: false,
-        homeInvites: false,
-        recipeRecommendations: false,
-        mealPlanReminders: false,
-        cookingReminders: false,
-        weeklyDigest: false,
-        monthlyReport: false,
-        quietHoursEnabled: false,
-        quietHoursStart: '22:00',
-        quietHoursEnd: '08:00',
-      },
-      loading: false,
-      updateNotificationSetting: mockUpdateNotificationSetting,
-      resetToDefaults: mockResetToDefaults,
-      isQuietTime: jest.fn(() => false),
-    });
-
-    const tree = render(<NotificationSettingsScreen />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it('renders with DAILY_EVENING frequency', () => {
-    const { useNotificationSettings } = jest.requireMock(
-      '#features/notifications/hooks/useNotificationSettings',
-    );
-    useNotificationSettings.mockReturnValue({
-      settings: {
-        pushEnabled: true,
-        emailEnabled: true,
-        expirationNotifications: true,
-        expirationNotificationFrequency: 'DAILY_EVENING',
-        expirationDaysThreshold: 1,
-        lowStockAlerts: true,
-        pantryChanges: true,
-        shoppingListUpdates: true,
-        sharedListUpdates: true,
-        collaborationInvites: true,
-        homeInvites: true,
-        recipeRecommendations: true,
-        mealPlanReminders: true,
-        cookingReminders: true,
-        weeklyDigest: true,
-        monthlyReport: true,
-        quietHoursEnabled: false,
-        quietHoursStart: '23:00',
-        quietHoursEnd: '07:00',
-      },
-      loading: false,
-      updateNotificationSetting: mockUpdateNotificationSetting,
-      resetToDefaults: mockResetToDefaults,
-      isQuietTime: jest.fn(() => false),
-    });
-
-    const tree = render(<NotificationSettingsScreen />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
-  /**
-   * The API skips a ladder rung whose days exceed `expirationDaysThreshold`, so
-   * a threshold between rungs behaves as the rung below it — 5 delivers exactly
-   * what 3 delivers. The picker offers only values the ladder can fire.
-   */
-  describe('alert threshold', () => {
-    const renderWithThreshold = (
-      expirationDaysThreshold: number,
-      expirationNotificationFrequency = 'DAILY_MORNING',
-    ) => {
-      const { useNotificationSettings } = jest.requireMock(
-        '#features/notifications/hooks/useNotificationSettings',
-      );
-      useNotificationSettings.mockReturnValue({
-        settings: {
-          pushEnabled: true,
-          expirationNotifications: true,
-          expirationNotificationFrequency,
-          expirationDaysThreshold,
+    expect(update.fired).toEqual([
+      {
+        input: {
+          expiration: {
+            expirationNotificationFrequency: ExpirationFrequency.WeeklyDigest,
+          },
         },
-        loading: false,
-        hasPreferences: true,
-        updateNotificationSetting: mockUpdateNotificationSetting,
-        resetToDefaults: mockResetToDefaults,
-        isQuietTime: mockIsQuietTime,
-      });
-      return JSON.stringify(render(<NotificationSettingsScreen />).toJSON());
-    };
-
-    it('labels a threshold that maps to a ladder rung', () => {
-      expect(renderWithThreshold(7)).toContain('7 days before');
-    });
-
-    it('offers no label for a threshold the ladder cannot fire', () => {
-      const tree = renderWithThreshold(5);
-      expect(tree).not.toContain('5 days before');
-      expect(tree).toContain('Select');
-    });
-
-    it.each(['WEEKLY_DIGEST', 'NEVER'])(
-      'is not offered under %s, which the API does not filter by it',
-      frequency => {
-        expect(renderWithThreshold(3, frequency)).not.toContain(
-          'Alert Threshold',
-        );
       },
+    ]);
+    expect(
+      pickerLabelled(t('notifications.notificationFrequency'))?.props.visible,
+    ).toBe(false);
+  });
+
+  it('offer no threshold for a weekly digest', async () => {
+    await openSettings({
+      preferences: {
+        expirationNotificationFrequency: ExpirationFrequency.WeeklyDigest,
+      },
+    });
+
+    expect(screen.queryByText(t('notifications.alertThreshold'))).toBeNull();
+  });
+
+  it('save a picked threshold as a number of days', async () => {
+    const update = saved();
+    await openSettings({ answers: [update] });
+
+    pick(
+      t('notifications.alertThreshold'),
+      t('notifications.thresholdNDaysBeforePlural', { n: 7 }),
     );
+    await act(() => log.landed(UpdateNotificationPreferencesDocument));
 
-    it.each(['REAL_TIME', 'DAILY_MORNING', 'DAILY_EVENING'])(
-      'is offered under %s',
-      frequency => {
-        expect(renderWithThreshold(3, frequency)).toContain('Alert Threshold');
+    expect(update.fired).toEqual([
+      { input: { expiration: { expirationDaysThreshold: 7 } } },
+    ]);
+  });
+});
+
+describe('quiet hours', () => {
+  // A window from 00:00 to 23:59 holds every minute, whatever the clock says.
+  it('say so while they are on and the window holds now', async () => {
+    await openSettings({
+      preferences: {
+        quietHoursEnabled: true,
+        quietHoursStart: '00:00',
+        quietHoursEnd: '23:59',
       },
+    });
+
+    expect(screen.getByText(t('notifications.quietHoursActive'))).toBeTruthy();
+  });
+
+  it('show neither the banner nor the window while off', async () => {
+    await openSettings({
+      preferences: {
+        quietHoursEnabled: false,
+        quietHoursStart: '00:00',
+        quietHoursEnd: '23:59',
+      },
+    });
+
+    expect(screen.queryByText(t('notifications.quietHoursActive'))).toBeNull();
+    expect(
+      screen.queryByText(t('notifications.quietHoursSubtitle')),
+    ).toBeNull();
+  });
+});
+
+describe('resetting to the defaults', () => {
+  const reset = async () => {
+    fireEvent(
+      screen.getByRole('switch', { name: t('settings.resetToDefaults') }),
+      'valueChange',
+      true,
+    );
+    await answerAlert(t('settings.resetSection'));
+    await act(() => log.landed(UpdateNotificationPreferencesDocument));
+  };
+
+  it('says it is done once the server takes it', async () => {
+    await openSettings({ answers: [saved()] });
+
+    await reset();
+
+    expect(toastService.success).toHaveBeenCalledWith(
+      t('notifications.resetSuccess'),
     );
   });
 
-  /**
-   * A permission changed in system settings reaches the server only from here.
-   * On a grant, `registerDeviceOnce` uploads the token it can now acquire; on a
-   * revoke it writes a null token, because revoking OS notifications leaves the
-   * FCM token valid and the server would otherwise keep pushing into a device
-   * that silently drops every one.
-   */
-  describe('re-registers the device when permission changes elsewhere', () => {
-    const renderWithPermission = (
-      hasPermission: boolean | null,
-      checkResult: boolean,
-      pushEnabled = true,
-    ) => {
-      const { useNotificationPermissions } = jest.requireMock(
-        '#features/notifications/screens/useNotificationPermissions',
-      );
-      const { useNotificationSettings } = jest.requireMock(
-        '#features/notifications/hooks/useNotificationSettings',
-      );
-      useNotificationPermissions.mockReturnValue({
-        hasPermission,
-        requestPermissions: jest.fn().mockResolvedValue(true),
-        checkPermissions: jest.fn().mockResolvedValue(checkResult),
-      });
-      useNotificationSettings.mockReturnValue({
-        settings: { pushEnabled, emailEnabled: false },
-        loading: false,
-        hasPreferences: true,
-        updateNotificationSetting: mockUpdateNotificationSetting,
-        resetToDefaults: mockResetToDefaults,
-        isQuietTime: mockIsQuietTime,
-      });
-      return render(<NotificationSettingsScreen />);
-    };
+  it('says so when the server refuses it', async () => {
+    await openSettings({ answers: [refused()] });
 
-    const fireFocus = async () => {
-      const handler = mockAddListener.mock.calls.find(
-        ([event]) => event === 'focus',
-      )?.[1];
-      expect(handler).toBeDefined();
-      await act(async () => {
-        handler?.();
-      });
-    };
+    await reset();
 
-    it('delivers the push token when a denial becomes a grant', async () => {
-      renderWithPermission(false, true);
-      await fireFocus();
-      expect(registerDeviceInBackground).toHaveBeenCalledTimes(1);
-    });
-
-    it('clears the stored token when a grant becomes a denial', async () => {
-      renderWithPermission(true, false);
-      await fireFocus();
-      expect(registerDeviceInBackground).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not re-register when permission was already granted', async () => {
-      renderWithPermission(true, true);
-      await fireFocus();
-      expect(registerDeviceInBackground).not.toHaveBeenCalled();
-    });
-
-    it('does not re-register while the grant is still missing', async () => {
-      renderWithPermission(false, false);
-      await fireFocus();
-      expect(registerDeviceInBackground).not.toHaveBeenCalled();
-    });
-
-    it('does not re-register when the push preference is off', async () => {
-      renderWithPermission(false, true, false);
-      await fireFocus();
-      expect(registerDeviceInBackground).not.toHaveBeenCalled();
-    });
-
-    // The system-settings round trip is an AppState transition, not a focus
-    // event, so it needs its own coverage.
-    it('delivers the push token on the return from system settings', async () => {
-      // React Native's own jest setup already makes this a mock; `clearAllMocks`
-      // wipes the subscription it returns, which the effect's cleanup needs.
-      const addEventListener =
-        AppState.addEventListener as unknown as jest.Mock<
-          { remove: () => void },
-          [string, (state: AppStateStatus) => void]
-        >;
-      addEventListener.mockReturnValue({ remove: jest.fn() });
-      renderWithPermission(false, true);
-
-      const handler = addEventListener.mock.calls.find(
-        ([event]) => event === 'change',
-      )?.[1];
-      expect(handler).toBeDefined();
-
-      await act(async () => {
-        handler?.('background');
-      });
-      await act(async () => {
-        handler?.('active');
-      });
-
-      expect(registerDeviceInBackground).toHaveBeenCalledTimes(1);
-    });
-
-    // The first check resolves before any denial is observed, so the initial
-    // `null` must not read as a transition.
-    it('does not re-register on the first check of an unknown state', async () => {
-      renderWithPermission(null, true);
-      await fireFocus();
-      expect(registerDeviceInBackground).not.toHaveBeenCalled();
-    });
+    expect(alertService.alert).toHaveBeenLastCalledWith(
+      t('labels.error'),
+      t('errors.resetSettingsFailed'),
+    );
   });
 });

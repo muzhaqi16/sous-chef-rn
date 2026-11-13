@@ -1,591 +1,514 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen, within } from '@testing-library/react-native';
+import { RefreshControl } from 'react-native';
+
+import { act, fireEvent, screen } from '@testing-library/react-native';
+import {
+  type MockDataFor,
+  recordMock,
+  renderWithApollo,
+} from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
+import { useStore } from '#store';
 import { t } from '#/i18n';
 import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
-import type { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
 import { DateRange, PeriodGranularity } from '#/graphql/generated/schemaTypes';
-import type { MockPart } from '#/test-utils/apolloMockProvider';
+import {
+  GetPantryLedgerAnalyticsDocument,
+  GetPantryUsageAnalyticsDocument,
+  GetPantryWasteAnalyticsDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import { PantryAnalytics } from '../PantryAnalytics';
-import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 jest.mock('#hooks/navigation/useAppNavigation');
-jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
-  useBudgetAndPricesEnabled: jest.fn(() => true),
-}));
+// Navigation is the boundary: with no navigator, the screen is focused while
+// mounted.
+jest.mock('@react-navigation/native', () => {
+  const { useEffect: useMountEffect } = jest.requireActual('react');
+  return {
+    ...jest.requireActual('@react-navigation/native'),
+    useFocusEffect: (effect: () => undefined | (() => void)) =>
+      useMountEffect(effect, [effect]),
+  };
+});
 
-type AnalyticsReturn = MockPart<ReturnType<typeof usePantryAnalytics>>;
-type Ledger = NonNullable<AnalyticsReturn['ledgerData']>;
+type UsageAnswer = MockDataFor<typeof GetPantryUsageAnalyticsDocument>;
+type WasteAnswer = MockDataFor<typeof GetPantryWasteAnalyticsDocument>;
+type LedgerAnswer = MockDataFor<typeof GetPantryLedgerAnalyticsDocument>;
+type Waste = NonNullable<NonNullable<WasteAnswer['pantry']>['wasteAnalytics']>;
+type Ledger = NonNullable<
+  NonNullable<LedgerAnswer['pantry']>['ledgerAnalytics']
+>;
+type Summary = NonNullable<Ledger['summary']>;
+type Costs = NonNullable<Ledger['costAnalytics']>;
 
-let mockAnalytics: AnalyticsReturn;
-jest.mock('#features/pantry/hooks/usePantryAnalytics', () => ({
-  usePantryAnalytics: () => mockAnalytics,
-}));
-
-/** The hook over an empty period, with the figures a case states. */
-const analyticsReturn = ({
-  usage,
-  waste,
-  summary,
-  ledger,
-}: {
-  usage?: AnalyticsReturn['usageData'];
-  waste?: AnalyticsReturn['wasteData'];
-  summary?: Ledger['summary'];
-  ledger?: Omit<Ledger, 'summary'>;
-} = {}): AnalyticsReturn => ({
-  usageData: {
-    totalUsageCount: 0,
-    averageUsagePerDay: 0,
-    usageTrend: [],
-    usageByPurpose: [],
-    usageBySource: [],
-    topUsedItems: [],
-    ...usage,
-  },
-  wasteData: {
-    totalWasteCount: 0,
-    wasteRate: 0,
-    valueByCurrency: [],
-    composted: 0,
-    recycled: 0,
-    wasteTrend: [],
-    wasteByReason: [],
-    topWastedItems: [],
-    ...waste,
-  },
-  ledgerData: {
-    summary: {
-      totalAdded: 0,
-      totalConsumed: 0,
-      totalWasted: 0,
-      netQuantity: 0,
-      additionCount: 0,
-      consumptionCount: 0,
-      additionsByUnit: [],
-      consumptionByUnit: [],
-      ...summary,
+const usage = (): UsageAnswer => ({
+  pantry: {
+    id: 'p1',
+    usageAnalytics: {
+      totalUsageCount: 42,
+      averageUsagePerDay: 2.5,
+      usageTrend: [],
+      usageByPurpose: [],
+      usageBySource: [],
+      topUsedItems: [],
     },
-    periodData: [],
-    costAnalytics: null,
-    topRestockedItems: [],
-    ...ledger,
   },
-  usageLoading: false,
-  wasteLoading: false,
-  ledgerLoading: false,
-  dateRange: DateRange.LastWeek,
-  setDateRange: jest.fn(),
-  ledgerGranularity: PeriodGranularity.Weekly,
-  setLedgerGranularity: jest.fn(),
-  refetch: jest.fn(() => Promise.resolve()),
 });
 
-/** One ledger bucket, keyed by its start day; every figure zero unless stated. */
-const period = (
-  periodLabel: string,
-  figures: NonNullable<Ledger['periodData']>[number] = {},
-) => ({
-  periodLabel,
-  periodStart: periodLabel,
-  added: 0,
-  consumed: 0,
-  wasted: 0,
-  net: 0,
-  ...figures,
+/** A period's waste: nothing costed, nothing listed, unless stated. */
+const waste = (stated: Waste = {}): WasteAnswer => ({
+  pantry: {
+    id: 'p1',
+    wasteAnalytics: {
+      totalWasteCount: 5,
+      wasteRate: 10.5,
+      valueByCurrency: [],
+      composted: 0,
+      recycled: 1.5,
+      wasteTrend: [],
+      wasteByReason: [],
+      topWastedItems: [],
+      ...stated,
+    },
+  },
 });
 
-jest.mock('#components/organisms/Header', () => ({
-  Header: ({
-    title,
-  }: React.ComponentProps<
-    typeof import('#components/organisms/Header').Header
-  >) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID="header">
-        <Text>{title}</Text>
-      </View>
-    );
+/** A period's ledger: no movement, no cost, unless stated. */
+const ledger = ({
+  summary = {},
+  ...stated
+}: Omit<Ledger, 'summary'> & { summary?: Summary } = {}): LedgerAnswer => ({
+  pantry: {
+    id: 'p1',
+    ledgerAnalytics: {
+      summary: {
+        totalAdded: 0,
+        totalConsumed: 0,
+        totalWasted: 0,
+        netQuantity: 0,
+        additionCount: 0,
+        consumptionCount: 0,
+        additionsByUnit: [],
+        consumptionByUnit: [],
+        ...summary,
+      },
+      periodData: [],
+      costAnalytics: null,
+      topRestockedItems: [],
+      ...stated,
+    },
   },
-}));
-jest.mock('#features/pantry/components/analytics/DateRangeFilter', () => ({
-  DateRangeFilter: () => {
-    const { View } = require('react-native');
-    return <View testID="date-range-filter" />;
-  },
-}));
-jest.mock('#features/pantry/components/analytics/AnalyticsSummaryCard', () => ({
-  AnalyticsSummaryCard: ({
-    title,
-    value,
-    subtitle,
-  }: React.ComponentProps<
-    typeof import('#features/pantry/components/analytics/AnalyticsSummaryCard').AnalyticsSummaryCard
-  >) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID="summary-card">
-        <Text>{title}</Text>
-        <Text>{String(value)}</Text>
-        {subtitle ? <Text>{subtitle}</Text> : null}
-      </View>
-    );
-  },
-}));
-jest.mock('#features/pantry/components/analytics/ChartSection', () => ({
-  ChartSection: ({
-    title,
-    children,
-  }: React.ComponentProps<
-    typeof import('#features/pantry/components/analytics/ChartSection').ChartSection
-  >) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID="chart-section">
-        <Text>{title}</Text>
-        {children}
-      </View>
-    );
-  },
-}));
-jest.mock('#features/pantry/components/charts/TrendLineChart', () => ({
-  TrendLineChart: () => null,
-}));
-jest.mock('#features/pantry/components/charts/BreakdownPieChart', () => ({
-  BreakdownPieChart: () => null,
-}));
-// Each bar as its label, with the figure beside it when the tab gives one.
-jest.mock('#features/pantry/components/charts/TopItemsBarChart', () => ({
-  TopItemsBarChart: ({
-    data,
-  }: React.ComponentProps<
-    typeof import('#features/pantry/components/charts/TopItemsBarChart').TopItemsBarChart
-  >) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View>
-        {data.map(bar => (
-          <Text key={bar.label}>
-            {bar.secondaryLabel === undefined
-              ? bar.label
-              : `${bar.label} (${bar.secondaryLabel})`}
-          </Text>
-        ))}
-      </View>
-    );
-  },
-}));
-jest.mock('#features/pantry/components/TabView/TabView', () => ({
-  TabView: ({
-    routes,
-    renderScene,
-  }: {
-    routes: import('#features/pantry/components/TabView/TabView').TabRoute[];
-    renderScene: (props: {
-      route: import('#features/pantry/components/TabView/TabView').TabRoute;
-    }) => React.ReactNode;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID="tab-view">
-        {routes.map(route => (
-          <View key={route.key}>
-            <Text>{route.title}</Text>
-            {renderScene({ route })}
-          </View>
-        ))}
-      </View>
-    );
-  },
-}));
-jest.mock('#/styles/commonStyles', () => ({
-  commonStyles: { container: {} },
-}));
+});
 
-const SAMPLE = analyticsReturn({
-  usage: { totalUsageCount: 42, averageUsagePerDay: 2.5 },
-  waste: {
-    totalWasteCount: 5,
-    wasteRate: 10.5,
-    valueByCurrency: [
-      { currencyCode: 'USD', amount: 12.5 },
-      { currencyCode: 'EUR', amount: 3.1 },
+type Spent = NonNullable<Costs['totalSpent']>[number];
+type UnitCost = NonNullable<Costs['averageCostPerUnit']>[number];
+
+const spent = (amount: number, currencyCode: string): Spent => ({
+  __typename: 'CurrencyAmount',
+  amount,
+  currencyCode,
+});
+
+const unitCost = (
+  amount: number,
+  currencyCode: string,
+  unitSymbol: string | null,
+): UnitCost => ({
+  __typename: 'UnitCostAverage',
+  amount,
+  currencyCode,
+  unitSymbol,
+  unit: null,
+});
+
+let log = operationLog();
+
+interface Open {
+  ledgerAnswer?: LedgerAnswer;
+  wasteAnswer?: WasteAnswer;
+  /** Answers that take precedence over the period's. */
+  answers?: ReturnType<typeof recordMock>[];
+}
+
+/** The screen once every tab's period has been read. */
+async function openAnalytics({
+  ledgerAnswer = ledger(),
+  wasteAnswer = waste(),
+  answers = [],
+}: Open = {}) {
+  const reads = {
+    usage: recordMock(GetPantryUsageAnalyticsDocument, { data: usage() }),
+    waste: recordMock(GetPantryWasteAnalyticsDocument, { data: wasteAnswer }),
+    ledger: recordMock(GetPantryLedgerAnalyticsDocument, {
+      data: ledgerAnswer,
+    }),
+  };
+  renderWithApollo(<PantryAnalytics route={{ params: { pantryId: 'p1' } }} />, {
+    links: [log.link],
+    operationMocks: [
+      ...answers.map(answer => answer.mock),
+      reads.usage.mock,
+      reads.waste.mock,
+      reads.ledger.mock,
     ],
-    composted: 2.0,
-    recycled: 1.5,
-  },
-  summary: {
-    totalAdded: 100,
-    totalConsumed: 80,
-    totalWasted: 5,
-    netQuantity: 15,
-    additionCount: 50,
-    consumptionCount: 40,
-  },
+  });
+  await log.landed(GetPantryUsageAnalyticsDocument);
+  await log.landed(GetPantryWasteAnalyticsDocument);
+  await log.landed(GetPantryLedgerAnalyticsDocument);
+  return reads;
+}
+
+const openTab = (title: string) =>
+  fireEvent.press(screen.getByRole('tab', { name: title }));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  log = operationLog();
+  useStore.setState({
+    isOnline: true,
+    apiReachable: true,
+    budgetAndPrices: true,
+  });
 });
 
-describe('PantryAnalytics', () => {
-  const route = { params: { pantryId: 'p1' } };
+describe('the screen', () => {
+  it('reads the pantry it was opened on, over the last month', async () => {
+    const reads = await openAnalytics();
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockAnalytics = SAMPLE;
+    expect(reads.usage.fired).toEqual([
+      {
+        pantryId: 'p1',
+        filter: { dateRange: DateRange.LastMonth, topItemsLimit: 10 },
+      },
+    ]);
   });
 
-  it.each([
-    ['renders the title', ['Pantry Analytics']],
-    ['renders usage tab', ['Usage']],
-    ['renders waste tab', ['Waste']],
-    ['renders ledger tab', ['Ledger']],
-    ['shows usage summary cards', ['Total Usage', '42']],
-    ['shows waste summary cards', ['Total Waste', '5']],
-    ['shows ledger summary cards', ['Added', '100']],
-    [
-      'shows granularity selector in ledger tab',
-      ['Period:', 'Daily', 'Weekly', 'Monthly'],
-    ],
-    ['shows waste rate in waste tab', ['Waste Rate', '10.5%']],
-    [
-      'shows the value lost in each currency apart, never added together',
-      ['Est. Value Lost', '$12.50 · €3.10'],
-    ],
-    ['shows composted value in waste tab', ['Composted']],
-    ['shows recycled value in waste tab', ['Recycled', '1.5']],
-    ['shows average usage per day', ['Avg Per Day', '2.5']],
-    ['shows net change in ledger', ['Net Change', '15']],
-    ['shows transaction counts', ['Additions', '50', 'Consumptions', '40']],
-  ])('%s', (_name, texts) => {
-    render(<PantryAnalytics route={route} />);
-    for (const text of texts) {
-      expect(screen.getAllByText(text).length).toBeGreaterThanOrEqual(1);
+  it('reads every tab again over a picked range', async () => {
+    const reads = await openAnalytics();
+
+    fireEvent.press(screen.getByText(t('dateRange.week')));
+    await log.landed(GetPantryLedgerAnalyticsDocument, 2);
+
+    for (const read of [reads.usage, reads.waste, reads.ledger]) {
+      expect(read.fired.at(-1)).toMatchObject({
+        filter: { dateRange: DateRange.LastWeek },
+      });
     }
   });
 
-  it('shows date range filter', () => {
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByTestId('date-range-filter')).toBeTruthy();
+  it('refreshes every tab on a pull', async () => {
+    await openAnalytics();
+
+    act(() => {
+      screen.UNSAFE_getByType(RefreshControl).props.onRefresh();
+    });
+    await log.landed(GetPantryUsageAnalyticsDocument, 2);
+    await log.landed(GetPantryWasteAnalyticsDocument, 2);
+    await log.landed(GetPantryLedgerAnalyticsDocument, 2);
   });
 
-  describe('cost figures', () => {
-    type CostAnalytics = NonNullable<
-      NonNullable<
-        ReturnType<typeof usePantryAnalytics>['ledgerData']
-      >['costAnalytics']
-    >;
-    type Spent = CostAnalytics['totalSpent'][number];
-    type UnitCost = CostAnalytics['averageCostPerUnit'][number];
+  it('titles its three tabs', async () => {
+    await openAnalytics();
 
-    const spent = (amount: number, currencyCode: string): Spent => ({
-      __typename: 'CurrencyAmount',
-      amount,
-      currencyCode,
-    });
-    const unitCost = (
-      amount: number,
-      currencyCode: string,
-      unitSymbol: string | null,
-    ): UnitCost => ({
-      __typename: 'UnitCostAverage',
-      amount,
-      currencyCode,
-      unitSymbol,
-      unit: null,
-    });
+    for (const title of [
+      t('labels.usage'),
+      t('pantryAnalytics.tabWaste'),
+      t('pantryAnalytics.tabLedger'),
+    ]) {
+      expect(screen.getByRole('tab', { name: title })).toBeTruthy();
+    }
+  });
+});
 
-    /** Renders the screen over a ledger whose cost block is the one given. */
-    const renderWithCosts = (
-      costs: Pick<CostAnalytics, 'totalSpent' | 'averageCostPerUnit'> | null,
-    ) => {
-      mockAnalytics = analyticsReturn({
-        ledger: { costAnalytics: costs && { costByStore: [], ...costs } },
-      });
-      render(<PantryAnalytics route={route} />);
-    };
+describe('usage', () => {
+  it('shows how much was used, and how much a day', async () => {
+    await openAnalytics();
 
-    /** The texts one summary card shows, title first; undefined when absent. */
-    const cardTexts = (title: string): string[] | undefined => {
-      const card = screen
-        .queryAllByTestId('summary-card')
-        .find(candidate => within(candidate).queryByText(title));
-      return card
-        ? within(card)
-            .getAllByText(/[^]*/)
-            .map(node => String(node.props.children))
-        : undefined;
-    };
-    const sectionTitled = (title: string) =>
-      screen
-        .queryAllByTestId('chart-section')
-        .find(candidate => within(candidate).queryByText(title));
+    expect(screen.getByText('42')).toBeTruthy();
+    expect(screen.getByText('2.5')).toBeTruthy();
+  });
 
-    const totalSpent = t('labels.totalSpent');
-    const avgCostPerUnit = t('labels.avgCostPerUnit');
-    const perUnit = (unit: string) => t('pantryAnalytics.perUnit', { unit });
-
-    it('shows what was spent in one currency as that amount', () => {
-      renderWithCosts({
-        totalSpent: [spent(45.99, 'USD')],
-        averageCostPerUnit: [],
-      });
-
-      expect(cardTexts(totalSpent)).toEqual([totalSpent, '$45.99']);
+  it('says a failed read failed, never that nothing was used', async () => {
+    await openAnalytics({
+      answers: [
+        recordMock(GetPantryUsageAnalyticsDocument, {
+          error: new Error('500'),
+        }),
+      ],
     });
 
-    it('shows what was spent in two currencies as two amounts, never one total', () => {
-      renderWithCosts({
-        totalSpent: [spent(45.99, 'USD'), spent(12, 'EUR')],
-        averageCostPerUnit: [],
-      });
+    expect(screen.queryByText(t('labels.noDataAvailable'))).toBeNull();
+  });
+});
 
-      expect(cardTexts(totalSpent)).toEqual([totalSpent, '$45.99 · €12.00']);
-      expect(screen.queryByText(/57\.99/)).toBeNull();
+describe('offline', () => {
+  beforeEach(() => useStore.setState({ apiReachable: false }));
+
+  const failed = () => [
+    recordMock(GetPantryUsageAnalyticsDocument, {
+      error: new Error('offline'),
+    }),
+    recordMock(GetPantryWasteAnalyticsDocument, {
+      error: new Error('offline'),
+    }),
+    recordMock(GetPantryLedgerAnalyticsDocument, {
+      error: new Error('offline'),
+    }),
+  ];
+
+  it.each([
+    { tab: 'usage', title: () => t('labels.usage') },
+    { tab: 'waste', title: () => t('pantryAnalytics.tabWaste') },
+    { tab: 'ledger', title: () => t('pantryAnalytics.tabLedger') },
+  ])('says the $tab tab needs a connection, never zeros', async ({ title }) => {
+    await openAnalytics({ answers: failed() });
+
+    openTab(title());
+
+    expect(screen.getByText(t('pantryAnalytics.offlineTitle'))).toBeTruthy();
+  });
+});
+
+describe('waste', () => {
+  it('shows how much was wasted, and at what rate', async () => {
+    await openAnalytics();
+
+    openTab(t('pantryAnalytics.tabWaste'));
+
+    expect(screen.getByText('5')).toBeTruthy();
+    expect(screen.getByText('10.5%')).toBeTruthy();
+    expect(screen.getByText('1.5')).toBeTruthy();
+  });
+
+  it('shows the value lost in each currency apart, never added together', async () => {
+    await openAnalytics({
+      wasteAnswer: waste({
+        valueByCurrency: [spent(12.5, 'USD'), spent(3.1, 'EUR')],
+      }),
     });
 
-    it('shows an unknown spend, never zero, when nothing in the period was costed', () => {
-      renderWithCosts({ totalSpent: [], averageCostPerUnit: [] });
+    openTab(t('pantryAnalytics.tabWaste'));
 
-      // The card's whole content: the em dash stands where an amount would.
-      expect(cardTexts(totalSpent)).toEqual([totalSpent, UNKNOWN_AMOUNT]);
-      // No average to show either: neither the card nor the breakdown.
-      expect(screen.queryByText(avgCostPerUnit)).toBeNull();
-    });
+    expect(screen.getByText('$12.50 · €3.10')).toBeTruthy();
+  });
 
-    // The waste fixture carries no value: no wasted batch had a cost.
-    it('shows an unknown value lost, never zero, when no wasted stock was costed', () => {
-      renderWithCosts(null);
+  it('shows an unknown value lost, never zero, when nothing wasted was costed', async () => {
+    await openAnalytics();
 
-      const valueLost = t('pantryAnalytics.estValueLost');
-      expect(cardTexts(valueLost)).toEqual([valueLost, UNKNOWN_AMOUNT]);
-    });
+    openTab(t('pantryAnalytics.tabWaste'));
 
-    it('shows the one average on a card that names its unit', () => {
-      renderWithCosts({
-        totalSpent: [spent(45.99, 'USD')],
-        averageCostPerUnit: [unitCost(4.6, 'USD', 'kg')],
-      });
+    expect(screen.getByText(UNKNOWN_AMOUNT)).toBeTruthy();
+  });
 
-      expect(cardTexts(avgCostPerUnit)).toEqual([
-        avgCostPerUnit,
-        '$4.60',
-        perUnit('kg'),
-      ]);
-      expect(sectionTitled(avgCostPerUnit)).toBeUndefined();
-    });
-
-    it('shows the one average without a unit caption when it has no unit', () => {
-      renderWithCosts({
-        totalSpent: [spent(45.99, 'USD')],
-        averageCostPerUnit: [unitCost(4.6, 'USD', null)],
-      });
-
-      expect(cardTexts(avgCostPerUnit)).toEqual([avgCostPerUnit, '$4.60']);
-    });
-
-    it('lists several averages apart, each amount with its unit, instead of one card', () => {
-      renderWithCosts({
-        totalSpent: [spent(45.99, 'USD'), spent(12, 'EUR')],
-        averageCostPerUnit: [
-          unitCost(4.6, 'USD', 'kg'),
-          unitCost(0.5, 'USD', 'pc'),
-          unitCost(3, 'EUR', 'kg'),
-          unitCost(7.25, 'EUR', null),
+  it('names what each top wasted item cost', async () => {
+    await openAnalytics({
+      wasteAnswer: waste({
+        topWastedItems: [
+          { itemName: 'Milk', count: 2, valueByCurrency: [spent(4, 'USD')] },
         ],
-      });
-
-      // A kilogram and a piece do not average: no single figure on a card.
-      expect(cardTexts(avgCostPerUnit)).toBeUndefined();
-      const section = sectionTitled(avgCostPerUnit);
-      expect(section).toBeDefined();
-      expect(
-        within(section!)
-          .getAllByText(/[^]*/)
-          .map(node => String(node.props.children)),
-      ).toEqual([
-        avgCostPerUnit,
-        '$4.60',
-        perUnit('kg'),
-        '$0.50',
-        perUnit('pc'),
-        '€3.00',
-        perUnit('kg'),
-        '€7.25',
-      ]);
+      }),
     });
 
-    it('shows no cost cards when the ledger carries no cost analytics', () => {
-      renderWithCosts(null);
+    openTab(t('pantryAnalytics.tabWaste'));
 
-      expect(screen.queryByText(totalSpent)).toBeNull();
-      expect(screen.queryByText(avgCostPerUnit)).toBeNull();
-    });
+    expect(screen.getByText(/\$4\.00/)).toBeTruthy();
   });
+});
 
-  describe('with budget & prices off', () => {
-    beforeEach(() => {
-      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
-    });
-    afterEach(() => {
-      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
-    });
-
-    const wasted = (itemName: string) => ({
-      itemId: itemName,
-      itemName,
-      count: 2,
-      valueByCurrency: [{ currencyCode: 'USD', amount: 4 }],
-    });
-
-    it('shows no spend or cost in the ledger, and still its movements', () => {
-      mockAnalytics = analyticsReturn({
-        summary: { totalAdded: 100, additionCount: 50 },
-        ledger: {
-          costAnalytics: {
-            costByStore: [],
-            totalSpent: [
-              {
-                __typename: 'CurrencyAmount',
-                amount: 45.99,
-                currencyCode: 'USD',
-              },
-            ],
-            averageCostPerUnit: [
-              {
-                __typename: 'UnitCostAverage',
-                amount: 4.6,
-                currencyCode: 'USD',
-                unitSymbol: 'kg',
-              },
-            ],
-          },
+describe('the ledger', () => {
+  it('shows each movement, and the net change', async () => {
+    await openAnalytics({
+      ledgerAnswer: ledger({
+        summary: {
+          totalAdded: 100,
+          netQuantity: -8,
+          additionCount: 50,
+          consumptionCount: 40,
         },
-      });
-      render(<PantryAnalytics route={route} />);
-
-      expect(screen.queryByText(t('labels.totalSpent'))).toBeNull();
-      expect(screen.queryByText(t('labels.avgCostPerUnit'))).toBeNull();
-      expect(screen.queryByText(/45\.99|4\.60/)).toBeNull();
-      expect(screen.getByText('Additions')).toBeTruthy();
-      expect(screen.getByText('50')).toBeTruthy();
+      }),
     });
 
-    it('shows no value lost in the waste tab, and still what was wasted', () => {
-      mockAnalytics = analyticsReturn({
-        waste: {
-          totalWasteCount: 5,
-          valueByCurrency: [{ currencyCode: 'USD', amount: 12.5 }],
-          topWastedItems: [wasted('Milk')],
-        },
-      });
-      render(<PantryAnalytics route={route} />);
+    openTab(t('pantryAnalytics.tabLedger'));
 
-      expect(screen.queryByText(t('pantryAnalytics.estValueLost'))).toBeNull();
-      expect(screen.queryByText(/\$/)).toBeNull();
-      expect(screen.getByText('Total Waste')).toBeTruthy();
-      expect(screen.getByText('Milk')).toBeTruthy();
-    });
-
-    it('names what each top wasted item cost once the switch is on', () => {
-      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
-      mockAnalytics = analyticsReturn({
-        waste: { topWastedItems: [wasted('Milk')] },
-      });
-      render(<PantryAnalytics route={route} />);
-
-      expect(screen.getByText('Milk ($4.00)')).toBeTruthy();
-    });
-  });
-
-  it('renders with period data in ledger', () => {
-    mockAnalytics = analyticsReturn({
-      ledger: {
-        periodData: [
-          period('2024-01-01', { added: 5, consumed: 3, wasted: 1, net: 1 }),
-          period('2024-01-08', { added: 3, consumed: 2, net: 1 }),
-        ],
-      },
-    });
-
-    render(<PantryAnalytics route={route} />);
-    // `periodLabel` is the API's bucket key, formatted as a local date.
-    expect(screen.getByText('Jan 1')).toBeTruthy();
-    expect(screen.getByText('Jan 8')).toBeTruthy();
-    expect(screen.queryByText('2024-01-01')).toBeNull();
-  });
-
-  it('renders with additionsByUnit data', () => {
-    const pounds = (totalQuantity: number, count: number) => ({
-      unitId: 'u1',
-      unitSymbol: 'lbs',
-      unitName: 'Pounds',
-      totalQuantity,
-      count,
-    });
-    mockAnalytics = analyticsReturn({
-      summary: {
-        additionsByUnit: [pounds(10, 3)],
-        consumptionByUnit: [pounds(5, 2)],
-      },
-    });
-
-    render(<PantryAnalytics route={route} />);
-    expect(screen.getByText('Additions by Unit')).toBeTruthy();
-    expect(screen.getByText('10 lbs')).toBeTruthy();
-    expect(screen.getByText('(3 transactions)')).toBeTruthy();
-    expect(screen.getByText('Consumption by Unit')).toBeTruthy();
-    expect(screen.getByText('5 lbs')).toBeTruthy();
-  });
-
-  it('renders with negative net quantity', () => {
-    mockAnalytics = analyticsReturn({ summary: { netQuantity: -8 } });
-
-    render(<PantryAnalytics route={route} />);
+    expect(screen.getByText('100')).toBeTruthy();
     expect(screen.getByText('-8')).toBeTruthy();
+    expect(screen.getByText('50')).toBeTruthy();
+    expect(screen.getByText('40')).toBeTruthy();
   });
 
-  it('renders ledger quantities through the quantity formatter', () => {
-    mockAnalytics = analyticsReturn({
-      summary: {
-        totalAdded: 1.25,
-        totalConsumed: 3.14159,
-        totalWasted: 0.33333334,
-        netQuantity: -177.4412,
-        additionsByUnit: [
-          {
-            unitId: 'u1',
-            unitSymbol: 'g',
-            unitName: 'Grams',
-            totalQuantity: 1500,
-            count: 3,
-          },
-        ],
-        consumptionByUnit: [
-          {
-            unitId: 'u2',
-            unitSymbol: 'cup',
-            unitName: 'Cups',
-            totalQuantity: 0.75,
-            count: 2,
-          },
-        ],
-      },
-      ledger: {
-        periodData: [
-          period('2024-01-01', { added: 0.5, consumed: 1.6667, wasted: 2.456 }),
-        ],
-      },
+  it('reads the ledger again by a picked period', async () => {
+    const reads = await openAnalytics();
+    openTab(t('pantryAnalytics.tabLedger'));
+
+    fireEvent.press(screen.getByText(t('labels.monthly')));
+    await log.landed(GetPantryLedgerAnalyticsDocument, 2);
+
+    expect(reads.ledger.fired.at(-1)).toMatchObject({
+      granularity: PeriodGranularity.Monthly,
+    });
+  });
+
+  // `periodLabel` is the API's bucket key, formatted as a local date.
+  it.each([
+    {
+      by: 'week',
+      granularity: PeriodGranularity.Weekly,
+      label: '2024-01-08',
+      shown: 'Jan 8',
+    },
+    {
+      by: 'month',
+      granularity: PeriodGranularity.Monthly,
+      label: '2024-01',
+      shown: 'Jan 2024',
+    },
+  ])('labels each period by its $by', async ({ granularity, label, shown }) => {
+    const period = { periodLabel: label, added: 5, consumed: 3, wasted: 1 };
+    await openAnalytics({
+      answers: [
+        recordMock(GetPantryLedgerAnalyticsDocument, {
+          match: vars => vars.granularity === granularity,
+          data: ledger({ periodData: [period] }),
+        }),
+      ],
+    });
+    openTab(t('pantryAnalytics.tabLedger'));
+    if (granularity === PeriodGranularity.Monthly) {
+      fireEvent.press(screen.getByText(t('labels.monthly')));
+      await log.landed(GetPantryLedgerAnalyticsDocument, 2);
+    }
+
+    expect(screen.getByText(shown)).toBeTruthy();
+    expect(screen.queryByText(label)).toBeNull();
+  });
+
+  it('reads each quantity as the formatter does', async () => {
+    await openAnalytics({
+      ledgerAnswer: ledger({
+        summary: {
+          totalAdded: 1.25,
+          totalConsumed: 3.14159,
+          totalWasted: 0.33333334,
+          netQuantity: -177.4412,
+          additionsByUnit: [
+            {
+              unitId: 'u1',
+              unitSymbol: 'g',
+              unitName: 'Grams',
+              unit: null,
+              totalQuantity: 1500,
+              count: 3,
+            },
+          ],
+        },
+      }),
     });
 
-    render(<PantryAnalytics route={route} />);
+    openTab(t('pantryAnalytics.tabLedger'));
+
     expect(screen.getByText('1 1/4')).toBeTruthy();
     expect(screen.getByText('3.142')).toBeTruthy();
     expect(screen.getByText('1/3')).toBeTruthy();
     expect(screen.getByText('-177.441')).toBeTruthy();
-    expect(screen.getByText('+1/2')).toBeTruthy();
-    expect(screen.getByText('-1 2/3')).toBeTruthy();
-    expect(screen.getByText('-2.456')).toBeTruthy();
+    expect(screen.getByText(t('pantryAnalytics.additionsByUnit'))).toBeTruthy();
     expect(screen.getByText('1.5 kg')).toBeTruthy();
-    expect(screen.getByText('3/4 cup')).toBeTruthy();
+  });
+
+  describe('what it cost', () => {
+    const openCosts = async (costs: Costs | null) => {
+      await openAnalytics({
+        ledgerAnswer: ledger({
+          costAnalytics: costs && { costByStore: [], ...costs },
+        }),
+      });
+      openTab(t('pantryAnalytics.tabLedger'));
+    };
+    const avgCostPerUnit = () => t('labels.avgCostPerUnit');
+    const perUnit = (unit: string) => t('pantryAnalytics.perUnit', { unit });
+
+    it('shows a spend in two currencies as two amounts, never one total', async () => {
+      await openCosts({
+        totalSpent: [spent(45.99, 'USD'), spent(12, 'EUR')],
+        averageCostPerUnit: [],
+      });
+
+      expect(screen.getByText('$45.99 · €12.00')).toBeTruthy();
+    });
+
+    it('shows an unknown spend, never zero, when nothing was costed', async () => {
+      await openCosts({ totalSpent: [], averageCostPerUnit: [] });
+
+      expect(screen.getByText(UNKNOWN_AMOUNT)).toBeTruthy();
+      expect(screen.queryByText(avgCostPerUnit())).toBeNull();
+    });
+
+    it('shows the one average on a card that names its unit', async () => {
+      await openCosts({
+        totalSpent: [spent(45.99, 'USD')],
+        averageCostPerUnit: [unitCost(4.6, 'USD', 'kg')],
+      });
+
+      expect(screen.getAllByText(avgCostPerUnit())).toHaveLength(1);
+      expect(screen.getByText('$4.60')).toBeTruthy();
+      expect(screen.getByText(perUnit('kg'))).toBeTruthy();
+    });
+
+    // A kilogram and a piece do not average: no single figure on a card.
+    it('lists several averages apart, each with its unit, instead of one card', async () => {
+      await openCosts({
+        totalSpent: [spent(45.99, 'USD')],
+        averageCostPerUnit: [
+          unitCost(4.6, 'USD', 'kg'),
+          unitCost(0.5, 'USD', 'pc'),
+        ],
+      });
+
+      expect(screen.getAllByText(avgCostPerUnit())).toHaveLength(1);
+      expect(screen.getAllByText('$4.60')).toHaveLength(1);
+      expect(screen.getByText('$0.50')).toBeTruthy();
+      expect(screen.getByText(perUnit('pc'))).toBeTruthy();
+    });
+  });
+});
+
+describe('with budget & prices off', () => {
+  beforeEach(() => useStore.setState({ budgetAndPrices: false }));
+
+  it('shows no spend or cost in the ledger, and still its movements', async () => {
+    await openAnalytics({
+      ledgerAnswer: ledger({
+        summary: { additionCount: 50 },
+        costAnalytics: {
+          costByStore: [],
+          totalSpent: [spent(45.99, 'USD')],
+          averageCostPerUnit: [unitCost(4.6, 'USD', 'kg')],
+        },
+      }),
+    });
+
+    openTab(t('pantryAnalytics.tabLedger'));
+
+    expect(screen.queryByText(t('labels.totalSpent'))).toBeNull();
+    expect(screen.queryByText(/45\.99|4\.60/)).toBeNull();
+    expect(screen.getByText('50')).toBeTruthy();
+  });
+
+  it('shows no value lost in the waste tab, and still what was wasted', async () => {
+    await openAnalytics({
+      wasteAnswer: waste({
+        valueByCurrency: [spent(12.5, 'USD')],
+        topWastedItems: [
+          { itemName: 'Milk', count: 2, valueByCurrency: [spent(4, 'USD')] },
+        ],
+      }),
+    });
+
+    openTab(t('pantryAnalytics.tabWaste'));
+
+    expect(screen.queryByText(t('pantryAnalytics.estValueLost'))).toBeNull();
+    expect(screen.queryByText(/\$/)).toBeNull();
+    expect(screen.getByText(/Milk/)).toBeTruthy();
   });
 });

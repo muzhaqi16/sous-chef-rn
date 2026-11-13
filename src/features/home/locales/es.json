@@ -41,7 +41,6 @@
     "emailPlaceholder": "Introduce un correo electrónico"
   },
   "invitationAcceptance": {
-    "invalidInvitation": "Invitación no válida",
     "shoppingListAccepted": "¡Invitación a la lista de la compra aceptada!",
     "homeAccepted": "¡Invitación al hogar aceptada!",
     "unknownType": "Tipo de invitación desconocido",
