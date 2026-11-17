@@ -150,6 +150,7 @@ export function pantryItemData(
         (fixture.storageState as StorageState | undefined) ??
         StorageState.Refrigerated,
       expiresOn: fixture.expiresOn ?? null,
+      expiryKind: null,
       lowStockAlert: false,
       isLowStock: false,
       minQuantity: fixture.minQuantity ?? null,

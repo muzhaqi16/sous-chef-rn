@@ -381,7 +381,7 @@ describe('MoveToPantryModal', () => {
     ['the Storage Type section', ['Storage Type']],
     ['every storage state', ['Ambient', 'Refrigerated', 'Frozen']],
     ['the Expiration Date section', ['Expiration Date']],
-    ['Select date while no expiration date is set', ['Select date']],
+    ['a blank date as estimated', ['Leave blank for an estimate']],
     ['the Remove from shopping list toggle', ['Remove from shopping list']],
     ['the notes input', ['Notes (Optional)']],
     // The same question Mark Purchased asks.

@@ -37,6 +37,7 @@ import {
 import {
   dateActiveBatches,
   dropBatchesPage,
+  typedExpiryKind,
   isBatchesPage,
   writeRestatedBatches,
 } from '#features/pantry/cache/restatedStack';
@@ -335,6 +336,7 @@ export const updatePantryRow: LocalWrite<EntityFieldsInputs> = {
     const stack = stackOf(write.variables);
     const expiresOn = expiryOf(write.variables);
     if (!stack || expiresOn === undefined) return;
+    writeEntityFields(cache, stack, { expiryKind: typedExpiryKind(expiresOn) });
     if (dateActiveBatches(cache, stack.id, expiresOn)) {
       writeEntityFields(cache, stack, { earliestBatchExpiresOn: expiresOn });
     }

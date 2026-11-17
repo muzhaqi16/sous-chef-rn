@@ -4,7 +4,11 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
-import { ErrorCode, StockCheckAnswer } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  StockCheckAnswer,
+  StockConfidence,
+} from '#/graphql/generated/schemaTypes';
 import { pantryTrackingContext as context } from '#/test-utils/fixtures/pantryTrackingFixtures';
 import { useStockCheck } from '../useStockCheck';
 import {
@@ -24,7 +28,7 @@ const stack = (id: string, version: number) => ({
   id,
   version,
   itemName: id,
-  stockConfidence: { level: 'LOW', reasons: [] },
+  stockConfidence: { level: StockConfidence.Low, reasons: [] },
 });
 
 beforeEach(() => jest.useFakeTimers());

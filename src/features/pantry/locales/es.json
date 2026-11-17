@@ -56,7 +56,8 @@
     "removedTitle": "Este artículo ya no está en tu despensa",
     "removedBody": "Se eliminó, quizá desde otro dispositivo.",
     "hiddenTitle": "Este artículo no se te muestra",
-    "hiddenBody": "Está en una despensa que no puedes ver. Quien gestiona el hogar puede permitirte verla."
+    "hiddenBody": "Está en una despensa que no puedes ver. Quien gestiona el hogar puede permitirte verla.",
+    "expiryEstimated": "Fecha estimada"
   },
   "pantrySettings": {
     "createTitle": "Crear nueva despensa",

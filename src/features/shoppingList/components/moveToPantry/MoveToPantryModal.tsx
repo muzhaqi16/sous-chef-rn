@@ -593,6 +593,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
               label={t('labels.expirationDate')}
               value={expirationDate ?? null}
               onChange={date => setValue('expirationDate', date ?? undefined)}
+              placeholder={t('instructions.expiryOptional')}
               minimumDate={new Date()}
               clearable
             />

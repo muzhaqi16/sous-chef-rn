@@ -589,7 +589,8 @@
     "pointCamera": "Apunta la cámara a un código de barras",
     "barcodeVisible": "Asegúrate de que el código de barras esté bien visible",
     "swipeToDelete": "Desliza a la izquierda para eliminar",
-    "pullToRefresh": "Tira hacia abajo para actualizar"
+    "pullToRefresh": "Tira hacia abajo para actualizar",
+    "expiryOptional": "Déjala en blanco para una estimación"
   },
   "status": {
     "scanning": "Escaneando…",

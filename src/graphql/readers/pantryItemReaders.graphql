@@ -57,6 +57,7 @@ fragment PantryItemReaders on PantryItem {
   }
   earliestBatchExpiresOn
   expiresOn
+  expiryKind
   heldQuantity
   image {
     catalogImageId
