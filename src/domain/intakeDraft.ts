@@ -18,11 +18,14 @@ export function resolveIntakeDraft({
   catalog,
   correction,
   heldUnit = null,
+  unitFromRoute = false,
 }: {
   purchased: IntakeFacts;
   catalog?: IntakeFacts;
   correction?: IntakeFacts;
   heldUnit?: HeldUnit;
+  /** The route's API supplies a measured amount's missing unit (a list line's). */
+  unitFromRoute?: boolean;
 }): {
   facts: IntakeFacts;
   amount: StockAmountInput | null;
@@ -34,10 +37,11 @@ export function resolveIntakeDraft({
     return { facts, amount: null, unresolved: ['quantity'] };
   }
   if (intent === 'measured') {
+    const stated = !!unitId || unitFromRoute;
     return {
       facts,
-      amount: unitId ? stockAmountOf(quantity, { unitId }) : null,
-      unresolved: unitId ? [] : ['unit'],
+      amount: stated ? stockAmountOf(quantity, { unitId }) : null,
+      unresolved: stated ? [] : ['unit'],
     };
   }
   if (!Number.isInteger(quantity))

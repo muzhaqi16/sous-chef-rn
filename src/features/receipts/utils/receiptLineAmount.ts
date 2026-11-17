@@ -2,11 +2,8 @@ import {
   UnitType,
   type StockAmountInput,
 } from '#/graphql/generated/schemaTypes';
-import {
-  boughtAmountOf,
-  stockAmountOf,
-  type HeldUnit,
-} from '#domain/stockAmount';
+import type { HeldUnit } from '#domain/stockAmount';
+import { resolveIntakeDraft, type IntakeFacts } from '#domain/intakeDraft';
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
 
 /** The open list line a receipt line ticks off. */
@@ -38,34 +35,32 @@ export function receiptLineAmount(
   heldUnit: HeldUnit,
 ): ReceiptLineAmount {
   const { quantity, unitId, unitText } = choice;
+  const stated = (facts: IntakeFacts, fromList = false): ReceiptLineAmount => {
+    const { amount } = resolveIntakeDraft({ purchased: facts, heldUnit });
+    return amount ? { amount, fromList } : { needs: 'amount' };
+  };
   if (unitId !== null || unitText !== '') {
     const resolved = unitId ?? listLine?.unit?.id;
     return resolved
-      ? {
-          amount: stockAmountOf(quantity, { unitId: resolved }),
-          fromList: false,
-        }
+      ? stated({ quantity, unitId: resolved, intent: 'measured' })
       : { needs: 'unit' };
   }
   if (!Number.isInteger(quantity)) return { needs: 'unit' };
   const unit = listLine?.unit;
-  if (!unit) {
-    return { amount: boughtAmountOf(quantity, { heldUnit }), fromList: false };
-  }
+  if (!unit) return stated({ quantity });
   const asked = listLine.quantity ?? 1;
   const counted = unit.type === UnitType.Count;
   if (quantity === 1 || (counted && quantity === asked)) {
-    return {
-      amount: stockAmountOf(quantity === 1 ? asked : quantity, {
+    return stated(
+      {
+        quantity: quantity === 1 ? asked : quantity,
         unitId: unit.id,
-      }),
-      fromList: true,
-    };
+        intent: 'measured',
+      },
+      true,
+    );
   }
   return counted
     ? { needs: 'amount' }
-    : {
-        amount: stockAmountOf(quantity, { asPackages: true }),
-        fromList: false,
-      };
+    : stated({ quantity, intent: 'packages' });
 }

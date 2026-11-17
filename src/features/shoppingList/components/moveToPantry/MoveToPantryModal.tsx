@@ -19,7 +19,8 @@ import {
 } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { StorageState, type UnitType } from '#/graphql/generated/schemaTypes';
-import { contentsOf, stockAmountOf } from '#domain/stockAmount';
+import { contentsOf } from '#domain/stockAmount';
+import { resolveIntakeDraft } from '#domain/intakeDraft';
 import type { MoveToPantryInput } from '#features/shoppingList/hooks/useMoveToPantry';
 import { useMoveToPantryItem } from '#features/shoppingList/components/moveToPantry/useMoveToPantryItem';
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
@@ -375,20 +376,29 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     const { packageSize, measurementProfile } = contentsOf(
       statedTheOtherWay ? null : contents,
     );
-    const amount = statedTheOtherWay
-      ? stockAmountOf(contents.amount, {
-          asPackages: true,
-          packageSize: {
-            netWeight: quantityValue,
-            netWeightUnitId: confirmedUnitId,
+    const { amount } = statedTheOtherWay
+      ? resolveIntakeDraft({
+          purchased: {
+            quantity: contents.amount,
+            intent: 'packages',
+            packageSize: {
+              netWeight: quantityValue,
+              netWeightUnitId: confirmedUnitId,
+            },
+            unitId: contents.unitId,
           },
-          unitId: contents.unitId,
         })
-      : stockAmountOf(quantityValue, {
-          asPackages: contents !== null,
-          packageSize,
-          unitId: confirmedUnitId,
+      : resolveIntakeDraft({
+          purchased: {
+            quantity: quantityValue,
+            intent: contents === null ? 'measured' : 'packages',
+            packageSize,
+            unitId: confirmedUnitId,
+          },
+          // A unit typed and not resolved goes as the list line's.
+          unitFromRoute: true,
         });
+    if (!amount) return;
 
     // The field asks for the TOTAL paid, as Mark Purchased does; the server
     // records it exactly and derives the unit price.

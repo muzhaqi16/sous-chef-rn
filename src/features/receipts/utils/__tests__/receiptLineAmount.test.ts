@@ -1,5 +1,12 @@
 import { UnitType } from '#/graphql/generated/schemaTypes';
 import { receiptLineAmount } from '../receiptLineAmount';
+import {
+  pantryTrackingExamples as examples,
+  pantryTrackingUnits as units,
+} from '#/test-utils/fixtures/pantryTrackingFixtures';
+
+const IN_03 = examples['IN-03'];
+const IN_02 = examples['IN-02'];
 
 const line = (
   quantity: number,
@@ -40,6 +47,29 @@ describe('receiptLineAmount', () => {
       null,
       {
         amount: { measured: { quantity: 1.5, unitId: 'unit-lb' } },
+        fromList: false,
+      },
+    ],
+    [
+      'IN-03: a printed 2.21 lb is what was bought, not the 2 lb the list asked',
+      line(IN_03.purchased.quantity, { unitId: IN_03.purchased.unitId }),
+      {
+        quantity: IN_03.requested.quantity,
+        unit: { id: IN_03.requested.unitId, type: UnitType.Weight },
+      },
+      null,
+      {
+        amount: { measured: { quantity: 2.21, unitId: units.pound.id } },
+        fromList: false,
+      },
+    ],
+    [
+      'IN-02: six cans the pantry counts in cans are six cans',
+      line(IN_02.expected.quantity),
+      undefined,
+      { id: units.can.id, type: UnitType.Count },
+      {
+        amount: { measured: { quantity: 6, unitId: units.can.id } },
         fromList: false,
       },
     ],

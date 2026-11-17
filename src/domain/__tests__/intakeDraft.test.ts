@@ -67,3 +67,14 @@ it.each([NaN, Infinity, 0, -1])(
     });
   },
 );
+it('takes a measured amount without a unit only where the route supplies one', () => {
+  const purchased = { quantity: 6, intent: 'measured' as const };
+  expect(resolveIntakeDraft({ purchased })).toMatchObject({
+    amount: null,
+    unresolved: ['unit'],
+  });
+  expect(resolveIntakeDraft({ purchased, unitFromRoute: true })).toMatchObject({
+    amount: { measured: { quantity: 6 } },
+    unresolved: [],
+  });
+});
