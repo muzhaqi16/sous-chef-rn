@@ -11054,6 +11054,10 @@ type Purchase {
   When it was bought: the time it was recorded unless a date was given, or the receipt's day when a receipt backs it
   """
   purchaseDate: DateTime!
+  """
+  The member who recorded the purchase; null once their account is gone, while the purchase stays the home's
+  """
+  purchasedBy: User
   """How many units were bought, counted in unit; always more than 0"""
   quantity: Float!
   """
@@ -11078,10 +11082,8 @@ type Purchase {
   The unit as written when the purchase was recorded. While it spells unit itself (its name or symbol, in any language) it reads in the request's language, agreeing with quantity, as unit.localizedSymbol(quantity:); a label of the client's own is returned as written
   """
   unitSymbol: String!
-  """
-  The user who recorded the purchase, the one member who may update or delete it; resolves for a deleted account too
-  """
-  user: User!
+  """The user who recorded the purchase, while their account exists"""
+  user: User! @deprecated(reason: "Use purchasedBy. A home's purchase outlives its buyer's account, and user cannot answer one whose buyer is gone, so such a purchase is left out wherever user is selected.")
   """
   Incremented on every write; send it back with an update to refuse a stale edit
   """
@@ -12374,6 +12376,18 @@ input ReceiptRefInput {
   The store the receipt is from; when the purchase also names one, they must agree.
   """
   storeId: ID
+}
+
+"""A listed place a receipt's merchant may be."""
+type ReceiptStoreChoice {
+  address: String!
+  """The credit to show beside this place"""
+  credit: String!
+  name: String!
+  """
+  Pick it with createStoreFromPlace, which answers the store already made of it
+  """
+  placeId: ID!
 }
 
 """Recipe type for meal instructions and ingredients"""
@@ -13879,6 +13893,15 @@ type ResolveReceiptLinesPayload {
   when one store alone has it
   """
   store: Store
+  """
+  When no store is placed and the place search cannot settle on one: the
+  listed places the merchant may be, at most 5. That is every listing at a
+  printed street several match, or each listing of the merchant's name when
+  the receipt prints an address with no street. Ask the user to pick one,
+  create it with createStoreFromPlace, and check in with that store's id.
+  Empty when a store is placed or one place is settled on (proposedStore's).
+  """
+  storeChoices: [ReceiptStoreChoice!]!
 }
 
 """
