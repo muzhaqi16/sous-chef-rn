@@ -733,6 +733,10 @@ type BatchElementFailure {
   """Set only when the reason was masked."""
   errorId: String
   """
+  The input field the failure names, as a ValidationError names it; null when it names none.
+  """
+  field: String
+  """
   Client-safe explanation. An unexpected fault reads as a generic message,
   with errorId naming the log entry that holds the real error.
   """
