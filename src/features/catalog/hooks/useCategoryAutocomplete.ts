@@ -38,8 +38,7 @@ export function useCategoryAutocomplete(
   };
 
   const getResults = (): CategorySuggestion[] => {
-    return (data?.autocompleteCategories.suggestions ??
-      []) as CategorySuggestion[];
+    return data?.autocompleteCategories.suggestions ?? [];
   };
 
   // The warmed cache is the first ~100 categories (GetCategories), so online the
