@@ -428,35 +428,6 @@ describe('useReceiptCheckIn', () => {
     expect(useReceiptDraftStore.getState().draft?.added).toEqual([]);
   });
 
-  it('says a currency the API cannot record is why the receipt was refused', async () => {
-    const refused = recordMock(CreateReceiptCheckInDocument, {
-      data: {
-        createReceiptCheckIn: {
-          __typename: 'ValidationError',
-          code: ErrorCode.ValidationFailed,
-          field: 'currency',
-        },
-      },
-    });
-    const { result } = renderHookWithApollo(
-      () => useReceiptCheckIn(undefined),
-      { operationMocks: [refused.mock] },
-    );
-
-    let outcome;
-    await act(async () => {
-      outcome = await result.current.checkIn(
-        { ...receipt(checkInIds()), currency: 'MXN' },
-        [line(0)],
-      );
-    });
-
-    expect(outcome).toEqual({
-      status: 'refused',
-      reason: t('receipts.review.currencyUnsupported', { currency: 'MXN' }),
-    });
-  });
-
   it('takes back the sends after one refused whole, unsent, and keeps what landed before it', async () => {
     const cache = makeCache();
     const lines = Array.from({ length: 250 }, (_, index) => line(index));

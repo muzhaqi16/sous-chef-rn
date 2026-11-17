@@ -144,7 +144,6 @@
       "matchFailedBody": "Tocca per riprovare quando sei online. Puoi anche scegliere ogni prodotto da te.",
       "storeWhereHint": "Cambia il negozio",
       "storeLearned": "{{store}} ora è tra i tuoi negozi",
-      "currencyUnsupported": "Questo scontrino è in {{currency}}, che non si può ancora registrare, quindi non è stato aggiunto nulla.",
       "storeChoicesTitle": "Quale negozio era?",
       "storeChoiceFailed": "Impossibile usare quel negozio. Controlla la connessione e riprova."
     },

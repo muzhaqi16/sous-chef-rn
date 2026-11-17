@@ -3,7 +3,7 @@ import { useReceiptDraft } from '../store/receiptDraftStore';
 
 /**
  * The currency the receipt prints, sent as read: the API books the receipt in
- * it, or refuses one it cannot record. Undefined where the reading decided none.
+ * it. Undefined where the reading decided none.
  */
 export function useReceiptCurrency(): string | undefined {
   return useReceiptDraft()?.parsed?.currency;

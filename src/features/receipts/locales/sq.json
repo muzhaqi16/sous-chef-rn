@@ -144,7 +144,6 @@
       "matchFailedBody": "Prek për të provuar përsëri kur të jesh në linjë. Mund ta zgjedhësh edhe vetë çdo produkt.",
       "storeWhereHint": "Ndryshon dyqanin",
       "storeLearned": "{{store}} tani është një nga dyqanet e tua",
-      "currencyUnsupported": "Kjo faturë është në {{currency}}, që nuk mund të regjistrohet ende, ndaj nuk u shtua asgjë.",
       "storeChoicesTitle": "Cili dyqan ishte?",
       "storeChoiceFailed": "Ai dyqan nuk u përdor dot. Kontrollo lidhjen dhe provo sërish."
     },
