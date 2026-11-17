@@ -9911,8 +9911,9 @@ type PantryItem {
   
   Historical data comes from PantryItemUsage records:
   - Initial quantity: first RESTOCK record
-  - Consumed: SUM(quantityUsed) WHERE purpose != RESTOCK
-  - Wasted: SUM(quantityUsed) WHERE purpose = WASTE
+  - Consumed: the sum of each use's amount in the stack's tracking unit, over
+    uses whose purpose is not RESTOCK
+  - Wasted: the same sum over uses whose purpose is WASTE
   """
   quantity: Float!
   """
@@ -12379,16 +12380,23 @@ input ReceiptRefInput {
   storeId: ID
 }
 
-"""A listed place a receipt's merchant may be."""
+"""
+A listed place a receipt's merchant may be. Pick it with createStoreFromPlace,
+passing placeId, chain's id and storeNumber: it answers the store already made
+of the place, else the chain's store of that number, completed with the place.
+"""
 type ReceiptStoreChoice {
   address: String!
+  """The chain the receipt names, for createStoreFromPlace's chainId"""
+  chain: StoreChain
   """The credit to show beside this place"""
   credit: String!
   name: String!
-  """
-  Pick it with createStoreFromPlace, which answers the store already made of it
-  """
   placeId: ID!
+  """
+  The store number the receipt prints, for createStoreFromPlace's storeNumber
+  """
+  storeNumber: String
 }
 
 """Recipe type for meal instructions and ingredients"""
@@ -13895,12 +13903,14 @@ type ResolveReceiptLinesPayload {
   """
   store: Store
   """
-  When no store is placed and the place search cannot settle on one: the
-  listed places the merchant may be, at most 5. That is every listing at a
-  printed street several match, or each listing of the merchant's name when
-  the receipt prints an address with no street. Ask the user to pick one,
-  create it with createStoreFromPlace, and check in with that store's id.
-  Empty when a store is placed or one place is settled on (proposedStore's).
+  The listed places the merchant may be, at most 5, when the place search
+  cannot settle on one: every listing at a printed street several match, a
+  listing near a misread street, or each listing of the name when the receipt
+  prints no street. Served when no store is placed, or when the placed store
+  has no address. Ask the user to pick one, pick it with createStoreFromPlace
+  (see ReceiptStoreChoice), and check in with the store it answers. Empty
+  otherwise; a settled place is proposedStore's, or completes the placed store
+  at check-in.
   """
   storeChoices: [ReceiptStoreChoice!]!
 }
