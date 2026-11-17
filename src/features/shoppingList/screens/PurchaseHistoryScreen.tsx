@@ -170,7 +170,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
             {t('purchaseHistory.purchasedBy')}
           </Text>
           <Text role="label" style={styles.purchaseDetailValue}>
-            {personName(purchase.user) ?? t('labels.someone')}
+            {personName(purchase.purchasedBy) ?? t('labels.someone')}
           </Text>
         </View>
       </View>
