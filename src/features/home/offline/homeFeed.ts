@@ -33,6 +33,10 @@ import {
 } from './homeFeed.generated';
 
 const SNAPSHOT_PAGE_SIZE = 100;
+// The server's largest page, for a home's members and storage locations. Sent
+// as a variable: the server's cost rule multiplies a literal `first` into the
+// selection beneath it, which put the summary past the limit.
+const WHOLE_PAGE = 100;
 
 type HomePage = HomeFeedChangesQuery['syncChanges'][number];
 type SnapshotRow = HomeFeedSnapshotQuery['syncSnapshot']['rows'][number];
@@ -134,7 +138,7 @@ async function readSummary(
 ): Promise<FeedAnswer<HomeRows>> {
   const { data, error } = await client.query({
     query: HomeFeedSummaryDocument,
-    variables: { id: homeId },
+    variables: { id: homeId, wholePage: WHOLE_PAGE },
     fetchPolicy: 'network-only',
   });
   if (error || !data?.home) {
