@@ -302,6 +302,25 @@ package is left, since the server draws those first, and a restock adds its whol
 answer replaces the layer, so a mutation that moves stock returns `amountLeft` and `fullPackages`, or
 the row falls back to the old read when the layer drops.
 
+**Four figures, one stack.**
+- `quantity` is the physical count, a part-used package counted whole (the API's `countOf`).
+- `heldQuantity` is the exact fraction held, each batch by its own size (the API's `packagesHeld`).
+- `stockBreakdown.fullPackages` is the unopened count.
+- `remainingNetWeight` and `remainingPortions` are what is inside.
+
+A use stated in what is inside moves all four before the answer on a stack of one batch: one batch is
+one package size, so its packages scale with its contents (`heldAfterDraw`). A 64 fl oz carton less
+8 fl oz is 56 fl oz, 0.875 carton held, one carton, none unopened (USE-02). Across batches only the
+total and `amountLeft` move at once: which package a use drew is the API's quantity engine, which the
+client does not copy. Two 16 oz packs less 12 oz read 20 oz at once; 1.25 held, one unopened and two
+packs come with the answer (USE-04). An acquisition keeps the size it was bought in, so a 24 oz jar
+restocked beside a 16 oz one adds 24 oz and restates neither (IN-05). A use in a unit the device cannot
+convert changes nothing until the server answers, and the row shows Syncing; a use the device can prove
+is never held behind it (USE-05). The figures are the example catalog's
+(`__tests__/helpers/fixtures/pantryTrackingFixtures.ts`), asserted in `usePantryItemActions.test.ts`
+and the pantry `localWrites.test.ts`. The API contracts this work still waits on are tracked in
+`docs/pantry-tracking-api-alignment.md`.
+
 **An optimistic entity is COMPLETE for every query that reads it.** With
 `returnPartialData: false`, one missing field makes the whole cache read
 incomplete and `useQuery` returns nothing; online a refetch hides it, offline
