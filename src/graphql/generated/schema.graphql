@@ -284,12 +284,6 @@ input AddRecipeToFavoritesInput {
 }
 
 type AddRecipeToFavoritesPayload {
-  """
-  True when this call CONVERGED on a pre-existing favorite (the recipe was
-  already favorited) — it did NOT create one. Either way savedRecipe is the
-  canonical server record. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   recipe: Recipe
   savedRecipe: SavedRecipe!
 }
@@ -322,12 +316,6 @@ input AddRestrictionInput {
 }
 
 type AddRestrictionPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
-  dietaryProfile: DietaryProfile
   dietaryRestriction: DietaryRestriction!
 }
 
@@ -375,11 +363,6 @@ input AddTemplateItemInput {
 }
 
 type AddTemplateItemPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   mealTemplate: MealTemplate
   mealTemplateItem: MealTemplateItem!
 }
@@ -484,7 +467,7 @@ input AdjustPantryItemQuantityInput {
 type AdjustPantryItemQuantityPayload {
   """
   True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  and this payload is read as it stands now.
   """
   converged: Boolean!
   pantry: Pantry
@@ -519,7 +502,6 @@ type AllergenInfo {
   contains: Boolean!
   mayContain: Boolean
   name: String!
-  processedIn: Boolean
   severity: AllergenSeverity
 }
 
@@ -691,11 +673,6 @@ input BatchAddShoppingListItemInput {
 type BatchAddShoppingListItemResult {
   """Client ID if provided in input"""
   clientId: String
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   """Why the entry failed; set exactly when success is false"""
   failure: BatchElementFailure
   """Index in the input array"""
@@ -946,8 +923,6 @@ input BulkUpdateItemFieldsInput {
 type BulkUpdateItemResult {
   """Why the id failed; set exactly when success is false"""
   failure: BatchElementFailure
-  """Index in the input array"""
-  index: Int!
   """The item id, as sent"""
   itemId: ID!
   success: Boolean!
@@ -1067,7 +1042,10 @@ type CatalogRecipeMatchEdge {
 """Category type for organizing items"""
 type Category {
   """Active child categories the caller can see, by sort order, then name"""
-  children: [Category!]!
+  children(
+    """At most this many: default 50, at most 50 (a larger value gives 50)"""
+    limit: Int = 50
+  ): [Category!]!
   """Display color in hex; null when none"""
   color: String
   """When the category was created"""
@@ -1147,6 +1125,10 @@ categories only.
 input CategoryFilters {
   """Only the children of this category; null selects top-level categories"""
   parentId: ID
+  """
+  Case-insensitive substring of the name, description or slug; requires sign-in. A search leaves inactive categories out
+  """
+  search: String
   """Only categories of this type"""
   type: CategoryType
 }
@@ -1155,6 +1137,12 @@ input CategoryOpsInput {
   addCategoryIds: [ID!]
   primaryCategoryId: ID
   removeCategoryIds: [ID!]
+}
+
+"""Order by options for categories"""
+input CategoryOrderBy {
+  """Sorts by name"""
+  name: SortOrder
 }
 
 """A category, named exactly one way: by id, by slug, or by name."""
@@ -1203,7 +1191,7 @@ input ChangePantryItemItemInput {
 type ChangePantryItemItemPayload {
   """
   True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  and this payload is read as it stands now.
   """
   converged: Boolean!
   pantry: Pantry
@@ -1254,7 +1242,7 @@ type ChangePantryItemUnitPayload {
   ): PantryItemBatchConnection!
   """
   True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  and this payload is read as it stands now.
   """
   converged: Boolean!
   pantry: Pantry
@@ -1275,7 +1263,6 @@ input ChangePasswordInput {
 }
 
 type ChangePasswordPayload {
-  message: String!
   """
   A new session for the device that made the change, on COMPLETED. Every
   token issued before the change stops working on every device, this one's
@@ -1478,10 +1465,6 @@ invariant. Includes both `CONFLICT` (logical) and `VERSION_CONFLICT`
 """
 type ConflictError implements Error {
   code: ErrorCode!
-  """
-  The version the row holds, when the write lost a version check; otherwise null.
-  """
-  currentVersion: Int
   disposition: ErrorDisposition!
   message: String!
 }
@@ -1559,11 +1542,6 @@ type ConvertExpiredToWastePayload {
     """Page size: default 20, at most 100"""
     first: Int
   ): PantryItemBatchConnection!
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -1634,6 +1612,12 @@ type CookingLogEdge implements Edge {
   node: CookingLog!
 }
 
+"""Order by options for cooking logs"""
+input CookingLogOrderBy {
+  """Sorts by when the recipe was cooked"""
+  cookedAt: SortOrder
+}
+
 """It is time to start cooking a planned recipe (COOKING_REMINDER)."""
 type CookingReminderNotificationData {
   """The meal's local time, as HH:MM."""
@@ -1676,7 +1660,7 @@ type CorrectPantryItemPackageSizePayload {
   batch: PantryItemBatch!
   """
   True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  and this payload is read as it stands now.
   """
   converged: Boolean!
   pantry: Pantry
@@ -1802,11 +1786,6 @@ input CreateHomeInput {
 }
 
 type CreateHomePayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   home: Home!
 }
 
@@ -1994,14 +1973,6 @@ input CreateMealPlanItemInput {
 }
 
 type CreateMealPlanItemPayload {
-  """
-  True when this call CONVERGED on a pre-existing meal-plan item (an idempotent
-  replay, or a second device) rather than creating a new one — recipe meals
-  converge on the natural key (mealPlanId, date, mealType, recipeId), custom
-  meals on the client-minted id. The canonical, API-wide replay flag; clients
-  treat converged=true as already-synced.
-  """
-  converged: Boolean!
   mealPlan: MealPlan
   mealPlanItem: MealPlanItem!
 }
@@ -2014,11 +1985,6 @@ Always include a __typename so the variant can be discriminated.
 union CreateMealPlanItemResult = ConflictError | CreateMealPlanItemPayload | ForbiddenError | NotFoundError | ValidationError
 
 type CreateMealPlanPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   mealPlan: MealPlan!
 }
 
@@ -2065,11 +2031,6 @@ input CreateMealTemplateInput {
 }
 
 type CreateMealTemplatePayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   mealTemplate: MealTemplate!
 }
 
@@ -2174,11 +2135,6 @@ input CreatePantryItemInput {
 }
 
 type CreatePantryItemPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -2248,11 +2204,6 @@ input CreatePantryItemUsageInput {
 }
 
 type CreatePantryItemUsagePayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   pantry: Pantry
   pantryItemUsage: PantryItemUsage!
   storageLocation: StorageLocation
@@ -2266,11 +2217,6 @@ Always include a __typename so the variant can be discriminated.
 union CreatePantryItemUsageResult = ConflictError | CreatePantryItemUsagePayload | ForbiddenError | InsufficientQuantityError | NotFoundError | UnitEligibilityError | ValidationError
 
 type CreatePantryPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   pantry: Pantry!
 }
 
@@ -2282,6 +2228,14 @@ Always include a __typename so the variant can be discriminated.
 union CreatePantryResult = ConflictError | CreatePantryPayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateReceiptCheckInInput {
+  """
+  The ISO 4217 code of the currency the receipt prints, as the device read it
+  (receipt-rules' ParsedReceipt.currency). The check-in, its lines and its
+  orderDiscount are booked in it; a receiptParseId's own currency wins over
+  it. With neither, the shopping list's currency, else the user's. A code no
+  active currency has is refused. A check-in sent again keeps the first.
+  """
+  currency: String
   """
   Client-minted CUID2 for the receipt. Sending the same id again, with the
   same pantryId and shoppingListId, returns the check-in it created and
@@ -2310,7 +2264,7 @@ input CreateReceiptCheckInInput {
   merchantHeader: String
   """
   A saving the receipt takes off the whole order rather than one line ("$5
-  off $50"), in the lines' currency. It is counted in the household's
+  off $50"), in the receipt's currency. It is counted in the household's
   savings and changes no line's price. A check-in sent again keeps the
   first value.
   """
@@ -2444,11 +2398,6 @@ input CreateRecipeCaptureInput {
 
 type CreateRecipeCapturePayload {
   capture: RecipeCapture!
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
 }
 
 """
@@ -2484,11 +2433,6 @@ input CreateRecipeInput {
 }
 
 type CreateRecipePayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   recipe: Recipe!
 }
 
@@ -2513,11 +2457,6 @@ input CreateRecipeReviewInput {
 }
 
 type CreateRecipeReviewPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   recipe: Recipe
   recipeReview: RecipeReview!
 }
@@ -2578,11 +2517,6 @@ input CreateShoppingListInput {
 
 type CreateShoppingListPayload {
   """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
-  """
   One result per CreateShoppingListInput.items entry, in input order, as
   addItemsToShoppingList reports them; empty when none were sent. On a replay,
   one per entry carrying its own id or idempotencyKey.
@@ -2633,11 +2567,6 @@ input CreateStorageLocationInput {
 }
 
 type CreateStorageLocationPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   storageLocation: StorageLocation!
 }
 
@@ -2922,7 +2851,6 @@ input DeclineHomeInviteInput @oneOf {
 }
 
 type DeclineHomeInvitePayload {
-  home: Home
   homeInvite: HomeInvite!
 }
 
@@ -2979,8 +2907,7 @@ type DeleteBrandListPayload {
   brandList: BrandList
   """
   True when this call CONVERGED on a brand list that was already gone: a
-  no-op success that changed nothing and published nothing. The canonical,
-  API-wide replay flag.
+  no-op success that changed nothing and published nothing.
   """
   converged: Boolean!
 }
@@ -2999,8 +2926,7 @@ input DeleteDeviceInput {
 type DeleteDevicePayload {
   """
   True when this call CONVERGED on a device that was already gone: a
-  no-op success that changed nothing and published nothing. The canonical,
-  API-wide replay flag.
+  no-op success that changed nothing and published nothing.
   """
   converged: Boolean!
   """
@@ -3024,8 +2950,7 @@ input DeleteExternalSourceInput {
 type DeleteExternalSourcePayload {
   """
   True when this call CONVERGED on a external source that was already gone: a
-  no-op success that changed nothing and published nothing. The canonical,
-  API-wide replay flag.
+  no-op success that changed nothing and published nothing.
   """
   converged: Boolean!
   """
@@ -3053,11 +2978,9 @@ input DeleteHomeInviteInput {
 type DeleteHomeInvitePayload {
   """
   True when this call CONVERGED on a invitation that was already revoked: a
-  no-op success that did not revoke it or publish again. The canonical, API-wide
-  replay flag.
+  no-op success that did not revoke it or publish again.
   """
   converged: Boolean!
-  home: Home
   """
   The revoked invitation; also on a repeat, since a revoked invitation stays readable
   """
@@ -3086,8 +3009,7 @@ union DeleteHomeItemPhotoResult = ConflictError | ForbiddenError | HomeItemPhoto
 type DeleteHomePayload {
   """
   True when this call CONVERGED on a home that was already deleted: a
-  no-op success that did not delete it or publish again. The canonical, API-wide
-  replay flag.
+  no-op success that did not delete it or publish again.
   """
   converged: Boolean!
   """
@@ -3115,8 +3037,7 @@ input DeleteMealPlanItemInput {
 type DeleteMealPlanItemPayload {
   """
   True when this call CONVERGED on a planned meal that was already deleted: a
-  no-op success that did not delete it or publish again. The canonical, API-wide
-  replay flag.
+  no-op success that did not delete it or publish again.
   """
   converged: Boolean!
   mealPlan: MealPlan
@@ -3137,8 +3058,7 @@ union DeleteMealPlanItemResult = ConflictError | DeleteMealPlanItemPayload | For
 type DeleteMealPlanPayload {
   """
   True when this call CONVERGED on a meal plan that was already deleted: a
-  no-op success that did not delete it or publish again. The canonical, API-wide
-  replay flag.
+  no-op success that did not delete it or publish again.
   """
   converged: Boolean!
   """
@@ -3166,8 +3086,7 @@ input DeleteMealTemplateInput {
 type DeleteMealTemplatePayload {
   """
   True when this call CONVERGED on a meal template that was already deleted: a
-  no-op success that did not delete it or publish again. The canonical, API-wide
-  replay flag.
+  no-op success that did not delete it or publish again.
   """
   converged: Boolean!
   """
@@ -3208,8 +3127,7 @@ input DeleteNotificationInput {
 type DeleteNotificationPayload {
   """
   True when this call CONVERGED on a notification that was already deleted: a
-  no-op success that did not delete it or publish again. The canonical, API-wide
-  replay flag.
+  no-op success that did not delete it or publish again.
   """
   converged: Boolean!
   """The caller's badge after this write"""
@@ -3235,7 +3153,6 @@ type DeletePantryItemPayload {
   """
   True when this call CONVERGED on a pre-existing state (the stack was
   already removed) — a no-op success that did NOT re-remove or re-publish.
-  The canonical, API-wide replay flag.
   """
   converged: Boolean!
   """The removed stack's pantry, also on a converged replay"""
@@ -3260,14 +3177,8 @@ union DeletePantryItemResult = ConflictError | DeletePantryItemPayload | Forbidd
 
 type DeletePantryPayload {
   """
-  True when this call CONVERGED on a pre-existing state (the pantry was
-  already deleted) — a no-op success that did NOT re-delete or re-publish.
-  The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
-  """
   The deleted pantry, or null when it was already deleted — an idempotent
-  replay (or second device) that converged as success. See converged.
+  replay (or second device) that converged as success.
   """
   pantry: Pantry
 }
@@ -3285,12 +3196,6 @@ input DeleteRecipeFolderInput {
 }
 
 type DeleteRecipeFolderPayload {
-  """
-  True when this call CONVERGED on a pre-existing state — no saved recipe
-  carried the label, so the folder did not exist and nothing moved. A no-op
-  success. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   """The deleted folder label (folders are string labels, not entities)."""
   folder: String!
   """How many saved recipes were moved out of the folder."""
@@ -3311,8 +3216,7 @@ input DeleteRecipeInput {
 type DeleteRecipePayload {
   """
   True when this call CONVERGED on a recipe that was already deleted: a
-  no-op success that did not delete it or publish again. The canonical, API-wide
-  replay flag.
+  no-op success that did not delete it or publish again.
   """
   converged: Boolean!
   """
@@ -3336,8 +3240,7 @@ input DeleteRecipeReviewInput {
 type DeleteRecipeReviewPayload {
   """
   True when this call CONVERGED on a review that was already deleted: a
-  no-op success that did not delete it or publish again. The canonical, API-wide
-  replay flag.
+  no-op success that did not delete it or publish again.
   """
   converged: Boolean!
   recipe: Recipe
@@ -3362,8 +3265,7 @@ input DeleteShoppingListInput {
 type DeleteShoppingListPayload {
   """
   True when this call CONVERGED on a shopping list that was already deleted: a
-  no-op success that did not delete it or publish again. The canonical, API-wide
-  replay flag.
+  no-op success that did not delete it or publish again.
   """
   converged: Boolean!
   """
@@ -3401,15 +3303,8 @@ input DeleteStorageLocationInput {
 
 type DeleteStorageLocationPayload {
   """
-  True when this call CONVERGED on a pre-existing state (the location was
-  already deleted) — a no-op success that did NOT re-delete. The canonical,
-  API-wide replay flag.
-  """
-  converged: Boolean!
-  """
   The deleted storage location, or null when it was already deleted — an
-  idempotent replay (or second device) that converged as success. See
-  converged.
+  idempotent replay (or second device) that converged as success.
   """
   storageLocation: StorageLocation
 }
@@ -3650,7 +3545,6 @@ Metadata only. The secret itself is returned exactly once, by
 reads it back.
 """
 type DeviceCredential {
-  createdAt: DateTime!
   """The client-minted device identifier this credential is bound to."""
   deviceId: String!
   """
@@ -3658,8 +3552,6 @@ type DeviceCredential {
   """
   expiresAt: DateTime!
   id: ID!
-  """When the credential was last exchanged for a session; null if never."""
-  lastUsedAt: DateTime
 }
 
 """
@@ -3971,11 +3863,6 @@ type DisplayAmount {
   """
   text: String!
   unit: Unit!
-  """
-  Beside fraction, the whole units: 1 of 1¼ doz, 0 of ¼ doz. Null when the
-  amount has no fraction, which is then quantity as a number.
-  """
-  whole: Int
 }
 
 """Display format for quantities"""
@@ -4049,10 +3936,6 @@ type EntryImage {
   The ItemPhoto shown when it is one of the item's photos; null for a household upload.
   """
   catalogImageId: ID
-  """
-  The credit a catalog photo needs; null for a household upload or a pending photo.
-  """
-  credit: ImageCredit
   source: EntryImageSource!
   """
   The image sized for a row. A catalog photo, one the household picked, or the
@@ -4227,6 +4110,14 @@ Always include a __typename so the variant can be discriminated.
 """
 union ExchangeDeviceCredentialResult = AuthenticationError | ConflictError | DeviceCredentialSessionPayload | ForbiddenError | NotFoundError | ValidationError
 
+"""A purchase a receipt line attaches to, at the version the line read"""
+input ExistingPurchaseInput {
+  """The purchase's id"""
+  id: ID!
+  """The purchase's version as last read"""
+  version: Int!
+}
+
 enum ExpirationAction {
   CONSUMED
   COOKED
@@ -4326,6 +4217,18 @@ type ExpiryDigestNotificationData {
   items: [NotificationPantryItem!]!
 }
 
+"""
+Whether an expiry date was stated or estimated, and how far off an estimate was
+"""
+enum ExpiryKind {
+  """Stated by a person: typed, or read from what was bought"""
+  LABEL
+  """Estimated from a longer shelf life"""
+  LONG_LIFE_ESTIMATE
+  """Estimated from a shelf life of at most 30 days"""
+  PERISHABLE_ESTIMATE
+}
+
 """One expiring pantry item or package (EXPIRY_REMINDER)."""
 type ExpiryReminderNotificationData {
   """When the package was added, null without package tracking."""
@@ -4388,6 +4291,10 @@ input ExternalSourceIdentifiersInput {
 }
 
 type ExternalSourceMapping {
+  """
+  The record's key in its source: a barcode, a catalog id, or for a receipt line chain:<chainId>:<language>:<normalized text>
+  """
+  externalId: String!
   externalName: String
   id: ID!
   identifiers: ExternalSourceIdentifiers
@@ -4557,11 +4464,6 @@ input ForkRecipeInput {
 }
 
 type ForkRecipePayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   recipe: Recipe!
 }
 
@@ -4779,16 +4681,6 @@ MEMBERSHIP_* subtypes, a HomeInvite for the INVITE_* subtypes.
 """
 union HomeEventNode = HomeInvite | Membership
 
-"""Filters for querying homes."""
-input HomeFilters {
-  """Filter by public/private status"""
-  isPublic: Boolean
-  """Search by home name"""
-  search: String
-  """Filter by home type"""
-  type: HomeType
-}
-
 """An invitation to join a home (HOME_INVITATION)."""
 type HomeInvitationNotificationData {
   """The home's name when the invitation was sent."""
@@ -4878,8 +4770,6 @@ type HomeInviteEdge implements Edge {
 
 type HomeItemPhotoPayload {
   homeId: ID!
-  """The photo the household's entries for the item show now."""
-  image: EntryImage
   item: Item!
   """
   The household's live pantry stacks for the item; empty for a caller who may not view its pantries.
@@ -5524,6 +5414,8 @@ type Item {
   externalSourcesConnection(
     """Page size: default 20, at most 100"""
     first: Int
+    """Records from any of these catalogs only; every record when omitted"""
+    sources: [ExternalSource!]
   ): ExternalSourceMappingConnection!
   """
   What the household paid for this item. The caller must be an ACTIVE member of the home.
@@ -5686,6 +5578,12 @@ type Item {
     """Page size: default 20, at most 100"""
     first: Int
   ): ItemConnection!
+  """
+  The unit a one-tap add of one package counts this item in, for the caller's
+  household, as ItemSuggestion.defaultUnit is: its held stack's, else the
+  last it held, else a packaged product's counted unit; never a bare gram.
+  """
+  quickAddUnit: Unit!
   """
   Size of one labelled serving in servingSizeUnit (for example 240 for 240 mL), or null when unknown.
   """
@@ -6450,8 +6348,7 @@ input LeaveHomeInput {
 type LeaveHomePayload {
   """
   True when this call CONVERGED on a membership that was already gone: a
-  no-op success that changed nothing and published nothing. The canonical,
-  API-wide replay flag.
+  no-op success that changed nothing and published nothing.
   """
   converged: Boolean!
   """
@@ -6797,8 +6694,8 @@ input MarkRecipeAsCookedInput {
 type MarkRecipeAsCookedPayload {
   """
   True when this call CONVERGED on a pre-existing cooking log (a client-provided
-  id matched an existing log) — it did NOT re-log or re-deduct the pantry. The
-  canonical, API-wide replay flag; clients treat converged=true as already-synced.
+  id matched an existing log) — it did NOT re-log or re-deduct the pantry.
+  Clients treat converged=true as already-synced.
   """
   converged: Boolean!
   cookingLog: CookingLog!
@@ -6878,11 +6775,6 @@ input MarkSuggestionActiveInput {
 }
 
 type MarkSuggestionActivePayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   """Always false — the item can be suggested again on this surface."""
   dismissed: Boolean!
   """The item the dismissal was removed for."""
@@ -6913,11 +6805,6 @@ input MarkSuggestionDismissedInput {
 }
 
 type MarkSuggestionDismissedPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   """Always true — the item is now dismissed on this surface."""
   dismissed: Boolean!
   """The item the dismissal applies to."""
@@ -7519,6 +7406,9 @@ input MeasuredAmountInput {
   unit: UnitRefInput
   """
   Omitted, the unit the door defaults to: the list line's, or the stack's.
+  Where that unit is a weight or volume, a whole quantity with no unit is a
+  count of what was bought, taken as that many packages (PackagesInput):
+  1 is one package, never 1 g.
   """
   unitId: ID
 }
@@ -7883,11 +7773,6 @@ union MovePurchasedItemsToPantryResult = ConflictError | ForbiddenError | MovePu
 
 """One purchased line's outcome in movePurchasedItemsToPantry."""
 type MovePurchasedLineResult {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   """Why the line failed; set exactly when success is false"""
   failure: BatchElementFailure
   itemName: String!
@@ -7971,11 +7856,6 @@ input MoveShoppingItemToPantryInput {
 }
 
 type MoveShoppingItemToPantryPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   shoppingList: ShoppingList
@@ -8815,12 +8695,9 @@ A report as its reporter sees it: what was reported and where it stands. It
 never carries the moderator, the resolution or any action taken.
 """
 type MyUserReport {
-  contentId: ID
   contentType: ModerationContentType
   createdAt: DateTime!
-  description: String
   id: ID!
-  reportedUserId: ID!
   status: ReportStatus!
   type: ReportType!
 }
@@ -9565,8 +9442,6 @@ input NutritionInfoInput {
 The limits a client shares with the server, so its queue and pulls follow them.
 """
 type OfflineLimits {
-  """The most scopes one syncChanges may name."""
-  maxSyncScopes: Int!
   """
   Days a queued write stays safe to replay. A client's own limit never exceeds it.
   """
@@ -9585,11 +9460,6 @@ input OpenPantryItemBatchInput {
 }
 
 type OpenPantryItemBatchPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -9938,6 +9808,10 @@ type PantryItem {
   The expiry date, with no time and no timezone. An item is not expired on this date: it expires today. It is expired from the next day on, judged on the viewer's calendar.
   """
   expiresOn: LocalDate
+  """
+  The kind of expiresOn: the kind of the active batch whose date it is, and LABEL when batches of different kinds share it; null exactly when there is no date
+  """
+  expiryKind: ExpiryKind
   """displayAmount's quantity in its unit, read in both unit systems."""
   held: Measure!
   """
@@ -10154,6 +10028,10 @@ type PantryItemBatch {
   expiresAtIsManual: Boolean!
   """The batch's expiry date, with no time and no timezone."""
   expiresOn: LocalDate
+  """
+  Whether expiresOn was stated or estimated; null exactly when there is no date
+  """
+  expiryKind: ExpiryKind
   id: ID!
   isOpened: Boolean!
   """
@@ -10366,6 +10244,10 @@ type PantryItemSuggestion {
   itemId: ID!
   """Last quantity used (for RECENTLY_DELETED source)"""
   lastQuantity: Float
+  """
+  Last unit ID used (for RECENTLY_DELETED source): the unit the removed stack was tracked in
+  """
+  lastUnitId: ID
   """Item name for display"""
   name: String!
   """
@@ -10534,7 +10416,7 @@ input PantryStockCheckEntryInput {
   """
   SOME_LEFT only, and required there: what is left, zero or more, in the
   stack's tracking unit or in quantityUnitId. With remainingNetWeight it is
-  the count of packages, as adjustPantryItemQuantity's newQuantity is.
+  the count of packages found, as adjustPantryItemQuantity's newQuantity is.
   """
   quantity: Float
   """
@@ -10542,7 +10424,7 @@ input PantryStockCheckEntryInput {
   """
   quantityUnitId: ID
   """
-  SOME_LEFT only: what is left in the open package, as AdjustPantryItemQuantityInput.remainingNetWeight
+  SOME_LEFT only: the stack's remaining contents, as AdjustPantryItemQuantityInput.remainingNetWeight
   """
   remainingNetWeight: Float
   """
@@ -10814,6 +10696,13 @@ type ParsedIngredientLine {
 }
 
 type ParsedReceipt {
+  """
+  The ISO 4217 code of the currency the receipt prints: a printed code, a
+  sign one currency alone uses, or a dollar sign placed by the store's
+  address; null when nothing printed decides one. A check-in of this parse
+  is booked in it.
+  """
+  currency: String
   """
   The receipt's lines. They add up as: every ITEM, FEE and DEPOSIT amount
   less every DISCOUNT amount, over the lines before the first PAYMENT line
@@ -11337,8 +11226,6 @@ type QuantityBreakdown {
   fullPackages: Int!
   """Loose content units from opened packages (e.g., 9 cans)"""
   looseContentUnits: Float!
-  """remainingWeight in its unit, read in both unit systems; null with it."""
-  remaining: Measure
   """Total remaining weight/volume"""
   remainingWeight: Float
   """Unit of the remaining weight"""
@@ -11450,6 +11337,8 @@ type Query {
     filters: CategoryFilters
     """Page size: default 20, at most 100"""
     first: Int
+    """Sort order; by display position, then name, when omitted"""
+    orderBy: CategoryOrderBy
   ): CategoryConnection!
   """
   Ranked consumption-eligible units for a CATALOG item, for a stack described
@@ -11599,8 +11488,6 @@ type Query {
   homes(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Narrows the list: every field given must match"""
-    filters: HomeFilters
     """Page size: default 20, at most 100"""
     first: Int
   ): HomeConnection!
@@ -11849,6 +11736,8 @@ type Query {
     after: String
     """Page size: default 20, at most 100"""
     first: Int
+    """Sort order; most recently cooked first when omitted"""
+    orderBy: CookingLogOrderBy
     """The recipe's id"""
     recipeId: ID!
   ): CookingLogConnection!
@@ -12016,16 +11905,10 @@ type Query {
     """What to search for, in plain words"""
     prompt: String!
   ): ItemConnection!
-  """
-  Search units by name or symbol.
-  Set prioritizeCommon to true for autocomplete behavior (common units first).
-  Default limit: 10
-  """
+  """Search units by name or symbol. Default limit: 10"""
   searchUnits(
     """At most this many: default 10, at most 100"""
     limit: Int = 10
-    """Rank common units first, for autocomplete"""
-    prioritizeCommon: Boolean
     """The search text"""
     query: String!
     """Only units of this type"""
@@ -12232,6 +12115,17 @@ input ReceiptCheckInLineInput {
   weaker evidence than a choice.
   """
   edited: Boolean
+  """
+  The purchase this line is the receipt for, already recorded without one:
+  a barcode or manual add, a restock, or a list line moved to the pantry.
+  Needs stock false and the purchase's item, and only its buyer attaches.
+  The line fills what the purchase lacks (store, price, discount, line text,
+  the receipt's day) and records no purchase, stock or list tick. A stated
+  fact the purchase contradicts fails the line on that field; a purchase
+  changed since version was read fails it with VERSION_CONFLICT. Sending
+  the line again converges. purchaseId stays the line's own key.
+  """
+  existingPurchase: ExistingPurchaseInput
   """The stock's expiry day, as YYYY-MM-DD"""
   expiresOn: LocalDate
   """
@@ -12288,7 +12182,7 @@ type ReceiptCheckInLineResult {
   """
   True when the line's purchase already existed and this call wrote nothing for it
   """
-  alreadyRecorded: Boolean! @deprecated(reason: "Use converged, which states the same fact.")
+  alreadyRecorded: Boolean! @deprecated(reason: "Compare the purchase id this line answers with the one it sent.")
   """The line's clientId, as sent"""
   clientId: String!
   """Why the line failed; set exactly when success is false"""
@@ -13456,10 +13350,6 @@ enum RecipeStatus {
 type RecipeSuggestionConnection {
   edges: [RecipeSuggestionEdge!]!
   pageInfo: PageInfo!
-  """
-  The number of suggestions on this page; a ranked list has no later page to count
-  """
-  totalCount: Int!
 }
 
 """A suggested recipe, and why it was suggested."""
@@ -13510,7 +13400,7 @@ input RecordPantryStockCheckInput {
 type RecordPantryStockCheckPayload {
   """
   True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  and this payload is read as it stands now.
   """
   converged: Boolean!
   """The pantry the stacks belong to"""
@@ -13652,8 +13542,7 @@ type RemoveBrandFromListPayload {
   brandListEntry: BrandListEntry
   """
   True when this call CONVERGED on a brand list entry that was already gone: a
-  no-op success that changed nothing and published nothing. The canonical,
-  API-wide replay flag.
+  no-op success that changed nothing and published nothing.
   """
   converged: Boolean!
 }
@@ -13670,17 +13559,11 @@ input RemoveItemFromShoppingListInput {
 }
 
 type RemoveItemFromShoppingListPayload {
-  """
-  True when this call CONVERGED on a line that was already removed — a
-  no-op success that did not re-remove or re-publish. The canonical,
-  API-wide replay flag.
-  """
-  converged: Boolean!
   """The line's list after the removal, also on a converged replay"""
   shoppingList: ShoppingList
   """
   The removed line, or null when it was already removed — a replay (or a
-  second device) that converged as success. See converged.
+  second device) that converged as success.
   """
   shoppingListItem: ShoppingListItem
 }
@@ -13736,8 +13619,7 @@ input RemoveMemberInput {
 type RemoveMemberPayload {
   """
   True when this call CONVERGED on a membership that was already gone: a
-  no-op success that changed nothing and published nothing. The canonical,
-  API-wide replay flag.
+  no-op success that changed nothing and published nothing.
   """
   converged: Boolean!
   """
@@ -13759,15 +13641,10 @@ input RemoveRecipeFromFavoritesInput {
 }
 
 type RemoveRecipeFromFavoritesPayload {
-  """
-  True when this call CONVERGED on a pre-existing state (the recipe was already
-  not favorited) — a no-op success. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   recipe: Recipe
   """
   The removed favorite, or null when the recipe was already not favorited — an
-  idempotent replay (or second device) that converged as success. See converged.
+  idempotent replay (or second device) that converged as success.
   """
   savedRecipe: SavedRecipe
 }
@@ -13788,11 +13665,9 @@ input RemoveRestrictionInput {
 type RemoveRestrictionPayload {
   """
   True when this call CONVERGED on a restriction that was already removed: a
-  no-op success that did not remove it or publish again. The canonical, API-wide
-  replay flag.
+  no-op success that did not remove it or publish again.
   """
   converged: Boolean!
-  dietaryProfile: DietaryProfile
   """
   The removed restriction, or null when it was already removed: a replay, or a
   second device, that converged as success. See converged.
@@ -13819,8 +13694,7 @@ type RemoveShoppingListCollaboratorPayload {
   collaborator: ShoppingListCollaborator
   """
   True when this call CONVERGED on a collaborator that was already gone: a
-  no-op success that changed nothing and published nothing. The canonical,
-  API-wide replay flag.
+  no-op success that changed nothing and published nothing.
   """
   converged: Boolean!
   shoppingList: ShoppingList
@@ -13844,17 +13718,10 @@ input RemoveTemplateItemInput {
 }
 
 type RemoveTemplateItemPayload {
-  """
-  True when this call CONVERGED on a pre-existing state (the item was already
-  removed) — a no-op success that did NOT re-remove. The canonical, API-wide
-  replay flag.
-  """
-  converged: Boolean!
   mealTemplate: MealTemplate
   """
   The removed template item, or null when it was already removed — an
-  idempotent replay (or second device) that converged as success. See
-  converged.
+  idempotent replay (or second device) that converged as success.
   """
   mealTemplateItem: MealTemplateItem
 }
@@ -13918,7 +13785,6 @@ input RequestPasswordResetInput {
 }
 
 type RequestPasswordResetPayload {
-  message: String!
   status: PasswordActionStatus!
 }
 
@@ -13950,7 +13816,6 @@ input ResetPasswordInput {
 }
 
 type ResetPasswordPayload {
-  message: String!
   status: PasswordActionStatus!
 }
 
@@ -14079,11 +13944,6 @@ input RestockPantryItemInput {
 }
 
 type RestockPantryItemPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   pantry: Pantry
   pantryItemUsage: PantryItemUsage!
   storageLocation: StorageLocation
@@ -15925,17 +15785,14 @@ type StoreSaving {
 type StoreSavingsCandidate {
   """The store's chain, or the chain compared"""
   chain: StoreChain
-  estimatedLines: Int!
   """The list's store"""
   isTarget: Boolean!
   """Every comparable line, in the list's order"""
   lines: [StoreSavingsLine!]!
-  sameLines: Int!
   """
   Null for the list's store, with no list store, or with no line on the shelf at both
   """
   savingVsTarget: StoreSaving
-  similarLines: Int!
   """
   Where its shelf prices come from: a store's stand-in when it has none of its own; a whole chain's collected branch nearest the household's stores. Null for a chain with none within 24 km, which then has no shelf prices
   """
@@ -15946,7 +15803,6 @@ type StoreSavingsCandidate {
   The SAME, SIMILAR and ESTIMATED amounts summed; null unless SAME and SIMILAR lines cover at least half the comparable lines
   """
   total: Float
-  unpricedLines: Int!
 }
 
 """One line at one store."""
@@ -15955,30 +15811,19 @@ type StoreSavingsLine {
   What the line's quantity costs at this price, in the list's currency; null for NONE
   """
   amount: Float
-  basis: PriceBasis
   """Observed within the last 8 days"""
   isCurrent: Boolean!
   kind: StoreLineMatch!
   line: ShoppingListItem!
-  """The price per kilogram, litre or piece"""
-  normalizedPrice: Float
   """When the price was observed; null for NONE"""
   observedAt: DateTime
   """The net quantity one unit holds, in packageNetWeightUnit"""
   packageNetWeight: Float
   packageNetWeightUnit: Unit
-  """The price as sold, per one of unit; null for NONE"""
-  price: Float
   """
   The product priced: the line's own, a concept line's cheapest, or one of its kind for SIMILAR; null for NONE
   """
   product: Item
-  """
-  The unit the price is per: the product's as sold, the line's for ESTIMATED
-  """
-  unit: Unit
-  """Priced at the store's stand-in"""
-  viaStandIn: Boolean!
 }
 
 input StoreSkuInput {
@@ -16156,10 +16001,6 @@ Contains only the fields needed for one-tap add UI.
 """
 type SuggestionUnit {
   id: ID!
-  """
-  The short form to show, in the request's language, as Unit.localizedSymbol
-  """
-  localizedSymbol: String!
   """Both forms of localizedSymbol, as Unit.localizedSymbolForms"""
   localizedSymbolForms: PluralForms!
   symbol: String!
@@ -16880,7 +16721,7 @@ type UpdateBrandListPayload {
   brandList: BrandList!
   """
   True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  and this payload is read as it stands now.
   """
   converged: Boolean!
 }
@@ -17061,11 +16902,6 @@ input UpdateDietarySharingInput {
 }
 
 type UpdateDietarySharingPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   membership: Membership!
 }
 
@@ -17517,7 +17353,7 @@ type UpdatePantryItemPayload {
   ): PantryItemBatchConnection!
   """
   True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  and this payload is read as it stands now.
   """
   converged: Boolean!
   pantry: Pantry
@@ -17801,7 +17637,7 @@ input UpdateShoppingListItemInput {
 type UpdateShoppingListItemPayload {
   """
   True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  and this payload is read as it stands now.
   """
   converged: Boolean!
   shoppingList: ShoppingList
@@ -18278,16 +18114,14 @@ type User {
   """Null unless the caller is this user or an admin. See email."""
   role: UserRole
   """
-  Recipes the user saved, most recently saved first by default, optionally
-  narrowed to one folder. Empty unless the caller is this user or an admin.
+  Recipes the user saved, most recently saved first by default. Empty unless
+  the caller is this user or an admin.
   """
   savedRecipesConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
     """Page size: default 20, at most 100"""
     first: Int
-    """Only recipes saved in this folder"""
-    folder: String
   ): SavedRecipeConnection!
   """
   The user's app settings; null unless the caller is this user or an admin
@@ -18581,7 +18415,6 @@ input ValidatePasswordResetTokenInput {
 }
 
 type ValidatePasswordResetTokenPayload {
-  message: String!
   status: PasswordActionStatus!
 }
 
@@ -18603,19 +18436,7 @@ type ValidationError implements Error {
   Dotted path to the first offending field, when the error is field-specific.
   """
   field: String
-  """
-  Every rule the input failed, one entry per message; never empty. A rule on
-  the whole input has the path _root.
-  """
-  issues: [ValidationIssue!]!
   message: String!
-}
-
-"""One failed validation rule."""
-type ValidationIssue {
-  message: String!
-  """Dotted path to the input field; _root for a rule on the whole input"""
-  path: String!
 }
 
 input VerifyEmailInput {
@@ -18726,11 +18547,6 @@ input WastePantryItemBatchInput {
 }
 
 type WastePantryItemBatchPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
