@@ -236,11 +236,6 @@ type AddBrandToListPayload {
   brandList: BrandList!
   """The entry: the one already there when the brand was listed before"""
   brandListEntry: BrandListEntry!
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
 }
 
 """
@@ -519,14 +514,6 @@ enum AdjustmentKind {
   USER
 }
 
-"""A sum of quantities, in the unit the total reads best in"""
-type AggregationResult {
-  """The total as text, at the unit's display step"""
-  displayText: String!
-  quantity: Float!
-  unit: Unit!
-}
-
 """One allergen an item declares, and how it is present"""
 type AllergenInfo {
   contains: Boolean!
@@ -764,32 +751,10 @@ enum BatchStatus {
   WASTED
 }
 
-input BatchUpsertItemInput {
-  externalId: String!
-  externalType: String
-  itemData: CreateItemInput!
-  source: ExternalSource!
-  sourceData: JSON
-}
-
-type BatchUpsertItemResult {
-  created: Boolean
-  externalId: String!
-  """Why the entry failed; set exactly when success is false"""
-  failure: BatchElementFailure
-  item: Item
-  mapping: ExternalSourceMapping
-  source: ExternalSource!
-  success: Boolean!
-}
-
 """Brand type for product manufacturers and retailers"""
 type Brand {
   """Child brands, by name"""
-  children(
-    """At most this many: default 50, at most 50 (a larger value gives 50)"""
-    limit: Int = 50
-  ): [Brand!]!
+  children: [Brand!]!
   createdAt: DateTime!
   description: String
   id: ID!
@@ -849,7 +814,6 @@ input BrandFilters {
 Brands a user wants to be told about on a product. Private to its owner; at most 20 per user.
 """
 type BrandList {
-  createdAt: DateTime!
   """
   The owner's switch: only an enabled list is matched by Item.listMatches.
   """
@@ -858,13 +822,11 @@ type BrandList {
   entries: [BrandListEntry!]!
   id: ID!
   name: String!
-  updatedAt: DateTime!
   version: Int!
 }
 
 type BrandListEntry {
   brand: Brand!
-  createdAt: DateTime!
   id: ID!
   reason: String
   version: Int!
@@ -926,90 +888,6 @@ input BrowserOsDetailsInput {
   userAgent: String
 }
 
-"""One entry's outcome in bulkCreateItems."""
-type BulkCreateItemResult {
-  """Why the entry failed; set exactly when success is false"""
-  failure: BatchElementFailure
-  """Index in the input array"""
-  index: Int!
-  """
-  The item the entry created, or the existing item it matched; null when the
-  entry failed, or under validateOnly when it would create one.
-  """
-  item: Item
-  """
-  Which key matched an existing item; null when the entry failed or created one
-  """
-  matchType: ItemMatchType
-  """
-  CREATED or MERGED, or what it would be under validateOnly; null when the entry failed
-  """
-  outcome: CreateOutcome
-  success: Boolean!
-}
-
-input BulkCreateItemsInput {
-  """The items to create, each as createItem creates one; at most 100"""
-  items: [CreateItemInput!]!
-  """
-  Count an entry that matches an existing item under summary.skipped rather
-  than summary.succeeded. The entry still reports the item it matched.
-  """
-  skipDuplicates: Boolean
-  """
-  Check every entry and report what it would resolve to, created or the item
-  it matches, writing nothing. An entry that passes can still fail on the
-  real write if a row it names is gone by then.
-  """
-  validateOnly: Boolean
-}
-
-type BulkCreateItemsPayload {
-  """One result per entry, in input order"""
-  results: [BulkCreateItemResult!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of BulkCreateItems. Select on BulkCreateItemsPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union BulkCreateItemsResult = BulkCreateItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-"""One id's outcome in bulkDeleteItems and adminBulkDeleteItems."""
-type BulkDeleteItemResult {
-  """Why the id failed; set exactly when success is false"""
-  failure: BatchElementFailure
-  """Index in the input array"""
-  index: Int!
-  """
-  The item as deleted; null when the id failed, and in bulkDeleteItems when the caller's item was already deleted
-  """
-  item: Item
-  """The item id, as sent"""
-  itemId: ID!
-  success: Boolean!
-}
-
-input BulkDeleteItemsInput {
-  """The items to soft-delete; at most 100"""
-  ids: [ID!]!
-}
-
-type BulkDeleteItemsPayload {
-  """One result per id, in input order"""
-  results: [BulkDeleteItemResult!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of BulkDeleteItems. Select on BulkDeleteItemsPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union BulkDeleteItemsResult = BulkDeleteItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
 """
 The summary every bulk, batch and admin-purge mutation returns.
 Operation-level failure is the result union's error members; per-element
@@ -1066,8 +944,6 @@ type BulkUpdateItemResult {
   failure: BatchElementFailure
   """Index in the input array"""
   index: Int!
-  """The item as updated; null when the id failed"""
-  item: Item
   """The item id, as sent"""
   itemId: ID!
   success: Boolean!
@@ -1095,27 +971,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union BulkUpdateItemsResult = BulkUpdateItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-input BulkUpsertItemsByExternalSourceInput {
-  items: [BatchUpsertItemInput!]!
-}
-
-type BulkUpsertItemsByExternalSourcePayload {
-  """
-  Per-item upsert results, in input order. Each element carries its own
-  success/error and created flag (create-vs-update split lives here, not in
-  the summary).
-  """
-  results: [BatchUpsertItemResult!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of BulkUpsertItemsByExternalSource. Select on BulkUpsertItemsByExternalSourcePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union BulkUpsertItemsByExternalSourceResult = BulkUpsertItemsByExternalSourcePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 type CanDeleteAccountResult {
   blockers: [DeletionBlocker!]!
@@ -1208,18 +1063,11 @@ type CatalogRecipeMatchEdge {
 """Category type for organizing items"""
 type Category {
   """Active child categories the caller can see, by sort order, then name"""
-  children(
-    """At most this many: default 50, at most 50 (a larger value gives 50)"""
-    limit: Int = 50
-  ): [Category!]!
+  children: [Category!]!
   """Display color in hex; null when none"""
   color: String
   """When the category was created"""
   createdAt: DateTime!
-  """
-  The user who created the category; null when none is recorded or the account is gone
-  """
-  createdBy: User
   """Free text about the category; null when none"""
   description: String
   """Icon name or URL; null when none"""
@@ -1230,18 +1078,12 @@ type Category {
   Whether the category is in use; an inactive one is left out of children
   """
   isActive: Boolean!
-  """Whether the category came with the system rather than from a user"""
-  isSystem: Boolean!
   """
   How many items are filed under the category. Kept by every write that files or unfiles an item and reconciled weekly, so it can lag a concurrent write.
   """
   itemCount: Int!
   """Display name; no two live categories share one"""
   name: String!
-  """
-  The category this one sits under; null for a top-level category, and null when the caller may not see the parent
-  """
-  parent: Category
   """URL slug; no two live categories share one"""
   slug: String!
   """Position among its siblings, lowest first; 0 when none is set"""
@@ -1301,10 +1143,6 @@ categories only.
 input CategoryFilters {
   """Only the children of this category; null selects top-level categories"""
   parentId: ID
-  """
-  Case-insensitive substring of the name, description or slug; requires sign-in. A search ignores parentId, type, orderBy and the paging cursor, and leaves inactive categories out
-  """
-  search: String
   """Only categories of this type"""
   type: CategoryType
 }
@@ -1313,18 +1151,6 @@ input CategoryOpsInput {
   addCategoryIds: [ID!]
   primaryCategoryId: ID
   removeCategoryIds: [ID!]
-}
-
-"""Order by options for categories"""
-input CategoryOrderBy {
-  """Sorts by when the category was created"""
-  createdAt: SortOrder
-  """Sorts by name"""
-  name: SortOrder
-  """
-  Sorts by display position. A category with no position stored sorts last under ASC and first under DESC.
-  """
-  sortOrder: SortOrder
 }
 
 """A category, named exactly one way: by id, by slug, or by name."""
@@ -1343,11 +1169,9 @@ enum CategorySource {
 }
 
 type CategorySuggestion {
-  color: String
   icon: String
   id: ID!
   name: String!
-  slug: String
   type: CategoryType!
 }
 
@@ -1421,18 +1245,8 @@ type ChangePantryItemUnitPayload {
   reads them, so a client updates its batch list without a second request.
   """
   batchesConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: PantryItemBatchOrderBy
   ): PantryItemBatchConnection!
   """
   True when this call was a replay of a write already applied: it wrote nothing,
@@ -1508,11 +1322,6 @@ type CollaborationInviteNotificationData {
   listName: String!
   """The token that accepts or declines the invitation."""
   token: String!
-}
-
-"""Order by options for collaborators"""
-input CollaboratorOrderBy {
-  invitedAt: SortOrder
 }
 
 """
@@ -1691,14 +1500,10 @@ type ConversionAvailability {
   available: Boolean!
   confidence: Float!
   conversionType: ConversionType!
-  notes: String
-  requiresItemContext: Boolean!
 }
 
 """Result of a unit conversion operation"""
 type ConversionResult {
-  displayText: String!
-  unit: Unit!
   value: Float!
 }
 
@@ -1747,18 +1552,8 @@ type ConvertExpiredToWastePayload {
   reads them, so a client updates its batch list without a second request.
   """
   batchesConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: PantryItemBatchOrderBy
   ): PantryItemBatchConnection!
   """
   True when this call was a replay of a write already applied: it wrote nothing,
@@ -1796,12 +1591,8 @@ type CookingLog {
   pantryItemsUsedConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
   ): PantryItemUsageConnection!
   rating: Int
   """
@@ -1837,11 +1628,6 @@ type CookingLogEdge implements Edge {
   cursor: String!
   """The CookingLog this edge wraps."""
   node: CookingLog!
-}
-
-"""Order by options for cooking logs"""
-input CookingLogOrderBy {
-  cookedAt: SortOrder
 }
 
 """It is time to start cooking a planned recipe (COOKING_REMINDER)."""
@@ -1914,7 +1700,7 @@ input CreateBrandListInput {
   """Whether the list is matched from the start; true when omitted"""
   enabled: Boolean
   """
-  Optional client-minted CUID2: a replayed create answers the list with converged true, not a duplicate
+  Optional client-minted CUID2: a replayed create answers the existing list, not a duplicate
   """
   id: ID
   """1 to 100 characters"""
@@ -1923,11 +1709,6 @@ input CreateBrandListInput {
 
 type CreateBrandListPayload {
   brandList: BrandList!
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
 }
 
 """
@@ -2094,17 +1875,8 @@ input CreateItemInput {
 }
 
 type CreateItemPayload {
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
   """The item created, or the existing item the create matched"""
   item: Item!
-  """Which key matched the existing item; null when outcome is CREATED"""
-  matchType: ItemMatchType
-  """CREATED for a new item; MERGED when the catalog already held it"""
-  outcome: CreateOutcome!
 }
 
 """
@@ -3129,17 +2901,6 @@ scalar DateTime @specifiedBy(url: "https://www.rfc-editor.org/rfc/rfc3339#sectio
 """A package figure as the product's label prints it."""
 type DeclaredQuantity {
   """
-  The first figure the label prints in imperial units for this same
-  quantity, by the same rule as metric; null when it prints none.
-  """
-  imperial: MeasureReading
-  """
-  The first figure the label prints in metric units for this same quantity;
-  null when it prints none. A multipack's piece and its total are different
-  quantities: 6 x 8.4 fl oz (1.49 L) prints no metric figure for one piece.
-  """
-  metric: MeasureReading
-  """
   The label's own text, as the barcode record keeps it (6.35 oz (180 g)).
   """
   text: String!
@@ -4003,13 +3764,6 @@ input DeviceIdentificationInput {
   systemVersion: String
 }
 
-input DeviceOrderBy {
-  createdAt: SortOrder
-  deviceName: SortOrder
-  lastLoginAt: SortOrder
-  lastSeenAt: SortOrder
-}
-
 """Sub-input for device peripherals (automation detection)"""
 input DevicePeripheralsDetailsInput {
   isBluetoothHeadphonesConnected: Boolean
@@ -4542,10 +4296,8 @@ input ExpirationNotificationFilters {
   pantryItemId: ID
 }
 
-"""Order by options for expiration notifications"""
 input ExpirationNotificationOrderBy {
   createdAt: SortOrder
-  expiresOn: SortOrder
 }
 
 """
@@ -4632,24 +4384,14 @@ input ExternalSourceIdentifiersInput {
 }
 
 type ExternalSourceMapping {
-  allergens: SourceAllergens
-  categories: [String!]
-  confidence: Float
-  createdAt: DateTime!
-  externalDescription: String
-  externalId: String!
   externalName: String
-  externalType: String
   id: ID!
   identifiers: ExternalSourceIdentifiers
   isPrimary: Boolean!
-  item: Item!
-  lastSyncedAt: DateTime!
   netWeight: Float
   netWeightUnit: String
   packageSize: String
   source: ExternalSource!
-  updatedAt: DateTime!
 }
 
 """
@@ -4849,15 +4591,6 @@ enum GoalStatus {
   UNDER_TARGET
 }
 
-"""A health benefit recorded for an item"""
-type HealthBenefit {
-  benefit: String!
-  category: HealthBenefitCategory
-  confidenceLevel: Float
-  description: String
-  scientificEvidence: String
-}
-
 enum HealthBenefitCategory {
   DIETARY
   FITNESS
@@ -4902,14 +4635,8 @@ type Home {
   dietaryNeeds: [MemberDietaryNeeds!]!
   id: ID!
   invitesConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
   ): HomeInviteConnection!
   """
   Whether this home is the current user's default home.
@@ -4926,16 +4653,8 @@ type Home {
   joinLink: ShareLink
   maxMembers: Int
   membersConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; oldest first when omitted"""
-    orderBy: MembershipOrderBy
   ): MembershipConnection!
   """
   What this household spent, saved, wasted and paid per cooked meal over a
@@ -4958,18 +4677,8 @@ type Home {
   whose pantry view (`canViewPantry`) is off.
   """
   pantriesConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; oldest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: PantryOrderBy
   ): PantryConnection!
   """
   The household's purchases, every member's: each one recorded for this home
@@ -4982,34 +4691,16 @@ type Home {
   purchasesConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """
     Narrows the list: every field given must match; fromDate and toDate bound purchaseDate, both inclusive
     """
     filters: PurchaseFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; most recent purchase first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: PurchaseOrderBy
   ): PurchaseConnection!
   shoppingListsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: ShoppingListOrderBy
   ): ShoppingListConnection!
   tags: [String!]!
   timezone: TimeZone
@@ -5194,12 +4885,6 @@ type HomeItemPhotoPayload {
   The household's live shopping-list lines for the item, on lists not deleted.
   """
   shoppingListItems: [ShoppingListItem!]!
-}
-
-"""Order by options for homes"""
-input HomeOrderBy {
-  createdAt: SortOrder
-  name: SortOrder
 }
 
 """Subtype discriminator for the consolidated homeEvents stream."""
@@ -5757,12 +5442,8 @@ type Item {
   childConcepts(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
   ): ItemConnection!
   """
   A product's root concept, which recipes match it through. Null for a
@@ -5839,20 +5520,9 @@ type Item {
   externalSourcesConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Records from any of these catalogs only; every record when omitted"""
-    sources: [ExternalSource!]
   ): ExternalSourceMappingConnection!
-  """
-  Health benefits recorded for this item, at most 100. Empty when none are
-  recorded.
-  """
-  healthBenefits: [HealthBenefit!]!
   """
   What the household paid for this item. The caller must be an ACTIVE member of the home.
   """
@@ -5872,16 +5542,10 @@ type Item {
   """URL of the primary photo, or its thumbnail rendition when one exists."""
   imageUrl: String
   """
-  At most ONE image row — the best single asset for the primary photo, or the
-  best match for an explicit kind. This field cannot express a gallery; select
-  "photos" for that.
+  At most ONE image row — the best single asset for the primary photo. This
+  field cannot express a gallery; select "photos" for that.
   """
-  images(
-    """
-    The rendition of the primary photo to return; the thumbnail, else the photo, when omitted
-    """
-    kind: ImageKind
-  ): [ItemImage!]!
+  images: [ItemImage!]!
   """
   The item's ingredient list as supplied when it was created or edited, with no
   fixed shape. Null when none was supplied.
@@ -5977,8 +5641,6 @@ type Item {
   A concept's parent concept, used for matching only. Null for a product or a top-level concept.
   """
   parentConcept: Item
-  """Number of PENDING community edit suggestions for this item."""
-  pendingSuggestionCount: Int!
   """
   Every distinct photo of this item, each carrying its own size renditions.
   
@@ -6019,12 +5681,8 @@ type Item {
   products(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
   ): ItemConnection!
   """
   Size of one labelled serving in servingSizeUnit (for example 240 for 240 mL), or null when unknown.
@@ -6139,29 +5797,16 @@ type Item {
   visibility: Visibility!
 }
 
-type ItemAvailability {
-  available: Boolean!
-  inventory: Int
-  lastChecked: DateTime!
-  price: Float
-  storeId: ID!
-  storeName: String!
-}
-
 type ItemBrand {
   brand: Brand!
   id: ID!
-  item: Item!
 }
 
 type ItemCategory {
-  assignedAt: DateTime
-  assignedBy: User
   category: Category!
   confidence: Float!
   id: ID!
   isPrimary: Boolean!
-  item: Item!
   source: CategorySource!
 }
 
@@ -6242,33 +5887,6 @@ type ItemEditSuggestion {
   status: ItemSuggestionStatus!
   """The contributor who proposed the change."""
   suggestedBy: User
-  updatedAt: DateTime!
-}
-
-"""
-A page of ItemEditSuggestion results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type ItemEditSuggestionConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [ItemEditSuggestionEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One ItemEditSuggestion in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type ItemEditSuggestionEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The ItemEditSuggestion this edge wraps."""
-  node: ItemEditSuggestion!
 }
 
 input ItemFilters {
@@ -6322,10 +5940,6 @@ Select Item.photos to get that structure.
 """
 type ItemImage {
   createdAt: DateTime!
-  """
-  The credit this image needs; a rendition carries its photo's. Null when none is needed.
-  """
-  credit: ImageCredit
   featured: Boolean!
   hash: String
   id: ID!
@@ -6382,14 +5996,6 @@ input ItemLookupInput @oneOf {
   upc: UpcLookupInput
 }
 
-"""Which key a create matched an existing catalog item by."""
-enum ItemMatchType {
-  """An item of that name is already on file"""
-  EXISTING_NAME
-  """The barcode it sent is already on file"""
-  EXISTING_UPC
-}
-
 """
 Client-settable subset of an item's metadata. The stored column also carries
 server-written moderation, merge-audit and enrichment keys, which are not
@@ -6440,12 +6046,10 @@ exactly two ItemPhoto entries, no matter how many ItemImage rows the
 processing pipeline derived from them.
 """
 type ItemPhoto {
-  createdAt: DateTime!
   """
   The credit this photo needs when shown, such as its source's licence. Null when none is needed.
   """
   credit: ImageCredit
-  featured: Boolean!
   id: ID!
   """Whether this is the item's hero photo. At most one photo per item is."""
   isPrimary: Boolean!
@@ -6453,10 +6057,6 @@ type ItemPhoto {
   Which angle this photo shows, lower-cased (e.g. "front"). Null if untagged.
   """
   perspective: String
-  """
-  Where the photo came from: USER_CREATED for an upload, else the catalog source.
-  """
-  source: ExternalSource
   """
   Review state of this photo. Always APPROVED unless the viewer is its
   submitter or an admin, since no other viewer is shown a pending photo.
@@ -6621,12 +6221,6 @@ type ItemSuggestion {
   type: ItemType!
 }
 
-"""Filters for the admin item-suggestion review queue."""
-input ItemSuggestionFilters {
-  itemId: ID
-  status: ItemSuggestionStatus
-}
-
 """
 Lifecycle of a community edit suggestion against a public catalog item.
 """
@@ -6644,8 +6238,6 @@ type ItemSuggestionSubmission implements ReviewSubmission {
   senderNote: String
   sentAt: DateTime!
   status: ReviewSubmissionStatus!
-  """The suggestion itself, with the changes it proposed."""
-  suggestion: ItemEditSuggestion!
 }
 
 """Categorizes the general type of an item in the pantry or shopping list"""
@@ -6671,31 +6263,18 @@ enum ItemType {
 }
 
 type ItemUnit {
-  averagePricePerUnit: Float
   contentUnit: Unit
   contentUnitId: ID
-  createdAt: DateTime!
   displayFormat: DisplayFormat!
-  displayNamePlural: String
-  displayNameSingular: String
   id: ID!
   isCommon: Boolean!
   isDefault: Boolean!
   isPreferred: Boolean!
-  """The item this unit belongs to, deleted or not"""
-  item: Item!
-  itemId: ID!
-  """Always null: no maximum sensible quantity is recorded."""
-  maxQuantity: Float
-  minQuantity: Float
-  packageDescription: String
   packageSize: Float
-  quantityStep: Float
   recommendedFor: [UnitRecommendation!]!
   retailUnit: Boolean!
   unit: Unit!
   unitId: ID!
-  updatedAt: DateTime!
   usageContext: [UnitUsageContext!]!
   version: Int!
   """
@@ -6762,10 +6341,7 @@ type ItemUnitSuggestion {
   """
   The short form to show, in the request's language, as Unit.localizedSymbol
   """
-  localizedSymbol(
-    """How many it follows: picks singular or plural; omitted, the singular"""
-    quantity: Float
-  ): String!
+  localizedSymbol: String!
   """Both forms of localizedSymbol, as Unit.localizedSymbolForms"""
   localizedSymbolForms: PluralForms!
   name: String!
@@ -6939,27 +6515,6 @@ type LedgerSummary {
   unitName: String
   wasteCount: Int!
 }
-
-"""Input for linking an item to an external source"""
-input LinkItemToExternalSourceInput {
-  data: JSON
-  externalId: String!
-  externalType: String
-  isPrimary: Boolean
-  itemId: ID!
-  source: ExternalSource!
-}
-
-type LinkItemToExternalSourcePayload {
-  externalSourceMapping: ExternalSourceMapping!
-}
-
-"""
-Result of LinkItemToExternalSource. Select on LinkItemToExternalSourcePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union LinkItemToExternalSourceResult = ConflictError | ForbiddenError | LinkItemToExternalSourcePayload | NotFoundError | ValidationError
 
 """The shopping list to link and the meal plan it was derived from."""
 input LinkShoppingListToMealPlanInput {
@@ -7391,16 +6946,7 @@ type MealPlan {
   """
   The shopping lists generated from this plan that the caller may view, newest first; a list they may not view is left out
   """
-  generatedShoppingListsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-  ): ShoppingListConnection!
+  generatedShoppingListsConnection: ShoppingListConnection!
   """That home; null for a personal plan"""
   home: Home
   """The home the plan is shared with; null for a personal plan"""
@@ -7411,12 +6957,8 @@ type MealPlan {
   mealPlanItemsConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
   ): MealPlanItemConnection!
   """The plan's name; never blank"""
   name: String!
@@ -7729,12 +7271,8 @@ type MealTemplate {
   itemsConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
   ): MealTemplateItemConnection!
   """When a meal plan was last created from it; null if never"""
   lastUsedAt: DateTime
@@ -7935,15 +7473,14 @@ type MeasureReading {
   displayAsFraction: Boolean!
   """
   The unit's short form in the request's language, agreeing with value
-  (unit.localizedSymbol(quantity: value): g and lb as they are, 3 cans as
-  3 latas in Spanish), so a reading needs no unit selection.
+  (g and lb as they are, 3 cans as 3 latas in Spanish), so a reading needs
+  no unit selection.
   """
   localizedSymbol: String!
   """The symbol of unit (lb, g, can), so a reading needs no unit selection."""
   symbol: String!
   """The dimension of unit: weight, volume or count."""
   type: UnitType!
-  unit: Unit!
   """The id of unit, so a reading needs no unit selection."""
   unitId: ID!
   value: Float!
@@ -8114,10 +7651,6 @@ type MembershipEdge implements Edge {
   cursor: String!
   """The Membership this edge wraps."""
   node: Membership!
-}
-
-input MembershipOrderBy {
-  createdAt: SortOrder
 }
 
 """Defines the role and permission level of a member within a household"""
@@ -8560,25 +8093,10 @@ type Mutation {
   """
   adjustPantryItemQuantity(input: AdjustPantryItemQuantityInput!): AdjustPantryItemQuantityResult!
   """
-  Create many items, each as createItem creates one: an entry matching an
-  existing item reports that item instead. One result per entry, in input
-  order; a failing entry stops no other.
-  """
-  bulkCreateItems(input: BulkCreateItemsInput!): BulkCreateItemsResult!
-  """
-  Soft-delete many items under the direct-write gate: the creator of a
-  PRIVATE item, or an admin. restoreItem undoes one. One result per id, in
-  input order; a failing id stops no other. An item the caller already
-  deleted succeeds again, with a null item.
-  """
-  bulkDeleteItems(input: BulkDeleteItemsInput!): BulkDeleteItemsResult!
-  """
   Update multiple items with the same changes.
   Note: the `id` field on `update` is ignored — ids are taken from the `ids` field.
   """
   bulkUpdateItems(input: BulkUpdateItemsInput!): BulkUpdateItemsResult!
-  """Bulk create or update items by external source (max 50 per batch)."""
-  bulkUpsertItemsByExternalSource(input: BulkUpsertItemsByExternalSourceInput!): BulkUpsertItemsByExternalSourceResult!
   """Stop a shopping list repeating: clears its recurrence."""
   cancelRecurring(input: CancelRecurringInput!): CancelRecurringResult!
   """
@@ -8887,12 +8405,6 @@ type Mutation {
   """Leave a home as the current user."""
   leaveHome(input: LeaveHomeInput!): LeaveHomeResult!
   """
-  Link an existing item to an external source. Linking the item a source id
-  already links answers with that link; a source id another item holds is a
-  ConflictError.
-  """
-  linkItemToExternalSource(input: LinkItemToExternalSourceInput!): LinkItemToExternalSourceResult!
-  """
   Record the meal plan a shopping list was derived from. A list made from a
   plan names it at createShoppingList (mealPlanId, with its items) instead;
   this links one that already exists. Both ends are checked: edit access to
@@ -9042,13 +8554,6 @@ type Mutation {
   """
   removeItemFromShoppingList(input: RemoveItemFromShoppingListInput!): RemoveItemFromShoppingListResult!
   """
-  Remove every photo of an item, with its size renditions, and queue their
-  stored files for deletion. Takes the direct-write gate: the creator of a
-  PRIVATE item, or an admin. To drop one photo, set the gallery with
-  updateItem media.images.
-  """
-  removeItemImage(input: RemoveItemImageInput!): RemoveItemImageResult!
-  """
   Batch remove specific items from a shopping list by id (batch twin of
   removeItemFromShoppingList). Deletes exactly the given ids scoped to
   shoppingListId; an id that no longer exists is a no-op, not an error.
@@ -9108,8 +8613,6 @@ type Mutation {
   Rename a list or switch it on or off. Another user's list is a NotFoundError.
   """
   updateBrandList(input: UpdateBrandListInput!): UpdateBrandListResult!
-  """Change an entry's reason."""
-  updateBrandListEntry(input: UpdateBrandListEntryInput!): UpdateBrandListEntryResult!
   """Update a collaborator's granular permissions on a shopping list."""
   updateCollaboratorPermissions(input: UpdateCollaboratorPermissionsInput!): UpdateCollaboratorPermissionsResult!
   """Update a collaborator's role on a shopping list."""
@@ -9234,8 +8737,6 @@ type Mutation {
   error beyond it); a source the API cannot fetch from is a ValidationError.
   """
   upsertExternalRecipe(input: UpsertExternalRecipeInput!): UpsertExternalRecipeResult!
-  """Create or update an item based on its external source ID."""
-  upsertItemByExternalSource(input: UpsertItemByExternalSourceInput!): UpsertItemByExternalSourceResult!
   """
   Add or update an item-specific unit conversion. An admin may write one on
   any item and set source, confidence and isVerified. Anyone else may write
@@ -9565,16 +9066,7 @@ input NotificationFilters {
 }
 
 enum NotificationOrderBy {
-  CREATED_AT_ASC
-  CREATED_AT_DESC
-  PRIORITY_ASC
-  PRIORITY_DESC
-  SENT_AT_ASC
   SENT_AT_DESC
-  STATUS_ASC
-  STATUS_DESC
-  TYPE_ASC
-  TYPE_DESC
 }
 
 """A pantry item a notification names, as it was named when sent."""
@@ -10211,13 +9703,9 @@ type Pantry {
   itemsConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     filters: PantryItemFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
     """
     Sort order; most recently added first when omitted. Fields apply in the order createdAt, addedAt, itemName, currentQuantity, expiresOn, not request order
     """
@@ -10242,16 +9730,8 @@ type Pantry {
   storageLocationsConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; by name when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: StorageLocationOrderBy
   ): StorageLocationConnection!
   """
   Items worth adding to this pantry, one list per section. An item appears at
@@ -10607,12 +10087,8 @@ type PantryItem {
   usageRecordsConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
     """Sort order; most recent movement first when omitted"""
     orderBy: PantryItemUsageOrderBy
   ): PantryItemUsageConnection!
@@ -10737,15 +10213,6 @@ type PantryItemBatchEdge implements Edge {
   cursor: String!
   """The PantryItemBatch this edge wraps."""
   node: PantryItemBatch!
-}
-
-"""
-Sort options for the pantry item batches connection. Object-map convention:
-set a field to ASC or DESC.
-"""
-input PantryItemBatchOrderBy {
-  batchNumber: SortOrder
-  createdAt: SortOrder
 }
 
 """
@@ -11003,12 +10470,6 @@ type PantryItemUsageEdge implements Edge {
 input PantryItemUsageOrderBy {
   """Sorts by when the movement happened"""
   usedAt: SortOrder
-}
-
-"""Order by options for pantries"""
-input PantryOrderBy {
-  createdAt: SortOrder
-  name: SortOrder
 }
 
 type PantryStats {
@@ -11552,7 +11013,7 @@ enum PriceSuggestionScope {
 
 """Sub-input for pricing estimates"""
 input PricingEstimatesInput {
-  budgetPrice: Float
+  budgetPrice: Float @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   estimatedPrice: Float
 }
 
@@ -11610,31 +11071,9 @@ One barcode's product record: the package that barcode names, its brand and
 images, as its source stated them.
 """
 type ProductVariation {
-  brandInfo: VariationBrandInfo
-  confidence: Float
-  createdAt: DateTime!
-  externalType: String
   id: ID!
-  """
-  The record's own images, the first 100 of them; null when it lists none
-  """
-  images: [VariationImage!]
-  """The package figure, in unit; netWeightKind says what it measures."""
-  netWeight: Float
-  """
-  What netWeight measures; only a PACKAGE figure becomes a stack's package size.
-  """
-  netWeightKind: NetWeightKind
-  """The unit as the source spelled it; unit is the one to compute with."""
-  netWeightUnit: String
-  packageSize: String
   source: String!
-  """
-  The unit netWeight is stated in. Null when the record states no figure.
-  """
-  unit: Unit
   upc: String
-  updatedAt: DateTime!
 }
 
 enum ProfileVisibility {
@@ -11795,14 +11234,8 @@ input PurchaseInfoInput {
 
 """Order by options for purchases"""
 input PurchaseOrderBy {
-  """Sorts by when the purchase was recorded"""
-  createdAt: SortOrder
   """Sorts by when the purchase was made"""
   purchaseDate: SortOrder
-  """
-  Sorts by the amount paid in all. An unpriced purchase sorts last under ASC and first under DESC.
-  """
-  totalPrice: SortOrder
 }
 
 type PurchaseStats {
@@ -11872,18 +11305,6 @@ type QuantityBreakdown {
   totalContentUnits: Float!
 }
 
-"""
-Quantity displayed in multiple formats
-Useful for showing both fraction and decimal representations
-"""
-type QuantityDisplay {
-  decimal: Float!
-  display: String!
-  fraction: String
-  mixed: String
-  unit: Unit
-}
-
 """Sub-input for quantity display preferences"""
 input QuantityDisplayInput {
   """Ignored"""
@@ -11906,24 +11327,7 @@ enum QuantityDisplayPreference {
   MIXED
 }
 
-"""Input for quantity aggregation"""
-input QuantityInput {
-  quantity: Float!
-  unitId: ID!
-}
-
 type Query {
-  """
-  Sum quantities of one item, each in its own unit, through the item's own
-  conversions. Refused when no conversion relates two of the units, and
-  NOT_FOUND for an item the caller cannot see.
-  """
-  aggregateQuantities(
-    """The catalog item's id"""
-    itemId: ID!
-    """The quantities to sum, each in its own unit: from 1 to 100"""
-    quantities: [QuantityInput!]!
-  ): AggregationResult!
   """Autocomplete category names for faster item categorization."""
   autocompleteCategories(
     """What to look up, and how"""
@@ -11934,11 +11338,6 @@ type Query {
     """What to look up, and how"""
     input: AutocompleteInput!
   ): AutocompleteResult!
-  """Fetch a single brand by its ID."""
-  brand(
-    """The id of the Brand to read"""
-    id: ID!
-  ): Brand
   """The caller's own brand lists, oldest first."""
   brandLists: [BrandList!]!
   """
@@ -11948,14 +11347,10 @@ type Query {
   brands(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """Narrows the list: every field given must match"""
     filters: BrandFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
     """
     Sort order; by name when omitted. Fields apply in declaration order, not request order
     """
@@ -12009,54 +11404,20 @@ type Query {
   categories(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """Narrows the list: every field given must match"""
     filters: CategoryFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; by display position, then name, when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: CategoryOrderBy
   ): CategoryConnection!
-  """Fetch a single category by its ID."""
-  category(
-    """The id of the Category to read"""
-    id: ID!
-  ): Category
-  """
-  The category a URL slug names, matched exactly; null when none the caller
-  may see does.
-  """
-  categoryBySlug(
-    """The category's slug"""
-    slug: String!
-  ): Category
-  """Check item availability across specified stores."""
-  checkItemAvailability(
-    """The catalog item's id"""
-    itemId: ID!
-    """Only these stores, at most 100; every store when omitted or empty"""
-    storeIds: [ID!]
-  ): [ItemAvailability!]!
   """
   Ranked consumption-eligible units for a CATALOG item, for a stack described
   by its unit ids — the preview of what a user holding that stack would be
-  offered, before any stack exists. Amounts are optional: which units are
-  offered does not depend on them. A netWeight, portionsPerTrackingUnit or densityOverride of
-  zero or less is refused, and so is a portionsPerTrackingUnit without its
-  portionUnitId.
+  offered, before any stack exists. Which units are offered does not depend
+  on their amounts.
   """
   consumptionUnitsForCatalogItem(
-    """The stack's density in g/mL, when it overrides the item's."""
-    densityOverride: Float
     """The catalog item's id"""
     itemId: ID!
-    """The net weight of ONE tracking unit. Optional."""
-    netWeight: Float
     """
     The unit the stack's net weight is recorded in. Its measure is offered
     whether or not netWeight is passed.
@@ -12068,11 +11429,6 @@ type Query {
     so "clove" is offered first for a bulb stack.
     """
     portionUnitId: ID
-    """
-    How many portion units one tracking unit holds. Optional; requires
-    portionUnitId.
-    """
-    portionsPerTrackingUnit: Float
     """The unit the stack would be tracked in"""
     trackingUnitId: ID!
   ): [RankedUnit!]!
@@ -12139,18 +11495,10 @@ type Query {
   devices(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """Narrows the list: every field given must match"""
     filters: DeviceFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; most recently seen first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: DeviceOrderBy
   ): DeviceConnection!
   """Fetch a single expiration notification by its ID."""
   expirationNotification(
@@ -12209,18 +11557,10 @@ type Query {
   homes(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """Narrows the list: every field given must match"""
     filters: HomeFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: HomeOrderBy
   ): HomeConnection!
   """
   Fetch a single item by its ID. An id a merge removed returns the item it
@@ -12249,8 +11589,7 @@ type Query {
   
   A curated list (curation isPopular, isTrending, isRecent, showInOnboarding,
   commonlyAvoided)
-  and a UPC/SKU lookup each return a single page, so after, before and last
-  are refused, and each applies a subset of the filters. A filter the
+  and a UPC/SKU lookup each return a single page, so after is refused, and each applies a subset of the filters. A filter the
   request's mode does not apply is refused with a validation error naming
   it, never ignored. The orderBy applies in every mode: isPopular and
   isTrending still select the most popular items, and isRecent the newest,
@@ -12260,14 +11599,10 @@ type Query {
   items(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """Narrows the list: every field given must match"""
     filters: ItemFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
     """
     Sort order; most popular first when omitted, and newest first for isRecent. Fields apply in declaration order, not request order
     """
@@ -12303,16 +11638,12 @@ type Query {
   mealPlans(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """Narrows the list: every field given must match"""
     filters: MealPlanFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
     """Only this home's; every one the caller may read when omitted"""
     homeId: ID
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
     """
     Sort order; newest first when omitted. Fields apply in declaration order, not request order
     """
@@ -12327,14 +11658,10 @@ type Query {
   mealTemplates(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """Narrows the list: every field given must match"""
     filters: MealTemplateFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
     """
     Sort order; newest first when omitted. Fields apply in declaration order, not request order
     """
@@ -12348,22 +11675,6 @@ type Query {
   """
   myFeatureFlags: [FeatureFlagState!]!
   """
-  The current user's own item edit suggestions, newest first. Same filters as
-  the admin queue, scoped to the caller — there is no arg to widen that scope.
-  """
-  myItemSuggestions(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Narrows the list: every field given must match"""
-    filters: ItemSuggestionFilters
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-  ): ItemEditSuggestionConnection!
-  """
   Everything the caller sent for review, newest first, as one timeline: their
   reports on people, recipes and reviews, their reports on items and photos,
   their suggested edits, and the photos they uploaded for moderation. A photo
@@ -12372,23 +11683,15 @@ type Query {
   myReviewSubmissions(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
   ): ReviewSubmissionConnection!
   """The caller's own reports, newest first, as their reporter sees them."""
   myUserReports(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
   ): MyUserReportConnection!
   """
   The stores near a zip or a point, nearest first: every store the caller
@@ -12434,16 +11737,8 @@ type Query {
   pantryItemBatchesConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: PantryItemBatchOrderBy
     """The pantry item's id"""
     pantryItemId: ID!
     """Only batches in this status"""
@@ -12464,17 +11759,6 @@ type Query {
   name, handling and catalog candidates. Writes nothing.
   """
   parseIngredientLines(input: ParseIngredientLinesInput!): ParseIngredientLinesPayload!
-  """
-  Parse a typed amount ("1/4", "1 1/4", "0.25") by the parser every write
-  door uses: greater than 0, at most 99,999. The display forms follow the
-  caller's quantity display preference and the unit's fractions.
-  """
-  parseQuantityInput(
-    """The quantity as typed, e.g. 1 1/2"""
-    input: String!
-    """The quantity's unit"""
-    unitId: ID!
-  ): QuantityDisplay!
   """
   What changePantryItemUnit would do with this input, without writing: the
   method, whether the route is exact or an estimate, the stack and each batch
@@ -12521,14 +11805,8 @@ type Query {
   recipeCookingLogs(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; most recently cooked first when omitted"""
-    orderBy: CookingLogOrderBy
     """The recipe's id"""
     recipeId: ID!
   ): CookingLogConnection!
@@ -12558,8 +11836,8 @@ type Query {
   page holds fewer than first only when fewer of those pass. No alert means
   no evidence, never safe.
   
-  Forward only, via first. The ranking depends on the caller's pantry and
-  day, so after, before and last are not offered.
+  One page only, via first. The ranking depends on the caller's pantry and
+  day, so after is not offered.
   
   Behind the PANTRY_SUGGESTIONS flag: refused with FEATURE_DISABLED while it
   is off for the caller.
@@ -12587,14 +11865,8 @@ type Query {
   recipes(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; newest first when omitted"""
-    orderBy: RecipeOrderBy
   ): RecipeConnection!
   """
   Catalog candidates for each line of a receipt, whichever parser read it:
@@ -12618,12 +11890,8 @@ type Query {
   arguments and their refusals are consumptionUnitsForCatalogItem's.
   """
   restockUnitsForCatalogItem(
-    """The stack's density in g/mL, when it overrides the item's."""
-    densityOverride: Float
     """The catalog item's id"""
     itemId: ID!
-    """The net weight of ONE tracking unit. Optional."""
-    netWeight: Float
     """
     The unit the stack's net weight is recorded in. Its measure is offered
     whether or not netWeight is passed.
@@ -12635,11 +11903,6 @@ type Query {
     so "clove" is offered first for a bulb stack.
     """
     portionUnitId: ID
-    """
-    How many portion units one tracking unit holds. Optional; requires
-    portionUnitId.
-    """
-    portionsPerTrackingUnit: Float
     """The unit the stack would be tracked in"""
     trackingUnitId: ID!
   ): [RankedUnit!]!
@@ -12662,13 +11925,13 @@ type Query {
   The query needs at least three characters: a shorter one is refused with a
   validation error on query.
   
-  With an orderBy, every page is reachable through after, before and last.
+  With an orderBy, every page is reachable through after.
   Without one, matches are ranked by relevance: an exact name first, then
   names starting with the query, then names containing it, and only then a
   description, tag or UPC match. Within each tier come the caller's own private
   items, then their frequent items, then name similarity and popularity. A ranked list has
-  no cursor, so only its first page is served: after, before and last are
-  refused with a validation error until an orderBy is named. Ranking reads a
+  no cursor, so only its first page is served: after is refused with a
+  validation error until an orderBy is named. Ranking reads a
   bounded set of candidates: every exact name, and of a very common word the
   shortest names holding it at each level. totalCount stops
   at 10,000: that figure means at least that many.
@@ -12676,14 +11939,10 @@ type Query {
   searchItems(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """Narrows the list: every field given must match"""
     filters: ItemFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
     """
     Sort order; ranked by relevance when omitted. Fields apply in declaration order, not request order
     """
@@ -12699,10 +11958,9 @@ type Query {
   An item just created or edited may be missing for a short while, until it
   has been indexed. Requires sign-in.
   
-  Forward pagination only, via first. Vector-distance ordering does not
-  compose with id-based cursors, and backward pagination has no meaningful
-  semantics over a relevance ranking, so after, before and last are not
-  offered rather than being accepted and rejected at runtime.
+  One page only, via first: vector-distance ordering does not compose with
+  keyset cursors, so after is not offered rather than being accepted and
+  rejected at runtime.
   """
   searchItemsSemantic(
     """Narrows the matches by item type"""
@@ -12781,20 +12039,12 @@ type Query {
   shoppingLists(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """Narrows the list: every field given must match"""
     filters: ShoppingListFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
     """Only this home's; every one the caller may read when omitted"""
     homeId: ID
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; most recently updated first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: ShoppingListOrderBy
   ): ShoppingListConnection!
   """
   Get a single storage location by ID
@@ -12806,24 +12056,14 @@ type Query {
   ): StorageLocation
   """
   Get all active storage locations for a home (flat list)
-  Returns locations by name unless orderBy says otherwise
+  Returns locations by name
   Requires user to be a member of the home
   """
   storageLocations(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
     """The home's id"""
     homeId: ID!
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; by name when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: StorageLocationOrderBy
   ): StorageLocationConnection!
   """
   The places to shop near a zip or a point, nearest first, one row per place:
@@ -12836,18 +12076,10 @@ type Query {
   stores(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """Narrows the list: every field given must match"""
     filters: StoreFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; by name when omitted. StoreOrderBy describes how its fields combine
-    """
-    orderBy: StoreOrderBy
   ): StoreConnection!
   """What changed in up to maxSyncScopes scopes, each from its own cursor."""
   syncChanges(input: SyncChangesInput!): [SyncPage!]!
@@ -12858,26 +12090,17 @@ type Query {
   syncScopes(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
     """
     The kinds to list. A client that sends none stays on shopping lists, whichever kinds the server adds
     """
     kinds: [SyncScopeKind!] = [SHOPPING_LIST]
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
   ): SyncScopeConnection!
   """
   One page of a scope's complete rows, for a first sync or after RESYNC_REQUIRED.
   """
   syncSnapshot(input: SyncSnapshotInput!): SyncSnapshotPage!
-  """Fetch a single unit by its ID."""
-  unit(
-    """The id of the Unit to read"""
-    id: ID!
-  ): Unit
   """
   The unit a symbol names, or a spelling the unit vocabulary knows ("liters"
   is the litre); null when none does. A read: it never creates a unit.
@@ -13008,11 +12231,14 @@ input ReceiptCheckInLineInput {
   """
   stock: Boolean
   """
-  The total paid for the line, after any discount. Zero only for a line its
-  discount made free (the free one of a deal): its purchase is recorded at
-  nothing paid, with the discount as its saving, and observes no price.
+  The total paid for the line, after any discount. Absent or null when the
+  price is unknown: the purchase and its stock are recorded with no cost, no
+  shopping-list estimate stands in for it, and no price is observed. Zero only
+  for a line its discount made free (the free one of a deal): its purchase is
+  recorded at nothing paid, with the discount as its saving, and observes no
+  price.
   """
-  totalPaid: Float!
+  totalPaid: Float
 }
 
 """One line's outcome in createReceiptCheckIn."""
@@ -13294,14 +12520,8 @@ type Recipe {
   imageUrl: String
   """The recipe's ingredients in display order."""
   ingredientsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
   ): RecipeIngredientConnection!
   """
   The cooking steps as an ordered JSON array, each entry as the author or import
@@ -13340,18 +12560,12 @@ type Recipe {
   unauthenticated.
   """
   missingIngredientsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
     """
     Only this home's pantries, those you may view; refused unless you are an active member. Every pantry you may view when omitted
     """
     homeId: ID
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
   ): RecipeIngredientConnection!
   """The recipe's title."""
   name: String!
@@ -13410,12 +12624,8 @@ type Recipe {
   reviewsConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
     """
     Sort order; newest first when omitted. Fields apply in declaration order, not request order
     """
@@ -14038,11 +13248,6 @@ type RecipeNutrition {
   totalSugars: Float
 }
 
-"""Order by options for recipes"""
-input RecipeOrderBy {
-  createdAt: SortOrder
-}
-
 """Recipes matching the recipient's pantries (RECIPE_RECOMMENDATIONS)."""
 type RecipeRecommendationsNotificationData {
   """How many recipes were recommended."""
@@ -14437,24 +13642,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union RemoveItemFromShoppingListResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemFromShoppingListPayload | ValidationError
-
-"""
-Note that "id" is the ITEM's id — this clears the item's whole gallery.
-"""
-input RemoveItemImageInput {
-  id: ID!
-}
-
-type RemoveItemImagePayload {
-  item: Item!
-}
-
-"""
-Result of RemoveItemImage. Select on RemoveItemImagePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union RemoveItemImageResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemImagePayload | ValidationError
 
 """
 Batch remove specific shopping list items by id (batch twin of
@@ -15041,12 +14228,6 @@ type SavedRecipeEdge implements Edge {
   node: SavedRecipe!
 }
 
-"""Order by options for saved recipes"""
-input SavedRecipeOrderBy {
-  """When the recipe was saved; the default, newest first"""
-  createdAt: SortOrder
-}
-
 """
 What a semantic search can narrow by: the vector query applies nothing else.
 """
@@ -15149,16 +14330,8 @@ type ShoppingList {
   The list's ACTIVE and PENDING collaborators, most recently invited first by default
   """
   collaboratorsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; most recently invited first when omitted"""
-    orderBy: CollaboratorOrderBy
   ): ShoppingListCollaboratorConnection!
   """How many of the list's items are marked purchased"""
   completedItems: Int!
@@ -15244,14 +14417,10 @@ type ShoppingList {
   itemsConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """Narrow the items returned"""
     filters: ShoppingListItemFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
     """
     Sort order; newest first when omitted. Fields apply in declaration order, not request order
     """
@@ -15653,12 +14822,8 @@ type ShoppingListItem {
   purchasesConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
     """
     Sort order; most recent purchase first when omitted. Fields apply in declaration order, not request order
     """
@@ -15755,14 +14920,8 @@ input ShoppingListItemFilters {
 
 """Order by options for shopping list items"""
 input ShoppingListItemOrderBy {
-  """Sorts by when the line was added"""
-  createdAt: SortOrder
-  """Sorts by priority: 0 low, 1 medium, 2 high"""
-  priority: SortOrder
   """Sorts by the position the shopper arranged the list in"""
   sortOrder: SortOrder
-  """Sorts by when the line last changed"""
-  updatedAt: SortOrder
 }
 
 """Purchase state for a shopping list item"""
@@ -15805,13 +14964,6 @@ type ShoppingListItemStoreInfo {
   preferredStore: Store
 }
 
-"""Order by options for shopping lists"""
-input ShoppingListOrderBy {
-  createdAt: SortOrder
-  name: SortOrder
-  updatedAt: SortOrder
-}
-
 type ShoppingListOwnership {
   createdAt: DateTime!
   id: ID!
@@ -15843,12 +14995,6 @@ type ShoppingListOwnershipEdge implements Edge {
   cursor: String!
   """The ShoppingListOwnership this edge wraps."""
   node: ShoppingListOwnership!
-}
-
-"""Order by options for shopping list ownerships"""
-input ShoppingListOwnershipOrderBy {
-  createdAt: SortOrder
-  transferredAt: SortOrder
 }
 
 """Sub-input for shopping list planning details"""
@@ -16108,20 +15254,8 @@ enum SortOrder {
 }
 
 """
-Allergens exactly as one external source buckets them.
-
-Deliberately not the [AllergenInfo!]! shape of Item.allergens: a source
-reports two flat name lists, while Item.allergens carries one entry per
-allergen with contains/mayContain flags.
-"""
-type SourceAllergens {
-  contains: [String!]!
-  mayContain: [String!]!
-}
-
-"""
 Allergens in a source's own bucketed form. This is NOT [AllergenInput!] — that
-is Item.allergens' per-allergen shape. See the SourceAllergens output twin.
+is Item.allergens' per-allergen shape.
 """
 input SourceAllergensInput {
   contains: [String!]
@@ -16358,12 +15492,6 @@ type StorageLocationEdge implements Edge {
   cursor: String!
   """The StorageLocation this edge wraps."""
   node: StorageLocation!
-}
-
-"""Order by options for storage locations"""
-input StorageLocationOrderBy {
-  createdAt: SortOrder
-  name: SortOrder
 }
 
 """
@@ -16636,20 +15764,6 @@ input StoreNearInput @oneOf {
   point: GeoPointInput
   """A US zip code, placed at its Census centre; one not on file is refused"""
   zip: String
-}
-
-"""
-Sort options for the stores list. Object-map convention: set a field to
-ASC or DESC. `popularity` is the quality rating, unrated stores last in
-either direction; setting it makes the list a single page, sorted by
-popularity, then name, then createdAt. Otherwise the fields set apply in the
-order declared here, whatever order the request writes them in. A
-recommended list is returned in the order set here.
-"""
-input StoreOrderBy {
-  createdAt: SortOrder
-  name: SortOrder
-  popularity: SortOrder
 }
 
 """
@@ -16996,13 +16110,9 @@ type SuggestionUnit {
   """
   The short form to show, in the request's language, as Unit.localizedSymbol
   """
-  localizedSymbol(
-    """How many it follows: picks singular or plural; omitted, the singular"""
-    quantity: Float
-  ): String!
+  localizedSymbol: String!
   """Both forms of localizedSymbol, as Unit.localizedSymbolForms"""
   localizedSymbolForms: PluralForms!
-  name: String!
   symbol: String!
 }
 
@@ -17476,7 +16586,6 @@ input UiPreferencesInput {
 type Unit {
   autoConvertThreshold: Float
   autoConvertToUnit: UnitRef
-  autoConvertToUnitId: ID
   baseUnit: UnitRef
   baseUnitId: ID
   """
@@ -17495,17 +16604,6 @@ type Unit {
   id: ID!
   isCommon: Boolean!
   isMetric: Boolean!
-  """
-  The unit's name in the request's language (Accept-Language), singular or
-  plural as that language's plural rules read quantity, and singular for a
-  part of one where this unit shows amounts as fractions (½ cup, as
-  displayAsFraction says) or without one. English when the language has no
-  name for the unit; a household's own unit keeps its name.
-  """
-  localizedName(
-    """How many: picks singular or plural; omitted, the singular"""
-    quantity: Float
-  ): String!
   """Both forms of localizedName, picked per number as PluralForms says"""
   localizedNameForms: PluralForms!
   """
@@ -17516,10 +16614,7 @@ type Unit {
   it is singular or plural as localizedName reads quantity (2 bolsas, 3 cans);
   an abbreviation or a standard symbol never changes.
   """
-  localizedSymbol(
-    """How many it follows: picks singular or plural; omitted, the singular"""
-    quantity: Float
-  ): String!
+  localizedSymbol: String!
   """
   Both forms of localizedSymbol, for a client that picks one per number it
   shows (a list's rows, an amount being edited) as PluralForms says; one
@@ -17603,7 +16698,6 @@ enum UnitRecommendation {
 """Lightweight unit reference to break self-referential cycles"""
 type UnitRef {
   id: ID!
-  isMetric: Boolean!
   name: String!
   symbol: String!
   type: UnitType!
@@ -17718,32 +16812,6 @@ input UpcLookupInput {
   """Format hint for validation and normalisation; AUTO when omitted"""
   format: UpcFormat
 }
-
-input UpdateBrandListEntryInput {
-  id: ID!
-  """As on UpdateBrandListInput.idempotencyKey"""
-  idempotencyKey: ID
-  """The owner's own note, at most 500 characters; null clears it"""
-  reason: String
-  """As on UpdateBrandListInput.version"""
-  version: Int
-}
-
-type UpdateBrandListEntryPayload {
-  brandListEntry: BrandListEntry!
-  """
-  True when this call was a replay of a write already applied: it wrote nothing,
-  and this payload is read as it stands now. The canonical, API-wide replay flag.
-  """
-  converged: Boolean!
-}
-
-"""
-Result of UpdateBrandListEntry. Select on UpdateBrandListEntryPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union UpdateBrandListEntryResult = ConflictError | ForbiddenError | NotFoundError | UpdateBrandListEntryPayload | ValidationError
 
 input UpdateBrandListInput {
   enabled: Boolean
@@ -18395,18 +17463,8 @@ type UpdatePantryItemPayload {
   client updates its batch list without a second request.
   """
   batchesConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: PantryItemBatchOrderBy
   ): PantryItemBatchConnection!
   """
   True when this call was a replay of a write already applied: it wrote nothing,
@@ -18897,32 +17955,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union UpsertExternalRecipeResult = ConflictError | ForbiddenError | NotFoundError | UpsertExternalRecipePayload | ValidationError
 
-input UpsertItemByExternalSourceInput {
-  externalId: String!
-  externalType: String
-  itemData: CreateItemInput!
-  source: ExternalSource!
-  sourceData: JSON
-}
-
-type UpsertItemByExternalSourcePayload {
-  """
-  True if the item was newly created, false if an existing one was updated.
-  """
-  created: Boolean!
-  """The created or updated catalog item."""
-  item: Item!
-  """The external-source mapping linking the item to its source."""
-  mapping: ExternalSourceMapping!
-}
-
-"""
-Result of UpsertItemByExternalSource. Select on UpsertItemByExternalSourcePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union UpsertItemByExternalSourceResult = ConflictError | ForbiddenError | NotFoundError | UpsertItemByExternalSourcePayload | ValidationError
-
 """
 Input for adding or updating item-specific unit conversion.
 Admin-only fields (source, confidence, isVerified) are ignored for non-admin users.
@@ -19070,36 +18102,7 @@ type User {
   active collaborator, newest first by default. Empty for anyone but the user
   themselves, admins included.
   """
-  collaboratedShoppingListsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: ShoppingListOrderBy
-  ): ShoppingListConnection!
-  """
-  The user's cooking log entries, most recently cooked first by default.
-  Empty unless the caller is this user or an admin.
-  """
-  cookingLogsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; most recently cooked first when omitted"""
-    orderBy: CookingLogOrderBy
-  ): CookingLogConnection!
+  collaboratedShoppingListsConnection: ShoppingListConnection!
   """
   The user's cooking statistics. Null for anyone but the user themselves,
   admins included.
@@ -19152,16 +18155,10 @@ type User {
   Empty unless the caller is this user or an admin.
   """
   expirationNotificationsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """Narrow the notifications returned"""
     filters: ExpirationNotificationFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
     """
     Sort order; newest first when omitted. createdAt applies before expiresOn, whatever order the request writes them in
     """
@@ -19173,18 +18170,7 @@ type User {
   The user's ACTIVE home memberships, newest first by default. Empty unless
   the caller is this user or an admin.
   """
-  membershipsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; newest first when omitted"""
-    orderBy: MembershipOrderBy
-  ): MembershipConnection!
+  membershipsConnection: MembershipConnection!
   """
   Which notifications the user receives and how they are delivered. Null
   unless the caller is this user or an admin.
@@ -19197,14 +18183,10 @@ type User {
   notificationsConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
     """Narrow the notifications returned"""
     filters: NotificationFilters
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
     """Sort order; most recently sent first when omitted"""
     orderBy: NotificationOrderBy
   ): NotificationConnection!
@@ -19219,31 +18201,14 @@ type User {
   user or an admin.
   """
   pendingCollaborationInvitesConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; most recently invited first when omitted"""
-    orderBy: CollaboratorOrderBy
   ): ShoppingListCollaboratorConnection!
   """
   Pending, unexpired home invites sent to the user's email address, newest
   first. Empty unless the caller is this user or an admin.
   """
-  pendingHomeInvitesConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-  ): HomeInviteConnection!
+  pendingHomeInvitesConnection: HomeInviteConnection!
   """
   The user's profile; every live account has one, created with the account,
   and a deleted one has none: deletion purges it, and a restore writes an
@@ -19270,16 +18235,10 @@ type User {
   savedRecipesConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
+    """Page size: default 20, at most 100"""
     first: Int
     """Only recipes saved in this folder"""
     folder: String
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """Sort order; most recently saved first when omitted"""
-    orderBy: SavedRecipeOrderBy
   ): SavedRecipeConnection!
   """
   The user's app settings; null unless the caller is this user or an admin
@@ -19289,20 +18248,7 @@ type User {
   The user's shopping-list ownership entries, newest first by default. Empty
   unless the caller is this user or an admin.
   """
-  shoppingListOwnershipsConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Resume before this cursor: a previous page's startCursor"""
-    before: String
-    """Page size, reading forward: default 20, at most 100"""
-    first: Int
-    """Page size, reading backward: default 20, at most 100"""
-    last: Int
-    """
-    Sort order; newest first when omitted. Fields apply in declaration order, not request order
-    """
-    orderBy: ShoppingListOwnershipOrderBy
-  ): ShoppingListOwnershipConnection!
+  shoppingListOwnershipsConnection: ShoppingListOwnershipConnection!
 }
 
 """
@@ -19621,21 +18567,6 @@ type ValidationIssue {
   message: String!
   """Dotted path to the input field; _root for a rule on the whole input"""
   path: String!
-}
-
-"""Brand information for a product variation"""
-type VariationBrandInfo {
-  id: ID
-  name: String!
-  type: String
-}
-
-"""Image information for a product variation"""
-type VariationImage {
-  isPrimary: Boolean
-  size: String
-  source: String
-  url: String!
 }
 
 input VerifyEmailInput {
