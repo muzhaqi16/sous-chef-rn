@@ -517,6 +517,44 @@ describe('editing and deleting', () => {
 });
 
 describe('using some', () => {
+  it('returns applied versus queued settlement and suppresses repeated confirmation', async () => {
+    const m = consumeMock();
+    const { result } = renderActions([m]);
+    act(() => result.current.handleConsumeItem('item-1'));
+    await act(async () => {
+      const first = result.current.handleConfirmConsume(
+        2,
+        '2',
+        UsagePurpose.General,
+        '',
+      );
+      const repeated = result.current.handleConfirmConsume(
+        2,
+        '2',
+        UsagePurpose.General,
+        '',
+      );
+      expect(await repeated).toBeUndefined();
+      expect(await first).toBe('applied');
+    });
+    expect(m.fired).toHaveLength(1);
+  });
+
+  it('returns queued without claiming the server applied the use', async () => {
+    const { result } = renderActions([queuedUsage()]);
+    act(() => result.current.handleConsumeItem('item-1'));
+    await act(async () => {
+      expect(
+        await result.current.handleConfirmConsume(
+          2,
+          '2',
+          UsagePurpose.General,
+          '',
+        ),
+      ).toBe('queued');
+    });
+  });
+
   it('sends the use and closes the modal', async () => {
     const m = consumeMock();
     const { result } = renderActions([m]);

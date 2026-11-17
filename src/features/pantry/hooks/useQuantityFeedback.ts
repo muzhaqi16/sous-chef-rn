@@ -91,14 +91,17 @@ export function useQuantityFeedback(
   } else if (!shared.isConvertedUnit) {
     // Tracking unit selected — prefer the converter's cap when available
     // (handles dual-tracked items where tracking unit matches net-weight unit).
-    const availableInUnit = Math.max(
-      shared.availableInSelectedUnit ?? 0,
-      shared.trackingQuantity,
-    );
-    available = inActiveUnit(availableInUnit);
-    remaining = hasInput
-      ? shared.leftAfter(snapDeductionToCap(inputQuantity, availableInUnit))
-      : null;
+    const availableInUnit =
+      shared.availableInSelectedUnit ??
+      (shared.activeUnitId === shared.trackingUnitId
+        ? shared.trackingQuantity
+        : null);
+    if (availableInUnit !== null) {
+      available = inActiveUnit(availableInUnit);
+      remaining = hasInput
+        ? shared.leftAfter(snapDeductionToCap(inputQuantity, availableInUnit))
+        : null;
+    }
   } else if (
     shared.isDualTracked &&
     conversion.convertedValue != null &&

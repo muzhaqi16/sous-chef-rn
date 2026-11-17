@@ -65,6 +65,7 @@ export interface PantryActionSharedState {
   /** Null when the unit is the same or the conversion failed. */
   availableInSelectedUnit: number | null;
   availableLoading: boolean;
+  conversionUnavailable?: boolean;
   /** Dual-tracked items only. */
   remainingNetWeight: number | null;
   netWeightUnit: UnitLabelSource | undefined;

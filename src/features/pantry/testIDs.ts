@@ -6,6 +6,8 @@ const ITEM = 'pantry-item';
  */
 export const pantryTestIDs = {
   screen: 'pantry-screen',
+  consumeUseAll: 'pantry-consume-use-all',
+  consumeDetails: 'pantry-consume-details',
   loading: 'pantry-loading',
   list: 'pantry-list',
   listSkeletonOverlay: 'pantry-list-skeleton-overlay',

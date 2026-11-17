@@ -202,7 +202,9 @@
     "purpose": "Purpose *",
     "notesPlaceholder": "Add any notes about this usage...",
     "purposeCooking": "Cooking",
-    "purposeTransfer": "Transfer"
+    "purposeTransfer": "Transfer",
+    "useAll": "Use all",
+    "optionalDetails": "Optional details"
   },
   "moveToPantry": {
     "cannotAddTitle": "Can't add to this home's pantry",
@@ -337,7 +339,8 @@
     "exceedsAvailableConsume": "Cannot consume more than available quantity ({{amount}} {{unit}})",
     "exceedsAvailableWaste": "Cannot waste more than available quantity ({{amount}} {{unit}})",
     "remainingAfter": "Remaining: {{amount}} {{unit}}",
-    "exceedsAvailable": "Exceeds available ({{amount}} {{unit}})"
+    "exceedsAvailable": "Exceeds available ({{amount}} {{unit}})",
+    "conversionUnavailable": "This unit cannot be converted. Choose another unit."
   },
   "duplicateItem": {
     "title": "Item Already in Pantry"

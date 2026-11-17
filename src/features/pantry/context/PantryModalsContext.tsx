@@ -1,3 +1,4 @@
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import React, { useState, type ReactNode } from 'react';
 import { createActionsContext } from '#hooks/utils/createActionsContext';
 import type { StorageType } from '#/graphql/generated/schemaTypes';
@@ -68,6 +69,7 @@ export function PantryModalsProvider({
   };
   const [addLocationSheetVisible, setAddLocationSheetVisible] = useState(false);
 
+  const pantryTrackingFoundation = useFeatureFlag('pantryTrackingFoundation');
   const [itemsAdded, setItemsAdded] = useState(false);
 
   // Force-close pantry-bound sheets when pantryId vanishes. Adjusting state
@@ -139,6 +141,7 @@ export function PantryModalsProvider({
 
       {!!consumeModal.visible && (
         <ConsumePantryItemModal
+          compact={pantryTrackingFoundation}
           visible={consumeModal.visible}
           pantryItemId={consumeModal.itemId}
           onClose={consumeModal.close}

@@ -13,6 +13,7 @@ export type FeatureFlag =
   | 'listChangeFeed'
   | 'pantryChangeFeed'
   | 'pantrySuggestions'
+  | 'pantryTrackingFoundation'
   | 'receiptParsing'
   | 'recipeCapturePhoto'
   | 'recipeCaptureText'
@@ -48,6 +49,7 @@ const FEATURE_FLAG_DEFAULTS: Record<FeatureFlag, boolean> = {
   pantryChangeFeed: true,
   // Discovery ranked by the API's `recipeSuggestions`; off, the catalog's discovery.
   pantrySuggestions: true,
+  pantryTrackingFoundation: false,
   // A receipt read by the API's `createReceiptParse`; off, only the phone reads it.
   receiptParsing: true,
   // Recipes from cookbook photos, shared text or a page's link (`createRecipeCapture`).

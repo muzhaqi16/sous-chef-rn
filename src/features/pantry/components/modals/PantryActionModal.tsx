@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
@@ -43,7 +44,7 @@ interface PantryActionModalProps {
   currentQuantityLabel?: string;
   /** Selects which unit-eligibility query runs. */
   operation: PantryOperation;
-  onConfirm: (shared: PantryActionSharedState) => void;
+  onConfirm: (shared: PantryActionSharedState) => void | Promise<unknown>;
   /** Fires when the modal opens; reset consumer-specific state here. */
   onReset?: (
     pantryItem: PantryActionModal_PantryItemFragment,
@@ -98,6 +99,8 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   const [selectedUnitInfo, setSelectedUnitInfo] =
     useState<SelectedUnitInfo | null>(null);
   const [notes, setNotes] = useState('');
+  const submitting = useRef(false);
+  const [saving, setSaving] = useState(false);
 
   // A row created offline holds a neutral unit with an empty id. Sent as
   // `usageUnitId` it names no unit; omitted, the server uses the stack's own.
@@ -208,7 +211,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   const packagesOfNetWeight = (amount: number) =>
     pantryItem?.netWeight ? amount / pantryItem.netWeight : null;
 
-  const { availableInSelectedUnit, availableLoading } =
+  const { availableInSelectedUnit, availableLoading, conversionUnavailable } =
     useConvertAvailableQuantity({
       pantryItemId: pantryItem?.id,
       selectedUnitId: activeUnitId,
@@ -278,6 +281,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       selectedRankedUnit?.commonFractions ?? defaultCommonFractions,
     availableInSelectedUnit,
     availableLoading,
+    conversionUnavailable,
     remainingNetWeight: effectiveNetWeight,
     netWeightUnit: pantryItem?.netWeightUnit ?? undefined,
     netWeightUnitId: pantryItem?.netWeightUnit?.id,
@@ -299,7 +303,21 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
           contentPadding="md"
           title={title}
           onCancel={onClose}
-          onConfirm={() => onConfirm(shared)}
+          onConfirm={async () => {
+            if (submitting.current) return;
+            submitting.current = true;
+            setSaving(true);
+            try {
+              await onConfirm(shared);
+            } catch (error) {
+              errorService.reportError(error, {
+                operation: 'Confirm pantry action',
+              });
+            }
+            submitting.current = false;
+            setSaving(false);
+          }}
+          saving={saving}
           confirmLabel={confirmLabel}
           confirmColor={confirmColor}
         />

@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { errorService } from '#/services/errorService';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { alertService } from '#/services/alertService';
+import {
+  settleMutation,
+  type SettleStatus,
+} from '#/apollo/utils/settleMutation';
 import {
   ConsumptionUnitsForPantryItemDocument,
   CreatePantryItemUsageDocument,
@@ -73,6 +77,8 @@ export function usePantryItemActions({
   // Single state for all modals — only one can be open at a time
   const [activeModal, setActiveModal] = useState<ActiveModal>(CLOSED_MODAL);
 
+  const usagePending = useRef(false);
+
   const closeModal = () => setActiveModal(CLOSED_MODAL);
 
   const refetchRankedUnits = () => {
@@ -98,8 +104,9 @@ export function usePantryItemActions({
       'purpose' | 'notes' | 'wasteReason' | 'isComposted' | 'isRecycled'
     >,
     fallback: string,
-  ) => {
-    if (activeModal.type !== modal) return;
+  ): Promise<SettleStatus | undefined> => {
+    if (activeModal.type !== modal || usagePending.current) return;
+    usagePending.current = true;
 
     const itemId = activeModal.itemId;
     // A converted unit moves the stock when the server answers.
@@ -111,29 +118,44 @@ export function usePantryItemActions({
       now: new Date().toISOString(),
     };
 
-    const settled = await pendingWritesOf(client.cache).send(
-      CreatePantryItemUsageDocument,
-      {
-        today: todayKey(),
-        input: {
-          pantryItemId: itemId,
-          amount: { quantity },
-          usageUnitId,
-          ...usage,
+    let status: SettleStatus;
+    try {
+      const settled = await pendingWritesOf(client.cache).send(
+        CreatePantryItemUsageDocument,
+        {
           today: todayKey(),
-          // idempotencyKey dedups the usage ledger row on replay.
-          idempotencyKey: generateEntityId(),
+          input: {
+            pantryItemId: itemId,
+            amount: { quantity },
+            usageUnitId,
+            ...usage,
+            today: todayKey(),
+            // idempotencyKey dedups the usage ledger row on replay.
+            idempotencyKey: generateEntityId(),
+          },
         },
-      },
-      write =>
-        settleMutation(() => createPantryItemUsage(write), {
-          document: CreatePantryItemUsageDocument,
-          fallback,
-          on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
-        }),
-      inputs,
-    );
-    if (settled.status !== 'failed') closeModal();
+        write =>
+          settleMutation(() => createPantryItemUsage(write), {
+            document: CreatePantryItemUsageDocument,
+            fallback,
+            on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
+          }),
+        inputs,
+      );
+      status = settled.status;
+    } catch (error) {
+      errorService.reportError(error, { operation: 'Record pantry usage' });
+      usagePending.current = false;
+      alertService.alert(t('labels.error'), fallback);
+      return 'failed';
+    }
+    usagePending.current = false;
+    if (status !== 'failed') {
+      setActiveModal(current =>
+        current === activeModal ? CLOSED_MODAL : current,
+      );
+    }
+    return status;
   };
 
   const handleConfirmConsume = (

@@ -202,7 +202,9 @@
     "purpose": "Qëllimi *",
     "notesPlaceholder": "Shto shënime për këtë përdorim...",
     "purposeCooking": "Gatim",
-    "purposeTransfer": "Transferim"
+    "purposeTransfer": "Transferim",
+    "useAll": "Përdor të gjitha",
+    "optionalDetails": "Hollësi opsionale"
   },
   "moveToPantry": {
     "cannotAddTitle": "Nuk mund të shtoni në qilarin e kësaj shtëpie",
@@ -337,7 +339,8 @@
     "exceedsAvailableConsume": "Nuk mund të konsumosh më shumë se sasia e disponueshme ({{amount}} {{unit}})",
     "exceedsAvailableWaste": "Nuk mund të hedhësh më shumë se sasia e disponueshme ({{amount}} {{unit}})",
     "remainingAfter": "Mbetet: {{amount}} {{unit}}",
-    "exceedsAvailable": "Tejkalon sasinë e disponueshme ({{amount}} {{unit}})"
+    "exceedsAvailable": "Tejkalon sasinë e disponueshme ({{amount}} {{unit}})",
+    "conversionUnavailable": "Kjo njësi nuk mund të konvertohet. Zgjidh një njësi tjetër."
   },
   "duplicateItem": {
     "title": "Artikulli është tashmë në qilar"

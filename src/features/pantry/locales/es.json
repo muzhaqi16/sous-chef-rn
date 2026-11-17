@@ -202,7 +202,9 @@
     "purpose": "Propósito *",
     "notesPlaceholder": "Añade notas sobre este uso...",
     "purposeCooking": "Cocinar",
-    "purposeTransfer": "Traslado"
+    "purposeTransfer": "Traslado",
+    "useAll": "Usar todo",
+    "optionalDetails": "Detalles opcionales"
   },
   "moveToPantry": {
     "cannotAddTitle": "No puedes añadir a la despensa de este hogar",
@@ -337,7 +339,8 @@
     "exceedsAvailableConsume": "No puedes consumir más de la cantidad disponible ({{amount}} {{unit}})",
     "exceedsAvailableWaste": "No puedes desperdiciar más de la cantidad disponible ({{amount}} {{unit}})",
     "remainingAfter": "Restante: {{amount}} {{unit}}",
-    "exceedsAvailable": "Supera lo disponible ({{amount}} {{unit}})"
+    "exceedsAvailable": "Supera lo disponible ({{amount}} {{unit}})",
+    "conversionUnavailable": "No se puede convertir esta unidad. Elige otra unidad."
   },
   "duplicateItem": {
     "title": "El artículo ya está en la despensa"

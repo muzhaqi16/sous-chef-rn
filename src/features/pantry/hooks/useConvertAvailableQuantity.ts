@@ -1,7 +1,6 @@
-import { useState } from 'react';
-import { useLazyQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import { ConvertQuantityDocument } from '#operations/item/conversions.generated';
-import { errorService } from '#/services/errorService';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 interface UseConvertAvailableQuantityOptions {
   pantryItemId: string | undefined;
@@ -19,17 +18,7 @@ interface UseConvertAvailableQuantityOptions {
   netWeightUnitId?: string;
 }
 
-interface UseConvertAvailableQuantityResult {
-  /** Available quantity expressed in the selected unit (null if same unit or failed) */
-  availableInSelectedUnit: number | null;
-  /** Whether the conversion is still loading */
-  availableLoading: boolean;
-}
-
-/**
- * Dual-tracked items convert from `remainingNetWeight`; simple items use the
- * local `conversionRatio`, falling back to the `convertQuantity` API.
- */
+/** Only amounts expressed in the selected unit are usable as a deduction cap. */
 export function useConvertAvailableQuantity({
   pantryItemId,
   selectedUnitId,
@@ -38,81 +27,37 @@ export function useConvertAvailableQuantity({
   conversionRatio,
   remainingNetWeight,
   netWeightUnitId,
-}: UseConvertAvailableQuantityOptions): UseConvertAvailableQuantityResult {
-  const [availableInSelectedUnit, setAvailableInSelectedUnit] = useState<
-    number | null
-  >(null);
-  const [availableLoading, setAvailableLoading] = useState(false);
-
-  // `nextFetchPolicy` too: a re-execute otherwise inherits the client's
-  // `cache-first` and repeats the first answer.
-  const [convertQuantity] = useLazyQuery(ConvertQuantityDocument, {
-    fetchPolicy: 'network-only',
-    nextFetchPolicy: 'network-only',
-    refetchOn: false,
-  });
-
-  // For dual-tracked items, the authoritative remaining is in net weight units
-  const isDualTracked = remainingNetWeight != null && netWeightUnitId != null;
-  const fromUnitId = isDualTracked ? netWeightUnitId : trackingUnitId;
-  const fromQuantity = isDualTracked
-    ? remainingNetWeight
-    : availableInTrackingUnit;
-  const isSameUnit =
-    selectedUnitId === fromUnitId || !selectedUnitId || !fromUnitId;
-
-  // Re-convert when selected unit changes (render-time state update)
-  const [prevUnitId, setPrevUnitId] = useState(selectedUnitId);
-  if (selectedUnitId !== prevUnitId) {
-    setPrevUnitId(selectedUnitId);
-
-    if (isSameUnit) {
-      setAvailableInSelectedUnit(null);
-      setAvailableLoading(false);
-    } else if (conversionRatio != null && !isDualTracked) {
-      // Local ratio (tracking→selected) — only for non-dual-tracked items
-      setAvailableInSelectedUnit(availableInTrackingUnit * conversionRatio);
-      setAvailableLoading(false);
-    } else {
-      // Let the API handle the conversion
-      setAvailableLoading(true);
-      const convertAvailable = async () => {
-        let result: Awaited<ReturnType<typeof convertQuantity>> | undefined;
-        try {
-          result = await convertQuantity({
-            variables: {
-              pantryItemId,
-              quantity: fromQuantity,
-              fromUnitId: fromUnitId,
-              toUnitId: selectedUnitId,
-            },
-          });
-        } catch (error) {
-          // Leaving `result` undefined clears the converted value below, which
-          // is what a failed conversion should show.
-          errorService.reportError(error, {
-            operation: 'Error converting available quantity:',
-          });
+}: UseConvertAvailableQuantityOptions) {
+  const dual = remainingNetWeight != null && netWeightUnitId != null;
+  const fromUnitId = dual ? netWeightUnitId : trackingUnitId;
+  const fromQuantity = dual ? remainingNetWeight : availableInTrackingUnit;
+  const same = !!selectedUnitId && selectedUnitId === fromUnitId;
+  const local = same
+    ? fromQuantity
+    : !dual && conversionRatio != null
+    ? availableInTrackingUnit * conversionRatio
+    : null;
+  const request =
+    local === null && pantryItemId && selectedUnitId && fromUnitId
+      ? {
+          pantryItemId,
+          quantity: fromQuantity,
+          fromUnitId,
+          toUnitId: selectedUnitId,
         }
-
-        setAvailableInSelectedUnit(
-          result?.data?.convertQuantity?.value ?? null,
-        );
-        setAvailableLoading(false);
-      };
-      queueMicrotask(() => {
-        void convertAvailable();
-      });
-    }
-  }
-
-  // When selected unit matches the source, return the quantity directly
-  if (isSameUnit && isDualTracked) {
-    return { availableInSelectedUnit: fromQuantity, availableLoading: false };
-  }
-
+      : null;
+  const { data, loading, error } = useQuery(
+    ConvertQuantityDocument,
+    request
+      ? { variables: request, fetchPolicy: 'network-only', refetchOn: false }
+      : skipToken,
+  );
+  useApolloErrorLogger(ConvertQuantityDocument, error);
   return {
-    availableInSelectedUnit,
-    availableLoading,
+    availableInSelectedUnit:
+      local ?? (request ? data?.convertQuantity?.value ?? null : null),
+    availableLoading: !!request && loading,
+    conversionUnavailable:
+      !!request && !loading && !error && data?.convertQuantity === null,
   };
 }

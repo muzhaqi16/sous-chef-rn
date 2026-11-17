@@ -15,6 +15,7 @@ describe('resolveFeatureFlags', () => {
       listChangeFeed: true,
       pantryChangeFeed: true,
       pantrySuggestions: true,
+      pantryTrackingFoundation: false,
       receiptParsing: true,
       recipeCapturePhoto: true,
       recipeCaptureText: true,
@@ -39,6 +40,7 @@ describe('resolveFeatureFlags', () => {
       ),
     ).toMatchObject({
       pantrySuggestions: true,
+      pantryTrackingFoundation: false,
       ingredientPaste: false,
       recipeCaptureText: false,
       recipeCaptureUrl: true,
@@ -72,6 +74,7 @@ describe('resolveFeatureFlags', () => {
       listChangeFeed: true,
       pantryChangeFeed: true,
       pantrySuggestions: true,
+      pantryTrackingFoundation: false,
       receiptParsing: true,
       recipeCapturePhoto: true,
       recipeCaptureText: true,
