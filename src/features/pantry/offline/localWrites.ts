@@ -164,13 +164,16 @@ export const drawStock: LocalWrite<DrawStockInputs> = {
   },
 };
 
-export type AddStockInputs = StockDeltaInputs & { pantryId?: string };
+export type AddStockInputs = StockDeltaInputs & {
+  pantryId?: string;
+  contents?: Parameters<typeof bumpStock>[4];
+};
 
 export const addStock: LocalWrite<AddStockInputs> = {
-  apply(cache, { variables, inputs: { delta, now } }) {
+  apply(cache, { variables, inputs: { delta, now, contents } }) {
     const stack = stackOf(variables);
     if (!stack) return;
-    if (delta !== null) bumpStock(cache, stack.id, delta, now);
+    if (delta !== null) bumpStock(cache, stack.id, delta, now, contents);
     countNewBatch(cache, stack.id);
   },
   commit(cache, { variables, inputs: { pantryId } }, data) {

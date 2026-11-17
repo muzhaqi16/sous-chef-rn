@@ -351,13 +351,15 @@ describe('the pantry, as the move shows it', () => {
     ).toMatchObject({ acquisitionMethod: 'SHOPPING_LIST' });
   });
 
-  // Only the server converts a package of a weighed line.
+  // The server counts packages of a counted line in its unit, and sizes those
+  // of a weighed one (line size, catalog pack, else the line's amount each).
+  // Until it answers, a weighed line's row claims no unit, so no weight is invented.
   it.each([
-    ['that many of a counted line', UnitType.Count, 2],
-    ["a weighed line's own amount", UnitType.Weight, 1],
+    ['two of a counted line', UnitType.Count, 'unit-line'],
+    ['two packages, in no unit yet, on a weighed line', UnitType.Weight, ''],
   ])(
     'shows two packages as %s until the server answers',
-    async (_, type, shown) => {
+    async (_, type, shownUnitId) => {
       const cache = makeCache();
       pantryWith63(cache);
 
@@ -390,7 +392,7 @@ describe('the pantry, as the move shows it', () => {
             }
           `,
         ),
-      ).toMatchObject({ quantity: shown, unit: { id: 'unit-line' } });
+      ).toMatchObject({ quantity: 2, unit: { id: shownUnitId } });
     },
   );
 

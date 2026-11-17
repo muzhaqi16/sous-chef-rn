@@ -4,6 +4,7 @@ import {
   type AcquisitionMethod,
   type ItemCondition,
   type StorageState,
+  type PackageSizeInput,
 } from '#/graphql/generated/schemaTypes';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -39,6 +40,9 @@ export interface LocalPantryItem {
   costPerUnit?: number | null;
   /** What one package holds as a count: 10 cans to the case. */
   portions?: { unitId: string; perPackage: number } | null;
+  packageSize?: PackageSizeInput | null;
+  /** An aggregate of acquisitions whose sizes differ; null needs server conversion. */
+  remainingNetWeight?: number | null;
   brand?: { id: string; name: string } | null;
   store?: { id: string; name: string } | null;
 }
@@ -97,6 +101,18 @@ export function writeLocalPantryItem(
       unit,
       displayAmount: { __typename: 'DisplayAmount', quantity, unit },
       amountLeft: localAmountLeft(cache, quantity, unit.id),
+      ...(row.packageSize && {
+        netWeight: row.packageSize.netWeight,
+        netWeightUnitId: row.packageSize.netWeightUnitId,
+        netWeightUnit: {
+          __typename: 'Unit',
+          id: row.packageSize.netWeightUnitId,
+        },
+        remainingNetWeight:
+          row.remainingNetWeight === undefined
+            ? quantity * row.packageSize.netWeight
+            : row.remainingNetWeight,
+      }),
       ...(row.portions && {
         portionUnitId: row.portions.unitId,
         portionUnit: { __typename: 'Unit', id: row.portions.unitId },

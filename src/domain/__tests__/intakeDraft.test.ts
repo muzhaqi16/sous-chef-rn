@@ -1,0 +1,69 @@
+import { resolveIntakeDraft } from '../intakeDraft';
+import { pantryTrackingExamples as examples } from '#/test-utils/fixtures/pantryTrackingFixtures';
+
+it('IN-02 states the six contained cans once, without expanding them again', () => {
+  const result = resolveIntakeDraft({
+    purchased: {
+      quantity: 6,
+      intent: 'packages',
+      packageSize: { netWeight: 250, netWeightUnitId: 'ml' },
+    },
+  });
+  expect(result.amount).toEqual({
+    packages: { count: 6, size: { netWeight: 250, netWeightUnitId: 'ml' } },
+  });
+  expect(result.unresolved).toEqual([]);
+  expect(examples['IN-02'].expected.remainingMl).toBe(1500);
+});
+it('IN-03 preserves a measured purchase over catalog defaults', () => {
+  expect(
+    resolveIntakeDraft({
+      catalog: { quantity: 2, unitId: 'lb' },
+      purchased: { quantity: 2.21, unitId: 'lb', intent: 'measured' },
+    }).amount,
+  ).toEqual({ measured: { quantity: 2.21, unitId: 'lb' } });
+});
+it('IN-05 keeps each acquisition size and never mutates a previous draft', () => {
+  const first = resolveIntakeDraft({
+    purchased: {
+      quantity: 1,
+      intent: 'packages',
+      packageSize: { netWeight: 16, netWeightUnitId: 'oz' },
+    },
+  });
+  const second = resolveIntakeDraft({
+    purchased: {
+      quantity: 1,
+      intent: 'packages',
+      packageSize: { netWeight: 24, netWeightUnitId: 'oz' },
+    },
+  });
+  expect(first.amount?.packages?.size?.netWeight).toBe(16);
+  expect(second.amount?.packages?.size?.netWeight).toBe(24);
+});
+it('preserves a cleared correction and asks for the unresolved measured unit', () => {
+  expect(
+    resolveIntakeDraft({
+      purchased: { quantity: 2.21, unitId: 'lb', intent: 'measured' },
+      correction: { unitId: null },
+    }),
+  ).toMatchObject({
+    amount: null,
+    unresolved: ['unit'],
+    facts: { quantity: 2.21, unitId: null },
+  });
+});
+it('retains an unknown-size package without inventing its contents', () => {
+  expect(resolveIntakeDraft({ purchased: { quantity: 1 } }).amount).toEqual({
+    packages: { count: 1 },
+  });
+});
+it.each([NaN, Infinity, 0, -1])(
+  'rejects an invalid acquisition quantity %s',
+  quantity => {
+    expect(resolveIntakeDraft({ purchased: { quantity } })).toMatchObject({
+      amount: null,
+      unresolved: ['quantity'],
+    });
+  },
+);

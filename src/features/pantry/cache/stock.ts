@@ -340,6 +340,10 @@ export function bumpStock(
   pantryItemId: string,
   delta: number,
   now: string,
+  contents?: {
+    size?: { netWeight: number; netWeightUnitId: string } | null;
+    portions?: number | null;
+  },
 ): void {
   const id = cache.identify({ __typename: 'PantryItem', id: pantryItemId });
   if (!id) return;
@@ -357,9 +361,18 @@ export function bumpStock(
     fields: {
       quantity: (existing: number) => Math.max(0, existing + delta),
       remainingPortions: () =>
-        moved(inside?.remainingPortions, inside?.portionsPerTrackingUnit),
+        moved(
+          inside?.remainingPortions,
+          contents?.portions ?? inside?.portionsPerTrackingUnit,
+        ),
       remainingNetWeight: () =>
-        moved(inside?.remainingNetWeight, inside?.netWeight),
+        contents?.size &&
+        contents.size.netWeightUnitId !== inside?.netWeightUnit?.id
+          ? null
+          : moved(
+              inside?.remainingNetWeight,
+              contents?.size?.netWeight ?? inside?.netWeight,
+            ),
       updatedAt: () => now,
       lastUsedAt: () => now,
     },

@@ -4,6 +4,7 @@ import {
   contentsOf,
   restockContentsOf,
   localQuantity,
+  packagesNeedSizing,
   stockAmountOf,
   takesContents,
 } from '#domain/stockAmount';
@@ -116,53 +117,58 @@ describe('stockAmountOf', () => {
 
 describe('localQuantity', () => {
   it('shows a measured amount as stated', () => {
-    expect(
-      localQuantity(
-        { measured: { quantity: 750 } },
-        { quantity: 2, unit: { type: UnitType.Weight } },
-      ),
-    ).toBe(750);
+    expect(localQuantity({ measured: { quantity: 750 } })).toBe(750);
   });
 
-  it('shows packages of a counted line as that many of it', () => {
+  it('shows packages as their count, never a requested amount', () => {
+    // A receipt's "3 @" on "Flour 1000 g": the server sizes the packages, so
+    // the row must not show 1000 g as if it were what was bought.
+    expect(localQuantity({ packages: { count: 3, size: JAR } })).toBe(3);
+  });
+});
+
+describe('packagesNeedSizing', () => {
+  it('leaves a measured amount to the device', () => {
     expect(
-      localQuantity(
-        { packages: { count: 3, size: JAR } },
-        { quantity: 1, unit: { type: UnitType.Count } },
+      packagesNeedSizing(
+        { measured: { quantity: 2 } },
+        { unit: { type: UnitType.Weight } },
       ),
-    ).toBe(3);
+    ).toBe(false);
   });
 
-  it('shows packages counted in a named unit as that many, whatever the line', () => {
-    // 12 pieces on a dozen line land as 12 pieces, not 12 dozen.
+  it('leaves packages of a counted line to the device: the server counts them', () => {
     expect(
-      localQuantity(
+      packagesNeedSizing(
+        { packages: { count: 2 } },
+        { unit: { type: UnitType.Count } },
+      ),
+    ).toBe(false);
+  });
+
+  it('leaves packages counted in a named unit to the device', () => {
+    // 12 pieces on a weighed line land as 12 pieces.
+    expect(
+      packagesNeedSizing(
         { packages: { count: 12, unitId: 'piece' } },
-        { quantity: 1, unit: { type: UnitType.Weight } },
+        { unit: { type: UnitType.Weight } },
       ),
-    ).toBe(12);
+    ).toBe(false);
   });
 
-  it("shows a weighed line's own amount until the server converts packages", () => {
+  it('hands packages of a weighed line to the server', () => {
     expect(
-      localQuantity(
-        { packages: { count: 3, size: JAR } },
-        { quantity: 1000, unit: { type: UnitType.Weight } },
+      packagesNeedSizing(
+        { packages: { count: 2 } },
+        { unit: { type: UnitType.Weight } },
       ),
-    ).toBe(1000);
+    ).toBe(true);
   });
 
-  it('falls back to the count when the line states no amount', () => {
-    expect(
-      localQuantity({ packages: { count: 2 } }, { quantity: null, unit: null }),
-    ).toBe(2);
-  });
-
-  it('shows the count on a line with no unit, as the server counts it', () => {
-    // A receipt's one milk on "Milk 2" lands as 1 in a counted stack.
-    expect(
-      localQuantity({ packages: { count: 1 } }, { quantity: 2, unit: null }),
-    ).toBe(1);
+  it('hands packages of a line with no unit to the server', () => {
+    expect(packagesNeedSizing({ packages: { count: 1 } }, { unit: null })).toBe(
+      true,
+    );
   });
 });
 

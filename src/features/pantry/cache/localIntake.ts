@@ -33,13 +33,14 @@ export function localIntakeRow(
     itemId: input.item.id ?? input.item.inline?.id ?? null,
     quantity:
       input.quantity ??
-      (input.amount ? localQuantity(input.amount, {}) : undefined),
+      (input.amount ? localQuantity(input.amount) : undefined),
     unitId:
       input.unit?.id ??
       input.amount?.measured?.unitId ??
       input.amount?.packages?.unitId,
     storageState: input.storage?.storageState,
     acquisitionMethod: input.purchase?.acquisitionMethod,
+    packageSize: input.amount?.packages?.size,
     portions:
       portionUnitId && portionsPerTrackingUnit
         ? { unitId: portionUnitId, perPackage: portionsPerTrackingUnit }
