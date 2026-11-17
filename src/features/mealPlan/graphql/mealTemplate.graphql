@@ -179,6 +179,10 @@ mutation AddTemplateItem($input: AddTemplateItemInput!) {
         id
         ...MealTemplateReaders
       }
+      mealTemplateItem {
+        id
+        ...MealTemplateItemReaders
+      }
     }
     ... on Error {
       code

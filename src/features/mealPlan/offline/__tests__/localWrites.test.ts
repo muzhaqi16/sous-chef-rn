@@ -542,20 +542,26 @@ describe('a template meal', () => {
     expect(templateItems(screen)).toEqual(['held-item']);
   });
 
-  it('keeps an added one the answer does not state', () => {
+  it('keeps an added one as the answer states it, not as the device built it', () => {
     const screen = setup();
 
     answered(screen, addItem(screen, 'minted'), {
       addTemplateItem: {
         __typename: 'AddTemplateItemPayload',
         mealTemplate: { __typename: 'MealTemplate', id: TEMPLATE_ID },
+        mealTemplateItem: {
+          __typename: 'MealTemplateItem',
+          id: 'minted',
+          dayOffset: 2,
+          customMealName: 'Beef stew',
+        },
       },
     });
 
     expect(templateItems(screen, false)).toEqual(['held-item', 'minted']);
     expect(screen.cache.extract()['MealTemplateItem:minted']).toMatchObject({
       dayOffset: 2,
-      customMealName: 'Stew',
+      customMealName: 'Beef stew',
     });
   });
 

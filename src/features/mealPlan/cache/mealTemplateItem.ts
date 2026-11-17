@@ -125,6 +125,20 @@ export function addTemplateItemToCache(
   addToTemplateItems(cache, templateId, item, { position: 'end' });
 }
 
+/** Appends a meal the server answered to its template; the row is the answer's. */
+export function linkTemplateItem(
+  cache: ApolloCache,
+  templateId: string,
+  itemId: string,
+): void {
+  addToTemplateItems(
+    cache,
+    templateId,
+    { __typename: 'MealTemplateItem', id: itemId },
+    { position: 'end' },
+  );
+}
+
 /** Drop an item's edge from its template and evict the entity. */
 export function removeTemplateItemFromCache(
   cache: ApolloCache,
