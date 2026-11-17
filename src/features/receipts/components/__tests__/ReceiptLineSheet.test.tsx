@@ -111,7 +111,8 @@ jest.mock('#components/atoms/FormInput', () => {
   };
 });
 
-const TOTAL_NEEDED = 'Enter what you paid for this line.';
+const TOTAL_NEEDED =
+  "Enter what you paid for this line, or leave it empty if the receipt doesn't show it.";
 
 const MILK = { index: 0, printed: 'MILK 2%', price: 2.5 };
 
@@ -198,21 +199,32 @@ describe('the total paid on a receipt line', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it.each(['', '0'])(
-    'asks for what was paid when the total is %p',
-    async typed => {
-      const { onSave } = renderSheet();
+  it('asks for what was paid when the total is 0 and no discount made it free', async () => {
+    const { onSave } = renderSheet();
 
-      typeTotal(typed);
-      fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+    typeTotal('0');
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-      await drainTimers();
-      expect(screen.getByTestId('field-Total paid-error')).toHaveTextContent(
-        TOTAL_NEEDED,
-      );
-      expect(onSave).not.toHaveBeenCalled();
-    },
-  );
+    await drainTimers();
+    expect(screen.getByTestId('field-Total paid-error')).toHaveTextContent(
+      TOTAL_NEEDED,
+    );
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  // IN-01: an unreadable total is left empty and the line still goes in, its
+  // price unknown rather than zero.
+  it('saves an emptied total as a price the receipt did not show', async () => {
+    const { onSave } = renderSheet();
+
+    typeTotal('');
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ price: null }),
+    );
+  });
 
   it('saves a line its discount made free at nothing paid', async () => {
     const { onSave } = renderSheet({ ...MILK, price: 0, discount: 2.5 });

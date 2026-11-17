@@ -110,7 +110,7 @@
       "dontAdd": "No añadir esta línea",
       "needsUnit": "Indica una unidad para añadirlo, como 2 L o 500 g.",
       "needsAmount": "¿Cuánto compraste en total en esta línea? Tu lista pide {{amount}}.",
-      "totalNeeded": "Introduce lo que pagaste por esta línea.",
+      "totalNeeded": "Introduce lo que pagaste por esta línea, o déjalo vacío si el recibo no lo muestra.",
       "totalsTitle": "Las líneas no suman lo que dice el recibo",
       "totalsBody": "Los artículos leídos suman {{counted}}, pero el recibo dice {{printed}}. Puede que falte una línea, así que compara la lista con el recibo antes de añadir.",
       "listIncompleteTitle": "Tu lista es demasiado larga para revisarla entera",

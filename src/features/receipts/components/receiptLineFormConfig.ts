@@ -47,12 +47,15 @@ export const receiptLineSchema: ObjectSchema<ReceiptLineFormValues> = object({
   quantityInput: quantityRule('errors.invalidQuantity'),
   unitValue: string().defined(),
   unitId: string().nullable().defined(),
+  // Empty is a total the receipt left unread, recorded as unknown; a stated
+  // one is a real amount, and zero only where a discount made the line free.
   priceInput: string()
     .defined()
     .test(
       'paid',
       lazyMessage('receipts.review.totalNeeded'),
       (value, { options }) => {
+        if (value.trim() === '') return true;
         const paid = parseMoneyInput(value);
         const free = isRecord(options.context) && options.context.free === true;
         return paid != null && (paid > 0 || free);

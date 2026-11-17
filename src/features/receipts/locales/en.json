@@ -110,7 +110,7 @@
       "dontAdd": "Don't add this line",
       "needsUnit": "Give it a unit to add it, like 2 L or 500 g.",
       "needsAmount": "How much did this line buy in all? Your list asks for {{amount}}.",
-      "totalNeeded": "Enter what you paid for this line.",
+      "totalNeeded": "Enter what you paid for this line, or leave it empty if the receipt doesn't show it.",
       "totalsTitle": "The lines don't add up to the receipt",
       "totalsBody": "The items read add up to {{counted}}, but the receipt says {{printed}}. A line may have been missed, so check the list against the receipt before adding.",
       "listIncompleteTitle": "Your list is too long to check in full",

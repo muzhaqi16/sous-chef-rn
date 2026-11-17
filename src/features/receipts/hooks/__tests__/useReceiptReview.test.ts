@@ -598,11 +598,6 @@ describe('useReceiptReview', () => {
 
   it.each<[string, Partial<ReceiptLineChoice>, string]>([
     [
-      'no price was read',
-      { price: null },
-      'Enter what you paid for this line.',
-    ],
-    [
       'it was bought in a unit the device cannot name',
       { unitText: 'flagon' },
       'Give it a unit to add it',
@@ -630,6 +625,19 @@ describe('useReceiptReview', () => {
       expect(review().pendingCount).toBe(1);
     },
   );
+
+  // IN-01: a line whose price went unread goes in with the rest, nothing
+  // typed, its cost unknown: no total is stated, never zero.
+  it('adds a line whose price was not read, stating no total for it', async () => {
+    const { choose, checkIn, addChosen } = await setup();
+    await choose({ 1: { ...MILK, price: null }, 3: PICKED_BANANAS });
+
+    expect(await addChosen()).toMatchObject({ sent: 2, held: 0 });
+
+    const [milk] = sent(checkIn).filter(line => line.clientId === '1');
+    expect(milk).toBeDefined();
+    expect(milk).not.toHaveProperty('totalPaid');
+  });
 
   it('says a line refused with no code this build knows was not added', async () => {
     const { review, run } = await setup();

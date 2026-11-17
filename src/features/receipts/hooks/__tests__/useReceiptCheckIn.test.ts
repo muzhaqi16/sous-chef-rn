@@ -128,6 +128,32 @@ describe('useReceiptCheckIn', () => {
     });
   });
 
+  // IN-01: the spinach whose price went unread lands with the rest, its cost
+  // unknown on the row before the answer and in what is sent, never zero.
+  it('shows a line whose price went unread at no cost, and sends no total for it', async () => {
+    const cache = makeCache();
+    const checkIn = answering();
+    const { result } = renderHookWithApollo(
+      () => useReceiptCheckIn(undefined),
+      { cache, operationMocks: [checkIn.mock] },
+    );
+    const { totalPaid: _unread, ...unpriced } = line(0).input;
+
+    let costBefore: unknown = 'unread';
+    await act(async () => {
+      const sending = result.current.checkIn(receipt(checkInIds()), [
+        { ...line(0), input: unpriced },
+      ]);
+      costBefore = cache.extract(true)['PantryItem:pi-0']?.totalCost;
+      await sending;
+    });
+
+    expect(costBefore ?? null).toBeNull();
+    const [sentLine] = sentLinesOf(checkIn.fired[0] ?? {});
+    expect(sentLine).toMatchObject({ clientId: '0' });
+    expect(sentLine).not.toHaveProperty('totalPaid');
+  });
+
   describe('a store new to the household', () => {
     beforeEach(() => {
       jest.useFakeTimers();

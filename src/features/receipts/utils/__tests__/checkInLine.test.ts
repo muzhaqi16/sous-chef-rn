@@ -150,7 +150,6 @@ describe('checkInLineOf', () => {
   it.each([
     ['item', lineChoice({ itemId: null, itemName: '  ', price: 1 })],
     ['unit', lineChoice({ itemId: 'item-1', quantity: 0.5, price: 1 })],
-    ['price', lineChoice({ itemId: 'item-1', price: null })],
     ['price', lineChoice({ itemId: 'item-1', price: 0 })],
   ])('asks for the %s a line lacks', (needs, choice) => {
     expect(
@@ -161,5 +160,31 @@ describe('checkInLineOf', () => {
         heldUnit: null,
       }),
     ).toEqual({ needs });
+  });
+
+  // IN-01: the spinach whose price went unread goes in at once, its cost
+  // unknown: no total is stated, so the API observes no price and counts none.
+  it('sends a line whose total went unread with no total, never zero', () => {
+    const result = checkInLineOf({
+      line: { index: 2, printed: 'SPINACH 10OZ' },
+      choice: lineChoice({ itemId: 'item-spinach', price: null }),
+      ids: IDS,
+      heldUnit: null,
+    });
+
+    expect(result).toMatchObject({ input: { item: { id: 'item-spinach' } } });
+    expect(result).not.toHaveProperty('input.totalPaid');
+  });
+
+  it('states a coupon on a line whose total went unread', () => {
+    const result = checkInLineOf({
+      line: MAYO,
+      choice: lineChoice({ itemId: 'item-mayo', price: null }),
+      ids: IDS,
+      heldUnit: null,
+    });
+
+    expect(result).toMatchObject({ input: { discount: 1 } });
+    expect(result).not.toHaveProperty('input.totalPaid');
   });
 });

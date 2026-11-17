@@ -46,6 +46,8 @@ const itemOf = (
  * The check-in's input for one confirmed line, or what it still needs. The
  * total is what was paid after the line's discounts, which it states apart, so
  * the API records the original price; a line its discount made free is paid 0.
+ * A total the receipt left unread goes unstated: the API records an unknown
+ * price, never zero.
  */
 export function checkInLineOf({
   line,
@@ -65,7 +67,7 @@ export function checkInLineOf({
       ? line.discount
       : undefined;
   const { price } = choice;
-  if (price === null || (toCents(price) <= 0 && discount === undefined)) {
+  if (price !== null && toCents(price) <= 0 && discount === undefined) {
     return { needs: 'price' };
   }
   return {
@@ -78,7 +80,7 @@ export function checkInLineOf({
         : { pantryItemId: ids.pantryItemId }),
       item,
       amount,
-      totalPaid: price,
+      ...(price === null ? {} : { totalPaid: price }),
       ...(discount === undefined ? {} : { discount }),
       ...(listLine ? { shoppingListItemId: listLine.id } : {}),
       rawText: line.printed,

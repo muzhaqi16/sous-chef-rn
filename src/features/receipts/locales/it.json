@@ -110,7 +110,7 @@
       "dontAdd": "Non aggiungere questa riga",
       "needsUnit": "Indica un'unità per aggiungerlo, come 2 L o 500 g.",
       "needsAmount": "Quanto hai comprato in tutto con questa riga? La tua lista chiede {{amount}}.",
-      "totalNeeded": "Inserisci quanto hai pagato per questa riga.",
+      "totalNeeded": "Inserisci quanto hai pagato per questa riga, oppure lascia vuoto se lo scontrino non lo indica.",
       "totalsTitle": "Le righe non tornano con lo scontrino",
       "totalsBody": "Gli articoli letti fanno {{counted}}, ma lo scontrino dice {{printed}}. Potrebbe mancare una riga: confronta l'elenco con lo scontrino prima di aggiungere.",
       "listIncompleteTitle": "La tua lista è troppo lunga per controllarla tutta",
