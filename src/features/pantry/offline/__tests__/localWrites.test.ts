@@ -195,11 +195,17 @@ const use = (
     ...inputs,
   } satisfies DrawStockInputs);
 
-const restock = ({ writes }: Device, delta: number | null, id = 'held') =>
+const restock = (
+  { writes }: Device,
+  delta: number | null,
+  id = 'held',
+  contents?: AddStockInputs['contents'],
+) =>
   writes.begin(RestockPantryItemDocument, { input: { id } }, {
     delta,
     now: NOW,
     pantryId: PANTRY_ID,
+    contents,
   } satisfies AddStockInputs);
 
 const setTo = (
@@ -581,6 +587,46 @@ describe('a restock', () => {
     expect(rowOf(device)?.amountLeft).toMatchObject({
       value: 19,
       unitId: 'can',
+    });
+  });
+
+  // IN-05: each batch keeps its own size; the stack's default restates none.
+  describe('a jar of another size', () => {
+    const JAR: Partial<Row> = {
+      unit: unitOf('jar', UnitType.Count),
+      netWeightUnit: unitOf('oz', UnitType.Weight),
+      netWeight: 16,
+      ...held(1),
+      remainingNetWeight: 16,
+    };
+
+    it('adds its own contents beside the held jar, which keeps its size', () => {
+      const device = stocked(JAR);
+
+      restock(device, 1, 'held', {
+        size: { netWeight: 24, netWeightUnitId: 'oz' },
+      });
+
+      // 16 + 24 = 40 oz, never 2 x 16; the default stays the held jar's 16.
+      expect(rowOf(device)).toMatchObject({
+        netWeight: 16,
+        remainingNetWeight: 40,
+        heldQuantity: 2,
+        stockBreakdown: { fullPackages: 2 },
+      });
+    });
+
+    it('leaves the contents unknown for a size in a unit the stack does not hold', () => {
+      const device = stocked(JAR);
+
+      restock(device, 1, 'held', {
+        size: { netWeight: 700, netWeightUnitId: 'g' },
+      });
+
+      expect(rowOf(device)).toMatchObject({
+        remainingNetWeight: null,
+        heldQuantity: 2,
+      });
     });
   });
 

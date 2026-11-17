@@ -261,6 +261,31 @@ describe('writeLocalPantryItem', () => {
     expect(detail(cache, 'row-8').result?.pantryItem?.unit?.id).toBe('');
   });
 
+  // IN-05: an acquisition keeps the size it was bought in.
+  it('holds what two jars of a stated size contain, in that size', () => {
+    const cache = makeCache();
+
+    writeLocalPantryItem(
+      cache,
+      'row-9',
+      {
+        pantryId: 'pantry-1',
+        itemName: 'Salsa',
+        quantity: 2,
+        unitId: 'unit-jar',
+        packageSize: { netWeight: 24, netWeightUnitId: 'unit-oz' },
+      },
+      NOW,
+    );
+
+    // 2 x 24 = 48 oz, in the jar's own size.
+    expect(detail(cache, 'row-9').result?.pantryItem).toMatchObject({
+      netWeight: 24,
+      remainingNetWeight: 48,
+      netWeightUnit: { id: 'unit-oz' },
+    });
+  });
+
   // Offline, the row is all there is until the queue drains: a picked
   // location must place it, as a typed one does.
   it('shows a picked location as the pantry holds it', () => {
