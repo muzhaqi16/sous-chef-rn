@@ -194,5 +194,20 @@ export function useReceiptMatches(
       pickedStoreId || resolved?.store
         ? null
         : resolved?.completableStore ?? null,
+    /**
+     * The places the receipt's printed address could be, when the search could
+     * not settle on one: asked, never placed. None once a store is placed.
+     */
+    storeChoices:
+      pickedStoreId || resolved?.store
+        ? []
+        : (resolved?.storeChoices ?? []).map(
+            ({ placeId, name, address, credit }) => ({
+              placeId,
+              name,
+              address,
+              credit,
+            }),
+          ),
   };
 }

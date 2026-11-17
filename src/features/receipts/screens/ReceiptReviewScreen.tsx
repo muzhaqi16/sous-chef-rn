@@ -16,6 +16,8 @@ import { DataStateView } from '#components/organisms/DataStateView';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { storeBranchLabel } from '#domain/stores';
+import { OPENSTREETMAP_COPYRIGHT } from '#domain/openStreetMap';
+import { Link } from '#components/atoms/Link';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useReceiptFlowExits } from './receiptFlowExits';
 import { toastService } from '#/services/toastService';
@@ -126,6 +128,8 @@ export const ReceiptReviewScreen: React.FC = () => {
     proposedStoreName,
     storeLocation,
     storeOffer,
+    storeChoices,
+    chooseStoreChoice,
     storeUnrecognized,
     purchasedOn,
     dayIsScanDay,
@@ -528,6 +532,45 @@ export const ReceiptReviewScreen: React.FC = () => {
                     testID={receiptsTestIDs.reviewStoreOffer}
                   />
                 ) : null}
+                {storeChoices.length > 0 ? (
+                  <View style={styles.storeChoices}>
+                    <Text role="bodyStrong">
+                      {t('receipts.review.storeChoicesTitle')}
+                    </Text>
+                    {storeChoices.map(choice => (
+                      <ItemCard
+                        key={choice.placeId}
+                        id={choice.placeId}
+                        title={choice.name}
+                        subtitle={choice.address}
+                        leftElement={
+                          <Icon
+                            name="storefront-outline"
+                            size="md"
+                            tone="primary"
+                          />
+                        }
+                        onPress={() => {
+                          void chooseStoreChoice(choice.placeId);
+                        }}
+                        testID={receiptsTestIDs.reviewStoreChoice(
+                          choice.placeId,
+                        )}
+                      />
+                    ))}
+                    {[
+                      ...new Set(storeChoices.map(choice => choice.credit)),
+                    ].map(credit => (
+                      <Link
+                        key={credit}
+                        variant="caption"
+                        href={OPENSTREETMAP_COPYRIGHT}
+                      >
+                        {credit}
+                      </Link>
+                    ))}
+                  </View>
+                ) : null}
                 {dayIsScanDay ? (
                   <View>
                     {dateField}
@@ -635,6 +678,9 @@ const styles = StyleSheet.create(theme => ({
   },
   storeWhereText: {
     flexShrink: 1,
+  },
+  storeChoices: {
+    gap: theme.spacing.sm,
   },
   // A price over the discount that made it.
   price: {

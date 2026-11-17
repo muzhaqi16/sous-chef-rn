@@ -3,6 +3,7 @@ import { useApolloClient, useFragment } from '@apollo/client/react';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { useToday } from '#hooks/app/useToday';
 import { errorService } from '#/services/errorService';
+import { toastService } from '#/services/toastService';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
@@ -50,6 +51,7 @@ import { merchantInputOf } from '../utils/merchantInput';
 import { storeOfferOf } from '../utils/storeOfferOf';
 import { purchaseMomentOf } from '../utils/receiptDate';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
+import { useCreateStoreFromPlace } from '#features/catalog/hooks/useCreateStoreFromPlace';
 import { useUsualStores } from '#features/catalog/hooks/useUsualStores';
 import { useUsualStoreWrites } from '#features/catalog/hooks/useUsualStoreWrites';
 import type { NewUsualStore } from '#features/catalog/cache/usualStores';
@@ -208,6 +210,7 @@ export function useReceiptReview() {
     resolvedStore,
     proposedStore,
     completableStore,
+    storeChoices,
   } = useReceiptMatches(
     lines.map(line => ({
       index: line.index,
@@ -411,6 +414,15 @@ export function useReceiptReview() {
     return created?.id;
   };
 
+  const { createStoreFromPlace } = useCreateStoreFromPlace();
+  // The place picked among those the printed address could be, made a store
+  // once for every household; it needs the search, so not offline.
+  const chooseStoreChoice = async (placeId: string) => {
+    const created = await createStoreFromPlace(placeId);
+    if (created) chooseStore(created);
+    else toastService.error(t('receipts.review.storeChoiceFailed'));
+  };
+
   /**
    * The receipt's store when it is new to the household, as the check-in adds
    * it on the server. Nothing is new while the household's stores were never
@@ -572,6 +584,13 @@ export function useReceiptReview() {
      * complete, offered before adding a new one; picked with `chooseStore`.
      */
     storeOffer,
+    /**
+     * The places the printed address could be, when the search could not
+     * settle on one; picked with `chooseStoreChoice`. Unpicked, the receipt's
+     * own name and address are added.
+     */
+    storeChoices,
+    chooseStoreChoice,
     /** Neither the receipt nor the API names the shop, so the user is asked for it. */
     storeUnrecognized: !resolvedStore && !draft?.parsed?.merchant,
     /** The day of the shop, YYYY-MM-DD; the scan's day when none was read. */

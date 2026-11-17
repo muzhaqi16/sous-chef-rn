@@ -24,6 +24,8 @@ export const receiptsTestIDs = {
   reviewStoreWhere: 'receipt-review-store-where',
   /** A store on file with no address, offered to take the receipt's. */
   reviewStoreOffer: 'receipt-review-store-offer',
+  reviewStoreChoice: (placeId: string) =>
+    `receipt-review-store-choice-${placeId}`,
   /** The purchase date field; its calendar is the kit's `datePickerCalendar`. */
   reviewDate: 'receipt-review-date',
   /** The banner that asks the API again after a failed match. */

@@ -24,6 +24,14 @@ query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
       id
       name
     }
+    # No store is placed and the place search could not settle on one: the
+    # listings to ask which (at most five), each made a store on a pick.
+    storeChoices {
+      placeId
+      name
+      address
+      credit
+    }
     lines {
       clientId
       confidence

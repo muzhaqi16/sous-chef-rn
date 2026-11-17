@@ -1,8 +1,0 @@
-# The currencies a check-in can be booked in: the API refuses a whole check-in
-# naming any other.
-query ReceiptCurrencies {
-  currencies(isActive: true) {
-    id
-    code
-  }
-}

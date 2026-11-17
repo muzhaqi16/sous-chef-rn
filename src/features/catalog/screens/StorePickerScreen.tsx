@@ -26,6 +26,7 @@ import {
   type FoundOption,
   type StoreChoice,
 } from '#domain/stores';
+import { OPENSTREETMAP_COPYRIGHT } from '#domain/openStreetMap';
 import { useNearMe } from '#features/catalog/hooks/useNearMe';
 import { useStoreSearch } from '#features/catalog/hooks/useStoreSearch';
 import {
@@ -39,7 +40,6 @@ import { StoreRow } from '#features/catalog/ui/StoreRow';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 
 const US_ZIP = /^\d{5}$/;
-const OPENSTREETMAP_COPYRIGHT = 'https://www.openstreetmap.org/copyright';
 
 const optionOf = (choice: StoreChoice): FoundOption =>
   choice.store ? storeOption(choice.store) : chainOption(choice.chain);

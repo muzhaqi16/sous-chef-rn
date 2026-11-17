@@ -143,7 +143,10 @@
       "matchFailedTitle": "No se pudieron buscar los productos",
       "matchFailedBody": "Toca para reintentar cuando tengas conexión. También puedes elegir cada producto tú mismo.",
       "storeWhereHint": "Cambia la tienda",
-      "storeLearned": "{{store}} ahora es una de tus tiendas"
+      "storeLearned": "{{store}} ahora es una de tus tiendas",
+      "currencyUnsupported": "Este recibo está en {{currency}}, que aún no se puede registrar, así que no se añadió nada.",
+      "storeChoicesTitle": "¿Qué tienda era?",
+      "storeChoiceFailed": "No se pudo usar esa tienda. Revisa tu conexión e inténtalo de nuevo."
     },
     "photoSend": {
       "title": "¿Enviar la foto para leerla?",

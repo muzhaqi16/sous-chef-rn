@@ -55,11 +55,12 @@ import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { useReceiptReview } from '../useReceiptReview';
 import { UseReceiptReview_StoreFragmentDoc } from '../useReceiptReview.generated';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
+import { CreateStoreFromPlaceDocument } from '#features/catalog/hooks/useCreateStoreFromPlace.generated';
+import { toastService } from '#/services/toastService';
 import { RemoveUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { ResolveReceiptLinesDocument } from '../useReceiptMatches.generated';
 import { CreateReceiptCheckInDocument } from '../useReceiptCheckIn.generated';
-import { ReceiptCurrenciesDocument } from '../useReceiptCurrency.generated';
 import {
   UseHeldStores_ListFragmentDoc,
   UseHeldStores_StoreFragmentDoc,
@@ -664,37 +665,18 @@ describe('useReceiptReview', () => {
     );
   });
 
-  describe('the currency the receipt prints', () => {
-    const booked = () =>
-      recordMock(ReceiptCurrenciesDocument, {
-        data: { currencies: [{ id: 'cur-usd', code: 'USD' }] },
-      });
-    const printedIn = (currency: string) =>
-      seedKroger({
-        parsed: { ...parsedReceipt(KROGER_LINES, 'KROGER'), currency },
-      });
-
-    it('books the check-in in it', async () => {
-      printedIn('USD');
-      const { choose, checkIn, addChosen } = await setup({ mocks: [booked()] });
-      await choose({ 1: MILK });
-
-      await addChosen();
-
-      expect(fired(checkIn)[0]).toEqual(
-        expect.objectContaining({ currency: 'USD' }),
-      );
+  it('books the check-in in the currency the receipt prints, as read', async () => {
+    seedKroger({
+      parsed: { ...parsedReceipt(KROGER_LINES, 'KROGER'), currency: 'MXN' },
     });
+    const { choose, checkIn, addChosen } = await setup();
+    await choose({ 1: MILK });
 
-    it('names none the API does not book, which would refuse the whole receipt', async () => {
-      printedIn('MXN');
-      const { choose, checkIn, addChosen } = await setup({ mocks: [booked()] });
-      await choose({ 1: MILK });
+    await addChosen();
 
-      await addChosen();
-
-      expect(fired(checkIn)[0]).not.toHaveProperty('currency');
-    });
+    expect(fired(checkIn)[0]).toEqual(
+      expect.objectContaining({ currency: 'MXN' }),
+    );
   });
 
   it('adds on the scan day when the receipt printed none, and at its printed time on the day the user sets', async () => {
@@ -1135,6 +1117,108 @@ describe('useReceiptReview', () => {
       await drained(() => storeCreate.release());
       expect(checkIn.fired).toHaveLength(1);
       expect(storeCreate.fired).toHaveLength(1);
+    });
+  });
+
+  describe('asking which place the printed address is', () => {
+    const CHOICES = [
+      {
+        placeId: 'osm-1',
+        name: "Trader Joe's",
+        address: '6343 Penn Ave, Pittsburgh',
+        credit: '© OpenStreetMap contributors',
+      },
+      {
+        placeId: 'osm-2',
+        name: "Trader Joe's",
+        address: '6343 Penn Ave Suite 2, Pittsburgh',
+        credit: '© OpenStreetMap contributors',
+      },
+    ];
+    // The search could not settle on one place for the printed street.
+    const unsettled = () =>
+      recordMock(ResolveReceiptLinesDocument, {
+        data: {
+          resolveReceiptLines: {
+            ...RESOLVED.resolveReceiptLines,
+            store: null,
+            proposedStore: {
+              name: "Trader Joe's",
+              address: '6343 Penn Ave, Pittsburgh, PA 15206',
+              storeNumber: null,
+              chain: null,
+            },
+            storeChoices: CHOICES,
+          },
+        },
+        maxUsageCount: 1,
+      });
+    // Asked again for the picked store, which the API places.
+    const placed = () =>
+      recordMock(ResolveReceiptLinesDocument, {
+        data: {
+          resolveReceiptLines: {
+            ...RESOLVED.resolveReceiptLines,
+            store: { id: 'store-tj', name: "Trader Joe's" },
+            storeChoices: [],
+          },
+        },
+      });
+
+    it('checks in at the place picked, made a store', async () => {
+      seedKroger();
+      const fromPlace = recordMock(CreateStoreFromPlaceDocument, {
+        data: {
+          createStoreFromPlace: {
+            __typename: 'CreateStorePayload',
+            outcome: CreateOutcome.Created,
+            store: { id: 'store-tj', name: "Trader Joe's" },
+          },
+        },
+      });
+      const { review, choose, checkIn, addChosen } = await setup({
+        resolve: unsettled(),
+        mocks: [fromPlace, placed()],
+      });
+      expect(review().storeChoices).toEqual(CHOICES);
+      // Asked, never placed.
+      expect(review().store).toBeNull();
+
+      await drained(() => review().chooseStoreChoice('osm-2'));
+      await drainTimers();
+
+      expect(fired(fromPlace)).toEqual([{ placeId: 'osm-2' }]);
+      expect(review().store).toEqual({ id: 'store-tj', name: "Trader Joe's" });
+      expect(review().storeChoices).toEqual([]);
+
+      await choose({ 1: MILK });
+      await addChosen();
+
+      expect(fired(checkIn)[0]).toEqual(
+        expect.objectContaining({ storeId: 'store-tj' }),
+      );
+    });
+
+    it('keeps asking, and says why, when the place cannot be made a store', async () => {
+      seedKroger();
+      const shown = jest.spyOn(toastService, 'error');
+      const { review } = await setup({
+        resolve: unsettled(),
+        mocks: [
+          recordMock(CreateStoreFromPlaceDocument, {
+            error: new Error('Network request failed'),
+          }),
+        ],
+      });
+
+      await drained(() => review().chooseStoreChoice('osm-1'));
+      await drainTimers();
+
+      expect(shown).toHaveBeenCalledWith(
+        t('receipts.review.storeChoiceFailed'),
+      );
+      expect(review().store).toBeNull();
+      expect(review().storeChoices).toEqual(CHOICES);
     });
   });
 

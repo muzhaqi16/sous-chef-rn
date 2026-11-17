@@ -386,7 +386,12 @@ export function useReceiptCheckIn(listId: string | undefined) {
         markUnsent(
           unsent.flatMap(later => later.chunk.map(line => line.index)),
         );
-        const reason = settled.failure?.body ?? t('errors.addItemFailedRetry');
+        const reason =
+          settled.failure?.field === 'currency' && fields.currency
+            ? t('receipts.review.currencyUnsupported', {
+                currency: fields.currency,
+              })
+            : settled.failure?.body ?? t('errors.addItemFailedRetry');
         toastService.error(reason);
         return { status: 'refused', reason };
       }

@@ -143,7 +143,10 @@
       "matchFailedTitle": "Couldn't look up the products",
       "matchFailedBody": "Tap to try again once you are online. You can also choose each product yourself.",
       "storeWhereHint": "Changes the store",
-      "storeLearned": "{{store}} is now one of your stores"
+      "storeLearned": "{{store}} is now one of your stores",
+      "currencyUnsupported": "This receipt is in {{currency}}, which can't be recorded yet, so nothing was added.",
+      "storeChoicesTitle": "Which store was it?",
+      "storeChoiceFailed": "Couldn't use that store. Check your connection and try again."
     },
     "photoSend": {
       "title": "Send the photo to be read?",

@@ -38,6 +38,13 @@ let mockStoreLocation: {
   storeNumber: string | null;
 } | null = null;
 const mockChooseStore = jest.fn();
+let mockStoreChoices: {
+  placeId: string;
+  name: string;
+  address: string;
+  credit: string;
+}[] = [];
+const mockChooseStoreChoice = jest.fn();
 const mockAddChosen = jest.fn<
   Promise<{
     sent: number;
@@ -67,6 +74,8 @@ jest.mock('../../hooks/useReceiptReview', () => ({
     proposedStoreName: mockStoreOffer ? 'Giant Eagle' : null,
     storeLocation: mockStoreLocation,
     storeOffer: mockStoreOffer,
+    storeChoices: mockStoreChoices,
+    chooseStoreChoice: mockChooseStoreChoice,
     storeUnrecognized: false,
     purchasedOn: '2026-10-15',
     dayIsScanDay: false,
@@ -616,6 +625,7 @@ describe('ReceiptReviewScreen store', () => {
   afterEach(() => {
     mockStoreOffer = null;
     mockStoreLocation = null;
+    mockStoreChoices = [];
   });
 
   it('says which branch of the chain it is, and opens the store field from it', async () => {
@@ -668,6 +678,24 @@ describe('ReceiptReviewScreen store', () => {
       id: 'store-label',
       name: 'Giant Eagle (home)',
     });
+  });
+
+  it('asks which place the printed address is, with its credit, and picks one on a tap', async () => {
+    const credit = '© OpenStreetMap contributors';
+    mockStoreChoices = [
+      { placeId: 'osm-1', name: 'Giant Eagle', address: '1 Penn Ave', credit },
+      { placeId: 'osm-2', name: 'Giant Eagle', address: '9 Penn Ave', credit },
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.getByText('Which store was it?')).toBeTruthy();
+    expect(screen.getByText('1 Penn Ave')).toBeTruthy();
+    // One credit for the places it names, however many there are.
+    expect(screen.getAllByText(credit)).toHaveLength(1);
+
+    await userEvent.setup().press(screen.getByText('9 Penn Ave'));
+
+    expect(mockChooseStoreChoice).toHaveBeenCalledWith('osm-2');
   });
 
   it('offers no store when there is none to complete', () => {
