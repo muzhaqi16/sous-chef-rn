@@ -661,6 +661,18 @@ describe('using some', () => {
     },
   );
 
+  // USE-05 offline: the device has no route from ounces to the stack's unit,
+  // so the use waits for the server's conversion; a provable use never does.
+  it('holds a queued use in a unit it cannot convert, and still moves a provable one', async () => {
+    const { result, cache } = renderActions([queuedUsage(), queuedUsage()]);
+
+    await consume(result, { quantity: 4, unitId: 'unit-oz' });
+    expect(cachedItem(cache)).toMatchObject({ quantity: 5, heldQuantity: 5 });
+
+    await consume(result, { quantity: 2 });
+    expect(cachedItem(cache)).toMatchObject({ quantity: 3, heldQuantity: 3 });
+  });
+
   it('draws portions stated in a unit that does not convert to the stack', async () => {
     const { result, cache } = renderActions([queuedUsage()], seedSoup());
 
