@@ -238,6 +238,7 @@ describe('fromServerReceipt', () => {
         __typename: 'ParsedReceipt',
         purchasedOn: null,
         purchaseTime: null,
+        currency: null,
         merchant: merchant('KROGER'),
         lines: [
           line({
@@ -362,11 +363,13 @@ describe('outcomeOf', () => {
     warnings = [],
     purchasedOn = null,
     purchaseTime = null,
+    currency = null,
     lines = [MILK],
   }: {
     warnings?: Warning[];
     purchasedOn?: string | null;
     purchaseTime?: string | null;
+    currency?: string | null;
     lines?: ServerLine[];
   } = {}): ReceiptParseReadersFragment => ({
     __typename: 'ReceiptParse',
@@ -377,6 +380,7 @@ describe('outcomeOf', () => {
       __typename: 'ParsedReceipt',
       purchasedOn,
       purchaseTime,
+      currency,
       merchant: merchant('WALMART'),
       lines,
     },
@@ -414,6 +418,16 @@ describe('outcomeOf', () => {
     expect(outcomeOf(parsed())).toMatchObject({
       printedStore: { name: 'WALMART' },
     });
+  });
+
+  it('keeps the currency the receipt prints', () => {
+    expect(outcomeOf(parsed({ currency: 'USD' }))).toMatchObject({
+      parsed: { currency: 'USD' },
+    });
+  });
+
+  it('names no currency where the receipt decides none', () => {
+    expect(outcomeOf(parsed())).not.toHaveProperty('parsed.currency');
   });
 
   it('calls a receipt the server could barely read unreadable, never an empty review', () => {

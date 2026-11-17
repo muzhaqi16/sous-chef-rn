@@ -59,6 +59,7 @@ import { RemoveUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreW
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { ResolveReceiptLinesDocument } from '../useReceiptMatches.generated';
 import { CreateReceiptCheckInDocument } from '../useReceiptCheckIn.generated';
+import { ReceiptCurrenciesDocument } from '../useReceiptCurrency.generated';
 import {
   UseHeldStores_ListFragmentDoc,
   UseHeldStores_StoreFragmentDoc,
@@ -661,6 +662,39 @@ describe('useReceiptReview', () => {
     expect(fired(checkIn)[0]).toEqual(
       expect.objectContaining({ receiptParseId: 'parse-1', orderDiscount: 2 }),
     );
+  });
+
+  describe('the currency the receipt prints', () => {
+    const booked = () =>
+      recordMock(ReceiptCurrenciesDocument, {
+        data: { currencies: [{ id: 'cur-usd', code: 'USD' }] },
+      });
+    const printedIn = (currency: string) =>
+      seedKroger({
+        parsed: { ...parsedReceipt(KROGER_LINES, 'KROGER'), currency },
+      });
+
+    it('books the check-in in it', async () => {
+      printedIn('USD');
+      const { choose, checkIn, addChosen } = await setup({ mocks: [booked()] });
+      await choose({ 1: MILK });
+
+      await addChosen();
+
+      expect(fired(checkIn)[0]).toEqual(
+        expect.objectContaining({ currency: 'USD' }),
+      );
+    });
+
+    it('names none the API does not book, which would refuse the whole receipt', async () => {
+      printedIn('MXN');
+      const { choose, checkIn, addChosen } = await setup({ mocks: [booked()] });
+      await choose({ 1: MILK });
+
+      await addChosen();
+
+      expect(fired(checkIn)[0]).not.toHaveProperty('currency');
+    });
   });
 
   it('adds on the scan day when the receipt printed none, and at its printed time on the day the user sets', async () => {

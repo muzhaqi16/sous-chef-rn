@@ -22,7 +22,7 @@ import { toastService } from '#/services/toastService';
 import { rowType } from '#/theme/foundations/type';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
-import { useMoney } from '#domain/money';
+import { useReceiptMoney } from '../hooks/useReceiptCurrency';
 import { useToday } from '#hooks/app/useToday';
 import { fromDateKey, toDateKey } from '#/utils/dateUtils';
 import { EARLIEST_RECEIPT_DAY } from '#features/receipts/utils/receiptDate';
@@ -115,7 +115,7 @@ const STATUS_LOOK: Record<ReceiptRowStatus, StatusLook> = {
 
 export const ReceiptReviewScreen: React.FC = () => {
   const { t } = useTranslation();
-  const money = useMoney();
+  const money = useReceiptMoney();
   const today = useToday();
   const { toPantryMain } = useAppNavigation();
   const exits = useReceiptFlowExits();

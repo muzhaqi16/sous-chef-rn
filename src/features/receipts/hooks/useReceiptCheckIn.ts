@@ -64,6 +64,7 @@ export interface ReceiptToCheckIn
     | 'merchant'
     | 'merchantHeader'
     | 'orderDiscount'
+    | 'currency'
   > {
   /** One per send: a receipt over the API's cap goes as several. */
   checkInIds: readonly string[];

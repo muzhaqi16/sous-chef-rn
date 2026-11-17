@@ -60,6 +60,7 @@ import {
 } from '#domain/stores';
 import { toDateKey } from '#/utils/dateUtils';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { useReceiptCurrency } from './useReceiptCurrency';
 
 // The chain and its store number print above the items (`ALDI` / `Store #027`).
 const HEADER_LINES = 6;
@@ -156,6 +157,7 @@ const stockedBy = (
 export function useReceiptReview() {
   const { t } = useTranslation();
   const draft = useReceiptDraft();
+  const currency = useReceiptCurrency();
   const {
     chooseLine,
     setPurchasedOn,
@@ -529,6 +531,7 @@ export function useReceiptReview() {
           ...(phoneMerchant ? { merchant: phoneMerchant } : {}),
           ...(!store && merchantHeader ? { merchantHeader } : {}),
           ...(orderDiscount ? { orderDiscount } : {}),
+          ...(currency ? { currency } : {}),
         },
         toSend,
       );

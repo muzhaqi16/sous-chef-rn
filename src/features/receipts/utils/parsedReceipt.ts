@@ -36,5 +36,7 @@ export interface ReceiptTotalsGap {
 
 export interface ParsedReceipt {
   merchant?: string;
+  /** The ISO 4217 code the receipt prints, where its reading decided one. */
+  currency?: string;
   lines: ParsedReceiptLine[];
 }

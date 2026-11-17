@@ -38,6 +38,7 @@ query ReceiptParse($id: ID!) {
       }
       purchasedOn
       purchaseTime
+      currency
       lines {
         text
         kind

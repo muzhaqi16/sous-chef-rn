@@ -2,6 +2,7 @@
 fragment ReceiptParseReaders on ReceiptParse {
   id
   receipt {
+    currency
     lines {
       amount
       appliesTo

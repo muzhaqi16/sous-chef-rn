@@ -17,6 +17,7 @@ type ServerReceiptLine = ServerReceipt['lines'][number];
  */
 interface ApiReceipt {
   merchant: Pick<ServerReceipt['merchant'], 'name'>;
+  currency?: string | null;
   lines: readonly (Omit<
     ServerReceiptLine,
     '__typename' | 'kind' | 'measureUnit'
@@ -62,7 +63,12 @@ const toLine = (line: ApiReceiptLine, index: number): ParsedReceiptLine => ({
 export function fromServerReceipt(receipt: ApiReceipt): ParsedReceipt {
   const lines = receipt.lines.map(toLine);
   const merchant = receipt.merchant.name?.trim();
-  return merchant ? { merchant, lines } : { lines };
+  const currency = firstNonBlank(receipt.currency)?.trim();
+  return {
+    ...(merchant ? { merchant } : {}),
+    ...(currency ? { currency } : {}),
+    lines,
+  };
 }
 
 /** The shop a reading read, the server's or the rules' on the phone, when it read a name. */

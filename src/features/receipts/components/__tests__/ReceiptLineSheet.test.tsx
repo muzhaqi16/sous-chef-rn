@@ -72,6 +72,14 @@ jest.mock('#features/catalog/hooks/useResolveUnit', () => ({
   }),
 }));
 
+// The receipt's own currency is read through the API; here, the account's.
+jest.mock('../../hooks/useReceiptCurrency', () => ({
+  useReceiptMoney: () =>
+    jest
+      .requireActual<typeof import('#domain/money')>('#domain/money')
+      .useMoney(),
+}));
+
 jest.mock('#components/molecules/FractionInput', () => ({
   FractionInput: () => null,
 }));

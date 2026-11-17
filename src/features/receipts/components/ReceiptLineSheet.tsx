@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#/i18n';
-import { useMoney } from '#domain/money';
+import { useReceiptMoney } from '../hooks/useReceiptCurrency';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { Text } from '#components/atoms/Text';
@@ -65,7 +65,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   onRemove,
 }) => {
   const { t } = useTranslation();
-  const money = useMoney();
+  const money = useReceiptMoney();
   const { resolveUnitId } = useResolveUnit();
   const { control, handleSubmit, getValues, setValue, setError } = useForm<
     ReceiptLineFormValues,
