@@ -5522,8 +5522,6 @@ type Item {
   This item's records in external catalogs such as USDA or Open Food Facts, with each source's own data, oldest first. isPrimary marks the authoritative one.
   """
   externalSourcesConnection(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
     """Page size: default 20, at most 100"""
     first: Int
   ): ExternalSourceMappingConnection!
@@ -8543,15 +8541,16 @@ type Mutation {
   """
   Record a household's answers about stacks of one pantry it was asked to
   check (Pantry.stockToConfirm). Every entry that applies confirms its stack
-  now. STILL_HAVE changes nothing else and advances no version. SOME_LEFT and
+  at checkedAt. STILL_HAVE changes nothing else and advances no version. SOME_LEFT and
   USED_UP correct the stack to the count found, as adjustPantryItemQuantity
   does, with the reason "Stock check": counted neither as consumption nor as
   waste. THREW_OUT records everything held as waste. A stack holding nothing
   records the confirmation alone. An entry naming a stack that is not an
-  active stack of the pantry, or carrying a field its answer does not take,
-  fails on its own; the entries that apply commit together, computed from the
-  stacks as they are now, and a replay applies nothing twice. Each changed
-  stack is published to pantry subscribers after the check commits.
+  active stack of the pantry, carrying a field its answer does not take, or
+  whose expectedVersion the stack has moved past, fails on its own; the
+  entries that apply commit together, computed from the stacks as they are
+  now, and a replay applies nothing twice and retries no failed entry. Each
+  changed stack is published to pantry subscribers after the check commits.
   """
   recordPantryStockCheck(input: RecordPantryStockCheckInput!): RecordPantryStockCheckResult!
   """Refresh an expired access token using a refresh token."""
@@ -10523,12 +10522,33 @@ type PantryStats {
 """One answer about one stack in recordPantryStockCheck"""
 input PantryStockCheckEntryInput {
   answer: StockCheckAnswer!
+  """
+  The stack's version as the person saw it. An entry whose stack has changed
+  since fails alone with VERSION_CONFLICT and writes nothing: a count is
+  never applied to stock it did not see. Omitted: the entry applies to the
+  stack as it is now.
+  """
+  expectedVersion: Int
   """The stack the answer is about: an active stack of the request's pantry"""
   pantryItemId: ID!
   """
-  SOME_LEFT only, and required there: what is left, zero or more, in the stack's tracking unit
+  SOME_LEFT only, and required there: what is left, zero or more, in the
+  stack's tracking unit or in quantityUnitId. With remainingNetWeight it is
+  the count of packages, as adjustPantryItemQuantity's newQuantity is.
   """
   quantity: Float
+  """
+  SOME_LEFT only: the unit quantity is stated in, as AdjustPantryItemQuantityInput.newQuantityUnitId
+  """
+  quantityUnitId: ID
+  """
+  SOME_LEFT only: what is left in the open package, as AdjustPantryItemQuantityInput.remainingNetWeight
+  """
+  remainingNetWeight: Float
+  """
+  SOME_LEFT only: the unit remainingNetWeight is stated in, as AdjustPantryItemQuantityInput.remainingNetWeightUnitId
+  """
+  remainingNetWeightUnitId: ID
   """THREW_OUT only: why it was thrown out"""
   wasteReason: WasteReason
 }
@@ -13467,6 +13487,13 @@ type RecipeSuggestionEdge {
 }
 
 input RecordPantryStockCheckInput {
+  """
+  When the check was made; when it was received if omitted. At most a day
+  ahead of now and no older than the offline replay window, else the check
+  is refused on this field. An older check arriving after a newer one never
+  moves a stack's latest confirmation back.
+  """
+  checkedAt: DateTime
   """1 to 50 answers, each about a different stack"""
   entries: [PantryStockCheckEntryInput!]!
   """
