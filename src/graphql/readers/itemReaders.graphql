@@ -26,17 +26,6 @@ fragment ItemReaders on Item {
     }
     isPrimary
   }
-  defaultConsumeUnit {
-    id
-    localizedSymbol
-    localizedSymbolForms {
-      one
-      other
-    }
-    name
-    symbol
-    type
-  }
   description
   displayUnit {
     id
@@ -90,6 +79,17 @@ fragment ItemReaders on Item {
     ...ItemPhotoReaders
   }
   primaryUpc
+  quickAddUnit {
+    id
+    localizedSymbol
+    localizedSymbolForms {
+      one
+      other
+    }
+    name
+    symbol
+    type
+  }
   shelfLifeDays
   shelfLifeOpenedDays
   shownNutrition {
