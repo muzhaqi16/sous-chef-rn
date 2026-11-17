@@ -3,7 +3,8 @@
 # ============================================
 
 query GetStorageLocations($homeId: ID!) {
-  storageLocations(homeId: $homeId) {
+  # The API's largest page: a home's locations nest, and the screen reads no next page.
+  storageLocations(homeId: $homeId, first: 100) {
     edges {
       node {
         version

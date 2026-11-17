@@ -176,7 +176,7 @@ query HomeFeedSummary($id: ID!) {
         }
       }
     }
-    membersConnection(first: 20) {
+    membersConnection(first: 100) {
       totalCount
       pageInfo {
         hasNextPage
@@ -207,7 +207,7 @@ query HomeFeedSummary($id: ID!) {
       }
     }
   }
-  storageLocations(homeId: $id) {
+  storageLocations(homeId: $id, first: 100) {
     totalCount
     pageInfo {
       hasNextPage

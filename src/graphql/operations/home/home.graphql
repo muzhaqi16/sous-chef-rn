@@ -184,7 +184,7 @@ mutation TransferHomeOwnership($input: TransferHomeOwnershipInput!) {
       home {
         id
         ...HomeReaders
-        membersConnection(first: 20) {
+        membersConnection(first: 100) {
           edges {
             node {
               id
