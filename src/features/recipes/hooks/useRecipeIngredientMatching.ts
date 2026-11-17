@@ -8,6 +8,7 @@ import {
 import {
   MatchRecipeIngredientsToPantryDocument,
   MarkRecipeAsCookedDocument,
+  type MarkRecipeAsCookedMutationVariables,
   type MatchRecipeIngredientsToPantryQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import {
@@ -28,6 +29,12 @@ import {
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { inTrackingUnit } from '#features/pantry/cache/stock';
+import type {
+  CookDrawInputs,
+  CookRecipeInputs,
+} from '#features/recipes/offline/localWrites';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -286,6 +293,25 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     MarkRecipeAsCookedDocument,
     { context: { localFirst: true } },
   );
+  const cooking = useRef(false);
+
+  /** A reviewed cook, held as a pending layer that draws what it states. */
+  const sendCook = (
+    variables: MarkRecipeAsCookedMutationVariables,
+    inputs: CookRecipeInputs,
+  ) =>
+    pendingWritesOf(client.cache).send(
+      MarkRecipeAsCookedDocument,
+      variables,
+      write =>
+        settleMutation(() => confirmMutation(write), {
+          document: MarkRecipeAsCookedDocument,
+          fallback: t('recipes.markCookedFailed'),
+          // The review sheet reports the cook as a toast and stays open to retry.
+          present: 'toast',
+        }),
+      inputs,
+    );
 
   const loadMatches = async (servings: number) => {
     if (!recipeId || !pantryId) {
@@ -457,34 +483,47 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       return;
     }
 
-    // Mint the cooking-log id client-side and queue + replay (`localFirst`) when
-    // the API is unreachable. The shared id means a re-synced cook converges on
-    // the same cooking log instead of creating a duplicate and re-deducting.
-    const settled = await settleMutation(
-      () =>
-        confirmMutation({
-          variables: {
-            input: {
-              id: generateEntityId(),
-              recipeId,
-              pantryId,
-              deductFromPantry: true,
-              // Each entry draws on the stack it names and no other; an
-              // ingredient with no entry is left alone.
-              exactStacks: true,
-              ingredientsUsed,
-              servings: cook?.servings,
-              notes: cook?.notes,
-            },
-          },
-        }),
+    // One cooking-log id per confirmed cook, queued with it, so a replay
+    // converges on the same log instead of deducting again. A tap while it is
+    // in flight is the same cook.
+    if (cooking.current) return;
+    cooking.current = true;
+    // What the device can prove moves at once, as a use does; the rest waits.
+    const draws: CookDrawInputs[] = ingredientsUsed.flatMap(usage => {
+      const { pantryItemId, actualQuantity, actualUnitId } = usage;
+      if (!pantryItemId) return [];
+      const used = inTrackingUnit(
+        client.cache,
+        pantryItemId,
+        actualQuantity,
+        actualUnitId,
+      );
+      return [
+        {
+          pantryItemId,
+          delta: used === null ? null : -used,
+          stated: { amount: actualQuantity, unitId: actualUnitId },
+        },
+      ];
+    });
+    const settled = await sendCook(
       {
-        document: MarkRecipeAsCookedDocument,
-        fallback: t('recipes.markCookedFailed'),
-        // The review sheet reports the cook as a toast and stays open to retry.
-        present: 'toast',
+        input: {
+          id: generateEntityId(),
+          recipeId,
+          pantryId,
+          deductFromPantry: true,
+          // Each entry draws on the stack it names and no other; an
+          // ingredient with no entry is left alone.
+          exactStacks: true,
+          ingredientsUsed,
+          servings: cook?.servings,
+          notes: cook?.notes,
+        },
       },
+      { draws, now: new Date().toISOString() },
     );
+    cooking.current = false;
     // Applied and queued both succeed; a queued cook replays later.
     if (settled.failure) return;
     emitTutorialEvent('recipe.cooked');

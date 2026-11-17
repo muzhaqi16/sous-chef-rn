@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   useRecipeIngredientMatching,
@@ -9,6 +9,8 @@ import {
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import type { CookRecipeInputs } from '#features/recipes/offline/localWrites';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
 import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -59,6 +61,7 @@ export function useRecipeCookingActions({
   // A confirm or a skip of the review records it.
   const [reviewedCook, setReviewedCook] = useState<CookEntry | null>(null);
 
+  const client = useApolloClient();
   const ingredientMatching = useRecipeIngredientMatching(recipeId);
   const pantryId = useSelectedPantryId();
   const isOffline = useIsApiUnavailable();
@@ -74,22 +77,27 @@ export function useRecipeCookingActions({
    */
   const fireMarkCooked = async (vars: FireMarkCookedVars) => {
     const id = generateEntityId();
-    const settled = await settleMutation(
-      () =>
-        markRecipeAsCookedMutation({
-          variables: {
-            input: {
-              ...vars,
-              ...deductingFrom(vars.deductFromPantry, pantryId),
-              id,
-            },
-          },
-        }),
+    // The server picks the stacks, so the device draws none until it answers.
+    const inputs: CookRecipeInputs = {
+      draws: [],
+      now: new Date().toISOString(),
+    };
+    const settled = await pendingWritesOf(client.cache).send(
+      MarkRecipeAsCookedDocument,
       {
-        document: MarkRecipeAsCookedDocument,
-        fallback: t('recipes.markCookedFailed'),
-        present: 'toast',
+        input: {
+          ...vars,
+          ...deductingFrom(vars.deductFromPantry, pantryId),
+          id,
+        },
       },
+      write =>
+        settleMutation(() => markRecipeAsCookedMutation(write), {
+          document: MarkRecipeAsCookedDocument,
+          fallback: t('recipes.markCookedFailed'),
+          present: 'toast',
+        }),
+      inputs,
     );
 
     // Replay diagnostics: `converged: true` means this client-minted cooking-log

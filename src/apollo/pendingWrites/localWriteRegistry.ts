@@ -112,6 +112,7 @@ import {
   DeleteRecipeDocument,
   DeleteRecipeFolderDocument,
   ForkRecipeDocument,
+  MarkRecipeAsCookedDocument,
   RemoveRecipeFromFavoritesDocument,
   UpdateFavoriteRecipeDocument,
   UpdateRecipeDocument,
@@ -151,6 +152,7 @@ import { checkIn } from '#features/receipts/offline/localWrites';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import {
   addFavorite,
+  cookRecipe,
   createRecipe,
   moveFolder,
   removeFavorite,
@@ -219,6 +221,7 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [AdjustPantryItemQuantityDocument, setStock],
   [DeletePantryItemDocument, removeItem],
   [CreatePantryItemUsageDocument, drawStock],
+  [MarkRecipeAsCookedDocument, cookRecipe],
   [RestockPantryItemDocument, addStock],
   [ConvertExpiredToWasteDocument, discardExpired],
   [OpenPantryItemBatchDocument, entityFields],
