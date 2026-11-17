@@ -301,6 +301,23 @@ describe('useRecipeCookingActions', () => {
     expect(inputOf(cooked.fired[0]!)).not.toHaveProperty('pantryId');
   });
 
+  // A review with nothing to draw still records the cook, and says so.
+  it('records a reviewed cook without deducting, and says the pantry was not changed', async () => {
+    const cooked = cookedMock();
+    const { result } = renderCooking([cooked.mock]);
+
+    await drained(() => result.current.handleRecordWithoutDeducting());
+
+    await drainTimers();
+    expect(cooked.fired).toHaveLength(1);
+    expect(inputOf(cooked.fired[0]!)).toMatchObject({
+      deductFromPantry: false,
+    });
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Recipe marked as cooked. Your pantry wasn't changed.",
+    );
+  });
+
   it('toasts the failure message and shows no success toast when the server rejects', async () => {
     const { result } = renderCooking([refusedCookMock().mock]);
 

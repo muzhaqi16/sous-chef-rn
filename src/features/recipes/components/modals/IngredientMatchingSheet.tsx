@@ -65,6 +65,8 @@ interface IngredientMatchingSheetProps {
   onUpdate: (index: number, updates: MatchUpdate) => void;
   onConfirm: () => void;
   onSkip: () => void;
+  /** Records the cook and leaves the pantry alone: the action when nothing is included. */
+  onRecordOnly: () => void;
   onClose: () => void;
   confirmLoading: boolean;
 }
@@ -78,11 +80,14 @@ export const IngredientMatchingSheet: React.FC<
   onUpdate,
   onConfirm,
   onSkip,
+  onRecordOnly,
   onClose,
   confirmLoading,
 }) => {
   const { t } = useTranslation();
   const readingSystem = useReadingSystem();
+  // Nothing included: the cook can still be recorded, deducting nothing.
+  const recordsOnly = matchSummary.included === 0;
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -101,9 +106,12 @@ export const IngredientMatchingSheet: React.FC<
           contentPadding="md"
           title={t('ingredientMatching.reviewIngredients')}
           onCancel={onClose}
-          onConfirm={onConfirm}
-          confirmLabel={t('ingredientMatching.confirmAndDeduct')}
-          confirmDisabled={matchSummary.included === 0}
+          onConfirm={recordsOnly ? onRecordOnly : onConfirm}
+          confirmLabel={
+            recordsOnly
+              ? t('ingredientMatching.recordWithoutDeducting')
+              : t('ingredientMatching.confirmAndDeduct')
+          }
           saving={confirmLoading}
           savingLabel={t('ingredientMatching.deducting')}
         />
@@ -166,14 +174,15 @@ export const IngredientMatchingSheet: React.FC<
             {t('ingredientMatching.skipReview')}
           </Button>
           <Button
-            onPress={onConfirm}
+            onPress={recordsOnly ? onRecordOnly : onConfirm}
             loading={confirmLoading}
-            disabled={matchSummary.included === 0}
             style={styles.confirm}
           >
-            {t('ingredientMatching.confirmAndDeductCount', {
-              count: matchSummary.included,
-            })}
+            {recordsOnly
+              ? t('ingredientMatching.recordWithoutDeducting')
+              : t('ingredientMatching.confirmAndDeductCount', {
+                  count: matchSummary.included,
+                })}
           </Button>
         </View>
       </View>

@@ -245,6 +245,23 @@ export function useRecipeCookingActions({
   const handleConfirmReview = () =>
     ingredientMatching.confirmConsumption(reviewedCook ?? undefined);
 
+  // A review with nothing to draw still records the cook, and says the pantry
+  // was left as it was.
+  const handleRecordWithoutDeducting = () => {
+    if (!recipeId) return;
+    ingredientMatching.closeSheet();
+    void executeWithLoadingState(async () => {
+      const { failure } = await fireMarkCooked({
+        recipeId,
+        servings: reviewedCook?.servings,
+        deductFromPantry: false,
+        notes: reviewedCook?.notes,
+      });
+      if (failure) return;
+      toastService.success(t('recipes.markedCookedNotDeducted'));
+    }, setMarkingAsCooked);
+  };
+
   return {
     cookedModalVisible,
     setCookedModalVisible,
@@ -252,6 +269,7 @@ export function useRecipeCookingActions({
     handleMarkAsCooked,
     handleSkipReview,
     handleConfirmReview,
+    handleRecordWithoutDeducting,
     ingredientMatching,
   };
 }

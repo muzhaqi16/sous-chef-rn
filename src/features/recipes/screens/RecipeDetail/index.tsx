@@ -207,6 +207,7 @@ const RecipeDetailScreen: React.FC = () => {
     handleMarkAsCooked,
     handleSkipReview,
     handleConfirmReview,
+    handleRecordWithoutDeducting,
     ingredientMatching,
     showFolderPicker,
     setShowFolderPicker,
@@ -802,6 +803,7 @@ const RecipeDetailScreen: React.FC = () => {
         onUpdate={ingredientMatching.updateMatch}
         onConfirm={handleConfirmReview}
         onSkip={handleSkipReview}
+        onRecordOnly={handleRecordWithoutDeducting}
         onClose={ingredientMatching.closeSheet}
         confirmLoading={ingredientMatching.confirmLoading}
       />
