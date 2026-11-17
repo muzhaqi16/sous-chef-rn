@@ -6764,6 +6764,18 @@ input MarkRecipeAsCookedInput {
   is set; anything else is refused.
   """
   ingredientsUsed: [IngredientUsageInput!]
+  """
+  The planned meal this cook completes, sent with mealPlanItemVersion and id.
+  It must be a meal of recipeId on a plan the caller can edit. The cooking
+  log, its draws and the meal's completion commit together, and the meal's
+  cookingLogId names the cook. A meal that already has a cook is a
+  ConflictError, unchecked since or not; one edited since
+  mealPlanItemVersion was read is a ConflictError with VERSION_CONFLICT.
+  Sending the same id again converges before either is checked.
+  """
+  mealPlanItemId: ID
+  """The planned meal's version as last read; sent with mealPlanItemId"""
+  mealPlanItemVersion: Int
   notes: String
   """
   The pantry to deduct from. Omitted: the default pantry of the caller's
@@ -6788,6 +6800,8 @@ type MarkRecipeAsCookedPayload {
   """
   converged: Boolean!
   cookingLog: CookingLog!
+  """The planned meal the cook completed; null for a cook that named none"""
+  mealPlanItem: MealPlanItem
   recipe: Recipe
   """
   Ingredients not deducted: no conversion reached the stack's unit, or the recipe states no amount.
@@ -7106,6 +7120,10 @@ type MealPlanItem {
   When the meal was marked done; null until then, and null once an update clears it
   """
   completedAt: DateTime
+  """
+  The id of the cooking log that completed the meal; null until a cook does. Set once and never cleared. Every reader of the meal sees it; the log's own fields keep their audience.
+  """
+  cookingLogId: ID
   """The meal's name when it is not a recipe; null for a recipe meal"""
   customMealName: String
   """
@@ -7114,7 +7132,7 @@ type MealPlanItem {
   date: LocalDate!
   id: ID!
   """
-  Whether the meal was marked done. The first time a recipe meal is marked done, its ingredients are deducted from the pantry unless that update set deductFromPantry to false.
+  Whether the meal was marked done. Marking a recipe meal with no cook done cooks it once, deducting its ingredients unless that update set deductFromPantry to false; a meal with a cook is never deducted again, unchecked since or not.
   """
   isCompleted: Boolean!
   """Which meal of the day it is"""
@@ -17265,7 +17283,7 @@ input UpdateMealPlanItemInput {
   """The meal to update"""
   id: ID!
   """
-  Mark the meal done or not done; null is refused. The first change to true on a recipe meal deducts its ingredients from the pantry (see deductFromPantry).
+  Mark the meal done or not done; null is refused. Marking a recipe meal with no cook done cooks it once, deducting its ingredients from the pantry (see deductFromPantry) and setting cookingLogId; a meal with a cook is never deducted again.
   """
   isCompleted: Boolean
   """
