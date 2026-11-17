@@ -2231,9 +2231,10 @@ input CreateReceiptCheckInInput {
   """
   The ISO 4217 code of the currency the receipt prints, as the device read it
   (receipt-rules' ParsedReceipt.currency). The check-in, its lines and its
-  orderDiscount are booked in it; a receiptParseId's own currency wins over
-  it. With neither, the shopping list's currency, else the user's. A code no
-  active currency has is refused. A check-in sent again keeps the first.
+  orderDiscount are booked in it, added to the currencies when none is on
+  file; a receiptParseId's own currency wins over it. With neither, or a
+  code ISO 4217 does not list, the shopping list's currency, else the
+  user's. A check-in sent again keeps the first.
   """
   currency: String
   """
