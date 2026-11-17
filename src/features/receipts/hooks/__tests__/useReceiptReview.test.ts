@@ -852,6 +852,23 @@ describe('useReceiptReview', () => {
       expect(statuses()).toEqual(['add', 'unmatched']);
     });
 
+    // IN-01: what the receipt and the API resolve goes in as read, with
+    // nothing typed, a line whose price went unread included at no cost.
+    it('adds the lines it is sure of with nothing typed, an unread price unknown', async () => {
+      seedKroger({}, [
+        { rawText: 'KROGER', kind: 'other' },
+        { rawText: 'KRO WHL MILK', kind: 'item', product: 'KRO WHL MILK' },
+        { rawText: 'BALANCE 3.29', kind: 'total', lineTotal: 3.29 },
+      ]);
+      const { checkIn, addChosen } = await setup({ resolve: resolved() });
+
+      expect(await addChosen()).toMatchObject({ sent: 1, held: 0 });
+
+      const [milk] = sent(checkIn);
+      expect(milk).toMatchObject({ clientId: '1', item: { id: 'cat-milk' } });
+      expect(milk).not.toHaveProperty('totalPaid');
+    });
+
     it('adds the item it is sure of, and only suggests the one it guesses', async () => {
       const { review, choose, statuses } = await setup({ resolve: resolved() });
 

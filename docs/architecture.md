@@ -655,7 +655,14 @@ those repos.
 - Its ids are minted once and kept in the draft (`receiptDraftStore.checkIn`): the check-in's own, and each line's purchase, stack and typed item. A retry, a restart and a replay send the same ids, so nothing is recorded twice.
 - Every line's local rows are written before the call fires, by the writers the pantry add and the list move use (`writeLocalIntake`, `writeLocalMove`). `applyReceiptCheckIn` settles each line from its result: a refused line withdraws only its own writes, and a merged stack or a matched item is adopted.
 - Queued, it replays through `reconcileReceiptCheckInReplay`, which also settles the saved receipt. Refused for good, `withdrawReceiptCheckIn` and `restoreReceiptCheckInListLines` undo every line.
-- A line that still lacks its product, unit or price is held back and named on the review. A refused line stays on the saved receipt with its cause, and Add sends only the lines not yet recorded.
+- Every line states its amount through `resolveIntakeDraft`, as every intake route does. A line that still lacks its product, unit or amount is held back and named on the review. A price is not required: a line whose price went unread is sent with no `totalPaid`, so its purchase and stack keep an unknown cost and no price is observed (C1). A refused line stays on the saved receipt with its cause, and Add sends only the lines not yet recorded.
+- A line can be the receipt for an earlier purchase, picked by the user and never inferred. The line sheet offers the user's own purchases of the line's product that stocked this pantry in the 14 days before the receipt's day (`useEarlierPurchases`), beside "A new purchase", the default. Only the buyer may attach a receipt, so another member's purchases are not offered. A picked line goes as `existingPurchase { id, version }` with `stock: false`: it fills in that purchase's price, store and day, and adds no stock, no second purchase and no list tick (C2). The API answers that purchase's id, which differs from the line's own `purchaseId`.
+- Worked examples, by line:
+  - **Resolved:** the API is sure of the product and the receipt states the amount, so the line goes in with nothing typed.
+  - **Ambiguous:** a bare count against a counted list line ("2" against 12 eggs) asks for the amount, opening on the list line's.
+  - **Unpriced:** it goes in with its cost unknown, never zero.
+  - **Reconciled:** the receipt for milk already moved to the pantry fills in that purchase, and the pantry still holds what it held.
+  - **Partially refused:** the accepted lines stay recorded, and the refused one keeps the user's edits for the next Add.
 
 Four rules keep parallel work apart:
 
