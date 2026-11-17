@@ -44,6 +44,20 @@ export interface ReceiptMatchLine {
   code?: string;
 }
 
+/**
+ * A listing the receipt's printed address could be, and the receipt's own
+ * chain and store number, which a pick sends so the store of that number
+ * completes rather than a second one being made.
+ */
+export interface PrintedStoreChoice {
+  placeId: string;
+  name: string;
+  address: string;
+  credit: string;
+  chainId: string | null;
+  storeNumber: string | null;
+}
+
 /** Whether the API has said which items the lines are, is asking, or could not be asked. */
 export type ReceiptMatchState = 'matching' | 'failed' | 'done';
 
@@ -196,18 +210,20 @@ export function useReceiptMatches(
         : resolved?.completableStore ?? null,
     /**
      * The places the receipt's printed address could be, when the search could
-     * not settle on one: asked, never placed. None once a store is placed.
+     * not settle on one, also beside a placed store that has no address:
+     * asked, never placed. None once the user picked a store.
      */
-    storeChoices:
-      pickedStoreId || resolved?.store
-        ? []
-        : (resolved?.storeChoices ?? []).map(
-            ({ placeId, name, address, credit }) => ({
-              placeId,
-              name,
-              address,
-              credit,
-            }),
-          ),
+    storeChoices: pickedStoreId
+      ? []
+      : (resolved?.storeChoices ?? []).map(
+          (choice): PrintedStoreChoice => ({
+            placeId: choice.placeId,
+            name: choice.name,
+            address: choice.address,
+            credit: choice.credit,
+            chainId: choice.chain?.id ?? null,
+            storeNumber: choice.storeNumber ?? null,
+          }),
+        ),
   };
 }

@@ -43,7 +43,11 @@ import {
   type CheckInLineToSend,
   type ReceiptCheckInOutcome,
 } from './useReceiptCheckIn';
-import { useReceiptMatches, type ReceiptCandidate } from './useReceiptMatches';
+import {
+  useReceiptMatches,
+  type PrintedStoreChoice,
+  type ReceiptCandidate,
+} from './useReceiptMatches';
 import { UseReceiptReview_StoreFragmentDoc } from './useReceiptReview.generated';
 import { useHeldStores } from './useHeldStores';
 import { unlocatedStoreNamed } from '../utils/unlocatedStoreNamed';
@@ -416,9 +420,17 @@ export function useReceiptReview() {
 
   const { createStoreFromPlace } = useCreateStoreFromPlace();
   // The place picked among those the printed address could be, made a store
-  // once for every household; it needs the search, so not offline.
-  const chooseStoreChoice = async (placeId: string) => {
-    const created = await createStoreFromPlace(placeId);
+  // once for every household, or completing the receipt's store of that
+  // number; it needs the search, so not offline.
+  const chooseStoreChoice = async ({
+    placeId,
+    chainId,
+    storeNumber,
+  }: PrintedStoreChoice) => {
+    const created = await createStoreFromPlace(
+      placeId,
+      chainId ? { chainId, storeNumber } : undefined,
+    );
     if (created) chooseStore(created);
     else toastService.error(t('receipts.review.storeChoiceFailed'));
   };

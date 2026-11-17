@@ -1121,20 +1121,31 @@ describe('useReceiptReview', () => {
   });
 
   describe('asking which place the printed address is', () => {
+    const TRADER_JOES = { id: 'chain-tj', name: "Trader Joe's" };
     const CHOICES = [
       {
         placeId: 'osm-1',
         name: "Trader Joe's",
         address: '6343 Penn Ave, Pittsburgh',
         credit: '© OpenStreetMap contributors',
+        storeNumber: '0638',
+        chain: TRADER_JOES,
       },
       {
         placeId: 'osm-2',
         name: "Trader Joe's",
         address: '6343 Penn Ave Suite 2, Pittsburgh',
         credit: '© OpenStreetMap contributors',
+        storeNumber: '0638',
+        chain: TRADER_JOES,
       },
     ];
+    // As the review offers them: the receipt's chain and number ride along.
+    const OFFERED = CHOICES.map(({ chain, ...choice }) => ({
+      ...choice,
+      chainId: chain.id,
+    }));
+    const [, SECOND] = OFFERED;
     // The search could not settle on one place for the printed street.
     const unsettled = () =>
       recordMock(ResolveReceiptLinesDocument, {
@@ -1180,14 +1191,17 @@ describe('useReceiptReview', () => {
         resolve: unsettled(),
         mocks: [fromPlace, placed()],
       });
-      expect(review().storeChoices).toEqual(CHOICES);
+      expect(review().storeChoices).toEqual(OFFERED);
       // Asked, never placed.
       expect(review().store).toBeNull();
 
-      await drained(() => review().chooseStoreChoice('osm-2'));
+      await drained(() => review().chooseStoreChoice(SECOND!));
       await drainTimers();
 
-      expect(fired(fromPlace)).toEqual([{ placeId: 'osm-2' }]);
+      // The receipt's chain and number: the store of that number completes.
+      expect(fired(fromPlace)).toEqual([
+        { placeId: 'osm-2', chainId: 'chain-tj', storeNumber: '0638' },
+      ]);
       expect(review().store).toEqual({ id: 'store-tj', name: "Trader Joe's" });
       expect(review().storeChoices).toEqual([]);
 
@@ -1211,14 +1225,32 @@ describe('useReceiptReview', () => {
         ],
       });
 
-      await drained(() => review().chooseStoreChoice('osm-1'));
+      await drained(() => review().chooseStoreChoice(SECOND!));
       await drainTimers();
 
       expect(shown).toHaveBeenCalledWith(
         t('receipts.review.storeChoiceFailed'),
       );
       expect(review().store).toBeNull();
-      expect(review().storeChoices).toEqual(CHOICES);
+      expect(review().storeChoices).toEqual(OFFERED);
+    });
+
+    it('asks beside the store it placed when that store has no address', async () => {
+      seedKroger();
+      const { review } = await setup({
+        resolve: recordMock(ResolveReceiptLinesDocument, {
+          data: {
+            resolveReceiptLines: {
+              ...RESOLVED.resolveReceiptLines,
+              store: { id: 'store-tj', name: "Trader Joe's" },
+              storeChoices: CHOICES,
+            },
+          },
+        }),
+      });
+
+      expect(review().store).toEqual({ id: 'store-tj', name: "Trader Joe's" });
+      expect(review().storeChoices).toEqual(OFFERED);
     });
   });
 

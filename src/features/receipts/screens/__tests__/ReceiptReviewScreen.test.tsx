@@ -43,6 +43,8 @@ let mockStoreChoices: {
   name: string;
   address: string;
   credit: string;
+  chainId: string | null;
+  storeNumber: string | null;
 }[] = [];
 const mockChooseStoreChoice = jest.fn();
 const mockAddChosen = jest.fn<
@@ -682,9 +684,15 @@ describe('ReceiptReviewScreen store', () => {
 
   it('asks which place the printed address is, with its credit, and picks one on a tap', async () => {
     const credit = '© OpenStreetMap contributors';
+    const place = {
+      name: 'Giant Eagle',
+      credit,
+      chainId: null,
+      storeNumber: null,
+    };
     mockStoreChoices = [
-      { placeId: 'osm-1', name: 'Giant Eagle', address: '1 Penn Ave', credit },
-      { placeId: 'osm-2', name: 'Giant Eagle', address: '9 Penn Ave', credit },
+      { ...place, placeId: 'osm-1', address: '1 Penn Ave' },
+      { ...place, placeId: 'osm-2', address: '9 Penn Ave' },
     ];
     const screen = renderWithApollo(<ReceiptReviewScreen />);
 
@@ -695,7 +703,7 @@ describe('ReceiptReviewScreen store', () => {
 
     await userEvent.setup().press(screen.getByText('9 Penn Ave'));
 
-    expect(mockChooseStoreChoice).toHaveBeenCalledWith('osm-2');
+    expect(mockChooseStoreChoice).toHaveBeenCalledWith(mockStoreChoices[1]);
   });
 
   it('offers no store when there is none to complete', () => {

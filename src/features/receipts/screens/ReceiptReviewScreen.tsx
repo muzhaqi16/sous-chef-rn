@@ -551,7 +551,7 @@ export const ReceiptReviewScreen: React.FC = () => {
                           />
                         }
                         onPress={() => {
-                          void chooseStoreChoice(choice.placeId);
+                          void chooseStoreChoice(choice);
                         }}
                         testID={receiptsTestIDs.reviewStoreChoice(
                           choice.placeId,
