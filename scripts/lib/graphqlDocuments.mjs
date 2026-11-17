@@ -87,13 +87,14 @@ export const isEntity = type =>
  * route, a household's dietary alerts and needs, paid prices, substitutes,
  * similar products' shelf prices, a product's price comparison, a store's
  * collected prices or stand-in, brand-list matches, a list's price readiness
- * or its cost to go, which the server re-prices on every read) its own screen
- * re-reads; a product's source-record facts (origin, brand owner), which no
+ * or its cost to go, which the server re-prices on every read; a stack's
+ * stock confidence and the stacks worth a check, judged on the viewer's day)
+ * its own screen re-reads; a product's source-record facts (origin, brand owner), which no
  * write changes; or a field one writer owns, which a mutation's snapshot would
  * race.
  */
 const VIEWS =
-  /Analytics$|^suggestions$|^storeRoute$|^dietaryAlerts$|^dietaryAlternatives$|^dietaryNeeds$|^householdPriceSummary$|^origin$|^brandOwner$|^substitutes$|^similarStorePrices$|^priceComparison$|^hasCollectedPrices$|^priceStandIn$|^listMatches$|^priceReadiness$|^costToGo$/;
+  /Analytics$|^suggestions$|^storeRoute$|^dietaryAlerts$|^dietaryAlternatives$|^dietaryNeeds$|^householdPriceSummary$|^origin$|^brandOwner$|^substitutes$|^similarStorePrices$|^priceComparison$|^hasCollectedPrices$|^priceStandIn$|^listMatches$|^priceReadiness$|^costToGo$|^stockConfidence$|^stockToConfirm$/;
 const OWNED_BY_WRITER = new Set([
   // Follows the given pantry's stacks, which pantry writes change; read only by
   // the barcode lookup, under its own route's pantry.

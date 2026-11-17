@@ -313,7 +313,22 @@
     "runningLow": "Sta finendo",
     "stockGuideSubtitle": "Tocca + e scansiona uno scontrino recente: ciò che hai comprato va dritto in dispensa.",
     "stockGuideOffline": "Scansionare uno scontrino richiede una connessione. Riprova quando sarai di nuovo online.",
-    "pendingAmount": "{{amount}} in attesa di sincronizzazione"
+    "pendingAmount": "{{amount}} in attesa di sincronizzazione",
+    "stockCheckEntry_one": "{{count}} prodotto da controllare",
+    "stockCheckEntry_other": "{{count}} prodotti da controllare",
+    "stockCheckTitle": "Li hai ancora?",
+    "stockCheckStillHave": "Ce l'ho ancora",
+    "stockCheckSomeLeft": "Ne resta un po'",
+    "stockCheckUsedUp": "Finito",
+    "stockCheckThrewOut": "Buttato",
+    "stockCheckLeft": "Ne resta, in {{unit}}",
+    "stockCheckInside": "Quanto contengono, in {{unit}}",
+    "stockCheckStale": "È cambiato da quando l'hai visto. Controllalo di nuovo.",
+    "stockCheckFailed": "Impossibile salvare il controllo. Riprova.",
+    "stockDoubtNotConfirmed": "Non controllato da un po'",
+    "stockDoubtPastExpiry": "Oltre la data",
+    "stockDoubtPastRunOut": "Di solito a quest'ora è finito",
+    "stockDoubtRunOutSoon": "Di solito finisce presto"
   },
   "storageState": {
     "AMBIENT": "Temperatura ambiente",

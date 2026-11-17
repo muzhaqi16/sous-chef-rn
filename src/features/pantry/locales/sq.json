@@ -313,7 +313,22 @@
     "runningLow": "Po mbaron",
     "stockGuideSubtitle": "Prek + dhe skano një faturë të fundit: çka bleve shkon drejt në qilar.",
     "stockGuideOffline": "Skanimi i një fature ka nevojë për lidhje. Provoje sapo të jesh sërish online.",
-    "pendingAmount": "{{amount}} në pritje të sinkronizimit"
+    "pendingAmount": "{{amount}} në pritje të sinkronizimit",
+    "stockCheckEntry_one": "{{count}} artikull për të kontrolluar",
+    "stockCheckEntry_other": "{{count}} artikuj për të kontrolluar",
+    "stockCheckTitle": "I ke ende këto?",
+    "stockCheckStillHave": "E kam ende",
+    "stockCheckSomeLeft": "Ka mbetur pak",
+    "stockCheckUsedUp": "Mbaroi",
+    "stockCheckThrewOut": "E hodha",
+    "stockCheckLeft": "Ka mbetur, në {{unit}}",
+    "stockCheckInside": "Sa përmbajnë, në {{unit}}",
+    "stockCheckStale": "Ka ndryshuar që kur e pe. Kontrolloje sërish.",
+    "stockCheckFailed": "Kontrolli nuk u ruajt. Provo sërish.",
+    "stockDoubtNotConfirmed": "Pa u kontrolluar prej kohësh",
+    "stockDoubtPastExpiry": "I ka kaluar data",
+    "stockDoubtPastRunOut": "Zakonisht do të kishte mbaruar",
+    "stockDoubtRunOutSoon": "Zakonisht mbaron së shpejti"
   },
   "storageState": {
     "AMBIENT": "Ambient",

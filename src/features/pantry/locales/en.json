@@ -313,7 +313,22 @@
     "runningLow": "Running low",
     "stockGuideSubtitle": "Tap + and scan a recent receipt: what you bought goes straight into your pantry.",
     "stockGuideOffline": "Scanning a receipt needs a connection. Try it once you’re back online.",
-    "pendingAmount": "{{amount}} waiting to sync"
+    "pendingAmount": "{{amount}} waiting to sync",
+    "stockCheckEntry_one": "{{count}} item to check",
+    "stockCheckEntry_other": "{{count}} items to check",
+    "stockCheckTitle": "Still have these?",
+    "stockCheckStillHave": "Still have",
+    "stockCheckSomeLeft": "Some left",
+    "stockCheckUsedUp": "Used up",
+    "stockCheckThrewOut": "Threw out",
+    "stockCheckLeft": "Left, in {{unit}}",
+    "stockCheckInside": "What they hold, in {{unit}}",
+    "stockCheckStale": "This changed since you looked. Check it again.",
+    "stockCheckFailed": "Couldn't save the check. Try again.",
+    "stockDoubtNotConfirmed": "Not checked in a while",
+    "stockDoubtPastExpiry": "Past its date",
+    "stockDoubtPastRunOut": "Usually gone by now",
+    "stockDoubtRunOutSoon": "Usually runs out soon"
   },
   "storageState": {
     "AMBIENT": "Ambient",

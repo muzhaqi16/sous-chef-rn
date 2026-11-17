@@ -95,12 +95,14 @@ import {
 } from '#features/mealPlan/offline/localWrites';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
+import { RecordPantryStockCheckDocument } from '#features/pantry/hooks/useStockCheck.generated';
 import {
   addStock,
   createItem,
   createPantry,
   discardExpired,
   drawStock,
+  recordStockCheck,
   removeItem,
   removePantry,
   setStock,
@@ -219,6 +221,7 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [UpdatePantryItemDocument, updatePantryRow],
   [UpdatePantryItemQuantityDocument, setStock],
   [AdjustPantryItemQuantityDocument, setStock],
+  [RecordPantryStockCheckDocument, recordStockCheck],
   [DeletePantryItemDocument, removeItem],
   [CreatePantryItemUsageDocument, drawStock],
   [MarkRecipeAsCookedDocument, cookRecipe],

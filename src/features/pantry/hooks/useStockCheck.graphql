@@ -1,0 +1,95 @@
+# The stacks most worth a "still have it?" check today, in the server's order,
+# with why each is doubtful. At most five: a check stays small.
+query StockToConfirm($pantryId: ID!, $today: LocalDate!) {
+  pantry(id: $pantryId) {
+    id
+    version
+    stockToConfirm(limit: 5, today: $today) {
+      id
+      version
+      itemName
+      amountLeft {
+        value
+        unitId
+        unit {
+          id
+          symbol
+        }
+        metric {
+          value
+          unitId
+          symbol
+          localizedSymbol
+          displayAsFraction
+          type
+        }
+        imperial {
+          value
+          unitId
+          symbol
+          localizedSymbol
+          displayAsFraction
+          type
+        }
+      }
+      # A package's contents, which "Some left" can be counted in.
+      packageSize {
+        value
+        unitId
+        unit {
+          id
+          symbol
+        }
+      }
+      stockConfidence(today: $today) {
+        level
+        reasons
+        lastConfirmedAt
+      }
+    }
+  }
+}
+
+# What the household found, row by row. Each row names the version it saw and
+# the check its observation time, so a stale count fails alone.
+mutation RecordPantryStockCheck(
+  $input: RecordPantryStockCheckInput!
+  $today: LocalDate!
+) {
+  recordPantryStockCheck(input: $input) {
+    __typename
+    ... on RecordPantryStockCheckPayload {
+      converged
+      pantry {
+        id
+        ...PantryReaders
+      }
+      results {
+        pantryItemId
+        answer
+        success
+        failure {
+          code
+          field
+        }
+        pantryItem {
+          id
+          ...PantryItemReaders
+          stockConfidence(today: $today) {
+            level
+            reasons
+            lastConfirmedAt
+          }
+        }
+      }
+    }
+    ... on Error {
+      code
+      disposition
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

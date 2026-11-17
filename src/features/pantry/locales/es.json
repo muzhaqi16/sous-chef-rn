@@ -313,7 +313,22 @@
     "runningLow": "Queda poco",
     "stockGuideSubtitle": "Toca + y escanea un ticket reciente: lo que compraste va directo a tu despensa.",
     "stockGuideOffline": "Escanear un ticket necesita conexión. Pruébalo cuando vuelvas a estar en línea.",
-    "pendingAmount": "{{amount}} pendiente de sincronizar"
+    "pendingAmount": "{{amount}} pendiente de sincronizar",
+    "stockCheckEntry_one": "{{count}} producto por revisar",
+    "stockCheckEntry_other": "{{count}} productos por revisar",
+    "stockCheckTitle": "¿Todavía tienes esto?",
+    "stockCheckStillHave": "Todavía lo tengo",
+    "stockCheckSomeLeft": "Queda algo",
+    "stockCheckUsedUp": "Se acabó",
+    "stockCheckThrewOut": "Lo tiré",
+    "stockCheckLeft": "Queda, en {{unit}}",
+    "stockCheckInside": "Lo que contienen, en {{unit}}",
+    "stockCheckStale": "Esto cambió desde que lo viste. Revísalo de nuevo.",
+    "stockCheckFailed": "No se pudo guardar la revisión. Inténtalo de nuevo.",
+    "stockDoubtNotConfirmed": "Sin revisar desde hace tiempo",
+    "stockDoubtPastExpiry": "Pasado de fecha",
+    "stockDoubtPastRunOut": "Normalmente ya se habría acabado",
+    "stockDoubtRunOutSoon": "Normalmente se acaba pronto"
   },
   "storageState": {
     "AMBIENT": "Ambiente",

@@ -315,11 +315,33 @@ total and `amountLeft` move at once: which package a use drew is the API's quant
 client does not copy. Two 16 oz packs less 12 oz read 20 oz at once; 1.25 held, one unopened and two
 packs come with the answer (USE-04). An acquisition keeps the size it was bought in, so a 24 oz jar
 restocked beside a 16 oz one adds 24 oz and restates neither (IN-05). A use in a unit the device cannot
-convert changes nothing until the server answers, and the row shows Syncing; a use the device can prove
-is never held behind it (USE-05). The figures are the example catalog's
+convert changes nothing until the server answers, and the row shows the amount entered, "4 oz waiting to
+sync" (`usePendingUses`); a use the device can prove is never held behind it (USE-05). The figures are the example catalog's
 (`__tests__/helpers/fixtures/pantryTrackingFixtures.ts`), asserted in `usePantryItemActions.test.ts`
-and the pantry `localWrites.test.ts`. The API contracts this work still waits on are tracked in
+and the pantry `localWrites.test.ts`. The API contracts behind this work are tracked in
 `docs/pantry-tracking-api-alignment.md`.
+
+**Stock checks.** `useStockCheck` reads `Pantry.stockToConfirm(limit: 5, today)`: at most five stacks
+in the server's order, each with its `stockConfidence(today)` level and reasons. Both are views no
+mutation owes, judged on the viewer's day. The check (`StockCheckSheet`, opened from `StockCheckEntry`
+behind `pantryTrackingFoundation`) sends only the rows answered. Closing it is deferral, which moves
+nothing and confirms nothing. One `recordPantryStockCheck` carries the check's `checkedAt`, an
+idempotency key, and each row's `expectedVersion`, so a queued check keeps the time it was made, a
+replay applies nothing twice, and a row whose stack moved since fails alone with `VERSION_CONFLICT`. That
+row stays in the sheet to be counted again; the absolute count is never rebased onto newer stock
+(CHECK-03), and accepted rows stand (REL-02). Its local write (`recordStockCheck`) sets each answered
+row's absolute count ahead of the answer:
+- **Still have** moves nothing.
+- **Some left** sets the count in the stack's unit.
+- **Used up** and **Threw out** set zero.
+A count stated with what the packages hold (CHECK-04: one carton holding 40 fl oz) moves nothing until
+the server answers, which owns the package arithmetic. The ledger meaning is the API's:
+- Some left records an adjustment of the difference (10 eggs found as 6 is a correction of 4, CHECK-01).
+- Used up is a correction to zero, never consumption.
+- Threw out is waste.
+- Still have is a confirmation with no movement (CHECK-02).
+A confirmation does not force the level HIGH: the answer reads the stack's confidence again. The sheet
+keeps its answers in component state only, so a session end leaves nothing behind (REL-03).
 
 **An optimistic entity is COMPLETE for every query that reads it.** With
 `returnPartialData: false`, one missing field makes the whole cache read

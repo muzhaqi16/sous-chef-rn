@@ -5,6 +5,11 @@ const ITEM = 'pantry-item';
  * has no imports: Detox's Jest reads it by relative path, outside the aliases.
  */
 export const pantryTestIDs = {
+  stockCheckEntry: 'pantry-stock-check-entry',
+  stockCheckSave: 'pantry-stock-check-save',
+  stockCheckRow: (pantryItemId: string) => `pantry-stock-check-${pantryItemId}`,
+  stockCheckAnswer: (pantryItemId: string, answer: string) =>
+    `pantry-stock-check-${pantryItemId}-${answer}`,
   screen: 'pantry-screen',
   consumeUseAll: 'pantry-consume-use-all',
   consumeDetails: 'pantry-consume-details',

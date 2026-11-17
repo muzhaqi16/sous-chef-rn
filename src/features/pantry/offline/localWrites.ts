@@ -134,6 +134,26 @@ export const setStock: LocalWrite<SetStockInputs> = {
   },
 };
 
+/**
+ * A stock check's rows, as found: what each stack holds now, absolute, or null
+ * where the answer moves nothing (still have) or only the server can say.
+ */
+export type StockCheckInputs = {
+  rows: readonly { pantryItemId: string; held: number | null }[];
+  now: string;
+};
+
+export const recordStockCheck: LocalWrite<StockCheckInputs> = {
+  apply(cache, { inputs: { rows, now } }) {
+    for (const { pantryItemId, held } of rows) {
+      const stack = stackRef(pantryItemId);
+      if (held === null || !isHeld(cache, stack)) continue;
+      writeEntityFields(cache, stack, { quantity: held, updatedAt: now });
+      writeHeldStock(cache, pantryItemId, held);
+    }
+  },
+};
+
 type StockDeltaInputs = {
   /** In tracking units; null when only the server can convert the amount. */
   delta: number | null;

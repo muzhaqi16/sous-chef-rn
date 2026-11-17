@@ -42,6 +42,7 @@ import {
 import { PartialDataNote } from '#components/molecules/PartialDataNote';
 import { PantryEmptyState } from './PantryEmptyState';
 import { PantryListSkeletonOverlay } from './PantryListSkeletonOverlay';
+import { StockCheckEntry } from './StockCheckEntry';
 import type {
   PantryContentProps,
   PantryContentRef,
@@ -360,6 +361,7 @@ export const PantryContent = React.forwardRef<
                 testIDPrefix={pantryTestIDs.locationTabPrefix}
               />
             </View>
+            <StockCheckEntry />
           </View>
 
           <View style={styles.listHost}>
