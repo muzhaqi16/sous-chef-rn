@@ -71,3 +71,32 @@ describe('a barcode text recognition split', () => {
     ).toEqual([{ product: 'BLUE TOWEL', code: null }]);
   });
 });
+
+describe('a store printed with its ZIP on the street row', () => {
+  const reading = () =>
+    readOnPhone(
+      [
+        [
+          "TRADER JOE'S #638",
+          '6343 Penn Ave 15206',
+          'Pittsburgh, PA',
+          'BANANA ORG $0.58',
+          'TIROPITA $4.49',
+          'SUBTOTAL $5.07',
+          'TOTAL $5.07',
+        ].join('\n'),
+      ],
+      TODAY,
+      'monthFirst',
+    );
+
+  it('keeps its whole address for the store', () => {
+    expect(reading()?.printedStore?.address).toBe(
+      '6343 Penn Ave, Pittsburgh, PA 15206',
+    );
+  });
+
+  it('reads its dollars as the currency its address places', () => {
+    expect(reading()?.parsed.currency).toBe('USD');
+  });
+});
