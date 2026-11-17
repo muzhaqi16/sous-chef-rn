@@ -664,6 +664,28 @@ describe('useReceiptReview', () => {
     expect(pantryItems(cache)).toEqual([]);
   });
 
+  // REL-01: two confirms in flight carry the identities the first minted, so
+  // the API records the receipt once; once it has, a confirm sends nothing.
+  it('sends confirms made together under one set of ids, and none once landed', async () => {
+    const { review, choose, checkIn, addChosen } = await setup();
+    await choose({ 1: MILK, 3: PICKED_BANANAS });
+
+    await drained(() =>
+      Promise.all([review().addChosen(), review().addChosen()]),
+    );
+    await drainTimers();
+
+    const [first, second] = checkIn.fired.map(vars => ({
+      id: inputOf(vars).id,
+      purchases: sentLinesOf(vars).map(line => line.purchaseId),
+    }));
+    expect(second ?? first).toEqual(first);
+    const sends = checkIn.fired.length;
+
+    expect(await addChosen()).toMatchObject({ sent: 0 });
+    expect(checkIn.fired).toHaveLength(sends);
+  });
+
   it('says a line refused with no code this build knows was not added', async () => {
     const { review, run } = await setup();
     await run(current => {
