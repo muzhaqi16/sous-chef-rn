@@ -32,6 +32,10 @@ import {
   type ReceiptLineFormValues,
 } from './receiptLineFormConfig';
 import { receiptsTestIDs } from '../testIDs';
+import { useEarlierPurchases } from './useEarlierPurchases';
+
+// The picker's choice for a line that is a purchase of its own.
+const NEW_PURCHASE = 'new';
 
 interface ReceiptLineFormProps {
   line: ReceiptReviewLine;
@@ -80,7 +84,38 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   const itemId = useWatch({ control, name: 'itemId' });
   const unitId = useWatch({ control, name: 'unitId' });
   const unitText = useWatch({ control, name: 'unitValue' });
+  const existingPurchaseId = useWatch({ control, name: 'existingPurchaseId' });
   const listItemName = listItemNameFor({ itemId, unitId, unitText });
+  // Offered, never picked for the user: a similar purchase may be another one.
+  const earlier = useEarlierPurchases(itemId);
+  const pickedElsewhere =
+    existingPurchaseId !== null &&
+    !earlier.some(purchase => purchase.id === existingPurchaseId);
+  const earlierOptions = [
+    {
+      key: NEW_PURCHASE,
+      label: t('receipts.review.newPurchase'),
+      testID: receiptsTestIDs.lineNewPurchase,
+    },
+    ...earlier.map(purchase => ({
+      key: purchase.id,
+      label: t('receipts.review.earlierPurchase', {
+        amount: purchase.amount,
+        date: purchase.boughtOn,
+      }),
+      testID: receiptsTestIDs.lineEarlierPurchase(purchase.id),
+    })),
+    ...(pickedElsewhere
+      ? [
+          {
+            key: existingPurchaseId,
+            label: t('receipts.review.earlierPicked'),
+            testID: receiptsTestIDs.lineEarlierPurchase(existingPurchaseId),
+          },
+        ]
+      : []),
+  ];
+  const attached = existingPurchaseId !== null;
   const chipLabel = ({ itemName, detail }: ReceiptCandidate): string =>
     detail === null
       ? itemName
@@ -185,7 +220,31 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
           )}
         </View>
 
-        {!!listItemName && (
+        {earlierOptions.length > 1 && (
+          <View style={styles.suggestions}>
+            <Text role="caption" tone="secondary">
+              {t('receipts.review.earlierTitle')}
+            </Text>
+            <ChipScrollRow
+              options={earlierOptions}
+              selected={existingPurchaseId ?? NEW_PURCHASE}
+              onSelect={key => {
+                const picked = earlier.find(purchase => purchase.id === key);
+                if (key !== NEW_PURCHASE && !picked) return;
+                setValue('existingPurchaseId', picked?.id ?? null);
+                setValue('existingPurchaseVersion', picked?.version ?? null);
+              }}
+              edgeFadeColor="surface"
+            />
+            {attached ? (
+              <Text role="caption" tone="tertiary">
+                {t('receipts.review.earlierBody')}
+              </Text>
+            ) : null}
+          </View>
+        )}
+
+        {!!listItemName && !attached && (
           <Controller
             control={control}
             name="offList"
@@ -204,26 +263,30 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
           />
         )}
 
-        <Controller
-          control={control}
-          name="notStocked"
-          render={({ field }) => (
-            <SettingSwitch
-              title={t('receipts.review.notStockedTitle')}
-              description={t('receipts.review.notStockedBody')}
-              value={field.value}
-              onValueChange={on => {
-                field.onChange(on);
-                // A purchase still names what was bought: what the receipt prints.
-                if (on && !getValues('itemName').trim()) {
-                  setValue('itemName', line.printed, { shouldValidate: true });
-                }
-              }}
-              testID={receiptsTestIDs.lineNotStocked}
-              containerStyle={styles.listToggle}
-            />
-          )}
-        />
+        {!attached && (
+          <Controller
+            control={control}
+            name="notStocked"
+            render={({ field }) => (
+              <SettingSwitch
+                title={t('receipts.review.notStockedTitle')}
+                description={t('receipts.review.notStockedBody')}
+                value={field.value}
+                onValueChange={on => {
+                  field.onChange(on);
+                  // A purchase still names what was bought: what the receipt prints.
+                  if (on && !getValues('itemName').trim()) {
+                    setValue('itemName', line.printed, {
+                      shouldValidate: true,
+                    });
+                  }
+                }}
+                testID={receiptsTestIDs.lineNotStocked}
+                containerStyle={styles.listToggle}
+              />
+            )}
+          />
+        )}
 
         <View style={styles.amountRow}>
           <View style={styles.quantityField}>

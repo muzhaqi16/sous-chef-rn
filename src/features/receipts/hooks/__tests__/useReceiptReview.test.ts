@@ -639,6 +639,31 @@ describe('useReceiptReview', () => {
     expect(milk).not.toHaveProperty('totalPaid');
   });
 
+  // IN-04: the milk already moved to the pantry gets its receipt: the line
+  // fills that purchase in, records it, and adds no stock or second purchase.
+  it('sends a line picked as the receipt for an earlier purchase as that purchase', async () => {
+    const { choose, checkIn, addChosen, cache } = await setup();
+    await choose({
+      1: {
+        ...MILK,
+        notStocked: true,
+        existingPurchase: { id: 'IN-04-existing-purchase', version: 3 },
+      },
+    });
+
+    expect(await addChosen()).toMatchObject({ sent: 1, recorded: 1 });
+
+    const [attached] = sent(checkIn);
+    expect(attached).toMatchObject({
+      clientId: '1',
+      stock: false,
+      existingPurchase: { id: 'IN-04-existing-purchase', version: 3 },
+    });
+    expect(attached).not.toHaveProperty('pantryItemId');
+    expect(attached).not.toHaveProperty('shoppingListItemId');
+    expect(pantryItems(cache)).toEqual([]);
+  });
+
   it('says a line refused with no code this build knows was not added', async () => {
     const { review, run } = await setup();
     await run(current => {

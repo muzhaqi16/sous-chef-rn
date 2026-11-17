@@ -82,7 +82,13 @@ export function checkInLineOf({
       amount,
       ...(price === null ? {} : { totalPaid: price }),
       ...(discount === undefined ? {} : { discount }),
-      ...(listLine ? { shoppingListItemId: listLine.id } : {}),
+      // The receipt for a purchase already stocked fills it in, and ticks no
+      // list line: that purchase already did.
+      ...(choice.existingPurchase
+        ? { existingPurchase: choice.existingPurchase }
+        : listLine
+        ? { shoppingListItemId: listLine.id }
+        : {}),
       rawText: line.printed,
       resolvedBy: proposed?.method ?? null,
       // Only a preselected product is accepted; a pick among suggestions is a

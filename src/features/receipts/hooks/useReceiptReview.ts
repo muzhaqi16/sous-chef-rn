@@ -532,7 +532,8 @@ export function useReceiptReview() {
         index: entry.index,
         input: built.input,
         itemName: entry.choice.itemName,
-        ...(listLine ? { listLine } : {}),
+        // The receipt for an earlier purchase ticks no list line.
+        ...(listLine && !entry.choice.existingPurchase ? { listLine } : {}),
       });
     }
     setNeeds(lacking);

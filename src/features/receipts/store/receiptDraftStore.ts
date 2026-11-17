@@ -23,6 +23,11 @@ export interface ReceiptLineChoice {
   offList?: boolean;
   /** Recorded as bought without adding it to the pantry. */
   notStocked?: boolean;
+  /**
+   * The purchase, already recorded without a receipt, that this line is the
+   * receipt for, at the version read: picked by the user, never inferred.
+   */
+  existingPurchase?: { id: string; version: number };
 }
 
 /**

@@ -37,6 +37,9 @@ export const receiptsTestIDs = {
   lineProduct: 'receipt-line-product',
   /** A proposed item's chip in the line sheet, best first. */
   lineSuggestion: (index: number) => `receipt-line-suggestion-${index}`,
+  lineNewPurchase: 'receipt-line-new-purchase',
+  lineEarlierPurchase: (purchaseId: string) =>
+    `receipt-line-earlier-purchase-${purchaseId}`,
   lineSave: 'receipt-line-save',
   lineTickOff: 'receipt-line-tick-off',
   lineNotStocked: 'receipt-line-not-stocked',

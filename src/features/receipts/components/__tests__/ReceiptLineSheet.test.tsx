@@ -72,6 +72,17 @@ jest.mock('#features/catalog/hooks/useResolveUnit', () => ({
   }),
 }));
 
+// The earlier purchases a line may be the receipt for, read through the API.
+let mockEarlier: {
+  id: string;
+  version: number;
+  amount: string;
+  boughtOn: string;
+}[] = [];
+jest.mock('../useEarlierPurchases', () => ({
+  useEarlierPurchases: () => mockEarlier,
+}));
+
 // The receipt's own currency is read through the API; here, the account's.
 jest.mock('../../hooks/useReceiptCurrency', () => ({
   useReceiptMoney: () =>
@@ -234,6 +245,50 @@ describe('the total paid on a receipt line', () => {
 
     await drainTimers();
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ price: 0 }));
+  });
+});
+
+describe('the receipt for an earlier purchase', () => {
+  const EGGS_BOUGHT = {
+    id: 'IN-04-existing-purchase',
+    version: 3,
+    amount: '12 pc',
+    boughtOn: '11/15/2026',
+  };
+  beforeEach(() => {
+    mockEarlier = [EGGS_BOUGHT];
+  });
+  afterEach(() => {
+    mockEarlier = [];
+  });
+
+  // IN-04: picked, the line fills in that purchase and stocks nothing again.
+  it('saves the line as the receipt for the purchase picked', async () => {
+    const { onSave } = renderSheet();
+
+    fireEvent.press(screen.getByText('12 pc on 11/15/2026'));
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        existingPurchase: { id: 'IN-04-existing-purchase', version: 3 },
+        notStocked: true,
+      }),
+    );
+  });
+
+  // A similar purchase may be another one: it is offered, never assumed.
+  it('keeps the line a new purchase unless one is picked', async () => {
+    const { onSave } = renderSheet();
+
+    expect(screen.getByText('A new purchase')).toBeTruthy();
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.not.objectContaining({ existingPurchase: expect.anything() }),
+    );
   });
 });
 

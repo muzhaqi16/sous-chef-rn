@@ -145,7 +145,12 @@
       "storeWhereHint": "Cambia la tienda",
       "storeLearned": "{{store}} ahora es una de tus tiendas",
       "storeChoicesTitle": "¿Qué tienda era?",
-      "storeChoiceFailed": "No se pudo usar esa tienda. Revisa tu conexión e inténtalo de nuevo."
+      "storeChoiceFailed": "No se pudo usar esa tienda. Revisa tu conexión e inténtalo de nuevo.",
+      "earlierTitle": "¿Ya lo añadiste?",
+      "newPurchase": "Una compra nueva",
+      "earlierPurchase": "{{amount}} el {{date}}",
+      "earlierPicked": "La compra anterior",
+      "earlierBody": "Este recibo completa el precio y la tienda de esa compra. No se añade nada de nuevo a tu despensa."
     },
     "photoSend": {
       "title": "¿Enviar la foto para leerla?",

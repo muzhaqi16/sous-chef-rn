@@ -1,4 +1,4 @@
-import { boolean, object, string, type ObjectSchema } from 'yup';
+import { boolean, number, object, string, type ObjectSchema } from 'yup';
 import {
   itemNameText,
   lazyMessage,
@@ -28,6 +28,9 @@ export interface ReceiptLineFormValues {
   offList: boolean;
   /** Record what was paid without adding it to the pantry. */
   notStocked: boolean;
+  /** The earlier purchase picked for this line to be the receipt for. */
+  existingPurchaseId: string | null;
+  existingPurchaseVersion: number | null;
 }
 
 /** What the schema reads from the line beyond the form (`useForm`'s `context`). */
@@ -63,6 +66,8 @@ export const receiptLineSchema: ObjectSchema<ReceiptLineFormValues> = object({
     ),
   offList: boolean().defined(),
   notStocked: boolean().defined(),
+  existingPurchaseId: string().nullable().defined(),
+  existingPurchaseVersion: number().nullable().defined(),
 });
 
 /** An amount in a unit the form opens with in place of the printed count. */
@@ -91,6 +96,7 @@ export const receiptLineDefaults = (
     price,
     offList,
     notStocked,
+    existingPurchase,
   } = asked
     ? {
         ...saved,
@@ -108,6 +114,8 @@ export const receiptLineDefaults = (
     priceInput: formatNumberForInput(price),
     offList: offList ?? false,
     notStocked: notStocked ?? false,
+    existingPurchaseId: existingPurchase?.id ?? null,
+    existingPurchaseVersion: existingPurchase?.version ?? null,
   };
 };
 
@@ -123,4 +131,15 @@ export const toLineChoice = (
   price: parseMoneyInput(values.priceInput) ?? null,
   ...(values.offList ? { offList: true } : {}),
   ...(values.notStocked ? { notStocked: true } : {}),
+  // The receipt for a purchase already stocked adds nothing to the pantry.
+  ...(values.existingPurchaseId !== null &&
+  values.existingPurchaseVersion !== null
+    ? {
+        notStocked: true,
+        existingPurchase: {
+          id: values.existingPurchaseId,
+          version: values.existingPurchaseVersion,
+        },
+      }
+    : {}),
 });

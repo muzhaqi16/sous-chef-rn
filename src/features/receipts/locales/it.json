@@ -145,7 +145,12 @@
       "storeWhereHint": "Cambia il negozio",
       "storeLearned": "{{store}} ora è tra i tuoi negozi",
       "storeChoicesTitle": "Quale negozio era?",
-      "storeChoiceFailed": "Impossibile usare quel negozio. Controlla la connessione e riprova."
+      "storeChoiceFailed": "Impossibile usare quel negozio. Controlla la connessione e riprova.",
+      "earlierTitle": "L'hai già aggiunto?",
+      "newPurchase": "Un nuovo acquisto",
+      "earlierPurchase": "{{amount}} il {{date}}",
+      "earlierPicked": "L'acquisto precedente",
+      "earlierBody": "Questo scontrino completa prezzo e negozio di quell'acquisto. Nulla viene aggiunto di nuovo alla tua dispensa."
     },
     "photoSend": {
       "title": "Inviare la foto per leggerla?",

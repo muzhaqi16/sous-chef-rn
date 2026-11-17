@@ -145,7 +145,12 @@
       "storeWhereHint": "Changes the store",
       "storeLearned": "{{store}} is now one of your stores",
       "storeChoicesTitle": "Which store was it?",
-      "storeChoiceFailed": "Couldn't use that store. Check your connection and try again."
+      "storeChoiceFailed": "Couldn't use that store. Check your connection and try again.",
+      "earlierTitle": "Already added this?",
+      "newPurchase": "A new purchase",
+      "earlierPurchase": "{{amount}} on {{date}}",
+      "earlierPicked": "The earlier purchase",
+      "earlierBody": "This receipt fills in that purchase's price and store. Nothing is added to your pantry again."
     },
     "photoSend": {
       "title": "Send the photo to be read?",

@@ -187,4 +187,32 @@ describe('checkInLineOf', () => {
     expect(result).toMatchObject({ input: { discount: 1 } });
     expect(result).not.toHaveProperty('input.totalPaid');
   });
+
+  // IN-04: the receipt for the 12 eggs already moved to the pantry fills in
+  // that purchase: no stack, no list tick, no second purchase.
+  it('sends the receipt for a picked earlier purchase as that purchase, stocking nothing', () => {
+    const result = checkInLineOf({
+      line: { index: 3, printed: 'EGGS LG 12CT' },
+      choice: lineChoice({
+        itemId: 'item-eggs',
+        price: 4,
+        notStocked: true,
+        existingPurchase: { id: 'IN-04-existing-purchase', version: 3 },
+      }),
+      ids: IDS,
+      listLine: EGGS_LINE,
+      heldUnit: null,
+    });
+
+    expect(result).toMatchObject({
+      input: {
+        purchaseId: 'pur-1',
+        stock: false,
+        existingPurchase: { id: 'IN-04-existing-purchase', version: 3 },
+        totalPaid: 4,
+      },
+    });
+    expect(result).not.toHaveProperty('input.pantryItemId');
+    expect(result).not.toHaveProperty('input.shoppingListItemId');
+  });
 });

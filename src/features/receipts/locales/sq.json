@@ -145,7 +145,12 @@
       "storeWhereHint": "Ndryshon dyqanin",
       "storeLearned": "{{store}} tani është një nga dyqanet e tua",
       "storeChoicesTitle": "Cili dyqan ishte?",
-      "storeChoiceFailed": "Ai dyqan nuk u përdor dot. Kontrollo lidhjen dhe provo sërish."
+      "storeChoiceFailed": "Ai dyqan nuk u përdor dot. Kontrollo lidhjen dhe provo sërish.",
+      "earlierTitle": "E ke shtuar tashmë?",
+      "newPurchase": "Një blerje e re",
+      "earlierPurchase": "{{amount}} më {{date}}",
+      "earlierPicked": "Blerja e mëparshme",
+      "earlierBody": "Kjo faturë plotëson çmimin dhe dyqanin e asaj blerjeje. Asgjë nuk shtohet sërish në qilarin tënd."
     },
     "photoSend": {
       "title": "Ta dërgojmë foton për ta lexuar?",
