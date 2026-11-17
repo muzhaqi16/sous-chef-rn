@@ -549,14 +549,19 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       new Set(ingredientsUsed.map(usage => usage.recipeIngredientId)).size -
         skippedCount,
     );
-    toastService.success(
-      skippedCount > 0
-        ? t('recipes.deductedFromPantryFailed', {
-            count: deductedCount,
-            failed: skippedCount,
-          })
-        : t('recipes.deductedFromPantry', { count: deductedCount }),
-    );
+    // Queued, nothing is deducted yet: the server has not taken it.
+    if (settled.status === 'queued') {
+      toastService.info(t('recipes.cookedQueued'));
+    } else {
+      toastService.success(
+        skippedCount > 0
+          ? t('recipes.deductedFromPantryFailed', {
+              count: deductedCount,
+              failed: skippedCount,
+            })
+          : t('recipes.deductedFromPantry', { count: deductedCount }),
+      );
+    }
 
     Telemetry.trackEvent('recipe_consumption_confirmed', {
       recipe_id: recipeId,

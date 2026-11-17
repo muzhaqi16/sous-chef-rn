@@ -312,7 +312,8 @@
     "outOfStock": "Esaurito",
     "runningLow": "Sta finendo",
     "stockGuideSubtitle": "Tocca + e scansiona uno scontrino recente: ciò che hai comprato va dritto in dispensa.",
-    "stockGuideOffline": "Scansionare uno scontrino richiede una connessione. Riprova quando sarai di nuovo online."
+    "stockGuideOffline": "Scansionare uno scontrino richiede una connessione. Riprova quando sarai di nuovo online.",
+    "pendingAmount": "{{amount}} in attesa di sincronizzazione"
   },
   "storageState": {
     "AMBIENT": "Temperatura ambiente",

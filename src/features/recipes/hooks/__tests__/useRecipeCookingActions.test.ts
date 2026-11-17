@@ -85,6 +85,12 @@ const cookedMock = (skippedIngredients: SkippedIngredient[] = []) =>
     },
   });
 
+// No payload and no error: the offline queue took the write.
+const queuedCookMock = () =>
+  recordMock(MarkRecipeAsCookedDocument, {
+    data: { markRecipeAsCooked: null },
+  });
+
 const refusedCookMock = () =>
   recordMock(MarkRecipeAsCookedDocument, {
     data: {
@@ -284,6 +290,25 @@ describe('useRecipeCookingActions', () => {
     expect(mockToastSuccess).toHaveBeenCalled();
     expect(mockToastWarning).not.toHaveBeenCalled();
   });
+
+  // Queued work is never described as taken by the server.
+  it.each([
+    [true, 'Cooked. Your pantry updates when it syncs.'],
+    [false, "Cooked. It's saved when it syncs."],
+  ])(
+    'says a quick cook queued offline (deducting: %s) is saved, never done',
+    async (deductFromPantry, said) => {
+      const queued = queuedCookMock();
+      const { result } = renderCooking([queued.mock]);
+
+      await cook(result, { deductFromPantry });
+
+      await drainTimers();
+      expect(queued.fired).toHaveLength(1);
+      expect(mockToastInfo).toHaveBeenCalledWith(said);
+      expect(mockToastSuccess).not.toHaveBeenCalled();
+    },
+  );
 
   it('shows the no-deduction success toast when deductFromPantry is false', async () => {
     const cooked = cookedMock();

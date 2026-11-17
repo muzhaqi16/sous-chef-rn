@@ -312,7 +312,8 @@
     "outOfStock": "Sin existencias",
     "runningLow": "Queda poco",
     "stockGuideSubtitle": "Toca + y escanea un ticket reciente: lo que compraste va directo a tu despensa.",
-    "stockGuideOffline": "Escanear un ticket necesita conexión. Pruébalo cuando vuelvas a estar en línea."
+    "stockGuideOffline": "Escanear un ticket necesita conexión. Pruébalo cuando vuelvas a estar en línea.",
+    "pendingAmount": "{{amount}} pendiente de sincronizar"
   },
   "storageState": {
     "AMBIENT": "Ambiente",

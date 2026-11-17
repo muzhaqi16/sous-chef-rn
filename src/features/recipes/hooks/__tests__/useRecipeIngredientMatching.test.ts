@@ -959,17 +959,18 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     },
   );
 
-  it('counts every entry sent when the cook is queued offline', async () => {
+  // Queued work is never described as taken by the server.
+  it('says a cook queued offline is saved, never that it deducted', async () => {
     const cook = cookMock({ kind: 'queued' });
     const { result } = await loadMatchesFor([includedMatch, secondMatch], cook);
 
     await drained(() => result.current.confirmConsumption());
 
     expect(cook.fired).toHaveLength(1);
-    // No response to count: every entry replays on reconnect.
-    expect(mockToastSuccess).toHaveBeenCalledWith(
-      'Deducted 2 ingredients from pantry',
+    expect(mockToastInfo).toHaveBeenCalledWith(
+      'Cooked. Your pantry updates when it syncs.',
     );
+    expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(mockToastError).not.toHaveBeenCalled();
     await drainTimers();
     expect(result.current.isSheetVisible).toBe(false);

@@ -400,7 +400,9 @@
     },
     "cookGuideSuggestions": "Receta me çka ke, duke nisur me ushqimin që skadon më shpejt. Hap një për ta gatuar.",
     "cookGuideCook": "Hap një dhe, kur ta kesh gatuar, prek {{action}}.",
-    "cookGuideOffline": "Recetat nga qilari kanë nevojë për lidhje. Do të shfaqen këtu sapo të jesh sërish online."
+    "cookGuideOffline": "Recetat nga qilari kanë nevojë për lidhje. Do të shfaqen këtu sapo të jesh sërish online.",
+    "cookedQueued": "U gatua. Qilari yt do të përditësohet kur të sinkronizohet.",
+    "cookedQueuedNotDeducted": "U gatua. Do të ruhet kur të sinkronizohet."
   },
   "recipeFilters": {
     "title": "Filtrat",

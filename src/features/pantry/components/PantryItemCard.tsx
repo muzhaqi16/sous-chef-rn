@@ -26,6 +26,7 @@ import {
 } from './PantryActionsContext';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
+import { usePendingUses } from '#features/pantry/hooks/usePendingUses';
 import {
   formatAmountLeft,
   getExpirationStatus,
@@ -166,6 +167,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   // BEFORE the `!complete` early return: a hook after it is conditional, which
   // bails the whole component out of the React Compiler.
   const isPendingSync = useIsPendingSync(pantryItem.id);
+  const pendingUses = usePendingUses(pantryItem.id, isPendingSync);
   const today = useToday();
 
   if (!complete) return null;
@@ -216,8 +218,14 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const stockText = isOutOfStock
     ? t('pantryScreen.outOfStock')
     : t('pantryScreen.runningLow');
+  // A use only the server can convert shows what was entered, never a guess.
   const status: { tone: StatusTone; text: string } | null = isPendingSync
-    ? { tone: 'pending', text: t('status.syncing') }
+    ? {
+        tone: 'pending',
+        text: pendingUses
+          ? t('pantryScreen.pendingAmount', { amount: pendingUses })
+          : t('status.syncing'),
+      }
     : isStockStatus
     ? { tone: 'info', text: stockText }
     : expirationText

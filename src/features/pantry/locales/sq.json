@@ -312,7 +312,8 @@
     "outOfStock": "Pa stok",
     "runningLow": "Po mbaron",
     "stockGuideSubtitle": "Prek + dhe skano një faturë të fundit: çka bleve shkon drejt në qilar.",
-    "stockGuideOffline": "Skanimi i një fature ka nevojë për lidhje. Provoje sapo të jesh sërish online."
+    "stockGuideOffline": "Skanimi i një fature ka nevojë për lidhje. Provoje sapo të jesh sërish online.",
+    "pendingAmount": "{{amount}} në pritje të sinkronizimit"
   },
   "storageState": {
     "AMBIENT": "Ambient",

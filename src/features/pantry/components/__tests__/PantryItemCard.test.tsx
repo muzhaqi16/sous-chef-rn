@@ -17,7 +17,11 @@ import {
   makeQueuedMutation,
   queuedMutationFor,
 } from '#/test-utils/queuedMutation';
-import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  CreatePantryItemUsageDocument,
+  UpdatePantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { useStore } from '#store';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { gql, type ApolloClient } from '@apollo/client';
 import { t } from '#/i18n';
@@ -511,6 +515,41 @@ describe('PantryItemCard', () => {
     renderCard();
 
     expect(screen.getByText(t('status.syncing'))).toBeTruthy();
+  });
+
+  // USE-05 offline: only the server turns 4 oz into the stack's pounds, so the
+  // row shows the use as entered, waiting, and moves no stock.
+  it('shows a queued use only the server can convert as the amount entered', () => {
+    useStore
+      .getState()
+      .setCachedUnits([{ id: 'unit-oz', name: 'ounce', symbol: 'oz' }]);
+    queueStore.setCurrentUserId('user-1');
+    queueStore.addMutation(
+      makeQueuedMutation({
+        ...queuedMutationFor(CreatePantryItemUsageDocument),
+        variables: {
+          input: {
+            pantryItemId: 'pantry-1',
+            amount: { quantity: 4 },
+            usageUnitId: 'unit-oz',
+          },
+        },
+        pendingWrite: {
+          id: 'use-1',
+          inputs: {
+            delta: null,
+            stated: { amount: 4, unitId: 'unit-oz' },
+            now: '2026-11-15T15:00:00.000Z',
+          },
+        },
+      }),
+    );
+    renderCard();
+
+    expect(
+      screen.getByText(t('pantryScreen.pendingAmount', { amount: '4 oz' })),
+    ).toBeTruthy();
+    useStore.getState().setCachedUnits([]);
   });
 
   // A row whose fields are not all held would show what it does not have.

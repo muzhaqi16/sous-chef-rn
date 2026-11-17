@@ -134,8 +134,18 @@ export function useRecipeCookingActions({
       emitTutorialEvent('recipe.cooked');
       askForReviewAfterSuccess();
     }
-    return { failure: settled.failure, skipped };
+    return {
+      failure: settled.failure,
+      queued: settled.status === 'queued',
+      skipped,
+    };
   };
+
+  /** A queued cook is not taken yet: it says so, never that it deducted. */
+  const queuedToast = (deducting: boolean) =>
+    toastService.info(
+      t(deducting ? 'recipes.cookedQueued' : 'recipes.cookedQueuedNotDeducted'),
+    );
 
   /**
    * What the cook left undeducted: the lines by name, and the cause when one
@@ -193,14 +203,14 @@ export function useRecipeCookingActions({
         const loaded = await ingredientMatching.loadMatches(input.servings);
         if (!loaded) {
           // Fallback to simple deduction if matching fails
-          const { failure, skipped } = await fireMarkCooked({
+          const { failure, queued, skipped } = await fireMarkCooked({
             recipeId,
             servings: input.servings,
             deductFromPantry: input.deductFromPantry,
             notes: input.notes,
           });
           if (failure) return;
-          if (isOffline)
+          if (isOffline || queued)
             toastService.info(t('recipes.cookReviewNeedsConnection'));
           else deductionToast(skipped);
         }
@@ -210,7 +220,7 @@ export function useRecipeCookingActions({
 
     // Simple deduction path
     void executeWithLoadingState(async () => {
-      const { failure, skipped } = await fireMarkCooked({
+      const { failure, queued, skipped } = await fireMarkCooked({
         recipeId,
         servings: input.servings,
         deductFromPantry: input.deductFromPantry,
@@ -218,7 +228,9 @@ export function useRecipeCookingActions({
       });
       if (failure) return;
 
-      if (input.deductFromPantry) {
+      if (queued) {
+        queuedToast(input.deductFromPantry);
+      } else if (input.deductFromPantry) {
         deductionToast(skipped);
       } else {
         toastService.success(t('recipes.markedCooked'));
@@ -231,14 +243,15 @@ export function useRecipeCookingActions({
     if (!recipeId) return;
     ingredientMatching.closeSheet();
     void executeWithLoadingState(async () => {
-      const { failure, skipped } = await fireMarkCooked({
+      const { failure, queued, skipped } = await fireMarkCooked({
         recipeId,
         servings: reviewedCook?.servings,
         deductFromPantry: true,
         notes: reviewedCook?.notes,
       });
       if (failure) return;
-      deductionToast(skipped);
+      if (queued) queuedToast(true);
+      else deductionToast(skipped);
     }, setMarkingAsCooked);
   };
 
@@ -251,14 +264,15 @@ export function useRecipeCookingActions({
     if (!recipeId) return;
     ingredientMatching.closeSheet();
     void executeWithLoadingState(async () => {
-      const { failure } = await fireMarkCooked({
+      const { failure, queued } = await fireMarkCooked({
         recipeId,
         servings: reviewedCook?.servings,
         deductFromPantry: false,
         notes: reviewedCook?.notes,
       });
       if (failure) return;
-      toastService.success(t('recipes.markedCookedNotDeducted'));
+      if (queued) queuedToast(false);
+      else toastService.success(t('recipes.markedCookedNotDeducted'));
     }, setMarkingAsCooked);
   };
 

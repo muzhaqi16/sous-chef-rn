@@ -400,7 +400,9 @@
     },
     "cookGuideSuggestions": "Ricette con quello che hai, prima con ciò che scade prima. Aprine una per cucinarla.",
     "cookGuideCook": "Aprine una e, quando è pronta, tocca {{action}}.",
-    "cookGuideOffline": "Le ricette dalla dispensa richiedono una connessione. Compariranno qui quando sarai di nuovo online."
+    "cookGuideOffline": "Le ricette dalla dispensa richiedono una connessione. Compariranno qui quando sarai di nuovo online.",
+    "cookedQueued": "Cucinata. La tua dispensa si aggiornerà alla sincronizzazione.",
+    "cookedQueuedNotDeducted": "Cucinata. Verrà salvata alla sincronizzazione."
   },
   "recipeFilters": {
     "title": "Filtri",

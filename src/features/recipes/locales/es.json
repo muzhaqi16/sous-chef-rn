@@ -400,7 +400,9 @@
     },
     "cookGuideSuggestions": "Recetas con lo que tienes, primero con lo que caduca antes. Abre una para cocinarla.",
     "cookGuideCook": "Abre una y, cuando esté hecha, toca {{action}}.",
-    "cookGuideOffline": "Las recetas de tu despensa necesitan conexión. Aparecerán aquí cuando vuelvas a estar en línea."
+    "cookGuideOffline": "Las recetas de tu despensa necesitan conexión. Aparecerán aquí cuando vuelvas a estar en línea.",
+    "cookedQueued": "Cocinada. Tu despensa se actualizará al sincronizar.",
+    "cookedQueuedNotDeducted": "Cocinada. Se guardará al sincronizar."
   },
   "recipeFilters": {
     "title": "Filtros",
