@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AppPressable } from '#components/atoms/AppPressable';
+import { Button } from '#components/molecules/Button';
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import { View } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
@@ -60,6 +61,9 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   const { t } = useTranslation();
   const [fieldError, setFieldError] = useState<string>();
   const [quantityInput, setQuantityInput] = useState('1');
+  // A unit that lands after opening brings its increment only to an amount
+  // the user has not changed.
+  const [quantityEdited, setQuantityEdited] = useState(false);
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
 
   const handleReset = (
@@ -68,8 +72,15 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
     increment: number | null,
   ) => {
     setQuantityInput(increment ? formatQuantityForInput(increment) : '1');
+    setQuantityEdited(false);
     setPurpose(UsagePurpose.General);
     setFieldError(undefined);
+  };
+
+  const handleDefaultUnitLoaded = (increment: number | null) => {
+    if (!quantityEdited && increment) {
+      setQuantityInput(formatQuantityForInput(increment));
+    }
   };
 
   const handleConfirm = async (shared: PantryActionSharedState) => {
@@ -109,6 +120,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       operation={PantryOperation.Consume}
       onConfirm={handleConfirm}
       onReset={handleReset}
+      onDefaultUnitLoaded={handleDefaultUnitLoaded}
       renderActionFields={(shared, pantryItem) => (
         <ConsumeActionFields
           compact={compact}
@@ -116,6 +128,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
           quantityInput={quantityInput}
           setQuantityInput={value => {
             setFieldError(undefined);
+            setQuantityEdited(true);
             setQuantityInput(value);
           }}
           purpose={purpose}
@@ -201,18 +214,17 @@ const ConsumeActionFields: React.FC<{
 
       {!!compact && (
         <View style={commonStyles.bottomSheetSection}>
-          <AppPressable
+          <Button
+            variant="outline"
+            size="small"
             testID={pantryTestIDs.consumeUseAll}
-            accessibilityRole="button"
-            accessibilityLabel={t('consumeItem.useAll')}
+            title={t('consumeItem.useAll')}
             disabled={useAll == null || useAll <= 0}
             onPress={() => {
               if (useAll != null)
                 setQuantityInput(formatQuantityForInput(useAll));
             }}
-          >
-            <Text role="body">{t('consumeItem.useAll')}</Text>
-          </AppPressable>
+          />
           <AppPressable
             testID={pantryTestIDs.consumeDetails}
             accessibilityRole="button"

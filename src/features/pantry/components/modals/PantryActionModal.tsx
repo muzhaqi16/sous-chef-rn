@@ -51,6 +51,8 @@ interface PantryActionModalProps {
     defaultUnit: SelectedUnitInfo | null,
     defaultIncrement: number | null,
   ) => void;
+  /** Fires when the default unit lands after opening, with that unit's increment. */
+  onDefaultUnitLoaded?: (defaultIncrement: number | null) => void;
   renderActionFields: (
     shared: PantryActionSharedState,
     pantryItem: PantryActionModal_PantryItemFragment,
@@ -75,6 +77,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   operation,
   onConfirm,
   onReset,
+  onDefaultUnitLoaded,
   renderActionFields,
 }) => {
   const { t } = useTranslation();
@@ -251,6 +254,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       defaultUnit != null
     ) {
       setSelectedUnitInfo(defaultUnit);
+      onDefaultUnitLoaded?.(defaultIncrement);
     }
   }
 
