@@ -190,6 +190,7 @@ const seedSoup = () => {
     remainingPortions: 18,
     portionUnit: { __typename: 'Unit', id: 'serving' },
     stockBreakdown: null,
+    activeBatchCount: 1,
   };
   return seedCache([
     ...ITEM_FRAGMENTS.map(fragment => ({ fragment, data })),
@@ -678,9 +679,184 @@ describe('using some', () => {
 
     await consume(result, { quantity: 2, unitId: 'serving' });
 
+    // 18 - 2 = 16 servings; one batch of 9-serving cans holds 16 / 9 of a can,
+    // an exact fraction as the server keeps it for a portion-counted stack.
     expect(cachedItem(cache)).toMatchObject({
-      quantity: 2,
+      quantity: expect.closeTo(16 / 9, 6),
+      heldQuantity: expect.closeTo(16 / 9, 6),
       remainingPortions: 16,
+    });
+  });
+});
+
+// A stack of `count` packages of `size`, counted by the package, held inside
+// in `inside` (fl oz, oz), across `batches` batches.
+const seedPackages = ({
+  count,
+  size,
+  batches,
+  inside,
+}: {
+  count: number;
+  size: number;
+  batches: number;
+  inside: string;
+}) => {
+  const pack = asAbbreviation({
+    __typename: 'Unit',
+    id: 'pack',
+    symbol: 'pack',
+    type: UnitType.Count,
+    commonFractions: [],
+    displayAsFraction: false,
+  });
+  const data = {
+    __typename: 'PantryItem',
+    id: 'item-1',
+    quantity: count,
+    heldQuantity: count,
+    consumeUnit: null,
+    displayAmount: {
+      __typename: 'DisplayAmount',
+      quantity: count,
+      localizedSymbol: 'pack',
+      fraction: null,
+      unit: pack,
+    },
+    unit: pack,
+    activeBatchCount: batches,
+    netWeight: size,
+    remainingNetWeight: count * size,
+    netWeightUnit: { __typename: 'Unit', id: inside },
+    portionsPerTrackingUnit: null,
+    remainingPortions: null,
+    portionUnit: null,
+    stockBreakdown: { __typename: 'StockBreakdown', fullPackages: count },
+  };
+  return seedCache([
+    ...ITEM_FRAGMENTS.map(fragment => ({ fragment, data })),
+    { fragment: WriteHeldStock_InsideFragmentDoc, data },
+  ]);
+};
+
+const CONTENTS = gql`
+  fragment _ItemActionsContentsProbe on PantryItem {
+    id
+    quantity
+    heldQuantity
+    remainingNetWeight
+    stockBreakdown {
+      fullPackages
+    }
+    amountLeft {
+      value
+      unitId
+    }
+  }
+`;
+
+/** The row as shown, or (`optimistic: false`) as the server's answers left it. */
+const contentsOf = (cache: Cache, optimistic = true) =>
+  cache.readFragment({
+    optimistic,
+    id: cache.identify({ __typename: 'PantryItem', id: 'item-1' }),
+    fragment: CONTENTS,
+    returnPartialData: true,
+  });
+
+describe('using what a package holds', () => {
+  it('USE-02 moves every figure of a one-batch carton before the answer', async () => {
+    const { result, cache } = renderActions(
+      [queuedUsage()],
+      seedPackages({ count: 1, size: 64, batches: 1, inside: 'floz' }),
+    );
+
+    await consume(result, { quantity: 8, unitId: 'floz' });
+
+    // 64 - 8 = 56 fl oz; 56 / 64 = 0.875 carton; one carton, none unopened.
+    expect(contentsOf(cache)).toMatchObject({
+      remainingNetWeight: 56,
+      heldQuantity: 0.875,
+      quantity: 1,
+      stockBreakdown: { fullPackages: 0 },
+      amountLeft: { value: 56, unitId: 'floz' },
+    });
+  });
+
+  it('USE-03 takes one can of a six-can pack and its contents with it', async () => {
+    const { result, cache } = renderActions(
+      [queuedUsage()],
+      seedPackages({ count: 6, size: 250, batches: 1, inside: 'ml' }),
+    );
+
+    await consume(result, { quantity: 1 });
+
+    // 6 - 1 = 5 cans; 5 x 250 = 1250 mL, neither size applied twice.
+    expect(contentsOf(cache)).toMatchObject({
+      quantity: 5,
+      heldQuantity: 5,
+      remainingNetWeight: 1250,
+      stockBreakdown: { fullPackages: 5 },
+    });
+  });
+
+  it('USE-04 moves only the total across two packs until the server says which it drew', async () => {
+    const answer = recordMock(CreatePantryItemUsageDocument, {
+      held: true,
+      data: {
+        createPantryItemUsage: {
+          __typename: 'CreatePantryItemUsagePayload',
+          pantryItemUsage: {
+            __typename: 'PantryItemUsage',
+            id: 'usage-1',
+            pantryItem: {
+              __typename: 'PantryItem',
+              id: 'item-1',
+              quantity: 2,
+              heldQuantity: 1.25,
+              remainingNetWeight: 20,
+              stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 1 },
+            },
+          },
+        },
+      },
+    });
+    const { result, cache } = renderActions(
+      [answer],
+      seedPackages({ count: 2, size: 16, batches: 2, inside: 'oz' }),
+    );
+    act(() => result.current.handleConsumeItem('item-1'));
+    let settled: Promise<unknown> = Promise.resolve();
+    await act(async () => {
+      settled = result.current.handleConfirmConsume(
+        12,
+        '12',
+        UsagePurpose.Cooking,
+        '',
+        'oz',
+      );
+    });
+
+    // 32 - 12 = 20 oz is certain; which pack it came from is not, yet.
+    expect(contentsOf(cache)).toMatchObject({
+      remainingNetWeight: 20,
+      amountLeft: { value: 20, unitId: 'oz' },
+      heldQuantity: 2,
+      quantity: 2,
+      stockBreakdown: { fullPackages: 2 },
+    });
+
+    await act(async () => {
+      answer.release();
+      await settled;
+    });
+
+    // Pack A 4 oz, pack B 16 oz: 1.25 packs held, one unopened, two packs.
+    expect(contentsOf(cache, false)).toMatchObject({
+      remainingNetWeight: 20,
+      heldQuantity: 1.25,
+      quantity: 2,
+      stockBreakdown: { fullPackages: 1 },
     });
   });
 });

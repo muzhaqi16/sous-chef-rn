@@ -4,7 +4,9 @@ import {
   amountLeftOf,
   countFactorOver,
   fullPackagesAfter,
+  heldAfterDraw,
   inCountedUnit,
+  packagesStarted,
   shownStock,
 } from '#domain/stockDisplay';
 import { UnitType } from '#/graphql/generated/schemaTypes';
@@ -254,6 +256,18 @@ export function drawInside(
       lastUsedAt: () => now,
     },
   });
+  // One batch (or stock held on the row) moves every figure exactly; with more,
+  // only the total is known until the server says which package it drew.
+  const heldBefore = inside.heldQuantity;
+  const batches = inside.activeBatchCount;
+  if (batches != null && batches <= 1 && heldBefore != null && held > 0) {
+    const after = heldAfterDraw(heldBefore, held, left);
+    // Portions keep exact fractions of a pack; a weighed package counts whole.
+    const quantity = portionUnit ? after : packagesStarted(after);
+    cache.modify({ id, fields: { quantity: () => quantity } });
+    writeHeldStock(cache, pantryItemId, after);
+    return true;
+  }
   writeAmountLeft(
     cache,
     id,
