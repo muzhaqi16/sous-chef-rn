@@ -22,6 +22,14 @@ import {
   type ReceiptReviewLine,
 } from '../utils/receiptReviewLines';
 import { checkInLineOf, type CheckInLineNeed } from '../utils/checkInLine';
+import {
+  receiptLineAmount,
+  type ListLineAmount,
+} from '../utils/receiptLineAmount';
+import {
+  formatQuantityDisplay,
+  type UnitLabelSource,
+} from '#/utils/formatQuantity';
 import { forgetReceipt } from '../utils/forgetReceipt';
 import {
   linkReceiptLines,
@@ -56,11 +64,39 @@ import { firstNonBlank } from '#/utils/firstNonBlank';
 // The chain and its store number print above the items (`ALDI` / `Store #027`).
 const HEADER_LINES = 6;
 
-const NEED_COPY: Record<CheckInLineNeed, TranslationKey> = {
+const NEED_COPY: Record<Exclude<CheckInLineNeed, 'amount'>, TranslationKey> = {
   item: 'errors.itemNameRequired',
   unit: 'receipts.review.needsUnit',
   price: 'receipts.review.totalNeeded',
 };
+
+/** An amount the review shows in its list line's unit. */
+interface ListAmount {
+  quantity: number;
+  unitId: string;
+  /** The unit as the line sheet's unit field shows it. */
+  unitText: string;
+  unit: UnitLabelSource;
+}
+
+/** What a linked list line asked for, in its own unit; null with no unit. */
+const askedBy = (
+  listLine:
+    | (Omit<ListLineAmount, 'unit'> & {
+        unit:
+          | (ListLineAmount['unit'] & { symbol: string } & UnitLabelSource)
+          | null;
+      })
+    | undefined,
+): ListAmount | null =>
+  listLine?.unit
+    ? {
+        quantity: listLine.quantity ?? 1,
+        unitId: listLine.unit.id,
+        unitText: listLine.unit.symbol,
+        unit: listLine.unit,
+      }
+    : null;
 
 /**
  * What adding does with a line: `add` it, retry it once `failed`; or nothing:
@@ -86,6 +122,10 @@ export interface ReceiptReviewRow extends ReceiptReviewLine {
   failure?: string;
   /** Adding it ticks a shopping-list line off rather than adding it again. */
   onList: boolean;
+  /** The amount its list line supplied for a bare count, shown so it can be corrected. */
+  fromList?: ListAmount;
+  /** What its list line asked for, which the question about its amount starts from. */
+  asked?: ListAmount;
 }
 
 /** A store new to the household, which the receipt's check-in adds to it. */
@@ -297,6 +337,14 @@ export function useReceiptReview() {
   // told from its code.
   const failureOf = (index: number): string | undefined => {
     const need = needs[index];
+    if (need === 'amount') {
+      const asked = askedBy(links.get(index));
+      return asked
+        ? t('receipts.review.needsAmount', {
+            amount: formatQuantityDisplay(asked.quantity, asked.unit),
+          })
+        : t(NEED_COPY.unit);
+    }
     if (need) return t(NEED_COPY[need]);
     const code = draft?.failed?.[index];
     if (code === undefined) return undefined;
@@ -308,6 +356,15 @@ export function useReceiptReview() {
   const rows: ReceiptReviewRow[] = chosen.map(entry => {
     const { line, match, choice } = entry;
     const failure = failureOf(line.index);
+    const listLine = links.get(line.index);
+    const asked = askedBy(listLine);
+    // A linked line in a unit reads its amount without the held stack.
+    const bought =
+      choice && asked ? receiptLineAmount(choice, listLine, null) : null;
+    const measured =
+      bought && 'amount' in bought && bought.fromList
+        ? bought.amount.measured
+        : undefined;
     return {
       ...line,
       status: statusOf(entry, failure),
@@ -315,7 +372,13 @@ export function useReceiptReview() {
       candidates: match?.candidates ?? [],
       ...(match?.guess && !choice ? { suggestion: match.guess } : {}),
       failure,
-      onList: links.has(line.index),
+      onList: !!listLine,
+      ...(asked && measured
+        ? { fromList: { ...asked, quantity: measured.quantity } }
+        : {}),
+      ...(asked && bought && 'needs' in bought && bought.needs === 'amount'
+        ? { asked }
+        : {}),
     };
   });
 

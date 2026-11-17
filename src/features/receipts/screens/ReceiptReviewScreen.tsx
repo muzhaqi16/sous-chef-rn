@@ -206,6 +206,21 @@ export const ReceiptReviewScreen: React.FC = () => {
       case 'add':
       case 'added': {
         if (!choice) return row.printed;
+        // A bare count took its list line's amount: say so, so it can be fixed.
+        if (row.fromList) {
+          return t(
+            choice.notStocked
+              ? 'receipts.review.chosenDetailFromListNotStocked'
+              : 'receipts.review.chosenDetailFromList',
+            {
+              printed: row.printed,
+              amount: formatQuantityDisplay(
+                row.fromList.quantity,
+                row.fromList.unit,
+              ),
+            },
+          );
+        }
         return t(
           choice.notStocked
             ? 'receipts.review.chosenDetailNotStocked'
@@ -582,6 +597,7 @@ export const ReceiptReviewScreen: React.FC = () => {
         visible={sheetVisible}
         line={editing ?? null}
         choice={editing?.choice}
+        asked={editing?.asked}
         canLeaveOut={editing?.status !== 'skipped'}
         candidates={editing?.candidates ?? []}
         listItemNameFor={key =>

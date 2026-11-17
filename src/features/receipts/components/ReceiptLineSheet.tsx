@@ -27,6 +27,7 @@ import {
   receiptLineDefaults,
   receiptLineSchema,
   toLineChoice,
+  type ReceiptLineAmountSeed,
   type ReceiptLineFormContext,
   type ReceiptLineFormValues,
 } from './receiptLineFormConfig';
@@ -35,6 +36,8 @@ import { receiptsTestIDs } from '../testIDs';
 interface ReceiptLineFormProps {
   line: ReceiptReviewLine;
   choice: ReceiptLineChoice | undefined;
+  /** What its list line asked for, which a line whose amount is asked opens with. */
+  asked?: ReceiptLineAmountSeed;
   /** False for a line already left out, where leaving it out does nothing. */
   canLeaveOut: boolean;
   /** Items the API proposes for the line, best first. */
@@ -52,6 +55,7 @@ interface ReceiptLineFormProps {
 const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   line,
   choice,
+  asked,
   canLeaveOut,
   candidates,
   listItemNameFor,
@@ -69,7 +73,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   >({
     resolver: yupResolver(receiptLineSchema),
     context: { free: line.price === 0 && (line.discount ?? 0) > 0 },
-    defaultValues: receiptLineDefaults(line, choice),
+    defaultValues: receiptLineDefaults(line, choice, asked),
   });
 
   // `useWatch`, not `watch`: the compiler cannot memoize the latter's function.

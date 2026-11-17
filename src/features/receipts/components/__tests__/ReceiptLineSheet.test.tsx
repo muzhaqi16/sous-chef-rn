@@ -295,3 +295,37 @@ describe('a receipt line not for the pantry', () => {
     );
   });
 });
+
+describe('a line whose amount is asked', () => {
+  it('opens on what its list line asked for, so one save confirms it', async () => {
+    const onSave = jest.fn();
+    render(
+      <ReceiptLineSheet
+        visible
+        line={MILK}
+        choice={lineChoice({ quantity: 3, price: MILK.price })}
+        asked={{ quantity: 2, unitId: 'unit-bottle', unitText: 'btl' }}
+        candidates={[]}
+        listItemNameFor={() => undefined}
+        onPickItem={jest.fn()}
+        opening={1}
+        onClose={jest.fn()}
+        onSave={onSave}
+        onRemove={jest.fn()}
+        canLeaveOut
+      />,
+    );
+    expect(screen.getByTestId('field-unit')).toHaveProp('value', 'btl');
+
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quantity: 2,
+        unitId: 'unit-bottle',
+        unitText: 'btl',
+      }),
+    );
+  });
+});

@@ -10,7 +10,14 @@ const line = (
   unitText: unit.unitText ?? '',
 });
 
-const LIST_IN_POUNDS = { quantity: 2, unit: { id: 'unit-lb' } };
+const LIST_IN_POUNDS = {
+  quantity: 2,
+  unit: { id: 'unit-lb', type: UnitType.Weight },
+};
+const LIST_OF_EGGS = {
+  quantity: 12,
+  unit: { id: 'unit-pc', type: UnitType.Count },
+};
 const LIST_WITHOUT_UNIT = { quantity: 3, unit: null };
 const HELD_IN_PIECES = { id: 'unit-pc', type: UnitType.Count };
 
@@ -21,77 +28,119 @@ describe('receiptLineAmount', () => {
       line(2.21, { unitId: 'unit-lb' }),
       undefined,
       null,
-      { measured: { quantity: 2.21, unitId: 'unit-lb' } },
+      {
+        amount: { measured: { quantity: 2.21, unitId: 'unit-lb' } },
+        fromList: false,
+      },
     ],
     [
       'a typed unit names the list line it links to',
       line(1.5, { unitText: 'lb' }),
       LIST_IN_POUNDS,
       null,
-      { measured: { quantity: 1.5, unitId: 'unit-lb' } },
+      {
+        amount: { measured: { quantity: 1.5, unitId: 'unit-lb' } },
+        fromList: false,
+      },
     ],
     [
       'a typed unit with no line resolves to nothing',
       line(1.5, { unitText: 'lb' }),
       undefined,
       null,
-      null,
+      { needs: 'unit' },
     ],
     [
       'one with no unit is one package, never one of the tracking unit',
       line(1),
       undefined,
       null,
-      { packages: { count: 1 } },
+      { amount: { packages: { count: 1 } }, fromList: false },
     ],
     [
       'two with no unit is two packages',
       line(2),
       undefined,
       null,
-      { packages: { count: 2 } },
+      { amount: { packages: { count: 2 } }, fromList: false },
     ],
     [
       'a count the pantry holds in pieces is that many pieces',
       line(2),
       undefined,
       HELD_IN_PIECES,
-      { measured: { quantity: 2, unitId: 'unit-pc' } },
+      {
+        amount: { measured: { quantity: 2, unitId: 'unit-pc' } },
+        fromList: false,
+      },
     ],
     [
       "a bare 1 against a list line in a unit is the list's amount",
       line(1),
       LIST_IN_POUNDS,
       null,
-      { measured: { quantity: 2, unitId: 'unit-lb' } },
+      {
+        amount: { measured: { quantity: 2, unitId: 'unit-lb' } },
+        fromList: true,
+      },
     ],
     [
-      'a count against a list line in a unit is that many packages',
+      // The API counts a bare package of a counted line as one piece: one egg.
+      'a bare 1 against a counted list line is the list amount, never one piece',
+      line(1),
+      LIST_OF_EGGS,
+      HELD_IN_PIECES,
+      {
+        amount: { measured: { quantity: 12, unitId: 'unit-pc' } },
+        fromList: true,
+      },
+    ],
+    [
+      'a count equal to a counted list line is in its unit',
+      line(12),
+      LIST_OF_EGGS,
+      null,
+      {
+        amount: { measured: { quantity: 12, unitId: 'unit-pc' } },
+        fromList: true,
+      },
+    ],
+    [
+      // Two cartons or two eggs: the API would record two eggs, so it is asked.
+      'any other count against a counted list line is asked',
+      line(2),
+      LIST_OF_EGGS,
+      null,
+      { needs: 'amount' },
+    ],
+    [
+      // The API sizes them: the line's stored size, the catalog pack, else the line's amount each.
+      'a count against a weighed list line is that many packages',
       line(3),
       LIST_IN_POUNDS,
       null,
-      { packages: { count: 3 } },
+      { amount: { packages: { count: 3 } }, fromList: false },
     ],
     [
       'a count against a list line with no unit is that many packages',
       line(2),
       LIST_WITHOUT_UNIT,
       null,
-      { packages: { count: 2 } },
+      { amount: { packages: { count: 2 } }, fromList: false },
     ],
     [
       'a part of something no unit names is refused',
       line(0.5),
       undefined,
       null,
-      null,
+      { needs: 'unit' },
     ],
     [
       'a part against a list line in a unit is refused too',
       line(0.5),
       LIST_IN_POUNDS,
       null,
-      null,
+      { needs: 'unit' },
     ],
   ])('%s', (_case, choice, listLine, heldUnit, expected) => {
     expect(receiptLineAmount(choice, listLine, heldUnit)).toEqual(expected);

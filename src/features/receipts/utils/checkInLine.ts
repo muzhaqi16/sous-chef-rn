@@ -13,7 +13,7 @@ import type { ReceiptReviewLine } from './receiptReviewLines';
 import { receiptLineAmount, type ListLineAmount } from './receiptLineAmount';
 
 /** What a line still lacks before the API can record it. */
-export type CheckInLineNeed = 'item' | 'unit' | 'price';
+export type CheckInLineNeed = 'item' | 'unit' | 'amount' | 'price';
 
 export type CheckInLine =
   | { input: ReceiptCheckInLineInput }
@@ -57,8 +57,9 @@ export function checkInLineOf({
 }: CheckInLineSource): CheckInLine {
   const item = itemOf(choice, ids);
   if (!item) return { needs: 'item' };
-  const amount = receiptLineAmount(choice, listLine, heldUnit);
-  if (!amount) return { needs: 'unit' };
+  const bought = receiptLineAmount(choice, listLine, heldUnit);
+  if ('needs' in bought) return { needs: bought.needs };
+  const { amount } = bought;
   const discount =
     line.discount !== undefined && toCents(line.discount) > 0
       ? line.discount

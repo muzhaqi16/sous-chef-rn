@@ -189,6 +189,34 @@ const listItems = (
   };
 };
 
+// Milk open on the list as `quantity` bottles: a counted unit, unlike a weight.
+const BOTTLE = {
+  id: 'unit-bottle',
+  name: 'bottle',
+  symbol: 'btl',
+  type: UnitType.Count,
+};
+const milkInBottles =
+  (quantity: number): typeof listItems =>
+  vars => {
+    const asked = Array.isArray(vars.itemIds) ? vars.itemIds : null;
+    const open = !asked || asked.includes('cat-milk');
+    const milk = {
+      id: 'sli-milk',
+      itemName: 'Milk',
+      quantity,
+      unit: BOTTLE,
+      item: { id: 'cat-milk' },
+      purchaseInfo: { isPurchased: false, movedToPantryAt: null },
+    };
+    return {
+      shoppingList: {
+        id: 'list-1',
+        itemsConnection: connectionOf(open && !vars.isPurchased ? [milk] : []),
+      },
+    };
+  };
+
 const fired = (checkIn: Recorded) => checkIn.fired.map(vars => inputOf(vars));
 const sent = (checkIn: Recorded) => sentLinesOf(checkIn.fired[0] ?? {});
 const refusing = (
@@ -1323,6 +1351,46 @@ describe('useReceiptReview', () => {
         listLoading,
         onList: rows[0]?.onList,
       }).toMatchObject(expected);
+    });
+
+    it('shows the amount a bare count takes from a counted list line, and sends it', async () => {
+      const { review, checkIn, chooseOnList, addChosen } = await setup({
+        listFor: milkInBottles(2),
+      });
+      // The receipt printed only "1": one of what the list asked for. The API
+      // would count a bare package of a counted line as one bottle.
+      await chooseOnList({ 1: MILK });
+      expect(review().rows[0]?.fromList).toMatchObject({
+        quantity: 2,
+        unitId: 'unit-bottle',
+      });
+
+      await addChosen();
+
+      expect(sent(checkIn)).toEqual([
+        expect.objectContaining({
+          shoppingListItemId: 'sli-milk',
+          amount: { measured: { quantity: 2, unitId: 'unit-bottle' } },
+        }),
+      ]);
+    });
+
+    it('asks the amount of a count a counted list line cannot read, starting from the list', async () => {
+      const { review, checkIn, chooseOnList, confirm } = await setup({
+        listFor: milkInBottles(2),
+      });
+      // Three of what: bottles, or packs of them? Nothing is sent for it.
+      await chooseOnList({ 1: { ...MILK, quantity: 3 } });
+
+      await confirm();
+
+      expect(checkIn.fired).toEqual([]);
+      expect(review().rows[0]).toMatchObject({
+        status: 'failed',
+        failure: t('receipts.review.needsAmount', { amount: '2 btl' }),
+        asked: { quantity: 2, unitId: 'unit-bottle', unitText: 'btl' },
+      });
+      expect(review().rows[0]).not.toHaveProperty('fromList');
     });
 
     it('counts a line no unit names in the counted stack the pantry holds', async () => {

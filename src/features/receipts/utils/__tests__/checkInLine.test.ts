@@ -1,4 +1,4 @@
-import { ReceiptMatchMethod } from '#/graphql/generated/schemaTypes';
+import { ReceiptMatchMethod, UnitType } from '#/graphql/generated/schemaTypes';
 import { checkInLineOf } from '../checkInLine';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 
@@ -8,6 +8,11 @@ const IDS = {
   newItemId: 'item-new',
 };
 const MAYO = { index: 24, printed: 'MAYONNAISE AC', discount: 1 };
+const EGGS_LINE = {
+  id: 'line-eggs',
+  quantity: 12,
+  unit: { id: 'unit-pc', type: UnitType.Count },
+};
 
 describe('checkInLineOf', () => {
   it('states a coupon apart from the total paid', () => {
@@ -79,7 +84,7 @@ describe('checkInLineOf', () => {
       line: { index: 0, printed: 'EGGS' },
       choice: lineChoice({ itemId: 'item-eggs', price: 4.2, notStocked: true }),
       ids: IDS,
-      listLine: { id: 'line-eggs', quantity: 12, unit: { id: 'unit-pc' } },
+      listLine: EGGS_LINE,
       heldUnit: null,
     });
 
@@ -91,6 +96,19 @@ describe('checkInLineOf', () => {
       },
     });
     expect(result).not.toHaveProperty('input.pantryItemId');
+  });
+
+  it('holds back a count a counted list line cannot read, to ask its amount', () => {
+    // "EGGS 2 @ 4.20": two cartons, or two eggs? The API would count two eggs.
+    expect(
+      checkInLineOf({
+        line: { index: 0, printed: 'EGGS' },
+        choice: lineChoice({ itemId: 'item-eggs', quantity: 2, price: 8.4 }),
+        ids: IDS,
+        listLine: EGGS_LINE,
+        heldUnit: null,
+      }),
+    ).toEqual({ needs: 'amount' });
   });
 
   it('marks a proposal the user replaced as edited', () => {

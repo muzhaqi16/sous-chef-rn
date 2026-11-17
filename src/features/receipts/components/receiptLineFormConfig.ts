@@ -62,11 +62,23 @@ export const receiptLineSchema: ObjectSchema<ReceiptLineFormValues> = object({
   notStocked: boolean().defined(),
 });
 
-/** The form for a line: its saved choice, else what the receipt printed. */
+/** An amount in a unit the form opens with in place of the printed count. */
+export interface ReceiptLineAmountSeed {
+  quantity: number;
+  unitId: string;
+  unitText: string;
+}
+
+/**
+ * The form for a line: its saved choice, else what the receipt printed. A line
+ * whose amount is asked opens on `asked`, its list line's amount, to confirm.
+ */
 export const receiptLineDefaults = (
   line: ReceiptReviewLine,
   choice: ReceiptLineChoice | undefined,
+  asked?: ReceiptLineAmountSeed,
 ): ReceiptLineFormValues => {
+  const saved = choice ?? seedChoice(line);
   const {
     itemName,
     itemId,
@@ -76,7 +88,14 @@ export const receiptLineDefaults = (
     price,
     offList,
     notStocked,
-  } = choice ?? seedChoice(line);
+  } = asked
+    ? {
+        ...saved,
+        quantity: asked.quantity,
+        unitId: asked.unitId,
+        unitText: asked.unitText,
+      }
+    : saved;
   return {
     itemName,
     itemId,
