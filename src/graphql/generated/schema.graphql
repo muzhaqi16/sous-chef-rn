@@ -4696,9 +4696,7 @@ type HomeInvitationNotificationData {
 
 """An invitation to join a home, sent to an email address"""
 type HomeInvite {
-  """
-  When the invite was created, reset when the same address is re-invited to the same home
-  """
+  """When the invite was first created; a re-send keeps it"""
   createdAt: DateTime!
   """The email address the invite was sent to"""
   email: EmailAddress!
@@ -4734,6 +4732,10 @@ type HomeInvite {
   recipientName: String
   """The home role the recipient gets on accepting"""
   role: MembershipRole!
+  """
+  When the invite was last sent: its creation, or its latest re-send to the same address
+  """
+  sentAt: DateTime!
   """
   Where the invite stands. An invite past expiresAt stays PENDING until
   someone tries to accept it, which marks it EXPIRED.
