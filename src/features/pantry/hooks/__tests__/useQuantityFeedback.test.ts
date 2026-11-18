@@ -4,6 +4,7 @@ import {
   pantryActionShared,
 } from '#/test-utils/pantryActionShared';
 import { useQuantityFeedback } from '../useQuantityFeedback';
+import type { PantryActionSharedState } from '#features/pantry/types';
 
 /** What the API converts the typed amount to, in the net-weight unit. */
 let mockConvertedValue: number | null = null;
@@ -118,6 +119,45 @@ describe('useQuantityFeedback', () => {
           pack(() => null),
         ).remaining,
       ).toBe('1800 mL');
+    });
+  });
+
+  // One 64 fl oz carton, opened: 0.625 of it held, 40 fl oz inside.
+  describe('on an opened carton typed in the fl oz it holds', () => {
+    const CARTON_FL_OZ = 64;
+    const carton = (overrides: Partial<PantryActionSharedState>) =>
+      pantryActionShared(1, {
+        trackingUnit: { symbol: 'carton' },
+        trackingUnitId: 'carton',
+        activeUnit: { symbol: 'fl oz' },
+        activeUnitId: 'floz',
+        exactFactor: null,
+        isDualTracked: true,
+        remainingNetWeight: 40,
+        netWeightUnit: { symbol: 'fl oz' },
+        netWeightUnitId: 'floz',
+        availableInSelectedUnit: 40,
+        packagesOfNetWeight: flOz => flOz / CARTON_FL_OZ,
+        leftAfter: drawn => ({
+          quantity: 40 - drawn * CARTON_FL_OZ,
+          unit: { symbol: 'fl oz' },
+          displayAsFraction: null,
+        }),
+        ...overrides,
+      });
+
+    it('draws what was typed, with the unit picked from the list', () => {
+      expect(feedback(1, carton({ isConvertedUnit: true }))).toEqual({
+        remaining: '39 fl oz',
+        available: '40 fl oz',
+      });
+    });
+
+    it('draws what was typed with no unit list to pick from', () => {
+      expect(feedback(8, carton({ isConvertedUnit: false }))).toEqual({
+        remaining: '32 fl oz',
+        available: '40 fl oz',
+      });
     });
   });
 });
