@@ -310,7 +310,7 @@ export async function pantryStacks(pantryId: string): Promise<StackOnServer[]> {
 /** What a stack's history records, oldest first: the add that made it, then each use. */
 export async function historyOnServer(
   stackId: string,
-): Promise<{ quantityUsed: number; unit: string | null }[]> {
+): Promise<{ quantityUsed: number; unit: string | null; usedAt: string }[]> {
   type Node = {
     quantityUsed: number;
     usedAt: string;
@@ -331,7 +331,28 @@ export async function historyOnServer(
     .map(node => ({
       quantityUsed: node.quantityUsed,
       unit: node.usageUnit?.symbol ?? null,
+      usedAt: node.usedAt,
     }));
+}
+
+/** Every stack of a home, as id, amount and unit: what a spec must leave as it was. */
+export async function homeStock(
+  homeId: string,
+): Promise<{ id: string; quantity: number; unit: string }[]> {
+  const { home } = await asTestUser<{
+    home: { pantriesConnection: { edges: { node: { id: string } }[] } } | null;
+  }>(
+    'query ($id: ID!) { home(id: $id) { id pantriesConnection(first: 20) { edges { node { id } } } } }',
+    { id: homeId },
+  );
+  if (!home) throw new Error(`No home ${homeId}`);
+  const stacks = await Promise.all(
+    home.pantriesConnection.edges.map(({ node }) => pantryStacks(node.id)),
+  );
+  return stacks
+    .flat()
+    .map(({ id, quantity, unit }) => ({ id, quantity, unit }))
+    .sort((a, b) => a.id.localeCompare(b.id));
 }
 
 /**

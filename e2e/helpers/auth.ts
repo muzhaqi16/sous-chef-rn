@@ -217,6 +217,8 @@ export interface BootstrapOptions {
    * limited-access banner above it.
    */
   photoLibrary?: boolean;
+  /** The API through a spec's proxy (`startApiProxy`); a debug build only. */
+  apiUrl?: string;
 }
 
 /**
@@ -236,6 +238,7 @@ export async function bootstrapAuthenticatedSession(
     ...(options.photoLibrary ? { photos: 'YES' } : {}),
   };
   const preferenceArgs = {
+    ...(options.apiUrl ? { detoxApiUrl: options.apiUrl } : {}),
     ...(options.pantrySort
       ? {
           detoxPantrySortOption: options.pantrySort.option,

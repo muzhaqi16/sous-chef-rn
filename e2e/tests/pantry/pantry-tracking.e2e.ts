@@ -166,7 +166,7 @@ describe('Pantry tracking', () => {
     });
     // Its history: the add that seeded it, then the one use, as stated.
     const [, ...uses] = await historyOnServer(carton.id);
-    jestExpect(uses).toEqual([{ quantityUsed: 8, unit: 'fl oz' }]);
+    jestExpect(uses).toMatchObject([{ quantityUsed: 8, unit: 'fl oz' }]);
 
     // The same remainder on its detail, and after the app restarts.
     await element(by.id(row)).tap();
