@@ -33,6 +33,22 @@ export interface EnvironmentConfig {
  */
 export class Environment {
   private static _config: EnvironmentConfig | null = null;
+  private static _apiUrlOverride: { baseUrl: string; wsUrl: string } | null =
+    null;
+
+  /**
+   * Routes a debug build's API through `baseUrl`, as an e2e run's test proxy
+   * (`detoxApiUrl`); its WebSocket takes the same host. `__DEV__` is a
+   * compile-time constant stripped from release output, so no shipped binary
+   * can be pointed elsewhere.
+   */
+  static overrideApiUrl(baseUrl: string): void {
+    if (!__DEV__) return;
+    Environment._apiUrlOverride = {
+      baseUrl,
+      wsUrl: baseUrl.replace(/^http/, 'ws'),
+    };
+  }
 
   /**
    * Get current environment configuration
@@ -164,6 +180,13 @@ export class Environment {
    * Get environment-specific API configuration
    */
   static getApiConfig() {
+    const config = Environment.configuredApi();
+    return Environment._apiUrlOverride
+      ? { ...config, ...Environment._apiUrlOverride }
+      : config;
+  }
+
+  private static configuredApi() {
     const config = Environment.getConfig();
 
     if (config.isDevelopment) {
@@ -207,6 +230,7 @@ export class Environment {
    */
   static clearCache(): void {
     Environment._config = null;
+    Environment._apiUrlOverride = null;
   }
 }
 

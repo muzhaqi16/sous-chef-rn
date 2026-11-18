@@ -4,6 +4,7 @@ import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { requirePlatform } from '#platform/install';
 import { DeviceType } from '#/graphql/generated/schemaTypes';
+import { Environment } from '#/utils/environment';
 import { createHttpLink } from '../httpLink';
 
 const httpLink = createHttpLink();
@@ -33,6 +34,44 @@ const errorFrom = (rejection: unknown) => {
 
 afterEach(() => {
   jest.restoreAllMocks();
+});
+
+// Start-up applies a debug run's API override after the client is built.
+describe('where a request goes', () => {
+  it('reads the API URL per request, not when the link is built', async () => {
+    const config = (baseUrl: string) => ({
+      baseUrl,
+      wsUrl: baseUrl.replace(/^http/, 'ws'),
+      timeout: 10000,
+      retries: 1,
+    });
+    jest
+      .mocked(Environment.getApiConfig)
+      .mockReturnValue(config('http://built.test/graphql'));
+    const link = createHttpLink();
+    jest
+      .mocked(Environment.getApiConfig)
+      .mockReturnValue(config('http://proxy.test/graphql'));
+    const fetch = jest
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new TypeError('Network request failed'));
+
+    await new Promise(resolve => {
+      ApolloLink.execute(
+        link,
+        {
+          query: gql`
+            query Probe {
+              probe
+            }
+          `,
+        },
+        { client },
+      ).subscribe({ error: resolve });
+    });
+
+    expect(fetch.mock.calls[0]?.[0]).toBe('http://proxy.test/graphql');
+  });
 });
 
 describe('httpLink fetch boundary', () => {

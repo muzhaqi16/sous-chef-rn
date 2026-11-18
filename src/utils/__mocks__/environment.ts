@@ -74,6 +74,7 @@ export const Environment = {
   shouldEnableAnalytics: jest.fn(() => false),
   getLogLevel: jest.fn(() => 'none'),
   getApiConfig: jest.fn(() => apiConfig),
+  overrideApiUrl: jest.fn(),
   clearCache: jest.fn(),
 };
 

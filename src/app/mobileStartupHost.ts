@@ -64,7 +64,10 @@ function injectDetoxLaunchArgs(flags: EndToEndFlags): void {
       detoxPantrySortDirection?: string;
       /** A guide to run, with this account's tips fresh and tips left on. */
       detoxGuide?: string;
+      /** An e2e run's test proxy in front of the API; a debug build only. */
+      detoxApiUrl?: string;
     }>();
+    if (args.detoxApiUrl) Environment.overrideApiUrl(args.detoxApiUrl);
     // LogBox overlays the floating tab bar and breaks visibility checks; the
     // feature-hint tutorial dims the screen and swallows taps on a 2s delay.
     if (args.detoxServer) {

@@ -61,11 +61,15 @@ const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
   };
 };
 
-/** Built with the client, not at load: the API config is a platform service. */
+/**
+ * Built with the client, not at load: the API config is a platform service.
+ * The URL is read per request, as the socket's is per dial, so a debug run's
+ * override from start-up reaches a client built before it.
+ */
 export function createHttpLink(): ApolloLink {
   const apiConfig = Environment.getApiConfig();
   const baseOptions = {
-    uri: env.API_URL ?? apiConfig.baseUrl,
+    uri: () => env.API_URL ?? Environment.getApiConfig().baseUrl,
     headers: {
       'Content-Type': 'application/json',
       ...clientSourceHeaders(),
