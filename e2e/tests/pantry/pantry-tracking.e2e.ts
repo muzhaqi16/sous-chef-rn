@@ -10,6 +10,7 @@ import { element, by, waitFor, expect } from 'detox';
 import { expect as jestExpect } from '@jest/globals';
 import { PantryScreen } from '../../screens/PantryScreen';
 import { bootstrapAuthenticatedSession } from '../../helpers/auth';
+import { openSwipeAction } from '../../helpers/actions';
 import { getAuthTokens } from '../../helpers/tokenProvider';
 import { launchAppWithFabricWorkaround } from '../../init';
 import { generateItemName } from '../../helpers/data';
@@ -103,14 +104,12 @@ describe('Pantry tracking', () => {
   });
 
   it('USE-01 uses 2 of 12 eggs in one confirmation', async () => {
-    const row = pantryTestIDs.item(eggs.id);
-    await element(by.id(row)).swipe('right', 'slow', 0.5);
-    const consume = kitTestIDs.swipeAction(row, 'consume');
-    await waitFor(element(by.id(consume)))
-      .toBeVisible()
-      .withTimeout(WAIT);
-    await element(by.id(consume)).tap();
-    await waitForModalReady(pantryTestIDs.actionConfirm, WAIT);
+    await openSwipeAction(
+      pantryTestIDs.item(eggs.id),
+      'consume',
+      pantryTestIDs.actionConfirm,
+      WAIT,
+    );
     await element(by.id(pantryTestIDs.consumeQuantity)).replaceText('2');
     // The field lets go first, as a household's return key does: Detox's tap
     // on the bar's Confirm does nothing while the field still holds focus.
@@ -136,13 +135,7 @@ describe('Pantry tracking', () => {
       .toBeVisible()
       .whileElement(by.id(pantryTestIDs.list))
       .scroll(200, 'down');
-    await element(by.id(row)).swipe('right', 'slow', 0.5);
-    const consume = kitTestIDs.swipeAction(row, 'consume');
-    await waitFor(element(by.id(consume)))
-      .toBeVisible()
-      .withTimeout(WAIT);
-    await element(by.id(consume)).tap();
-    await waitForModalReady(pantryTestIDs.actionConfirm, WAIT);
+    await openSwipeAction(row, 'consume', pantryTestIDs.actionConfirm, WAIT);
     // A carton is used in what it holds: fl oz is offered, so only the amount
     // is typed.
     await element(by.id(pantryTestIDs.consumeQuantity)).replaceText('8');

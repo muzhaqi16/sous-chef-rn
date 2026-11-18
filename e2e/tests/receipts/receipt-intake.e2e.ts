@@ -13,9 +13,9 @@ import { expect as jestExpect } from '@jest/globals';
 import { PantryScreen } from '../../screens/PantryScreen';
 import { bootstrapAuthenticatedSession } from '../../helpers/auth';
 import { generateItemName } from '../../helpers/data';
-import { retry, waitForModalReady } from '../../helpers/waitFor';
+import { retry } from '../../helpers/waitFor';
 import { t } from '../../helpers/i18n';
-import { pickNewestPhoto } from '../../helpers/systemPhotoPicker';
+import { reviewNewestReceiptPhoto } from '../../helpers/receiptScan';
 import {
   closeTrackingHome,
   openTrackingHome,
@@ -26,7 +26,6 @@ import {
 } from '../../helpers/trackingHome';
 import { receiptsTestIDs } from '../../../src/features/receipts/testIDs';
 import { pantryTestIDs } from '../../../src/features/pantry/testIDs';
-import { kitTestIDs } from '../../../src/components/testIDs';
 
 const WAIT = 15000;
 const RECEIPT = path.join(
@@ -60,56 +59,8 @@ describe('Receipt intake', () => {
   });
 
   it('IN-01 adds a receipt of eggs, a milk carton and unpriced spinach', async () => {
-    await element(by.id(kitTestIDs.tabBarAddButton)).tap();
-    const scanReceipt = element(by.id(kitTestIDs.tabBarAddAction('receipt')));
-    const scanScreen = element(by.id(receiptsTestIDs.scanScreen));
-    await waitFor(scanReceipt).toBeVisible().withTimeout(WAIT);
-    await scanReceipt.tap();
-    // A tap while the entries still slide in can miss: tapped again, as the
-    // pantry page object does its add button.
-    try {
-      await waitFor(scanScreen).toBeVisible().withTimeout(5000);
-    } catch {
-      await scanReceipt.tap();
-      await waitFor(scanScreen).toBeVisible().withTimeout(WAIT);
-    }
-
-    // A receipt an earlier run kept is replaced, else the first step starts
-    // the scan; only which one is optional. The simulator has no document
-    // scanner, so either way the screen offers a photo instead.
-    const scanAnother = element(by.id(receiptsTestIDs.savedScanAnother));
-    let kept = true;
-    try {
-      await waitFor(scanAnother).toBeVisible().withTimeout(3000);
-    } catch {
-      kept = false;
-    }
-    if (kept) {
-      await scanAnother.tap();
-      await waitForModalReady(kitTestIDs.alertButton(1), WAIT);
-      await element(by.id(kitTestIDs.alertButton(1))).tap();
-    } else {
-      const startScan = element(by.id(receiptsTestIDs.startScan));
-      await waitFor(startScan).toBeVisible().withTimeout(WAIT);
-      await startScan.tap();
-    }
-
-    const choosePhoto = element(by.id(receiptsTestIDs.choosePhoto));
-    await waitFor(choosePhoto).toBeVisible().withTimeout(WAIT);
-    const { frame } = (await scanScreen.getAttributes()) as {
-      frame: { y: number; width: number };
-    };
-    await choosePhoto.tap();
-    await pickNewestPhoto(receiptsTestIDs.choosePhoto, frame);
-
     // The spinach whose price does not read is kept: three items, not two.
-    const review = element(by.id(receiptsTestIDs.savedReview));
-    await waitFor(review)
-      .toHaveLabel(t('receipts.saved.review_other', { count: 3 }))
-      .withTimeout(90000);
-    await review.tap();
-    const reviewScreen = element(by.id(receiptsTestIDs.reviewScreen));
-    await waitFor(reviewScreen).toBeVisible().withTimeout(WAIT);
+    await reviewNewestReceiptPhoto(3, WAIT);
 
     // Every line resolved with nothing typed, so all three are to be added.
     const add = element(by.id(receiptsTestIDs.reviewAdd));
@@ -117,7 +68,7 @@ describe('Receipt intake', () => {
       .toHaveLabel(t('receipts.review.add_other', { count: 3 }))
       .withTimeout(WAIT);
     await add.tap();
-    await waitFor(element(by.id(receiptsTestIDs.reviewScreen)))
+    await waitFor(element(by.id(receiptsTestIDs.reviewAdd)))
       .not.toBeVisible()
       .withTimeout(WAIT);
 

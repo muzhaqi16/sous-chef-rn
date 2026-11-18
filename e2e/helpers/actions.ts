@@ -10,7 +10,9 @@ import {
   waitForKeyboardDismiss,
   delay,
   TIMEOUTS,
+  waitForModalReady,
 } from './waitFor';
+import { kitTestIDs } from '../../src/components/testIDs';
 
 export async function tapByID(
   testID: string,
@@ -103,6 +105,31 @@ export async function scrollInContainerAndTap(
   throw new Error(
     `Failed to find element ${targetID} after ${maxScrolls} scrolls`,
   );
+}
+
+/**
+ * Swipes a row open and taps one of its swipe actions until `readyID` (what
+ * the action opens) is ready. A list still settling after a start or a resync
+ * can close the row under the tap, so a miss swipes once more.
+ */
+export async function openSwipeAction(
+  rowID: string,
+  actionKey: string,
+  readyID: string,
+  timeout: number = TIMEOUTS.DEFAULT,
+) {
+  const action = element(by.id(kitTestIDs.swipeAction(rowID, actionKey)));
+  for (let attempt = 1; ; attempt += 1) {
+    await element(by.id(rowID)).swipe('right', 'slow', 0.5);
+    await waitFor(action).toBeVisible().withTimeout(timeout);
+    await action.tap();
+    try {
+      await waitForModalReady(readyID, 5000);
+      return;
+    } catch (error) {
+      if (attempt >= 2) throw error;
+    }
+  }
 }
 
 export async function swipeLeft(
