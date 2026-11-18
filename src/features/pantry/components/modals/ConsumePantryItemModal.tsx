@@ -13,16 +13,11 @@ import { validateDeductionQuantity } from '#features/pantry/utils/validateDeduct
 import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
 import { UsagePurpose } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
-import {
-  PantryOperation,
-  type SelectedUnitInfo,
-} from '#features/pantry/hooks/useOperationUnits';
+import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import { PantryActionModal } from '#features/pantry/components/modals/PantryActionModal';
-import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { Text } from '#components/atoms/Text';
 import { localizeNumericHint } from '#/utils/formatters/number';
-import { unitLabel } from '#/utils/formatQuantity';
-import { formatQuantityForInput } from '#/utils/formatQuantity';
+import { formatQuantityForInput, unitLabel } from '#/utils/formatQuantity';
 import type { PantryActionSharedState } from '#features/pantry/types';
 
 interface ConsumePantryItemModalProps {
@@ -60,32 +55,29 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const [fieldError, setFieldError] = useState<string>();
-  const [quantityInput, setQuantityInput] = useState('1');
-  // A unit that lands after opening brings its increment only to an amount
-  // the user has not changed.
-  const [quantityEdited, setQuantityEdited] = useState(false);
+  // Null until typed: the amount then reads the default unit's step, which can
+  // land after the sheet opens.
+  const [typedQuantity, setTypedQuantity] = useState<string | null>(null);
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
 
-  const handleReset = (
-    _item: PantryActionModal_PantryItemFragment,
-    _defaultUnit: SelectedUnitInfo | null,
-    increment: number | null,
-  ) => {
-    setQuantityInput(increment ? formatQuantityForInput(increment) : '1');
-    setQuantityEdited(false);
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItemId);
+  if (visible !== prevVisible || pantryItemId !== prevPantryItemId) {
+    setPrevVisible(visible);
+    setPrevPantryItemId(pantryItemId);
+    setTypedQuantity(null);
     setPurpose(UsagePurpose.General);
     setFieldError(undefined);
-  };
+  }
 
-  const handleDefaultUnitLoaded = (increment: number | null) => {
-    if (!quantityEdited && increment) {
-      setQuantityInput(formatQuantityForInput(increment));
-    }
-  };
+  const quantityOf = ({ defaultUnitIncrement }: PantryActionSharedState) =>
+    typedQuantity ??
+    (defaultUnitIncrement ? formatQuantityForInput(defaultUnitIncrement) : '1');
 
   const handleConfirm = async (shared: PantryActionSharedState) => {
     if (!pantryItemId) return;
 
+    const quantityInput = quantityOf(shared);
     const quantityValue = validateDeductionQuantity(
       quantityInput,
       shared,
@@ -119,17 +111,14 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       unitToggleLabel={t('consumeItem.consumeBy')}
       operation={PantryOperation.Consume}
       onConfirm={handleConfirm}
-      onReset={handleReset}
-      onDefaultUnitLoaded={handleDefaultUnitLoaded}
       renderActionFields={(shared, pantryItem) => (
         <ConsumeActionFields
           compact={compact}
           fieldError={fieldError}
-          quantityInput={quantityInput}
+          quantityInput={quantityOf(shared)}
           setQuantityInput={value => {
             setFieldError(undefined);
-            setQuantityEdited(true);
-            setQuantityInput(value);
+            setTypedQuantity(value);
           }}
           purpose={purpose}
           setPurpose={setPurpose}
@@ -170,6 +159,7 @@ const ConsumeActionFields: React.FC<{
     shared.exactFactor != null
       ? shared.trackingQuantity / shared.exactFactor
       : shared.availableInSelectedUnit;
+  const activeUnitText = unitLabel(shared.activeUnit);
   const consumeAmount = parseFractionalInput(quantityInput);
   const { conversion, remaining, available } = useQuantityFeedback(
     consumeAmount,
@@ -181,9 +171,12 @@ const ConsumeActionFields: React.FC<{
       {/* Quantity Input */}
       <View style={commonStyles.bottomSheetSection}>
         <FractionInput
-          label={`${t('consumeItem.quantityToConsume')} (${unitLabel(
-            shared.activeUnit,
-          )})`}
+          label={
+            // A row made offline holds a unit with no symbol to name.
+            activeUnitText
+              ? `${t('consumeItem.quantityToConsume')} (${activeUnitText})`
+              : t('consumeItem.quantityToConsume')
+          }
           error={fieldError}
           required
           value={quantityInput}

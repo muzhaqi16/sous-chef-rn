@@ -12,51 +12,43 @@ export interface IntakeFacts {
   packageSize?: PackageSizeInput | null;
 }
 
-/** Preserve explicit corrections, even a cleared field, ahead of printed/catalog facts. */
+/** A fact an acquisition lacks before it can be stocked. */
+export type IntakeField = 'quantity' | 'unit' | 'packageSize';
+
+/** The amount a purchase states, or the facts it still lacks. */
 export function resolveIntakeDraft({
   purchased,
-  catalog,
-  correction,
   heldUnit = null,
   unitFromRoute = false,
 }: {
   purchased: IntakeFacts;
-  catalog?: IntakeFacts;
-  correction?: IntakeFacts;
   heldUnit?: HeldUnit;
   /** The route's API supplies a measured amount's missing unit (a list line's). */
   unitFromRoute?: boolean;
-}): {
-  facts: IntakeFacts;
-  amount: StockAmountInput | null;
-  unresolved: ('quantity' | 'unit' | 'packageSize')[];
-} {
-  const facts = { ...catalog, ...purchased, ...correction };
-  const { quantity, unitId, packageSize, intent = 'bought' } = facts;
+}): { amount: StockAmountInput | null; unresolved: IntakeField[] } {
+  const { quantity, unitId, packageSize, intent = 'bought' } = purchased;
   if (quantity == null || !Number.isFinite(quantity) || quantity <= 0) {
-    return { facts, amount: null, unresolved: ['quantity'] };
+    return { amount: null, unresolved: ['quantity'] };
   }
   if (intent === 'measured') {
     const stated = !!unitId || unitFromRoute;
     return {
-      facts,
       amount: stated ? stockAmountOf(quantity, { unitId }) : null,
       unresolved: stated ? [] : ['unit'],
     };
   }
   if (!Number.isInteger(quantity))
-    return { facts, amount: null, unresolved: ['quantity'] };
+    return { amount: null, unresolved: ['quantity'] };
   if (
     packageSize &&
     (!Number.isFinite(packageSize.netWeight) ||
       packageSize.netWeight <= 0 ||
       !packageSize.netWeightUnitId)
   ) {
-    return { facts, amount: null, unresolved: ['packageSize'] };
+    return { amount: null, unresolved: ['packageSize'] };
   }
   // The API owns package arithmetic: a multipack's contained count is stated as given.
   return {
-    facts,
     amount:
       intent === 'packages'
         ? stockAmountOf(quantity, { asPackages: true, packageSize, unitId })

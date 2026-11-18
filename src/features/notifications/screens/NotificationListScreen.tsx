@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
@@ -29,8 +29,21 @@ import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollCom
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const NotificationListScreen: React.FC = () => {
-  const { t } = useTranslation();
   useScreenTransition('NotificationListScreen');
+  return (
+    <NotificationActionHandler>
+      {({ handleNotificationAction }) => (
+        <NotificationFeed onAction={handleNotificationAction} />
+      )}
+    </NotificationActionHandler>
+  );
+};
+
+/** The feed; a notification that asks for an action goes to `onAction`. */
+const NotificationFeed: React.FC<{
+  onAction: (notification: NotificationType) => void;
+}> = ({ onAction }) => {
+  const { t } = useTranslation();
   const listInset = useScreenListInset();
   const { toNotificationDetail, toNotificationSettings } = useAppNavigation();
   const [filterCategory, setFilterCategory] =
@@ -73,7 +86,7 @@ export const NotificationListScreen: React.FC = () => {
     void handleMarkAsRead(notification.id);
 
     if (notification.requiresAction && notification.actionType) {
-      notificationActionRef.current?.(notification);
+      onAction(notification);
     } else if (
       notification.category !== NotificationCategory.Pantry &&
       notification.category !== NotificationCategory.Shopping
@@ -93,10 +106,6 @@ export const NotificationListScreen: React.FC = () => {
   const keyExtractor = (row: NotificationFeedRow) =>
     row.kind === 'header' ? `header:${row.title}` : row.notification.id;
 
-  const notificationActionRef = useRef<
-    ((notification: NotificationType) => void) | null
-  >(null);
-
   const renderRow = ({ item }: { item: NotificationFeedRow }) =>
     item.kind === 'header' ? (
       <NotificationGroupHeader title={item.title} />
@@ -109,85 +118,71 @@ export const NotificationListScreen: React.FC = () => {
     );
 
   return (
-    <NotificationActionHandler>
-      {({ handleNotificationAction }) => {
-        notificationActionRef.current = handleNotificationAction;
-        return (
-          <SubScreen
-            title={t('labels.notifications')}
-            actions={[
-              {
-                icon: 'settings',
-                accessibilityLabel: t('a11y.notificationSettings'),
-                onPress: toNotificationSettings,
-              },
-            ]}
-            scroll="list"
-            gutter="none"
-          >
-            <UrgentNotificationsBanner
-              urgentNotifications={filteredGroups.urgent}
-            />
+    <SubScreen
+      title={t('labels.notifications')}
+      actions={[
+        {
+          icon: 'settings',
+          accessibilityLabel: t('a11y.notificationSettings'),
+          onPress: toNotificationSettings,
+        },
+      ]}
+      scroll="list"
+      gutter="none"
+    >
+      <UrgentNotificationsBanner urgentNotifications={filteredGroups.urgent} />
 
-            <NotificationFilters
-              selectedCategory={filterCategory}
-              onCategoryChange={setFilterCategory}
-            />
+      <NotificationFilters
+        selectedCategory={filterCategory}
+        onCategoryChange={setFilterCategory}
+      />
 
-            <NotificationHeader
-              onMarkAllRead={handleMarkAllAsRead}
-              onClearRead={() =>
-                handleClearRead(
-                  notifications.filter(n => n.isRead).map(n => n.id),
-                )
-              }
-              hasNotifications={hasNotifications}
-            />
+      <NotificationHeader
+        onMarkAllRead={handleMarkAllAsRead}
+        onClearRead={() =>
+          handleClearRead(notifications.filter(n => n.isRead).map(n => n.id))
+        }
+        hasNotifications={hasNotifications}
+      />
 
-            <FlashList
-              data={rows}
-              keyExtractor={keyExtractor}
-              renderItem={renderRow}
-              getItemType={row => row.kind}
-              renderScrollComponent={SwipeAwareScrollComponent}
-              ListHeaderComponent={
-                mayHoldMore && hasNotifications ? (
-                  <PartialDataNote onRetry={refetchHistory} />
-                ) : null
-              }
-              ListEmptyComponent={
-                // An empty feed looks like a failed fetch unless the query is
-                // asked, and "all caught up" is wrong for a feed that never
-                // loaded.
-                mayHoldMore ? (
-                  <DataStateView state="offline" onRetry={refetchHistory} />
-                ) : historyState === 'error' || historyState === 'offline' ? (
-                  <DataStateView
-                    state={historyState}
-                    onRetry={refetchHistory}
-                  />
-                ) : (
-                  <EmptyNotifications />
-                )
-              }
-              ListFooterComponent={
-                <PaginationFooter
-                  hasMore={hasMore}
-                  isFetchingMore={loadingMore}
-                  itemCount={notifications.length}
-                />
-              }
-              onEndReached={loadMore}
-              onEndReachedThreshold={0.4}
-              contentContainerStyle={[
-                !hasNotifications && styles.emptyInset,
-                listInset,
-              ]}
-            />
-          </SubScreen>
-        );
-      }}
-    </NotificationActionHandler>
+      <FlashList
+        data={rows}
+        keyExtractor={keyExtractor}
+        renderItem={renderRow}
+        getItemType={row => row.kind}
+        renderScrollComponent={SwipeAwareScrollComponent}
+        ListHeaderComponent={
+          mayHoldMore && hasNotifications ? (
+            <PartialDataNote onRetry={refetchHistory} />
+          ) : null
+        }
+        ListEmptyComponent={
+          // An empty feed looks like a failed fetch unless the query is
+          // asked, and "all caught up" is wrong for a feed that never
+          // loaded.
+          mayHoldMore ? (
+            <DataStateView state="offline" onRetry={refetchHistory} />
+          ) : historyState === 'error' || historyState === 'offline' ? (
+            <DataStateView state={historyState} onRetry={refetchHistory} />
+          ) : (
+            <EmptyNotifications />
+          )
+        }
+        ListFooterComponent={
+          <PaginationFooter
+            hasMore={hasMore}
+            isFetchingMore={loadingMore}
+            itemCount={notifications.length}
+          />
+        }
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.4}
+        contentContainerStyle={[
+          !hasNotifications && styles.emptyInset,
+          listInset,
+        ]}
+      />
+    </SubScreen>
   );
 };
 

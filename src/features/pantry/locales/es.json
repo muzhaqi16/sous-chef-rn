@@ -192,8 +192,7 @@
     "differentSize": "¿Otro tamaño?",
     "newQuantityPrefix": "Nueva cantidad: ",
     "costPerUnit": "Coste por unidad",
-    "notesPlaceholder": "Añade notas sobre esta reposición...",
-    "expirationPlaceholder": "Establecer nueva caducidad"
+    "notesPlaceholder": "Añade notas sobre esta reposición..."
   },
   "consumeItem": {
     "title": "Consumir artículo",
@@ -352,7 +351,6 @@
   },
   "deduction": {
     "invalidWaste": "Introduce una cantidad de desperdicio válida",
-    "stillCalculating": "Calculando la cantidad disponible...",
     "exceedsAvailableConsume": "No puedes consumir más de la cantidad disponible ({{amount}} {{unit}})",
     "exceedsAvailableWaste": "No puedes desperdiciar más de la cantidad disponible ({{amount}} {{unit}})",
     "remainingAfter": "Restante: {{amount}} {{unit}}",

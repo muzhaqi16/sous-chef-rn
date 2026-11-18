@@ -41,6 +41,7 @@ export function pantryActionShared(
     pantryItemId: 'pi1',
     defaultUnit: null,
     defaultIncrement: null,
+    defaultUnitIncrement: null,
     commonFractions: null,
     availableInSelectedUnit: null,
     availableLoading: false,

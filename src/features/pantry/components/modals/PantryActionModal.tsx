@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { errorService } from '#/services/errorService';
+import { alertService } from '#/services/alertService';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
@@ -45,14 +46,6 @@ interface PantryActionModalProps {
   /** Selects which unit-eligibility query runs. */
   operation: PantryOperation;
   onConfirm: (shared: PantryActionSharedState) => void | Promise<unknown>;
-  /** Fires when the modal opens; reset consumer-specific state here. */
-  onReset?: (
-    pantryItem: PantryActionModal_PantryItemFragment,
-    defaultUnit: SelectedUnitInfo | null,
-    defaultIncrement: number | null,
-  ) => void;
-  /** Fires when the default unit lands after opening, with that unit's increment. */
-  onDefaultUnitLoaded?: (defaultIncrement: number | null) => void;
   renderActionFields: (
     shared: PantryActionSharedState,
     pantryItem: PantryActionModal_PantryItemFragment,
@@ -76,8 +69,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   currentQuantityLabel,
   operation,
   onConfirm,
-  onReset,
-  onDefaultUnitLoaded,
   renderActionFields,
 }) => {
   const { t } = useTranslation();
@@ -236,7 +227,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     if (visible && pantryItem) {
       setNotes('');
       setSelectedUnitInfo(defaultUnit);
-      onReset?.(pantryItem, defaultUnit, defaultIncrement);
     }
   }
 
@@ -254,7 +244,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       defaultUnit != null
     ) {
       setSelectedUnitInfo(defaultUnit);
-      onDefaultUnitLoaded?.(defaultIncrement);
     }
   }
 
@@ -281,6 +270,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     pantryItemId: pantryItem?.id,
     defaultUnit,
     defaultIncrement: selectedRankedUnit?.defaultIncrement ?? defaultIncrement,
+    defaultUnitIncrement: defaultIncrement,
     commonFractions:
       selectedRankedUnit?.commonFractions ?? defaultCommonFractions,
     availableInSelectedUnit,
@@ -317,6 +307,10 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
               errorService.reportError(error, {
                 operation: 'Confirm pantry action',
               });
+              alertService.alert(
+                t('labels.error'),
+                t('errors.codes.genericRetry'),
+              );
             }
             submitting.current = false;
             setSaving(false);

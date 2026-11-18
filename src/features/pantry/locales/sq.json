@@ -192,8 +192,7 @@
     "differentSize": "Madhësi tjetër?",
     "newQuantityPrefix": "Sasia e re: ",
     "costPerUnit": "Kostoja për njësi",
-    "notesPlaceholder": "Shto shënime për këtë riplotësim...",
-    "expirationPlaceholder": "Cakto skadim të ri"
+    "notesPlaceholder": "Shto shënime për këtë riplotësim..."
   },
   "consumeItem": {
     "title": "Konsumo artikullin",
@@ -352,7 +351,6 @@
   },
   "deduction": {
     "invalidWaste": "Shkruaj një sasi të vlefshme mbeturinash",
-    "stillCalculating": "Po llogaritet ende sasia e disponueshme...",
     "exceedsAvailableConsume": "Nuk mund të konsumosh më shumë se sasia e disponueshme ({{amount}} {{unit}})",
     "exceedsAvailableWaste": "Nuk mund të hedhësh më shumë se sasia e disponueshme ({{amount}} {{unit}})",
     "remainingAfter": "Mbetet: {{amount}} {{unit}}",

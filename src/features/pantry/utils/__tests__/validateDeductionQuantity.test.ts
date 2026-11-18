@@ -168,6 +168,25 @@ describe('conversion evidence', () => {
       'This unit cannot be converted. Choose another unit.',
     );
   });
+  it('caps the stack own unit by its count when the conversion is refused', () => {
+    const report = jest.fn();
+    expect(
+      validateDeductionQuantity(
+        '1',
+        shared(2, {
+          exactFactor: null,
+          activeUnitId: 'carton',
+          trackingUnitId: 'carton',
+          isConvertedUnit: false,
+          availableInSelectedUnit: null,
+          conversionUnavailable: true,
+        }),
+        'consume',
+        report,
+      ),
+    ).toBe(1);
+    expect(report).not.toHaveBeenCalled();
+  });
   it('validates the converted cap rather than the package count', () => {
     expect(
       validateDeductionQuantity(

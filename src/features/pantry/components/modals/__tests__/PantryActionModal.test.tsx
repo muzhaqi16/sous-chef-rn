@@ -13,6 +13,7 @@ import {
 import { operationLog } from '#/test-utils/operationLog';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { t } from '#/i18n';
+import { alertService } from '#/services/alertService';
 import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
 import { ConsumptionUnitsForPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryActionItemDocument } from '#features/pantry/components/modals/PantryActionModal.generated';
@@ -217,6 +218,26 @@ describe('the header', () => {
       expect.objectContaining({ trackingQuantity: 5, trackingUnitId: 'u1' }),
     );
   });
+
+  it('says a confirm that threw failed, and takes another press', async () => {
+    const alert = jest.spyOn(alertService, 'alert');
+    const alerted = new Promise<void>(resolve => {
+      alert.mockImplementation(() => resolve());
+    });
+    onConfirm.mockRejectedValueOnce(new Error('no local write'));
+    renderModal();
+
+    fireEvent.press(screen.getByLabelText('Use'));
+    await act(() => alerted);
+
+    expect(alert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('errors.codes.genericRetry'),
+    );
+    fireEvent.press(screen.getByLabelText('Use'));
+    expect(onConfirm).toHaveBeenCalledTimes(2);
+    alert.mockRestore();
+  });
 });
 
 describe('a stack the device does not hold', () => {
@@ -245,20 +266,14 @@ describe('a stack the device does not hold', () => {
 });
 
 describe('each time it opens', () => {
-  it('starts with no notes, and resets the action', () => {
-    const onReset = jest.fn();
-    const view = renderModal({ props: { onReset } });
+  it('starts with no notes', () => {
+    const view = renderModal();
     act(() => shared().setNotes('half a bag'));
 
-    view.rerender(modal({ visible: false, onReset }));
-    view.rerender(modal({ onReset }));
+    view.rerender(modal({ visible: false }));
+    view.rerender(modal());
 
     expect(shared().notes).toBe('');
-    expect(onReset).toHaveBeenLastCalledWith(
-      expect.objectContaining({ id: PANTRY_ITEM_ID }),
-      null,
-      null,
-    );
   });
 
   it('measures in the unit the server ranks first', async () => {

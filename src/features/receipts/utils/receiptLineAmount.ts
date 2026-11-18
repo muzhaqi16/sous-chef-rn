@@ -15,11 +15,11 @@ export interface ListLineAmount {
 /**
  * What a receipt line bought: the amount to send, `fromList` when the receipt
  * printed only a count and the list line supplied the amount, or what the user
- * is still asked.
+ * is still asked: `amount` is how much a count against the list line bought.
  */
 export type ReceiptLineAmount =
   | { amount: StockAmountInput; fromList: boolean }
-  | { needs: 'unit' | 'amount' };
+  | { needs: 'unit' | 'amount' | 'quantity' };
 
 /**
  * What a receipt line bought, as stated; the API does the package arithmetic.
@@ -36,8 +36,12 @@ export function receiptLineAmount(
 ): ReceiptLineAmount {
   const { quantity, unitId, unitText } = choice;
   const stated = (facts: IntakeFacts, fromList = false): ReceiptLineAmount => {
-    const { amount } = resolveIntakeDraft({ purchased: facts, heldUnit });
-    return amount ? { amount, fromList } : { needs: 'amount' };
+    const { amount, unresolved } = resolveIntakeDraft({
+      purchased: facts,
+      heldUnit,
+    });
+    if (amount) return { amount, fromList };
+    return { needs: unresolved.includes('unit') ? 'unit' : 'quantity' };
   };
   if (unitId !== null || unitText !== '') {
     const resolved = unitId ?? listLine?.unit?.id;

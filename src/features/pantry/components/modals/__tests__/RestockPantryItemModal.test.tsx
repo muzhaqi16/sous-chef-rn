@@ -200,7 +200,7 @@ describe('restocking', () => {
     typeQuantity('2');
     typeCost(TOTAL_PAID(), '3.49');
     typeInto(t('labels.notes'), t('restockItem.notesPlaceholder'), 'on sale');
-    fireEvent.press(screen.getByText(t('restockItem.expirationPlaceholder')));
+    fireEvent.press(screen.getByText(t('instructions.expiryOptional')));
     const [day20] = screen.getAllByText('20');
     if (!day20) throw new Error('the calendar shows no 20th');
     fireEvent.press(day20);

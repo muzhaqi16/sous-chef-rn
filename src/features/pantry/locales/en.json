@@ -192,8 +192,7 @@
     "differentSize": "A different size?",
     "newQuantityPrefix": "New quantity: ",
     "costPerUnit": "Cost per Unit",
-    "notesPlaceholder": "Add any notes about this restock...",
-    "expirationPlaceholder": "Set new expiration"
+    "notesPlaceholder": "Add any notes about this restock..."
   },
   "consumeItem": {
     "title": "Consume Item",
@@ -352,7 +351,6 @@
   },
   "deduction": {
     "invalidWaste": "Please enter a valid waste amount",
-    "stillCalculating": "Still calculating available quantity...",
     "exceedsAvailableConsume": "Cannot consume more than available quantity ({{amount}} {{unit}})",
     "exceedsAvailableWaste": "Cannot waste more than available quantity ({{amount}} {{unit}})",
     "remainingAfter": "Remaining: {{amount}} {{unit}}",

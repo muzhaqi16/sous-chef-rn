@@ -143,7 +143,7 @@ export function useStoreMode(listId: string) {
       permissions,
       /** Every loaded line, for the sheets the rows open. */
       items: [...rawUnpurchasedItems, ...rawPurchasedItems],
-      // False once any line is held.
+      // False once any line to buy is held; a cart's lines do not count.
       loading,
       error,
     },

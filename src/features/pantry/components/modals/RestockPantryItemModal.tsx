@@ -84,7 +84,6 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const { t } = useTranslation();
   const asksCost = useBudgetAndPricesEnabled();
   const [quantityInput, setQuantityInput] = useState('1');
-  // Outside `handleReset`, which runs as the modal opens.
   const [quantityEdited, setQuantityEdited] = useState(false);
   const [costPerUnitInput, setCostPerUnitInput] = useState('');
   const [totalCostInput, setTotalCostInput] = useState('');
@@ -93,10 +92,14 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const [askingSize, setAskingSize] = useState(false);
   const [statedSize, setStatedSize] = useState(NO_SIZE);
   const [sizeRefusal, setSizeRefusal] = useState<string | null>(null);
-  const [awaitingAnswer, setAwaitingAnswer] = useState(false);
 
-  const handleReset = () => {
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItemId);
+  if (visible !== prevVisible || pantryItemId !== prevPantryItemId) {
+    setPrevVisible(visible);
+    setPrevPantryItemId(pantryItemId);
     setQuantityInput('1');
+    setQuantityEdited(false);
     setCostPerUnitInput('');
     setTotalCostInput('');
     setExpiresAt(null);
@@ -104,7 +107,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
     setAskingSize(false);
     setStatedSize(NO_SIZE);
     setSizeRefusal(null);
-  };
+  }
 
   const editSize = (edit: Partial<StatedSize>) => {
     setSizeRefusal(null);
@@ -150,7 +153,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   });
 
   const handleConfirm = async (shared: PantryActionSharedState) => {
-    if (!pantryItemId || awaitingAnswer) return;
+    if (!pantryItemId) return;
     const sized = countedInOwnUnit(shared);
     if (
       !quantityIsUsable ||
@@ -178,12 +181,11 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
     );
     if (!contents) {
       onClose();
+      await answer;
       return;
     }
     // The sheet closes on success; a refusal stays to say why on the field.
-    setAwaitingAnswer(true);
     setSizeRefusal(await answer);
-    setAwaitingAnswer(false);
   };
 
   return (
@@ -197,10 +199,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       unitToggleLabel={t('restockItem.restockBy')}
       currentQuantityLabel={t('restockItem.currentLabel')}
       operation={PantryOperation.Restock}
-      onConfirm={shared => {
-        void handleConfirm(shared);
-      }}
-      onReset={handleReset}
+      onConfirm={handleConfirm}
       renderActionFields={shared => (
         <RestockActionFields
           quantityInput={quantityInput}
@@ -430,7 +429,7 @@ const RestockActionFields: React.FC<{
           label={t('labels.expirationDate')}
           value={expiresAt}
           onChange={setExpiresAt}
-          placeholder={t('restockItem.expirationPlaceholder')}
+          placeholder={t('instructions.expiryOptional')}
           minimumDate={new Date()}
         />
       </View>

@@ -74,6 +74,7 @@ const HEADER_LINES = 6;
 const NEED_COPY: Record<Exclude<CheckInLineNeed, 'amount'>, TranslationKey> = {
   item: 'errors.itemNameRequired',
   unit: 'receipts.review.needsUnit',
+  quantity: 'errors.invalidQuantity',
   price: 'receipts.review.totalNeeded',
 };
 
@@ -347,14 +348,16 @@ export function useReceiptReview() {
   const failureOf = (index: number): string | undefined => {
     const need = needs[index];
     if (need === 'amount') {
+      // Asked against its list line; once unlinked, its count stands alone.
       const asked = askedBy(links.get(index));
-      return asked
-        ? t('receipts.review.needsAmount', {
-            amount: formatQuantityDisplay(asked.quantity, asked.unit),
-          })
-        : t(NEED_COPY.unit);
+      if (asked) {
+        return t('receipts.review.needsAmount', {
+          amount: formatQuantityDisplay(asked.quantity, asked.unit),
+        });
+      }
+    } else if (need) {
+      return t(NEED_COPY[need]);
     }
-    if (need) return t(NEED_COPY[need]);
     const code = draft?.failed?.[index];
     if (code === undefined) return undefined;
     return code

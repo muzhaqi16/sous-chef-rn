@@ -159,6 +159,13 @@ describe('receiptLineAmount', () => {
       { amount: { packages: { count: 2 } }, fromList: false },
     ],
     [
+      'a unit with no usable amount asks for the quantity, not a unit',
+      line(0, { unitId: 'unit-lb' }),
+      undefined,
+      null,
+      { needs: 'quantity' },
+    ],
+    [
       'a part of something no unit names is refused',
       line(0.5),
       undefined,

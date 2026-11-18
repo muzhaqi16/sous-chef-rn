@@ -71,17 +71,18 @@ export function validateDeductionQuantity(
     return deduction;
   }
 
-  if (shared.conversionUnavailable) {
-    report(t('labels.error'), t('deduction.conversionUnavailable'));
-    return null;
-  }
-  // Missing conversion evidence stays pending; never compare ounces with pounds or cartons.
+  // Missing conversion evidence stays pending; never compare ounces with pounds
+  // or cartons. A refused conversion leaves the stack's own unit usable.
   const cap =
     shared.availableInSelectedUnit ??
     (shared.activeUnitId === shared.trackingUnitId
       ? shared.trackingQuantity
       : null);
-  if (cap === null) return value;
+  if (cap === null) {
+    if (!shared.conversionUnavailable) return value;
+    report(t('labels.error'), t('deduction.conversionUnavailable'));
+    return null;
+  }
 
   const deduction = snapDeductionToCap(value, cap);
   if (deduction > cap) {

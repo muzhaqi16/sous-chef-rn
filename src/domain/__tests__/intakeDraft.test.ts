@@ -15,10 +15,9 @@ it('IN-02 states the six contained cans once, without expanding them again', () 
   expect(result.unresolved).toEqual([]);
   expect(examples['IN-02'].expected.remainingMl).toBe(1500);
 });
-it('IN-03 preserves a measured purchase over catalog defaults', () => {
+it('IN-03 states a measured purchase as weighed', () => {
   expect(
     resolveIntakeDraft({
-      catalog: { quantity: 2, unitId: 'lb' },
       purchased: { quantity: 2.21, unitId: 'lb', intent: 'measured' },
     }).amount,
   ).toEqual({ measured: { quantity: 2.21, unitId: 'lb' } });
@@ -40,18 +39,6 @@ it('IN-05 keeps each acquisition size and never mutates a previous draft', () =>
   });
   expect(first.amount?.packages?.size?.netWeight).toBe(16);
   expect(second.amount?.packages?.size?.netWeight).toBe(24);
-});
-it('preserves a cleared correction and asks for the unresolved measured unit', () => {
-  expect(
-    resolveIntakeDraft({
-      purchased: { quantity: 2.21, unitId: 'lb', intent: 'measured' },
-      correction: { unitId: null },
-    }),
-  ).toMatchObject({
-    amount: null,
-    unresolved: ['unit'],
-    facts: { quantity: 2.21, unitId: null },
-  });
 });
 it('retains an unknown-size package without inventing its contents', () => {
   expect(resolveIntakeDraft({ purchased: { quantity: 1 } }).amount).toEqual({
