@@ -1,5 +1,6 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useUserId } from '#store/useAppStore';
 import { formatShortDate } from '#/utils/formatters/date';
 import { formatQuantityWithUnit } from '#/utils/formatQuantity';
@@ -43,6 +44,8 @@ export function useEarlierPurchases(itemId: string | null): EarlierPurchase[] {
         }
       : skipToken,
   );
+  // A failed read offers no earlier purchase, so the line stays a new one.
+  useApolloErrorLogger(HeldStacksOfItemDocument, stacks.error);
   const [stack] = stacks.data?.pantry?.itemsConnection.edges ?? [];
   const batches = useQuery(
     EarlierPurchasesOfStackDocument,
@@ -54,6 +57,7 @@ export function useEarlierPurchases(itemId: string | null): EarlierPurchase[] {
         }
       : skipToken,
   );
+  useApolloErrorLogger(EarlierPurchasesOfStackDocument, batches.error);
   if (!userId || !receiptDay) return [];
   const end = new Date(`${receiptDay}T23:59:59`).getTime();
   const start = end - WINDOW_DAYS * DAY_MS;

@@ -25,10 +25,14 @@ jest.mock('#features/pantry/hooks/useCurrentPantry', () => ({
 }));
 jest.mock('#hooks/app/useToday', () => ({ useToday: () => '2026-11-15' }));
 
+const PIECE = { id: 'unit-piece', symbol: 'pc' };
+
 const stack = (id: string, version: number) => ({
   id,
   version,
   itemName: id,
+  // The unit "Some left" counts in: the stack's own.
+  unit: PIECE,
   stockConfidence: { level: StockConfidence.Low, reasons: [] },
 });
 

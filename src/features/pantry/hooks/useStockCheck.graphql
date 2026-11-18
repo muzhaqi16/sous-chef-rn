@@ -8,13 +8,19 @@ query StockToConfirm($pantryId: ID!, $today: LocalDate!) {
       id
       version
       itemName
+      # The stack's own unit, which "Some left" counts in; as the stock
+      # writers select it, since the check's local write rewrites it.
+      unit {
+        id
+        symbol
+        localizedSymbolForms {
+          one
+          other
+        }
+      }
       amountLeft {
         value
         unitId
-        unit {
-          id
-          symbol
-        }
         metric {
           value
           unitId
@@ -32,14 +38,30 @@ query StockToConfirm($pantryId: ID!, $today: LocalDate!) {
           type
         }
       }
-      # A package's contents, which "Some left" can be counted in.
+      # A package's contents, in the net-weight unit "Some left" can count them in.
       packageSize {
         value
         unitId
-        unit {
-          id
+        metric {
+          value
+          unitId
           symbol
+          localizedSymbol
+          displayAsFraction
+          type
         }
+        imperial {
+          value
+          unitId
+          symbol
+          localizedSymbol
+          displayAsFraction
+          type
+        }
+      }
+      netWeightUnit {
+        id
+        symbol
       }
       stockConfidence(today: $today) {
         level
@@ -70,11 +92,18 @@ mutation RecordPantryStockCheck(
         success
         failure {
           code
+          disposition
           field
         }
         pantryItem {
           id
           ...PantryItemReaders
+          # A row used up leaves its location holding one stack fewer.
+          storageLocation {
+            version
+            id
+            ...StorageLocationReaders
+          }
           stockConfidence(today: $today) {
             level
             reasons

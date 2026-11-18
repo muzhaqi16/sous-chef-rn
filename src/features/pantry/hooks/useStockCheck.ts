@@ -18,6 +18,7 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { useToday } from '#hooks/app/useToday';
+import { useDayConfirmedRead } from '#hooks/apollo/useDayConfirmedRead';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { formatReading, readingOf } from '#domain/measure';
 import { useTranslation } from '#/i18n';
@@ -95,9 +96,20 @@ export function useStockCheck(enabled = true) {
   const today = useToday();
   const system = useReadingSystem();
   const pantryId = pantry?.id;
-  const { data, loading, error } = useQuery(
+  // Cached without its day: a new day shows the last check until it is confirmed.
+  const dayRead = useDayConfirmedRead(
+    enabled && pantryId ? `${today}:${pantryId}` : null,
+  );
+  const { data, loading, error, refetch, variables } = useQuery(
     StockToConfirmDocument,
-    enabled && pantryId ? { variables: { pantryId, today } } : skipToken,
+    enabled && pantryId
+      ? { variables: { pantryId, today }, ...dayRead.policy }
+      : skipToken,
+  );
+  dayRead.markAnswered(
+    data && !loading && !error
+      ? `${variables.today}:${variables.pantryId}`
+      : null,
   );
   const [record] = useMutation(RecordPantryStockCheckDocument, {
     context: { localFirst: true },
@@ -110,13 +122,14 @@ export function useStockCheck(enabled = true) {
     version: stack.version,
     name: stack.itemName,
     amount: formatReading(readingOf(stack.amountLeft, system)),
-    unitSymbol: stack.amountLeft.unit.symbol,
-    contents: stack.packageSize
-      ? {
-          unitId: stack.packageSize.unitId,
-          unitSymbol: stack.packageSize.unit.symbol,
-        }
-      : null,
+    unitSymbol: stack.unit.symbol,
+    contents:
+      stack.packageSize && stack.netWeightUnit
+        ? {
+            unitId: stack.netWeightUnit.id,
+            unitSymbol: stack.netWeightUnit.symbol,
+          }
+        : null,
     level: stack.stockConfidence?.level ?? null,
     reasons: stack.stockConfidence?.reasons ?? [],
   }));
@@ -185,5 +198,13 @@ export function useStockCheck(enabled = true) {
     };
   };
 
-  return { rows, state, answer };
+  return {
+    rows,
+    state,
+    /** Asks again after a failed read. */
+    retry: () => {
+      void refetch();
+    },
+    answer,
+  };
 }

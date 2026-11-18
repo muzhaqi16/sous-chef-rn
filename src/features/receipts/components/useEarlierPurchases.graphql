@@ -11,6 +11,10 @@ query HeldStacksOfItem($pantryId: ID!, $itemId: ID!) {
           version
         }
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
   }
 }
@@ -33,6 +37,10 @@ query EarlierPurchasesOfStack($pantryItemId: ID!) {
           }
         }
       }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
     }
   }
 }

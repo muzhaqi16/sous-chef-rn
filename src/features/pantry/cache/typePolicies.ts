@@ -50,6 +50,11 @@ export const pantryTypePolicies: TypePolicies = {
         keyArgs: false,
         merge: true,
       },
+      // Judged on the viewer's day, cached without it: a new day keeps the last
+      // check offline until the read confirms the day (`useStockCheck`).
+      stockToConfirm: {
+        keyArgs: ['limit'],
+      },
     },
   },
   PantryItem: {
@@ -65,6 +70,11 @@ export const pantryTypePolicies: TypePolicies = {
       // Without a policy, keyArgs is every argument and a `fetchMore` page
       // lands under its own cursor — the list never grows.
       usageRecordsConnection: mergeConnectionByNodeId(['orderBy']),
+      // Today's answer replaces the last; the day is not part of its key.
+      stockConfidence: {
+        keyArgs: false,
+        merge: false,
+      },
     },
   },
   // Only the detail reads `perUnit` and `total`: merged, a list's narrower

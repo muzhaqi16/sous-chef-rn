@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { Sheet } from '#components/templates/Sheet';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
@@ -70,7 +71,7 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
   onDismiss,
 }) => {
   const { t } = useTranslation();
-  const { rows, answer } = useStockCheck(visible);
+  const { rows, state, retry, answer } = useStockCheck(visible);
   const [choices, setChoices] = useState<
     Partial<Record<string, StockCheckAnswer>>
   >({});
@@ -153,6 +154,10 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
       snapPoints={['85%']}
       contentContainerStyle={styles.content}
     >
+      {/* A check the device cannot read says so, never an empty check. */}
+      {rows.length === 0 ? (
+        <DataStateView state={state} onRetry={retry} />
+      ) : null}
       {rows.map(row => {
         const picked = choices[row.id] ?? null;
         const reasons = row.reasons
