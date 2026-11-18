@@ -104,6 +104,12 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
     }
   };
   const existingPurchaseId = useWatch({ control, name: 'existingPurchaseId' });
+  // A purchase picked is one of the product the line named: another product
+  // leaves the line a new purchase until one of its own is picked.
+  const dropEarlierPick = () => {
+    setValue('existingPurchaseId', null);
+    setValue('existingPurchaseVersion', null);
+  };
   const listItemName = listItemNameFor({ itemId, unitId, unitText });
   // Offered, never picked for the user: a similar purchase may be another one.
   const earlier = useEarlierPurchases(itemId);
@@ -208,6 +214,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                 onChangeText={text => {
                   field.onChange(text);
                   setValue('itemId', null);
+                  dropEarlierPick();
                 }}
                 // No unit from the suggestion: its default is the unit a recipe
                 // uses, and a blank one stocks the item in its tracking unit.
@@ -239,6 +246,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                     candidate => candidate.itemId === key,
                   );
                   if (!picked) return;
+                  if (picked.itemId !== itemId) dropEarlierPick();
                   setValue('itemName', picked.itemName, {
                     shouldValidate: true,
                   });

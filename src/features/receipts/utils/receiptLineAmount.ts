@@ -23,12 +23,10 @@ export type ReceiptLineAmount =
 
 /**
  * What a receipt line bought, as stated; the API does the package arithmetic.
- * Packages of a stated size are what was bought, whatever the list asked for.
- * A typed unit is the list line's, the only one it links to. A unitless count is
- * as its stack counts (never 1 g of cheese). Against a list line in a unit, one
- * bought is what the list asked for, and a count equal to the list's is in its
- * unit. Any other count is packages: the API sizes a weighed line's, but a
- * counted line's could be cartons or eggs, so it is asked.
+ * A stated size wins over the list; a typed unit is the list line's; a unitless
+ * count is as its stack counts (never 1 g of cheese). Against a list line in a
+ * unit, one bought, or a count equal to the list's, is in that unit; any other
+ * count is packages, which a counted line asks about (cartons or eggs?).
  */
 export function receiptLineAmount(
   choice: Pick<

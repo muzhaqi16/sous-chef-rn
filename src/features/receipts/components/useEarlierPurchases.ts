@@ -46,7 +46,16 @@ export function useEarlierPurchases(itemId: string | null): EarlierPurchase[] {
   );
   // A failed read offers no earlier purchase, so the line stays a new one.
   useApolloErrorLogger(HeldStacksOfItemDocument, stacks.error);
-  const [stack] = stacks.data?.pantry?.itemsConnection.edges ?? [];
+  // `skipToken` keeps the last run's data: an item since changed or cleared,
+  // or one this pantry holds no stack of, never offers another's purchases.
+  const stacksData =
+    pantry &&
+    itemId &&
+    stacks.variables.itemId === itemId &&
+    stacks.variables.pantryId === pantry.id
+      ? stacks.data
+      : undefined;
+  const [stack] = stacksData?.pantry?.itemsConnection.edges ?? [];
   const batches = useQuery(
     EarlierPurchasesOfStackDocument,
     stack
@@ -58,10 +67,14 @@ export function useEarlierPurchases(itemId: string | null): EarlierPurchase[] {
       : skipToken,
   );
   useApolloErrorLogger(EarlierPurchasesOfStackDocument, batches.error);
+  const batchesData =
+    stack && batches.variables.pantryItemId === stack.node.id
+      ? batches.data
+      : undefined;
   if (!userId || !receiptDay) return [];
   const end = new Date(`${receiptDay}T23:59:59`).getTime();
   const start = end - WINDOW_DAYS * DAY_MS;
-  return (batches.data?.pantryItemBatchesConnection.edges ?? [])
+  return (batchesData?.pantryItemBatchesConnection.edges ?? [])
     .flatMap(({ node }) => (node.purchase ? [node.purchase] : []))
     .filter(purchase => {
       const at = new Date(purchase.purchaseDate).getTime();

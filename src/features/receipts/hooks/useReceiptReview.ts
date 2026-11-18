@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useApolloClient, useFragment } from '@apollo/client/react';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { useToday } from '#hooks/app/useToday';
@@ -442,6 +442,8 @@ export function useReceiptReview() {
   };
 
   const { createStoreFromPlace } = useCreateStoreFromPlace();
+  // Picks answer in any order, so only the last place picked becomes the store.
+  const lastStoreChoice = useRef<string | null>(null);
   // The place picked among those the printed address could be, made a store
   // once for every household, or completing the receipt's store of that
   // number; it needs the search, so not offline.
@@ -450,10 +452,12 @@ export function useReceiptReview() {
     chainId,
     storeNumber,
   }: PrintedStoreChoice) => {
+    lastStoreChoice.current = placeId;
     const created = await createStoreFromPlace(
       placeId,
       chainId ? { chainId, storeNumber } : undefined,
     );
+    if (lastStoreChoice.current !== placeId) return;
     if (created) chooseStore(created);
     else toastService.error(t('receipts.review.storeChoiceFailed'));
   };
