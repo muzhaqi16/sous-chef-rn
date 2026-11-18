@@ -51,7 +51,7 @@
     "expandToMonth": "Expand to month view"
   },
   "mealPlanItem": {
-    "unnamedMeal": "Unnamed meal",
+    "recipeUnavailable": "Recipe unavailable",
     "pantryUpdated": "Pantry updated",
     "calories": "{{count}} cal"
   },
@@ -147,7 +147,6 @@
     "preview": "Preview",
     "emptyPreview": "No meals in this template",
     "day": "Day {{day}}",
-    "customMeal": "Custom",
     "metaLine": "{{days}} days · {{servings}} servings",
     "duplicateTemplate": "Duplicate Template",
     "deleteTemplate": "Delete Template",

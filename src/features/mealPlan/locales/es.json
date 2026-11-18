@@ -51,7 +51,7 @@
     "expandToMonth": "Expandir a vista mensual"
   },
   "mealPlanItem": {
-    "unnamedMeal": "Comida sin nombre",
+    "recipeUnavailable": "Receta no disponible",
     "pantryUpdated": "Despensa actualizada",
     "calories": "{{count}} cal"
   },
@@ -147,7 +147,6 @@
     "preview": "Vista previa",
     "emptyPreview": "No hay comidas en esta plantilla",
     "day": "Día {{day}}",
-    "customMeal": "Personalizada",
     "metaLine": "{{days}} días · {{servings}} raciones",
     "duplicateTemplate": "Duplicar plantilla",
     "deleteTemplate": "Eliminar plantilla",

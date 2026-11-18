@@ -51,7 +51,7 @@
     "expandToMonth": "Zgjero te pamja mujore"
   },
   "mealPlanItem": {
-    "unnamedMeal": "Vakt pa emër",
+    "recipeUnavailable": "Receta nuk është e disponueshme",
     "pantryUpdated": "Qilari u përditësua",
     "calories": "{{count}} kal"
   },
@@ -147,7 +147,6 @@
     "preview": "Pamja paraprake",
     "emptyPreview": "Asnjë vakt në këtë model",
     "day": "Dita {{day}}",
-    "customMeal": "I personalizuar",
     "metaLine": "{{days}} ditë · {{servings}} racione",
     "duplicateTemplate": "Dublo modelin",
     "deleteTemplate": "Fshi modelin",
