@@ -15337,7 +15337,7 @@ enum StockDoubtReason {
   """
   NOT_CONFIRMED_RECENTLY
   """
-  Its expiry date is before the caller's today; expiring today is not past it
+  Its expiry date is before the caller's today, and no stock check has found it since that date; expiring today is not past it
   """
   PAST_EXPIRY
   """
