@@ -22,8 +22,7 @@ import { Icon, type IconName } from '#components/atoms/Icon';
 
 import { FolderPicker } from '#features/recipes/components/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#components/providers/ScreenErrorBoundary';
-import { MarkCookedModal } from '#features/recipes/ui/MarkCookedModal';
-import { IngredientMatchingSheet } from '#features/recipes/components/modals/IngredientMatchingSheet';
+import { RecipeCookFlow } from '#features/recipes/ui/RecipeCookFlow';
 import { SaveRecipeSheet } from '#features/recipes/components/modals/SaveRecipeSheet/SaveRecipeSheet';
 import { ManageRecipeSheet } from '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet';
 import { useAddToMealPlanSheet } from '#features/mealPlan/ui/useAddToMealPlanSheet';
@@ -782,30 +781,21 @@ const RecipeDetailScreen: React.FC = () => {
         onDismiss={handleSheetDismiss}
       />
 
-      {/* Mark Cooked Modal */}
-      <MarkCookedModal
+      <RecipeCookFlow
         visible={cookedModalVisible}
+        onClose={() => setCookedModalVisible(false)}
+        cooking={{
+          handleMarkAsCooked,
+          handleSkipReview,
+          handleConfirmReview,
+          handleRecordWithoutDeducting,
+          ingredientMatching,
+        }}
         recipeName={displayData.title}
         defaultServings={startingServings(
           cooksFor,
           displayData.servings === 0 ? 1 : displayData.servings ?? 1,
         )}
-        onClose={() => setCookedModalVisible(false)}
-        onConfirm={handleMarkAsCooked}
-        hasPantry={ingredientMatching.hasPantry}
-      />
-
-      {/* Ingredient Matching Sheet */}
-      <IngredientMatchingSheet
-        visible={ingredientMatching.isSheetVisible}
-        editableMatches={ingredientMatching.editableMatches}
-        matchSummary={ingredientMatching.matchSummary}
-        onUpdate={ingredientMatching.updateMatch}
-        onConfirm={handleConfirmReview}
-        onSkip={handleSkipReview}
-        onRecordOnly={handleRecordWithoutDeducting}
-        onClose={ingredientMatching.closeSheet}
-        confirmLoading={ingredientMatching.confirmLoading}
       />
 
       {/* Folder Picker Modal - for editing existing saved recipe folder */}

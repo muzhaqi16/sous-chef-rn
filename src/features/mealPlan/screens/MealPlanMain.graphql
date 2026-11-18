@@ -3,6 +3,8 @@ fragment MealPlanMain_item on MealPlanItem {
   id
   servings
   customMealName
+  # Set once a cook completed the meal: checking it again cooks nothing more.
+  cookingLogId
   recipe {
     version
     id

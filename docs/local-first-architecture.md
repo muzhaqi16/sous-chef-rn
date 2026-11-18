@@ -343,6 +343,23 @@ the server answers, which owns the package arithmetic. The ledger meaning is the
 A confirmation does not force the level HIGH: the answer reads the stack's confidence again. The sheet
 keeps its answers in component state only, so a session end leaves nothing behind (REL-03).
 
+**Cooking.** A recipe is cooked one way, from its page or a planned meal: `useRecipeCookingActions`
+under `RecipeCookFlow`. The review scales each draw once, by servings / `Recipe.servings`, and the
+confirm sends one `markRecipeAsCooked` with `exactStacks`, the stacks drawn and a cooking-log id minted
+once and queued with it, so a replay converges on that log and draws nothing twice. Its local write
+(`cookRecipe`) draws what the device can prove at once, as a use does; a draw only the server can
+convert waits. COOK-01's 12 eggs and 64 fl oz less 4 eggs and 16 fl oz read 8 and 48 at once and after
+any replay. A planned meal's cook names the meal and its version (C4), and the same layer shows the meal
+done with its `cookingLogId` (COOK-02, `docs/meal-planning.md`). A draw stops at what its stack holds,
+so the result is read from the rows the cook recorded (`cookOutcome`), never from what was asked:
+
+- a stack another member emptied records no row, and is reported not deducted;
+- a short draw states what it took ("Only 3 pc Eggs was left", COOK-03);
+- rows past the answer's page are read while the cook is still the recipe's newest log, and a row that
+  could not be read is reported as neither drawn nor undrawn.
+
+A queued cook says only that it will sync. Nothing is cooked again to make up a short draw.
+
 **An optimistic entity is COMPLETE for every query that reads it.** With
 `returnPartialData: false`, one missing field makes the whole cache read
 incomplete and `useQuery` returns nothing; online a refetch hides it, offline

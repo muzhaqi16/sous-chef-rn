@@ -59,6 +59,7 @@ const fullItem = (overrides: Partial<FullItem> = {}): FullItem => ({
   version: 3,
   isCompleted: false,
   completedAt: null,
+  cookingLogId: null,
   servings: 1,
   notes: null,
   customMealName: null,

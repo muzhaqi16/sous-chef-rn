@@ -402,7 +402,12 @@
     "cookGuideCook": "Abre una y, cuando esté hecha, toca {{action}}.",
     "cookGuideOffline": "Las recetas de tu despensa necesitan conexión. Aparecerán aquí cuando vuelvas a estar en línea.",
     "cookedQueued": "Cocinada. Tu despensa se actualizará al sincronizar.",
-    "cookedQueuedNotDeducted": "Cocinada. Se guardará al sincronizar."
+    "cookedQueuedNotDeducted": "Cocinada. Se guardará al sincronizar.",
+    "mealAlreadyCooked": "Esta comida ya se cocinó, así que no se descontó nada más.",
+    "cookedUnconfirmed": "Cocinada. Revisa tu despensa para ver qué se descontó.",
+    "onlyLeft_one": "{{drawn}}. Solo quedaba {{left}}.",
+    "onlyLeft_other": "{{drawn}}. Solo quedaban {{left}}.",
+    "onlyLeftMore_other": "{{drawn}}. Solo quedaban {{left}}, y {{count}} más no alcanzaron."
   },
   "recipeFilters": {
     "title": "Filtros",

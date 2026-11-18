@@ -402,7 +402,12 @@
     "cookGuideCook": "Aprine una e, quando è pronta, tocca {{action}}.",
     "cookGuideOffline": "Le ricette dalla dispensa richiedono una connessione. Compariranno qui quando sarai di nuovo online.",
     "cookedQueued": "Cucinata. La tua dispensa si aggiornerà alla sincronizzazione.",
-    "cookedQueuedNotDeducted": "Cucinata. Verrà salvata alla sincronizzazione."
+    "cookedQueuedNotDeducted": "Cucinata. Verrà salvata alla sincronizzazione.",
+    "mealAlreadyCooked": "Questo pasto è già stato cucinato, quindi non è stato scalato altro.",
+    "cookedUnconfirmed": "Cucinata. Controlla la dispensa per vedere cosa è stato scalato.",
+    "onlyLeft_one": "{{drawn}}. Restava solo {{left}}.",
+    "onlyLeft_other": "{{drawn}}. Restavano solo {{left}}.",
+    "onlyLeftMore_other": "{{drawn}}. Restavano solo {{left}}, e altri {{count}} non bastavano."
   },
   "recipeFilters": {
     "title": "Filtri",

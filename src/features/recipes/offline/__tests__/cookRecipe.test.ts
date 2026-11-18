@@ -8,6 +8,7 @@ import {
   WriteHeldStock_InsideFragmentDoc,
   WriteHeldStock_PantryItemFragmentDoc,
 } from '#features/pantry/cache/stock.generated';
+import { pantryTrackingExamples } from '#/test-utils/fixtures/pantryTrackingFixtures';
 import { cookRecipe, type CookRecipeInputs } from '../localWrites';
 
 const NOW = '2026-11-15T18:00:00.000Z';
@@ -19,6 +20,16 @@ const HELD = gql`
     heldQuantity
   }
 `;
+
+const MEAL = gql`
+  fragment _CookRecipeMealProbe on MealPlanItem {
+    id
+    isCompleted
+    completedAt
+    cookingLogId
+  }
+`;
+const COOK_02 = pantryTrackingExamples['COOK-02'];
 
 // COOK-01's pantry: 12 eggs counted in pieces, 64 fl oz of milk held by volume.
 function stocked() {
@@ -67,6 +78,16 @@ function stocked() {
   const cache = seedCache([
     ...stack('pi-eggs', 12, 'pc', UnitType.Count),
     ...stack('pi-milk', 64, 'floz', UnitType.Volume),
+    {
+      fragment: MEAL,
+      data: {
+        __typename: 'MealPlanItem',
+        id: COOK_02.mealPlanItemId,
+        isCompleted: COOK_02.before.completed,
+        completedAt: null,
+        cookingLogId: null,
+      },
+    },
   ]);
   return {
     cache,
@@ -79,6 +100,20 @@ const heldOf = ({ cache }: Device, id: string) =>
   cache.readFragment<{ quantity: number; heldQuantity: number }>({
     id: cache.identify({ __typename: 'PantryItem', id }),
     fragment: HELD,
+    optimistic: true,
+  });
+
+const mealOf = ({ cache }: Device) =>
+  cache.readFragment<{
+    isCompleted: boolean;
+    completedAt: string | null;
+    cookingLogId: string | null;
+  }>({
+    id: cache.identify({
+      __typename: 'MealPlanItem',
+      id: COOK_02.mealPlanItemId,
+    }),
+    fragment: MEAL,
     optimistic: true,
   });
 
@@ -154,6 +189,48 @@ describe('a reviewed cook', () => {
 
     cook(device, { draws: [], now: NOW });
 
+    expect(heldOf(device, 'pi-eggs')).toMatchObject({ quantity: 12 });
+  });
+
+  it('COOK-02 shows the planned meal it completes done and linked, with the same draws', () => {
+    const device = stocked();
+
+    cook(device, {
+      ...COOK_01,
+      meal: {
+        id: COOK_02.mealPlanItemId,
+        cookingLogId: COOK_02.cookingLogId,
+      },
+    });
+    device.writes.rebuild();
+
+    expect(mealOf(device)).toEqual({
+      __typename: 'MealPlanItem',
+      id: COOK_02.mealPlanItemId,
+      isCompleted: true,
+      completedAt: NOW,
+      cookingLogId: 'COOK-02-log',
+    });
+    expect(heldOf(device, 'pi-eggs')).toMatchObject({ quantity: 8 });
+    expect(heldOf(device, 'pi-milk')).toMatchObject({ quantity: 48 });
+  });
+
+  it('leaves the meal undone when its cook is refused, a competing cook included', () => {
+    const device = stocked();
+
+    const write = cook(device, {
+      ...COOK_01,
+      meal: {
+        id: COOK_02.mealPlanItemId,
+        cookingLogId: COOK_02.competingCookingLogId,
+      },
+    });
+    device.writes.drop(write.id);
+
+    expect(mealOf(device)).toMatchObject({
+      isCompleted: false,
+      cookingLogId: null,
+    });
     expect(heldOf(device, 'pi-eggs')).toMatchObject({ quantity: 12 });
   });
 });

@@ -402,7 +402,12 @@
     "cookGuideCook": "Hap një dhe, kur ta kesh gatuar, prek {{action}}.",
     "cookGuideOffline": "Recetat nga qilari kanë nevojë për lidhje. Do të shfaqen këtu sapo të jesh sërish online.",
     "cookedQueued": "U gatua. Qilari yt do të përditësohet kur të sinkronizohet.",
-    "cookedQueuedNotDeducted": "U gatua. Do të ruhet kur të sinkronizohet."
+    "cookedQueuedNotDeducted": "U gatua. Do të ruhet kur të sinkronizohet.",
+    "mealAlreadyCooked": "Ky vakt është gatuar tashmë, ndaj nuk u zbrit asgjë tjetër.",
+    "cookedUnconfirmed": "U gatua. Shiko qilarin për të parë çfarë u zbrit.",
+    "onlyLeft_one": "{{drawn}}. Kishte mbetur vetëm {{left}}.",
+    "onlyLeft_other": "{{drawn}}. Kishin mbetur vetëm {{left}}.",
+    "onlyLeftMore_other": "{{drawn}}. Kishin mbetur vetëm {{left}}, dhe {{count}} të tjerë nuk mjaftuan."
   },
   "recipeFilters": {
     "title": "Filtrat",

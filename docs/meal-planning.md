@@ -50,7 +50,7 @@ Screen  (title = active plan name, tap opens the plan selector;
 ├── GenerateShoppingListSheet
 ├── MealPlanSettingsSheet
 ├── DuplicatePlanSheet
-├── MarkCookedModal                   #components/organisms/MarkCookedModal
+├── PlannedMealCook                   recipes' RecipeCookFlow, or MarkCookedModal with the capability off
 └── AnimatedItemSelector              plan selector, MealPlanFilterBar as list header
 ```
 
@@ -220,13 +220,26 @@ warning and disables Add.
 
 ### Completing a meal
 
-Checking a recipe meal opens `MarkCookedModal` (servings, deduct from pantry, notes);
-checking a custom meal or unchecking toggles directly. `toggleCompleted` sends
-`UpdateMealPlanItem` as a pending write, which shows `isCompleted` / `completedAt`
-until the server answers (with `deductFromPantry`, `servings` and `notes` only when
-completing). The success toast says pantry items were deducted when a recipe meal was
-completed with deduction. A completed meal with `usedPantryItems` shows a "pantry
-updated" badge.
+A recipe meal is cooked as it is completed, once. Checking one with no cook yet
+(`MealPlanItem.cookingLogId` null) opens `PlannedMealCook`:
+
+- With `pantryTrackingFoundation`, it is the recipe's own cook (`RecipeCookFlow` over
+  `useRecipeCookingActions`, the flow `RecipeDetail` opens), with the meal as
+  `plannedMeal`. Servings, deduction and the reviewed draws are the recipe page's, and
+  the one `markRecipeAsCooked` names `mealPlanItemId` and `mealPlanItemVersion`: the
+  cook, its draws and the completion commit together, and the meal's `cookingLogId`
+  names the cook (COOK-02). Its layer shows the meal done and linked before the answer.
+  A meal another cook completed is refused (`CONFLICT`), and one changed since it was
+  read is `VERSION_CONFLICT`; either moves no stock and re-reads the plan. The cooking
+  log keeps the servings and notes; the meal keeps its planned servings.
+- Off, `MarkCookedModal` (whole servings, deduct, notes) completes the meal with
+  `UpdateMealPlanItem` and `deductFromPantry`, and the server cooks it.
+
+Checking a custom meal, unchecking, or checking a meal a cook already completed
+toggles directly through `toggleCompleted`: `UpdateMealPlanItem` as a pending write
+showing `isCompleted` / `completedAt` until the server answers. The server deducts
+only while `cookingLogId` is null, so unchecking restores nothing and checking again
+draws nothing. A completed meal with `usedPantryItems` shows a "pantry updated" badge.
 
 ### Deleting a meal
 

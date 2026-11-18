@@ -3,7 +3,10 @@ import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import {
+  plannedMealInput,
+  plannedMealSettle,
   useRecipeIngredientMatching,
+  type CookContext,
   type CookEntry,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { toastService } from '#/services/toastService';
@@ -21,7 +24,7 @@ import { useSelectedPantryId } from '#store/useAppStore';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { cappedNames } from '#/utils/cappedNames';
 
-interface UseRecipeCookingActionsOptions {
+interface UseRecipeCookingActionsOptions extends CookContext {
   recipeId: string | undefined;
 }
 
@@ -52,8 +55,14 @@ interface SkippedDeductions {
   allUnitConversion: boolean;
 }
 
+/**
+ * The one way a recipe is cooked, from its detail or from a planned meal: a
+ * planned meal's cook completes it in the same write, so it is cooked once.
+ */
 export function useRecipeCookingActions({
   recipeId,
+  plannedMeal,
+  onMealChanged,
 }: UseRecipeCookingActionsOptions) {
   const { t } = useTranslation();
   const [cookedModalVisible, setCookedModalVisible] = useState(false);
@@ -62,7 +71,10 @@ export function useRecipeCookingActions({
   const [reviewedCook, setReviewedCook] = useState<CookEntry | null>(null);
 
   const client = useApolloClient();
-  const ingredientMatching = useRecipeIngredientMatching(recipeId);
+  const ingredientMatching = useRecipeIngredientMatching(recipeId, {
+    plannedMeal,
+    onMealChanged,
+  });
   const pantryId = useSelectedPantryId();
   const isOffline = useIsApiUnavailable();
 
@@ -81,6 +93,7 @@ export function useRecipeCookingActions({
     const inputs: CookRecipeInputs = {
       draws: [],
       now: new Date().toISOString(),
+      ...(plannedMeal && { meal: { id: plannedMeal.id, cookingLogId: id } }),
     };
     const settled = await pendingWritesOf(client.cache).send(
       MarkRecipeAsCookedDocument,
@@ -88,6 +101,7 @@ export function useRecipeCookingActions({
         input: {
           ...vars,
           ...deductingFrom(vars.deductFromPantry, pantryId),
+          ...plannedMealInput(plannedMeal),
           id,
         },
       },
@@ -96,6 +110,7 @@ export function useRecipeCookingActions({
           document: MarkRecipeAsCookedDocument,
           fallback: t('recipes.markCookedFailed'),
           present: 'toast',
+          ...plannedMealSettle(t, { plannedMeal, onMealChanged }),
         }),
       inputs,
     );

@@ -40,11 +40,23 @@ import {
 } from '#/context/TabBarActionsContext';
 import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import { MarkCookedModal } from '#features/recipes/ui/MarkCookedModal';
+import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { GetMealTemplatesDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { MealPlanMain } from '../MealPlanMain';
 
 jest.mock('#hooks/navigation/useAppNavigation');
+// The reviewed cook is a capability; every other flag reads as the build has it.
+let mockTrackingFoundation = false;
+jest.mock('#hooks/settings/useFeatureFlag', () => {
+  const actual = jest.requireActual('#hooks/settings/useFeatureFlag');
+  return {
+    useFeatureFlag: (flag: string) =>
+      flag === 'pantryTrackingFoundation'
+        ? mockTrackingFoundation
+        : actual.useFeatureFlag(flag),
+  };
+});
 // Navigation is the boundary: no navigator, so the tab counts as focused.
 jest.mock('@react-navigation/native', () => {
   const { useEffect: useMountEffect } = jest.requireActual('react');
@@ -143,6 +155,7 @@ const LASAGNA: HeldMeal = {
   mealType: MealType.Dinner,
   isCompleted: false,
   completedAt: null,
+  cookingLogId: null,
   servings: 3,
   customMealName: null,
   notes: null,
@@ -284,6 +297,7 @@ async function openPlans({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockTrackingFoundation = false;
   log = operationLog();
   shell.addMenu = undefined;
   useStore.setState({
@@ -488,6 +502,67 @@ describe('a meal', () => {
       deductFromPantry: true,
       servings: 3,
     });
+  });
+
+  // Unchecked since a cook completed it: checking it again cooks nothing more.
+  it('a cook already completed is checked again with nothing cooked or deducted', async () => {
+    const updated = recordMock(UpdateMealPlanItemDocument, { held: true });
+    await openPlans({
+      plan: held('own', [{ ...LASAGNA, cookingLogId: 'cook-earlier' }]),
+      answers: [updated],
+    });
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(mealPlanTestIDs.itemCompleteToggle('mpi-1')));
+    await log.requested(UpdateMealPlanItemDocument);
+
+    expect(screen.UNSAFE_getByType(MarkCookedModal).props.visible).toBe(false);
+    expect(inputOf(updated.fired[0] ?? {})).toEqual({
+      id: 'mpi-1',
+      version: 1,
+      isCompleted: true,
+      completedAt: expect.any(String),
+    });
+  });
+
+  // COOK-02: the cook and the meal's completion are one write, so a lost
+  // answer or another member's completion cannot deduct the meal twice.
+  it('with the reviewed cook, completes the meal in the cook itself', async () => {
+    mockTrackingFoundation = true;
+    const cooked = recordMock(MarkRecipeAsCookedDocument, { held: true });
+    const updated = recordMock(UpdateMealPlanItemDocument, { held: true });
+    await openPlans({ answers: [cooked, updated] });
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(mealPlanTestIDs.itemCompleteToggle('mpi-1')));
+    const sheet = screen.UNSAFE_getByType(MarkCookedModal);
+    expect(sheet.props.visible).toBe(true);
+    expect(sheet.props.defaultServings).toBe(3);
+
+    act(() => {
+      sheet.props.onConfirm({
+        servings: 4,
+        deductFromPantry: true,
+        useGranularDeduction: false,
+      });
+    });
+    await log.requested(MarkRecipeAsCookedDocument);
+    await act(async () => undefined);
+
+    expect(inputOf(cooked.fired[0] ?? {})).toMatchObject({
+      recipeId: 'recipe-1',
+      servings: 4,
+      deductFromPantry: true,
+      mealPlanItemId: 'mpi-1',
+      mealPlanItemVersion: 1,
+    });
+    expect(updated.fired).toEqual([]);
+    // Held, the cook's layer shows the meal done.
+    expect(
+      screen.getByTestId(mealPlanTestIDs.itemCompleteToggle('mpi-1')).props
+        .accessibilityLabel,
+    ).toBe(t('a11y.markIncomplete'));
   });
 });
 

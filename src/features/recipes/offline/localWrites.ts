@@ -153,15 +153,18 @@ export type CookRecipeInputs = {
   /** A reviewed cook's draws; empty where the server picks the stacks. */
   draws: CookDrawInputs[];
   now: string;
+  /** The planned meal the cook completes, and the cook's own id. */
+  meal?: { id: string; cookingLogId: string };
 };
 
 /**
  * A reviewed cook draws what it states on the stacks it names, at once, as a
  * use does: an exact count or what a package holds in its own unit. Anything
- * else waits for the server, which answers with every stack it drew.
+ * else waits for the server, which answers with every stack it drew. A planned
+ * meal it completes shows done and linked to the cook.
  */
 export const cookRecipe: LocalWrite<CookRecipeInputs> = {
-  apply(cache, { inputs: { draws, now } }) {
+  apply(cache, { inputs: { draws, now, meal } }) {
     for (const { pantryItemId, delta, stated } of draws) {
       if (delta !== null) {
         bumpStock(cache, pantryItemId, delta, now);
@@ -169,5 +172,13 @@ export const cookRecipe: LocalWrite<CookRecipeInputs> = {
         drawInside(cache, pantryItemId, stated.amount, stated.unitId, now);
       }
     }
+    if (!meal) return;
+    const row = { __typename: 'MealPlanItem', id: meal.id };
+    if (!isHeld(cache, row)) return;
+    writeEntityFields(cache, row, {
+      isCompleted: true,
+      completedAt: now,
+      cookingLogId: meal.cookingLogId,
+    });
   },
 };

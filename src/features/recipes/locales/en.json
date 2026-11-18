@@ -402,7 +402,12 @@
     "cookGuideCook": "Open one, and once it’s made, tap {{action}}.",
     "cookGuideOffline": "Recipes from your pantry need a connection. They’ll show here once you’re back online.",
     "cookedQueued": "Cooked. Your pantry updates when it syncs.",
-    "cookedQueuedNotDeducted": "Cooked. It's saved when it syncs."
+    "cookedQueuedNotDeducted": "Cooked. It's saved when it syncs.",
+    "mealAlreadyCooked": "This meal was already cooked, so nothing more was deducted.",
+    "cookedUnconfirmed": "Cooked. Check your pantry for what was deducted.",
+    "onlyLeft_one": "{{drawn}}. Only {{left}} was left.",
+    "onlyLeft_other": "{{drawn}}. Only {{left}} were left.",
+    "onlyLeftMore_other": "{{drawn}}. Only {{left}} were left, and {{count}} more ran short."
   },
   "recipeFilters": {
     "title": "Filters",
