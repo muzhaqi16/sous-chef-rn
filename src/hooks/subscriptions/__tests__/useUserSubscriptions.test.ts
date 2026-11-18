@@ -188,8 +188,11 @@ describe('useUserSubscriptions', () => {
       });
     });
 
-    it('leaves the homes when this device moved it', () => {
-      expect(drive(['defaultHomeId'], THIS_DEVICE)).not.toHaveBeenCalled();
+    // Leaving or deleting the default home lets the server pick the next.
+    it('reads the homes again when this device moved it', () => {
+      expect(drive(['defaultHomeId'], THIS_DEVICE)).toHaveBeenCalledWith({
+        include: [GetHomesDocument],
+      });
     });
 
     it('leaves the homes for any other account change', () => {

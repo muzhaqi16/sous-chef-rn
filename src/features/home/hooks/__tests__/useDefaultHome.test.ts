@@ -720,6 +720,23 @@ describe('useDefaultHome', () => {
       expect(mockStoreState.selectedPantryId).toBe('other-pantry');
     });
 
+    it('follows the server past a default deleted here, from the stand-in picked meanwhile', async () => {
+      mockStoreState.selectedHomeId = 'deleted';
+      mockStoreState.selectedPantryId = 'deleted-pantry';
+
+      await startThenAnswer(
+        [home('deleted', true), home('stand-in'), home('picked')],
+        [home('stand-in'), home('picked', true)],
+        () => {
+          mockStoreState.selectedHomeId = 'stand-in';
+          mockStoreState.selectedPantryId = 'stand-in-pantry';
+        },
+      );
+
+      expect(mockStoreState.selectedHomeId).toBe('picked');
+      expect(mockStoreState.selectedPantryId).toBe('picked-pantry');
+    });
+
     it('leaves a home picked this session, as a join or a deep link picks one', async () => {
       mockStoreState.selectedHomeId = 'old';
       mockStoreState.selectedPantryId = 'old-pantry';

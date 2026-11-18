@@ -268,7 +268,11 @@ export const useDefaultHome = () => {
         adoptedDefaultRef.current = remoteDefaultHomeId;
         return;
       }
-      if (remoteDefaultHomeId === adopted || selectedHomeId !== adopted) return;
+      // A default since deleted left the selection on a stand-in, not a pick.
+      const onAdopted =
+        selectedHomeId === adopted ||
+        (adopted !== null && !homesList.some(h => h.id === adopted));
+      if (remoteDefaultHomeId === adopted || !onAdopted) return;
       adoptedDefaultRef.current = remoteDefaultHomeId;
       setSelectedHomeId(remoteDefaultHomeId);
       // With no pantry known yet, the stale-pantry check repoints it.
@@ -309,6 +313,7 @@ export const useDefaultHome = () => {
     }
   }, [
     remoteDefaultHomeId,
+    homesList,
     defaultPantryId,
     selectedHomeId,
     selectedPantryId,
