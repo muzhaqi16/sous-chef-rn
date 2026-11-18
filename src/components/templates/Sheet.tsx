@@ -35,6 +35,12 @@ export interface SheetProps extends UseStandardBottomSheetOptions {
   /** Keyboard bottom offset override for `form`. Defaults to the
    *  density-scaled `theme.spacing.md` inside the scroll view. */
   bottomOffset?: number;
+  /**
+   * The sheet's bar, `SheetHeader` or `BottomSheetHeader`, held above the
+   * content: a field scrolled into view above the keyboard never carries it off.
+   * It sits outside `contentContainerStyle`, so it takes no `contentPadding`.
+   */
+  header?: React.ReactNode;
   /** The row above the content. Omit when the content names itself. */
   title?: string;
   /** Actions beside the title, icon or text. */
@@ -52,6 +58,7 @@ export const Sheet: React.FC<SheetProps> = ({
   style,
   showsVerticalScrollIndicator = false,
   bottomOffset,
+  header,
   title,
   actions,
   ...sheetOptions
@@ -88,25 +95,49 @@ export const Sheet: React.FC<SheetProps> = ({
     showsVerticalScrollIndicator,
   };
 
+  // A scrollable sits in a `flex: 1` view under the header, which gorhom does
+  // not count for a content-sized sheet; those are `view`, where it is counted.
+  const underHeader = (scroll: React.ReactNode) =>
+    header ? (
+      <View style={styles.fill}>
+        {header}
+        {scroll}
+      </View>
+    ) : (
+      scroll
+    );
+
   const content = (() => {
     switch (mode) {
       case 'list':
         // The modal bounds the child itself. `BottomSheetView` is absolutely
         // positioned with no height, so a scrollable inside it never scrolls.
-        return body;
-      case 'view':
-        return <BottomSheetView style={containerStyle}>{body}</BottomSheetView>;
-      case 'action':
         return (
+          <>
+            {header}
+            {body}
+          </>
+        );
+      case 'view':
+        return header ? (
+          <BottomSheetView style={insetStyle}>
+            {header}
+            <View style={contentContainerStyle}>{body}</View>
+          </BottomSheetView>
+        ) : (
+          <BottomSheetView style={containerStyle}>{body}</BottomSheetView>
+        );
+      case 'action':
+        return underHeader(
           <BottomSheetScrollView
             {...scrollProps}
             contentContainerStyle={[styles.actionContent, containerStyle]}
           >
             {body}
-          </BottomSheetScrollView>
+          </BottomSheetScrollView>,
         );
       case 'form':
-        return (
+        return underHeader(
           <BottomSheetFormScrollView
             {...scrollProps}
             contentContainerStyle={containerStyle}
@@ -115,7 +146,7 @@ export const Sheet: React.FC<SheetProps> = ({
             {...(bottomOffset !== undefined ? { bottomOffset } : {})}
           >
             {body}
-          </BottomSheetFormScrollView>
+          </BottomSheetFormScrollView>,
         );
     }
   })();
@@ -128,6 +159,7 @@ export const Sheet: React.FC<SheetProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  fill: { flex: 1 },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',

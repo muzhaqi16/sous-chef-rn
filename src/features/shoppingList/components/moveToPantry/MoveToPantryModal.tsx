@@ -464,25 +464,24 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       snapPoints={['75%', '95%']}
       contentContainerStyle={styles.contentContainer}
       style={styles.scrollView}
+      header={
+        <SheetHeader
+          title={t('moveToPantry.title')}
+          onClose={onClose}
+          confirm={{
+            accessibilityLabel: t('moveToPantry.title'),
+            onPress: () => {
+              void resolveTypedUnits().then(() =>
+                handleSubmit(onValid, reportValidationErrors)(),
+              );
+            },
+            disabled: confirmDisabled,
+            loading: isMoving,
+            testID: shoppingListTestIDs.moveToPantryConfirm,
+          }}
+        />
+      }
     >
-      {/* Header */}
-      <SheetHeader
-        contentPadding="md"
-        title={t('moveToPantry.title')}
-        onClose={onClose}
-        confirm={{
-          accessibilityLabel: t('moveToPantry.title'),
-          onPress: () => {
-            void resolveTypedUnits().then(() =>
-              handleSubmit(onValid, reportValidationErrors)(),
-            );
-          },
-          disabled: confirmDisabled,
-          loading: isMoving,
-          testID: shoppingListTestIDs.moveToPantryConfirm,
-        }}
-      />
-
       {!!shoppingListItem && (
         <>
           {/* Item Info */}

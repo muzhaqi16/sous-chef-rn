@@ -3,12 +3,9 @@ import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#/i18n';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { FormInput } from '#components/atoms/FormInput';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { Text } from '#components/atoms/Text';
@@ -41,14 +38,6 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
   initialValues,
 }) => {
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
-
-  // Standard bottom-sheet boilerplate handled by useStandardBottomSheet.
-  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['65%'],
-  });
 
   const { control, handleSubmit, reset } = useForm<MacroTargetsFormValues>({
     resolver: yupResolver(macroTargetsSchema),
@@ -100,110 +89,104 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
   }, reportValidationErrors);
 
   return (
-    <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
-      {/* `BottomSheetFormScrollView`, not the raw gorhom scrollable: it also
-          supplies the input context, so the four `FormInput`s below resolve to
-          gorhom's `BottomSheetTextInput` and the sheet sees the keyboard. */}
-      <BottomSheetFormScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.contentContainer,
-          { paddingBottom: insets.bottom + 16 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
+    <Sheet
+      mode="form"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['65%']}
+      style={styles.scrollView}
+      contentContainerStyle={styles.contentContainer}
+      header={
         <BottomSheetHeader
-          contentPadding="md"
           title={t('macroTargets.title')}
           onCancel={onClose}
           onConfirm={handleSave}
           confirmLabel={t('labels.save')}
           confirmDisabled={saving}
         />
+      }
+    >
+      {/* Description */}
+      <Text role="caption" tone="secondary" style={styles.description}>
+        {t('macroTargets.subtitle')}
+      </Text>
 
-        {/* Description */}
-        <Text role="caption" tone="secondary" style={styles.description}>
-          {t('macroTargets.subtitle')}
-        </Text>
+      {/* Daily Calories */}
+      <View style={styles.section}>
+        <Controller
+          control={control}
+          name="calories"
+          render={({ field, fieldState }) => (
+            <FormInput
+              label={t('macroTargets.dailyCalories')}
+              value={field.value}
+              onChangeText={field.onChange}
+              error={fieldState.error?.message}
+              keyboardType="number-pad"
+              placeholder={t('macroTargets.caloriesPlaceholder')}
+              useBottomSheetInput
+            />
+          )}
+        />
+      </View>
 
-        {/* Daily Calories */}
-        <View style={styles.section}>
-          <Controller
-            control={control}
-            name="calories"
-            render={({ field, fieldState }) => (
-              <FormInput
-                label={t('macroTargets.dailyCalories')}
-                value={field.value}
-                onChangeText={field.onChange}
-                error={fieldState.error?.message}
-                keyboardType="number-pad"
-                placeholder={t('macroTargets.caloriesPlaceholder')}
-                useBottomSheetInput
-              />
-            )}
-          />
-        </View>
+      {/* Protein */}
+      <View style={styles.section}>
+        <Controller
+          control={control}
+          name="protein"
+          render={({ field, fieldState }) => (
+            <FormInput
+              label={t('labels.proteinG')}
+              value={field.value}
+              onChangeText={field.onChange}
+              error={fieldState.error?.message}
+              keyboardType="number-pad"
+              placeholder={t('macroTargets.proteinPlaceholder')}
+              useBottomSheetInput
+            />
+          )}
+        />
+      </View>
 
-        {/* Protein */}
-        <View style={styles.section}>
-          <Controller
-            control={control}
-            name="protein"
-            render={({ field, fieldState }) => (
-              <FormInput
-                label={t('labels.proteinG')}
-                value={field.value}
-                onChangeText={field.onChange}
-                error={fieldState.error?.message}
-                keyboardType="number-pad"
-                placeholder={t('macroTargets.proteinPlaceholder')}
-                useBottomSheetInput
-              />
-            )}
-          />
-        </View>
+      {/* Carbs */}
+      <View style={styles.section}>
+        <Controller
+          control={control}
+          name="carbs"
+          render={({ field, fieldState }) => (
+            <FormInput
+              label={t('labels.carbsG')}
+              value={field.value}
+              onChangeText={field.onChange}
+              error={fieldState.error?.message}
+              keyboardType="number-pad"
+              placeholder={t('macroTargets.carbsPlaceholder')}
+              useBottomSheetInput
+            />
+          )}
+        />
+      </View>
 
-        {/* Carbs */}
-        <View style={styles.section}>
-          <Controller
-            control={control}
-            name="carbs"
-            render={({ field, fieldState }) => (
-              <FormInput
-                label={t('labels.carbsG')}
-                value={field.value}
-                onChangeText={field.onChange}
-                error={fieldState.error?.message}
-                keyboardType="number-pad"
-                placeholder={t('macroTargets.carbsPlaceholder')}
-                useBottomSheetInput
-              />
-            )}
-          />
-        </View>
-
-        {/* Fat */}
-        <View style={styles.section}>
-          <Controller
-            control={control}
-            name="fat"
-            render={({ field, fieldState }) => (
-              <FormInput
-                label={t('macroTargets.fat')}
-                value={field.value}
-                onChangeText={field.onChange}
-                error={fieldState.error?.message}
-                keyboardType="number-pad"
-                placeholder={t('macroTargets.fatPlaceholder')}
-                useBottomSheetInput
-              />
-            )}
-          />
-        </View>
-      </BottomSheetFormScrollView>
-    </BottomSheetModal>
+      {/* Fat */}
+      <View style={styles.section}>
+        <Controller
+          control={control}
+          name="fat"
+          render={({ field, fieldState }) => (
+            <FormInput
+              label={t('macroTargets.fat')}
+              value={field.value}
+              onChangeText={field.onChange}
+              error={fieldState.error?.message}
+              keyboardType="number-pad"
+              placeholder={t('macroTargets.fatPlaceholder')}
+              useBottomSheetInput
+            />
+          )}
+        />
+      </View>
+    </Sheet>
   );
 };
 

@@ -3,10 +3,8 @@ import { errorService } from '#/services/errorService';
 import { alertService } from '#/services/alertService';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { UnitPicker } from '#features/pantry/components/UnitPicker';
 import {
   useOperationUnits,
@@ -77,12 +75,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     unitToggleLabel ?? t('pantryAction.useByDefault');
   const resolvedCurrentQuantityLabel =
     currentQuantityLabel ?? t('pantryAction.availableDefault');
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible: visible && !!pantryItemId,
-    onDismiss: onClose,
-    snapPoints,
-  });
-
   const {
     pantryItem,
     loading: itemQueryLoading,
@@ -283,18 +275,18 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     portionUnitId: pantryItem?.portionUnitId ?? null,
   };
 
+  const presented = visible && !!pantryItemId;
+
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetFormScrollView
-        style={commonStyles.bottomSheetScrollView}
-        contentContainerStyle={[
-          commonStyles.bottomSheetContent,
-          contentContainerStyle,
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
+    <Sheet
+      mode="form"
+      visible={presented}
+      onDismiss={onClose}
+      snapPoints={snapPoints}
+      style={commonStyles.bottomSheetScrollView}
+      contentContainerStyle={commonStyles.bottomSheetContent}
+      header={
         <BottomSheetHeader
-          contentPadding="md"
           title={title}
           onCancel={onClose}
           onConfirm={async () => {
@@ -319,49 +311,49 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
           confirmLabel={confirmLabel}
           confirmColor={confirmColor}
         />
-
-        {!!pantryItem && (
-          <>
-            {/* Item Info */}
-            <View style={commonStyles.bottomSheetItemInfo}>
-              <Text role="heading" style={commonStyles.bottomSheetItemName}>
-                {pantryItem.itemName}
+      }
+    >
+      {!!pantryItem && (
+        <>
+          {/* Item Info */}
+          <View style={commonStyles.bottomSheetItemInfo}>
+            <Text role="heading" style={commonStyles.bottomSheetItemName}>
+              {pantryItem.itemName}
+            </Text>
+            <View style={commonStyles.bottomSheetItemRow}>
+              <Text role="body" tone="secondary">
+                {resolvedCurrentQuantityLabel}{' '}
               </Text>
-              <View style={commonStyles.bottomSheetItemRow}>
-                <Text role="body" tone="secondary">
-                  {resolvedCurrentQuantityLabel}{' '}
-                </Text>
-                <Text role="bodyStrong">
-                  {formatAmountLeft(pantryItem, readingSystem)}
-                </Text>
-              </View>
+              <Text role="bodyStrong">
+                {formatAmountLeft(pantryItem, readingSystem)}
+              </Text>
             </View>
-
-            {/* Unit Picker */}
-            <UnitPicker
-              label={resolvedUnitToggleLabel}
-              ranked={allUnits}
-              groups={groups}
-              selectedUnitId={selectedUnitInfo?.unitId}
-              onSelect={setSelectedUnitInfo}
-              loading={unitsLoading}
-            />
-
-            {/* Action-specific fields */}
-            {renderActionFields(shared, pantryItem)}
-          </>
-        )}
-
-        {!pantryItem && !!pantryItemId && itemQueryLoading ? (
-          <View style={commonStyles.bottomSheetLoading}>
-            <ThemedActivityIndicator />
           </View>
-        ) : null}
 
-        {itemState === 'error' || itemState === 'offline' ? (
-          <DataStateView state={itemState} onRetry={retryItem} />
-        ) : null}
-      </BottomSheetFormScrollView>
-    </BottomSheetModal>
+          {/* Unit Picker */}
+          <UnitPicker
+            label={resolvedUnitToggleLabel}
+            ranked={allUnits}
+            groups={groups}
+            selectedUnitId={selectedUnitInfo?.unitId}
+            onSelect={setSelectedUnitInfo}
+            loading={unitsLoading}
+          />
+
+          {/* Action-specific fields */}
+          {renderActionFields(shared, pantryItem)}
+        </>
+      )}
+
+      {!pantryItem && !!pantryItemId && itemQueryLoading ? (
+        <View style={commonStyles.bottomSheetLoading}>
+          <ThemedActivityIndicator />
+        </View>
+      ) : null}
+
+      {itemState === 'error' || itemState === 'offline' ? (
+        <DataStateView state={itemState} onRetry={retryItem} />
+      ) : null}
+    </Sheet>
   );
 };

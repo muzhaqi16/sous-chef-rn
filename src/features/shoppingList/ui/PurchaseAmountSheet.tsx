@@ -151,16 +151,18 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
       enableDynamicSizing
       mode="view"
       contentContainerStyle={styles.content}
+      header={
+        <SheetHeader
+          title={t('purchaseAmountSheet.title')}
+          onClose={onClose}
+          confirm={{
+            onPress: handleConfirm,
+            disabled: !quantityIsUsable || parsedTotal === undefined,
+            loading,
+          }}
+        />
+      }
     >
-      <SheetHeader
-        title={t('purchaseAmountSheet.title')}
-        onClose={onClose}
-        confirm={{
-          onPress: handleConfirm,
-          disabled: !quantityIsUsable || parsedTotal === undefined,
-          loading,
-        }}
-      />
       <View style={styles.sections}>
         <Text role="heading" style={styles.itemName}>
           {item?.itemName ?? ''}

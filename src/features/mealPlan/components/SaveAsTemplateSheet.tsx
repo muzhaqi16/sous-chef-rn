@@ -113,17 +113,17 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
       snapPoints={['70%']}
       contentContainerStyle={styles.contentContainer}
       style={styles.scrollView}
+      header={
+        <BottomSheetHeader
+          title={t('labels.saveAsTemplate')}
+          onCancel={onClose}
+          onConfirm={handleSave}
+          confirmLabel={saving ? t('labels.saving') : t('labels.save')}
+          confirmDisabled={saving || disabled || !name.trim()}
+          confirmColor="primary"
+        />
+      }
     >
-      <BottomSheetHeader
-        contentPadding="md"
-        title={t('labels.saveAsTemplate')}
-        onCancel={onClose}
-        onConfirm={handleSave}
-        confirmLabel={saving ? t('labels.saving') : t('labels.save')}
-        confirmDisabled={saving || disabled || !name.trim()}
-        confirmColor="primary"
-      />
-
       {!!homeName && (
         <View style={styles.infoNote}>
           <Text role="caption" tone="accent">

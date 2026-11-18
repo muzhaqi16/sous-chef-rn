@@ -173,15 +173,15 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
       onDismiss={onClose}
       snapPoints={['65%', '85%']}
       contentContainerStyle={commonStyles.bottomSheetContent}
+      header={
+        <BottomSheetHeader
+          title={t('adjustQuantity.title')}
+          onCancel={onClose}
+          onConfirm={handleConfirm}
+          confirmLabel={t('adjustQuantity.adjust')}
+        />
+      }
     >
-      <BottomSheetHeader
-        contentPadding="md"
-        title={t('adjustQuantity.title')}
-        onCancel={onClose}
-        onConfirm={handleConfirm}
-        confirmLabel={t('adjustQuantity.adjust')}
-      />
-
       {!!pantryItem && (
         <>
           <View style={commonStyles.bottomSheetItemInfo}>

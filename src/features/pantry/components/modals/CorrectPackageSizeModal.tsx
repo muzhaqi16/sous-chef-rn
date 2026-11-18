@@ -170,16 +170,16 @@ export const CorrectPackageSizeModal: React.FC<
       onDismiss={onClose}
       snapPoints={['65%', '85%']}
       contentContainerStyle={commonStyles.bottomSheetContent}
+      header={
+        <BottomSheetHeader
+          title={t('correctWeight.title')}
+          onCancel={onClose}
+          onConfirm={handleConfirm}
+          confirmLabel={t('correctWeight.correct')}
+          saving={isSaving}
+        />
+      }
     >
-      <BottomSheetHeader
-        contentPadding="md"
-        title={t('correctWeight.title')}
-        onCancel={onClose}
-        onConfirm={handleConfirm}
-        confirmLabel={t('correctWeight.correct')}
-        saving={isSaving}
-      />
-
       {!!pantryItem && !!batch && (
         <>
           <View style={commonStyles.bottomSheetItemInfo}>

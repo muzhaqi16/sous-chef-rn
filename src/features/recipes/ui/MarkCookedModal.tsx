@@ -100,17 +100,16 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
       snapPoints={['55%']}
       contentContainerStyle={styles.contentContainer}
       style={styles.scrollView}
+      // No title: the "Mark Cooked" action and the recipe name convey intent.
+      header={
+        <BottomSheetHeader
+          onCancel={onClose}
+          onConfirm={handleConfirm}
+          confirmLabel={t('markCookedModal.markCooked')}
+          confirmDisabled={!!servingsError}
+        />
+      }
     >
-      {/* Header — no title; the "Mark Cooked" action and the recipe name
-            below already convey intent. */}
-      <BottomSheetHeader
-        contentPadding="md"
-        onCancel={onClose}
-        onConfirm={handleConfirm}
-        confirmLabel={t('markCookedModal.markCooked')}
-        confirmDisabled={!!servingsError}
-      />
-
       {/* Recipe Info */}
       <View style={styles.recipeInfo}>
         <Text role="bodyStrong" numberOfLines={2}>

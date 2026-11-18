@@ -87,18 +87,19 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
       snapPoints={['75%', '95%']}
       contentContainerStyle={styles.contentContainer}
       style={styles.scrollView}
+      header={
+        <SheetHeader
+          title={t('saveRecipe.title')}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void handleSave();
+            },
+            loading: saving,
+          }}
+        />
+      }
     >
-      <SheetHeader
-        contentPadding="md"
-        title={t('saveRecipe.title')}
-        onClose={onClose}
-        confirm={{
-          onPress: () => {
-            void handleSave();
-          },
-          loading: saving,
-        }}
-      />
       {!!recipeName && (
         <Text
           role="caption"

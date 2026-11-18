@@ -5,8 +5,17 @@ import { MarkCookedModal } from '../MarkCookedModal';
 jest.mock('#components/templates/Sheet', () => {
   const { View } = require('react-native');
   return {
-    Sheet: ({ children }: { children?: React.ReactNode }) => (
-      <View>{children}</View>
+    Sheet: ({
+      children,
+      header,
+    }: {
+      children?: React.ReactNode;
+      header?: React.ReactNode;
+    }) => (
+      <View>
+        {header}
+        {children}
+      </View>
     ),
   };
 });
