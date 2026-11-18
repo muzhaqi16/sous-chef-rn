@@ -34,8 +34,6 @@ const SHELL = [
  * the list may only SHRINK, and a sheet that leaves it must not come back.
  */
 const PENDING_ADOPTION = [
-  'src/features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet.tsx',
-  'src/features/profile/components/MacroTargetsSheet/MacroTargetsSheet.tsx',
   'src/features/catalog/components/BottomSheetAutocompleteInput.tsx',
   'src/features/recipes/components/FolderPicker/ManageFolderSheet.tsx',
   'src/features/recipes/components/FolderPicker.tsx',
@@ -43,11 +41,9 @@ const PENDING_ADOPTION = [
   'src/features/barcode/screens/SearchResultsScreen.tsx',
   'src/features/catalog/ui/AddItemSheet/AddItemSheet.tsx',
   'src/features/mealPlan/components/AddMealSheet.tsx',
-  'src/features/mealPlan/components/AddToMealPlanSheet/AddToMealPlanSheet.tsx',
   'src/features/mealPlan/components/TemplateBrowserSheet.tsx',
   'src/features/mealPlan/components/TemplatePreviewSheet.tsx',
   'src/features/notifications/components/ExpirationActionSheet.tsx',
-  'src/features/pantry/components/modals/PantryActionModal.tsx',
   'src/features/recipes/components/modals/IngredientMatchingSheet.tsx',
   'src/features/recipes/components/recipeForm/RecipeIngredientEditor.tsx',
   'src/features/recipes/components/recipeForm/RecipeStepEditor.tsx',
