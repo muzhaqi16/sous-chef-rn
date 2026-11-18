@@ -36,7 +36,39 @@ describe('environment', () => {
       expect(config).toHaveProperty('buildMode');
     });
 
-    describe("a debug run's API URL override", () => {
+    describe("the API's endpoints", () => {
+      /** Runs `fn` as a build whose env file states `API_URL` and `WEB_SOCKET_URL`. */
+      const withBuiltUrls = (fn: () => void) => {
+        const mutable = installedEnv();
+        const previous = [mutable.API_URL, mutable.WEB_SOCKET_URL];
+        mutable.API_URL = 'https://stg-api.example.test/graphql';
+        mutable.WEB_SOCKET_URL = 'wss://stg-api.example.test/graphql';
+        try {
+          fn();
+        } finally {
+          [mutable.API_URL, mutable.WEB_SOCKET_URL] = previous;
+        }
+      };
+
+      it("are the build's URLs, for every transport", () => {
+        withBuiltUrls(() => {
+          expect(Environment.getApiConfig()).toMatchObject({
+            baseUrl: 'https://stg-api.example.test/graphql',
+            wsUrl: 'wss://stg-api.example.test/graphql',
+          });
+        });
+      });
+
+      it("take a debug run's override over the build's URLs", () => {
+        withBuiltUrls(() => {
+          Environment.overrideApiUrl('http://localhost:4100/graphql');
+          expect(Environment.getApiConfig()).toMatchObject({
+            baseUrl: 'http://localhost:4100/graphql',
+            wsUrl: 'ws://localhost:4100/graphql',
+          });
+        });
+      });
+
       it('routes the API and its socket through the given host', () => {
         Environment.overrideApiUrl('http://localhost:4100/graphql');
         expect(Environment.getApiConfig()).toMatchObject({

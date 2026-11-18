@@ -69,7 +69,7 @@ const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
 export function createHttpLink(): ApolloLink {
   const apiConfig = Environment.getApiConfig();
   const baseOptions = {
-    uri: () => env.API_URL ?? Environment.getApiConfig().baseUrl,
+    uri: () => Environment.getApiConfig().baseUrl,
     headers: {
       'Content-Type': 'application/json',
       ...clientSourceHeaders(),

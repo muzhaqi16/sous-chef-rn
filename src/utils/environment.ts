@@ -177,16 +177,23 @@ export class Environment {
   }
 
   /**
-   * Get environment-specific API configuration
+   * The ONE source of the API's endpoints, for every transport (GraphQL, its
+   * socket, `/health`, REST): a debug run's override, else the build's
+   * `API_URL` / `WEB_SOCKET_URL`, else the environment's default.
    */
   static getApiConfig() {
-    const config = Environment.configuredApi();
+    const config = Environment.environmentApi();
+    const built = {
+      ...config,
+      baseUrl: env.API_URL ?? config.baseUrl,
+      wsUrl: env.WEB_SOCKET_URL ?? config.wsUrl,
+    };
     return Environment._apiUrlOverride
-      ? { ...config, ...Environment._apiUrlOverride }
-      : config;
+      ? { ...built, ...Environment._apiUrlOverride }
+      : built;
   }
 
-  private static configuredApi() {
+  private static environmentApi() {
     const config = Environment.getConfig();
 
     if (config.isDevelopment) {
