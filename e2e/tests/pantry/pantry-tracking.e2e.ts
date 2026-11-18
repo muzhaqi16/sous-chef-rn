@@ -1,0 +1,136 @@
+/**
+ * Pantry tracking (change `strengthen-pantry-tracking-and-consumption`, 8.1),
+ * judged on the row the app shows and on what the API persisted. Each run
+ * opens a home of its own as the test user's default, so the stock check and
+ * the rows hold only what it seeds. Needs Metro started with
+ * `FEATURE_FLAGS=pantryTrackingFoundation=on`.
+ */
+
+import { element, by, waitFor, expect } from 'detox';
+import { expect as jestExpect } from '@jest/globals';
+import { PantryScreen } from '../../screens/PantryScreen';
+import { bootstrapAuthenticatedSession } from '../../helpers/auth';
+import { generateItemName } from '../../helpers/data';
+import { waitForModalClosed, waitForModalReady } from '../../helpers/waitFor';
+import {
+  closeTrackingHome,
+  localDate,
+  openTrackingHome,
+  seedStack,
+  stackOnServer,
+  type SeededStack,
+  type TrackingHome,
+} from '../../helpers/trackingHome';
+import { pantryTestIDs } from '../../../src/features/pantry/testIDs';
+import { homeTestIDs } from '../../../src/features/home/testIDs';
+import { todayTestIDs } from '../../../src/features/today/testIDs';
+import { kitTestIDs } from '../../../src/components/testIDs';
+
+const WAIT = 15000;
+
+describe('Pantry tracking', () => {
+  let home: TrackingHome;
+  let eggs: SeededStack;
+  let checked: SeededStack;
+
+  beforeAll(async () => {
+    home = await openTrackingHome(generateItemName('Tracking'));
+    eggs = await seedStack(home.pantryId, {
+      name: generateItemName('Eggs'),
+      quantity: 12,
+      unit: 'pc',
+    });
+    // Past its date, so the server doubts it and the check offers it.
+    checked = await seedStack(home.pantryId, {
+      name: generateItemName('Check'),
+      quantity: 10,
+      unit: 'pc',
+      expiresOn: localDate(-3),
+    });
+    await bootstrapAuthenticatedSession();
+    // The app opens on the home it last showed; choosing the spec's home as
+    // default in My Homes selects it, as a household switching homes does.
+    await waitFor(element(by.id(todayTestIDs.householdTitle)))
+      .toBeVisible()
+      .withTimeout(WAIT);
+    await element(by.id(todayTestIDs.householdTitle)).tap();
+    await waitFor(element(by.id(homeTestIDs.managementScroll)))
+      .toBeVisible()
+      .withTimeout(WAIT);
+    const setDefault = homeTestIDs.setDefaultButton(home.homeId);
+    // The list opens from the cache; a home made since needs the read's answer.
+    try {
+      await waitFor(element(by.id(setDefault))).toExist().withTimeout(5000);
+    } catch {
+      await element(by.id(homeTestIDs.managementScroll)).swipe('down', 'slow');
+      await waitFor(element(by.id(setDefault))).toExist().withTimeout(WAIT);
+    }
+    await waitFor(element(by.id(setDefault)))
+      .toBeVisible()
+      .whileElement(by.id(homeTestIDs.managementScroll))
+      .scroll(250, 'down');
+    await element(by.id(setDefault)).tap();
+    await waitFor(element(by.id(setDefault))).not.toBeVisible().withTimeout(WAIT);
+    await element(by.id(kitTestIDs.headerBackButton)).tap();
+    await new PantryScreen().navigateToTab();
+    await waitFor(element(by.id(pantryTestIDs.item(eggs.id))))
+      .toBeVisible()
+      .withTimeout(WAIT);
+  });
+
+  afterAll(async () => {
+    if (home) await closeTrackingHome(home);
+  });
+
+  it('USE-01 uses 2 of 12 eggs in one confirmation', async () => {
+    const row = pantryTestIDs.item(eggs.id);
+    await element(by.id(row)).swipe('right', 'slow', 0.5);
+    const consume = kitTestIDs.swipeAction(row, 'consume');
+    await waitFor(element(by.id(consume))).toBeVisible().withTimeout(WAIT);
+    await element(by.id(consume)).tap();
+    await waitForModalReady(pantryTestIDs.actionConfirm, WAIT);
+    await element(by.id(pantryTestIDs.consumeQuantity)).replaceText('2');
+    // The field lets go first, as a household's return key does: Detox's tap
+    // on the bar's Confirm does nothing while the field still holds focus.
+    await element(by.id(pantryTestIDs.consumeQuantity)).tapReturnKey();
+    await element(by.id(pantryTestIDs.actionConfirm)).tap();
+    await waitForModalClosed(pantryTestIDs.actionConfirm, WAIT);
+
+    await waitFor(element(by.id(pantryTestIDs.itemQuantity(eggs.id))))
+      .toHaveText('10 pc')
+      .withTimeout(WAIT);
+    await expect(
+      element(by.id(pantryTestIDs.itemQuantity(eggs.id))),
+    ).toHaveText('10 pc');
+    jestExpect(await stackOnServer(eggs.id)).toEqual({
+      quantity: 10,
+      unit: 'pc',
+    });
+  });
+
+  it('CHECK-01 counts 6 of 10 recorded eggs with Some left', async () => {
+    await waitFor(element(by.id(pantryTestIDs.stockCheckEntry)))
+      .toBeVisible()
+      .withTimeout(WAIT);
+    await element(by.id(pantryTestIDs.stockCheckEntry)).tap();
+    // Settled before a chip is pressed: a tap while the sheet slides in misses.
+    await waitForModalReady(pantryTestIDs.stockCheckSave, WAIT);
+    const someLeft = pantryTestIDs.stockCheckAnswer(checked.id, 'SOME_LEFT');
+    await element(by.id(someLeft)).tap();
+    await waitFor(element(by.id(pantryTestIDs.stockCheckLeft(checked.id))))
+      .toBeVisible()
+      .withTimeout(WAIT);
+    const left = element(by.id(pantryTestIDs.stockCheckLeft(checked.id)));
+    await left.replaceText('6');
+    await left.tapReturnKey();
+    await element(by.id(pantryTestIDs.stockCheckSave)).tap();
+
+    await waitFor(element(by.id(pantryTestIDs.itemQuantity(checked.id))))
+      .toHaveText('6 pc')
+      .withTimeout(WAIT);
+    jestExpect(await stackOnServer(checked.id)).toEqual({
+      quantity: 6,
+      unit: 'pc',
+    });
+  });
+});

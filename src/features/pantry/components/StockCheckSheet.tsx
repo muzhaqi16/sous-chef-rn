@@ -208,6 +208,7 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
                     setLeft(current => ({ ...current, [row.id]: text }))
                   }
                   error={errors[row.id]}
+                  testID={pantryTestIDs.stockCheckLeft(row.id)}
                 />
                 {row.contents ? (
                   <FractionInput

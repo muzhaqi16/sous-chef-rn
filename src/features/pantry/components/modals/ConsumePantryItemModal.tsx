@@ -183,6 +183,7 @@ const ConsumeActionFields: React.FC<{
           onChangeText={setQuantityInput}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
           useBottomSheetInput
+          testID={pantryTestIDs.consumeQuantity}
         />
         <QuantityInputFeedback
           remaining={remaining}

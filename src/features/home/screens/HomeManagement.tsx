@@ -216,6 +216,7 @@ export const HomeManagement: React.FC = () => {
         title={t('homeManagement.title')}
         actions={headerActions}
         scroll="scroll"
+        scrollTestID={homeTestIDs.managementScroll}
         refresh={{ refreshing, onRefresh: handleRefresh }}
         // Create and join are local-first; an open form outranks an unanswered read.
         state={

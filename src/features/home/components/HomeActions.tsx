@@ -37,6 +37,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
           style={styles.actionButton}
           onPress={() => onSetDefault(homeId)}
           accessibilityRole="button"
+          testID={homeTestIDs.setDefaultButton(homeId)}
         >
           <Icon name="star-outline" size={22} tone="textSecondary" />
           <Text

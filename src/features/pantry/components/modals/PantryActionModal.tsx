@@ -4,6 +4,7 @@ import { alertService } from '#/services/alertService';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { Sheet } from '#components/templates/Sheet';
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { UnitPicker } from '#features/pantry/components/UnitPicker';
 import {
@@ -310,6 +311,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
           saving={saving}
           confirmLabel={confirmLabel}
           confirmColor={confirmColor}
+          confirmTestID={pantryTestIDs.actionConfirm}
         />
       }
     >

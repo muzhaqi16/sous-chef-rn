@@ -8,9 +8,14 @@ export const pantryTestIDs = {
   stockCheckEntry: 'pantry-stock-check-entry',
   stockCheckSave: 'pantry-stock-check-save',
   stockCheckRow: (pantryItemId: string) => `pantry-stock-check-${pantryItemId}`,
+  stockCheckLeft: (pantryItemId: string) =>
+    `pantry-stock-check-${pantryItemId}-left`,
   stockCheckAnswer: (pantryItemId: string, answer: string) =>
     `pantry-stock-check-${pantryItemId}-${answer}`,
   screen: 'pantry-screen',
+  /** Confirm on the consume, waste and restock sheets. */
+  actionConfirm: 'pantry-action-confirm',
+  consumeQuantity: 'pantry-consume-quantity',
   consumeUseAll: 'pantry-consume-use-all',
   consumeDetails: 'pantry-consume-details',
   loading: 'pantry-loading',
