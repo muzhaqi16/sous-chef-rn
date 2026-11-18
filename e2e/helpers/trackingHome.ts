@@ -335,6 +335,47 @@ export async function historyOnServer(
     }));
 }
 
+/** Uses `quantity` of a stack through the API, as another member's device would. */
+export async function useOnServer(
+  stackId: string,
+  quantity: number,
+): Promise<void> {
+  const { createPantryItemUsage } = await asTestUser<{
+    createPantryItemUsage: { __typename: string };
+  }>(
+    `mutation ($input: CreatePantryItemUsageInput!) { createPantryItemUsage(input: $input) { __typename ${ERROR} } }`,
+    {
+      input: {
+        pantryItemId: stackId,
+        amount: { quantity },
+        purpose: 'GENERAL',
+        today: localDate(),
+      },
+    },
+  );
+  payloadOf(createPantryItemUsage, 'CreatePantryItemUsagePayload');
+}
+
+/** When the API last had the stack's amount confirmed, and how much it holds. */
+export async function confidenceOnServer(
+  stackId: string,
+): Promise<{ quantity: number; lastConfirmedAt: string }> {
+  const { pantryItem } = await asTestUser<{
+    pantryItem: {
+      quantity: number;
+      stockConfidence: { lastConfirmedAt: string };
+    } | null;
+  }>(
+    'query ($id: ID!, $today: LocalDate!) { pantryItem(id: $id) { id quantity stockConfidence(today: $today) { lastConfirmedAt } } }',
+    { id: stackId, today: localDate() },
+  );
+  if (!pantryItem) throw new Error(`No stack ${stackId}`);
+  return {
+    quantity: pantryItem.quantity,
+    lastConfirmedAt: pantryItem.stockConfidence.lastConfirmedAt,
+  };
+}
+
 /** Every stack of a home, as id, amount and unit: what a spec must leave as it was. */
 export async function homeStock(
   homeId: string,

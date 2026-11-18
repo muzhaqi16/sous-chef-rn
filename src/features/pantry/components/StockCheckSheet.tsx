@@ -92,8 +92,10 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
 }) => {
   const { t } = useTranslation();
   const { rows, state, retry, answer } = useStockCheck(visible);
+  // Each answer keeps the version its row showed when it was picked, so a
+  // change that lands while the sheet is open is refused, never counted over.
   const [choices, setChoices] = useState<
-    Partial<Record<string, StockCheckAnswer>>
+    Partial<Record<string, { answer: StockCheckAnswer; seen?: number }>>
   >({});
   const [left, setLeft] = useState<Partial<Record<string, string>>>({});
   const [inside, setInside] = useState<Partial<Record<string, string>>>({});
@@ -104,7 +106,7 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
   const choiceOf = (
     row: StockCheckRow,
   ): StockCheckChoice | null | 'invalid' => {
-    const picked = choices[row.id];
+    const picked = choices[row.id]?.answer;
     if (!picked) return null;
     if (picked === StockCheckAnswer.StillHave) {
       return { answer: StockCheckAnswer.StillHave };
@@ -141,7 +143,11 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
         found[row.id] = t('errors.invalidQuantity');
         return [];
       }
-      return choice ? [{ row, choice }] : [];
+      if (!choice) return [];
+      const seen = choices[row.id]?.seen;
+      return [
+        { row: seen === undefined ? row : { ...row, version: seen }, choice },
+      ];
     });
     setErrors(found);
     const invalid = Object.keys(found).length > 0;
@@ -165,9 +171,12 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
         refused.map(id => [id, t('pantryScreen.stockCheckStale')]),
       ),
     );
+    // Counted again, it goes against the version the row shows by then.
     setChoices(current =>
       Object.fromEntries(
-        Object.entries(current).filter(([id]) => refused.includes(id)),
+        Object.entries(current)
+          .filter(([id]) => refused.includes(id))
+          .map(([id, choice]) => [id, choice && { answer: choice.answer }]),
       ),
     );
   };
@@ -186,7 +195,7 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
         <DataStateView state={state} onRetry={retry} />
       ) : null}
       {rows.map(row => {
-        const picked = choices[row.id] ?? null;
+        const picked = choices[row.id]?.answer ?? null;
         const evidence = [
           levelLabel(row.level),
           ...row.reasons.map(reasonLabel),
@@ -222,7 +231,10 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
               onSelect={key => {
                 const next = ANSWERS.find(option => option === key);
                 if (!next) return;
-                setChoices(current => ({ ...current, [row.id]: next }));
+                setChoices(current => ({
+                  ...current,
+                  [row.id]: { answer: next, seen: row.version },
+                }));
                 setNoneAnswered(false);
               }}
               edgeFadeColor="surface"
