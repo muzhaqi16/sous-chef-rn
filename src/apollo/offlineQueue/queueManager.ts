@@ -1191,6 +1191,14 @@ export class QueueManager {
    * replayable again, and a restored or rotated session never signs in to say so.
    */
   onSessionToken(userId: string): void {
+    // A session that began without a sign-in through `authService` (restored
+    // storage, an injected session) still owns its queue: without this its
+    // pending layers are never restored, as `getPendingWrites` reads this user.
+    const queueUser = queueStore.getCurrentUserId();
+    if (queueUser !== userId) {
+      this.onUserChange(userId, queueUser);
+      return;
+    }
     if (queueStore.revivePendingAuthErrors(userId) === 0) return;
     this.drainAfterPass();
   }

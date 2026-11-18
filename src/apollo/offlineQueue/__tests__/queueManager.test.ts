@@ -122,6 +122,7 @@ jest.mock('../queueStore', () => ({
     getRefusedRows: jest.fn(() => new Map<string, string>()),
     revivePendingAuthErrors: jest.fn(() => 0),
     clearQueueForUser: jest.fn(() => 0),
+    getCurrentUserId: jest.fn((): string | null => 'user-1'),
     setCurrentUserId: jest.fn(),
     clearCurrentUserId: jest.fn(),
     getQueueStats: jest.fn(() => ({
@@ -3038,6 +3039,25 @@ describe('QueueManager', () => {
         expect(queueStore.removeMutation).not.toHaveBeenCalledWith(
           'session-throw',
         );
+      });
+
+      // A session the queue never saw signed in (restored or injected): its
+      // pending layers would otherwise stay off screen after a cold start.
+      it('adopts the queue for a session it holds no user for, restoring its layers', () => {
+        (queueStore.getCurrentUserId as jest.Mock).mockReturnValueOnce(null);
+        (queueStore.getPendingWrites as jest.Mock).mockReturnValueOnce([]);
+
+        manager.onSessionToken('user-1');
+
+        expect(queueStore.setCurrentUserId).toHaveBeenCalledWith('user-1');
+        expect(queueStore.getPendingWrites).toHaveBeenCalled();
+        expect(queueStore.clearQueueForUser).not.toHaveBeenCalled();
+      });
+
+      it('leaves the queue alone for the user it already holds', () => {
+        manager.onSessionToken('user-1');
+
+        expect(queueStore.setCurrentUserId).not.toHaveBeenCalled();
       });
 
       it('revives auth-parked writes and drains when the session gets a new token', () => {
