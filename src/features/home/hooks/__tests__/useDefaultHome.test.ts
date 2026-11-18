@@ -3,7 +3,10 @@ import { drainTimers } from '#/test-utils/drainTimers';
 import {
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
+import { UseDefaultHome_HomeFragmentDoc } from '../useDefaultHome.generated';
 import {
   GetHomesDocument,
   type GetHomesQuery,
@@ -288,6 +291,28 @@ describe('useDefaultHome', () => {
 
     await drainTimers();
     expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(true);
+  });
+
+  // The quick check reads the one list every reader of a home's pantries
+  // shares, so a home the homes query holds answers it, default or not.
+  it('checks a persisted pantry against the list the homes query holds', () => {
+    const cache = makeCache();
+    const home = buildHomeNode({
+      id: 'home-2',
+      pantries: [{ id: 'pantry-2', isDefault: true }],
+    });
+    const homes = buildGetHomesMock([home]).result;
+    if (!homes || !('data' in homes) || !homes.data) throw new Error('No data');
+    seedQuery(cache, { query: GetHomesDocument, data: homes.data });
+
+    const held = cache.readFragment({
+      id: 'Home:home-2',
+      fragment: UseDefaultHome_HomeFragmentDoc,
+    });
+
+    expect(held?.pantriesConnection.edges.map(edge => edge.node.id)).toEqual([
+      'pantry-2',
+    ]);
   });
 
   it('does not set early ready when already ready', () => {

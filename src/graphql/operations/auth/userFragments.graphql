@@ -20,7 +20,8 @@ fragment LoginUser on User {
     id
     name
     isDefault
-    pantriesConnection {
+    # An argument, so it shares the one stored list GetHomes keeps.
+    pantriesConnection(first: 20) {
       edges {
         node {
           version

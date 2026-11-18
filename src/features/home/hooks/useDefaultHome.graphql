@@ -3,7 +3,9 @@
 # record would make the check unanswerable.
 fragment useDefaultHome_home on Home {
   id
-  pantriesConnection {
+  # Any argument reads the one list every reader of a home's pantries shares
+  # (the field keys on none); a bare selection would be a second, stale copy.
+  pantriesConnection(first: 20) {
     totalCount
     edges {
       node {
