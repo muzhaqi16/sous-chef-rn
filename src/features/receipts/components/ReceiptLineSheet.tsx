@@ -75,10 +75,15 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   const money = useReceiptMoney();
   const { resolveUnitId, heldUnitFor } = useResolveUnit();
   const unitTypeOf = (unitText: string) => heldUnitFor(unitText)?.type ?? null;
-  const { control, handleSubmit, getValues, setValue, setError } = useForm<
-    ReceiptLineFormValues,
-    ReceiptLineFormContext
-  >({
+  const {
+    control,
+    handleSubmit,
+    getValues,
+    getFieldState,
+    setValue,
+    setError,
+    trigger,
+  } = useForm<ReceiptLineFormValues, ReceiptLineFormContext>({
     resolver: yupResolver(receiptLineSchema),
     context: { free: line.price === 0 && (line.discount ?? 0) > 0 },
     defaultValues: receiptLineDefaults(line, choice, unitTypeOf, asked),
@@ -91,6 +96,13 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   const unitType = useWatch({ control, name: 'unitType' });
   // A bare count, or one in a counted unit, can say what each package holds.
   const countsPackages = takesContents(unitType);
+  // The whole-packages and size-unit rules read the size and the unit's kind.
+  const recheckPackages = () => {
+    if (getFieldState('quantityInput').invalid) void trigger('quantityInput');
+    if (getFieldState('sizeUnitDisplay').invalid) {
+      void trigger('sizeUnitDisplay');
+    }
+  };
   const existingPurchaseId = useWatch({ control, name: 'existingPurchaseId' });
   const listItemName = listItemNameFor({ itemId, unitId, unitText });
   // Offered, never picked for the user: a similar purchase may be another one.
@@ -336,6 +348,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                     field.onChange(text);
                     setValue('unitId', null);
                     setValue('unitType', unitTypeOf(text));
+                    recheckPackages();
                   }}
                   onUnitSelected={(id, _name, pickedType) => {
                     setValue('unitId', id);
@@ -343,6 +356,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                       'unitType',
                       pickedType ?? unitTypeOf(getValues('unitValue')),
                     );
+                    recheckPackages();
                   }}
                   placeholder={t('labels.pcsKgEtc')}
                   error={fieldState.error?.message}
@@ -365,7 +379,10 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                     <PackageContentsFields
                       variant="inline"
                       size={size.value}
-                      onSizeChange={size.onChange}
+                      onSizeChange={text => {
+                        size.onChange(text);
+                        recheckPackages();
+                      }}
                       sizeError={sizeState.error?.message}
                       unit={unit.value}
                       onUnitChange={text => {

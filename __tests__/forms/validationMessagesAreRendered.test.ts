@@ -298,6 +298,7 @@ const FORM_OWNERS: Record<string, string> = {
     'src/features/mealPlan/screens/MealTemplateBuilderScreen.tsx',
   // Resolved by SearchResults; its fields are written and re-run here.
   scanAmountSchema: 'src/features/barcode/components/ScanAmountSection.tsx',
+  receiptLineSchema: 'src/features/receipts/components/ReceiptLineSheet.tsx',
 };
 
 describe('cross-field rules are re-run by their form', () => {
