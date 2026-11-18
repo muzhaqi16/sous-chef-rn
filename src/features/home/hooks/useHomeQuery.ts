@@ -66,9 +66,9 @@ export function useHomeQuery() {
     homes,
     remoteDefaultHomeId,
     loading,
-    // A defined `data` with zero homes is still an answer, so a settled read
-    // with neither is the failure.
-    hasResult: data !== undefined || homes.length > 0,
+    // A home list with zero homes is still an answer; a `data` the server
+    // answered with errors and no list is the failure, never "0 homes".
+    hasResult: data?.homes != null || homes.length > 0,
     stats,
     refetch: memoizedRefetch,
   };
