@@ -13,7 +13,11 @@ import { bootstrapAuthenticatedSession } from '../../helpers/auth';
 import { getAuthTokens } from '../../helpers/tokenProvider';
 import { launchAppWithFabricWorkaround } from '../../init';
 import { generateItemName } from '../../helpers/data';
-import { waitForModalClosed, waitForModalReady } from '../../helpers/waitFor';
+import {
+  retry,
+  waitForModalClosed,
+  waitForModalReady,
+} from '../../helpers/waitFor';
 import {
   closeTrackingHome,
   localDate,
@@ -27,10 +31,13 @@ import {
   type TrackingHome,
 } from '../../helpers/trackingHome';
 import { pantryTestIDs } from '../../../src/features/pantry/testIDs';
+import { barcodeTestIDs } from '../../../src/features/barcode/testIDs';
 import { recipesTestIDs } from '../../../src/features/recipes/testIDs';
 import { kitTestIDs } from '../../../src/components/testIDs';
 
 const WAIT = 15000;
+// A dev catalog product whose label states 6 x 250 mL.
+const GINGER_BEER_6_X_250_ML = '9300675091206';
 
 describe('Pantry tracking', () => {
   let home: TrackingHome;
@@ -198,6 +205,46 @@ describe('Pantry tracking', () => {
     jestExpect(await stackOnServer(checked.id)).toEqual({
       quantity: 6,
       unit: 'pc',
+    });
+  });
+
+  it('IN-02 adds one 6 x 250 mL multipack as six pieces, 1500 mL in all', async () => {
+    // The simulator has no camera: the scan's result opens by its link, from
+    // the spec's pantry, as the pantry's scan does.
+    const tokens = await getAuthTokens();
+    await launchAppWithFabricWorkaround({
+      newInstance: true,
+      url: `souschef://scan/result?barcode=${GINGER_BEER_6_X_250_ML}&source=pantry&pantryId=${home.pantryId}`,
+      launchArgs: {
+        detoxUserToken: tokens.accessToken,
+        detoxRefreshToken: tokens.refreshToken,
+        detoxUser: JSON.stringify(tokens.user),
+      },
+    });
+    // One package is proposed; reading the barcode alone records nothing.
+    await waitFor(element(by.id(barcodeTestIDs.scanAmountSummary)))
+      .toBeVisible()
+      .withTimeout(30000);
+    const before = new Set(
+      (await pantryStacks(home.pantryId)).map(stack => stack.id),
+    );
+    await element(by.id(barcodeTestIDs.scanAdd)).tap();
+
+    const [added, ...more] = await retry(async () => {
+      const arrived = (await pantryStacks(home.pantryId)).filter(
+        stack => !before.has(stack.id),
+      );
+      if (arrived.length === 0) throw new Error('No stack yet');
+      return arrived;
+    }, 15);
+    jestExpect(more).toEqual([]);
+    // Six pieces of 250 mL, the outer pack counted once: never 36, never 250 mL.
+    jestExpect(added).toMatchObject({
+      heldQuantity: 6,
+      netWeight: 250,
+      netWeightUnit: 'mL',
+      remainingNetWeight: 1500,
+      activeBatchCount: 1,
     });
   });
 
