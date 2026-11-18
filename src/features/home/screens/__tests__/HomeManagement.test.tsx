@@ -202,6 +202,7 @@ describe('the homes', () => {
   });
 
   it('list the server default first, marked Default', async () => {
+    useStore.setState({ selectedHomeId: CABIN.id });
     await openHomes({
       homes: [
         { ...KITCHEN, isDefault: false },

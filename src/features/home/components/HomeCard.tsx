@@ -25,6 +25,8 @@ import { motion } from '#/theme/motion';
 interface HomeCardProps {
   homeId: string;
   isDefault: boolean;
+  /** The home this device is on; a default it is not on offers the switch back. */
+  isCurrent: boolean;
   isHighlighted?: boolean;
   canInvite?: boolean;
   canDelete?: boolean;
@@ -37,6 +39,7 @@ interface HomeCardProps {
 export const HomeCard: React.FC<HomeCardProps> = ({
   homeId,
   isDefault,
+  isCurrent,
   isHighlighted = false,
   canInvite,
   canDelete,
@@ -125,7 +128,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
               {t('joinHome.pantryCount', { count: pantryCount })}
             </Text>
           </View>
-          {isDefault ? (
+          {isDefault && isCurrent ? (
             <View style={styles.defaultBadge}>
               <Text role="label" tone="onPrimaryLight">
                 {t('homeManagement.cardDefault')}

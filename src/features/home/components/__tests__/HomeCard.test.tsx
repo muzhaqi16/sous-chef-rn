@@ -140,6 +140,7 @@ function renderCard(props: Partial<React.ComponentProps<typeof HomeCard>>) {
     <HomeCard
       homeId={home.id}
       isDefault={false}
+      isCurrent
       onPress={props.onPress ?? jest.fn()}
       onSetDefault={props.onSetDefault ?? jest.fn()}
       onInvite={props.onInvite ?? jest.fn()}
@@ -193,6 +194,17 @@ describe('HomeCard', () => {
     expect(screen.queryByLabelText(t('labels.setDefault'))).toBeNull();
   });
 
+  it('offers the switch back on a default home this device is not on', async () => {
+    const onSetDefault = jest.fn();
+    renderCard({ isDefault: true, isCurrent: false, onSetDefault });
+
+    expect(screen.queryByText(t('homeManagement.cardDefault'))).toBeNull();
+    await userEvent
+      .setup()
+      .press(screen.getByLabelText(t('labels.setDefault')));
+    expect(onSetDefault).toHaveBeenCalledWith('home-1');
+  });
+
   it('calls onDelete with home id and name', async () => {
     const onDelete = jest.fn();
     const user = userEvent.setup();
@@ -222,6 +234,7 @@ describe('HomeCard', () => {
       <HomeCard
         homeId={home.id}
         isDefault={false}
+        isCurrent
         onPress={jest.fn()}
         onSetDefault={jest.fn()}
         onInvite={jest.fn()}

@@ -72,6 +72,11 @@ export const useDefaultHome = () => {
   const hasInitializedRef = useRef(false);
   // Track if we've already triggered auto-select for first home
   const hasAutoSelectedRef = useRef(false);
+  // The account default the selection last adopted. A later answer naming
+  // another (a stale first paint corrected, a switch on another device) is
+  // followed while the selection is still that home; one picked this session
+  // (a join, a deep link) is left alone.
+  const adoptedDefaultRef = useRef<string | null>(null);
 
   // Home selection ready state - gates pantry queries
   const isHomeSelectionReady = useIsHomeSelectionReady();
@@ -254,11 +259,23 @@ export const useDefaultHome = () => {
   // CONSOLIDATED: Both home and pantry are set in a single effect to prevent
   // cascading re-renders that cause duplicate queries
   useEffect(() => {
-    // Skip if already initialized
-    if (hasInitializedRef.current) return;
-
     // Wait for remote data to be available
     if (!remoteDefaultHomeId) return;
+
+    if (hasInitializedRef.current) {
+      const adopted = adoptedDefaultRef.current;
+      if (selectedHomeId === remoteDefaultHomeId) {
+        adoptedDefaultRef.current = remoteDefaultHomeId;
+        return;
+      }
+      if (remoteDefaultHomeId === adopted || selectedHomeId !== adopted) return;
+      adoptedDefaultRef.current = remoteDefaultHomeId;
+      setSelectedHomeId(remoteDefaultHomeId);
+      // With no pantry known yet, the stale-pantry check repoints it.
+      if (defaultPantryId) setSelectedPantryId(defaultPantryId);
+      logger.debug('🏠 Followed the account default:', remoteDefaultHomeId);
+      return;
+    }
 
     let didUpdate = false;
 
@@ -288,6 +305,7 @@ export const useDefaultHome = () => {
       (selectedHomeId && (selectedPantryId || !defaultPantryId))
     ) {
       hasInitializedRef.current = true;
+      adoptedDefaultRef.current = remoteDefaultHomeId;
     }
   }, [
     remoteDefaultHomeId,
@@ -309,6 +327,7 @@ export const useDefaultHome = () => {
     logger.debug('🏠 Auto-selecting first home:', firstHome.id);
 
     hasAutoSelectedRef.current = true;
+    adoptedDefaultRef.current = firstHome.id;
     setSelectedHomeId(firstHome.id);
 
     const localDefaultPantry = defaultPantryOf(firstHome);

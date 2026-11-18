@@ -49,6 +49,19 @@ function handleRemovedFromHome(
   }
 }
 
+/**
+ * Another device moved the account default. Only a full read of the homes
+ * says which one now is: each home's `isDefault` is computed for the reader.
+ */
+function handleAccountUpdated(
+  payload: UserEventPayload,
+  client: SubscriptionApolloClient,
+  ownChange: boolean,
+) {
+  if (ownChange || !payload.updatedFields.includes('defaultHomeId')) return;
+  void client.refetchQueries({ include: [GetHomesDocument] });
+}
+
 /** `ownAccept`: the echo of an invite this device just accepted. */
 function handleAddedToHome(
   client: SubscriptionApolloClient,
@@ -119,10 +132,10 @@ export function useUserSubscriptions(userId?: string) {
     enableLogging: true,
     customOnData: (payload: UserEventPayload) => {
       switch (payload.subtype) {
-        // Apollo auto-normalizes the User / UserProfile node by id; no manual
-        // cache work needed (mirrors the former userUpdated / userProfileChanged
-        // subscriptions, which had no handler).
+        // Apollo auto-normalizes the User / UserProfile node by id.
         case UserSubtype.AccountUpdated:
+          handleAccountUpdated(payload, client, isSelfEcho(payload, userId));
+          break;
         case UserSubtype.ProfileChanged:
           break;
 
