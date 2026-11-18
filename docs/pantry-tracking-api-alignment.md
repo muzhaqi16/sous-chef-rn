@@ -66,6 +66,16 @@ Run 2026-11-18 against dev `:4000` (hash `b30985d8…`) as two member accounts o
 
 The run was a one-off script against the dev API, kept outside the repository.
 
+## Device acceptance on iOS (task 8.4, in progress)
+
+iOS simulator (iPhone 18 Pro, iOS 27), debug build on dev with `pantryTrackingFoundation=on`, 2026-11-18. Each outcome below was read back from the server.
+
+- **USE-01:** the compact consume sheet opened on a 12-egg stack with `pc` preselected, a prefilled amount, the remainder ("Remaining: 11 pc"), Use all, and the details collapsed. Changing the amount to 2 and confirming left 10, with one usage of 2 pc and no note typed.
+- **USE-02:** on one 64 fl oz carton the sheet led with fl oz. A use of 8 read "Remaining: 56 fl oz" before confirming. After it, the row and detail read 1.66 L (56 fl oz in a metric reading), with 1 package of 1.89 L (64 fl oz). The server holds quantity 1, held 0.875, 56 remaining and 0 unopened.
+- **COOK-02:** checking a planned recipe meal opened the recipe's own cook, with Smart Deduction. Its review proposed 4 eggs for 4 servings of a 2-serving recipe, and confirming said "Deducted 1 ingredient from pantry". The meal showed done at once. The server holds 8 eggs, one `COOKING` row of 4, and the meal's `cookingLogId`. Unchecking and checking the meal again opened no cook and drew nothing.
+- **Field and keyboard:** the amount field stays above the keyboard. Finding: with the keyboard up, the consume sheet rises under the status bar and its header goes behind it, so Confirm takes a tap to move the sheet and one to close the keyboard before it confirms.
+- **Not yet observed:** zero-typing intake on device; the five-row check, since the server doubted none of these stacks; long and localized copy; offline banners.
+
 ## Schema version and rollout
 
 - **Reads need dev's schema.** Documents select C1–C5 fields: `expiryKind` (in `PantryItemReaders` and the batch fragment), `MealPlanItem.cookingLogId`, `markRecipeAsCooked`'s `mealPlanItem` and cook rows, and the stock check's fields. A build from this tree validates only against a server at hash `b30985d8…` or later, so the release check holds a store build until production serves it.
