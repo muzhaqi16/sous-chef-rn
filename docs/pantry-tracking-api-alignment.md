@@ -46,6 +46,26 @@ Checked against `openspec/changes` on 2026-11-16. Each needs one owner before an
 
 Dependent client work builds against dev's schema and stays behind the `pantryTrackingFoundation` capability until production serves C1–C5; no route falls back to another stock-changing mutation on an old server. Tasks 3.1–3.5 are met by the tests above. Task 3.6 closes when the published package version is recorded. A unitless whole count is packages only where an add names no unit (a receipt's "1"); where a list line or stack states a unit, as on a list move or a restock, it means that unit.
 
+## Two members on dev (task 8.3)
+
+Run 2026-11-18 against dev `:4000` (hash `b30985d8…`) as two member accounts of a fresh home, judged on the persisted stack and its ledger rows, not on client totals. 34 of 34 checks held:
+
+- **USE-06:** uses of 2 and 3 eggs sent at once leave 7. There are two usage rows, each naming its own member, and resending both keys answers the same two rows. With 2 left, uses of 2 and 3 sent at once: the 2 lands, the 3 is `InsufficientQuantityError`, and the stack stops at 0 with one row.
+- **CHECK-03, REL-02, REL-01:** one member counts 10 eggs as 6 at version v. The other restocks 6 before that check lands, and the check also states a milk Still have:
+  - the milk row lands;
+  - the egg row is `VERSION_CONFLICT`, the restocked 16 stands, and no correction is written.
+  - A fresh count of 6 then corrects 16 to 6 with one `ADJUSTMENT` of 10 and no consumption. Its replay under the same key converges.
+- **COOK-02, atomic failure:**
+  - A cook stating a stale meal version is `VERSION_CONFLICT`: no stock moves, and the meal stays open with no cook.
+  - The cook at the read version completes the meal with its `cookingLogId` and draws 4 eggs once. Its replay converges.
+  - The other member's new cook of that meal is `CONFLICT`.
+  - Unchecking and checking the meal again leaves 8 eggs and the same cook.
+- **REL-03, H2/P2:**
+  - A member cannot use, or check, a stack in a home they are not in, and that stack is unchanged.
+  - With pantry edits turned off for the second member, their use is `ForbiddenError`, their check is refused, and the stack is unchanged.
+
+The run was a one-off script against the dev API, kept outside the repository.
+
 ## Schema version and rollout
 
 - **Reads need dev's schema.** Documents select C1–C5 fields: `expiryKind` (in `PantryItemReaders` and the batch fragment), `MealPlanItem.cookingLogId`, `markRecipeAsCooked`'s `mealPlanItem` and cook rows, and the stock check's fields. A build from this tree validates only against a server at hash `b30985d8…` or later, so the release check holds a store build until production serves it.
