@@ -332,7 +332,6 @@ describe('a template', () => {
         name: 'Weeknights',
         description: null,
         defaultServings: 4,
-        items: [],
       });
     });
 

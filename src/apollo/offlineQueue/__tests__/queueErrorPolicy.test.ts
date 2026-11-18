@@ -28,12 +28,12 @@ describe('classifyReplayResult', () => {
   });
 
   it('returns applied for a converged success payload (favorites / cooking logs / sync ops)', () => {
-    // A re-favorite / re-cook / sync replay converges as a SUCCESS payload with
-    // converged:true — it doesn't end in `Error`, so it's already applied.
+    // A re-favorite / re-cook / sync replay converges as a SUCCESS payload: its
+    // typename doesn't end in `Error`, so it's already applied.
     expect(
       classifyReplayResult({
         __typename: 'AddRecipeToFavoritesPayload',
-        converged: true,
+        savedRecipe: { __typename: 'SavedRecipe', id: 'saved-1' },
       }),
     ).toEqual({ status: 'applied' });
     expect(

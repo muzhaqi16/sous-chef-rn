@@ -277,7 +277,11 @@ describe('writes queued behind a replay', () => {
         data: {
           restockPantryItem: {
             __typename: 'RestockPantryItemPayload',
-            pantryItem: stackAt(6),
+            pantryItemUsage: {
+              __typename: 'PantryItemUsage',
+              id: 'usage-1',
+              pantryItem: stackAt(6),
+            },
           },
         },
       })
@@ -360,7 +364,6 @@ describe('writes queued behind a replay', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            outcome: 'MERGED',
             pantryItem: {
               __typename: 'PantryItem',
               id: 'surviving-1',
@@ -404,7 +407,6 @@ describe("a merged create's queued writes", () => {
     data: {
       createPantryItem: {
         __typename: 'CreatePantryItemPayload',
-        outcome: 'MERGED',
         pantryItem: { __typename: 'PantryItem', id: 'surviving-1', version: 5 },
       },
     },
@@ -797,10 +799,14 @@ describe('a delta queued against a stack merged since', () => {
       data: {
         restockPantryItem: {
           __typename: 'RestockPantryItemPayload',
-          pantryItem: {
-            __typename: 'PantryItem',
-            id: 'survivor-1',
-            version: 10,
+          pantryItemUsage: {
+            __typename: 'PantryItemUsage',
+            id: 'usage-1',
+            pantryItem: {
+              __typename: 'PantryItem',
+              id: 'survivor-1',
+              version: 10,
+            },
           },
         },
       },
