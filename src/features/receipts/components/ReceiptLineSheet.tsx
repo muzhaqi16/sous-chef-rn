@@ -7,6 +7,7 @@ import { useTranslation } from '#/i18n';
 import { useReceiptMoney } from '../hooks/useReceiptCurrency';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { Text } from '#components/atoms/Text';
 import { FormInput } from '#components/atoms/FormInput';
 import { DropdownStack } from '#components/atoms/DropdownStack';
@@ -138,17 +139,18 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
 
   return (
     <>
-      <SheetHeader
-        contentPadding="md"
-        title={t('receipts.review.editTitle')}
-        onClose={onClose}
-        confirm={{
-          onPress: () => {
-            void save();
-          },
-          testID: receiptsTestIDs.lineSave,
-        }}
-      />
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={t('receipts.review.editTitle')}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void save();
+            },
+            testID: receiptsTestIDs.lineSave,
+          }}
+        />
+      </SheetHeaderSlot>
 
       <View style={styles.printed}>
         <Text role="caption" tone="secondary">
@@ -370,6 +372,7 @@ export const ReceiptLineSheet: React.FC<ReceiptLineSheetProps> = ({
 }) => (
   <Sheet
     mode="form"
+    headerFromContent
     visible={visible ? !!line : false}
     onDismiss={form.onClose}
     snapPoints={['85%']}

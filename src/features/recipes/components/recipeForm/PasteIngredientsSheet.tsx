@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
@@ -36,11 +37,9 @@ const PasteForm: React.FC<PasteFormProps> = ({ room, onClose, onPasted }) => {
 
   return (
     <>
-      <SheetHeader
-        contentPadding="md"
-        title={t('recipes.pasteIngredients')}
-        onClose={onClose}
-      />
+      <SheetHeaderSlot>
+        <SheetHeader title={t('recipes.pasteIngredients')} onClose={onClose} />
+      </SheetHeaderSlot>
       {room === 0 ? (
         <Text role="body" tone="secondary">
           {t('recipes.pasteIngredientsFull')}
@@ -100,6 +99,7 @@ export const PasteIngredientsSheet: React.FC<PasteIngredientsSheetProps> = ({
   return (
     <Sheet
       mode="form"
+      headerFromContent
       visible={visible}
       onDismiss={onDismiss}
       snapPoints={['80%']}

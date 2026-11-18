@@ -11,6 +11,11 @@ import {
   type UseStandardBottomSheetOptions,
 } from '#hooks/ui/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import {
+  SheetHeaderOutlet,
+  SheetHeaderStoreProvider,
+  useSheetHeaderStore,
+} from './SheetHeaderSlot';
 
 export type SheetMode = 'view' | 'form' | 'action' | 'list';
 
@@ -41,6 +46,11 @@ export interface SheetProps extends UseStandardBottomSheetOptions {
    * It sits outside `contentContainerStyle`, so it takes no `contentPadding`.
    */
   header?: React.ReactNode;
+  /**
+   * The content renders its own bar through `SheetHeaderSlot`, held in the
+   * same place as `header`: for a form whose state owns the bar's handlers.
+   */
+  headerFromContent?: boolean;
   /** The row above the content. Omit when the content names itself. */
   title?: string;
   /** Actions beside the title, icon or text. */
@@ -58,7 +68,8 @@ export const Sheet: React.FC<SheetProps> = ({
   style,
   showsVerticalScrollIndicator = false,
   bottomOffset,
-  header,
+  header: headerProp,
+  headerFromContent = false,
   title,
   actions,
   ...sheetOptions
@@ -68,6 +79,12 @@ export const Sheet: React.FC<SheetProps> = ({
     modalProps,
     contentContainerStyle: insetStyle,
   } = useStandardBottomSheet(sheetOptions);
+  const headerStore = useSheetHeaderStore();
+  const header = headerFromContent ? (
+    <SheetHeaderOutlet store={headerStore} />
+  ) : (
+    headerProp
+  );
 
   const body = (
     <>
@@ -153,7 +170,13 @@ export const Sheet: React.FC<SheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      {content}
+      {headerFromContent ? (
+        <SheetHeaderStoreProvider value={headerStore}>
+          {content}
+        </SheetHeaderStoreProvider>
+      ) : (
+        content
+      )}
     </BottomSheetModal>
   );
 };

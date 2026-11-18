@@ -6,12 +6,22 @@ import { receiptsTestIDs } from '../../testIDs';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { drainTimers } from '#/test-utils/drainTimers';
 
+// The real slot, so the form's bar renders where the sheet holds it.
 jest.mock('#components/templates/Sheet', () => {
   const { View } = require('react-native');
+  const slot = jest.requireActual('#components/templates/SheetHeaderSlot');
   return {
-    Sheet: ({ children }: { children?: React.ReactNode }) => (
-      <View>{children}</View>
-    ),
+    Sheet: ({ children }: { children?: React.ReactNode }) => {
+      const store = slot.useSheetHeaderStore();
+      return (
+        <slot.SheetHeaderStoreProvider value={store}>
+          <View>
+            <slot.SheetHeaderOutlet store={store} />
+            {children}
+          </View>
+        </slot.SheetHeaderStoreProvider>
+      );
+    },
   };
 });
 

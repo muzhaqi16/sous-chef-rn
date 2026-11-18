@@ -7,6 +7,7 @@ import { useTranslation } from '#/i18n';
 import type { CreateUserReportInput } from '#/graphql/generated/schemaTypes';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
@@ -80,11 +81,9 @@ const ReportContentForm: React.FC<ReportContentFormProps> = ({
 
   return (
     <>
-      <SheetHeader
-        contentPadding="md"
-        title={t('reports.sheetTitle')}
-        onClose={onClose}
-      />
+      <SheetHeaderSlot>
+        <SheetHeader title={t('reports.sheetTitle')} onClose={onClose} />
+      </SheetHeaderSlot>
 
       <Controller
         control={control}
@@ -174,6 +173,7 @@ export const ReportContentSheet: React.FC<ReportContentSheetProps> = ({
   return (
     <Sheet
       mode="form"
+      headerFromContent
       visible={visible}
       onDismiss={onDismiss}
       snapPoints={['90%']}

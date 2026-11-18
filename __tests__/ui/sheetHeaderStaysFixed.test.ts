@@ -6,7 +6,8 @@ import ts from 'typescript';
  * A sheet's bar never scrolls. With the keyboard up, a field scrolled into view
  * carried a header in the content off the top, and Confirm took one tap to
  * close the keyboard before a second confirmed. The bar goes in `Sheet`'s
- * `header`, or above the scrollable in a sheet that lays itself out.
+ * `header`, in `SheetHeaderSlot` from content that owns its handlers, or above
+ * the scrollable in a sheet that lays itself out.
  */
 
 const BARS = new Set(['BottomSheetHeader', 'SheetHeader']);
@@ -36,6 +37,7 @@ function scrollingPlace(bar: ts.Node): string | null {
     }
     if (ts.isJsxElement(node)) {
       const name = tagName(node);
+      if (name === 'SheetHeaderSlot') return null;
       if (SCROLLERS.has(name)) return `inside ${name}`;
       if (name === 'Sheet') return "Sheet's children";
     }
