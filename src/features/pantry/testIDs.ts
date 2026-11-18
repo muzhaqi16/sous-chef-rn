@@ -32,6 +32,8 @@ export const pantryTestIDs = {
   addAllLowStockButton: 'add-all-low-stock',
 
   itemDetail: 'pantry-item-detail',
+  /** The amount left, beside the item's name on its detail. */
+  detailAmount: 'pantry-item-detail-amount',
   itemRemoved: 'pantry-item-removed',
   itemHidden: 'pantry-item-hidden',
   itemPartial: 'pantry-item-partial',

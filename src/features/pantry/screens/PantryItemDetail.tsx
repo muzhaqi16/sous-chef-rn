@@ -453,7 +453,11 @@ export const PantryItemDetail: React.FC<
           title={item.itemName}
           numberOfLines={2}
           trailing={
-            <Text role="heading" style={styles.quantityBadge}>
+            <Text
+              role="heading"
+              style={styles.quantityBadge}
+              testID={pantryTestIDs.detailAmount}
+            >
               {quantityText}
             </Text>
           }

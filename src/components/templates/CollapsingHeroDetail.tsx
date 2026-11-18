@@ -1,3 +1,4 @@
+import { kitTestIDs } from '#components/testIDs';
 import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -255,6 +256,8 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
               onPress: onBack,
               tone: 'textPrimary',
               accessibilityLabel: t('labels.goBack'),
+              // The screen's one back control, as the standard header's is.
+              testID: kitTestIDs.headerBackButton,
             }}
           />
           {/* Always mounted; the interpolated opacity (and pointerEvents

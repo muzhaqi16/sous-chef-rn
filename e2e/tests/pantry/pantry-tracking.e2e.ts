@@ -19,6 +19,7 @@ import {
   localDate,
   openTrackingHome,
   seedRecipe,
+  pantryStacks,
   seedStack,
   selectHome,
   stackOnServer,
@@ -37,6 +38,7 @@ describe('Pantry tracking', () => {
   let checked: SeededStack;
   let cookEggs: SeededStack;
   let cookMilk: SeededStack;
+  let carton: SeededStack;
   let recipeId: string;
 
   beforeAll(async () => {
@@ -57,6 +59,14 @@ describe('Pantry tracking', () => {
       name: generateItemName('Cook eggs'),
       quantity: 12,
       unit: 'pc',
+    });
+    carton = await seedStack(home.pantryId, {
+      name: generateItemName('Carton'),
+      packages: {
+        count: 1,
+        unit: 'carton',
+        size: { quantity: 64, unit: 'fl oz' },
+      },
     });
     cookMilk = await seedStack(home.pantryId, {
       name: generateItemName('Cook milk'),
@@ -109,6 +119,60 @@ describe('Pantry tracking', () => {
       quantity: 10,
       unit: 'pc',
     });
+  });
+
+  it('USE-02 uses 8 fl oz of one unopened 64 fl oz carton', async () => {
+    const row = pantryTestIDs.item(carton.id);
+    await waitFor(element(by.id(row)))
+      .toBeVisible()
+      .whileElement(by.id(pantryTestIDs.list))
+      .scroll(200, 'down');
+    await element(by.id(row)).swipe('right', 'slow', 0.5);
+    const consume = kitTestIDs.swipeAction(row, 'consume');
+    await waitFor(element(by.id(consume)))
+      .toBeVisible()
+      .withTimeout(WAIT);
+    await element(by.id(consume)).tap();
+    await waitForModalReady(pantryTestIDs.actionConfirm, WAIT);
+    // A carton is used in what it holds: fl oz is offered, so only the amount
+    // is typed.
+    await element(by.id(pantryTestIDs.consumeQuantity)).replaceText('8');
+    await element(by.id(pantryTestIDs.consumeQuantity)).tapReturnKey();
+    await element(by.id(pantryTestIDs.actionConfirm)).tap();
+    await waitForModalClosed(pantryTestIDs.actionConfirm, WAIT);
+
+    const amount = element(by.id(pantryTestIDs.itemQuantity(carton.id)));
+    await waitFor(amount).toHaveText('56 fl oz').withTimeout(WAIT);
+    const held = (await pantryStacks(home.pantryId)).find(
+      stack => stack.id === carton.id,
+    );
+    jestExpect(held).toMatchObject({
+      heldQuantity: 0.875,
+      unit: 'carton',
+      remainingNetWeight: 56,
+      netWeightUnit: 'fl oz',
+      amountLeft: { value: 56, unit: 'fl oz' },
+      fullPackages: 0,
+      activeBatchCount: 1,
+    });
+
+    // The same remainder on its detail, and after the app restarts.
+    await element(by.id(row)).tap();
+    await waitFor(element(by.id(pantryTestIDs.detailAmount)))
+      .toHaveText('56 fl oz')
+      .withTimeout(WAIT);
+    await element(by.id(kitTestIDs.headerBackButton)).tap();
+    await bootstrapAuthenticatedSession();
+    await new PantryScreen().navigateToTab();
+    // The list mounts under its skeleton once the restored stacks lay out.
+    await waitFor(element(by.id(row)))
+      .toExist()
+      .withTimeout(WAIT);
+    await waitFor(element(by.id(row)))
+      .toBeVisible()
+      .whileElement(by.id(pantryTestIDs.list))
+      .scroll(200, 'down');
+    await expect(amount).toHaveText('56 fl oz');
   });
 
   it('CHECK-01 counts 6 of 10 recorded eggs with Some left', async () => {

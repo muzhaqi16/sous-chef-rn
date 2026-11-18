@@ -22,7 +22,45 @@ export interface TrackingHome {
   previousDefaultHomeId: string | null;
 }
 
+// `generateItemName`'s shape, `<Prefix> Item <epoch ms>`.
+const SPEC_HOME = /^\w+ Item (\d{13})$/;
+// Longer than any spec runs (specs run one at a time), so an older one is left over.
+const LEFT_OVER_AFTER_MS = 15 * 60 * 1000;
+
+async function deleteHome(homeId: string): Promise<void> {
+  const { deleteHome: deleted } = await asTestUser<{
+    deleteHome: { __typename: string };
+  }>(
+    `mutation ($input: DeleteHomeInput!) { deleteHome(input: $input) { __typename ${ERROR} } }`,
+    { input: { id: homeId } },
+  );
+  payloadOf(deleted, 'DeleteHomePayload');
+}
+
+/**
+ * Deletes the homes earlier specs opened and never closed, as when the API went
+ * away before their `afterAll`. A left-over home can stay the account's default,
+ * which the next spec would then restore as the default it found.
+ */
+async function deleteLeftOverHomes(): Promise<void> {
+  const { homes } = await asTestUser<{
+    homes: {
+      edges: { node: { id: string; name: string; isDefault: boolean } }[];
+    };
+  }>('{ homes(first: 50) { edges { node { id name isDefault } } } }');
+  const all = homes.edges.map(edge => edge.node);
+  const now = Date.now();
+  const leftOver = all.filter(home => {
+    const opened = SPEC_HOME.exec(home.name)?.[1];
+    return opened !== undefined && now - Number(opened) > LEFT_OVER_AFTER_MS;
+  });
+  const kept = all.find(home => !SPEC_HOME.test(home.name));
+  if (kept && leftOver.some(home => home.isDefault)) await markDefault(kept.id);
+  for (const home of leftOver) await deleteHome(home.id);
+}
+
 export async function openTrackingHome(name: string): Promise<TrackingHome> {
+  await deleteLeftOverHomes();
   const { me } = await asTestUser<{ me: { defaultHomeId: string | null } }>(
     '{ me { id defaultHomeId } }',
   );
@@ -55,13 +93,7 @@ export async function openTrackingHome(name: string): Promise<TrackingHome> {
 
 export async function closeTrackingHome(home: TrackingHome): Promise<void> {
   if (home.previousDefaultHomeId) await markDefault(home.previousDefaultHomeId);
-  const { deleteHome } = await asTestUser<{
-    deleteHome: { __typename: string };
-  }>(
-    `mutation ($input: DeleteHomeInput!) { deleteHome(input: $input) { __typename ${ERROR} } }`,
-    { input: { id: home.homeId } },
-  );
-  payloadOf(deleteHome, 'DeleteHomePayload');
+  await deleteHome(home.homeId);
 }
 
 async function markDefault(homeId: string): Promise<void> {
@@ -95,10 +127,36 @@ export interface SeededStack {
 }
 
 /** A stack of an item made for it, as a household adds one by hand. */
+/** Packages, each holding `size`, counted in `unit` (a COUNT unit such as carton). */
+export interface SeededPackages {
+  count: number;
+  unit: string;
+  size: { quantity: number; unit: string };
+}
+
+/** A stack measured in `unit`, or of `packages` of a stated size. */
 export async function seedStack(
   pantryId: string,
-  stack: { name: string; quantity: number; unit: string; expiresOn?: string },
+  stack: { name: string; expiresOn?: string } & (
+    | { quantity: number; unit: string }
+    | { packages: SeededPackages }
+  ),
 ): Promise<SeededStack> {
+  const amount =
+    'packages' in stack
+      ? {
+          amount: {
+            packages: {
+              count: stack.packages.count,
+              unitId: await unitId(stack.packages.unit),
+              size: {
+                netWeight: stack.packages.size.quantity,
+                netWeightUnitId: await unitId(stack.packages.size.unit),
+              },
+            },
+          },
+        }
+      : { quantity: stack.quantity, unit: { id: await unitId(stack.unit) } };
   const { createPantryItem } = await asTestUser<{
     createPantryItem: {
       __typename: string;
@@ -112,8 +170,7 @@ export async function seedStack(
       input: {
         pantryId,
         item: { inline: { name: stack.name } },
-        quantity: stack.quantity,
-        unit: { id: await unitId(stack.unit) },
+        ...amount,
         today: localDate(),
         ...(stack.expiresOn ? { expiresOn: stack.expiresOn } : {}),
       },
@@ -187,6 +244,12 @@ export interface StackOnServer {
   remainingNetWeight: number | null;
   /** The amount a person reads as left (`PantryItem.amountLeft`). */
   amountLeft: { value: number; unit: string };
+  /** What is held in `unit`, a part-used package as its fraction (0.875 carton). */
+  heldQuantity: number;
+  /** Packages not yet opened. */
+  fullPackages: number;
+  /** Physical containers held: one batch each. */
+  activeBatchCount: number;
   totalPaid: number | null;
 }
 
@@ -201,6 +264,9 @@ export async function pantryStacks(pantryId: string): Promise<StackOnServer[]> {
     netWeightUnit: { symbol: string } | null;
     remainingNetWeight: number | null;
     amountLeft: { value: number; unit: { symbol: string } };
+    heldQuantity: number;
+    stockBreakdown: { fullPackages: number };
+    activeBatchCount: number;
     purchase: { totalPrice: number | null } | null;
   };
   const { pantry } = await asTestUser<{
@@ -208,7 +274,9 @@ export async function pantryStacks(pantryId: string): Promise<StackOnServer[]> {
   }>(
     `query ($id: ID!) { pantry(id: $id) { id itemsConnection(first: 50) { edges { node {
       id itemName quantity unit { symbol } netWeight netWeightUnit { symbol }
-      remainingNetWeight amountLeft { value unit { symbol } } purchase { id totalPrice }
+      remainingNetWeight amountLeft { value unit { symbol } }
+      heldQuantity stockBreakdown { fullPackages } activeBatchCount
+      purchase { id totalPrice }
     } } } } }`,
     { id: pantryId },
   );
@@ -225,6 +293,9 @@ export async function pantryStacks(pantryId: string): Promise<StackOnServer[]> {
       value: node.amountLeft.value,
       unit: node.amountLeft.unit.symbol,
     },
+    heldQuantity: node.heldQuantity,
+    fullPackages: node.stockBreakdown.fullPackages,
+    activeBatchCount: node.activeBatchCount,
     totalPaid: node.purchase?.totalPrice ?? null,
   }));
 }
