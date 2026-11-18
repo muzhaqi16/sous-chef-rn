@@ -7,7 +7,6 @@ import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   AddItemToShoppingListDocument,
-  MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -399,124 +398,6 @@ describe('QueueStore', () => {
       expect(all).toHaveLength(500);
       expect(all.find(m => m.id === 'fill-0')).toBeDefined();
       expect(all.find(m => m.id === 'overflow')).toBeUndefined();
-    });
-
-    describe('MoveShoppingListItem coalescing', () => {
-      const move = (
-        id: string,
-        input: Record<string, unknown>,
-        overrides: Partial<QueuedMutation> = {},
-      ) =>
-        makeMutation({
-          id,
-          ...queuedMutationFor(MoveShoppingListItemDocument),
-          variables: { input },
-          ...overrides,
-        });
-
-      it('coalesces pending move mutations for the same item', () => {
-        store.addMutation(move('move-1', { id: 'item-A', afterItemId: 'x' }));
-        store.addMutation(move('move-2', { id: 'item-A', afterItemId: 'y' }));
-
-        const result = store.getMutationsForUser('user-1');
-        expect(result).toHaveLength(1);
-        // The second (latest) mutation should win
-        expect(result[0]!.id).toBe('move-2');
-        expect(result[0]!.variables.input.afterItemId).toBe('y');
-      });
-
-      it.each([
-        [
-          'does not coalesce move mutations for different items',
-          {},
-          { variables: { input: { id: 'item-B' } } },
-        ],
-        [
-          'does not coalesce move mutations from different users',
-          {},
-          { userId: 'user-2' },
-        ],
-        [
-          'does not coalesce non-pending move mutations',
-          { status: QueueStatus.PROCESSING },
-          {},
-        ],
-      ])('%s', (_, first: Partial<QueuedMutation>, second) => {
-        store.addMutation(move('move-1', { id: 'item-A' }, first));
-        store.addMutation(move('move-2', { id: 'item-A' }, second));
-
-        expect(store.getMutation('move-1')).not.toBeNull();
-        expect(store.getMutation('move-2')).not.toBeNull();
-      });
-
-      it("queues the final move after a create it names, not in the first move's slot", () => {
-        // The drain replays in queue order. In the first move's slot, "after X"
-        // is sent before X exists, refused, and the row withdrawn.
-        store.addMutation(
-          move('move-1', { id: 'item-A', afterItemId: 'item-Y' }),
-        );
-        store.addMutation(
-          makeMutation({
-            id: 'create-x',
-            ...queuedMutationFor(AddItemToShoppingListDocument),
-            variables: {
-              input: { shoppingListId: 'list-1', items: [{ id: 'item-X' }] },
-            },
-          }),
-        );
-        store.addMutation(
-          move('move-2', { id: 'item-A', afterItemId: 'item-X' }),
-        );
-
-        expect(store.getMutationsForUser('user-1').map(m => m.id)).toEqual([
-          'create-x',
-          'move-2',
-        ]);
-      });
-
-      it("keeps the first move's age", () => {
-        store.addMutation(
-          move(
-            'move-1',
-            { id: 'item-A', afterItemId: 'item-Y' },
-            { createdAt: 1_000 },
-          ),
-        );
-        store.addMutation(
-          move(
-            'move-2',
-            { id: 'item-A', afterItemId: 'item-Z' },
-            { createdAt: 5_000 },
-          ),
-        );
-
-        const [survivor] = store.getMutationsForUser('user-1');
-        // The 90-day horizon counts from the first move the user made, while
-        // `createdAt` stays the moment this one was queued — the drain replays
-        // in `createdAt` order, and an older stamp would sort the surviving
-        // move ahead of a row created between the two moves.
-        expect(survivor).toMatchObject({
-          id: 'move-2',
-          createdAt: 5_000,
-          agedFrom: 1_000,
-        });
-      });
-
-      it("expires the survivor on the first move's age, not its own", () => {
-        const ninetyOneDays = 91 * 24 * 60 * 60 * 1000;
-        store.addMutation(
-          move(
-            'move-1',
-            { id: 'item-A', afterItemId: 'item-Y' },
-            { createdAt: Date.now() - ninetyOneDays },
-          ),
-        );
-        store.addMutation(
-          move('move-2', { id: 'item-A', afterItemId: 'item-Z' }),
-        );
-
-        expect(store.expireStalePending('user-1')).toHaveLength(1);
-      });
     });
 
     describe('a delete supersedes pending writes to its subject', () => {
@@ -1270,13 +1151,13 @@ describe('QueueStore', () => {
       store.addMutation(
         makeMutation({
           id: 'm2',
-          ...queuedMutationFor(MoveShoppingListItemDocument),
-          variables: { input: { id: 'cuid-move', afterItemId: 'row-0' } },
+          ...queuedMutationFor(UpdateShoppingListItemDocument),
+          variables: { input: { id: 'cuid-update', version: 1 } },
         }),
       );
 
       const ids = store.getPendingClientIds();
-      expect(ids).toEqual(new Set(['cuid-create', 'cuid-move']));
+      expect(ids).toEqual(new Set(['cuid-create', 'cuid-update']));
     });
 
     it("protects a pending fork's new recipe, not the recipe it forks from", () => {

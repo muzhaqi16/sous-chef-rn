@@ -7,6 +7,11 @@ fragment PantryItemUsageReaders on PantryItemUsage {
     id
     code
   }
+  pantryItem {
+    id
+    quantity
+    version
+  }
   purpose
   quantityUsed
   statedAmount {

@@ -38,6 +38,15 @@ let mockStoreLocation: {
   storeNumber: string | null;
 } | null = null;
 const mockChooseStore = jest.fn();
+let mockStoreChoices: {
+  placeId: string;
+  name: string;
+  address: string;
+  credit: string;
+  chainId: string | null;
+  storeNumber: string | null;
+}[] = [];
+const mockChooseStoreChoice = jest.fn();
 const mockAddChosen = jest.fn<
   Promise<{
     sent: number;
@@ -67,6 +76,8 @@ jest.mock('../../hooks/useReceiptReview', () => ({
     proposedStoreName: mockStoreOffer ? 'Giant Eagle' : null,
     storeLocation: mockStoreLocation,
     storeOffer: mockStoreOffer,
+    storeChoices: mockStoreChoices,
+    chooseStoreChoice: mockChooseStoreChoice,
     storeUnrecognized: false,
     purchasedOn: '2026-10-15',
     dayIsScanDay: false,
@@ -241,6 +252,36 @@ describe('ReceiptReviewScreen rows', () => {
     expect(screen.getByText(/TOMATOES · 2 pz/)).toBeTruthy();
     expect(screen.getByText(/BASIL · 1 bnch/)).toBeTruthy();
     expect(screen.getByText(/ONIONS · 3 kg/)).toBeTruthy();
+  });
+
+  it('shows packages as how many, each holding what', () => {
+    const fluidOunce = {
+      symbol: 'fl oz',
+      localizedSymbolForms: { one: 'oz liq', other: 'oz liq' },
+    };
+    const size = { quantity: 64, unit: 'fl oz', measureUnit: fluidOunce };
+    mockRows = [
+      row({
+        printed: 'WHOLE MILK',
+        packages: { count: 1, size },
+        choice: lineChoice({
+          quantity: 1,
+          packageSize: { quantity: 64, unitId: null, unitText: 'fl oz' },
+        }),
+      }),
+      row({
+        index: 1,
+        printed: 'OAT MILK',
+        choice: lineChoice({
+          quantity: 2,
+          packageSize: { quantity: 1, unitId: 'unit-l', unitText: 'L' },
+        }),
+      }),
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.getByText(/WHOLE MILK · 1 x 64 oz liq/)).toBeTruthy();
+    expect(screen.getByText(/OAT MILK · 2 x 1 L/)).toBeTruthy();
   });
 });
 
@@ -616,6 +657,7 @@ describe('ReceiptReviewScreen store', () => {
   afterEach(() => {
     mockStoreOffer = null;
     mockStoreLocation = null;
+    mockStoreChoices = [];
   });
 
   it('says which branch of the chain it is, and opens the store field from it', async () => {
@@ -668,6 +710,30 @@ describe('ReceiptReviewScreen store', () => {
       id: 'store-label',
       name: 'Giant Eagle (home)',
     });
+  });
+
+  it('asks which place the printed address is, with its credit, and picks one on a tap', async () => {
+    const credit = '© OpenStreetMap contributors';
+    const place = {
+      name: 'Giant Eagle',
+      credit,
+      chainId: null,
+      storeNumber: null,
+    };
+    mockStoreChoices = [
+      { ...place, placeId: 'osm-1', address: '1 Penn Ave' },
+      { ...place, placeId: 'osm-2', address: '9 Penn Ave' },
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.getByText('Which store was it?')).toBeTruthy();
+    expect(screen.getByText('1 Penn Ave')).toBeTruthy();
+    // One credit for the places it names, however many there are.
+    expect(screen.getAllByText(credit)).toHaveLength(1);
+
+    await userEvent.setup().press(screen.getByText('9 Penn Ave'));
+
+    expect(mockChooseStoreChoice).toHaveBeenCalledWith(mockStoreChoices[1]);
   });
 
   it('offers no store when there is none to complete', () => {

@@ -7,6 +7,7 @@ import {
 import type { ScannedItem } from '#features/barcode/types';
 import {
   isMultipack,
+  labelPieceOf,
   packageUnitOf,
   scanAmountDefaults,
   scanAmountOf,
@@ -361,13 +362,63 @@ describe('a multipack', () => {
       UnitSystem.Metric,
     );
     expect(
-      scanAmountOf(prefill, prefill, { piecesPrefilled: isMultipack(sixPack) }),
+      scanAmountOf(prefill, prefill, { labelPiece: labelPieceOf(sixPack) }),
     ).toEqual({
       packaged: true,
       count: 6,
       unitId: 'unit-can',
-      contents: { amount: 250, unitId: 'unit-ml', unitType: null },
+      contents: { amount: 250, unitId: 'unit-ml', unitType: UnitType.Volume },
     });
+  });
+
+  // IN-02: a reading is rounded for display, 250 mL as 1 cup; six of those
+  // would be 1420 mL, not the 1500 mL the label states.
+  it('sends the label’s piece, never a rounded reading of it', () => {
+    const roundedForUs: ScannedItem = {
+      ...sixPack,
+      packs: {
+        ...sixPack.packs!,
+        each: {
+          ...sixPack.packs!.each,
+          imperial: volume(1, 'unit-cup', 'cup'),
+        },
+      },
+    };
+    const prefill = scanAmountDefaults(
+      roundedForUs,
+      packageUnitOf(roundedForUs, null, [piece]),
+      UnitSystem.Imperial,
+    );
+    expect(prefill).toMatchObject({ sizeInput: '1', sizeUnitId: 'unit-cup' });
+    expect(
+      scanAmountOf(prefill, prefill, {
+        labelPiece: labelPieceOf(roundedForUs),
+      }),
+    ).toMatchObject({
+      count: 6,
+      contents: { amount: 250, unitId: 'unit-ml' },
+    });
+  });
+
+  it('sends a piece size the user changed, as typed', () => {
+    const prefill = scanAmountDefaults(
+      sixPack,
+      packageUnitOf(sixPack, null, [piece]),
+      UnitSystem.Metric,
+    );
+    expect(
+      scanAmountOf({ ...prefill, sizeInput: '330' }, prefill, {
+        labelPiece: labelPieceOf(sixPack),
+      }),
+    ).toMatchObject({ contents: { amount: 330, unitId: 'unit-ml' } });
+  });
+
+  it('has no label piece for a single package', () => {
+    const single: ScannedItem = {
+      ...sixPack,
+      packs: { ...sixPack.packs!, count: 1, each: sixPack.packageSize! },
+    };
+    expect(labelPieceOf(single)).toBeNull();
   });
 
   it('reads as one package where the label states no pieces', () => {

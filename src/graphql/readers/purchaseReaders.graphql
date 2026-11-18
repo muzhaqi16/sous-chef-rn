@@ -6,15 +6,7 @@ fragment PurchaseReaders on Purchase {
     code
   }
   purchaseDate
-  quantity
-  totalPrice
-  unit {
-    id
-    type
-  }
-  unitPrice
-  unitSymbol
-  user {
+  purchasedBy {
     id
     displayName
     email
@@ -23,5 +15,13 @@ fragment PurchaseReaders on Purchase {
       displayName
     }
   }
+  quantity
+  totalPrice
+  unit {
+    id
+    type
+  }
+  unitPrice
+  unitSymbol
   version
 }

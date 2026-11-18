@@ -3,7 +3,7 @@ import {
   type StockAmountInput,
   type StorageState,
 } from '#/graphql/generated/schemaTypes';
-import { localQuantity } from '#domain/stockAmount';
+import { localQuantity, packagesNeedSizing } from '#domain/stockAmount';
 import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 import { unitPriceFromTotal } from '../utils/purchasePrice';
 import type { ShoppingListItemDisplayFragment } from '../graphql/shoppingListFragments.generated';
@@ -37,10 +37,15 @@ export function localMoveRow({
   return {
     pantryId,
     itemName: item.itemName ?? '',
-    quantity: localQuantity(amount, item),
+    quantity: localQuantity(amount),
     itemId: item.item?.id,
-    // The API tracks the stack in the stated unit, else the line's own.
-    unitId: measured?.unitId ?? packages?.unitId ?? item.unit?.id,
+    // The API tracks the stack in the stated unit, else the line's own. Packages
+    // it must size claim no unit until it answers, so no weight is invented.
+    unitId:
+      measured?.unitId ??
+      packages?.unitId ??
+      (packagesNeedSizing(amount, item) ? undefined : item.unit?.id),
+    packageSize: packages?.size,
     storageState,
     expiresOn,
     acquisitionMethod: AcquisitionMethod.ShoppingList,

@@ -14,6 +14,7 @@ import notifications from '../../src/features/notifications/locales/en.json';
 import onboarding from '../../src/features/onboarding/locales/en.json';
 import pantry from '../../src/features/pantry/locales/en.json';
 import profile from '../../src/features/profile/locales/en.json';
+import receipts from '../../src/features/receipts/locales/en.json';
 import recipes from '../../src/features/recipes/locales/en.json';
 import shoppingList from '../../src/features/shoppingList/locales/en.json';
 
@@ -29,6 +30,7 @@ const BUNDLES: object[] = [
   onboarding,
   pantry,
   profile,
+  receipts,
   recipes,
   shoppingList,
 ];

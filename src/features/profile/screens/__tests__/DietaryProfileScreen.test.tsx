@@ -1,355 +1,392 @@
-'use no memo';
 import React from 'react';
+import { act, screen, userEvent } from '@testing-library/react-native';
 import {
-  fireEvent,
-  render,
-  screen,
-  userEvent,
-} from '@testing-library/react-native';
-import { alertService } from '#/services/alertService';
+  inputOf,
+  recordMock,
+  renderWithApollo,
+  type MockDataFor,
+} from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
+import { useStore } from '#store';
 import { t } from '#/i18n';
+import { alertService } from '#/services/alertService';
+import {
+  Diet,
+  ReligiousDiet,
+  RestrictionSeverity,
+} from '#/graphql/generated/schemaTypes';
+import {
+  AddDietaryRestrictionDocument,
+  GetDietaryProfileDocument,
+  RemoveDietaryRestrictionDocument,
+  UpdateDietaryProfileDocument,
+} from '#operations/user/user.generated';
+import { DietarySharingHomesDocument } from '#features/profile/hooks/useDietarySharing.generated';
+import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';
+import { ReligiousDietPicker } from '#features/profile/ui/ReligiousDietPicker';
+import { CookingPreferencesSheet } from '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet';
+import { MacroTargetsSheet } from '#features/profile/components/MacroTargetsSheet/MacroTargetsSheet';
 import { DietaryProfileScreen } from '../DietaryProfileScreen';
-import { ReligiousDiet } from '#/graphql/generated/schemaTypes';
-
-// --- Mocks ---
-
-const mockUpdateDietaryProfile = jest.fn().mockResolvedValue(true);
-const mockAddDietaryRestriction = jest.fn().mockResolvedValue(true);
-const mockRemoveDietaryRestriction = jest.fn().mockResolvedValue(true);
-const mockRefetch = jest.fn().mockResolvedValue({});
-
-jest.mock('#features/profile/hooks/useDietaryProfile', () => ({
-  useDietaryProfile: () => ({
-    editableProfile: {
-      restrictions: [],
-      maxCookTimeMinutes: 45,
-      calorieTarget: 2000,
-      proteinTarget: 150,
-      carbsTarget: 250,
-      fatTarget: 70,
-      religiousDiet: 'KOSHER',
-    },
-    loading: false,
-    updateDietaryProfile: mockUpdateDietaryProfile,
-    addDietaryRestriction: mockAddDietaryRestriction,
-    removeDietaryRestriction: mockRemoveDietaryRestriction,
-  }),
-}));
-
-jest.mock('#/styles/commonStyles', () => ({
-  commonStyles: {
-    loadingContainer: {},
-    loadingText: {},
-    subtitle: {},
-    emptyState: {},
-    emptyStateTitle: {},
-    emptyStateText: {},
-  },
-}));
-
-jest.mock('#/services/errorService');
-
-jest.mock('#constants/animations', () => ({}));
-
-jest.mock('#components/atoms/Icon', () => ({
-  Icon: 'Icon',
-}));
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#components/templates/SubScreen', () => {
-  const { View, Text } = require('react-native');
-  return {
-    SubScreen: ({
-      children,
-      title,
-    }: {
-      children?: React.ReactNode;
-      title?: string;
-    }) => (
-      <View testID="profile-screen-wrapper">
-        <Text>{title}</Text>
-        {children}
-      </View>
-    ),
-  };
+const ME = 'user-1';
+
+let log = operationLog();
+
+type Profile = NonNullable<
+  NonNullable<
+    MockDataFor<typeof GetDietaryProfileDocument>['me']
+  >['dietaryProfile']
+>;
+type Restriction = NonNullable<NonNullable<Profile['restrictions']>[number]>;
+type SharingEdge = NonNullable<
+  NonNullable<
+    NonNullable<
+      MockDataFor<typeof DietarySharingHomesDocument>['homes']
+    >['edges']
+  >[number]
+>;
+
+const VEGETARIAN: Restriction = {
+  __typename: 'DietaryRestriction',
+  id: 'r-veg',
+  diet: Diet.Vegetarian,
+  intolerance: null,
+  healthGoal: null,
+  religiousDiet: null,
+  item: null,
+  severity: RestrictionSeverity.Preference,
+  notes: null,
+};
+
+const profileOf = (overrides: Partial<Profile> = {}): Profile => ({
+  __typename: 'DietaryProfile',
+  id: 'profile-1',
+  userId: ME,
+  calorieTarget: null,
+  proteinTarget: null,
+  carbsTarget: null,
+  fatTarget: null,
+  cooksFor: 2,
+  religiousDiet: null,
+  maxCookTimeMinutes: null,
+  restrictions: [VEGETARIAN],
+  ...overrides,
 });
 
-jest.mock('#features/profile/components/DietaryRestrictionSelector', () => {
-  const { View, Text, Pressable } = require('react-native');
-  return {
-    DietaryRestrictionSelector: ({
-      onRemove,
-    }: {
-      onRemove: (item: { id: string; label: string }) => void;
-    }) => (
-      <View testID="dietary-restriction-selector">
-        <Text>DietaryRestrictionSelector</Text>
-        <Pressable
-          testID="remove-bacon"
-          onPress={() => onRemove({ id: 'r-bacon', label: 'bacon' })}
-        />
-      </View>
-    ),
-  };
+interface Visit {
+  profile?: Profile;
+  profileHeld?: boolean;
+  profileFails?: boolean;
+  homes?: string[];
+  answers?: ReturnType<typeof recordMock>[];
+}
+
+async function openDietary({
+  profile = profileOf(),
+  profileHeld = false,
+  profileFails = false,
+  homes = [],
+  answers = [],
+}: Visit = {}) {
+  const read = profileFails
+    ? [
+        recordMock(GetDietaryProfileDocument, {
+          error: new Error('Network request failed'),
+          maxUsageCount: 1,
+        }),
+        recordMock(GetDietaryProfileDocument, {
+          data: { me: { __typename: 'User', id: ME, dietaryProfile: profile } },
+        }),
+      ]
+    : [
+        recordMock(GetDietaryProfileDocument, {
+          held: profileHeld,
+          data: { me: { __typename: 'User', id: ME, dietaryProfile: profile } },
+        }),
+      ];
+  renderWithApollo(<DietaryProfileScreen />, {
+    links: [log.link],
+    operationMocks: [
+      ...answers.map(answer => answer.mock),
+      ...read.map(each => each.mock),
+      recordMock(DietarySharingHomesDocument, {
+        data: {
+          homes: {
+            __typename: 'HomeConnection',
+            edges: homes.map(
+              (name): SharingEdge => ({
+                __typename: 'HomeEdge',
+                cursor: name,
+                node: {
+                  __typename: 'Home',
+                  version: 1,
+                  id: `home-${name}`,
+                  name,
+                  myMembership: {
+                    version: 1,
+                    id: `member-${name}`,
+                    sharesDietaryNeeds: false,
+                  },
+                },
+              }),
+            ),
+            pageInfo: {
+              __typename: 'PageInfo',
+              hasNextPage: false,
+              endCursor: null,
+            },
+          },
+        },
+      }).mock,
+    ],
+  });
+  if (!profileHeld) await log.landed(GetDietaryProfileDocument);
+  await log.landed(DietarySharingHomesDocument);
+}
+
+/** Presses a button of the last alert raised. */
+async function answerAlert(text: string) {
+  const [, , buttons] = jest.mocked(alertService.alert).mock.lastCall ?? [];
+  const onPress = buttons?.find(button => button.text === text)?.onPress;
+  if (!onPress) throw new Error(`no "${text}" in the last alert`);
+  await act(async () => {
+    onPress();
+  });
+}
+
+const updated = () =>
+  recordMock(UpdateDietaryProfileDocument, {
+    data: {
+      updateDietaryProfile: {
+        __typename: 'UpdateDietaryProfilePayload',
+        dietaryProfile: profileOf(),
+      },
+    },
+  });
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  log = operationLog();
+  useStore.setState({
+    user: {
+      id: ME,
+      email: 'cook@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    isOnline: true,
+    apiReachable: true,
+  });
 });
 
-jest.mock('#components/atoms/InfoRow', () => {
-  const { View, Text } = require('react-native');
-  return {
-    InfoRow: ({
-      label,
-      value,
-    }: {
-      label: string;
-      value: string | number | null | undefined;
-    }) => (
-      <View testID={`info-row-${label}`}>
-        <Text>{label}</Text>
-        <Text>{String(value)}</Text>
-      </View>
-    ),
-  };
-});
+describe('the dietary profile', () => {
+  it('says it is loading while it has nothing to show', async () => {
+    await openDietary({ profileHeld: true });
 
-jest.mock(
-  '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet',
-  () => ({
-    CookingPreferencesSheet: () => null,
-  }),
-);
-
-jest.mock(
-  '#features/profile/components/MacroTargetsSheet/MacroTargetsSheet',
-  () => ({
-    MacroTargetsSheet: () => null,
-  }),
-);
-
-const mockSetShared = jest.fn().mockResolvedValue(undefined);
-const mockSharingHomes: { id: string; name: string; shared: boolean }[] = [];
-jest.mock('#features/profile/hooks/useDietarySharing', () => ({
-  useDietarySharing: () => ({
-    homes: mockSharingHomes,
-    setShared: mockSetShared,
-  }),
-}));
-
-describe('DietaryProfileScreen', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockSharingHomes.length = 0;
+    expect(screen.getByText(t('dietary.loadingProfile'))).toBeTruthy();
   });
 
-  it('offers no sharing section to a user with no home', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.queryByText('Shared with')).toBeNull();
+  it('offers to read it again when it could not be read', async () => {
+    await openDietary({ profileFails: true });
+
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+    await log.landed(GetDietaryProfileDocument, 2);
+
+    expect(screen.getByText(t('dietary.restrictions'))).toBeTruthy();
   });
 
-  it('lists a switch for each of the user’s homes', () => {
-    mockSharingHomes.push(
-      { id: 'home-1', name: 'Test Home', shared: true },
-      { id: 'home-2', name: 'Beach House', shared: false },
-    );
-    render(<DietaryProfileScreen />);
-
-    expect(screen.getByText('Shared with')).toBeTruthy();
-    expect(screen.getByTestId('dietary-sharing-switch-home-1')).toBeTruthy();
-    expect(screen.getByTestId('dietary-sharing-switch-home-2')).toBeTruthy();
-  });
-
-  it('changes the religious diet chosen in onboarding, or clears it', async () => {
-    const user = userEvent.setup();
-    render(<DietaryProfileScreen />);
-
-    await user.press(screen.getByText(t('recipes.religiousDiet.KOSHER')));
-    expect(mockUpdateDietaryProfile).toHaveBeenLastCalledWith({
-      religiousDiet: null,
+  it('shows the cook time and targets set, and says when none are', async () => {
+    await openDietary({
+      profile: profileOf({ maxCookTimeMinutes: 30, calorieTarget: 2000 }),
     });
 
-    await user.press(screen.getByText(t('recipes.religiousDiet.HALAL')));
-    expect(mockUpdateDietaryProfile).toHaveBeenLastCalledWith({
+    // The editors repeat the labels, so the values set are what tell.
+    expect(screen.getByText(/2000/)).toBeTruthy();
+    expect(
+      screen.queryByText(t('dietary.cookTimeEmpty')),
+    ).not.toBeOnTheScreen();
+    expect(
+      screen.queryByText(t('dietary.macroTargetsEmpty')),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('says when no cook time or target is set', async () => {
+    await openDietary();
+
+    expect(screen.getByText(t('dietary.cookTimeEmpty'))).toBeTruthy();
+    expect(screen.getByText(t('dietary.macroTargetsEmpty'))).toBeTruthy();
+  });
+
+  it('offers a sharing switch for each home, and none without one', async () => {
+    await openDietary({ homes: ['Home', 'Cabin'] });
+
+    expect(screen.getByText(t('dietary.sharedWith'))).toBeTruthy();
+    expect(screen.getByText('Cabin')).toBeTruthy();
+  });
+
+  it('offers no sharing without a home', async () => {
+    await openDietary();
+
+    expect(screen.queryByText(t('dietary.sharedWith'))).not.toBeOnTheScreen();
+  });
+});
+
+describe('a restriction', () => {
+  it('is removed once confirmed, by name', async () => {
+    const removed = recordMock(RemoveDietaryRestrictionDocument, {
+      held: true,
+    });
+    await openDietary({ answers: [removed] });
+
+    act(() => {
+      screen.UNSAFE_getByType(DietaryRestrictionSelector).props.onRemove({
+        id: 'r-veg',
+        label: 'Vegetarian',
+      });
+    });
+    expect(alertService.alert).toHaveBeenLastCalledWith(
+      t('labels.removeNamed', { name: 'Vegetarian' }),
+      t('dietary.removeRestrictionConfirm'),
+      expect.any(Array),
+    );
+    await answerAlert(t('labels.remove'));
+    await log.requested(RemoveDietaryRestrictionDocument);
+
+    expect(inputOf(removed.fired[0] ?? {})).toMatchObject({ id: 'r-veg' });
+  });
+
+  it('says so when its removal fails', async () => {
+    await openDietary({
+      answers: [
+        recordMock(RemoveDietaryRestrictionDocument, {
+          error: new Error('boom'),
+        }),
+      ],
+    });
+    act(() => {
+      screen.UNSAFE_getByType(DietaryRestrictionSelector).props.onRemove({
+        id: 'r-veg',
+        label: 'Vegetarian',
+      });
+    });
+
+    await answerAlert(t('labels.remove'));
+    await log.landed(RemoveDietaryRestrictionDocument);
+    await act(async () => undefined);
+
+    expect(alertService.alert).toHaveBeenLastCalledWith(
+      t('labels.error'),
+      t('dietary.removeRestrictionFailed'),
+    );
+  });
+
+  it('reads as not added when one of several fails', async () => {
+    await openDietary({
+      answers: [
+        recordMock(AddDietaryRestrictionDocument, {
+          error: new Error('boom'),
+          maxUsageCount: 1,
+        }),
+      ],
+    });
+
+    let added: unknown;
+    await act(async () => {
+      added = await screen
+        .UNSAFE_getByType(DietaryRestrictionSelector)
+        .props.onAdd([{ diet: Diet.GlutenFree }], RestrictionSeverity.Allergy);
+    });
+
+    expect(added).toBe(false);
+  });
+});
+
+describe('a diet change', () => {
+  it('keeps the old diet when the new one cannot be added, and says so', async () => {
+    const removed = recordMock(RemoveDietaryRestrictionDocument, {
+      held: true,
+    });
+    await openDietary({
+      answers: [
+        recordMock(AddDietaryRestrictionDocument, { error: new Error('boom') }),
+        removed,
+      ],
+    });
+
+    let changed: unknown;
+    await act(async () => {
+      changed = await screen
+        .UNSAFE_getByType(DietaryRestrictionSelector)
+        .props.onChangeDiets([Diet.Vegan], ['r-veg']);
+    });
+
+    expect(changed).toBe(false);
+    expect(removed.fired).toEqual([]);
+  });
+
+  it('says so when the old diet cannot be removed', async () => {
+    await openDietary({
+      answers: [
+        recordMock(RemoveDietaryRestrictionDocument, {
+          error: new Error('boom'),
+        }),
+      ],
+    });
+
+    await act(async () => {
+      await screen
+        .UNSAFE_getByType(DietaryRestrictionSelector)
+        .props.onChangeDiets([], ['r-veg']);
+    });
+
+    expect(alertService.alert).toHaveBeenLastCalledWith(
+      t('labels.error'),
+      t('dietary.removeRestrictionFailed'),
+    );
+  });
+});
+
+describe('its settings', () => {
+  it('saves a religious diet', async () => {
+    const saved = updated();
+    await openDietary({ answers: [saved] });
+
+    act(() => {
+      screen
+        .UNSAFE_getByType(ReligiousDietPicker)
+        .props.onChange(ReligiousDiet.Halal);
+    });
+    await log.requested(UpdateDietaryProfileDocument);
+
+    expect(inputOf(saved.fired[0] ?? {})).toMatchObject({
       religiousDiet: ReligiousDiet.Halal,
     });
   });
 
-  it('renders the screen with title', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Dietary Profile')).toBeTruthy();
-  });
+  it.each([
+    [
+      'cooking preferences',
+      'labels.cookingPreferences',
+      () => screen.UNSAFE_getByType(CookingPreferencesSheet),
+    ],
+    [
+      'macro targets',
+      'macroTargets.title',
+      () => screen.UNSAFE_getByType(MacroTargetsSheet),
+    ],
+  ] as const)('closes the %s editor once saved', async (_, name, sheet) => {
+    await openDietary({ answers: [updated()] });
+    await userEvent
+      .setup()
+      .press(screen.getByLabelText(t('a11y.editNamed', { name: t(name) })));
+    expect(sheet().props.visible).toBe(true);
 
-  it('renders Dietary Restrictions section', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Dietary Restrictions')).toBeTruthy();
-    expect(screen.getByTestId('dietary-restriction-selector')).toBeTruthy();
-  });
+    await act(async () => {
+      await sheet().props.onSave({});
+    });
 
-  // Named as its row shows it, an avoided food included.
-  it('names the restriction it asks to remove', () => {
-    const alert = jest.spyOn(alertService, 'alert');
-    render(<DietaryProfileScreen />);
-
-    fireEvent.press(screen.getByTestId('remove-bacon'));
-
-    expect(alert).toHaveBeenCalledWith(
-      'Remove bacon?',
-      expect.any(String),
-      expect.any(Array),
-    );
-    alert.mockRestore();
-  });
-
-  it('shows the longest cooking time, which Recipes search filters by', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Cooking Preferences')).toBeTruthy();
-    expect(screen.getByText(t('labels.maxCookTime'))).toBeTruthy();
-    expect(screen.getByText('45')).toBeTruthy();
-  });
-
-  // Only what something reads is offered.
-  it('offers no setting nothing reads', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.queryByText('Food Preferences')).toBeNull();
-    expect(screen.queryByText('Nutrition Goals')).toBeNull();
-    expect(screen.queryByText('Favorite Ingredients')).toBeNull();
-    expect(screen.queryByText('Disliked Ingredients')).toBeNull();
-    expect(screen.queryByText('Skill Level')).toBeNull();
-  });
-
-  it('renders Macro Targets section', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Macro Targets (Advanced)')).toBeTruthy();
-    expect(screen.getByText('Daily Calories')).toBeTruthy();
-    expect(screen.getByText('2000')).toBeTruthy();
-  });
-});
-
-/**
- * The gate is `loading && !profile`, not `loading`. Under `cache-and-network`
- * Apollo reports `loading: true` for the whole network leg on EVERY mount, so
- * gating on `loading` alone blanked this screen on every visit for as long as
- * the request took — up to the 10s httpLink abort deadline.
- */
-describe('DietaryProfileScreen - loading state', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest
-      .spyOn(
-        require('#features/profile/hooks/useDietaryProfile'),
-        'useDietaryProfile',
-      )
-      .mockReturnValue({
-        editableProfile: null,
-        loading: true,
-        updateDietaryProfile: mockUpdateDietaryProfile,
-        addDietaryRestriction: mockAddDietaryRestriction,
-        removeDietaryRestriction: mockRemoveDietaryRestriction,
-      });
-  });
-
-  it('shows loading text when there is no profile yet', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Loading dietary profile...')).toBeTruthy();
-  });
-
-  it('keeps the header and back button while it waits', () => {
-    render(<DietaryProfileScreen />);
-    // A loading branch that returns a bare View leaves the user on a blank
-    // screen with no way off it while a request stalls.
-    expect(screen.getByTestId('profile-screen-wrapper')).toBeTruthy();
-    expect(screen.getByText('Dietary Profile')).toBeTruthy();
-  });
-
-  it('renders the profile while a background refresh is in flight', () => {
-    jest
-      .spyOn(
-        require('#features/profile/hooks/useDietaryProfile'),
-        'useDietaryProfile',
-      )
-      .mockReturnValue({
-        editableProfile: {
-          restrictions: [],
-          maxCookTimeMinutes: 45,
-          calorieTarget: 2000,
-          proteinTarget: 150,
-          carbsTarget: 250,
-          fatTarget: 70,
-        },
-        loading: true,
-        updateDietaryProfile: mockUpdateDietaryProfile,
-        addDietaryRestriction: mockAddDietaryRestriction,
-        removeDietaryRestriction: mockRemoveDietaryRestriction,
-      });
-
-    render(<DietaryProfileScreen />);
-
-    expect(screen.queryByText('Loading dietary profile...')).toBeNull();
-    expect(screen.getByText('Dietary Profile')).toBeTruthy();
-  });
-});
-
-describe('DietaryProfileScreen - profile never read', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest
-      .spyOn(
-        require('#features/profile/hooks/useDietaryProfile'),
-        'useDietaryProfile',
-      )
-      .mockReturnValue({
-        editableProfile: null,
-        loading: false,
-        state: 'error',
-        refetch: mockRefetch,
-        updateDietaryProfile: mockUpdateDietaryProfile,
-        addDietaryRestriction: mockAddDietaryRestriction,
-        removeDietaryRestriction: mockRemoveDietaryRestriction,
-      });
-  });
-
-  it('says the profile could not be loaded and offers to read it again', async () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText(t('dataState.errorTitle'))).toBeTruthy();
-
-    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
-    expect(mockRefetch).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe('DietaryProfileScreen - partial profile', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest
-      .spyOn(
-        require('#features/profile/hooks/useDietaryProfile'),
-        'useDietaryProfile',
-      )
-      .mockReturnValue({
-        editableProfile: {
-          restrictions: [{ type: 'VEGETARIAN', severity: 'STRICT' }],
-          maxCookTimeMinutes: null,
-          calorieTarget: null,
-          proteinTarget: null,
-          carbsTarget: null,
-          fatTarget: null,
-        },
-        loading: false,
-        updateDietaryProfile: mockUpdateDietaryProfile,
-        addDietaryRestriction: mockAddDietaryRestriction,
-        removeDietaryRestriction: mockRemoveDietaryRestriction,
-      });
-  });
-
-  it('offers to set macro targets when none is set yet', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Macro Targets (Advanced)')).toBeTruthy();
-    expect(screen.getByText('No targets set yet')).toBeTruthy();
-    expect(screen.getByLabelText('Edit Macro Targets')).toBeTruthy();
-  });
-
-  it('says when no cooking time limit is set', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Cooking Preferences')).toBeTruthy();
-    expect(screen.getByText(t('dietary.cookTimeEmpty'))).toBeTruthy();
+    expect(sheet().props.visible).toBe(false);
   });
 });

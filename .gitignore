@@ -128,3 +128,8 @@ docs/audits/*
 .argent/
 # OpenSpec planning artifacts stay local to each checkout.
 openspec/
+.devin/
+.dsh/
+.kimi-code/
+.opencode/
+.qwen/

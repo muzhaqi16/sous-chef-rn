@@ -86,9 +86,6 @@
       "favorites": "Your Favorites",
       "popular": "Popular"
     },
-    "noListTitle": "No List Selected",
-    "noListBody": "Please select or create a shopping list first.",
-    "createList": "Create List",
     "searchPlaceholder": "Search for an item...",
     "added": "Added {{name}}",
     "emptyTitle": "No suggestions yet",

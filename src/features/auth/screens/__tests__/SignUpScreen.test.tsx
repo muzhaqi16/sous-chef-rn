@@ -1,306 +1,263 @@
+// The persisted cache lives on the device's disk.
+jest.mock('#/apollo/client', () => ({
+  restorePersistedCache: jest.fn(),
+  flushCachePersistence: jest.fn(),
+}));
+jest.mock('#native/storage/keychain', () =>
+  jest.requireActual('#/test-utils/memoryKeychain').memoryKeychainModule(),
+);
+// Registering the device runs in the background over native device APIs;
+// `deviceRegistration.test.ts` covers it.
+jest.mock('#/services/device/deviceRegistration', () => ({
+  registerDeviceInBackground: jest.fn(),
+}));
+jest.mock('#hooks/navigation/useAppNavigation');
+const mockAuthNav = {
+  navigateToLogin: jest.fn(),
+  navigateToForgotPassword: jest.fn(),
+};
+jest.mock('#features/auth/screens/useAuthNavigation', () => ({
+  useAuthNavigation: () => mockAuthNav,
+}));
+// Whether a mail app opens is the device's to say.
+jest.mock('#native/mailApp', () => ({
+  canOpenMailApp: () => Promise.resolve(false),
+  openMailApp: jest.fn(),
+}));
+
 import React from 'react';
-import { act, screen, userEvent } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { drainTimers } from '#/test-utils/drainTimers';
-import { ResendVerificationEmailDocument } from '#operations/auth/auth.generated';
+import { ApolloProvider } from '@apollo/client/react';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { t } from '#/i18n';
+import { useStore } from '#store';
+import { toastService } from '#/services/toastService';
+import { ErrorCode, ErrorDisposition } from '#/graphql/generated/schemaTypes';
+import {
+  LoginDocument,
+  RegisterDocument,
+  ResendVerificationEmailDocument,
+} from '#operations/auth/auth.generated';
+import { recordMock, type RecordedMock } from '#/test-utils/apolloMockProvider';
+import { registerTestClient } from '#/test-utils/registeredClient';
+import { memoryKeychain } from '#/test-utils/memoryKeychain';
+import { operationLog } from '#/test-utils/operationLog';
+import { registerMobileSessionHost } from '#/app/mobileSessionHost';
+import { authTestIDs } from '#features/auth/testIDs';
 import { SignUpScreen } from '../SignUpScreen';
 
-// --- Mocks ---
+registerMobileSessionHost();
 
-const mockNavigateToLogin = jest.fn();
-const mockRegister = jest.fn();
+const NEW_COOK = {
+  name: 'Ada Cook',
+  email: 'ada@example.com',
+  password: 'Kitchen42x',
+};
 
-jest.mock('#/services/authService', () => ({
-  authService: {
-    register: (...args: unknown[]) => mockRegister(...args),
-  },
-}));
-
-jest.mock('#features/auth/screens/useAuthNavigation', () => ({
-  useAuthNavigation: () => ({
-    navigateToLogin: mockNavigateToLogin,
-  }),
-}));
-
-jest.mock('@react-navigation/native', () => ({
-  ...jest.requireActual('@react-navigation/native'),
-  useNavigation: () => ({
-    goBack: jest.fn(),
-    navigate: jest.fn(),
-    dispatch: jest.fn(),
-    canGoBack: jest.fn(() => true),
-    addListener: jest.fn(() => jest.fn()),
-  }),
-}));
-
-jest.mock('#features/auth/components/AuthWrapper', () => {
-  const { View, Pressable, Text } = require('react-native');
-  return {
-    AuthWrapper: ({
-      children,
-      testID,
-      onBack,
-    }: {
-      children?: React.ReactNode;
-      testID?: string;
-      onBack?: () => void;
-    }) => (
-      <View testID={testID}>
-        {onBack ? (
-          <Pressable testID="back-button" onPress={onBack}>
-            <Text>Back</Text>
-          </Pressable>
-        ) : null}
-        {children}
-      </View>
-    ),
-  };
-});
-
-jest.mock('#features/auth/components/AuthFormTemplate', () => {
-  const { View, Text, Pressable } = require('react-native');
-  return {
-    AuthFormTemplate: ({
-      title,
-      subtitle,
-      submitText,
-      submitButtonTestID,
-      onSubmit,
-      submitDisabled,
-      submitCountdown,
-      footerText,
-      footerLinkText,
-      footerLinkTestID,
-      onFooterLinkPress,
-      linkText,
-      linkTestID,
-      onLinkPress,
-      linkDisabled,
-      linkCountdown,
-    }: {
-      title?: string;
-      subtitle?: string;
-      submitText?: string;
-      submitButtonTestID?: string;
-      onSubmit?: () => void;
-      submitDisabled?: boolean;
-      submitCountdown?: number;
-      footerText?: string;
-      footerLinkText?: string;
-      footerLinkTestID?: string;
-      onFooterLinkPress?: () => void;
-      linkText?: string;
-      linkTestID?: string;
-      onLinkPress?: () => void;
-      linkDisabled?: boolean;
-      linkCountdown?: number;
-    }) => (
-      <View testID="auth-form-template">
-        <Text>{title}</Text>
-        {subtitle ? <Text>{subtitle}</Text> : null}
-        <Pressable
-          testID={submitButtonTestID}
-          onPress={onSubmit}
-          disabled={submitDisabled}
-          accessibilityState={{ disabled: !!submitDisabled }}
-        >
-          <Text>
-            {submitCountdown && submitCountdown > 0
-              ? `${submitText} (${submitCountdown}s)`
-              : submitText}
-          </Text>
-        </Pressable>
-        {linkText ? (
-          <Pressable
-            testID={linkTestID}
-            onPress={onLinkPress}
-            disabled={linkDisabled}
-            accessibilityState={{ disabled: !!linkDisabled }}
-          >
-            <Text>
-              {linkCountdown && linkCountdown > 0
-                ? `${linkText} (${linkCountdown}s)`
-                : linkText}
-            </Text>
-          </Pressable>
-        ) : null}
-        {footerText ? <Text>{footerText}</Text> : null}
-        {footerLinkText ? (
-          <Pressable testID={footerLinkTestID} onPress={onFooterLinkPress}>
-            <Text>{footerLinkText}</Text>
-          </Pressable>
-        ) : null}
-      </View>
-    ),
-  };
-});
-
-jest.mock('#components/molecules/EmailInput', () => ({
-  EmailInput: 'EmailInput',
-}));
-
-jest.mock('#components/molecules/PasswordInput', () => ({
-  PasswordInput: 'PasswordInput',
-}));
-
-jest.mock('#components/molecules/BaseInput/BaseInput', () => ({
-  BaseInput: 'BaseInput',
-}));
-
-jest.mock('#/utils/validation/auth', () => {
-  const yup = require('yup');
-  return {
-    // A permissive real schema so `handleSubmit` passes validation and invokes
-    // `onSubmit` (the default `() => ({})` isn't a yup schema and blocks
-    // submit). The inputs are string mocks and cannot be typed into, so the
-    // address is seeded through the cast — `onSubmit` reads the resolver's
-    // output, and the confirmation needs a real one to resend to.
-    signUpSchema: yup.object({
-      email: yup.string().transform(() => 'new@example.com'),
-    }),
-    // The success branch renders CodeVerificationScreen, which builds its own
-    // resolver. A partial factory here would leave that undefined.
-    emailVerificationSchema: yup.object({}),
-  };
-});
-
-beforeEach(() => {
-  jest.useFakeTimers();
-});
-
-afterEach(() => {
-  jest.useRealTimers();
-});
-
-beforeEach(() => {
-  mockRegister.mockReset();
-});
-
-describe('SignUpScreen', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+const registered = (held = false) =>
+  recordMock(RegisterDocument, {
+    held,
+    data: {
+      register: {
+        __typename: 'RegisterPayload',
+        message: 'A verification link was sent.',
+      },
+    },
   });
 
-  it('renders the signup screen container', () => {
-    renderWithApollo(<SignUpScreen />);
-    expect(screen.getByTestId('signup-screen')).toBeTruthy();
-  });
-
-  it('renders the create account title', () => {
-    renderWithApollo(<SignUpScreen />);
-    expect(screen.getByText('Create account')).toBeTruthy();
-  });
-
-  it('renders the subtitle', () => {
-    renderWithApollo(<SignUpScreen />);
-    expect(screen.getByText('Join Sous Chef today')).toBeTruthy();
-  });
-
-  it('renders the Sign Up submit button', () => {
-    renderWithApollo(<SignUpScreen />);
-    expect(screen.getByTestId('signup-submit-button')).toBeTruthy();
-    expect(screen.getByText('Sign Up')).toBeTruthy();
-  });
-
-  it('renders no back button, like the other root auth screens', () => {
-    renderWithApollo(<SignUpScreen />);
-    expect(screen.queryByTestId('back-button')).toBeNull();
-  });
-
-  it('renders sign in footer link', () => {
-    renderWithApollo(<SignUpScreen />);
-    expect(screen.getByText('Already have an account?')).toBeTruthy();
-    expect(screen.getByText('Sign In')).toBeTruthy();
-  });
-
-  it('navigates to login when footer link is pressed', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<SignUpScreen />);
-    await user.press(screen.getByTestId('signup-login-link'));
-    expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
-  });
-
-  it('offers code entry when the new account cannot sign in', async () => {
-    mockRegister.mockResolvedValue('verificationSent');
-    const user = userEvent.setup();
-    renderWithApollo(<SignUpScreen />);
-
-    await user.press(screen.getByTestId('signup-submit-button'));
-
-    // The address refused the password (taken, or a deleted account), so the
-    // form is replaced by the code screen. The activation mail carries a code
-    // AND a link, so the user can finish here instead of leaving for their inbox.
-    await drainTimers();
-    expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
-    expect(screen.getByText('Enter Code')).toBeTruthy();
-    expect(mockRegister).toHaveBeenCalledTimes(1);
-  });
-
-  it('opens the resend cooldown as soon as the activation mail is sent', async () => {
-    // The mail has already gone out, so the first resend tap must not be able
-    // to fire a duplicate send seconds later.
-    const recordedVariables: Record<string, unknown>[] = [];
-    mockRegister.mockResolvedValue('verificationSent');
-    const user = userEvent.setup();
-    renderWithApollo(<SignUpScreen />, {
-      operationMocks: [
-        {
-          request: {
-            query: ResendVerificationEmailDocument,
-            variables: variables => {
-              recordedVariables.push(variables);
-              return true;
-            },
-          },
-          result: {
-            data: {
-              resendVerificationEmail: {
-                __typename: 'ResendVerificationEmailPayload',
-                user: { __typename: 'User', id: '1' },
-              },
-            },
-          },
+const signedIn = () =>
+  recordMock(LoginDocument, {
+    data: {
+      login: {
+        __typename: 'AuthPayload',
+        accessToken: 'at',
+        refreshToken: 'rt',
+        user: {
+          __typename: 'User',
+          id: 'u1',
+          email: NEW_COOK.email,
+          emailVerified: false,
+          onBoarded: false,
         },
-      ],
-    });
-
-    // Stops at the send: a drain runs the cooldown out.
-    await user.press(screen.getByTestId('signup-submit-button'));
-    await act(() => jest.advanceTimersByTimeAsync(0));
-    expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
-
-    // Resend sits in the link slot on this context and opens inside the first
-    // cooldown, so the tap cannot fire a duplicate send.
-    expect(screen.getByTestId('resend-code')).toBeDisabled();
-    await user.press(screen.getByTestId('resend-code'));
-
-    expect(recordedVariables).toHaveLength(0);
+      },
+    },
   });
 
-  it('leaves a signed-in registration to the verification gate', async () => {
-    // The root navigator swaps the auth group for the gate, which offers the
-    // skip; code entry here would be a second, skip-less copy of it.
-    mockRegister.mockResolvedValue('signedIn');
-    const user = userEvent.setup();
-    renderWithApollo(<SignUpScreen />);
-
-    await user.press(screen.getByTestId('signup-submit-button'));
-
-    await drainTimers();
-    expect(mockRegister).toHaveBeenCalledTimes(1);
-    expect(screen.queryByTestId('code-verification-screen')).toBeNull();
+/** The address is another account's, or a deleted one's: it refuses this password. */
+const refusedSignIn = () =>
+  recordMock(LoginDocument, {
+    data: {
+      login: {
+        __typename: 'AuthenticationError',
+        code: ErrorCode.AuthCredentialsInvalid,
+        disposition: ErrorDisposition.Fail,
+        message: 'Refused',
+      },
+    },
   });
 
-  it('stays on the form (no code entry) when registration is rejected', async () => {
-    mockRegister.mockResolvedValue('failed');
-    const user = userEvent.setup();
-    renderWithApollo(<SignUpScreen />);
-
-    await user.press(screen.getByTestId('signup-submit-button'));
-
-    await drainTimers();
-    expect(mockRegister).toHaveBeenCalledTimes(1);
-    expect(screen.queryByTestId('code-verification-screen')).toBeNull();
-    expect(screen.getByTestId('signup-screen')).toBeTruthy();
+const resend = () =>
+  recordMock(ResendVerificationEmailDocument, {
+    data: {
+      resendVerificationEmail: {
+        __typename: 'ResendVerificationEmailPayload',
+        user: { __typename: 'User', id: 'u1' },
+      },
+    },
   });
+
+let log = operationLog();
+
+function openSignUp(answers: RecordedMock[] = []) {
+  const client = registerTestClient(answers, [log.link]);
+  return render(
+    <ApolloProvider client={client}>
+      <SignUpScreen />
+    </ApolloProvider>,
+  );
+}
+
+function fillIn(values: Partial<typeof NEW_COOK> = NEW_COOK) {
+  const typeInto = (testID: string, value: string | undefined) => {
+    if (value !== undefined) {
+      fireEvent.changeText(screen.getByTestId(testID), value);
+    }
+  };
+  typeInto(authTestIDs.signUpNameInput, values.name);
+  typeInto(authTestIDs.signUpEmailInput, values.email);
+  typeInto(authTestIDs.signUpPasswordInput, values.password);
+}
+
+const submit = () =>
+  fireEvent.press(screen.getByTestId(authTestIDs.signUpSubmitButton));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  log = operationLog();
+  memoryKeychain.reset();
+  useStore.getState().clearAuth();
+  useStore.setState({
+    isOnline: true,
+    apiReachable: true,
+    authIsLoading: false,
+    navigationState: 'auth',
+  });
+});
+
+it('asks for a name, an email and a new password, and links to sign in', () => {
+  openSignUp();
+
+  expect(screen.getByText(t('auth.signupTitle'))).toBeTruthy();
+  expect(screen.getByText(t('auth.signupSubtitle'))).toBeTruthy();
+  expect(screen.getByTestId(authTestIDs.signUpNameInput)).toBeTruthy();
+  expect(screen.getByTestId(authTestIDs.signUpEmailInput)).toBeTruthy();
+  expect(screen.getByTestId(authTestIDs.signUpPasswordInput)).toBeTruthy();
+  fireEvent.press(screen.getByTestId(authTestIDs.signUpLoginLink));
+
+  expect(mockAuthNav.navigateToLogin).toHaveBeenCalledTimes(1);
+});
+
+it('reports what is missing on the fields, and sends nothing', async () => {
+  const register = registered();
+  openSignUp([register]);
+
+  fillIn({ email: 'not-an-address', password: 'short' });
+  await act(async () => {
+    submit();
+  });
+
+  expect(screen.getByText(t('auth.fullNameRequired'))).toBeTruthy();
+  expect(screen.getByText(t('commonValidation.passwordMin'))).toBeTruthy();
+  expect(register.fired).toHaveLength(0);
+});
+
+it('creates the account with what was typed, leaving the signed-in account to the verification gate', async () => {
+  const register = registered();
+  const login = signedIn();
+  openSignUp([register, login]);
+
+  fillIn();
+  submit();
+  await log.landed(LoginDocument);
+
+  expect(register.fired).toEqual([{ input: NEW_COOK }]);
+  expect(login.fired).toEqual([
+    { input: { email: NEW_COOK.email, password: NEW_COOK.password } },
+  ]);
+  expect(useStore.getState().navigationState).toBe('verification');
+  expect(
+    screen.queryByTestId(authTestIDs.codeVerificationScreen),
+  ).not.toBeOnTheScreen();
+});
+
+it('says the account is being created until the server answers', async () => {
+  const register = registered(true);
+  openSignUp([register, signedIn()]);
+
+  fillIn();
+  submit();
+  await log.requested(RegisterDocument);
+  await act(async () => undefined);
+
+  const button = screen.getByTestId(authTestIDs.signUpSubmitButton);
+  expect(button).toHaveAccessibleName(t('auth.creatingAccount'));
+  expect(button).toBeBusy();
+
+  register.release();
+  await log.landed(LoginDocument);
+});
+
+describe('an address that refuses the new password', () => {
+  // Taken, or a deleted account's: the mail carries a code AND a link, so the
+  // code can be entered here rather than leaving for the inbox.
+  it('offers code entry for that address', async () => {
+    openSignUp([registered(), refusedSignIn()]);
+
+    fillIn();
+    submit();
+    await log.landed(LoginDocument);
+
+    expect(screen.getByTestId(authTestIDs.codeVerificationScreen)).toBeTruthy();
+    expect(screen.getByText(t('auth.enterCode'))).toBeTruthy();
+    expect(screen.getByText(NEW_COOK.email)).toBeTruthy();
+    expect(useStore.getState().user).toBeNull();
+  });
+
+  it('opens inside the first cooldown, the mail having just gone out', async () => {
+    const resent = resend();
+    openSignUp([registered(), refusedSignIn(), resent]);
+
+    fillIn();
+    submit();
+    await log.landed(LoginDocument);
+    const resendLink = screen.getByTestId(
+      authTestIDs.codeVerificationResendLink,
+    );
+    fireEvent.press(resendLink);
+
+    expect(resendLink).toBeDisabled();
+    expect(resent.fired).toHaveLength(0);
+  });
+});
+
+it('stays on the form when the account cannot be created', async () => {
+  openSignUp([
+    recordMock(RegisterDocument, {
+      error: new Error('Network request failed'),
+    }),
+  ]);
+
+  fillIn();
+  submit();
+  await log.landed(RegisterDocument);
+
+  expect(toastService.error).toHaveBeenCalledWith(
+    t('errors.codes.genericRetry'),
+  );
+  expect(screen.getByTestId(authTestIDs.signUpScreen)).toBeTruthy();
+  expect(
+    screen.queryByTestId(authTestIDs.codeVerificationScreen),
+  ).not.toBeOnTheScreen();
+  expect(
+    screen.getByTestId(authTestIDs.signUpSubmitButton),
+  ).toHaveAccessibleName(t('auth.signUp'));
 });

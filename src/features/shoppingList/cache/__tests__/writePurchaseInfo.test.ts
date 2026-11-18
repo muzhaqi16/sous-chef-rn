@@ -178,7 +178,6 @@ describe('writePurchaseInfo', () => {
           __typename
           isPurchased
           movedToPantryAt
-          purchasedById
           purchasedBy {
             __typename
             id
@@ -196,7 +195,6 @@ describe('writePurchaseInfo', () => {
           __typename: 'ShoppingListItemPurchaseInfo',
           isPurchased: true,
           movedToPantryAt: null,
-          purchasedById: 'user-1',
           purchasedBy: { __typename: 'User', id: 'user-1' },
         },
       },
@@ -207,12 +205,10 @@ describe('writePurchaseInfo', () => {
     const after = cache.readFragment<{
       purchaseInfo: {
         isPurchased: boolean;
-        purchasedById: string | null;
         purchasedBy: { id: string } | null;
       };
     }>({ id: 'ShoppingListItem:sli-1', fragment: WITH_BUYER })?.purchaseInfo;
     expect(after?.isPurchased).toBe(false);
-    expect(after?.purchasedById).toBe('user-1');
     expect(after?.purchasedBy?.id).toBe('user-1');
   });
 

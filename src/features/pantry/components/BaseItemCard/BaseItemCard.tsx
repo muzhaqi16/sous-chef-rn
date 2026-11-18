@@ -41,16 +41,18 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
       <React.Fragment key="right">{rightElement}</React.Fragment>,
     );
 
+  const hasSwipeActions = !!leftActions?.length || !!rightActions?.length;
+
+  // A swipeable row's button carries the id, with its label and actions; the
+  // same id on the card inside it makes every lookup by id ambiguous.
   const cardContent = (
     <View
       style={[commonStyles.rowSurface, commonStyles.rowContent, containerStyle]}
-      testID={testID}
+      testID={hasSwipeActions ? undefined : testID}
     >
       {slotChildren}
     </View>
   );
-
-  const hasSwipeActions = !!leftActions?.length || !!rightActions?.length;
 
   if (hasSwipeActions) {
     return (

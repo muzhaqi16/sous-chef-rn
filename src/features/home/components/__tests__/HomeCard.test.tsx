@@ -11,6 +11,7 @@ import {
   type HomeCard_HomeFragment,
 } from '../HomeCard.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n';
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
@@ -22,23 +23,13 @@ jest.mock('../HomeActions', () => {
   const { View, Text, Pressable } = require('react-native');
   return {
     HomeActions: ({
-      onSetDefault,
       onInvite,
       onDelete,
       homeId,
-      isDefault,
       canInvite,
       canDelete,
     }: React.ComponentProps<typeof import('../HomeActions').HomeActions>) => (
       <View testID="home-actions">
-        {!isDefault && (
-          <Pressable
-            onPress={() => onSetDefault(homeId)}
-            testID="set-default-btn"
-          >
-            <Text>Set Default</Text>
-          </Pressable>
-        )}
         {canInvite !== false && (
           <Pressable onPress={() => onInvite(homeId)} testID="invite-btn">
             <Text>Invite</Text>
@@ -149,6 +140,7 @@ function renderCard(props: Partial<React.ComponentProps<typeof HomeCard>>) {
     <HomeCard
       homeId={home.id}
       isDefault={false}
+      isCurrent
       onPress={props.onPress ?? jest.fn()}
       onSetDefault={props.onSetDefault ?? jest.fn()}
       onInvite={props.onInvite ?? jest.fn()}
@@ -185,6 +177,34 @@ describe('HomeCard', () => {
     expect(screen.queryByText('Default')).toBeNull();
   });
 
+  // Where the badge sits on the default home, another home offers the star.
+  it('offers a star to make another home the default, without text', async () => {
+    const onSetDefault = jest.fn();
+    const user = userEvent.setup();
+    renderCard({ onSetDefault });
+
+    await user.press(screen.getByLabelText(t('labels.setDefault')));
+
+    expect(onSetDefault).toHaveBeenCalledWith('home-1');
+    expect(screen.queryByText(t('labels.setDefault'))).toBeNull();
+  });
+
+  it('offers no star on the default home', () => {
+    renderCard({ isDefault: true });
+    expect(screen.queryByLabelText(t('labels.setDefault'))).toBeNull();
+  });
+
+  it('offers the switch back on a default home this device is not on', async () => {
+    const onSetDefault = jest.fn();
+    renderCard({ isDefault: true, isCurrent: false, onSetDefault });
+
+    expect(screen.queryByText(t('homeManagement.cardDefault'))).toBeNull();
+    await userEvent
+      .setup()
+      .press(screen.getByLabelText(t('labels.setDefault')));
+    expect(onSetDefault).toHaveBeenCalledWith('home-1');
+  });
+
   it('calls onDelete with home id and name', async () => {
     const onDelete = jest.fn();
     const user = userEvent.setup();
@@ -214,6 +234,7 @@ describe('HomeCard', () => {
       <HomeCard
         homeId={home.id}
         isDefault={false}
+        isCurrent
         onPress={jest.fn()}
         onSetDefault={jest.fn()}
         onInvite={jest.fn()}

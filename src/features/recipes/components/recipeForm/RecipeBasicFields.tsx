@@ -5,7 +5,6 @@ import { useTranslation } from '#/i18n';
 import { FormInput } from '#components/atoms/FormInput';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { EditableCounter } from '#components/molecules/EditableCounter';
-import type { FieldErrors } from 'react-hook-form';
 import type { RecipeFormState } from '#features/recipes/types';
 
 interface RecipeBasicFieldsProps {
@@ -14,7 +13,10 @@ interface RecipeBasicFieldsProps {
     field: K,
     value: RecipeFormState[K],
   ) => void;
-  errors?: FieldErrors<RecipeFormState>;
+  /** Each field's message, if it has one. */
+  errors?: Partial<
+    Record<'name' | 'imageUrl' | 'videoUrl' | 'tips' | 'tags', string>
+  >;
 }
 
 export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
@@ -30,7 +32,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
         value={state.name}
         onChangeText={v => updateField('name', v)}
         placeholder={t('recipes.namePlaceholder')}
-        error={errors?.name?.message}
+        error={errors?.name}
         required
       />
 
@@ -48,7 +50,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
         placeholder={t('recipes.imageUrlPlaceholder')}
         keyboardType="url"
         autoCapitalize="none"
-        error={errors?.imageUrl?.message}
+        error={errors?.imageUrl}
       />
 
       <FormInput
@@ -58,7 +60,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
         placeholder={t('recipes.imageUrlPlaceholder')}
         keyboardType="url"
         autoCapitalize="none"
-        error={errors?.videoUrl?.message}
+        error={errors?.videoUrl}
       />
 
       <View style={styles.row}>
@@ -109,7 +111,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
         value={state.tips}
         onChangeText={v => updateField('tips', v)}
         placeholder={t('recipes.tipsPlaceholder')}
-        error={errors?.tips?.message}
+        error={errors?.tips}
       />
 
       <FormInput
@@ -118,7 +120,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
         onChangeText={v => updateField('tags', v)}
         placeholder={t('labels.commaSeparated')}
         autoCapitalize="none"
-        error={errors?.tags?.message}
+        error={errors?.tags}
       />
 
       <FormInput

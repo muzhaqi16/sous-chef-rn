@@ -23,7 +23,6 @@ export interface StoragePageProps {
     locationId: string | null,
     location: StorageLocationOption | null,
   ) => void;
-  handleAddNewLocation: (name: string) => void;
   condition: ItemCondition;
   setCondition: (value: ItemCondition) => void;
   tags: string;
@@ -38,7 +37,6 @@ export const StoragePage: React.FC<StoragePageProps> = ({
   setStorageLocation,
   storageLocations,
   handleStorageLocationSelected,
-  handleAddNewLocation,
   condition,
   setCondition,
   tags,
@@ -72,7 +70,6 @@ export const StoragePage: React.FC<StoragePageProps> = ({
             placeholder={t('addToPantry.storageLocationPlaceholder')}
             storageLocations={storageLocations}
             onStorageLocationSelected={handleStorageLocationSelected}
-            onAddNewLocation={handleAddNewLocation}
           />
         </View>
 

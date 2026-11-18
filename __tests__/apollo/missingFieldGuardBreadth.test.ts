@@ -90,7 +90,6 @@ describe('the missing-field guard exempts nothing', () => {
       'movedToPantryAt',
       'purchaseDate',
       'purchasedBy',
-      'purchasedById',
       'purchasedPrice',
       'purchasedQuantity',
     ];

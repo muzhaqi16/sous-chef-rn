@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/atoms/FormInput';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
@@ -24,13 +21,6 @@ export const CookingPreferencesSheet: React.FC<
   CookingPreferencesSheetProps
 > = ({ visible, onClose, onSave, initialValues }) => {
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
-
-  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['40%'],
-  });
 
   const [cookTime, setCookTime] = useState('');
   const [saving, setSaving] = useState(false);
@@ -83,36 +73,34 @@ export const CookingPreferencesSheet: React.FC<
   };
 
   return (
-    <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
-      <BottomSheetFormScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.contentContainer,
-          { paddingBottom: insets.bottom + 16 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
+    <Sheet
+      mode="form"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['40%']}
+      style={styles.scrollView}
+      contentContainerStyle={styles.contentContainer}
+      header={
         <BottomSheetHeader
-          contentPadding="md"
           title={t('labels.cookingPreferences')}
           onCancel={onClose}
           onConfirm={handleSave}
           confirmLabel={t('labels.save')}
           confirmDisabled={saving}
         />
-
-        <View style={styles.section}>
-          <FormInput
-            label={t('cookingPreferences.maxCookTime')}
-            value={cookTime}
-            onChangeText={setCookTime}
-            keyboardType="number-pad"
-            placeholder={t('cookingPreferences.cookTimePlaceholder')}
-            useBottomSheetInput
-          />
-        </View>
-      </BottomSheetFormScrollView>
-    </BottomSheetModal>
+      }
+    >
+      <View style={styles.section}>
+        <FormInput
+          label={t('cookingPreferences.maxCookTime')}
+          value={cookTime}
+          onChangeText={setCookTime}
+          keyboardType="number-pad"
+          placeholder={t('cookingPreferences.cookTimePlaceholder')}
+          useBottomSheetInput
+        />
+      </View>
+    </Sheet>
   );
 };
 

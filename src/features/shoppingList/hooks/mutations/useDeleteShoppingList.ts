@@ -8,6 +8,7 @@ import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shopp
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
+import { useStore } from '#store';
 
 export function useDeleteShoppingList() {
   const { t } = useTranslation();
@@ -19,6 +20,9 @@ export function useDeleteShoppingList() {
 
   /** `true` once the list is gone or its delete is queued; `false` when refused. */
   const deleteShoppingList = async (id: string): Promise<boolean> => {
+    // The removal shows at once and the List moves off the list with it; a
+    // refusal brings the list back, so the person goes back to it too.
+    const wasShown = useStore.getState().selectedShoppingListId === id;
     // Toasted rather than alerted: the list simply reappears where it was.
     const settled = await pendingWritesOf(client.cache).send(
       DeleteShoppingListDocument,
@@ -31,7 +35,9 @@ export function useDeleteShoppingList() {
           present: 'toast',
         }),
     );
-    return settled.status !== 'failed';
+    if (settled.status !== 'failed') return true;
+    if (wasShown) useStore.getState().setSelectedShoppingListId(id);
+    return false;
   };
 
   return { deleteShoppingList };

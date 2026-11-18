@@ -1,4 +1,5 @@
 import { requirePlatform } from '#platform/install';
+import { DeviceType } from '#/graphql/generated/schemaTypes';
 
 /**
  * Name the server matches against its MIN_CLIENT_VERSIONS table. One name is
@@ -16,3 +17,16 @@ export const CLIENT_NAME = 'sous-chef-app';
  */
 export const clientVersion = (): string =>
   requirePlatform('platformInfo').appVersion;
+
+/**
+ * Where a request comes from and on what kind of device. The API records both
+ * on each sign-in, and a device it has not seen takes its type from them.
+ */
+export const clientSourceHeaders = (): Record<string, string> => {
+  const { os, isTablet } = requirePlatform('platformInfo');
+  if (os === 'web') return { 'x-client-source': 'web' };
+  return {
+    'x-client-source': 'mobile',
+    'x-device-type': isTablet ? DeviceType.Tablet : DeviceType.Mobile,
+  };
+};

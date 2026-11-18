@@ -1,38 +1,15 @@
-'use no memo';
-
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 import type { User } from '#store/slices/authSlice';
 import type { NavigationState } from '#store/slices/appSlice';
-import type { RootState } from '#store/index';
+import { useStore } from '#store';
+import { Telemetry } from '#services/telemetry';
+import NavigationService, { navigationRef } from '#services/NavigationService';
+import { NativePerformanceService } from '#services/performance/NativePerformanceService';
 
 interface ChildrenProps {
   children?: React.ReactNode;
 }
-
-// Mock useDeepLinkRouter
-jest.mock('#hooks/deepLink/useDeepLinkRouter', () => ({
-  useDeepLinkRouter: jest.fn(),
-}));
-
-// Mock navigation guards
-jest.mock('#hooks/navigation/useNavigationGuards', () => ({
-  useIsAuth: jest.fn(() => true),
-  useIsVerification: jest.fn(() => false),
-  useIsBiometricSetup: jest.fn(() => false),
-  useIsOnboarding: jest.fn(() => false),
-  useIsMainApp: jest.fn(() => false),
-}));
-
-// Mock navigation service
-jest.mock('#services/NavigationService', () => ({
-  navigationRef: {
-    current: null,
-    isReady: jest.fn(() => false),
-    getCurrentRoute: jest.fn(() => null),
-    addListener: jest.fn(() => () => {}),
-  },
-}));
 
 // Mock @react-navigation/native-stack
 // The root stack is built at import time, so its config is captured here rather
@@ -60,6 +37,8 @@ jest.mock('@react-navigation/native-stack', () => ({
   createNativeStackScreen: jest.fn(<T,>(config: T): T => config),
 }));
 
+/** The props the navigator hands the static navigation container. */
+const mockStaticProps: { current: Record<string, unknown> } = { current: {} };
 // Mock createStaticNavigation
 jest.mock('@react-navigation/native', () => {
   const actual = jest.requireActual('@react-navigation/native');
@@ -68,10 +47,11 @@ jest.mock('@react-navigation/native', () => {
   return {
     ...actual,
     createStaticNavigation: jest.fn(() =>
-      ReactMock.forwardRef(
-        (_props: Record<string, unknown>, ref: React.Ref<unknown>) =>
-          ReactMock.createElement(View, { testID: 'static-navigation', ref }),
-      ),
+      // The real container ref stays unattached, as before a container mounts.
+      ReactMock.forwardRef((props: Record<string, unknown>) => {
+        mockStaticProps.current = props;
+        return ReactMock.createElement(View, { testID: 'static-navigation' });
+      }),
     ),
     DefaultTheme: {
       colors: {
@@ -112,65 +92,9 @@ jest.mock('#screens/NotFoundScreen', () => ({
   NotFoundScreen: () => null,
 }));
 
-// Mock ErrorBoundary
-jest.mock('#components/providers/ErrorBoundary', () => ({
-  NavigationErrorBoundary: ({ children }: ChildrenProps) => children,
-  AuthErrorBoundary: ({ children }: ChildrenProps) => children,
-}));
-
 // Mock the post-login biometric screen (rendered only in the biometric_setup group)
 jest.mock('#features/auth/screens/PostLoginBiometricScreen', () => ({
   PostLoginBiometricScreen: () => null,
-}));
-
-// Mock SousChefLoader
-jest.mock('#components/atoms/SousChefLoader', () => ({
-  SousChefLoader: () => null,
-}));
-
-// Mock zustand/shallow
-jest.mock('zustand/shallow', () => ({
-  useShallow: jest.fn(<S,>(fn: S): S => fn),
-}));
-
-jest.mock('#services/performance/NativePerformanceService', () => ({
-  NativePerformanceService: {
-    noteInteractiveGate: jest.fn(),
-  },
-}));
-
-// Track mock state
-let mockIsHydrated = false;
-let mockUser: User | null = null;
-let mockNavigationState: NavigationState = 'loading';
-let mockPostLoginCredentials: { email: string; password: string } | null = null;
-let mockVerificationSkipped = false;
-const mockSetNavigationState = jest.fn((state: NavigationState) => {
-  mockNavigationState = state;
-});
-
-// Mock useAppStore
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn(<T,>(selector: (state: RootState) => T) => {
-    const state: Partial<RootState> = {
-      isHydrated: mockIsHydrated,
-      user: mockUser,
-      navigationState: mockNavigationState,
-      postLoginCredentials: mockPostLoginCredentials,
-      setNavigationState: mockSetNavigationState,
-      setPostLoginCredentials: jest.fn(),
-    };
-    return selector(state as RootState);
-  }),
-  useIsHydrated: jest.fn(() => mockIsHydrated),
-  useUser: jest.fn(() => mockUser),
-  useVerificationSkipped: jest.fn(() => mockVerificationSkipped),
-  usePostLoginState: jest.fn(() => ({
-    navigationState: mockNavigationState,
-    postLoginCredentials: mockPostLoginCredentials,
-    setNavigationState: mockSetNavigationState,
-    setPostLoginCredentials: jest.fn(),
-  })),
 }));
 
 // Mock all navigation stacks
@@ -239,21 +163,66 @@ const rootScreens = (): Record<string, RootScreenConfig> => ({
   >((all, group) => ({ ...all, ...group.screens }), {}),
 });
 
+/** The store as this launch finds it. */
+function given({
+  isHydrated = true,
+  user = null,
+  navigationState = 'loading',
+  postLoginCredentials = null,
+  verificationSkipped = false,
+}: {
+  isHydrated?: boolean;
+  user?: User | null;
+  navigationState?: NavigationState;
+  postLoginCredentials?: { email: string } | null;
+  verificationSkipped?: boolean;
+} = {}) {
+  useStore.setState({
+    isHydrated,
+    user,
+    navigationState,
+    postLoginCredentials,
+    userNavigationStates: user ? { [user.id]: { verificationSkipped } } : {},
+  });
+}
+
+const account = (emailVerified: boolean, onBoarded: boolean): User => ({
+  id: '1',
+  email: 'test@example.com',
+  emailVerified,
+  onBoarded,
+});
+
+const routedTo = () => useStore.getState().navigationState;
+
+const LAUNCHES: Array<[string, User | null, boolean, NavigationState]> = [
+  ['no one signed in', null, false, 'auth'],
+  ['an unverified account', account(false, false), false, 'verification'],
+  ['a skipped verification', account(false, true), true, 'main_app'],
+  [
+    'a skipped verification not onboarded',
+    account(false, false),
+    true,
+    'onboarding',
+  ],
+  [
+    'a verified account not onboarded',
+    account(true, false),
+    false,
+    'onboarding',
+  ],
+  ['a fully set-up account', account(true, true), false, 'main_app'],
+];
+
 describe('Navigation (RootNavigator)', () => {
   beforeEach(() => {
+    jest.restoreAllMocks();
     jest.clearAllMocks();
-    mockIsHydrated = false;
-    mockUser = null;
-    mockNavigationState = 'loading';
-    mockPostLoginCredentials = null;
-    mockVerificationSkipped = false;
-    mockSetNavigationState.mockClear();
+    mockStaticProps.current = {};
   });
 
   // The tab subtree must survive a detail screen being pushed over it, or
   // popping back re-runs every layout effect under HomeTabs in one commit.
-  // Pairs with the same option on the HomeTabs navigator itself; every other
-  // root screen keeps the default `'pause'`.
   it('keeps the Home screen mounted while a detail screen is pushed over it', () => {
     expect(rootScreens().Home?.options?.inactiveBehavior).toBe('none');
   });
@@ -266,174 +235,129 @@ describe('Navigation (RootNavigator)', () => {
     expect(optedOut).toEqual(['Home']);
   });
 
-  it('shows SplashScreen when not hydrated', () => {
-    mockIsHydrated = false;
-    const { getByTestId } = render(<Navigation />);
-    expect(getByTestId('splash-screen')).toBeTruthy();
-  });
+  it('shows the splash before the store hydrates, and decides nothing', () => {
+    given({ isHydrated: false, navigationState: 'main_app' });
 
-  it('shows SplashScreen when navigation state is loading', () => {
-    mockIsHydrated = true;
-    mockNavigationState = 'loading';
-    const { getByTestId } = render(<Navigation />);
-    expect(getByTestId('splash-screen')).toBeTruthy();
-  });
-
-  it('renders StaticNavigation when hydrated and not loading', () => {
-    mockIsHydrated = true;
-    mockNavigationState = 'auth';
-    const { getByTestId } = render(<Navigation />);
-    expect(getByTestId('static-navigation')).toBeTruthy();
-  });
-
-  it('sets navigation to auth when hydrated with no user', () => {
-    mockIsHydrated = true;
-    mockUser = null;
-    mockNavigationState = 'auth';
     render(<Navigation />);
-    expect(mockSetNavigationState).toHaveBeenCalledWith('auth');
+
+    expect(screen.getByTestId('splash-screen')).toBeTruthy();
+    expect(routedTo()).toBe('main_app');
   });
 
-  it('sets navigation to verification for unverified user', () => {
-    mockIsHydrated = true;
-    mockUser = {
-      id: '1',
-      email: 'test@example.com',
-      emailVerified: false,
-      onBoarded: false,
-    };
-    mockNavigationState = 'auth'; // will be changed
+  it('opens the navigation, ready to replay what was asked before it', () => {
+    given({ navigationState: 'auth' });
+
     render(<Navigation />);
-    expect(mockSetNavigationState).toHaveBeenCalledWith('verification');
+
+    expect(screen.getByTestId('static-navigation')).toBeTruthy();
+    expect(mockStaticProps.current.onReady).toBe(
+      NavigationService.flushPendingNavigation,
+    );
   });
 
-  it('lets an unverified user who skipped through to the main app', () => {
-    mockIsHydrated = true;
-    mockVerificationSkipped = true;
-    mockUser = {
-      id: '1',
-      email: 'test@example.com',
-      emailVerified: false,
-      onBoarded: true,
-    };
-    mockNavigationState = 'verification';
-    render(<Navigation />);
-    expect(mockSetNavigationState).toHaveBeenCalledWith('main_app');
+  it.each(LAUNCHES)(
+    'routes a launch with %s',
+    (_, user, verificationSkipped, target) => {
+      given({ user, verificationSkipped, navigationState: 'auth' });
+
+      render(<Navigation />);
+
+      expect(routedTo()).toBe(target);
+    },
+  );
+
+  describe('a sign-in that holds a gate', () => {
+    it('stays on biometric setup when the account reaches the app', () => {
+      given({ navigationState: 'auth' });
+      render(<Navigation />);
+
+      act(() => {
+        useStore.setState({
+          navigationState: 'biometric_setup',
+          user: account(true, true),
+        });
+      });
+
+      expect(routedTo()).toBe('biometric_setup');
+    });
+
+    it("stays for the sign-in screen's remember-me question", () => {
+      given({ navigationState: 'auth' });
+      render(<Navigation />);
+
+      act(() => {
+        useStore.setState({
+          postLoginCredentials: { email: 'test@example.com' },
+          user: account(true, true),
+        });
+      });
+
+      expect(routedTo()).toBe('auth');
+    });
   });
 
-  it('still routes a skipped user to onboarding when not onboarded', () => {
-    mockIsHydrated = true;
-    mockVerificationSkipped = true;
-    mockUser = {
-      id: '1',
-      email: 'test@example.com',
-      emailVerified: false,
-      onBoarded: false,
-    };
-    mockNavigationState = 'verification';
+  it('reports each screen once, however often the state changes', () => {
+    const listeners: Array<() => void> = [];
+    jest
+      .spyOn(navigationRef, 'addListener')
+      .mockImplementation((_event, listener) => {
+        listeners.push(() => {
+          listener({ type: 'state', data: { state: undefined } });
+        });
+        return () => undefined;
+      });
+    jest.spyOn(navigationRef, 'isReady').mockReturnValue(true);
+    const current = jest.spyOn(navigationRef, 'getCurrentRoute');
+    given({ navigationState: 'auth' });
     render(<Navigation />);
-    expect(mockSetNavigationState).toHaveBeenCalledWith('onboarding');
-  });
+    const stateChanged = () => listeners.forEach(listener => listener());
 
-  it('sets navigation to onboarding for verified but not onboarded user', () => {
-    mockIsHydrated = true;
-    mockUser = {
-      id: '1',
-      email: 'test@example.com',
-      emailVerified: true,
-      onBoarded: false,
-    };
-    mockNavigationState = 'auth';
-    render(<Navigation />);
-    expect(mockSetNavigationState).toHaveBeenCalledWith('onboarding');
-  });
+    current.mockReturnValue({ key: 'a', name: 'PantryMain' });
+    stateChanged();
+    stateChanged();
+    current.mockReturnValue({ key: 'b', name: 'RecipeMain' });
+    stateChanged();
 
-  it('sets navigation to main_app for fully onboarded user', () => {
-    mockIsHydrated = true;
-    mockUser = {
-      id: '1',
-      email: 'test@example.com',
-      emailVerified: true,
-      onBoarded: true,
-    };
-    mockNavigationState = 'auth';
-    render(<Navigation />);
-    expect(mockSetNavigationState).toHaveBeenCalledWith('main_app');
+    expect(jest.mocked(Telemetry.trackScreen).mock.calls).toEqual([
+      ['PantryMain'],
+      ['RecipeMain'],
+    ]);
   });
 
   describe('the app_fully_drawn_ms interactive gate', () => {
-    const { NativePerformanceService } = jest.requireMock(
-      '#services/performance/NativePerformanceService',
-    );
+    const gate = () =>
+      jest.spyOn(NativePerformanceService, 'noteInteractiveGate');
 
+    // `navigationState` is persisted: a launch straight into the app after a
+    // session that ended on sign-in has no human wait to exclude.
     it('does not suppress the metric when only the PERSISTED state was a gate', () => {
-      // The regression. `navigationState` is persisted and rehydrated before
-      // this launch resolves its own target, so a signed-in user whose last
-      // session ended on the sign-in screen relaunches straight into the app
-      // with zero human wait — and reading the store value latched a one-way,
-      // process-scoped suppression that no API clears. The flagship metric was
-      // silently lost on exactly the cold starts it exists to measure.
-      mockIsHydrated = true;
-      mockNavigationState = 'auth'; // left over from the previous session
-      mockUser = {
-        id: '1',
-        email: 'test@example.com',
-        emailVerified: true,
-        onBoarded: true,
-      };
+      const noted = gate();
+      given({ navigationState: 'auth', user: account(true, true) });
 
       render(<Navigation />);
 
-      expect(mockSetNavigationState).toHaveBeenCalledWith('main_app');
-      expect(
-        NativePerformanceService.noteInteractiveGate,
-      ).not.toHaveBeenCalled();
+      expect(routedTo()).toBe('main_app');
+      expect(noted).not.toHaveBeenCalled();
     });
 
     it('suppresses the metric when THIS launch resolves to a gate', () => {
-      // The pair that makes the negative above able to fail: with no user, the
-      // launch really does stop for sign-in, and that wait is the person's.
-      mockIsHydrated = true;
-      mockNavigationState = 'main_app'; // stale in the other direction
-      mockUser = null;
+      const noted = gate();
+      given({ navigationState: 'main_app' });
 
       render(<Navigation />);
 
-      expect(mockSetNavigationState).toHaveBeenCalledWith('auth');
-      expect(
-        NativePerformanceService.noteInteractiveGate,
-      ).toHaveBeenCalledTimes(1);
+      expect(routedTo()).toBe('auth');
+      expect(noted).toHaveBeenCalledTimes(1);
     });
 
     it('suppresses on a verification gate too, not just sign-in', () => {
-      mockIsHydrated = true;
-      mockNavigationState = 'loading';
-      mockUser = {
-        id: '1',
-        email: 'test@example.com',
-        emailVerified: false,
-        onBoarded: false,
-      };
+      const noted = gate();
+      given({ user: account(false, false) });
 
       render(<Navigation />);
 
-      expect(mockSetNavigationState).toHaveBeenCalledWith('verification');
-      expect(NativePerformanceService.noteInteractiveGate).toHaveBeenCalled();
+      expect(routedTo()).toBe('verification');
+      expect(noted).toHaveBeenCalledTimes(1);
     });
-  });
-
-  it('does not show biometric prompt when conditions are not met', () => {
-    mockIsHydrated = true;
-    mockNavigationState = 'main_app';
-    mockUser = {
-      id: '1',
-      email: 'test@example.com',
-      emailVerified: true,
-      onBoarded: true,
-    };
-    const { queryByTestId } = render(<Navigation />);
-    // In main_app the biometric gate is not rendered (it's its own screen under
-    // the biometric_setup state, not an overlay), so nothing biometric appears.
-    expect(queryByTestId('biometric-prompt')).toBeNull();
   });
 });

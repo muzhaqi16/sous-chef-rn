@@ -1,403 +1,368 @@
-'use no memo';
-
 import React from 'react';
-import { RefreshControl, type TextInputProps } from 'react-native';
-import { act, fireEvent, screen } from '@testing-library/react-native';
-import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
-import { drainTimers } from '#/test-utils/drainTimers';
+import { RefreshControl } from 'react-native';
+import {
+  act,
+  fireEvent,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
+import {
+  collaboratorsOf,
+  listCollaborator,
+  listDetailsRead,
+  listOwner,
+  ownShoppingList,
+  type ShoppingListNode,
+} from '#/test-utils/fixtures/shoppingListFixtures';
+import { useStore } from '#store';
+import { t, type TranslationKey } from '#/i18n';
+import { alertService } from '#/services/alertService';
+import {
+  CollaboratorRole,
+  CollaboratorStatus,
+  ErrorCode,
+  MembershipRole,
+} from '#/graphql/generated/schemaTypes';
+import {
+  GetShoppingListDetailsDocument,
+  RemoveCollaboratorDocument,
+  UpdateCollaboratorRoleDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { ShareList } from '../ShareList';
-import { kitTestIDs } from '#components/testIDs';
-import { t } from '#/i18n';
-import { useUser } from '#store/useAppStore';
-import { ShoppingListCollaboratorFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-
-const seedCollaboratorCache = () =>
-  seedCache([
-    {
-      fragment: ShoppingListCollaboratorFragmentDoc,
-      data: {
-        __typename: 'ShoppingListCollaborator',
-        id: 'c1',
-        email: 'owner@test.com',
-        role: 'OWNER',
-        status: 'ACTIVE',
-        collaboratorId: 'u1',
-        canEdit: true,
-        canAddItems: true,
-        canRemoveItems: true,
-        canEditItems: true,
-        canMarkPurchased: true,
-        canInviteOthers: true,
-        invitedAt: '2024-01-01T00:00:00Z',
-        collaborator: null,
-      },
-    },
-    {
-      fragment: ShoppingListCollaboratorFragmentDoc,
-      data: {
-        __typename: 'ShoppingListCollaborator',
-        id: 'c2',
-        email: 'member@test.com',
-        role: 'CONTRIBUTOR',
-        status: 'ACTIVE',
-        collaboratorId: 'u2',
-        canEdit: false,
-        canAddItems: true,
-        canRemoveItems: false,
-        canEditItems: false,
-        canMarkPurchased: true,
-        canInviteOthers: false,
-        invitedAt: '2024-01-05T00:00:00Z',
-        collaborator: null,
-      },
-    },
-  ]);
-
-const render = (ui: React.ReactElement) =>
-  renderWithApollo(ui, { cache: seedCollaboratorCache() });
-
-// The verification gate is exercised in its own suite; here it always allows
-// the action so these tests stay focused on their own behaviour.
-jest.mock('#hooks/auth/useEmailVerification', () => ({
-  useVerifiedEmailGate: () => ({
-    requireVerifiedEmail: () => true,
-    hasUnverifiedEmail: false,
-  }),
-  useEmailVerificationActions: () => ({
-    skipVerification: jest.fn(),
-    resumeVerification: jest.fn(),
-  }),
-}));
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#store/useAppStore', () => {
-  const mockState = {
-    user: { id: 'u1', email: 'owner@test.com' },
-    isOnline: true,
-    apiReachable: true,
-  };
-  const fn = <T,>(selector: (state: typeof mockState) => T): T =>
-    selector(mockState);
-  fn.getState = () => ({});
-  fn.setState = jest.fn();
-  fn.subscribe = jest.fn();
-  return { useAppStore: fn, useUser: jest.fn(() => mockState.user) };
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
+
+const ME = 'u1';
+const OWNER = 'u2';
+const person = {
+  id: ME,
+  email: `${ME}@example.com`,
+  emailVerified: true,
+  onBoarded: true,
+};
+
+/** A list shared by its owner, as the share screen reads it. */
+const sharedList = (
+  overrides: Partial<ShoppingListNode> = {},
+): ShoppingListNode => ({
+  ...ownShoppingList('sl1', 'Weekly Groceries'),
+  isPublic: true,
+  shareCode: 'ABC123',
+  shareLink: { __typename: 'ShareLink', universal: 'https://example.com/s/1' },
+  ownerships: [listOwner(ME, 'Sam')],
+  collaboratorsConnection: collaboratorsOf(
+    listCollaborator('u3', { email: 'alex@example.com' }),
+    listCollaborator('u4', {
+      email: 'kim@example.com',
+      status: CollaboratorStatus.Pending,
+    }),
+    listCollaborator('u5', {
+      email: 'gone@example.com',
+      status: CollaboratorStatus.Removed,
+    }),
+  ),
+  ...overrides,
 });
 
-// useShoppingListDetails now returns already-materialized collaborator
-// fragments (with invitedAt), which ShareList consumes directly.
-const mockCollaborators = [
-  {
-    __typename: 'ShoppingListCollaborator',
-    id: 'c1',
-    email: 'owner@test.com',
-    role: 'OWNER',
-    status: 'ACTIVE',
-    collaboratorId: 'u1',
-    canEdit: true,
-    canAddItems: true,
-    canRemoveItems: true,
-    canEditItems: true,
-    canMarkPurchased: true,
-    canInviteOthers: true,
-    invitedAt: '2024-01-01T00:00:00Z',
-    collaborator: null,
-  },
-  {
-    __typename: 'ShoppingListCollaborator',
-    id: 'c2',
-    email: 'member@test.com',
-    role: 'CONTRIBUTOR',
-    status: 'ACTIVE',
-    collaboratorId: 'u2',
-    canEdit: false,
-    canAddItems: true,
-    canRemoveItems: false,
-    canEditItems: false,
-    canMarkPurchased: true,
-    canInviteOthers: false,
-    invitedAt: '2024-01-05T00:00:00Z',
-    collaborator: null,
-  },
-];
+/** The same list, someone else's, shared with me as `me`. */
+const sharedWithMe = (me: Parameters<typeof listCollaborator>[1] = {}) =>
+  sharedList({
+    ownerships: [listOwner(OWNER, 'Alex')],
+    collaboratorsConnection: collaboratorsOf(
+      listCollaborator(OWNER, { email: 'owner@example.com' }),
+      listCollaborator(ME, { email: person.email, ...me }),
+    ),
+  });
 
-// Ownership is a separate ShoppingListOwnership record (not the collaborator
-// `role`). Mutable so individual tests can flip between owner / non-owner.
-let mockOwnerships: Array<{
-  __typename: 'ShoppingListOwnership';
-  id: string;
-  userId: string;
-  user: null;
-}> = [];
+let log = operationLog();
 
-// `null` stands for a details read that produced nothing to show.
-let mockDetailsRead: { loading: boolean; hasResult: boolean } | null = null;
-const mockRefetch = jest.fn();
+async function openShare(
+  list: ShoppingListNode,
+  answers: ReturnType<typeof recordMock>[] = [],
+) {
+  renderWithApollo(<ShareList route={{ params: { listId: 'sl1' } }} />, {
+    cache: makeCache(),
+    links: [log.link],
+    operationMocks: [
+      ...answers.map(answer => answer.mock),
+      listDetailsRead(list).mock,
+    ],
+  });
+  await log.landed(GetShoppingListDetailsDocument);
+}
 
-jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
-  useShoppingListDetails: () => ({
-    shoppingList: mockDetailsRead
-      ? null
-      : {
-          id: 'sl1',
-          name: 'Test List',
-          homeId: null,
-          home: null,
-        },
-    loading: mockDetailsRead?.loading ?? false,
-    hasResult: mockDetailsRead?.hasResult ?? true,
-    collaborators: mockDetailsRead ? [] : mockCollaborators,
-    ownerships: mockDetailsRead ? [] : mockOwnerships,
-    name: 'Test List',
-    refetch: mockRefetch,
-  }),
-}));
+/** Presses `label` on the last alert raised, as the person answers it. */
+function answerAlert(label: string) {
+  const [, , buttons] = jest.mocked(alertService.alert).mock.calls.at(-1) ?? [];
+  const button = buttons?.find(candidate => candidate.text === label);
+  const { onPress } = button ?? {};
+  if (!onPress) throw new Error(`no ${label} on the last alert`);
+  act(() => onPress());
+}
 
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
-  createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
-  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
-}));
-
-jest.mock('#components/molecules/EmailInput', () => ({
-  EmailInput: (props: TextInputProps) => {
-    const { TextInput } = require('react-native');
-    return <TextInput placeholder="Enter email address" {...props} />;
-  },
-}));
-jest.mock('#components/organisms/Header', () => ({
-  Header: ({ title }: { title?: string }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID="header">
-        <Text>{title}</Text>
-      </View>
-    );
-  },
-}));
-jest.mock('#components/molecules/Loading', () => ({
-  Loading: () => null,
-}));
-jest.mock('#components/molecules/Button', () => ({
-  Button: ({
-    title,
-    children,
-    onPress,
-  }: {
-    title?: string;
-    children?: React.ReactNode;
-    onPress: () => void;
-  }) => {
-    const { Pressable, Text } = require('react-native');
-    return (
-      <Pressable onPress={onPress}>
-        <Text>{title ?? children}</Text>
-      </Pressable>
-    );
-  },
-}));
-jest.mock('#features/shoppingList/components/OfflineGate', () => ({
-  OfflineGate: ({ children }: { children: React.ReactNode }) => children,
-}));
-jest.mock('#components/molecules/AlertBanner', () => ({
-  AlertBanner: ({ title }: { title: string }) => {
-    const { Text } = require('react-native');
-    return <Text>{title}</Text>;
-  },
-}));
-jest.mock(
-  '#features/shoppingList/components/CollaboratorPermissionsBottomSheet',
-  () => {
-    const { forwardRef, useImperativeHandle } = require('react');
-    const { View } = require('react-native');
-    const comp = forwardRef(
-      (_: object, ref: React.Ref<{ open: () => void }>) => {
-        useImperativeHandle(ref, () => ({ open: jest.fn() }));
-        return <View testID="permissions-sheet" />;
-      },
-    );
-    return { __esModule: true, default: comp };
-  },
-);
+const roleChip = (role: TranslationKey) => screen.queryByText(t(role));
 
 beforeEach(() => {
-  jest.useFakeTimers();
+  jest.clearAllMocks();
+  log = operationLog();
+  useStore.setState({ user: person, isOnline: true, apiReachable: true });
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+describe('reading the list', () => {
+  it('says a cold read failed, and reads again on a retry', async () => {
+    renderWithApollo(<ShareList route={{ params: { listId: 'sl1' } }} />, {
+      cache: makeCache(),
+      links: [log.link],
+      operationMocks: [
+        recordMock(GetShoppingListDetailsDocument, {
+          error: new Error('Network request failed'),
+        }).mock,
+      ],
+    });
+    await log.landed(GetShoppingListDetailsDocument);
 
-describe('ShareList', () => {
-  const route = { params: { listId: 'sl1' } };
+    fireEvent.press(screen.getByText(t('labels.tryAgain')));
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockDetailsRead = null;
-    // Default: the current user (u1) owns the list via an ownership record.
-    mockOwnerships = [
-      {
-        __typename: 'ShoppingListOwnership',
-        id: 'o1',
-        userId: 'u1',
-        user: null,
-      },
-    ];
+    await expect(
+      log.requested(GetShoppingListDetailsDocument, 2),
+    ).resolves.toBeUndefined();
   });
 
-  it('renders the title', () => {
-    render(<ShareList route={route} />);
-    expect(screen.getByText('Share List')).toBeTruthy();
-  });
-
-  // The flag is the screen's own: a pull answered at once (offline, from the
-  // cache) lets it go, and nothing the app refetches later sets it again.
-  it('spins only while its own pull runs, even one answered at once', async () => {
-    mockRefetch.mockResolvedValue(undefined);
-    render(<ShareList route={route} />);
-    const control = () =>
-      screen.UNSAFE_getByType(RefreshControl).props as {
-        refreshing: boolean;
-        onRefresh: () => void;
-      };
-    expect(control().refreshing).toBe(false);
+  it('reads again on a pull, spinning only while it does', async () => {
+    await openShare(sharedList());
+    const control = () => screen.UNSAFE_getByType(RefreshControl).props;
 
     act(() => {
       control().onRefresh();
     });
     expect(control().refreshing).toBe(true);
+    await log.landed(GetShoppingListDetailsDocument, 2);
 
-    await drainTimers();
     expect(control().refreshing).toBe(false);
-    expect(mockRefetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the owner', () => {
+  it('shares by code and invites in any role', async () => {
+    await openShare(sharedList());
+
+    expect(
+      screen.getByText(t('shoppingListScreens.shareViaCode')),
+    ).toBeTruthy();
+    expect(roleChip('collaboratorRoles.editor')).toBeTruthy();
   });
 
-  it('shows the loading state, not an empty share screen, on a cold read', () => {
-    mockDetailsRead = { loading: true, hasResult: false };
-    render(<ShareList route={route} />);
-    expect(screen.getByText('Share List')).toBeTruthy();
-    expect(screen.queryByText('Invite Members')).toBeNull();
-    expect(screen.queryByTestId(kitTestIDs.stateError)).toBeNull();
+  it('sees who it is shared with and who is invited, not who was removed', async () => {
+    await openShare(sharedList());
+
+    expect(screen.getByText('alex@example.com')).toBeTruthy();
+    expect(screen.getByText('kim@example.com')).toBeTruthy();
+    expect(screen.queryByText('gone@example.com')).not.toBeOnTheScreen();
   });
 
-  it('shows a retryable error when the details read fails with nothing cached', () => {
-    mockDetailsRead = { loading: false, hasResult: false };
-    render(<ShareList route={route} />);
-    expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
-    expect(screen.queryByText('Invite Members')).toBeNull();
+  it('removes a member once confirmed', async () => {
+    const removal = recordMock(RemoveCollaboratorDocument, { held: true });
+    await openShare(sharedList(), [removal]);
 
-    fireEvent.press(screen.getByText('Try again'));
-    expect(mockRefetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows invite section', () => {
-    render(<ShareList route={route} />);
-    expect(screen.getByText('Invite Members')).toBeTruthy();
-  });
-
-  it('shows current members section', () => {
-    render(<ShareList route={route} />);
-    expect(screen.getByText('Current Members')).toBeTruthy();
-  });
-
-  it('shows member emails', () => {
-    render(<ShareList route={route} />);
-    expect(screen.getAllByText('owner@test.com').length).toBeGreaterThanOrEqual(
-      1,
+    const [removeAlex] = screen.getAllByLabelText(
+      t('shoppingListScreens.removeMemberA11y'),
     );
-    expect(
-      screen.getAllByText('member@test.com').length,
-    ).toBeGreaterThanOrEqual(1);
+    if (!removeAlex) throw new Error('no remove');
+    fireEvent.press(removeAlex);
+    answerAlert(t('labels.remove'));
+    await log.requested(RemoveCollaboratorDocument);
+
+    expect(removal.fired[0]).toMatchObject({ input: { id: 'c-u3' } });
   });
 
-  it('shows member statuses', () => {
-    render(<ShareList route={route} />);
-    expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('shows email input placeholder', () => {
-    render(<ShareList route={route} />);
-    expect(screen.getByPlaceholderText('Enter email address')).toBeTruthy();
-  });
-
-  it('hides the Leave List action for the list owner', () => {
-    // u1 is in `ownerships`, so even though the leave flow exists, the owner
-    // must not be offered "Leave" (there is no transfer-ownership mutation —
-    // the owner deletes the list instead).
-    render(<ShareList route={route} />);
-    expect(screen.queryByText('Leave List')).toBeNull();
-    expect(screen.queryByText('Danger Zone')).toBeNull();
-  });
-
-  it('tags the owning member and hides their remove button', () => {
-    render(<ShareList route={route} />);
-    expect(screen.getAllByText('Owner').length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('shows the Leave List action when the current user is not the owner', () => {
-    // Ownership lives in `ownerships`, decoupled from collaborator role:
-    // someone else (u2) owns the list, so u1 is a leaving-eligible collaborator
-    // regardless of what role their collaborator row carries.
-    mockOwnerships = [
-      {
-        __typename: 'ShoppingListOwnership',
-        id: 'o2',
-        userId: 'u2',
-        user: null,
-      },
-    ];
-    render(<ShareList route={route} />);
-    expect(screen.getByText('Leave List')).toBeTruthy();
-    expect(screen.getByText('Danger Zone')).toBeTruthy();
-  });
-
-  it('offers the owner the share link and member removal', () => {
-    render(<ShareList route={route} />);
-    expect(
-      screen.getByText(t('shoppingListScreens.publicSharingDisabled')),
-    ).toBeTruthy();
-    expect(
-      screen.getByLabelText(t('shoppingListScreens.removeMemberA11y')),
-    ).toBeTruthy();
-  });
-
-  // On a personal list sharing and the roster are the owner's, and inviting
-  // takes canInviteOthers: the API refuses a collaborator each of them.
-  describe('for a collaborator without canInviteOthers', () => {
-    beforeEach(() => {
-      mockOwnerships = [
-        {
-          __typename: 'ShoppingListOwnership',
-          id: 'o3',
-          userId: 'u3',
-          user: null,
+  it('changes a member’s role, and reads the list again', async () => {
+    const change = recordMock(UpdateCollaboratorRoleDocument, {
+      data: {
+        updateCollaboratorRole: {
+          __typename: 'UpdateCollaboratorRolePayload',
         },
-      ];
-      jest
-        .mocked(useUser)
-        .mockReturnValue({ id: 'u2', email: 'member@test.com' } as ReturnType<
-          typeof useUser
-        >);
+      },
     });
+    await openShare(sharedList(), [change]);
 
-    afterEach(() => {
-      jest
-        .mocked(useUser)
-        .mockReturnValue({ id: 'u1', email: 'owner@test.com' } as ReturnType<
-          typeof useUser
-        >);
-    });
+    fireEvent.press(screen.getByText('alex@example.com'));
+    expect(screen.getByText(t('collaborators.editPermissions'))).toBeTruthy();
+    // The sheet's role cards come after the invite's chips.
+    const editor = screen.getAllByText(t('collaboratorRoles.editor')).at(-1);
+    if (!editor) throw new Error('no Editor card');
+    fireEvent.press(editor);
+    fireEvent.press(screen.getByText(t('labels.update')));
+    await log.landed(UpdateCollaboratorRoleDocument);
 
-    it('offers no share link, invite or member removal', () => {
-      render(<ShareList route={route} />);
-      expect(screen.queryByText(t('labels.inviteMembers'))).toBeNull();
-      expect(
-        screen.queryByText(t('shoppingListScreens.publicSharingDisabled')),
-      ).toBeNull();
-      expect(
-        screen.queryByLabelText(t('shoppingListScreens.removeMemberA11y')),
-      ).toBeNull();
+    expect(change.fired[0]).toMatchObject({
+      input: { role: CollaboratorRole.Editor },
     });
+    await expect(
+      log.requested(GetShoppingListDetailsDocument, 2),
+    ).resolves.toBeUndefined();
+  });
+
+  it('is tagged owner, and never offered a way to leave', async () => {
+    await openShare(
+      sharedList({
+        collaboratorsConnection: collaboratorsOf(
+          listCollaborator(ME, { email: person.email }),
+        ),
+      }),
+    );
+
+    expect(screen.getByText(t('shoppingListScreens.owner'))).toBeTruthy();
+    expect(screen.queryByText(t('labels.leaveList'))).not.toBeOnTheScreen();
+  });
+});
+
+describe('a collaborator', () => {
+  it('invites only in roles their own row allows, and manages no one', async () => {
+    await openShare(
+      sharedWithMe({
+        role: CollaboratorRole.Contributor,
+        canInviteOthers: true,
+        canAddItems: true,
+        canEditItems: true,
+        canMarkPurchased: true,
+      }),
+    );
+
+    expect(
+      screen.queryByText(t('shoppingListScreens.shareViaCode')),
+    ).not.toBeOnTheScreen();
+    expect(roleChip('collaboratorRoles.contributor')).toBeTruthy();
+    expect(roleChip('collaboratorRoles.editor')).not.toBeOnTheScreen();
+    expect(
+      screen.queryByLabelText(t('shoppingListScreens.removeMemberA11y')),
+    ).not.toBeOnTheScreen();
+    // A person's press: the card takes none for someone who may not manage.
+    await userEvent.setup().press(screen.getByText('owner@example.com'));
+    expect(
+      screen.queryByText(t('collaborators.editPermissions')),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('invites no one while their own invitation is pending', async () => {
+    await openShare(
+      sharedWithMe({
+        status: CollaboratorStatus.Pending,
+        canInviteOthers: true,
+      }),
+    );
+
+    expect(
+      screen.queryByLabelText(t('labels.inviteMembers')),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('leaves once confirmed, by their own row, and goes back', async () => {
+    const leave = recordMock(RemoveCollaboratorDocument, {
+      data: {
+        removeShoppingListCollaborator: {
+          __typename: 'RemoveShoppingListCollaboratorPayload',
+        },
+      },
+    });
+    await openShare(sharedWithMe(), [leave]);
+
+    fireEvent.press(screen.getByText(t('labels.leaveList')));
+    answerAlert(t('labels.leaveList'));
+    await log.landed(RemoveCollaboratorDocument);
+
+    expect(leave.fired[0]).toMatchObject({ input: { id: `c-${ME}` } });
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('cannot leave twice while leaving', async () => {
+    await openShare(sharedWithMe(), [
+      recordMock(RemoveCollaboratorDocument, { held: true }),
+    ]);
+
+    fireEvent.press(screen.getByText(t('labels.leaveList')));
+    answerAlert(t('labels.leaveList'));
+    await log.requested(RemoveCollaboratorDocument);
+
+    expect(
+      screen.getByRole('button', { name: t('labels.leaveList') }),
+    ).toBeDisabled();
+  });
+
+  it('is told when leaving fails, and stays', async () => {
+    await openShare(sharedWithMe(), [
+      recordMock(RemoveCollaboratorDocument, {
+        data: {
+          removeShoppingListCollaborator: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            message: 'No',
+          },
+        },
+      }),
+    ]);
+
+    fireEvent.press(screen.getByText(t('labels.leaveList')));
+    answerAlert(t('labels.leaveList'));
+    await log.landed(RemoveCollaboratorDocument);
+
+    expect(alertService.alert).toHaveBeenLastCalledWith(
+      t('labels.error'),
+      t('shoppingListScreens.failedToLeave'),
+    );
+    expect(mockNav.goBack).not.toHaveBeenCalled();
+  });
+
+  // A row with no email is never taken for a person with none on record.
+  it('is not mistaken for another member when neither has an email', async () => {
+    useStore.setState({ user: { ...person, email: null } });
+
+    await openShare(
+      sharedList({
+        ownerships: [listOwner(OWNER, 'Alex')],
+        collaboratorsConnection: collaboratorsOf(
+          listCollaborator('u3', { email: null }),
+        ),
+      }),
+    );
+
+    expect(screen.queryByText(t('labels.leaveList'))).not.toBeOnTheScreen();
+  });
+});
+
+describe('a list in a home', () => {
+  const inHome: ShoppingListNode = {
+    ...sharedWithMe(),
+    homeId: 'h1',
+    home: {
+      __typename: 'Home',
+      id: 'h1',
+      name: 'Family',
+      myMembership: {
+        __typename: 'Membership',
+        id: 'm1',
+        role: MembershipRole.Member,
+      },
+    },
+  };
+
+  it('is shared through the home, not here', async () => {
+    await openShare(inHome);
+
+    expect(
+      screen.getByText(
+        t('shoppingListScreens.shareHomeLinkedNotice', { name: 'Family' }),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(t('labels.leaveList'))).not.toBeOnTheScreen();
+    fireEvent.press(screen.getByText(t('shoppingListScreens.manageHome')));
+
+    expect(mockNav.toHomeDetail).toHaveBeenCalledWith({ homeId: 'h1' });
   });
 });

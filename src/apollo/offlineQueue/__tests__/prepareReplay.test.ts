@@ -20,7 +20,7 @@ import {
 import {
   AddItemToShoppingListDocument,
   MoveShoppingItemToPantryDocument,
-  MoveShoppingListItemDocument,
+  RemoveItemFromShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { todayKey } from '#/utils/dateUtils';
 import type { DocumentNode } from 'graphql';
@@ -119,9 +119,7 @@ describe('prepareReplay', () => {
 
   it('adds no day to a document that declares none', async () => {
     const replayed = await prepare(
-      queued(MoveShoppingListItemDocument, {
-        input: { itemId: 'row-1', afterItemId: 'row-0' },
-      }),
+      queued(RemoveItemFromShoppingListDocument, { input: { id: 'row-1' } }),
     );
 
     expect(replayed).not.toHaveProperty('today');

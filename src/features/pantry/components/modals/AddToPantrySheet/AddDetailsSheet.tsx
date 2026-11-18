@@ -21,7 +21,6 @@ import { StoragePage } from './StoragePage';
 import { StockSettingsPage } from './StockSettingsPage';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
-import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
 import { takesContents } from '#domain/stockAmount';
 import type { UnitType } from '#/graphql/generated/schemaTypes';
 import { reportValidationErrors } from '#/utils/validation/common';
@@ -150,32 +149,27 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const setAcquisitionMethod = (v: OfferedAcquisitionMethod) =>
     setField('acquisitionMethod', v);
 
-  // Store selection (PurchaseInfoInput stores by id; free text isn't sent)
-  const handleStoreSelected = makeIdNameHandler(setStoreId, setStoreName);
-  const pickUnit = makeIdNameHandler(setUnitId, setUnit);
+  // Sent by id; the field has handed a picked store's name over as text.
+  const handleStoreSelected = (id: string | null) => setStoreId(id);
+  // `UnitAutocompleteField` has already written the picked unit's symbol.
   const handleUnitSelected = (
     id: string | null,
-    name: string | null,
+    _name: string | null,
     type?: UnitType | null,
   ) => {
-    pickUnit(id, name);
+    setUnitId(id);
     setField('unitType', type ?? null);
   };
   // Each keystroke clears the pick, and a half-typed unit is not yet a mistake.
-  const pickSizeUnit = makeIdNameHandler(
-    (v: string | null) =>
-      setValue('sizeUnitId', v, {
-        shouldDirty: true,
-        shouldValidate: v !== null,
-      }),
-    setSizeUnit,
-  );
   const handleSizeUnitSelected = (
     id: string | null,
-    name: string | null,
+    _name: string | null,
     type?: UnitType | null,
   ) => {
-    pickSizeUnit(id, name);
+    setValue('sizeUnitId', id, {
+      shouldDirty: true,
+      shouldValidate: id !== null,
+    });
     setField('sizeUnitType', type ?? null);
   };
 
@@ -188,12 +182,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     if (location?.temperature && location.temperature !== StorageState.None) {
       setStorageState(location.temperature);
     }
-  };
-
-  // Handle add new storage location
-  const handleAddNewLocation = (name: string) => {
-    setStorageLocation(name);
-    setSelectedStorageLocationId(null);
   };
 
   // Handle page change
@@ -292,7 +280,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           setStorageLocation={setStorageLocation}
           storageLocations={storageLocations}
           handleStorageLocationSelected={handleStorageLocationSelected}
-          handleAddNewLocation={handleAddNewLocation}
           condition={condition}
           setCondition={setCondition}
           tags={tags}

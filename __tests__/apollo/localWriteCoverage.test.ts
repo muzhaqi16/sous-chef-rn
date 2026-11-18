@@ -9,8 +9,6 @@ import {
 const NO_LOCAL_WRITE: Record<string, string> = {
   MarkExpirationAction:
     'writes the notification store, not the cache: its answer states neither the row nor the badge',
-  MarkRecipeAsCooked:
-    'shows nothing until answered: the server picks the stacks it deducts',
   MovePurchasedItemsToPantry:
     'shows nothing until answered: the server picks the lines, and the pantry reads the rows',
 };

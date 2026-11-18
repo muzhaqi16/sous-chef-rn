@@ -185,15 +185,15 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
       snapPoints={['80%']}
       contentContainerStyle={styles.contentContainer}
       style={styles.scrollView}
+      header={
+        <BottomSheetHeader
+          title={t('mealPlanSettings.planSettings')}
+          onCancel={onClose}
+          onConfirm={onClose}
+          confirmLabel={t('labels.done')}
+        />
+      }
     >
-      <BottomSheetHeader
-        contentPadding="md"
-        title={t('mealPlanSettings.planSettings')}
-        onCancel={onClose}
-        onConfirm={onClose}
-        confirmLabel={t('labels.done')}
-      />
-
       {/* Plan info */}
       <View style={styles.planInfo}>
         <Text role="heading">{mealPlan.name}</Text>

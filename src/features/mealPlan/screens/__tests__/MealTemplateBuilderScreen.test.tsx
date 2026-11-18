@@ -1,445 +1,463 @@
-'use no memo';
 import React from 'react';
-import { act, screen, userEvent } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  act,
+  fireEvent,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
+import {
+  inputOf,
+  recordMock,
+  renderWithApollo,
+  seedQuery,
+  type MockDataFor,
+} from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
+import { screenShows } from '#/test-utils/cacheWaits';
+import { recipeRead } from '#/test-utils/fixtures/recipeFixtures';
+import { useStore } from '#store';
 import { t } from '#/i18n';
-import type { DataState } from '#hooks/data/useDataState';
-import { drainTimers } from '#/test-utils/drainTimers';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { MealType, TemplateCategory } from '#/graphql/generated/schemaTypes';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import { GetDietaryProfileDocument } from '#operations/user/user.generated';
+import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  AddTemplateItemDocument,
+  CreateMealTemplateDocument,
+  GetMealTemplateForEditDocument,
+  RemoveTemplateItemDocument,
+  UpdateMealTemplateDocument,
+  UpdateTemplateItemDocument,
+} from '#features/mealPlan/graphql/mealTemplate.generated';
+import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
+import { MEAL_TYPE_LABEL_KEYS } from '#features/mealPlan/utils/mealPlanEnumLabels';
+import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { MealTemplateBuilderScreen } from '../MealTemplateBuilderScreen';
-
-// Delegate to the real hook and spy on the write: `control` has no
-// plain-object equivalent, so a stubbed form renders no Controller at all.
-// The form object is patched IN PLACE — replacing it would change its identity
-// every render, and the effect under test depends on that identity.
-const templateResets: { name?: string }[] = [];
-jest.mock('react-hook-form', () => {
-  const actual = jest.requireActual('react-hook-form');
-  const patched = new WeakSet<object>();
-  return {
-    ...actual,
-    useForm: (...args: unknown[]) => {
-      const form = actual.useForm(...args);
-      if (!patched.has(form)) {
-        patched.add(form);
-        const original = form.reset.bind(form);
-        form.reset = (values?: { name?: string }) => {
-          if (values && 'name' in values) templateResets.push(values);
-          return original(values);
-        };
-      }
-      return form;
-    },
-  };
-});
-
-// The hook hands the template's own fields and, apart from them, every one
-// of its meals as a flat list — however many pages they were read in.
-let mockLoadedTemplate: Record<string, unknown> | null = null;
-let mockLoadedItems: Record<string, unknown>[] = [];
-let mockLoadState: DataState = 'ready';
-const mockReloadTemplate = jest.fn();
-jest.mock('#features/mealPlan/hooks/useMealTemplateForEdit', () => ({
-  useMealTemplateForEdit: () => ({
-    template: mockLoadedTemplate,
-    items: mockLoadedItems,
-    state: mockLoadState,
-    refetch: mockReloadTemplate,
-  }),
-}));
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-const mockAddItem = jest.fn(async () => true);
-const mockUpdateItem = jest.fn(async () => true);
-jest.mock('#features/mealPlan/hooks/useMealTemplateEditor', () => ({
-  useMealTemplateEditor: jest.fn(() => ({
-    createTemplate: jest.fn(),
-    updateTemplate: jest.fn(),
-    addItem: mockAddItem,
-    updateItem: mockUpdateItem,
-    removeItem: jest.fn(),
-    readRecipeName: (recipeId: string) =>
-      recipeId === 'recipe-2' ? 'Pesto Pasta' : '',
-    creating: false,
-    updating: false,
-  })),
-}));
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
-interface PickerProps {
-  onAddRecipe: (recipeId: string, mealType: MealType) => void;
-}
-const pickerRenders: PickerProps[] = [];
-jest.mock('#features/mealPlan/components/AddMealSheet', () => ({
-  AddMealSheet: (props: PickerProps) => {
-    pickerRenders.push(props);
-    return null;
+const ME = 'user-1';
+
+let log = operationLog();
+
+type Template = NonNullable<
+  MockDataFor<typeof GetMealTemplateForEditDocument>['mealTemplate']
+>;
+type TemplateItem = NonNullable<
+  NonNullable<
+    NonNullable<NonNullable<Template['itemsConnection']>['edges']>[number]
+  >['node']
+>;
+
+const LASAGNA_ITEM: TemplateItem = {
+  __typename: 'MealTemplateItem',
+  id: 'item-1',
+  dayOffset: 1,
+  mealType: MealType.Dinner,
+  customMealName: null,
+  servings: 4,
+  notes: null,
+  recipe: {
+    __typename: 'Recipe',
+    version: 1,
+    id: 'recipe-1',
+    name: 'Lasagna',
+    imageUrl: null,
+    servings: 4,
+    totalTimeMinutes: 45,
   },
-}));
-
-const pickRecipe = (recipeId: string, mealType: MealType) => {
-  const picker = pickerRenders[pickerRenders.length - 1];
-  if (!picker) throw new Error('the recipe picker never rendered');
-  act(() => picker.onAddRecipe(recipeId, mealType));
 };
 
-jest.mock('#components/templates/FormScreen', () => ({
-  FormScreen: ({
-    children,
-    title,
-    testID,
-  }: {
-    children?: React.ReactNode;
-    title?: string;
-    testID?: string;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID={testID}>
-        <Text>{title}</Text>
-        {children}
-      </View>
-    );
+const templateRead = (items: TemplateItem[] = [LASAGNA_ITEM]): Template => ({
+  __typename: 'MealTemplate',
+  id: 'tpl-1',
+  name: 'Week A',
+  description: 'Easy week',
+  category: TemplateCategory.Weekly,
+  defaultServings: 3,
+  tags: ['quick'],
+  updatedAt: '2026-01-01T00:00:00Z',
+  itemsConnection: {
+    __typename: 'MealTemplateItemConnection',
+    edges: items.map(node => ({ __typename: 'MealTemplateItemEdge', node })),
+    pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: null },
   },
-}));
-
-jest.mock('#components/atoms/FormInput', () => ({
-  FormInput: ({ testID }: { testID?: string }) => {
-    const { View } = require('react-native');
-    return <View testID={testID} />;
-  },
-}));
-jest.mock('#components/atoms/FormTextArea', () => ({
-  FormTextArea: () => null,
-}));
-jest.mock('#components/molecules/FormSelect', () => ({
-  FormSelect: () => null,
-}));
-// Each counter's value, by its label: the servings fields under test.
-const mockCounters: Record<string, string> = {};
-jest.mock('#components/molecules/EditableCounter', () => ({
-  EditableCounter: ({ label, value }: { label: string; value: string }) => {
-    mockCounters[label] = value;
-    return null;
-  },
-}));
-
-let mockCooksFor: number | null = null;
-jest.mock('#features/profile/hooks/useCooksFor', () => ({
-  useCooksFor: () => mockCooksFor,
-}));
-
-beforeEach(() => {
-  jest.useFakeTimers();
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+interface Visit {
+  /** The template being edited; none opens a new one. */
+  template?: Template | null;
+  readFails?: boolean;
+  cooksFor?: number | null;
+  profileHeld?: boolean;
+  answers?: ReturnType<typeof recordMock>[];
+}
 
-describe('MealTemplateBuilderScreen, a template it could not read', () => {
-  afterEach(() => {
-    mockLoadState = 'ready';
-    mockLoadedTemplate = null;
+function openBuilder({
+  template = null,
+  readFails = false,
+  cooksFor = 4,
+  profileHeld = false,
+  answers = [],
+}: Visit = {}) {
+  const cache = makeCache();
+  // A recipe the person can pick, held as its own page left it.
+  seedQuery(cache, {
+    query: GetRecipeDocument,
+    variables: {
+      id: 'recipe-2',
+      ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+    },
+    data: { recipe: recipeRead({ id: 'recipe-2', name: 'Pho' }) },
   });
-
-  it('offers to read it again in place of a blank form', async () => {
-    mockLoadState = 'error';
-    renderWithApollo(
-      <MealTemplateBuilderScreen route={{ params: { templateId: 't1' } }} />,
-    );
-
-    expect(screen.getByText(t('dataState.errorTitle'))).toBeTruthy();
-    expect(screen.queryByTestId(mealPlanTestIDs.templateNameInput)).toBeNull();
-
-    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
-    expect(mockReloadTemplate).toHaveBeenCalledTimes(1);
-  });
-
-  it('keeps the form while it holds the template', () => {
-    mockLoadedTemplate = {
-      id: 't1',
-      name: 'Week A',
-      category: 'WEEKLY',
-      description: null,
-      defaultServings: 2,
-      tags: [],
-    };
-    renderWithApollo(
-      <MealTemplateBuilderScreen route={{ params: { templateId: 't1' } }} />,
-    );
-
-    expect(screen.getByTestId(mealPlanTestIDs.templateNameInput)).toBeTruthy();
-    expect(screen.queryByText(t('dataState.errorTitle'))).toBeNull();
-  });
-});
-
-describe('MealTemplateBuilderScreen', () => {
-  it('renders the create form with a "New Template" title', () => {
-    renderWithApollo(
-      <MealTemplateBuilderScreen route={{ params: undefined }} />,
-    );
-    expect(screen.getByTestId('meal-template-builder-screen')).toBeTruthy();
-    expect(screen.getByTestId('template-name-input')).toBeTruthy();
-    expect(screen.getByText('New Template')).toBeTruthy();
-  });
-
-  it('shows the empty-meals hint before any meal is added', () => {
-    renderWithApollo(
-      <MealTemplateBuilderScreen route={{ params: undefined }} />,
-    );
-    expect(screen.getByText('No meals added yet')).toBeTruthy();
-  });
-
-  // A cache write emits a NEW data object for the same template, so an effect
-  // keyed on the object rehydrates and throws away whatever the user typed.
-  it('hydrates once per template, not once per emitted object', () => {
-    const template = {
-      id: 'tmpl-1',
-      name: 'Winter Week',
-      category: 'WEEKLY',
-      description: '',
-      defaultServings: 4,
-      tags: [],
-    };
-    mockLoadedTemplate = template;
-    mockLoadedItems = [];
-    templateResets.length = 0;
-
-    const { rerender } = renderWithApollo(
-      <MealTemplateBuilderScreen
-        route={{ params: { templateId: 'tmpl-1' } }}
-      />,
-    );
-    const afterFirst = templateResets.length;
-
-    // The same template, a new object — what `cache.modify` produces when a
-    // meal is added on this very screen.
-    mockLoadedTemplate = { ...template };
-    rerender(
-      <MealTemplateBuilderScreen
-        route={{ params: { templateId: 'tmpl-1' } }}
-      />,
-    );
-
-    expect(afterFirst).toBe(1);
-    expect(templateResets.length).toBe(1);
-
-    // A different template is a different record, and does rehydrate.
-    mockLoadedTemplate = { ...template, id: 'tmpl-2', name: 'Summer Week' };
-    rerender(
-      <MealTemplateBuilderScreen
-        route={{ params: { templateId: 'tmpl-2' } }}
-      />,
-    );
-
-    expect(templateResets.length).toBe(2);
-    expect(templateResets[1]?.name).toBe('Summer Week');
-    mockLoadedTemplate = null;
-  });
-
-  it('renders the edit title when a templateId is provided', () => {
-    renderWithApollo(
-      <MealTemplateBuilderScreen route={{ params: { templateId: 'tpl-1' } }} />,
-    );
-    expect(screen.getByText('Edit Template')).toBeTruthy();
-  });
-
-  describe('recipe-backed items', () => {
-    const RECIPE_TEMPLATE = {
-      id: 'tmpl-r',
-      name: 'Pasta Week',
-      category: 'WEEKLY',
-      description: '',
-      defaultServings: 2,
-      tags: [],
-    };
-    const RECIPE_ITEMS = [
-      {
-        id: 'item-1',
-        dayOffset: 0,
-        mealType: MealType.Dinner,
-        customMealName: null,
-        servings: 2,
-        notes: null,
-        recipe: {
-          id: 'recipe-1',
-          name: 'Carbonara',
-          imageUrl: null,
-          servings: 4,
-          totalTimeMinutes: 25,
+  const editing = template !== null || readFails;
+  const reads = !editing
+    ? []
+    : readFails
+    ? [
+        recordMock(GetMealTemplateForEditDocument, {
+          error: new Error('Network request failed'),
+          maxUsageCount: 1,
+        }),
+        recordMock(GetMealTemplateForEditDocument, {
+          data: { mealTemplate: templateRead() },
+        }),
+      ]
+    : [
+        recordMock(GetMealTemplateForEditDocument, {
+          data: { mealTemplate: template },
+        }),
+      ];
+  const profileRead = recordMock(GetDietaryProfileDocument, {
+    held: profileHeld,
+    data: {
+      me: {
+        __typename: 'User',
+        id: ME,
+        dietaryProfile: {
+          __typename: 'DietaryProfile',
+          id: 'profile-1',
+          userId: ME,
+          cooksFor,
+          restrictions: [],
         },
       },
-    ];
+    },
+  });
+  const view = renderWithApollo(
+    <MealTemplateBuilderScreen
+      route={{ params: editing ? { templateId: 'tpl-1' } : undefined }}
+    />,
+    {
+      cache,
+      links: [log.link],
+      operationMocks: [
+        ...answers.map(answer => answer.mock),
+        ...reads.map(read => read.mock),
+        profileRead.mock,
+      ],
+    },
+  );
+  return { ...view, cache, profileRead };
+}
 
-    beforeEach(() => {
-      mockAddItem.mockClear();
-      mockUpdateItem.mockClear();
-      pickerRenders.length = 0;
+const counter = (label: string) =>
+  screen.getByLabelText(t('a11y.valueSuffix', { label }));
+
+// Typed over whole, as a select-on-focus field is.
+const setCounter = (label: string, value: string) => {
+  fireEvent.changeText(counter(label), value);
+};
+
+const sent = (write: ReturnType<typeof recordMock>) => {
+  const [first] = write.fired;
+  if (!first) throw new Error('nothing was sent');
+  return inputOf(first);
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  log = operationLog();
+  useStore.setState({
+    user: {
+      id: ME,
+      email: 'cook@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    isOnline: true,
+    apiReachable: true,
+  });
+});
+
+describe('a new template', () => {
+  it('starts it and its meals at who the person cooks for', async () => {
+    openBuilder({ cooksFor: 5 });
+    await log.landed(GetDietaryProfileDocument);
+
+    expect(screen.getByText(t('labels.newTemplate'))).toBeTruthy();
+    expect(counter(t('labels.defaultServings')).props.value).toBe('5');
+    expect(counter(t('labels.servings')).props.value).toBe('5');
+  });
+
+  it("keeps a meal's chosen servings over a late answer", async () => {
+    const { profileRead } = openBuilder({ cooksFor: 5, profileHeld: true });
+    setCounter(t('labels.servings'), '3');
+
+    profileRead.release();
+    await log.landed(GetDietaryProfileDocument);
+
+    expect(counter(t('labels.servings')).props.value).toBe('3');
+  });
+
+  it('holds its meals as drafts: added, edited in place, and removed', async () => {
+    openBuilder();
+    const user = userEvent.setup();
+    expect(screen.getByText(t('mealTemplateBuilder.noMeals'))).toBeTruthy();
+
+    await user.type(
+      screen.getByTestId(mealPlanTestIDs.templateItemNameInput),
+      'Toast',
+    );
+    await user.press(
+      screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
+    );
+    await user.press(screen.getByText('Toast'));
+    await user.clear(screen.getByTestId(mealPlanTestIDs.templateItemNameInput));
+    await user.type(
+      screen.getByTestId(mealPlanTestIDs.templateItemNameInput),
+      'French toast',
+    );
+    await user.press(
+      screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
+    );
+
+    expect(screen.queryByText('Toast')).not.toBeOnTheScreen();
+    expect(screen.getByText('French toast')).toBeTruthy();
+
+    await user.press(
+      screen.getByLabelText(t('a11y.removeNamed', { name: 'French toast' })),
+    );
+    expect(screen.getByText(t('mealTemplateBuilder.noMeals'))).toBeTruthy();
+  });
+
+  it('names a picked recipe and takes its meal type, keeping no typed name', async () => {
+    const created = recordMock(CreateMealTemplateDocument, { held: true });
+    openBuilder({ answers: [created] });
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByTestId(mealPlanTestIDs.templateItemNameInput),
+      'Something',
+    );
+
+    act(() => {
+      screen
+        .UNSAFE_getByType(AddMealSheet)
+        .props.onAddRecipe('recipe-2', MealType.Lunch);
     });
+    expect(
+      screen.getByTestId(mealPlanTestIDs.templateItemRecipe),
+    ).toHaveTextContent('Pho');
+    await user.press(
+      screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
+    );
+    await user.type(
+      screen.getByTestId(mealPlanTestIDs.templateNameInput),
+      'Week B',
+    );
+    await user.press(screen.getByLabelText(t('labels.save')));
+    await log.requested(CreateMealTemplateDocument);
 
-    afterEach(() => {
-      mockLoadedTemplate = null;
-      mockLoadedItems = [];
-    });
-
-    it('lists every meal the template holds, whichever page it was read in', () => {
-      mockLoadedTemplate = RECIPE_TEMPLATE;
-      mockLoadedItems = [
-        ...RECIPE_ITEMS,
-        {
-          id: 'item-101',
-          dayOffset: 6,
-          mealType: MealType.Lunch,
-          customMealName: 'Leftovers',
-          servings: 1,
-          notes: null,
-          recipe: null,
-        },
-      ];
-      renderWithApollo(
-        <MealTemplateBuilderScreen
-          route={{ params: { templateId: 'tmpl-r' } }}
-        />,
-      );
-
-      expect(
-        screen.getByTestId(mealPlanTestIDs.templateItemRow('item-1')),
-      ).toBeTruthy();
-      expect(
-        screen.getByTestId(mealPlanTestIDs.templateItemRow('item-101')),
-      ).toBeTruthy();
-      expect(screen.getByText('Carbonara')).toBeTruthy();
-      expect(screen.getByText('Leftovers')).toBeTruthy();
-      expect(screen.queryByText('No meals added yet')).toBeNull();
-    });
-
-    // Sending `meal: { customMealName }` for an untouched recipe row replaced
-    // its recipe on the server.
-    it('saves an edited recipe item without replacing its recipe', async () => {
-      const user = userEvent.setup();
-      mockLoadedTemplate = RECIPE_TEMPLATE;
-      mockLoadedItems = RECIPE_ITEMS;
-      renderWithApollo(
-        <MealTemplateBuilderScreen
-          route={{ params: { templateId: 'tmpl-r' } }}
-        />,
-      );
-
-      expect(screen.getByText('Carbonara')).toBeTruthy();
-      await user.press(
-        screen.getByTestId(mealPlanTestIDs.templateItemRow('item-1')),
-      );
-      expect(
-        screen.getByTestId(mealPlanTestIDs.templateItemRecipe),
-      ).toBeTruthy();
-
-      await user.press(
-        screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
-      );
-
-      await drainTimers();
-      expect(mockUpdateItem).toHaveBeenCalledTimes(1);
-      expect(mockUpdateItem).toHaveBeenCalledWith({
-        id: 'item-1',
-        dayOffset: 0,
-        mealType: MealType.Dinner,
-        servings: 2,
-      });
-    });
-
-    it('adds a saved recipe to a slot by its id', async () => {
-      const user = userEvent.setup();
-      mockLoadedTemplate = RECIPE_TEMPLATE;
-      mockLoadedItems = RECIPE_ITEMS;
-      renderWithApollo(
-        <MealTemplateBuilderScreen
-          route={{ params: { templateId: 'tmpl-r' } }}
-        />,
-      );
-
-      pickRecipe('recipe-2', MealType.Lunch);
-      expect(screen.getByText('Pesto Pasta')).toBeTruthy();
-
-      await user.press(
-        screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
-      );
-
-      await drainTimers();
-      expect(mockAddItem).toHaveBeenCalledTimes(1);
-      expect(mockAddItem).toHaveBeenCalledWith(
+    expect(sent(created)).toMatchObject({
+      items: [
         expect.objectContaining({
-          templateId: 'tmpl-r',
           mealType: MealType.Lunch,
           meal: { recipeId: 'recipe-2' },
         }),
-      );
-    });
-
-    it('lists a picked recipe as a draft row under its name', async () => {
-      const user = userEvent.setup();
-      renderWithApollo(
-        <MealTemplateBuilderScreen route={{ params: undefined }} />,
-      );
-
-      pickRecipe('recipe-2', MealType.Dinner);
-      await user.press(
-        screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
-      );
-
-      await drainTimers();
-      expect(screen.queryByText('No meals added yet')).toBeNull();
-      expect(screen.getByText('Pesto Pasta')).toBeTruthy();
-      expect(
-        screen.queryByTestId(mealPlanTestIDs.templateItemRecipe),
-      ).toBeNull();
+      ],
     });
   });
 
-  describe('where servings start', () => {
-    afterEach(() => {
-      mockCooksFor = null;
-      mockLoadedTemplate = null;
-      mockLoadedItems = [];
+  it('is made with its meals, its tags tidied, and then left', async () => {
+    const created = recordMock(CreateMealTemplateDocument, {
+      dataFor: (variables): MockDataFor<typeof CreateMealTemplateDocument> => ({
+        createMealTemplate: {
+          __typename: 'CreateMealTemplatePayload',
+          mealTemplate: { id: String(inputOf(variables).id) },
+        },
+      }),
     });
+    openBuilder({ answers: [created] });
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByTestId(mealPlanTestIDs.templateItemNameInput),
+      'Toast',
+    );
+    setCounter(t('mealTemplateBuilder.dayNumber'), '3');
+    await user.press(
+      screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
+    );
+    await user.type(
+      screen.getByTestId(mealPlanTestIDs.templateNameInput),
+      'Week B',
+    );
+    await user.type(
+      screen.getByPlaceholderText(t('labels.commaSeparated')),
+      ' quick , easy ,',
+    );
 
-    it('starts a new template and its meals at who the user cooks for', () => {
-      mockCooksFor = 4;
-      renderWithApollo(
-        <MealTemplateBuilderScreen route={{ params: undefined }} />,
+    await user.press(screen.getByLabelText(t('labels.save')));
+    await log.landed(CreateMealTemplateDocument);
+    await act(async () => undefined);
+
+    expect(sent(created)).toMatchObject({
+      name: 'Week B',
+      tags: ['quick', 'easy'],
+      items: [
+        expect.objectContaining({
+          dayOffset: 2,
+          meal: { customMealName: 'Toast' },
+        }),
+      ],
+    });
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('an edited template', () => {
+  it('opens filled, its meals named by their recipes', async () => {
+    openBuilder({ template: templateRead() });
+    await log.landed(GetMealTemplateForEditDocument);
+
+    expect(screen.getByText(t('labels.editTemplate'))).toBeTruthy();
+    expect(screen.getByDisplayValue('Week A')).toBeTruthy();
+    expect(screen.getByDisplayValue('Easy week')).toBeTruthy();
+    expect(screen.getByText('Lasagna')).toBeTruthy();
+    expect(
+      screen.getByText(
+        t('mealTemplateBuilder.itemSummary', {
+          day: 2,
+          meal: t(MEAL_TYPE_LABEL_KEYS[MealType.Dinner]),
+          servings: 4,
+        }),
+      ),
+    ).toBeTruthy();
+  });
+
+  it('keeps what was typed when the template is written again', async () => {
+    const { cache, client } = openBuilder({ template: templateRead() });
+    await log.landed(GetMealTemplateForEditDocument);
+    const user = userEvent.setup();
+    await user.type(screen.getByDisplayValue('Week A'), ' plus');
+    const read = {
+      query: GetMealTemplateForEditDocument,
+      variables: { id: 'tpl-1', itemsFirst: MEALS_PAGE_SIZE },
+    };
+
+    seedQuery(cache, {
+      ...read,
+      data: {
+        mealTemplate: { ...templateRead(), description: 'Easy week, again' },
+      },
+    });
+    // The screen's own watcher hears of the write first.
+    await act(async () => {
+      await screenShows(
+        client,
+        read,
+        () => client.readQuery(read)?.mealTemplate?.description,
+        description => description === 'Easy week, again',
       );
-
-      expect(mockCounters['Default Servings']).toBe('4');
-      expect(mockCounters.Servings).toBe('4');
     });
 
-    it('starts at two when that was not answered', () => {
-      renderWithApollo(
-        <MealTemplateBuilderScreen route={{ params: undefined }} />,
-      );
+    expect(screen.getByDisplayValue('Week A plus')).toBeTruthy();
+  });
 
-      expect(mockCounters['Default Servings']).toBe('2');
+  it('saves an edited meal in place, keeping its recipe, and clears the form', async () => {
+    const updated = recordMock(UpdateTemplateItemDocument, {
+      data: {
+        updateTemplateItem: {
+          __typename: 'UpdateTemplateItemPayload',
+          mealTemplateItem: { id: 'item-1' },
+        },
+      },
     });
+    openBuilder({ template: templateRead(), answers: [updated] });
+    await log.landed(GetMealTemplateForEditDocument);
+    const user = userEvent.setup();
 
-    it('keeps the servings an edited template already has', async () => {
-      mockCooksFor = 4;
-      mockLoadedTemplate = {
-        id: 'tmpl-s',
-        name: 'Summer Week',
-        category: 'WEEKLY',
-        description: '',
-        defaultServings: 6,
-        tags: [],
-      };
-      renderWithApollo(
-        <MealTemplateBuilderScreen
-          route={{ params: { templateId: 'tmpl-s' } }}
-        />,
-      );
+    await user.press(screen.getByText('Lasagna'));
+    setCounter(t('labels.servings'), '6');
+    await user.press(
+      screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
+    );
+    await log.landed(UpdateTemplateItemDocument);
+    await act(async () => undefined);
 
-      await drainTimers();
-      expect(mockCounters['Default Servings']).toBe('6');
+    expect(sent(updated)).toMatchObject({ id: 'item-1', servings: 6 });
+    expect(sent(updated)).not.toHaveProperty('meal');
+    expect(screen.getByText(t('mealTemplateBuilder.addMeal'))).toBeTruthy();
+  });
+
+  it('adds a meal on the day typed, and removes a saved one', async () => {
+    const added = recordMock(AddTemplateItemDocument, { held: true });
+    const removed = recordMock(RemoveTemplateItemDocument, { held: true });
+    openBuilder({ template: templateRead(), answers: [added, removed] });
+    await log.landed(GetMealTemplateForEditDocument);
+    const user = userEvent.setup();
+
+    await user.type(
+      screen.getByTestId(mealPlanTestIDs.templateItemNameInput),
+      'Toast',
+    );
+    setCounter(t('mealTemplateBuilder.dayNumber'), '3');
+    await user.press(
+      screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
+    );
+    await log.requested(AddTemplateItemDocument);
+    expect(sent(added)).toMatchObject({ templateId: 'tpl-1', dayOffset: 2 });
+
+    await user.press(
+      screen.getByLabelText(t('a11y.removeNamed', { name: 'Lasagna' })),
+    );
+    await log.requested(RemoveTemplateItemDocument);
+    expect(sent(removed)).toMatchObject({ id: 'item-1' });
+  });
+
+  it('is saved, then left', async () => {
+    const updated = recordMock(UpdateMealTemplateDocument, {
+      data: {
+        updateMealTemplate: {
+          __typename: 'UpdateMealTemplatePayload',
+          mealTemplate: { id: 'tpl-1' },
+        },
+      },
     });
+    openBuilder({ template: templateRead(), answers: [updated] });
+    await log.landed(GetMealTemplateForEditDocument);
+
+    await userEvent.setup().press(screen.getByLabelText(t('labels.save')));
+    await log.landed(UpdateMealTemplateDocument);
+    await act(async () => undefined);
+
+    expect(sent(updated)).toMatchObject({ id: 'tpl-1', name: 'Week A' });
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers to read it again in place of a blank form', async () => {
+    openBuilder({ readFails: true });
+    await log.landed(GetMealTemplateForEditDocument);
+
+    expect(screen.getByText(t('dataState.errorTitle'))).toBeTruthy();
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+    await log.landed(GetMealTemplateForEditDocument, 2);
+
+    expect(screen.getByDisplayValue('Week A')).toBeTruthy();
   });
 });

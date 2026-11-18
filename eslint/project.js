@@ -36,15 +36,8 @@ const ROOT = path.join(__dirname, '..');
 // file the named project happened to exclude no longer falls through to an
 // inferred program — where a type-aware rule sees no program and returns
 // nothing, which reads as a clean file. Pinned to the repo root: a runner
-// started elsewhere would otherwise resolve against its own cwd. Automatic
-// single-run mode stays off: from typescript-eslint 8.72.1 it loads a second
-// copy of overlapping tsconfigs, and `eslint .` exhausts CI's heap.
-// Verified: #typescript-eslint-single-run-mode-loads-overlapping-tsconfigs-twice
-const TYPED = {
-  projectService: true,
-  tsconfigRootDir: ROOT,
-  disallowAutomaticSingleRunInference: true,
-};
+// started elsewhere would otherwise resolve against its own cwd.
+const TYPED = { projectService: true, tsconfigRootDir: ROOT };
 
 const TEST_FILES = ['**/__tests__/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'];
 
@@ -205,6 +198,13 @@ const overrides = [
     // container — the variant CLAUDE.md records as getting away with it.
     files: ['src/features/recipes/components/FolderPicker.tsx'],
     rules: { 'sous-chef/no-scrollable-in-bottom-sheet-view': 'off' },
+  },
+  {
+    // iOS's photo picker is drawn by another process, which no Detox matcher
+    // reaches (the system matcher reads SpringBoard only): its first cell is
+    // tapped by point. Only this helper; specs call it.
+    files: ['e2e/helpers/systemPhotoPicker.ts'],
+    rules: { 'sous-chef/testid-from-registry': 'off' },
   },
   {
     // This module IS where the RNGH-vs-RN choice is made for every list.

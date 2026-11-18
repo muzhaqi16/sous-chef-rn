@@ -58,13 +58,16 @@ export interface PantryActionSharedState {
   /** The packages an amount in the net-weight unit makes; null with no size. */
   packagesOfNetWeight: (amount: number) => number | null;
   pantryItemId: string | undefined;
-  /** Resolved from the ranked-units API, along with the two below. */
+  /** Resolved from the ranked-units API, along with the three below. */
   defaultUnit: PickableUnit | null;
   defaultIncrement: number | null;
+  /** The default unit's own step, whichever unit is picked. */
+  defaultUnitIncrement: number | null;
   commonFractions: number[] | null;
   /** Null when the unit is the same or the conversion failed. */
   availableInSelectedUnit: number | null;
   availableLoading: boolean;
+  conversionUnavailable?: boolean;
   /** Dual-tracked items only. */
   remainingNetWeight: number | null;
   netWeightUnit: UnitLabelSource | undefined;

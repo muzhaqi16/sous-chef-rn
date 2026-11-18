@@ -28,7 +28,6 @@ import {
   moveAnsweredShoppingListItem,
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
-  sortShoppingListRows,
 } from '#features/shoppingList/cache/connections';
 import {
   addLocalShoppingListItem,
@@ -96,12 +95,6 @@ export type UpdateRowInputs = {
 };
 
 export type RemoveRowsInputs = { listId: string };
-
-export type ReorderRowInputs = {
-  listId: string;
-  sortOrder: string;
-  now: string;
-};
 
 /**
  * The row a write names. Read from its variables, which the queue moves onto
@@ -201,24 +194,6 @@ export const removeRows: LocalWrite<RemoveRowsInputs> = {
   // The answer names each row, which puts it back in the server's data.
   commit(cache, { variables, inputs: { listId } }, data) {
     settleRemovedRows(cache, listId, rowIdsOf(variables), appliedPayload(data));
-  },
-};
-
-export const reorderRow: LocalWrite<ReorderRowInputs> = {
-  // Its `commit` only sorts, which a page has done by then.
-  settlesFromFeed: true,
-  apply(cache, { variables, inputs: { listId, sortOrder, now } }) {
-    const row = rowOf(variables);
-    if (!row || !isHeld(cache, row)) return;
-    cache.modify({
-      id: cache.identify(row),
-      fields: { sortOrder: () => sortOrder, updatedAt: () => now },
-    });
-    sortShoppingListRows(cache, listId);
-  },
-  // The answer writes the row, and its order may not be the one worked out here.
-  commit(cache, { inputs: { listId } }) {
-    sortShoppingListRows(cache, listId);
   },
 };
 

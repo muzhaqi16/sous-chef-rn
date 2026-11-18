@@ -2406,7 +2406,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNReanimated (4.7.1):
+  - RNReanimated (4.7.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2428,36 +2428,12 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNReanimated/apple (= 4.7.1)
-    - RNReanimated/common (= 4.7.1)
-    - RNReanimated/view (= 4.7.1)
+    - RNReanimated/apple (= 4.7.2)
+    - RNReanimated/common (= 4.7.2)
+    - RNReanimated/view (= 4.7.2)
     - RNWorklets
     - Yoga
-  - RNReanimated/apple (4.7.1):
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-Core-prebuilt
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-hermes
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - RNWorklets
-    - Yoga
-  - RNReanimated/common (4.7.1):
+  - RNReanimated/apple (4.7.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2481,7 +2457,31 @@ PODS:
     - ReactNativeDependencies
     - RNWorklets
     - Yoga
-  - RNReanimated/view (4.7.1):
+  - RNReanimated/common (4.7.2):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - RNWorklets
+    - Yoga
+  - RNReanimated/view (4.7.2):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2668,7 +2668,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - Unistyles (3.8.1):
+  - Unistyles (3.8.2):
     - hermes-engine
     - NitroModules
     - RCTRequired
@@ -3161,11 +3161,11 @@ SPEC CHECKSUMS:
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
   RNPermissions: 64d0b4bc04663ebed27a42b69c2f0df699d2b4d4
   RNReactNativeHapticFeedback: 16e5f7fd37e2acc5a33ea14f48bfd88ff43776ee
-  RNReanimated: 51c9f6dcd9787f260c9bb9ac28b097270f15c5fc
+  RNReanimated: e3feb9c4bfbaaeff5f9d6f3e96a8944f3be55eb2
   RNScreens: 40b8d4fbffca379138edb3d8032ceaba316a65b2
   RNSVG: 6cae8d4082913be2eb43eaec2a456222c42195ed
   RNWorklets: 3da8f468c848547646f4e6b12fb46ad93a2cdee2
-  Unistyles: befd57e9173fd8202ab772de43f6aa7b54b17cad
+  Unistyles: fcf46110d9ff49369e987fd07519ff64daa276b1
   VisionCamera: f84550cffbbf23f3cac7a3d1d2e66e5098a4e8eb
   Yoga: 18b74b3ade30bebc1904004dfaceae1dd02a330a
 

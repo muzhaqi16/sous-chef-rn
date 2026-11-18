@@ -6,6 +6,7 @@ import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Text } from '#components/atoms/Text';
 import { Sheet } from '#components/templates/Sheet';
@@ -100,17 +101,17 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
       snapPoints={['55%']}
       contentContainerStyle={styles.contentContainer}
       style={styles.scrollView}
+      // No title: the "Mark Cooked" action and the recipe name convey intent.
+      header={
+        <BottomSheetHeader
+          onCancel={onClose}
+          onConfirm={handleConfirm}
+          confirmLabel={t('markCookedModal.markCooked')}
+          confirmDisabled={!!servingsError}
+          confirmTestID={recipesTestIDs.cookConfirm}
+        />
+      }
     >
-      {/* Header — no title; the "Mark Cooked" action and the recipe name
-            below already convey intent. */}
-      <BottomSheetHeader
-        contentPadding="md"
-        onCancel={onClose}
-        onConfirm={handleConfirm}
-        confirmLabel={t('markCookedModal.markCooked')}
-        confirmDisabled={!!servingsError}
-      />
-
       {/* Recipe Info */}
       <View style={styles.recipeInfo}>
         <Text role="bodyStrong" numberOfLines={2}>
@@ -128,6 +129,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
             count: defaultServings || 1,
           })}
           error={servingsError}
+          testID={recipesTestIDs.cookServings}
         />
       </View>
 

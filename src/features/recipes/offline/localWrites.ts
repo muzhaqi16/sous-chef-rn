@@ -16,6 +16,7 @@ import {
   type SaveToFavoritesOptions,
 } from '#features/recipes/cache/favorites';
 import { moveSavedFolder } from '#features/recipes/cache/folders';
+import { bumpStock, drawInside } from '#features/pantry/cache/stock';
 import {
   removeMyRecipesEdge,
   upsertMyRecipesEdge,
@@ -138,4 +139,46 @@ export const moveFolder: LocalWrite<MoveFolderInputs> = {
   apply: moveFolderRows,
   // The answer states only the folder's name and how many recipes moved.
   commit: moveFolderRows,
+};
+
+/** One reviewed draw: its stack, the tracking-unit change when the device can prove it, and the amount as stated. */
+export interface CookDrawInputs {
+  pantryItemId: string;
+  /** In the stack's tracking unit; null when only the server can convert it. */
+  delta: number | null;
+  stated: { amount: number; unitId: string };
+}
+
+export type CookRecipeInputs = {
+  /** A reviewed cook's draws; empty where the server picks the stacks. */
+  draws: CookDrawInputs[];
+  now: string;
+  /** The planned meal the cook completes, and the cook's own id. */
+  meal?: { id: string; cookingLogId: string };
+};
+
+/**
+ * A reviewed cook draws what it states on the stacks it names, at once, as a
+ * use does: an exact count or what a package holds in its own unit. Anything
+ * else waits for the server, which answers with every stack it drew. A planned
+ * meal it completes shows done and linked to the cook.
+ */
+export const cookRecipe: LocalWrite<CookRecipeInputs> = {
+  apply(cache, { inputs: { draws, now, meal } }) {
+    for (const { pantryItemId, delta, stated } of draws) {
+      if (delta !== null) {
+        bumpStock(cache, pantryItemId, delta, now);
+      } else {
+        drawInside(cache, pantryItemId, stated.amount, stated.unitId, now);
+      }
+    }
+    if (!meal) return;
+    const row = { __typename: 'MealPlanItem', id: meal.id };
+    if (!isHeld(cache, row)) return;
+    writeEntityFields(cache, row, {
+      isCompleted: true,
+      completedAt: now,
+      cookingLogId: meal.cookingLogId,
+    });
+  },
 };

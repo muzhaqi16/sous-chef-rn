@@ -61,7 +61,6 @@ interface ShoppingListModalsProviderProps {
   ) => Promise<boolean>;
   searchQuery: string;
   onSearchQueryClear: () => void;
-  onNavigateToListSettings: () => void;
 }
 
 /** Owns every shopping-list modal's state, and renders the modals itself. */
@@ -72,12 +71,8 @@ export function ShoppingListModalsProvider({
   recordPurchase,
   searchQuery,
   onSearchQueryClear,
-  onNavigateToListSettings,
 }: ShoppingListModalsProviderProps) {
-  const addItemSheet = useAddItemSheet({
-    currentListId,
-    onNavigateToListSettings,
-  });
+  const addItemSheet = useAddItemSheet({ currentListId });
 
   const quantityEdit = useQuantityEditModal({
     items,

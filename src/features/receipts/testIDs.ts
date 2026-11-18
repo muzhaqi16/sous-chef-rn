@@ -5,6 +5,12 @@
 export const receiptsTestIDs = {
   scanScreen: 'receipt-scan-screen',
   savedReview: 'receipt-scan-saved-review',
+  savedScanAnother: 'receipt-scan-saved-scan-another',
+  savedDiscard: 'receipt-scan-saved-discard',
+  /** Starts a scan from the screen's first step. */
+  startScan: 'receipt-scan-start',
+  /** Picks a receipt photo from the library when the phone cannot scan. */
+  choosePhoto: 'receipt-scan-choose-photo',
   /** The server is picking out a saved receipt's items. */
   savedReading: 'receipt-scan-saved-reading',
   /** Lines of a saved receipt the API refused, to fix and add again. */
@@ -24,6 +30,8 @@ export const receiptsTestIDs = {
   reviewStoreWhere: 'receipt-review-store-where',
   /** A store on file with no address, offered to take the receipt's. */
   reviewStoreOffer: 'receipt-review-store-offer',
+  reviewStoreChoice: (placeId: string) =>
+    `receipt-review-store-choice-${placeId}`,
   /** The purchase date field; its calendar is the kit's `datePickerCalendar`. */
   reviewDate: 'receipt-review-date',
   /** The banner that asks the API again after a failed match. */
@@ -35,7 +43,13 @@ export const receiptsTestIDs = {
   lineProduct: 'receipt-line-product',
   /** A proposed item's chip in the line sheet, best first. */
   lineSuggestion: (index: number) => `receipt-line-suggestion-${index}`,
+  lineNewPurchase: 'receipt-line-new-purchase',
+  lineEarlierPurchase: (purchaseId: string) =>
+    `receipt-line-earlier-purchase-${purchaseId}`,
   lineSave: 'receipt-line-save',
+  /** What one package holds, when the line counts packages. */
+  lineSize: 'receipt-line-size',
+  lineSizeUnit: 'receipt-line-size-unit',
   lineTickOff: 'receipt-line-tick-off',
   lineNotStocked: 'receipt-line-not-stocked',
 };

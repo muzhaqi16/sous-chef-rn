@@ -16,13 +16,15 @@ import { DataStateView } from '#components/organisms/DataStateView';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { storeBranchLabel } from '#domain/stores';
+import { OPENSTREETMAP_COPYRIGHT } from '#domain/openStreetMap';
+import { Link } from '#components/atoms/Link';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useReceiptFlowExits } from './receiptFlowExits';
 import { toastService } from '#/services/toastService';
 import { rowType } from '#/theme/foundations/type';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
-import { useMoney } from '#domain/money';
+import { useReceiptMoney } from '../hooks/useReceiptCurrency';
 import { useToday } from '#hooks/app/useToday';
 import { fromDateKey, toDateKey } from '#/utils/dateUtils';
 import { EARLIEST_RECEIPT_DAY } from '#features/receipts/utils/receiptDate';
@@ -57,6 +59,16 @@ const shownUnitOf = (
   row.measureUnit && choice.unitText === (row.unit ?? '')
     ? row.measureUnit
     : { symbol: choice.unitText };
+
+const shownSizeUnitOf = (
+  row: ReceiptReviewRow,
+  size: NonNullable<ReceiptLineChoice['packageSize']>,
+): UnitLabelSource => {
+  const printed = row.packages?.size;
+  return printed?.measureUnit && size.unitText === printed.unit
+    ? printed.measureUnit
+    : { symbol: size.unitText };
+};
 
 // Lines that will be added first, then those only recorded, those waiting for
 // a match, those with no product to add yet, those left out, and those already in.
@@ -115,7 +127,7 @@ const STATUS_LOOK: Record<ReceiptRowStatus, StatusLook> = {
 
 export const ReceiptReviewScreen: React.FC = () => {
   const { t } = useTranslation();
-  const money = useMoney();
+  const money = useReceiptMoney();
   const today = useToday();
   const { toPantryMain } = useAppNavigation();
   const exits = useReceiptFlowExits();
@@ -126,6 +138,8 @@ export const ReceiptReviewScreen: React.FC = () => {
     proposedStoreName,
     storeLocation,
     storeOffer,
+    storeChoices,
+    chooseStoreChoice,
     storeUnrecognized,
     purchasedOn,
     dayIsScanDay,
@@ -206,16 +220,39 @@ export const ReceiptReviewScreen: React.FC = () => {
       case 'add':
       case 'added': {
         if (!choice) return row.printed;
+        // A bare count took its list line's amount: say so, so it can be fixed.
+        if (row.fromList) {
+          return t(
+            choice.notStocked
+              ? 'receipts.review.chosenDetailFromListNotStocked'
+              : 'receipts.review.chosenDetailFromList',
+            {
+              printed: row.printed,
+              amount: formatQuantityDisplay(
+                row.fromList.quantity,
+                row.fromList.unit,
+              ),
+            },
+          );
+        }
         return t(
           choice.notStocked
             ? 'receipts.review.chosenDetailNotStocked'
             : 'receipts.review.chosenDetail',
           {
             printed: row.printed,
-            amount: formatQuantityDisplay(
-              choice.quantity,
-              shownUnitOf(row, choice),
-            ),
+            amount: choice.packageSize
+              ? t('receipts.review.packagesAmount', {
+                  count: choice.quantity,
+                  size: formatQuantityDisplay(
+                    choice.packageSize.quantity,
+                    shownSizeUnitOf(row, choice.packageSize),
+                  ),
+                })
+              : formatQuantityDisplay(
+                  choice.quantity,
+                  shownUnitOf(row, choice),
+                ),
           },
         );
       }
@@ -513,6 +550,45 @@ export const ReceiptReviewScreen: React.FC = () => {
                     testID={receiptsTestIDs.reviewStoreOffer}
                   />
                 ) : null}
+                {storeChoices.length > 0 ? (
+                  <View style={styles.storeChoices}>
+                    <Text role="bodyStrong">
+                      {t('receipts.review.storeChoicesTitle')}
+                    </Text>
+                    {storeChoices.map(choice => (
+                      <ItemCard
+                        key={choice.placeId}
+                        id={choice.placeId}
+                        title={choice.name}
+                        subtitle={choice.address}
+                        leftElement={
+                          <Icon
+                            name="storefront-outline"
+                            size="md"
+                            tone="primary"
+                          />
+                        }
+                        onPress={() => {
+                          void chooseStoreChoice(choice);
+                        }}
+                        testID={receiptsTestIDs.reviewStoreChoice(
+                          choice.placeId,
+                        )}
+                      />
+                    ))}
+                    {[
+                      ...new Set(storeChoices.map(choice => choice.credit)),
+                    ].map(credit => (
+                      <Link
+                        key={credit}
+                        variant="caption"
+                        href={OPENSTREETMAP_COPYRIGHT}
+                      >
+                        {credit}
+                      </Link>
+                    ))}
+                  </View>
+                ) : null}
                 {dayIsScanDay ? (
                   <View>
                     {dateField}
@@ -582,6 +658,7 @@ export const ReceiptReviewScreen: React.FC = () => {
         visible={sheetVisible}
         line={editing ?? null}
         choice={editing?.choice}
+        asked={editing?.asked}
         canLeaveOut={editing?.status !== 'skipped'}
         candidates={editing?.candidates ?? []}
         listItemNameFor={key =>
@@ -619,6 +696,9 @@ const styles = StyleSheet.create(theme => ({
   },
   storeWhereText: {
     flexShrink: 1,
+  },
+  storeChoices: {
+    gap: theme.spacing.sm,
   },
   // A price over the discount that made it.
   price: {

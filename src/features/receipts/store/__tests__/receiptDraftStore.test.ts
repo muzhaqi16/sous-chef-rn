@@ -186,6 +186,27 @@ describe('receiptDraftStore', () => {
       expect(draft()?.checkIn?.lines[0]).toEqual(minted?.lines[0]);
     });
 
+    // REL-01 / IN-04: the purchase a line was picked as the receipt for comes
+    // back with the draft after a cold start, at the version read.
+    it('keeps the earlier purchase a line is the receipt for through a restart', async () => {
+      seedDraft();
+      const existingPurchase = { id: 'IN-04-existing-purchase', version: 3 };
+      actions().chooseLine(0, {
+        itemId: 'item-eggs',
+        itemName: 'Eggs',
+        quantity: 12,
+        unitId: null,
+        unitText: '',
+        price: 4,
+        notStocked: true,
+        existingPurchase,
+      });
+
+      await useReceiptDraftStore.persist.rehydrate();
+
+      expect(draft()?.choices?.[0]).toMatchObject({ existingPurchase });
+    });
+
     it('adds a check-in id per send a long receipt needs', () => {
       seedDraft();
       actions().ensureCheckInIds([0], 1);

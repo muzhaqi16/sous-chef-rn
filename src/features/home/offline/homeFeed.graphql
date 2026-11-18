@@ -156,7 +156,7 @@ query HomeFeedSnapshot($input: SyncSnapshotInput!) {
 # name, read after a page that added or removed one of them or moved what the
 # join link is made of, and after a full read. It also reads what the homes
 # list reads on a home, as a full read is how a home joins that list.
-query HomeFeedSummary($id: ID!) {
+query HomeFeedSummary($id: ID!, $wholePage: Int!) {
   home(id: $id) {
     id
     version
@@ -176,7 +176,7 @@ query HomeFeedSummary($id: ID!) {
         }
       }
     }
-    membersConnection(first: 20) {
+    membersConnection(first: $wholePage) {
       totalCount
       pageInfo {
         hasNextPage
@@ -207,7 +207,7 @@ query HomeFeedSummary($id: ID!) {
       }
     }
   }
-  storageLocations(homeId: $id) {
+  storageLocations(homeId: $id, first: $wholePage) {
     totalCount
     pageInfo {
       hasNextPage

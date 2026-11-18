@@ -4,7 +4,9 @@ import {
   amountLeftOf,
   countFactorOver,
   fullPackagesAfter,
+  heldAfterDraw,
   inCountedUnit,
+  packagesStarted,
   shownStock,
 } from '#domain/stockDisplay';
 import { UnitType } from '#/graphql/generated/schemaTypes';
@@ -254,6 +256,18 @@ export function drawInside(
       lastUsedAt: () => now,
     },
   });
+  // One batch (or stock held on the row) moves every figure exactly; with more,
+  // only the total is known until the server says which package it drew.
+  const heldBefore = inside.heldQuantity;
+  const batches = inside.activeBatchCount;
+  if (batches != null && batches <= 1 && heldBefore != null && held > 0) {
+    const after = heldAfterDraw(heldBefore, held, left);
+    // Portions keep exact fractions of a pack; a weighed package counts whole.
+    const quantity = portionUnit ? after : packagesStarted(after);
+    cache.modify({ id, fields: { quantity: () => quantity } });
+    writeHeldStock(cache, pantryItemId, after);
+    return true;
+  }
   writeAmountLeft(
     cache,
     id,
@@ -330,6 +344,62 @@ export function rememberConsumeUnit(
   });
 }
 
+type PackageContents = {
+  size?: { netWeight: number; netWeightUnitId: string } | null;
+  portions?: number | null;
+};
+
+/**
+ * What a counted stack's packages hold, moved by `delta` packages as the API
+ * moves it on a count: by the stack's own figures, or a counted package's.
+ */
+function movedContents(
+  cache: ApolloCache,
+  id: string,
+  delta: number,
+  contents?: PackageContents,
+) {
+  const inside = readInside(cache, id);
+  const counted = inside?.unit?.type === UnitType.Count;
+  const moved = (
+    left: number | null | undefined,
+    perPackage: number | null | undefined,
+  ) =>
+    counted && left != null && perPackage != null
+      ? Math.max(0, left + delta * perPackage)
+      : left;
+  return {
+    remainingPortions: () =>
+      moved(
+        inside?.remainingPortions,
+        contents?.portions ?? inside?.portionsPerTrackingUnit,
+      ),
+    remainingNetWeight: () =>
+      contents?.size &&
+      contents.size.netWeightUnitId !== inside?.netWeightUnit?.id
+        ? null
+        : moved(
+            inside?.remainingNetWeight,
+            contents?.size?.netWeight ?? inside?.netWeight,
+          ),
+  };
+}
+
+/**
+ * What a stack's packages hold, moved to go with `held` packages: written
+ * before a count is, so its amount left never reads the old contents.
+ */
+export function moveContentsTo(
+  cache: ApolloCache,
+  pantryItemId: string,
+  held: number,
+): void {
+  const id = cache.identify({ __typename: 'PantryItem', id: pantryItemId });
+  const before = heldQuantityOf(cache, pantryItemId);
+  if (!id || before === null) return;
+  cache.modify({ id, fields: movedContents(cache, id, held - before) });
+}
+
 /**
  * Moves the cached stock by `delta` tracking units. `heldQuantity` is what the
  * screens show; `quantity` is settled by the response. A package counted in a
@@ -340,26 +410,15 @@ export function bumpStock(
   pantryItemId: string,
   delta: number,
   now: string,
+  contents?: PackageContents,
 ): void {
   const id = cache.identify({ __typename: 'PantryItem', id: pantryItemId });
   if (!id) return;
-  const inside = readInside(cache, id);
-  const counted = inside?.unit?.type === UnitType.Count;
-  const moved = (
-    left: number | null | undefined,
-    perPackage: number | null | undefined,
-  ) =>
-    counted && left != null && perPackage != null
-      ? Math.max(0, left + delta * perPackage)
-      : left;
   cache.modify({
     id,
     fields: {
       quantity: (existing: number) => Math.max(0, existing + delta),
-      remainingPortions: () =>
-        moved(inside?.remainingPortions, inside?.portionsPerTrackingUnit),
-      remainingNetWeight: () =>
-        moved(inside?.remainingNetWeight, inside?.netWeight),
+      ...movedContents(cache, id, delta, contents),
       updatedAt: () => now,
       lastUsedAt: () => now,
     },

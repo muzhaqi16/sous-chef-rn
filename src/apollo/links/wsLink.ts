@@ -38,10 +38,8 @@ const DEFAULT_KEEP_ALIVE_MS = 12_000;
 
 let transport: WebSocketTransport = { webSocketImpl: globalThis.WebSocket };
 
-// env.WEB_SOCKET_URL if set, else the environment's default. Read when a
-// socket dials, not at load: the build config is a platform service.
-const wsUrl = (): string =>
-  env.WEB_SOCKET_URL ?? Environment.getApiConfig().wsUrl;
+// Read when a socket dials, not at load: the build config is a platform service.
+const wsUrl = (): string => Environment.getApiConfig().wsUrl;
 
 // Replaceable because `dispose()` is one-way: it latches `disposed` with no
 // reset, after which every retry silently gives up. A session end must drop

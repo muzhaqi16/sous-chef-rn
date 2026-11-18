@@ -425,18 +425,39 @@ mutation MarkRecipeAsCooked(
           name
         }
         # The stacks the cook drew from, so the pantry shows what is left: a
-        # cook publishes no pantry event.
+        # cook publishes no pantry event. What each row recorded is what the
+        # cook reports, since a draw stops at what its stack held.
         pantryItemsUsedConnection(first: $stacksFirst) {
           edges {
             node {
               id
+              quantityUsed
+              usageUnit {
+                id
+                name
+                symbol
+                localizedSymbolForms {
+                  one
+                  other
+                }
+              }
               pantryItem {
                 id
+                quantity
                 ...PantryItemReaders
               }
             }
           }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
+      }
+      # The planned meal the cook completed, with its cookingLogId.
+      mealPlanItem {
+        id
+        ...MealPlanItemReaders
       }
     }
     ... on Error {
@@ -450,6 +471,45 @@ mutation MarkRecipeAsCooked(
     }
     ... on ValidationError {
       field
+    }
+  }
+}
+
+# A reviewed cook's rows past the first page of its answer. The newest log is
+# the cook just made unless another landed since, which the caller checks by id.
+# The stacks are the answer's own; this reads only what each row recorded.
+query RecipeCookUses($recipeId: ID!, $after: String, $usesFirst: Int = 100) {
+  recipeCookingLogs(recipeId: $recipeId, first: 1) {
+    edges {
+      node {
+        id
+        pantryItemsUsedConnection(first: $usesFirst, after: $after) {
+          edges {
+            node {
+              id
+              quantityUsed
+              usageUnit {
+                id
+                name
+                symbol
+                localizedSymbolForms {
+                  one
+                  other
+                }
+              }
+              pantryItem {
+                id
+                version
+                quantity
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
     }
   }
 }

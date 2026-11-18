@@ -13,12 +13,24 @@ export function useCreateStoreFromPlace() {
   const { t } = useTranslation();
   const [create] = useMutation(CreateStoreFromPlaceDocument);
 
-  /** Null when refused: the place has left the search, or the search is down. */
+  /**
+   * Null when refused: the place has left the search, or the search is down.
+   * A receipt's chain and store number make it answer that chain's store of
+   * the number, completed with the place, rather than a second store.
+   */
   const createStoreFromPlace = async (
     placeId: string,
+    branch?: { chainId: string; storeNumber: string | null },
   ): Promise<CreatedStore | null> => {
+    const input = branch
+      ? {
+          placeId,
+          chainId: branch.chainId,
+          ...(branch.storeNumber ? { storeNumber: branch.storeNumber } : {}),
+        }
+      : { placeId };
     const settled = await settleMutation(
-      () => create({ variables: { input: { placeId } } }),
+      () => create({ variables: { input } }),
       {
         document: CreateStoreFromPlaceDocument,
         fallback: t('errors.generic'),

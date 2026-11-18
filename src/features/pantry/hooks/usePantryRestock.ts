@@ -4,7 +4,7 @@ import { inTrackingUnit } from '#features/pantry/cache/stock';
 import type { AddStockInputs } from '#features/pantry/offline/localWrites';
 import { readStackUnit } from '#features/pantry/utils/pantryCacheReaders';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
-import { boughtAmountOf } from '#domain/stockAmount';
+import { resolveIntakeDraft } from '#domain/intakeDraft';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import {
   settleMutation,
@@ -19,6 +19,7 @@ import type {
   RestockPantryItemInput,
   StockAmountInput,
 } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 
 /**
  * A restock's variables. `input.today` dates its default expiry; the key
@@ -104,12 +105,18 @@ export function usePantryRestock(pantryId: string | undefined) {
     const heldUnit = readStackUnit(client.cache, pantryItemId);
     const amount =
       stated ??
-      boughtAmountOf(bought.count, {
+      resolveIntakeDraft({
         heldUnit,
-        packageSize: bought.packageSize,
-        unitId: bought.unitId,
-      });
+        purchased: {
+          quantity: bought.count,
+          intent: 'bought',
+          packageSize: bought.packageSize,
+          unitId: bought.unitId,
+        },
+      }).amount;
     const refusal = fallback ?? t('errors.restockFailedRetry');
+    if (!amount)
+      return { status: 'rejected', sizeRefusal: t('errors.invalidQuantity') };
     // A restock refuses a count in a unit the stack is not counted in. An add
     // with `forceAdd` takes it, but names no stack: the server joins it to one
     // its unit restates into, else makes a stack of its own.
@@ -138,11 +145,22 @@ export function usePantryRestock(pantryId: string | undefined) {
           amount.measured.quantity,
           amount.measured.unitId,
         )
+      : packages &&
+        heldUnit?.type === UnitType.Count &&
+        (!packages.unitId || packages.unitId === heldUnit.id)
+      ? packages.count
       : null;
+    const batch: Partial<RestockDetails> = details;
     const inputs: AddStockInputs = {
       delta: added,
       now: new Date().toISOString(),
       pantryId,
+      contents: {
+        size: packages?.size,
+        portions:
+          batch.packagePortions ??
+          batch.measurementProfile?.portionsPerTrackingUnit,
+      },
     };
 
     const settled = await pendingWritesOf(client.cache).send(

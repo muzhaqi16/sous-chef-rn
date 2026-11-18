@@ -30,7 +30,6 @@ jest.mock('../../../../src/constants/layout', () => ({
 describe('SortableShoppingList', () => {
   const defaultProps = {
     items: [],
-    reorderable: true,
     onItemPress: jest.fn(),
     onItemEdit: jest.fn(),
     onItemDelete: jest.fn(),

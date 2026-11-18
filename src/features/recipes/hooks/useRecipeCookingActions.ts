@@ -1,14 +1,19 @@
 import { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import {
+  plannedMealInput,
+  plannedMealSettle,
   useRecipeIngredientMatching,
+  type CookContext,
   type CookEntry,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import type { CookRecipeInputs } from '#features/recipes/offline/localWrites';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
 import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -19,7 +24,7 @@ import { useSelectedPantryId } from '#store/useAppStore';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { cappedNames } from '#/utils/cappedNames';
 
-interface UseRecipeCookingActionsOptions {
+interface UseRecipeCookingActionsOptions extends CookContext {
   recipeId: string | undefined;
 }
 
@@ -50,8 +55,14 @@ interface SkippedDeductions {
   allUnitConversion: boolean;
 }
 
+/**
+ * The one way a recipe is cooked, from its detail or from a planned meal: a
+ * planned meal's cook completes it in the same write, so it is cooked once.
+ */
 export function useRecipeCookingActions({
   recipeId,
+  plannedMeal,
+  onMealChanged,
 }: UseRecipeCookingActionsOptions) {
   const { t } = useTranslation();
   const [cookedModalVisible, setCookedModalVisible] = useState(false);
@@ -59,7 +70,11 @@ export function useRecipeCookingActions({
   // A confirm or a skip of the review records it.
   const [reviewedCook, setReviewedCook] = useState<CookEntry | null>(null);
 
-  const ingredientMatching = useRecipeIngredientMatching(recipeId);
+  const client = useApolloClient();
+  const ingredientMatching = useRecipeIngredientMatching(recipeId, {
+    plannedMeal,
+    onMealChanged,
+  });
   const pantryId = useSelectedPantryId();
   const isOffline = useIsApiUnavailable();
 
@@ -74,22 +89,30 @@ export function useRecipeCookingActions({
    */
   const fireMarkCooked = async (vars: FireMarkCookedVars) => {
     const id = generateEntityId();
-    const settled = await settleMutation(
-      () =>
-        markRecipeAsCookedMutation({
-          variables: {
-            input: {
-              ...vars,
-              ...deductingFrom(vars.deductFromPantry, pantryId),
-              id,
-            },
-          },
-        }),
+    // The server picks the stacks, so the device draws none until it answers.
+    const inputs: CookRecipeInputs = {
+      draws: [],
+      now: new Date().toISOString(),
+      ...(plannedMeal && { meal: { id: plannedMeal.id, cookingLogId: id } }),
+    };
+    const settled = await pendingWritesOf(client.cache).send(
+      MarkRecipeAsCookedDocument,
       {
-        document: MarkRecipeAsCookedDocument,
-        fallback: t('recipes.markCookedFailed'),
-        present: 'toast',
+        input: {
+          ...vars,
+          ...deductingFrom(vars.deductFromPantry, pantryId),
+          ...plannedMealInput(plannedMeal),
+          id,
+        },
       },
+      write =>
+        settleMutation(() => markRecipeAsCookedMutation(write), {
+          document: MarkRecipeAsCookedDocument,
+          fallback: t('recipes.markCookedFailed'),
+          present: 'toast',
+          ...plannedMealSettle(t, { plannedMeal, onMealChanged }),
+        }),
+      inputs,
     );
 
     // Replay diagnostics: `converged: true` means this client-minted cooking-log
@@ -126,8 +149,18 @@ export function useRecipeCookingActions({
       emitTutorialEvent('recipe.cooked');
       askForReviewAfterSuccess();
     }
-    return { failure: settled.failure, skipped };
+    return {
+      failure: settled.failure,
+      queued: settled.status === 'queued',
+      skipped,
+    };
   };
+
+  /** A queued cook is not taken yet: it says so, never that it deducted. */
+  const queuedToast = (deducting: boolean) =>
+    toastService.info(
+      t(deducting ? 'recipes.cookedQueued' : 'recipes.cookedQueuedNotDeducted'),
+    );
 
   /**
    * What the cook left undeducted: the lines by name, and the cause when one
@@ -185,14 +218,14 @@ export function useRecipeCookingActions({
         const loaded = await ingredientMatching.loadMatches(input.servings);
         if (!loaded) {
           // Fallback to simple deduction if matching fails
-          const { failure, skipped } = await fireMarkCooked({
+          const { failure, queued, skipped } = await fireMarkCooked({
             recipeId,
             servings: input.servings,
             deductFromPantry: input.deductFromPantry,
             notes: input.notes,
           });
           if (failure) return;
-          if (isOffline)
+          if (isOffline || queued)
             toastService.info(t('recipes.cookReviewNeedsConnection'));
           else deductionToast(skipped);
         }
@@ -202,7 +235,7 @@ export function useRecipeCookingActions({
 
     // Simple deduction path
     void executeWithLoadingState(async () => {
-      const { failure, skipped } = await fireMarkCooked({
+      const { failure, queued, skipped } = await fireMarkCooked({
         recipeId,
         servings: input.servings,
         deductFromPantry: input.deductFromPantry,
@@ -210,7 +243,9 @@ export function useRecipeCookingActions({
       });
       if (failure) return;
 
-      if (input.deductFromPantry) {
+      if (queued) {
+        queuedToast(input.deductFromPantry);
+      } else if (input.deductFromPantry) {
         deductionToast(skipped);
       } else {
         toastService.success(t('recipes.markedCooked'));
@@ -223,19 +258,38 @@ export function useRecipeCookingActions({
     if (!recipeId) return;
     ingredientMatching.closeSheet();
     void executeWithLoadingState(async () => {
-      const { failure, skipped } = await fireMarkCooked({
+      const { failure, queued, skipped } = await fireMarkCooked({
         recipeId,
         servings: reviewedCook?.servings,
         deductFromPantry: true,
         notes: reviewedCook?.notes,
       });
       if (failure) return;
-      deductionToast(skipped);
+      if (queued) queuedToast(true);
+      else deductionToast(skipped);
     }, setMarkingAsCooked);
   };
 
   const handleConfirmReview = () =>
     ingredientMatching.confirmConsumption(reviewedCook ?? undefined);
+
+  // A review with nothing to draw still records the cook, and says the pantry
+  // was left as it was.
+  const handleRecordWithoutDeducting = () => {
+    if (!recipeId) return;
+    ingredientMatching.closeSheet();
+    void executeWithLoadingState(async () => {
+      const { failure, queued } = await fireMarkCooked({
+        recipeId,
+        servings: reviewedCook?.servings,
+        deductFromPantry: false,
+        notes: reviewedCook?.notes,
+      });
+      if (failure) return;
+      if (queued) queuedToast(false);
+      else toastService.success(t('recipes.markedCookedNotDeducted'));
+    }, setMarkingAsCooked);
+  };
 
   return {
     cookedModalVisible,
@@ -244,6 +298,7 @@ export function useRecipeCookingActions({
     handleMarkAsCooked,
     handleSkipReview,
     handleConfirmReview,
+    handleRecordWithoutDeducting,
     ingredientMatching,
   };
 }

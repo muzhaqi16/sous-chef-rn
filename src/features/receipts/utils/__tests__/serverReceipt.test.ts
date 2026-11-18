@@ -7,9 +7,16 @@ import {
   TopLevelErrorCode,
 } from '#/graphql/generated/schemaTypes';
 import type { ReceiptParseReadersFragment } from '#/graphql/readers/receiptParseReaders.generated';
+import { todayKey } from '#/utils/dateUtils';
 import { classifyCreateResult, outcomeOf } from '../serverReceipt';
 import { fromServerReceipt } from '../fromServerReceipt';
-import { receiptReviewLines } from '../receiptReviewLines';
+import { receiptReviewLines, seedChoice } from '../receiptReviewLines';
+
+// The phone's day: a read purchase day is held to a window around it.
+jest.mock('#/utils/dateUtils', () => ({
+  ...jest.requireActual('#/utils/dateUtils'),
+  todayKey: jest.fn(),
+}));
 
 type ServerReceipt = NonNullable<ReceiptParseReadersFragment['receipt']>;
 type ServerLine = ServerReceipt['lines'][number];
@@ -28,6 +35,7 @@ const line = (
   unitPrice: null,
   amount: null,
   appliesTo: null,
+  packages: null,
   ...fields,
 });
 
@@ -143,6 +151,67 @@ describe('fromServerReceipt', () => {
     expect(unnamed).not.toHaveProperty('measureUnit');
   });
 
+  it('seeds a printed size as packages of it, and a weighed line as its weight', () => {
+    const fluidOunce: NonNullable<
+      ServerLine['packages']
+    >['size']['measureUnit'] = {
+      __typename: 'Unit',
+      id: 'unit-fl-oz',
+      symbol: 'fl oz',
+      localizedSymbolForms: {
+        __typename: 'PluralForms',
+        one: 'fl oz',
+        other: 'fl oz',
+      },
+    };
+    const [milk, bananas] = receiptReviewLines(
+      fromServerReceipt({
+        merchant: merchant(null),
+        lines: [
+          line({
+            text: 'WHOLE MILK 64 FL OZ 4.29',
+            kind: ReceiptLineKind.Item,
+            quantity: 64,
+            unit: 'fl oz',
+            amount: 4.29,
+            packages: {
+              __typename: 'ParsedPackages',
+              count: 1,
+              size: {
+                __typename: 'ParsedPackSize',
+                quantity: 64,
+                unit: 'fl oz',
+                measureUnit: fluidOunce,
+              },
+            },
+          }),
+          line({
+            text: 'BANANAS 2.13 LB 1.26',
+            kind: ReceiptLineKind.Item,
+            quantity: 2.13,
+            unit: 'lb',
+            amount: 1.26,
+          }),
+        ],
+      }),
+    );
+    expect(milk?.packages).toEqual({
+      count: 1,
+      size: { quantity: 64, unit: 'fl oz', measureUnit: fluidOunce },
+    });
+    expect(milk && seedChoice(milk)).toMatchObject({
+      quantity: 1,
+      unitText: '',
+      packageSize: { quantity: 64, unitId: null, unitText: 'fl oz' },
+    });
+    expect(bananas).not.toHaveProperty('packages');
+    expect(bananas && seedChoice(bananas)).toMatchObject({
+      quantity: 2.13,
+      unitText: 'lb',
+    });
+    expect(bananas && seedChoice(bananas)).not.toHaveProperty('packageSize');
+  });
+
   it('copies the figures the server gives, and reads none from the text', () => {
     const parsed = fromServerReceipt({
       merchant: merchant('Walmart'),
@@ -231,6 +300,7 @@ describe('fromServerReceipt', () => {
         __typename: 'ParsedReceipt',
         purchasedOn: null,
         purchaseTime: null,
+        currency: null,
         merchant: merchant('KROGER'),
         lines: [
           line({
@@ -343,15 +413,26 @@ describe('outcomeOf', () => {
     ...figures,
   });
 
-  /** A parse the server finished, reading one item. */
+  const MILK = line({
+    text: 'GV WHOLE MILK 3.48 N',
+    kind: ReceiptLineKind.Item,
+    product: 'GV WHOLE MILK',
+    amount: 3.48,
+  });
+
+  /** A parse the server finished, reading one item unless told otherwise. */
   const parsed = ({
     warnings = [],
     purchasedOn = null,
     purchaseTime = null,
+    currency = null,
+    lines = [MILK],
   }: {
     warnings?: Warning[];
     purchasedOn?: string | null;
     purchaseTime?: string | null;
+    currency?: string | null;
+    lines?: ServerLine[];
   } = {}): ReceiptParseReadersFragment => ({
     __typename: 'ReceiptParse',
     id: 'rp-1',
@@ -361,23 +442,54 @@ describe('outcomeOf', () => {
       __typename: 'ParsedReceipt',
       purchasedOn,
       purchaseTime,
+      currency,
       merchant: merchant('WALMART'),
-      lines: [
-        line({
-          text: 'GV WHOLE MILK 3.48 N',
-          kind: ReceiptLineKind.Item,
-          product: 'GV WHOLE MILK',
-          amount: 3.48,
-        }),
-      ],
+      lines,
     },
   });
 
   beforeEach(() => {
-    jest.useFakeTimers({ now: new Date(2026, 9, 1, 12) });
+    jest.mocked(todayKey).mockReturnValue('2026-10-01');
   });
-  afterEach(() => {
-    jest.useRealTimers();
+
+  it.each([
+    { status: ReceiptParseStatus.Pending, outcome: undefined },
+    { status: ReceiptParseStatus.Failed, outcome: 'failed' },
+    { status: ReceiptParseStatus.Unavailable, outcome: 'unavailable' },
+  ])('leaves $outcome for a parse $status', ({ status, outcome }) => {
+    expect(outcomeOf({ ...parsed(), status, receipt: null })).toBe(outcome);
+  });
+
+  it('calls a receipt with no line to review unreadable', () => {
+    expect(
+      outcomeOf(
+        parsed({
+          lines: [
+            line({
+              text: 'TOTAL 3.48',
+              kind: ReceiptLineKind.Total,
+              amount: 3.48,
+            }),
+          ],
+        }),
+      ),
+    ).toBe('unreadable');
+  });
+
+  it('names the store printed on the receipt', () => {
+    expect(outcomeOf(parsed())).toMatchObject({
+      printedStore: { name: 'WALMART' },
+    });
+  });
+
+  it('keeps the currency the receipt prints', () => {
+    expect(outcomeOf(parsed({ currency: 'USD' }))).toMatchObject({
+      parsed: { currency: 'USD' },
+    });
+  });
+
+  it('names no currency where the receipt decides none', () => {
+    expect(outcomeOf(parsed())).not.toHaveProperty('parsed.currency');
   });
 
   it('calls a receipt the server could barely read unreadable, never an empty review', () => {
@@ -466,22 +578,29 @@ describe('classifyCreateResult', () => {
       Date.parse('2026-10-06T12:00:00Z'),
     ).kind;
 
+  const accepted = (status: ReceiptParseStatus) =>
+    classifyCreateResult({
+      accepted: true,
+      parse: {
+        __typename: 'ReceiptParse',
+        id: 'rp-1',
+        status,
+        warnings: [],
+        receipt: null,
+      },
+      refusedField: null,
+      error: undefined,
+    });
+
   it('polls an accepted parse that is still running', () => {
-    const running: ReceiptParseReadersFragment = {
-      __typename: 'ReceiptParse',
-      id: 'rp-1',
-      status: ReceiptParseStatus.Pending,
-      warnings: [],
-      receipt: null,
-    };
-    expect(
-      classifyCreateResult({
-        accepted: true,
-        parse: running,
-        refusedField: null,
-        error: undefined,
-      }),
-    ).toEqual({ kind: 'poll' });
+    expect(accepted(ReceiptParseStatus.Pending)).toEqual({ kind: 'poll' });
+  });
+
+  it('settles an accepted parse the server already finished', () => {
+    expect(accepted(ReceiptParseStatus.Failed)).toEqual({
+      kind: 'settle',
+      outcome: 'failed',
+    });
   });
 
   it.each([

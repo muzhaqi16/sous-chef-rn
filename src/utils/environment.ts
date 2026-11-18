@@ -33,6 +33,22 @@ export interface EnvironmentConfig {
  */
 export class Environment {
   private static _config: EnvironmentConfig | null = null;
+  private static _apiUrlOverride: { baseUrl: string; wsUrl: string } | null =
+    null;
+
+  /**
+   * Routes a debug build's API through `baseUrl`, as an e2e run's test proxy
+   * (`detoxApiUrl`); its WebSocket takes the same host. `__DEV__` is a
+   * compile-time constant stripped from release output, so no shipped binary
+   * can be pointed elsewhere.
+   */
+  static overrideApiUrl(baseUrl: string): void {
+    if (!__DEV__) return;
+    Environment._apiUrlOverride = {
+      baseUrl,
+      wsUrl: baseUrl.replace(/^http/, 'ws'),
+    };
+  }
 
   /**
    * Get current environment configuration
@@ -161,9 +177,23 @@ export class Environment {
   }
 
   /**
-   * Get environment-specific API configuration
+   * The ONE source of the API's endpoints, for every transport (GraphQL, its
+   * socket, `/health`, REST): a debug run's override, else the build's
+   * `API_URL` / `WEB_SOCKET_URL`, else the environment's default.
    */
   static getApiConfig() {
+    const config = Environment.environmentApi();
+    const built = {
+      ...config,
+      baseUrl: env.API_URL ?? config.baseUrl,
+      wsUrl: env.WEB_SOCKET_URL ?? config.wsUrl,
+    };
+    return Environment._apiUrlOverride
+      ? { ...built, ...Environment._apiUrlOverride }
+      : built;
+  }
+
+  private static environmentApi() {
     const config = Environment.getConfig();
 
     if (config.isDevelopment) {
@@ -207,6 +237,7 @@ export class Environment {
    */
   static clearCache(): void {
     Environment._config = null;
+    Environment._apiUrlOverride = null;
   }
 }
 

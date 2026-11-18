@@ -4,7 +4,7 @@
  * no data at all, and a `cache.modify` edge write needs a variant to land in.
  */
 
-import type { ApolloCache, Reference } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
@@ -45,10 +45,10 @@ export function writeLocalPantry(
 }
 
 /**
- * Add a pantry to its home's `pantries` array and `pantriesConnection` —
- * idempotent by pantry id, shared by the local-first pre-fire write and the
- * mutation's update callback (the server row carries the same client-minted
- * id, so it merges instead of duplicating).
+ * Add a pantry to its home's `pantriesConnection` — idempotent by pantry id,
+ * shared by the local-first pre-fire write and the mutation's update callback
+ * (the server row carries the same client-minted id, so it merges instead of
+ * duplicating).
  */
 export function addPantryToHomeCache(
   cache: ApolloCache,
@@ -62,17 +62,6 @@ export function addPantryToHomeCache(
   cache.modify({
     id: homeCacheId,
     fields: {
-      pantries(
-        existingPantries: readonly Reference[] = [],
-        { readField, toReference },
-      ) {
-        const newPantryRef = toReference(pantry);
-        const exists = existingPantries.some(
-          pantryRef => readField('id', pantryRef) === pantry.id,
-        );
-        if (exists || !newPantryRef) return existingPantries;
-        return [...existingPantries, newPantryRef];
-      },
       pantriesConnection(
         existingConnection: ConnectionData | null = null,
         { readField, toReference },
@@ -117,11 +106,6 @@ export function removeOptimisticPantry(
     cache.modify({
       id: homeCacheId,
       fields: {
-        pantries(existingPantries: readonly Reference[] = [], { readField }) {
-          return existingPantries.filter(
-            pantryRef => readField('id', pantryRef) !== pantryId,
-          );
-        },
         pantriesConnection(
           existingConnection: ConnectionData | null = null,
           { readField },

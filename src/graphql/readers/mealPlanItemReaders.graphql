@@ -3,6 +3,7 @@ fragment MealPlanItemReaders on MealPlanItem {
   id
   calories
   completedAt
+  cookingLogId
   customMealName
   date
   isCompleted

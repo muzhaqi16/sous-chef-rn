@@ -81,7 +81,6 @@ function buildDeviceInput(
         osVersion: deviceInfo.osVersion,
         userAgent: deviceInfo.userAgent,
         browserName: deviceInfo.browserName,
-        browserVersion: deviceInfo.browserVersion,
         screenResolution: deviceInfo.screenResolution,
       },
       characteristics: {
@@ -137,7 +136,6 @@ function buildDeviceInput(
       supportedMediaTypes: deviceInfo.supportedMediaTypes,
     },
     location: {
-      ipAddress: deviceInfo.deviceIpAddress,
       timezone: deviceInfo.timezone,
       language: deviceInfo.language,
     },

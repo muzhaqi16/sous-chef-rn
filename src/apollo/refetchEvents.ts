@@ -120,8 +120,10 @@ const languageChanged = (client: ApolloClient) => () =>
       ) {
         return;
       }
-      // What was answered before the switch is in the old language.
+      // What was answered before the switch is in the old language, and the
+      // feed's pulls carry only what moved, so its scopes are read in full.
       startAnswersForSwitch();
+      feedEngine.refreshHeld();
       catchUpOnNavigation();
       observer.next();
     });

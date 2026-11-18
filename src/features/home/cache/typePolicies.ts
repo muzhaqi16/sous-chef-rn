@@ -11,16 +11,15 @@ import {
 export const homeTypePolicies: TypePolicies = {
   Home: {
     fields: {
-      membersConnection: mergeConnectionByNodeId(['orderBy']),
+      membersConnection: mergeConnectionByNodeId([]),
       invitesConnection: mergeConnectionByNodeId(),
-      pantriesConnection: mergeConnectionByNodeId(['orderBy']),
-      shoppingListsConnection: mergeConnectionByNodeId(),
-      mealTemplatesConnection: mergeConnectionByNodeId(),
+      pantriesConnection: mergeConnectionByNodeId([]),
+      shoppingListsConnection: mergeConnectionByNodeId([]),
     },
   },
   Query: {
     fields: {
-      homes: mergeConnectionByNodeId(),
+      homes: mergeConnectionByNodeId([]),
       home: readByIdFromCache('Home'),
     },
   },

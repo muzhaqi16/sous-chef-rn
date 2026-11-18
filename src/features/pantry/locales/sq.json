@@ -3,6 +3,9 @@
     "inLocation": " në {{location}}",
     "inThePantry": "Në qilar",
     "expiring": "Skadimi",
+    "expiryDaysAgo_one": "{{count}} ditë më parë",
+    "expiryDaysAgo_other": "{{count}} ditë më parë",
+    "expiryApprox": "≈ {{when}}",
     "noExpiry": "Pa skadim",
     "amount": "Sasia",
     "nutrition": "Ushqyerja",
@@ -56,7 +59,8 @@
     "removedTitle": "Ky artikull nuk është më në qilarin tënd",
     "removedBody": "U hoq, ndoshta nga një pajisje tjetër.",
     "hiddenTitle": "Ky artikull nuk të shfaqet",
-    "hiddenBody": "Është në një qilar që nuk mund ta shohësh. Kush e menaxhon shtëpinë mund të të lejojë ta shohësh."
+    "hiddenBody": "Është në një qilar që nuk mund ta shohësh. Kush e menaxhon shtëpinë mund të të lejojë ta shohësh.",
+    "expiryEstimated": "Datë e vlerësuar"
   },
   "pantrySettings": {
     "createTitle": "Krijo qilar të ri",
@@ -177,7 +181,6 @@
     "composted": "Të kompostuara",
     "recycledPackaging": "Të ricikluara (ambalazhi)",
     "notesPlaceholder": "Shto shënime për këto mbeturina...",
-    "reasonExpired": "Skaduar",
     "reasonSpoiled": "Prishur",
     "reasonSpilled": "Derdhur",
     "reasonBurnt": "Djegur",
@@ -191,8 +194,7 @@
     "differentSize": "Madhësi tjetër?",
     "newQuantityPrefix": "Sasia e re: ",
     "costPerUnit": "Kostoja për njësi",
-    "notesPlaceholder": "Shto shënime për këtë riplotësim...",
-    "expirationPlaceholder": "Cakto skadim të ri"
+    "notesPlaceholder": "Shto shënime për këtë riplotësim..."
   },
   "consumeItem": {
     "title": "Konsumo artikullin",
@@ -202,7 +204,9 @@
     "purpose": "Qëllimi *",
     "notesPlaceholder": "Shto shënime për këtë përdorim...",
     "purposeCooking": "Gatim",
-    "purposeTransfer": "Transferim"
+    "purposeTransfer": "Transferim",
+    "useAll": "Përdor të gjitha",
+    "optionalDetails": "Hollësi opsionale"
   },
   "moveToPantry": {
     "cannotAddTitle": "Nuk mund të shtoni në qilarin e kësaj shtëpie",
@@ -310,7 +314,28 @@
     "outOfStock": "Pa stok",
     "runningLow": "Po mbaron",
     "stockGuideSubtitle": "Prek + dhe skano një faturë të fundit: çka bleve shkon drejt në qilar.",
-    "stockGuideOffline": "Skanimi i një fature ka nevojë për lidhje. Provoje sapo të jesh sërish online."
+    "stockGuideOffline": "Skanimi i një fature ka nevojë për lidhje. Provoje sapo të jesh sërish online.",
+    "pendingAmount": "{{amount}} në pritje të sinkronizimit",
+    "stockCheckEntry_one": "{{count}} artikull për të kontrolluar",
+    "stockCheckEntry_other": "{{count}} artikuj për të kontrolluar",
+    "stockCheckTitle": "I ke ende këto?",
+    "stockCheckStillHave": "E kam ende",
+    "stockCheckSomeLeft": "Ka mbetur pak",
+    "stockCheckUsedUp": "Mbaroi",
+    "stockCheckThrewOut": "E hodha",
+    "stockCheckLeft": "Ka mbetur, në {{unit}}",
+    "stockCheckInside": "Sa përmbajnë, në {{unit}}",
+    "stockCheckStale": "Ka ndryshuar që kur e pe. Kontrolloje sërish.",
+    "stockCheckFailed": "Kontrolli nuk u ruajt. Provo sërish.",
+    "stockCheckNoneAnswered": "Zgjidh një përgjigje për të paktën një artikull.",
+    "stockDoubtNotConfirmed": "Pa u kontrolluar prej kohësh",
+    "stockDoubtPastExpiry": "I ka kaluar data",
+    "stockDoubtPastRunOut": "Zakonisht do të kishte mbaruar",
+    "stockDoubtRunOutSoon": "Zakonisht mbaron së shpejti",
+    "stockLevelHigh": "Ndoshta është ende këtu",
+    "stockLevelMedium": "Ia vlen ta kontrollosh",
+    "stockLevelLow": "Ndoshta ka mbaruar",
+    "stockLevelUnknown": "Nuk dihet"
   },
   "storageState": {
     "AMBIENT": "Ambient",
@@ -333,11 +358,11 @@
   },
   "deduction": {
     "invalidWaste": "Shkruaj një sasi të vlefshme mbeturinash",
-    "stillCalculating": "Po llogaritet ende sasia e disponueshme...",
     "exceedsAvailableConsume": "Nuk mund të konsumosh më shumë se sasia e disponueshme ({{amount}} {{unit}})",
     "exceedsAvailableWaste": "Nuk mund të hedhësh më shumë se sasia e disponueshme ({{amount}} {{unit}})",
     "remainingAfter": "Mbetet: {{amount}} {{unit}}",
-    "exceedsAvailable": "Tejkalon sasinë e disponueshme ({{amount}} {{unit}})"
+    "exceedsAvailable": "Tejkalon sasinë e disponueshme ({{amount}} {{unit}})",
+    "conversionUnavailable": "Kjo njësi nuk mund të konvertohet. Zgjidh një njësi tjetër."
   },
   "duplicateItem": {
     "title": "Artikulli është tashmë në qilar"

@@ -30,7 +30,8 @@ fragment HomeDetailScreen_home on Home {
     canRemoveItems
     canInviteOthers
   }
-  membersConnection(first: 20) {
+  # Every member: a home seats 50 by default, and 100 is the API's largest page.
+  membersConnection(first: 100) {
     edges {
       node {
         id

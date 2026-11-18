@@ -195,7 +195,6 @@ const CORE_EXTERNALS = [
   '@hookform/resolvers',
   'date-fns',
   'fraction.js',
-  'fractional-indexing',
   'fuse.js',
   '@paralleldrive/cuid2',
   'uuid',

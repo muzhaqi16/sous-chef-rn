@@ -16,6 +16,8 @@ import {
   MembershipStatus,
 } from '#/graphql/generated/schemaTypes';
 import type { GetHomesQuery } from '#operations/home/home.generated';
+import type { MockDataFor } from '../apolloMockProvider';
+import type { GetHomesDocument } from '#operations/home/home.generated';
 import type { GetHomeQuery } from '#features/home/screens/useHomeDetailManagement.generated';
 
 // The document's own shapes. Annotating a builder with one narrows every
@@ -201,5 +203,36 @@ export function homesData(homes: HomeFixture[]): Unmasked<GetHomesQuery> {
   return {
     __typename: 'Query',
     homes: connection('HomeConnection', 'HomeEdge', homes.map(homeNode)),
+  };
+}
+
+/**
+ * The homes as the app reads them, the person holding `role` in each. The
+ * role is stated: left to completion, it would be any role.
+ */
+export function homesWithRole(
+  homes: HomeFixture[],
+  role: MembershipRole,
+): MockDataFor<typeof GetHomesDocument> {
+  const data = homesData(homes);
+  return {
+    ...data,
+    homes: {
+      ...data.homes,
+      edges: data.homes.edges.map(edge => ({
+        ...edge,
+        node: {
+          ...edge.node,
+          myMembership: {
+            __typename: 'Membership',
+            id: `m-${edge.node.id}`,
+            role,
+            canEditPantry: false,
+            canAddItems: false,
+            canRemoveItems: false,
+          },
+        },
+      })),
+    },
   };
 }

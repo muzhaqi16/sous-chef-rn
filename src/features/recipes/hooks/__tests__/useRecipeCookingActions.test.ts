@@ -81,8 +81,29 @@ const cookedMock = (skippedIngredients: SkippedIngredient[] = []) =>
       markRecipeAsCooked: {
         __typename: 'MarkRecipeAsCookedPayload',
         skippedIngredients,
+        // The one stack these cooks draw on, which still holds some after.
+        cookingLog: {
+          pantryItemsUsedConnection: {
+            edges: [
+              {
+                node: {
+                  quantityUsed: 1,
+                  pantryItem: { id: 'pi-1', quantity: 4 },
+                },
+              },
+            ],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+        mealPlanItem: null,
       },
     },
+  });
+
+// No payload and no error: the offline queue took the write.
+const queuedCookMock = () =>
+  recordMock(MarkRecipeAsCookedDocument, {
+    data: { markRecipeAsCooked: null },
   });
 
 const refusedCookMock = () =>
@@ -285,6 +306,25 @@ describe('useRecipeCookingActions', () => {
     expect(mockToastWarning).not.toHaveBeenCalled();
   });
 
+  // Queued work is never described as taken by the server.
+  it.each([
+    [true, 'Cooked. Your pantry updates when it syncs.'],
+    [false, "Cooked. It's saved when it syncs."],
+  ])(
+    'says a quick cook queued offline (deducting: %s) is saved, never done',
+    async (deductFromPantry, said) => {
+      const queued = queuedCookMock();
+      const { result } = renderCooking([queued.mock]);
+
+      await cook(result, { deductFromPantry });
+
+      await drainTimers();
+      expect(queued.fired).toHaveLength(1);
+      expect(mockToastInfo).toHaveBeenCalledWith(said);
+      expect(mockToastSuccess).not.toHaveBeenCalled();
+    },
+  );
+
   it('shows the no-deduction success toast when deductFromPantry is false', async () => {
     const cooked = cookedMock();
     const { result } = renderCooking([cooked.mock]);
@@ -299,6 +339,23 @@ describe('useRecipeCookingActions', () => {
       deductFromPantry: false,
     });
     expect(inputOf(cooked.fired[0]!)).not.toHaveProperty('pantryId');
+  });
+
+  // A review with nothing to draw still records the cook, and says so.
+  it('records a reviewed cook without deducting, and says the pantry was not changed', async () => {
+    const cooked = cookedMock();
+    const { result } = renderCooking([cooked.mock]);
+
+    await drained(() => result.current.handleRecordWithoutDeducting());
+
+    await drainTimers();
+    expect(cooked.fired).toHaveLength(1);
+    expect(inputOf(cooked.fired[0]!)).toMatchObject({
+      deductFromPantry: false,
+    });
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Recipe marked as cooked. Your pantry wasn't changed.",
+    );
   });
 
   it('toasts the failure message and shows no success toast when the server rejects', async () => {
@@ -560,6 +617,91 @@ describe('useRecipeCookingActions', () => {
         cookedCount: 3,
         lastCookedAt: COOKED_AT,
       });
+    });
+  });
+});
+
+// 6.1: the recipe's page and a planned meal open one cook; COOK-01's 2-serving
+// recipe cooked for 4 proposes the same draws from either.
+describe('useRecipeCookingActions — from a recipe or from its planned meal', () => {
+  const matchesFor4 = () =>
+    recordMock(MatchRecipeIngredientsToPantryDocument, {
+      data: {
+        matchRecipeIngredientsToPantry: [
+          {
+            matchKind: RecipeIngredientMatchKind.Item,
+            isAvailable: true,
+            availableQuantity: 12,
+            suggestedQuantity: 4,
+            suggestedUnit: { id: 'pc' },
+            matchedPantryItem: { id: 'pi-1', unit: { id: 'pc' } },
+            ingredient: { id: 'ing-eggs', isOptional: false },
+          },
+        ],
+      },
+    });
+
+  async function reviewedCook(plannedMeal?: { id: string; version: number }) {
+    const matches = matchesFor4();
+    const confirm = cookedMock();
+    const { result } = renderHookWithApollo(
+      () => useRecipeCookingActions({ recipeId: 'recipe-1', plannedMeal }),
+      { operationMocks: [matches.mock, confirm.mock] },
+    );
+    await cook(result, { servings: 4, useGranularDeduction: true });
+    await drainTimers();
+    const proposed = result.current.ingredientMatching.editableMatches.map(
+      ({ adjustedQuantity, adjustedUnitId, selectedStack }) => ({
+        adjustedQuantity,
+        adjustedUnitId,
+        stack: selectedStack?.id,
+      }),
+    );
+    await drained(() => result.current.handleConfirmReview());
+    return { matches, confirm, proposed };
+  }
+
+  it('proposes and sends the same draws, the planned one also naming its meal', async () => {
+    const fromRecipe = await reviewedCook();
+    const fromMeal = await reviewedCook({ id: 'mpi-1', version: 2 });
+
+    expect(fromMeal.matches.fired).toEqual(fromRecipe.matches.fired);
+    expect(fromMeal.proposed).toEqual(fromRecipe.proposed);
+    expect(fromRecipe.proposed).toEqual([
+      { adjustedQuantity: 4, adjustedUnitId: 'pc', stack: 'pi-1' },
+    ]);
+    const { mealPlanItemId, mealPlanItemVersion, ...cooked } = inputOf(
+      fromMeal.confirm.fired[0]!,
+    );
+    expect({ mealPlanItemId, mealPlanItemVersion }).toEqual({
+      mealPlanItemId: 'mpi-1',
+      mealPlanItemVersion: 2,
+    });
+    expect(cooked).toEqual(inputOf(fromRecipe.confirm.fired[0]!));
+    expect(inputOf(fromRecipe.confirm.fired[0]!)).not.toHaveProperty(
+      'mealPlanItemId',
+    );
+  });
+
+  it('a quick cook of a planned meal completes it in the same write', async () => {
+    const confirm = cookedMock();
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeCookingActions({
+          recipeId: 'recipe-1',
+          plannedMeal: { id: 'mpi-1', version: 2 },
+        }),
+      { operationMocks: [confirm.mock] },
+    );
+
+    await cook(result, { deductFromPantry: false });
+    await drainTimers();
+
+    expect(inputOf(confirm.fired[0]!)).toMatchObject({
+      recipeId: 'recipe-1',
+      deductFromPantry: false,
+      mealPlanItemId: 'mpi-1',
+      mealPlanItemVersion: 2,
     });
   });
 });

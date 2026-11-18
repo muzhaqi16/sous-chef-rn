@@ -1,18 +1,17 @@
-'use no memo';
-
 import React from 'react';
-import { screen, userEvent } from '@testing-library/react-native';
-import type {
-  MockedResponse,
-  MockFor,
-  MockPart,
-  RecordedMock,
+import { act, screen, userEvent } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderWithApollo,
+  type MockPart,
 } from '#/test-utils/apolloMockProvider';
-import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { drainTimers } from '#/test-utils/drainTimers';
+import { operationLog } from '#/test-utils/operationLog';
+import { withDeadline } from '#/test-utils/cacheWaits';
 import { useStore } from '#store';
+import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
+import { kitTestIDs } from '#components/testIDs';
 import {
   CollaboratorRole,
   CollaboratorStatus,
@@ -20,7 +19,7 @@ import {
   InviteStatus,
   MembershipRole,
 } from '#/graphql/generated/schemaTypes';
-import { AcceptInvite } from '../AcceptInvite';
+import { formatRoleDisplay } from '#features/shoppingList/utils/ownershipHelpers';
 import {
   AcceptShoppingListInviteDocument,
   DeclineShoppingListInviteDocument,
@@ -37,678 +36,553 @@ import {
   type GetHomeInviteByTokenQuery,
   type GetShoppingListInviteByTokenQuery,
 } from '../AcceptInvite.generated';
+import { AcceptInvite } from '../AcceptInvite';
 
-// The screen resolves the invite straight from the deep-link token, so every
-// test drives it through a route `token` and the *ByToken queries. In-app
-// acceptance lives in InvitationAcceptanceModal and is tested there.
+jest.mock('#hooks/navigation/useAppNavigation');
+// The deep link's route is the boundary: the screen reads its token there.
+const mockRoute: { params: { token?: string } } = { params: {} };
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useRoute: () => mockRoute,
+}));
+
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
+
 const TOKEN = 'invite-token';
 
-const mockGoBack = jest.fn();
-jest.mock('@react-navigation/native', () => ({
-  // The screen goes through useAppNavigation, whose goBack guards on
-  // canGoBack — so the stand-in has to answer that too.
-  useNavigation: jest.fn(() => ({
-    goBack: mockGoBack,
-    canGoBack: () => true,
-  })),
-  useRoute: jest.fn(() => ({
-    params: { token: 'invite-token' },
-  })),
-}));
-
-jest.mock('#/services/errorService');
-
-jest.mock('#components/organisms/Header', () => ({
-  Header: () => null,
-}));
-
-jest.mock('#components/atoms/SousChefLoader', () => ({
-  SousChefLoader: () => 'SousChefLoader',
-}));
-
-interface ShoppingListInviteInput {
-  role?: CollaboratorRole;
-  status?: CollaboratorStatus;
-  invitedByEmail?: string | null;
-  invitedByDisplayName?: string | null;
-  shoppingListName?: string;
-  shoppingListDescription?: string | null;
-}
-
-/** The invite on the wire: the query's own selection plus the screen's fragment. */
-type ShoppingListInvite =
+type ListInvite =
   GetShoppingListInviteByTokenQuery['shoppingListInviteByToken'] &
     AcceptInvite_ShoppingListInviteFragment;
-
-function buildShoppingListInvite(
-  input: ShoppingListInviteInput = {},
-): MockPart<ShoppingListInvite> {
-  return {
-    role: input.role ?? CollaboratorRole.Editor,
-    status: input.status ?? CollaboratorStatus.Pending,
-    // The invitee shares nothing with the inviter yet, so the invite itself
-    // carries the name and the inviter's own reads null.
-    inviterName: input.invitedByDisplayName ?? null,
-    invitedBy:
-      input.invitedByEmail === null
-        ? null
-        : {
-            email: input.invitedByEmail ?? 'host@test.com',
-            displayName: null,
-            profile: null,
-          },
-    shoppingList: {
-      name: input.shoppingListName ?? 'My List',
-      description: input.shoppingListDescription ?? null,
-    },
-  };
-}
-
-interface HomeInviteInput {
-  role?: MembershipRole;
-  status?: InviteStatus;
-  inviterEmail?: string;
-  inviterDisplayName?: string | null;
-  inviterName?: string | null;
-  homeName?: string;
-}
-
 type HomeInvite = GetHomeInviteByTokenQuery['homeInviteByToken'] &
   AcceptInvite_HomeInviteFragment;
 
-function buildHomeInvite(input: HomeInviteInput = {}): MockPart<HomeInvite> {
-  return {
-    role: input.role ?? MembershipRole.Member,
-    status: input.status ?? InviteStatus.Pending,
-    inviterName: input.inviterName ?? null,
-    home: { name: input.homeName ?? 'Family Home' },
-    inviter: {
-      email: input.inviterEmail ?? 'owner@test.com',
-      // Only a name the inviter chose; their first name comes as inviterName.
-      displayName: input.inviterDisplayName ?? null,
-      profile: input.inviterDisplayName
-        ? { displayName: input.inviterDisplayName }
-        : null,
-    },
-  };
-}
+/** An editor's invite to My List, from host@test.com, who chose no name. */
+const listInvite = (
+  invite: MockPart<ListInvite> = {},
+): MockPart<ListInvite> => ({
+  role: CollaboratorRole.Editor,
+  status: CollaboratorStatus.Pending,
+  inviterName: null,
+  invitedBy: { email: 'host@test.com', displayName: null, profile: null },
+  shoppingList: { name: 'My List', description: null },
+  ...invite,
+});
 
-/** What the deep link's token resolves to: a list invite, a home invite, or neither. */
-type LinkedInvite =
-  | { list: ShoppingListInviteInput }
-  | { home: HomeInviteInput }
+/** A member's invite to Family Home, from owner@test.com, who chose no name. */
+const homeInvite = (
+  invite: MockPart<HomeInvite> = {},
+): MockPart<HomeInvite> => ({
+  role: MembershipRole.Member,
+  status: InviteStatus.Pending,
+  inviterName: null,
+  home: { name: 'Family Home' },
+  inviter: { email: 'owner@test.com', displayName: null, profile: null },
+  ...invite,
+});
+
+type Linked =
+  | { list: MockPart<ListInvite> }
+  | { home: MockPart<HomeInvite> }
   | null;
 
-const variables = (token: string) => ({ input: { token } });
+let log = operationLog();
 
-function tokenMocks(
-  invite: LinkedInvite,
-  token: string,
-): [
-  MockFor<typeof GetShoppingListInviteByTokenDocument>,
-  MockFor<typeof GetHomeInviteByTokenDocument>,
-] {
-  return [
-    {
-      request: {
-        query: GetShoppingListInviteByTokenDocument,
-        variables: { token },
-      },
-      result: {
-        data: {
-          shoppingListInviteByToken:
-            invite && 'list' in invite
-              ? buildShoppingListInvite(invite.list)
-              : null,
-        },
-      },
-      maxUsageCount: 10,
-    },
-    {
-      request: { query: GetHomeInviteByTokenDocument, variables: { token } },
-      result: {
-        data: {
-          homeInviteByToken:
-            invite && 'home' in invite ? buildHomeInvite(invite.home) : null,
-        },
-      },
-      maxUsageCount: 10,
-    },
-  ];
-}
-
-/** Renders the screen on a deep link whose token resolves to `invite`. */
-function renderInvite(
-  invite: LinkedInvite,
-  writes: MockedResponse[] = [],
-  token = TOKEN,
+/**
+ * Opens the deep link on `token`, which resolves to `linked`, and waits for
+ * both reads: a token names one kind of invite, so the other answers null.
+ */
+async function openLink(
+  linked: Linked,
+  answers: ReturnType<typeof recordMock>[] = [],
+  token: string | undefined = TOKEN,
 ) {
-  jest
-    .requireMock('@react-navigation/native')
-    .useRoute.mockReturnValue({ params: { token } });
-  return renderWithApollo(<AcceptInvite />, {
-    operationMocks: [...tokenMocks(invite, token), ...writes],
+  mockRoute.params = { token };
+  const reads = [
+    recordMock(GetShoppingListInviteByTokenDocument, {
+      data: {
+        shoppingListInviteByToken:
+          linked && 'list' in linked ? linked.list : null,
+      },
+    }),
+    recordMock(GetHomeInviteByTokenDocument, {
+      data: {
+        homeInviteByToken: linked && 'home' in linked ? linked.home : null,
+      },
+    }),
+  ];
+  renderWithApollo(<AcceptInvite />, {
+    links: [log.link],
+    operationMocks: [...answers, ...reads].map(answer => answer.mock),
   });
+  if (!token) return;
+  await log.landed(GetShoppingListInviteByTokenDocument);
+  await log.landed(GetHomeInviteByTokenDocument);
 }
 
-const LIST_INVITE = { list: {} };
-const HOME_INVITE = { home: {} };
-
-const acceptListMock = (
-  token = TOKEN,
-): MockFor<typeof AcceptShoppingListInviteDocument> => ({
-  request: {
-    query: AcceptShoppingListInviteDocument,
-    variables: variables(token),
-  },
-  result: {
-    data: {
-      acceptShoppingListInvite: {
-        __typename: 'AcceptShoppingListInvitePayload',
-      },
+/** Resolves once the screen leaves. */
+const leaves = () =>
+  withDeadline(
+    done => {
+      mockNav.goBack.mockImplementation(done);
+      return () => undefined;
     },
-  },
-});
+    () => 'the screen never left',
+  );
 
-const REFUSAL_CODE = {
-  NotFoundError: ErrorCode.NotFound,
-  ForbiddenError: ErrorCode.Forbidden,
-  ConflictError: ErrorCode.Conflict,
-};
-
-const refusedListMock = (
-  typename: 'NotFoundError' | 'ForbiddenError' | 'ConflictError',
-): MockFor<typeof AcceptShoppingListInviteDocument> => ({
-  request: {
-    query: AcceptShoppingListInviteDocument,
-    variables: variables(TOKEN),
-  },
-  result: {
-    data: {
-      acceptShoppingListInvite: {
-        __typename: typename,
-        code: REFUSAL_CODE[typename],
-      },
+/** Resolves once an alert is raised. */
+const alerted = () =>
+  withDeadline(
+    done => {
+      jest.mocked(alertService.alert).mockImplementation(() => done());
+      return () => undefined;
     },
-  },
-});
+    () => 'nothing was alerted',
+  );
 
-const acceptHomeMock: MockFor<typeof AcceptHomeInviteDocument> = {
-  request: { query: AcceptHomeInviteDocument, variables: variables(TOKEN) },
-  result: {
-    data: { acceptHomeInvite: { __typename: 'AcceptHomeInvitePayload' } },
-  },
-};
-
-const declineListMock: MockFor<typeof DeclineShoppingListInviteDocument> = {
-  request: {
-    query: DeclineShoppingListInviteDocument,
-    variables: variables(TOKEN),
-  },
-  result: {
-    data: {
-      declineShoppingListInvite: {
-        __typename: 'DeclineShoppingListInvitePayload',
-      },
-    },
-  },
-};
-
-const declineHomeMock: MockFor<typeof DeclineHomeInviteDocument> = {
-  request: { query: DeclineHomeInviteDocument, variables: variables(TOKEN) },
-  result: {
-    data: { declineHomeInvite: { __typename: 'DeclineHomeInvitePayload' } },
-  },
-};
-
-const failingMock = (
-  query:
-    | typeof AcceptShoppingListInviteDocument
-    | typeof DeclineShoppingListInviteDocument,
-  error: Error,
-): MockedResponse => ({
-  request: { query, variables: variables(TOKEN) },
-  error,
-});
-
-const alerts = () => jest.mocked(alertService.alert).mock.calls;
+const press = (label: string) =>
+  userEvent.setup().press(screen.getByRole('button', { name: label }));
 
 /** Presses Decline, then the confirmation's own Decline. */
-async function declineAndConfirm(user: ReturnType<typeof userEvent.setup>) {
-  await drainTimers();
-  await user.press(screen.getByText('Decline'));
-  const [confirmation] = alerts();
-  confirmation?.[2]?.find(b => b.text === 'Decline')?.onPress?.();
+async function declineConfirmed() {
+  await press(t('labels.decline'));
+  await confirmDecline();
+}
+
+/** Presses Decline on the confirmation raised last. */
+async function confirmDecline() {
+  const [, , buttons] = jest.mocked(alertService.alert).mock.calls.at(-1) ?? [];
+  const { onPress } =
+    buttons?.find(button => button.text === t('labels.decline')) ?? {};
+  if (!onPress) throw new Error('no Decline on the confirmation');
+  await act(async () => {
+    onPress();
+  });
 }
 
 beforeEach(() => {
-  jest.useFakeTimers();
+  jest.clearAllMocks();
+  log = operationLog();
+  useStore.setState({
+    user: {
+      id: 'user-1',
+      email: 'invitee@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+  });
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
-
-describe('AcceptInvite', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it.each<[string, LinkedInvite, Array<string | RegExp>]>([
-    [
-      'shows "not found" when no invite matches',
-      null,
-      [/Invitation not found or expired/],
-    ],
-    ['shows Go Back button on not found state', null, ['Go Back']],
-    [
-      'renders shopping list invite details',
-      { list: { shoppingListName: 'Weekly Groceries' } },
-      ["You've been invited!", 'Accept', 'Decline'],
-    ],
-    [
-      'shows shopping list invite with inviter email fallback',
-      { list: { invitedByEmail: 'host@test.com' } },
-      [/host@test.com/],
-    ],
-    [
-      'shows "Someone" when inviter is missing for shopping list invite',
-      { list: { invitedByEmail: null } },
-      [/Someone/],
-    ],
-    [
-      'shows role for shopping list invite',
-      { list: { role: CollaboratorRole.Editor } },
-      ['Role', 'Editor'],
-    ],
-    [
-      'shows "Shopping List" as invite type for shopping list invite',
-      LIST_INVITE,
-      ['Shopping List'],
-    ],
-    [
-      'shows description when shopping list has description',
-      { list: { shoppingListDescription: 'Weekly shopping' } },
-      ['Description', 'Weekly shopping'],
-    ],
-    [
-      'shows inviter displayName for shopping list invite when available',
-      { list: { invitedByDisplayName: 'ListOwner' } },
-      [/ListOwner/],
-    ],
-    [
-      'renders invite details when home invite exists',
-      HOME_INVITE,
-      ["You've been invited!", 'Accept', 'Decline'],
-    ],
-    [
-      'shows role for home invite',
-      { home: { role: MembershipRole.Admin } },
-      ["You've been invited!", 'Admin'],
-    ],
-    ['shows "Home" invite type label for home invite', HOME_INVITE, ['Home']],
-    [
-      'shows inviter email for home invite when no displayName',
-      HOME_INVITE,
-      [/owner@test.com/],
-    ],
-    [
-      'shows "Someone" when home inviter has no displayName or email',
-      { home: { inviterEmail: '' } },
-      [/Someone/],
-    ],
-    [
-      'shows inviter displayName for home invite when available',
-      { home: { inviterDisplayName: 'HomeOwner' } },
-      [/HomeOwner/],
-    ],
-    [
-      'names a home inviter who chose no display name by the invite itself',
-      { home: { inviterName: 'Ana' } },
-      [/Ana/],
-    ],
-    [
-      'shows "join" text for home invite and "collaborate on" for shopping list',
-      HOME_INVITE,
-      [/join/],
-    ],
-  ])('%s', async (_name, invite, texts) => {
-    renderInvite(invite);
-
-    for (const text of texts) {
-      await drainTimers();
-      expect(screen.getAllByText(text).length).toBeGreaterThan(0);
-    }
-  });
-
-  it.each<[string, LinkedInvite]>([
-    ['an accepted home invite', { home: { status: InviteStatus.Accepted } }],
-    ['a revoked home invite', { home: { status: InviteStatus.Revoked } }],
-    [
-      'a list invite already taken up',
-      { list: { status: CollaboratorStatus.Active } },
-    ],
-  ])('offers nothing to accept on %s', async (_name, invite) => {
-    renderInvite(invite);
-
-    await drainTimers();
-    expect(
-      screen.getByText(/This invitation is no longer available/),
-    ).toBeTruthy();
-    expect(screen.queryByText('Accept')).toBeNull();
-  });
-
-  it('shows loading state while fetching invites', () => {
-    renderInvite(HOME_INVITE);
-
-    expect(screen.queryByText('Accept')).toBeNull();
-    expect(screen.queryByText(/Invitation not found/)).toBeNull();
-  });
-
-  it('offers a retry when the invite could not be read', async () => {
-    renderWithApollo(<AcceptInvite />, {
-      operationMocks: [
-        GetHomeInviteByTokenDocument,
-        GetShoppingListInviteByTokenDocument,
-      ].map(query => ({
-        request: { query, variables: { token: TOKEN } },
-        error: new Error('Server error'),
-      })),
+describe('an invite to a list', () => {
+  it('says who invited the person, to what, in which role', async () => {
+    await openLink({
+      list: listInvite({
+        shoppingList: { name: 'Weekly Groceries', description: 'Saturdays' },
+      }),
     });
 
-    await drainTimers();
-    expect(screen.getByText('Try again')).toBeTruthy();
-    expect(screen.queryByText(/Invitation not found/)).toBeNull();
+    expect(
+      screen.getByText(t('invitationAcceptance.invitedHeading')),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        t('invitationAcceptance.listInviteText', { inviter: 'host@test.com' }),
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText('Weekly Groceries')).toBeTruthy();
+    expect(screen.getByText(t('labels.shoppingList'))).toBeTruthy();
+    expect(
+      screen.getByText(formatRoleDisplay(CollaboratorRole.Editor, t)),
+    ).toBeTruthy();
+    expect(screen.getByText('Saturdays')).toBeTruthy();
   });
 
-  it.each<[string, string, LinkedInvite, string]>([
-    [
-      'home',
-      'home-token',
-      { home: { homeName: 'Beach House' } },
-      'Beach House',
-    ],
-    [
-      'shopping-list',
-      'list-token',
-      { list: { shoppingListName: 'Camping Trip' } },
-      'Camping Trip',
-    ],
-  ])(
-    'resolves a %s invite from a token deep link',
-    async (kind, token, invite, name) => {
-      renderInvite(invite, [], token);
+  it.each([
+    ['the name the invite gives', { inviterName: 'Sam' }, 'Sam'],
+    ['someone, with no inviter', { invitedBy: null }, t('labels.someone')],
+  ])('names its inviter as %s', async (_, invite, named) => {
+    await openLink({ list: listInvite(invite) });
 
-      await drainTimers();
-      expect(screen.getByText("You've been invited!")).toBeTruthy();
-      expect(screen.getByText(name)).toBeTruthy();
-      if (kind === 'shopping-list') {
-        expect(screen.getByText(/collaborate on/)).toBeTruthy();
-      }
+    expect(
+      screen.getByText(
+        t('invitationAcceptance.listInviteText', { inviter: named }),
+      ),
+    ).toBeTruthy();
+  });
+
+  it('is accepted, said so, and left', async () => {
+    const accepted = recordMock(AcceptShoppingListInviteDocument, {
+      data: {
+        acceptShoppingListInvite: {
+          __typename: 'AcceptShoppingListInvitePayload',
+        },
+      },
+    });
+    await openLink({ list: listInvite() }, [accepted]);
+    const left = leaves();
+
+    await press(t('labels.accept'));
+    await left;
+
+    expect(accepted.fired).toEqual([{ input: { token: TOKEN } }]);
+    expect(toastService.success).toHaveBeenCalledWith(
+      t('invitationAcceptance.shoppingListAccepted'),
+    );
+  });
+
+  it('offers nothing more while an accept is out', async () => {
+    await openLink({ list: listInvite() }, [
+      recordMock(AcceptShoppingListInviteDocument, { held: true }),
+    ]);
+
+    await press(t('labels.accept'));
+    await log.requested(AcceptShoppingListInviteDocument);
+
+    expect(
+      screen.getByRole('button', { name: t('labels.decline') }),
+    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: t('labels.accept') })).toBeBusy();
+  });
+
+  it('is declined once confirmed, and left', async () => {
+    const declined = recordMock(DeclineShoppingListInviteDocument, {
+      data: {
+        declineShoppingListInvite: {
+          __typename: 'DeclineShoppingListInvitePayload',
+        },
+      },
+    });
+    await openLink({ list: listInvite() }, [declined]);
+    const left = leaves();
+
+    await declineConfirmed();
+    await left;
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('confirmations.declineInvitationTitle'),
+      t('invitationAcceptance.declineConfirm'),
+      expect.any(Array),
+    );
+    expect(declined.fired).toEqual([{ input: { token: TOKEN } }]);
+  });
+
+  // A refusal is a member of a 200 answer: nothing throws.
+  it.each([
+    ['NotFoundError', ErrorCode.NotFound, t('errors.invitationUnavailable')],
+    [
+      'ForbiddenError',
+      ErrorCode.Forbidden,
+      t('invitationAcceptance.wrongAccountTitle'),
+    ],
+    ['ConflictError', ErrorCode.Conflict, undefined],
+  ] as const)(
+    'stays, saying so, when an accept is refused as %s',
+    async (typename, code, said) => {
+      await openLink({ list: listInvite() }, [
+        recordMock(AcceptShoppingListInviteDocument, {
+          data: { acceptShoppingListInvite: { __typename: typename, code } },
+        }),
+      ]);
+      const raised = alerted();
+
+      await press(t('labels.accept'));
+      await raised;
+
+      const shown = jest.mocked(alertService.alert).mock.calls.flat();
+      if (said) expect(shown).toContain(said);
+      expect(toastService.success).not.toHaveBeenCalled();
+      expect(mockNav.goBack).not.toHaveBeenCalled();
     },
   );
 
-  it.each<[string, LinkedInvite, MockedResponse, string]>([
+  it.each([
     [
-      'calls acceptShoppingListInvite on accept for shopping list invite',
-      LIST_INVITE,
-      acceptListMock(),
-      'Shopping list invitation accepted!',
+      'an accept that cannot be sent',
+      () =>
+        recordMock(AcceptShoppingListInviteDocument, {
+          error: new Error('Network error'),
+        }),
+      t('invitationAcceptance.acceptFailed'),
     ],
     [
-      'calls acceptHomeInvite on accept for home invite',
-      HOME_INVITE,
-      acceptHomeMock,
-      'Home invitation accepted!',
+      'a throttled accept, saying how long to wait',
+      () =>
+        recordMock(AcceptShoppingListInviteDocument, {
+          error: Object.assign(new Error('rate limited'), {
+            errors: [
+              {
+                message: 'Too many requests',
+                extensions: { code: 'OPERATION_RATE_LIMITED', retryAfter: 600 },
+              },
+            ],
+          }),
+        }),
+      t('errors.rateLimitMinutes', { count: 10 }),
     ],
-  ])('%s', async (_name, invite, accept, message) => {
-    const user = userEvent.setup();
-    renderInvite(invite, [accept]);
+    [
+      'a decline that cannot be sent',
+      () =>
+        recordMock(DeclineShoppingListInviteDocument, {
+          error: new Error('Failed'),
+        }),
+      t('invitationAcceptance.declineFailed'),
+    ],
+  ])('stays after %s', async (name, answer, said) => {
+    await openLink({ list: listInvite() }, [answer()]);
 
-    await drainTimers();
-    await user.press(screen.getByText('Accept'));
+    if (name.includes('decline')) {
+      await press(t('labels.decline'));
+      const raised = alerted();
+      await confirmDecline();
+      await raised;
+    } else {
+      const raised = alerted();
+      await press(t('labels.accept'));
+      await raised;
+    }
+    // The alert comes before the press's own promise has run out.
+    await act(async () => undefined);
 
-    await drainTimers();
-    expect(mockGoBack).toHaveBeenCalled();
-    expect(toastService.success).toHaveBeenCalledWith(message);
-    // The accepted invite resolves to not found; the screen has already left.
-    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(alertService.alert).toHaveBeenLastCalledWith(
+      t('labels.error'),
+      said,
+    );
+    expect(mockNav.goBack).not.toHaveBeenCalled();
+  });
+});
+
+describe('an invite to a home', () => {
+  it('says who invited the person to join it, in which role', async () => {
+    await openLink({
+      home: homeInvite({
+        role: MembershipRole.Admin,
+        home: { name: 'Beach House' },
+      }),
+    });
+
+    expect(
+      screen.getByText(
+        t('invitationAcceptance.homeInviteText', { inviter: 'owner@test.com' }),
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText('Beach House')).toBeTruthy();
+    expect(screen.getByText(t('labels.home'))).toBeTruthy();
+    expect(
+      screen.getByText(formatRoleDisplay(MembershipRole.Admin, t)),
+    ).toBeTruthy();
   });
 
-  it('uses a custom token from route params', async () => {
-    const user = userEvent.setup();
-    renderInvite(
-      LIST_INVITE,
-      [acceptListMock('deep-link-token')],
-      'deep-link-token',
-    );
+  it.each([
+    ['the name the invite gives', { inviterName: 'Ana' }, 'Ana'],
+    [
+      'the name the inviter chose',
+      {
+        inviter: {
+          email: 'owner@test.com',
+          displayName: 'HomeOwner',
+          profile: { displayName: 'HomeOwner' },
+        },
+      },
+      'HomeOwner',
+    ],
+    [
+      'someone, with neither a name nor an email',
+      {
+        inviter: { email: '', displayName: null, profile: null },
+      },
+      t('labels.someone'),
+    ],
+  ])('names its inviter as %s', async (_, invite, named) => {
+    await openLink({ home: homeInvite(invite) });
 
-    await drainTimers();
-    expect(screen.getByText(/collaborate on/)).toBeTruthy();
-    await user.press(screen.getByText('Accept'));
+    expect(
+      screen.getByText(
+        t('invitationAcceptance.homeInviteText', { inviter: named }),
+      ),
+    ).toBeTruthy();
+  });
 
-    await drainTimers();
+  it('is accepted, said so, and left', async () => {
+    const accepted = recordMock(AcceptHomeInviteDocument, {
+      data: { acceptHomeInvite: { __typename: 'AcceptHomeInvitePayload' } },
+    });
+    await openLink({ home: homeInvite() }, [accepted]);
+    const left = leaves();
+
+    await press(t('labels.accept'));
+    await left;
+
+    expect(accepted.fired).toEqual([{ input: { token: TOKEN } }]);
     expect(toastService.success).toHaveBeenCalledWith(
-      'Shopping list invitation accepted!',
+      t('invitationAcceptance.homeAccepted'),
     );
   });
 
-  // Refusals arrive as union members of a 200 response, so nothing throws and
-  // `result.error` is undefined. A screen that reads neither reports success.
-  describe('when the server refuses the deep-linked invite', () => {
-    const refusalCase = async (
-      typename: 'NotFoundError' | 'ForbiddenError' | 'ConflictError',
-    ) => {
-      const user = userEvent.setup();
-      renderInvite(LIST_INVITE, [refusedListMock(typename)]);
-      await drainTimers();
-      await user.press(screen.getByText('Accept'));
-      await drainTimers();
-      expect(alertService.alert).toHaveBeenCalled();
-      return alerts().flat();
-    };
+  it('is declined once confirmed, and left', async () => {
+    const declined = recordMock(DeclineHomeInviteDocument, {
+      data: { declineHomeInvite: { __typename: 'DeclineHomeInvitePayload' } },
+    });
+    await openLink({ home: homeInvite() }, [declined]);
+    const left = leaves();
 
-    it.each(['NotFoundError', 'ForbiddenError', 'ConflictError'] as const)(
-      'does not claim success on %s',
-      async typename => {
-        expect(await refusalCase(typename)).not.toContain(
-          'Shopping list invitation accepted!',
-        );
+    await declineConfirmed();
+    await left;
+
+    expect(declined.fired).toEqual([{ input: { token: TOKEN } }]);
+  });
+});
+
+// The gate is the hook's, so it holds for both kinds of invite.
+describe('for an account that has not verified its email', () => {
+  beforeEach(() => {
+    useStore.setState({
+      user: {
+        id: 'user-1',
+        email: 'invitee@example.com',
+        emailVerified: false,
+        onBoarded: true,
       },
-    );
-
-    it("explains a revoked or spent invite in the reader's language", async () => {
-      expect(await refusalCase('NotFoundError')).toContain(
-        'This invitation is no longer available. It may have been used, declined, or expired.',
-      );
-    });
-
-    it('names the account mismatch only for a permission refusal', async () => {
-      expect(await refusalCase('ForbiddenError')).toContain(
-        'Signed in as a different account',
-      );
     });
   });
 
-  // The gate lives in the hook, so it holds for both kinds of invite.
-  describe('when the signed-in account has not verified its email', () => {
-    beforeEach(() => {
-      useStore.setState({
-        user: {
-          id: 'user-1',
-          email: 'invitee@example.com',
-          emailVerified: false,
-          onBoarded: true,
-        },
-      });
-    });
-
-    afterEach(() => {
-      useStore.setState({ user: null });
-    });
-
-    it.each<[string, LinkedInvite, () => RecordedMock, string]>([
-      [
-        'a list invite',
-        LIST_INVITE,
-        () => recordMock(AcceptShoppingListInviteDocument, { data: {} }),
-        'Shopping list invitation accepted!',
-      ],
-      [
-        'a home invite',
-        HOME_INVITE,
-        () => recordMock(AcceptHomeInviteDocument, { data: {} }),
-        'Home invitation accepted!',
-      ],
-    ])(
-      'offers verification instead of accepting %s',
-      async (_kind, invite, acceptMock, success) => {
-        const user = userEvent.setup();
-        const accept = acceptMock();
-        renderInvite(invite, [accept.mock]);
-
-        await drainTimers();
-        await user.press(screen.getByText('Accept'));
-
-        await drainTimers();
-        expect(alertService.alert).toHaveBeenCalledWith(
-          'Verify your email first',
-          expect.any(String),
-          expect.arrayContaining([
-            expect.objectContaining({ text: 'Verify Now' }),
-          ]),
-        );
-        expect(accept.fired).toHaveLength(0);
-        expect(alerts().flat()).not.toContain(success);
-        expect(mockGoBack).not.toHaveBeenCalled();
-      },
-    );
-
-    // Declining shares nothing, and the API takes it from an unverified account.
-    it('still declines', async () => {
-      const user = userEvent.setup();
-      renderInvite(LIST_INVITE, [declineListMock]);
-
-      await declineAndConfirm(user);
-
-      await drainTimers();
-      expect(mockGoBack).toHaveBeenCalled();
-      expect(alerts().flat()).not.toContain('Verify your email first');
-    });
-  });
-
-  it('shows decline confirmation dialog', async () => {
-    const user = userEvent.setup();
-    renderInvite(LIST_INVITE);
-
-    await drainTimers();
-    await user.press(screen.getByText('Decline'));
-
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Decline Invitation',
-      'Are you sure you want to decline this invitation?',
-      expect.any(Array),
-    );
-  });
-
-  it.each<[string, LinkedInvite, MockedResponse]>([
+  it.each([
     [
-      'calls declineShoppingListInvite when decline is confirmed',
-      LIST_INVITE,
-      declineListMock,
+      'a list',
+      { list: listInvite() },
+      () => recordMock(AcceptShoppingListInviteDocument, { held: true }),
     ],
     [
-      'calls declineHomeInvite when decline is confirmed for home invite',
-      HOME_INVITE,
-      declineHomeMock,
+      'a home',
+      { home: homeInvite() },
+      () => recordMock(AcceptHomeInviteDocument, { held: true }),
     ],
-  ])('%s', async (_name, invite, decline) => {
-    const user = userEvent.setup();
-    renderInvite(invite, [decline]);
+  ] as const)(
+    'offers verification instead of accepting %s',
+    async (_, linked, answer) => {
+      const accept = answer();
+      await openLink(linked, [accept]);
 
-    await declineAndConfirm(user);
+      await press(t('labels.accept'));
 
-    await drainTimers();
-    expect(mockGoBack).toHaveBeenCalled();
-  });
+      expect(alertService.alert).toHaveBeenCalledWith(
+        t('auth.verifyToCollaborateTitle'),
+        expect.any(String),
+        expect.arrayContaining([
+          expect.objectContaining({ text: t('auth.verifyNow') }),
+        ]),
+      );
+      expect(accept.fired).toHaveLength(0);
+      expect(mockNav.goBack).not.toHaveBeenCalled();
+    },
+  );
 
-  it('shows error alert when accept fails', async () => {
-    const user = userEvent.setup();
-    renderInvite(LIST_INVITE, [
-      failingMock(AcceptShoppingListInviteDocument, new Error('Network error')),
-    ]);
-
-    await drainTimers();
-    await user.press(screen.getByText('Accept'));
-
-    // The server's own text is unlocalizable English by construction — the
-    // client sends no `Accept-Language` and the token carries no locale — so it
-    // must not be what the alert body says.
-    await drainTimers();
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Failed to accept invitation. Please try again.',
-    );
-  });
-
-  it('tells a throttled accept how long to wait, not that accepting failed', async () => {
-    const user = userEvent.setup();
-    const rateLimited = Object.assign(new Error('rate limited'), {
-      errors: [
-        {
-          message: 'Too many requests',
-          extensions: { code: 'OPERATION_RATE_LIMITED', retryAfter: 600 },
+  // Declining shares nothing, and the API takes it from an unverified account.
+  it('still declines', async () => {
+    await openLink({ list: listInvite() }, [
+      recordMock(DeclineShoppingListInviteDocument, {
+        data: {
+          declineShoppingListInvite: {
+            __typename: 'DeclineShoppingListInvitePayload',
+          },
         },
+      }),
+    ]);
+    const left = leaves();
+
+    await declineConfirmed();
+
+    await expect(left).resolves.toBeUndefined();
+  });
+});
+
+describe('a link that resolves to no invite', () => {
+  it.each([
+    [
+      'an accepted home invite',
+      { home: homeInvite({ status: InviteStatus.Accepted }) },
+    ],
+    [
+      'a revoked home invite',
+      { home: homeInvite({ status: InviteStatus.Revoked }) },
+    ],
+    [
+      'a list invite already taken up',
+      { list: listInvite({ status: CollaboratorStatus.Active }) },
+    ],
+  ] as const)('offers nothing to accept on %s', async (_, linked) => {
+    await openLink(linked);
+
+    expect(screen.getByText(t('errors.invitationUnavailable'))).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: t('labels.accept') }),
+    ).not.toBeOnTheScreen();
+  });
+
+  it.each([
+    ['no invite', TOKEN],
+    ['no token', undefined],
+  ])(
+    'says it was not found for %s, and goes back from there',
+    async (_, token) => {
+      await openLink(null, [], token);
+
+      expect(screen.getByText(t('invitationAcceptance.notFound'))).toBeTruthy();
+      await press(t('labels.goBack'));
+
+      expect(mockNav.goBack).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('offers nothing while the invite is being read', async () => {
+    mockRoute.params = { token: TOKEN };
+    renderWithApollo(<AcceptInvite />, {
+      links: [log.link],
+      operationMocks: [
+        recordMock(GetShoppingListInviteByTokenDocument, { held: true }).mock,
+        recordMock(GetHomeInviteByTokenDocument, { held: true }).mock,
       ],
     });
-    renderInvite(LIST_INVITE, [
-      failingMock(AcceptShoppingListInviteDocument, rateLimited),
-    ]);
+    await log.requested(GetHomeInviteByTokenDocument);
 
-    await drainTimers();
-    await user.press(screen.getByText('Accept'));
-
-    await drainTimers();
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Too many requests. Please try again in 10 minutes.',
-    );
-    expect(mockGoBack).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('button', { name: t('labels.accept') }),
+    ).not.toBeOnTheScreen();
+    expect(
+      screen.queryByText(t('invitationAcceptance.notFound')),
+    ).not.toBeOnTheScreen();
   });
 
-  it('shows error alert when decline fails', async () => {
-    const user = userEvent.setup();
-    renderInvite(LIST_INVITE, [
-      failingMock(DeclineShoppingListInviteDocument, new Error('Failed')),
-    ]);
+  it('offers a retry when the invite could not be read, which reads it again', async () => {
+    mockRoute.params = { token: TOKEN };
+    renderWithApollo(<AcceptInvite />, {
+      links: [log.link],
+      operationMocks: [
+        recordMock(GetShoppingListInviteByTokenDocument, {
+          error: new Error('Server error'),
+        }).mock,
+        recordMock(GetHomeInviteByTokenDocument, {
+          error: new Error('Server error'),
+        }).mock,
+      ],
+    });
+    await log.landed(GetShoppingListInviteByTokenDocument);
+    await log.landed(GetHomeInviteByTokenDocument);
 
-    await declineAndConfirm(user);
+    await press(t('labels.tryAgain'));
 
-    await drainTimers();
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Failed to decline invitation. Please try again.',
-    );
-    expect(mockGoBack).not.toHaveBeenCalled();
+    await expect(
+      log.requested(GetHomeInviteByTokenDocument, 2),
+    ).resolves.toBeUndefined();
   });
+});
 
-  it('shows error alert for invalid invitation when no token', async () => {
-    jest
-      .requireMock('@react-navigation/native')
-      .useRoute.mockReturnValue({ params: {} });
-    renderWithApollo(<AcceptInvite />, { operationMocks: [] });
+it('closes from its header', async () => {
+  await openLink({ list: listInvite() });
 
-    await drainTimers();
-    expect(screen.getByText(/Invitation not found/)).toBeTruthy();
-  });
+  await userEvent
+    .setup()
+    .press(screen.getByTestId(kitTestIDs.headerCloseButton));
 
-  it('navigates back when Go Back is pressed on not found screen', async () => {
-    const user = userEvent.setup();
-    renderInvite(null);
-
-    await drainTimers();
-    await user.press(screen.getByText('Go Back'));
-
-    expect(mockGoBack).toHaveBeenCalled();
-  });
+  expect(mockNav.goBack).toHaveBeenCalledTimes(1);
 });

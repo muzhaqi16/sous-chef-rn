@@ -1,361 +1,255 @@
-'use no memo';
-
 import React from 'react';
-import { act, fireEvent, render } from '@testing-library/react-native';
-import { BarcodeScannerScreen } from '../BarcodeScannerScreen';
+import { act, render, screen, userEvent } from '@testing-library/react-native';
+import { t } from '#/i18n';
+import { PermissionService } from '#/services/permissions/PermissionService';
+import { HapticService } from '#services/haptic/HapticService';
 import type { BarcodeSource } from '#features/barcode/types';
-import { motion } from '#/theme/motion';
+import { BarcodeScannerScreen } from '../BarcodeScannerScreen';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-const mockRequestPermission = jest.fn();
-const mockOpenSettings = jest.fn();
-jest.mock('#hooks/permissions/usePermission', () => ({
-  usePermission: jest.fn(() => ({
-    isGranted: false,
-    isBlocked: false,
-    request: mockRequestPermission,
-    openSettings: mockOpenSettings,
-  })),
-}));
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
-jest.mock('../../hooks/useBarcodeScanner', () => ({
-  useBarcodeScanner: jest.fn(() => ({
-    setScanning: jest.fn(),
-    resetScanner: jest.fn(),
-    isScanning: false,
-  })),
-}));
-
-interface CapturedCameraProps {
+interface CameraProps {
+  isActive?: boolean;
   torchMode?: 'on' | 'off';
   onStarted?: () => void;
   onStopped?: () => void;
-  onError?: (error: Error) => void;
 }
 
-// Captured so the torch tests can assert what the screen commands, and drive
-// the session's started/stopped events the way the native camera would.
-let mockCameraProps: CapturedCameraProps = {};
-
+/** The native camera: the props the screen last gave it, and its devices. */
+const mockCamera: { props: CameraProps; devices: { position: string }[] } = {
+  props: {},
+  devices: [{ position: 'back' }],
+};
 jest.mock('react-native-vision-camera', () => ({
-  Camera: (props: CapturedCameraProps) => {
-    mockCameraProps = props;
+  Camera: (props: CameraProps) => {
+    mockCamera.props = props;
     return null;
   },
-  useCameraDevices: jest.fn(() => []),
+  useCameraDevices: () => mockCamera.devices,
 }));
 
-// The screen reads from our platform-shimmed hook, not the underlying
-// vision-camera packages, so mocking this single module is enough.
+/** The native code scanner: what the screen hands it to call on a read. */
+const mockScanner: {
+  onBarcodeScanned?: (code: { value: string; format: string }) => void;
+} = {};
 jest.mock('../useBarcodeOutput', () => ({
-  useBarcodeOutput: jest.fn(() => ({})),
-}));
-
-jest.mock('#features/barcode/components/BarcodeMask', () => 'BarcodeMask');
-
-jest.mock('#components/molecules/Button', () => ({
-  Button: ({
-    children,
-    onPress,
-  }: {
-    children?: React.ReactNode;
-    onPress?: () => void;
+  useBarcodeOutput: (options: {
+    onBarcodeScanned: (code: { value: string; format: string }) => void;
   }) => {
-    const { Text, Pressable } = require('react-native');
-    return (
-      <Pressable onPress={onPress}>
-        <Text>{children}</Text>
-      </Pressable>
-    );
+    mockScanner.onBarcodeScanned = options.onBarcodeScanned;
+    return {};
   },
 }));
 
-jest.mock('#components/atoms/IconButton', () => ({
-  IconButton: ({
-    name,
-    onPress,
-    accessibilityLabel,
-  }: {
-    name?: string;
-    onPress?: () => void;
-    accessibilityLabel?: string;
-  }) => {
-    const { Text, Pressable } = require('react-native');
-    return (
-      <Pressable accessibilityLabel={accessibilityLabel} onPress={onPress}>
-        <Text>{name}</Text>
-      </Pressable>
-    );
+// The library's focus effect runs on every render; this one runs when told,
+// as a screen gaining focus does.
+const mockFocus: React.EffectCallback[] = [];
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  useFocusEffect: (effect: React.EffectCallback) => {
+    mockFocus.push(effect);
   },
 }));
 
-jest.mock('#services/haptic/HapticService', () => ({
-  HapticService: { success: jest.fn() },
-}));
+type PermissionStatus = Awaited<ReturnType<typeof PermissionService.check>>;
 
-// Override useFocusEffect to avoid infinite re-render loop in tests
-// The global mock calls callback on every render; useEffect-style is needed here
-jest.mock('@react-navigation/native', () => {
-  const actual = jest.requireActual('@react-navigation/native');
-  return {
-    ...actual,
-    useFocusEffect: jest.fn(),
-  };
+const SOURCE: BarcodeSource = 'pantry';
+
+/**
+ * Opens the scanner with the camera permission `held`, focuses it, and, for a
+ * permission not yet granted, waits for the ask once the screen settles.
+ */
+async function openScanner({
+  held = 'granted',
+  askAnswers = 'denied',
+}: { held?: PermissionStatus; askAnswers?: PermissionStatus } = {}) {
+  jest.spyOn(PermissionService, 'check').mockResolvedValue(held);
+  const asked = new Promise<void>(resolve => {
+    jest.spyOn(PermissionService, 'request').mockImplementation(async () => {
+      resolve();
+      return askAnswers;
+    });
+  });
+  render(
+    <BarcodeScannerScreen
+      route={{ params: { source: SOURCE, pantryId: 'p-1' } }}
+    />,
+  );
+  await act(async () => {
+    mockFocus.splice(0).forEach(effect => effect());
+  });
+  if (held !== 'granted' && held !== 'blocked') {
+    // Outside `act`: the settle timer's render, which sends the ask, would wait
+    // on a held scope.
+    await asked;
+    await act(async () => undefined);
+  }
+}
+
+/** The focus effects of the latest render, run as a refocus would. */
+const refocus = async () => {
+  await act(async () => {
+    mockFocus.splice(0).forEach(effect => effect());
+  });
+};
+
+const scan = (value: string, format = 'ean-13') => {
+  act(() => {
+    mockScanner.onBarcodeScanned?.({ value, format });
+  });
+};
+
+beforeEach(() => {
+  jest.restoreAllMocks();
+  jest.clearAllMocks();
+  mockFocus.length = 0;
+  mockCamera.devices = [{ position: 'back' }];
+  mockCamera.props = {};
 });
 
-const source: BarcodeSource = 'pantry';
-const defaultRoute = { params: { source, pantryId: 'p-1' } };
+describe('the camera permission', () => {
+  it('is asked for once the screen settles, with no refusal said before', async () => {
+    jest.spyOn(PermissionService, 'check').mockResolvedValue('denied');
+    jest
+      .spyOn(PermissionService, 'request')
+      .mockImplementation(() => new Promise(() => undefined));
+    render(<BarcodeScannerScreen route={{ params: { source: SOURCE } }} />);
+    await act(async () => undefined);
 
-describe('BarcodeScannerScreen', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  // Renders, then drives the screen past its settle delay and the permission
-  // request the way a real focus plus an answered OS dialog would — the only
-  // route to the refusal UI now that it waits for the ask to resolve. The
-  // suite's no-op `useFocusEffect` mock never arms the settle timer, so capture
-  // the callbacks and fire them once by hand: running them on every render
-  // instead re-arms the timer indefinitely.
-  const renderAfterPermissionAsk = async (route = defaultRoute) => {
-    const { useFocusEffect } = jest.requireMock('@react-navigation/native');
-    const focusCallbacks: React.EffectCallback[] = [];
-    useFocusEffect.mockImplementation((cb: React.EffectCallback) => {
-      focusCallbacks.push(cb);
-    });
-    jest.useFakeTimers();
-    const utils = render(<BarcodeScannerScreen route={route} />);
-    await act(async () => {
-      focusCallbacks.splice(0).forEach(cb => cb());
-      jest.advanceTimersByTime(motion.timing.SLOW + motion.timing.STANDARD);
-    });
-    jest.useRealTimers();
-    return utils;
-  };
-
-  // The screen must never present a refusal the user has not made. On Android a
-  // never-requested permission checks as `RESULTS.DENIED`, so "not granted" on
-  // its own is NOT evidence of a refusal — and the request is deliberately
-  // delayed until the screen settles, which left this copy on screen for half a
-  // second before the OS dialog even appeared.
-  it('shows no refusal copy before the permission has been requested', () => {
-    const { queryByText } = render(
-      <BarcodeScannerScreen route={defaultRoute} />,
-    );
     expect(
-      queryByText('Camera access is required to scan barcodes.'),
-    ).toBeNull();
-    expect(queryByText('Grant Permission')).toBeNull();
-    expect(queryByText('Cancel')).toBeNull();
+      screen.queryByText(t('errors.cameraPermission')),
+    ).not.toBeOnTheScreen();
+    expect(PermissionService.request).not.toHaveBeenCalled();
   });
 
-  it('shows permission request once the request resolved and was refused', async () => {
-    const { getByText } = await renderAfterPermissionAsk();
-    expect(
-      getByText('Camera access is required to scan barcodes.'),
-    ).toBeTruthy();
-    expect(getByText('Grant Permission')).toBeTruthy();
+  it('offers to ask again once the ask was refused, and a way out', async () => {
+    await openScanner({ held: 'denied' });
+
+    expect(screen.getByText(t('errors.cameraPermission'))).toBeTruthy();
+    expect(screen.getByText(t('labels.grantPermission'))).toBeTruthy();
+    await userEvent.setup().press(screen.getByText(t('labels.cancel')));
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 
-  it('shows Open Settings when permission is blocked', () => {
-    const { usePermission } = jest.requireMock(
-      '#hooks/permissions/usePermission',
+  it('sends a blocked camera to Settings without asking', async () => {
+    const settings = jest
+      .spyOn(PermissionService, 'openSettings')
+      .mockResolvedValue(undefined);
+    await openScanner({ held: 'blocked' });
+
+    expect(PermissionService.request).not.toHaveBeenCalled();
+    await userEvent.setup().press(screen.getByText(t('labels.openSettings')));
+    expect(settings).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the scanner', () => {
+  it('says so when the device has no camera', async () => {
+    mockCamera.devices = [];
+    await openScanner();
+
+    expect(screen.getByText(t('errors.noCameraDevice'))).toBeTruthy();
+  });
+
+  it('wakes the camera on focus', async () => {
+    await openScanner();
+    await refocus();
+
+    expect(mockCamera.props.isActive).toBe(true);
+  });
+
+  it('opens what it reads, once, carrying where it was opened from', async () => {
+    const felt = jest.spyOn(HapticService, 'success');
+    await openScanner();
+    await refocus();
+
+    scan('051500255162');
+    scan('000000000000');
+
+    expect(mockNav.toSearchResults).toHaveBeenCalledTimes(1);
+    expect(mockNav.toSearchResults).toHaveBeenCalledWith({
+      barcode: '051500255162',
+      format: 'ean-13',
+      source: SOURCE,
+      pantryId: 'p-1',
+      shoppingListId: undefined,
+    });
+    expect(felt).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(t('status.barcodeScanned'))).toBeTruthy();
+  });
+
+  it('scans again on request', async () => {
+    await openScanner();
+    await refocus();
+    scan('051500255162');
+
+    await userEvent.setup().press(screen.getByText(t('labels.scanAnother')));
+    scan('000000000017');
+
+    expect(mockNav.toSearchResults).toHaveBeenCalledTimes(2);
+  });
+
+  it('closes to the navigator above it, where there is one', async () => {
+    const parent = { canGoBack: () => true, goBack: jest.fn() };
+    jest.mocked(mockNav.navigation.getParent).mockReturnValueOnce(parent);
+    await openScanner();
+
+    await userEvent
+      .setup()
+      .press(screen.getByLabelText(t('barcodeScanner.closeScanner')));
+
+    expect(parent.goBack).toHaveBeenCalledTimes(1);
+    expect(mockNav.goBack).not.toHaveBeenCalled();
+  });
+});
+
+describe('the torch', () => {
+  const flash = (on: boolean) =>
+    screen.getByLabelText(
+      on ? t('barcodeScanner.flashOff') : t('barcodeScanner.flashOn'),
     );
-    usePermission.mockReturnValue({
-      isGranted: false,
-      isBlocked: true,
-      request: mockRequestPermission,
-      openSettings: mockOpenSettings,
+
+  it('commands nothing until the session starts, then what was pressed', async () => {
+    await openScanner();
+
+    await userEvent.setup().press(flash(false));
+    expect(mockCamera.props.torchMode).toBeUndefined();
+    act(() => {
+      mockCamera.props.onStarted?.();
     });
 
-    const { getByText } = render(<BarcodeScannerScreen route={defaultRoute} />);
-    expect(getByText('Open Settings')).toBeTruthy();
+    expect(mockCamera.props.torchMode).toBe('on');
   });
 
-  it('shows no camera device message when no device found', () => {
-    const { usePermission } = jest.requireMock(
-      '#hooks/permissions/usePermission',
-    );
-    usePermission.mockReturnValue({
-      isGranted: true,
-      isBlocked: false,
-      request: mockRequestPermission,
-      openSettings: mockOpenSettings,
+  it('turns off again', async () => {
+    await openScanner();
+    act(() => {
+      mockCamera.props.onStarted?.();
     });
+    const user = userEvent.setup();
 
-    const { useCameraDevices } = jest.requireMock('react-native-vision-camera');
-    useCameraDevices.mockReturnValue([]);
+    await user.press(flash(false));
+    await user.press(flash(true));
 
-    const { getByText } = render(<BarcodeScannerScreen route={defaultRoute} />);
-    expect(getByText('No camera device found')).toBeTruthy();
+    expect(mockCamera.props.torchMode).toBe('off');
   });
 
-  it('renders camera scanner when permission granted and device found', () => {
-    const { usePermission } = jest.requireMock(
-      '#hooks/permissions/usePermission',
-    );
-    usePermission.mockReturnValue({
-      isGranted: true,
-      isBlocked: false,
-      request: mockRequestPermission,
-      openSettings: mockOpenSettings,
+  it('is left dark once the session stops', async () => {
+    await openScanner();
+    act(() => {
+      mockCamera.props.onStarted?.();
+    });
+    await userEvent.setup().press(flash(false));
+
+    act(() => {
+      mockCamera.props.onStopped?.();
+      mockCamera.props.onStarted?.();
     });
 
-    const { useCameraDevices } = jest.requireMock('react-native-vision-camera');
-    useCameraDevices.mockReturnValue([{ position: 'back', id: 'back-cam' }]);
-
-    const { getByText } = render(<BarcodeScannerScreen route={defaultRoute} />);
-    expect(getByText('Point your camera at a barcode')).toBeTruthy();
+    expect(mockCamera.props.torchMode).toBeUndefined();
   });
-
-  it('shows Cancel button on permission screen', async () => {
-    const { usePermission } = jest.requireMock(
-      '#hooks/permissions/usePermission',
-    );
-    usePermission.mockReturnValue({
-      isGranted: false,
-      isBlocked: false,
-      request: mockRequestPermission,
-      openSettings: mockOpenSettings,
-    });
-
-    const { getByText } = await renderAfterPermissionAsk();
-    expect(getByText('Cancel')).toBeTruthy();
-  });
-
-  describe('torch', () => {
-    beforeEach(() => {
-      mockCameraProps = {};
-      const { usePermission } = jest.requireMock(
-        '#hooks/permissions/usePermission',
-      );
-      usePermission.mockReturnValue({
-        isGranted: true,
-        isBlocked: false,
-        request: mockRequestPermission,
-        openSettings: mockOpenSettings,
-      });
-
-      const { useCameraDevices } = jest.requireMock(
-        'react-native-vision-camera',
-      );
-      useCameraDevices.mockReturnValue([{ position: 'back', id: 'back-cam' }]);
-    });
-
-    // A defined torchMode makes VisionCamera call setTorchMode() as soon as the
-    // controller exists — before the session has opened — which CameraX rejects
-    // with "Camera is not active.".
-    it('commands no torch mode before the session starts', () => {
-      render(<BarcodeScannerScreen route={defaultRoute} />);
-
-      expect(mockCameraProps.torchMode).toBeUndefined();
-    });
-
-    it('defers a flash press made while the session is still starting', () => {
-      const { getByLabelText } = render(
-        <BarcodeScannerScreen route={defaultRoute} />,
-      );
-
-      fireEvent.press(getByLabelText('Turn flash on'));
-      expect(mockCameraProps.torchMode).toBeUndefined();
-
-      act(() => {
-        mockCameraProps.onStarted?.();
-      });
-      expect(mockCameraProps.torchMode).toBe('on');
-    });
-
-    it('stops commanding the torch once the session stops', () => {
-      const { getByLabelText } = render(
-        <BarcodeScannerScreen route={defaultRoute} />,
-      );
-
-      act(() => {
-        mockCameraProps.onStarted?.();
-      });
-      fireEvent.press(getByLabelText('Turn flash on'));
-      expect(mockCameraProps.torchMode).toBe('on');
-
-      act(() => {
-        mockCameraProps.onStopped?.();
-      });
-      expect(mockCameraProps.torchMode).toBeUndefined();
-      // Back to the "off" affordance, so the next session starts dark.
-      expect(getByLabelText('Turn flash on')).toBeTruthy();
-    });
-  });
-
-  it('renders with undefined route params', () => {
-    const { usePermission } = jest.requireMock(
-      '#hooks/permissions/usePermission',
-    );
-    usePermission.mockReturnValue({
-      isGranted: false,
-      isBlocked: false,
-      request: mockRequestPermission,
-      openSettings: mockOpenSettings,
-    });
-
-    const tree = render(<BarcodeScannerScreen route={{ params: undefined }} />);
-    expect(tree.toJSON()).toBeTruthy();
-  });
-
-  it.each([
-    { source: 'pantry', pantryId: 'p-1' },
-    { source: 'shoppingList', shoppingListId: 'l-1' },
-    { source: 'storeMode', shoppingListId: 'l-1' },
-  ] as const)(
-    'hands a $source scan its destination with the barcode',
-    async params => {
-      const { usePermission } = jest.requireMock(
-        '#hooks/permissions/usePermission',
-      );
-      usePermission.mockReturnValue({
-        isGranted: true,
-        isBlocked: false,
-        request: mockRequestPermission,
-        openSettings: mockOpenSettings,
-      });
-      const { useCameraDevices } = jest.requireMock(
-        'react-native-vision-camera',
-      );
-      useCameraDevices.mockReturnValue([{ position: 'back', id: 'back-cam' }]);
-      const navigation = jest.requireMock('#hooks/navigation/useAppNavigation');
-      const toSearchResults = jest.fn();
-      navigation.useAppNavigation.mockReturnValue({
-        ...navigation.useAppNavigation(),
-        toSearchResults,
-      });
-      const { useFocusEffect } = jest.requireMock('@react-navigation/native');
-      const focusCallbacks: React.EffectCallback[] = [];
-      useFocusEffect.mockImplementation((cb: React.EffectCallback) => {
-        focusCallbacks.push(cb);
-      });
-      let output: {
-        onBarcodeScanned: (code: { value: string; format: string }) => void;
-      } | null = null;
-      const { useBarcodeOutput } = jest.requireMock('../useBarcodeOutput');
-      useBarcodeOutput.mockImplementation((options: typeof output) => {
-        output = options;
-        return {};
-      });
-
-      render(<BarcodeScannerScreen route={{ params }} />);
-      await act(async () => {
-        focusCallbacks.splice(0).forEach(cb => cb());
-      });
-      act(() => {
-        output?.onBarcodeScanned({ value: '012345678905', format: 'upc-a' });
-      });
-
-      expect(toSearchResults).toHaveBeenCalledWith({
-        barcode: '012345678905',
-        format: 'upc-a',
-        pantryId: undefined,
-        shoppingListId: undefined,
-        ...params,
-      });
-    },
-  );
 });

@@ -302,6 +302,64 @@ package is left, since the server draws those first, and a restock adds its whol
 answer replaces the layer, so a mutation that moves stock returns `amountLeft` and `fullPackages`, or
 the row falls back to the old read when the layer drops.
 
+**Four figures, one stack.**
+- `quantity` is the physical count, a part-used package counted whole (the API's `countOf`).
+- `heldQuantity` is the exact fraction held, each batch by its own size (the API's `packagesHeld`).
+- `stockBreakdown.fullPackages` is the unopened count.
+- `remainingNetWeight` and `remainingPortions` are what is inside.
+
+A use stated in what is inside moves all four before the answer on a stack of one batch: one batch is
+one package size, so its packages scale with its contents (`heldAfterDraw`). A 64 fl oz carton less
+8 fl oz is 56 fl oz, 0.875 carton held, one carton, none unopened (USE-02). Across batches only the
+total and `amountLeft` move at once: which package a use drew is the API's quantity engine, which the
+client does not copy. Two 16 oz packs less 12 oz read 20 oz at once; 1.25 held, one unopened and two
+packs come with the answer (USE-04). An acquisition keeps the size it was bought in, so a 24 oz jar
+restocked beside a 16 oz one adds 24 oz and restates neither (IN-05). A use in a unit the device cannot
+convert changes nothing until the server answers, and the row shows the amount entered, "4 oz waiting to
+sync" (`usePendingUses`); a use the device can prove is never held behind it (USE-05). The figures are the example catalog's
+(`__tests__/helpers/fixtures/pantryTrackingFixtures.ts`), asserted in `usePantryItemActions.test.ts`
+and the pantry `localWrites.test.ts`. The API contracts behind this work are tracked in
+`docs/pantry-tracking-api-alignment.md`.
+
+**Stock checks.** `useStockCheck` reads `Pantry.stockToConfirm(limit: 5, today)`: at most five stacks
+in the server's order, each with its `stockConfidence(today)` level and reasons. Both are views no
+mutation owes, judged on the viewer's day. The check (`StockCheckSheet`, opened from `StockCheckEntry`
+behind `pantryTrackingFoundation`) sends only the rows answered. Closing it is deferral, which moves
+nothing and confirms nothing. One `recordPantryStockCheck` carries the check's `checkedAt`, an
+idempotency key, and each row's `expectedVersion`, so a queued check keeps the time it was made, a
+replay applies nothing twice, and a row whose stack moved since fails alone with `VERSION_CONFLICT`. That
+row stays in the sheet to be counted again; the absolute count is never rebased onto newer stock
+(CHECK-03), and accepted rows stand (REL-02). Its local write (`recordStockCheck`) sets each answered
+row's absolute count ahead of the answer:
+- **Still have** moves nothing.
+- **Some left** sets the count in the stack's unit.
+- **Used up** and **Threw out** set zero.
+A count stated with what the packages hold (CHECK-04: one carton holding 40 fl oz) moves nothing until
+the server answers, which owns the package arithmetic. The ledger meaning is the API's:
+- Some left records an adjustment of the difference (10 eggs found as 6 is a correction of 4, CHECK-01).
+- Used up is a correction to zero, never consumption.
+- Threw out is waste.
+- Still have is a confirmation with no movement (CHECK-02).
+A confirmation does not force the level HIGH: the answer reads the stack's confidence again. The sheet
+keeps its answers in component state only, so a session end leaves nothing behind (REL-03).
+
+**Cooking.** A recipe is cooked one way, from its page or a planned meal: `useRecipeCookingActions`
+under `RecipeCookFlow`. The review scales each draw once, by servings / `Recipe.servings`, and the
+confirm sends one `markRecipeAsCooked` with `exactStacks`, the stacks drawn and a cooking-log id minted
+once and queued with it, so a replay converges on that log and draws nothing twice. Its local write
+(`cookRecipe`) draws what the device can prove at once, as a use does; a draw only the server can
+convert waits. COOK-01's 12 eggs and 64 fl oz less 4 eggs and 16 fl oz read 8 and 48 at once and after
+any replay. A planned meal's cook names the meal and its version (C4), and the same layer shows the meal
+done with its `cookingLogId` (COOK-02, `docs/meal-planning.md`). A draw stops at what its stack holds,
+so the result is read from the rows the cook recorded (`cookOutcome`), never from what was asked:
+
+- a stack another member emptied records no row, and is reported not deducted;
+- a short draw states what it took ("Only 3 pc Eggs was left", COOK-03);
+- rows past the answer's page are read while the cook is still the recipe's newest log, and a row that
+  could not be read is reported as neither drawn nor undrawn.
+
+A queued cook says only that it will sync. Nothing is cooked again to make up a short draw.
+
 **An optimistic entity is COMPLETE for every query that reads it.** With
 `returnPartialData: false`, one missing field makes the whole cache read
 incomplete and `useQuery` returns nothing; online a refetch hides it, offline
@@ -479,13 +537,14 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   coded `VERSION_CONFLICT` and applies nothing. For a write that declares `conflict`, the queue reads
   the row `network-only` and compares each field the write changed (`conflictOutcome`):
 
-  | The server's row | Outcome |
-  | --- | --- |
-  | Every field holds what the write sent | **Landed**: a lost reply, or both agreed. The layer drops, nothing is reported, and the writes behind it move on as after a converged answer |
-  | Every field holds what was sent or what the person saw | **Merge**: sent again at the row's version, nothing reported. The writes behind it meet the row themselves |
-  | Any field holds neither, or the write has no baseline or declares no `conflict` | **Clash**: the server's row stands, and the write goes to the changes not saved |
+  | The server's row                                                                | Outcome                                                                                                                                      |
+  | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+  | Every field holds what the write sent                                           | **Landed**: a lost reply, or both agreed. The layer drops, nothing is reported, and the writes behind it move on as after a converged answer |
+  | Every field holds what was sent or what the person saw                          | **Merge**: sent again at the row's version, nothing reported. The writes behind it meet the row themselves                                   |
+  | Any field holds neither, or the write has no baseline or declares no `conflict` | **Clash**: the server's row stands, and the write goes to the changes not saved                                                              |
 
   A read that cannot run defers the entry. A row that moves again on each of 2 resends is a clash.
+
 - **A local-first write is saved before it is sent.** Online, `queueLink` stores the entry as
   `PROCESSING` (`queueStore.journal`), forwards it, and removes it on any answer. With no answer, from a
   network failure or a 5xx, `handBack` turns it `PENDING` and the drain carries it. The drain's reset
@@ -522,9 +581,8 @@ A queued write replays as the canonical mutation it was queued as — the API's 
 | Queued write                                                            | Why a re-send is safe                                                                                         |
 | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | Create with a client-minted id (`CreatePantryItem`, the batch adds, …)  | the id is the row's PK: a re-send converges and returns the row, or answers `IDEMPOTENT_REPLAY` if it is gone |
-| Update (`UpdatePantryItem`, `UpdateShoppingListItem`, quantity, toggle) | `keyed`: a re-send converges on its key; a new key at a stale version is `VERSION_CONFLICT` (§ 5)            |
+| Update (`UpdatePantryItem`, `UpdateShoppingListItem`, quantity, toggle) | `keyed`: a re-send converges on its key; a new key at a stale version is `VERSION_CONFLICT` (§ 5)             |
 | Delete (`DeletePantryItem`, `RemoveItemFromShoppingList`)               | converges: `converged: true`, the entity `null`                                                               |
-| Reorder (`MoveShoppingListItem`)                                        | repeats to the same order; a line removed since is `NotFoundError`                                            |
 | Cumulative change (the pantry deltas)                                   | at-most-once by `input.idempotencyKey`: a re-send converges and returns the row                               |
 
 What a replay restates is only what the device knows better by then. `prepareReplay`
@@ -739,9 +797,9 @@ Everything else is online-only and fails fast offline. On 2026-10-30, 92 of the 
 were queueable. Areas, with what is worth knowing beyond the pattern:
 
 - **Shopping:** every add surface goes through `createShoppingListRow` (§4); remove, toggle and record
-  purchased, update, quantity, aisle, reorder (`MoveShoppingListItem`, coalesced to the latest per
-  item), clear, complete/reactivate, budget, reminder, template, recurring, copy, set default, move to
-  pantry (single; the batch move writes nothing before it lands).
+  purchased, update, quantity, aisle, clear, complete/reactivate, budget, reminder, template,
+  recurring, copy, set default, move to pantry (single; the batch move writes nothing before it
+  lands).
 - **Shopping list create** (`useCreateShoppingList`) seeds both empty `itemsConnection` variants, and
   the `Query.shoppingList` cache redirect serves by-id reads, so a list created offline takes items at
   once (the drain holds them behind its create). Known limits: `isDefault: true` doesn't clear the flag
@@ -892,8 +950,8 @@ replay only after their parent has landed — the drain reads the parent referen
 | Background flush trigger                           | `src/hooks/app/useAppStateLifecycle.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Shared shopping writers                            | `src/features/shoppingList/cache/items.ts` (`createLocalShoppingListItem`, `addLocalShoppingListItem`), `createShoppingListRow.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Replay reconcilers                                 | `src/apollo/offlineQueue/replayRegistry.ts` (`REPLAY_RECONCILERS`), `queueReplayReconcilers.ts`, each feature's `offline/replayReconcilers.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| Change feed engine and scope adapters              | `src/apollo/feed/feedEngine.ts`, `feedRegistry.ts`, `feedStorage.ts`; `src/features/shoppingList/offline/listFeed.ts`, `src/features/pantry/offline/pantryFeed.ts` |
-| List shards                                        | `src/features/shoppingList/offline/listShards.ts`, `scopeStorage` in `ApolloCachePersistence.ts` |
+| Change feed engine and scope adapters              | `src/apollo/feed/feedEngine.ts`, `feedRegistry.ts`, `feedStorage.ts`; `src/features/shoppingList/offline/listFeed.ts`, `src/features/pantry/offline/pantryFeed.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| List shards                                        | `src/features/shoppingList/offline/listShards.ts`, `scopeStorage` in `ApolloCachePersistence.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Resync after foreground / reconnect                | `src/apollo/refetchEvents.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Local row writers (`writeLocalEntity`)             | `src/apollo/utils/writeLocalEntity.ts`; `writeLocalPantryItem`, `writeLocalPantry` (`src/features/pantry/cache/`), `writeLocalHome` (`src/features/home/cache/optimisticHome.ts`), `writeLocalStorageLocation` (`src/features/catalog/hooks/useCreateStorageLocation.ts`), `writeLocalShoppingList` and `addLocalShoppingListItem` (`src/features/shoppingList/cache/`), `writeLocalRecipe` (`src/features/recipes/utils/recipeCacheWriters.ts`), `writeLocalFavorite` (`src/features/recipes/cache/favorites.ts`), `writeLocalMealPlan` (`src/features/mealPlan/cache/`), `writeLocalMealTemplate` and `addTemplateItemToCache` (`src/features/mealPlan/cache/`) |
 | Field-edit write                                   | `src/apollo/pendingWrites/entityFields.ts`, `sendFields.ts`; `src/apollo/utils/localFirstFields.ts` (`writeEntityFields`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

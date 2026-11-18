@@ -93,21 +93,21 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
       mode="form"
       style={styles.scrollView}
       contentContainerStyle={styles.contentContainer}
+      header={
+        <BottomSheetHeader
+          title={t('labels.duplicatePlan')}
+          onCancel={onClose}
+          onConfirm={handleDuplicate}
+          confirmLabel={
+            loading
+              ? t('duplicatePlan.duplicating')
+              : t('duplicatePlan.duplicate')
+          }
+          confirmDisabled={loading || disabled || !name.trim()}
+          confirmColor="primary"
+        />
+      }
     >
-      <BottomSheetHeader
-        contentPadding="md"
-        title={t('labels.duplicatePlan')}
-        onCancel={onClose}
-        onConfirm={handleDuplicate}
-        confirmLabel={
-          loading
-            ? t('duplicatePlan.duplicating')
-            : t('duplicatePlan.duplicate')
-        }
-        confirmDisabled={loading || disabled || !name.trim()}
-        confirmColor="primary"
-      />
-
       {!!mealPlan && !!mealPlan.startDate && !!mealPlan.endDate && (
         <View style={styles.currentInfo}>
           <Text role="caption" tone="secondary" style={styles.currentLabel}>

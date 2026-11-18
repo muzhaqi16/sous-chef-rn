@@ -64,6 +64,7 @@ export interface ReceiptToCheckIn
     | 'merchant'
     | 'merchantHeader'
     | 'orderDiscount'
+    | 'currency'
   > {
   /** One per send: a receipt over the API's cap goes as several. */
   checkInIds: readonly string[];
@@ -124,7 +125,8 @@ const localLines = (
           item: listLine,
           pantryId,
           amount: input.amount,
-          totalCost: input.totalPaid,
+          // An unread price stays unknown on the row, never zero.
+          totalCost: input.totalPaid ?? undefined,
         })
       : localIntakeRow(pantryId, itemName, {
           item: input.item,
@@ -135,9 +137,23 @@ const localLines = (
     const key = input.item.id ? `${input.item.id}:${row.unitId ?? ''}` : null;
     const first = key ? firstRows.get(key) : undefined;
     if (first) {
+      const firstSize = first.row.packageSize;
+      const nextSize = row.packageSize;
+      const firstContents =
+        first.row.remainingNetWeight === undefined
+          ? (first.row.quantity ?? 1) * (firstSize?.netWeight ?? 0)
+          : first.row.remainingNetWeight;
+      const remainingNetWeight =
+        firstSize &&
+        nextSize &&
+        firstContents !== null &&
+        firstSize.netWeightUnitId === nextSize.netWeightUnitId
+          ? firstContents + (row.quantity ?? 1) * nextSize.netWeight
+          : null;
       first.row = {
         ...first.row,
         quantity: (first.row.quantity ?? 1) + (row.quantity ?? 1),
+        remainingNetWeight,
       };
       return { stack: { ...stack, joined: true }, listLineId };
     }

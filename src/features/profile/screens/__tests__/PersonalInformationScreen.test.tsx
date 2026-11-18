@@ -1,338 +1,169 @@
-'use no memo';
 import React from 'react';
-import { screen, userEvent } from '@testing-library/react-native';
+import { act, screen, userEvent } from '@testing-library/react-native';
 import {
+  inputOf,
   recordMock,
   renderWithApollo,
-  type MockedResponse,
+  type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { drainTimers } from '#/test-utils/drainTimers';
+import { operationLog } from '#/test-utils/operationLog';
+import { isRecord } from '#/utils/isRecord';
+import { useStore } from '#store';
+import { t } from '#/i18n';
+import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import {
+  GetUserProfileDocument,
+  UpdateUserProfileDocument,
+} from '#operations/auth/user.generated';
+import { SettingsSection } from '#components/organisms/SettingsSection';
+import { SubScreen } from '#components/templates/SubScreen';
 import { PersonalInformationScreen } from '../PersonalInformationScreen';
-import type { SettingsSectionProps } from '#components/organisms/SettingsSection';
-import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
-import { ErrorCode, ProfileVisibility } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
-import { kitTestIDs } from '#components/testIDs';
-
-const mockProfile = {
-  __typename: 'UserProfile',
-  id: 'profile-1',
-  firstName: 'John',
-  lastName: 'Doe',
-  displayName: 'JohnDoe',
-  bio: 'A chef',
-  phone: '555-1234',
-  dateOfBirth: '1990-01-15',
-  gender: 'Male',
-  profileVisibility: 'PUBLIC',
-};
-let mockProfileData: {
-  profile: typeof mockProfile | null;
-  loading: boolean;
-  error: Error | undefined;
-  refetch: jest.Mock;
-} = {
-  profile: mockProfile,
-  loading: false,
-  error: undefined,
-  refetch: jest.fn(),
-};
-
-jest.mock('#features/profile/hooks/useProfileData', () => ({
-  useProfileData: () => mockProfileData,
-}));
-
-jest.mock('#store/useAppStore', () => ({
-  useUser: () => ({ email: 'john@example.com' }),
-  // `isApiUnavailable`: the server is reachable.
-  useAppStore: () => false,
-}));
-
-jest.mock('#/services/errorService');
-
-jest.mock('#utils/dateUtils', () => ({
-  extractDateString: jest.fn((val: string) => val || ''),
-}));
-
-// Mirrors the real PERSONAL_INFO_CONFIG: i18n KEYS, a stable section id, and
-// `options` carrying keys too. The assertions below therefore check that the
-// screen RESOLVES those keys, which is the behaviour that breaks when the
-// translation lives in a lookup map keyed on the English title.
-jest.mock('#/config/settingsConfig', () => ({
-  PERSONAL_INFO_CONFIG: [
-    {
-      id: 'personalInformation',
-      titleKey: 'labels.personalInformation',
-      items: [
-        { key: 'email', labelKey: 'personalInformation.email', type: 'text' },
-        {
-          key: 'firstName',
-          labelKey: 'personalInformation.firstName',
-          type: 'editable',
-        },
-        {
-          key: 'lastName',
-          labelKey: 'personalInformation.lastName',
-          type: 'editable',
-        },
-        {
-          key: 'displayName',
-          labelKey: 'personalInformation.displayName',
-          type: 'editable',
-          subtitleKey: 'personalInformation.displayNameSubtitle',
-        },
-        {
-          key: 'gender',
-          labelKey: 'personalInformation.gender',
-          type: 'modal',
-          options: [
-            { labelKey: 'personalInformation.genderMale', value: 'male' },
-            { labelKey: 'personalInformation.genderFemale', value: 'female' },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'privacy',
-      titleKey: 'personalInformation.sectionPrivacySettings',
-      items: [
-        {
-          key: 'profileVisibility',
-          labelKey: 'personalInformation.profileVisibility',
-          type: 'modal',
-          // The real config's values, so the assertion below is about what the
-          // screen sends rather than about this stub.
-          options: [
-            {
-              labelKey: 'personalInformation.visibilityPublic',
-              value: 'PUBLIC',
-            },
-            {
-              labelKey: 'labels.members',
-              value: 'FRIENDS',
-            },
-            {
-              labelKey: 'personalInformation.visibilityPrivate',
-              value: 'PRIVATE',
-            },
-          ],
-        },
-      ],
-    },
-  ],
-}));
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#components/templates/SubScreen', () => {
-  const { View, Text } = require('react-native');
-  return {
-    SubScreen: ({
-      children,
-      title,
-    }: {
-      children?: React.ReactNode;
-      title?: string;
-    }) => (
-      <View testID="profile-screen-wrapper">
-        <Text>{title}</Text>
-        {children}
-      </View>
-    ),
-  };
+const ME = 'user-1';
+
+let log = operationLog();
+
+type Profile = NonNullable<
+  NonNullable<MockDataFor<typeof GetUserProfileDocument>['me']>['profile']
+>;
+
+const PROFILE: Profile = {
+  __typename: 'UserProfile',
+  id: 'profile-1',
+  firstName: 'Ana',
+  lastName: 'Lima',
+  displayName: null,
+  bio: null,
+  avatar: null,
+  phone: null,
+  dateOfBirth: '1990-04-02',
+  gender: null,
+  profileVisibility: null,
+};
+
+const answer = (
+  profile: Profile,
+): MockDataFor<typeof GetUserProfileDocument> => ({
+  me: { __typename: 'User', id: ME, profile },
 });
 
-// Stands in for the real row + picker sheet: each modal option becomes a
-// pressable that fires the row's `onSave`, which is the whole chain under test.
-jest.mock('#components/organisms/SettingsSection', () => {
-  const { View, Text, Pressable } = require('react-native');
-  return {
-    SettingsSection: ({ title, items }: SettingsSectionProps) => (
-      <View testID={`section-${title}`}>
-        <Text>{title}</Text>
-        {items?.map(item => (
-          <View key={item.key} testID={`setting-${item.key}`}>
-            <Text>{item.label}</Text>
-            {!!item.subtitle && <Text>{item.subtitle}</Text>}
-            {item.value !== undefined && (
-              <Text testID={`value-${item.key}`}>{String(item.value)}</Text>
-            )}
-            {item.options?.map(opt => (
-              <Pressable
-                key={opt.value}
-                testID={`option-${item.key}-${opt.value}`}
-                onPress={() => item.onSave?.(opt.value)}
-              />
-            ))}
-          </View>
-        ))}
-      </View>
-    ),
-  };
-});
+async function openInfo({
+  readFails = false,
+  answers = [],
+}: { readFails?: boolean; answers?: ReturnType<typeof recordMock>[] } = {}) {
+  renderWithApollo(<PersonalInformationScreen />, {
+    links: [log.link],
+    operationMocks: [
+      ...answers.map(each => each.mock),
+      ...(readFails
+        ? [
+            recordMock(GetUserProfileDocument, {
+              error: new Error('Network request failed'),
+              maxUsageCount: 1,
+            }).mock,
+          ]
+        : []),
+      recordMock(GetUserProfileDocument, { data: answer(PROFILE) }).mock,
+    ],
+  });
+  await log.landed(GetUserProfileDocument);
+}
+
+/** A row the sections render, by its key, as the section is handed it. */
+const row = (key: string) => {
+  const items: unknown[] = screen
+    .UNSAFE_getAllByType(SettingsSection)
+    .flatMap(section => section.props.items);
+  const found = items.find(item => isRecord(item) && item.key === key);
+  if (!isRecord(found)) throw new Error(`no row ${key}`);
+  return found;
+};
+
+/** Saves a value through a row's own editor, as its save would. */
+const saveRow = async (key: string, value: string) => {
+  const onSave = row(key).onSave;
+  if (typeof onSave !== 'function') throw new Error(`row ${key} saves nothing`);
+  await act(async () => {
+    onSave(value);
+  });
+};
+
+const updated = () => recordMock(UpdateUserProfileDocument, { held: true });
 
 beforeEach(() => {
-  jest.useFakeTimers();
+  jest.clearAllMocks();
+  log = operationLog();
+  useStore.setState({
+    user: {
+      id: ME,
+      email: 'cook@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    isOnline: true,
+    apiReachable: true,
+  });
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+describe('personal information', () => {
+  it('shows the email and the names held, and a private profile when unset', async () => {
+    await openInfo();
 
-describe('PersonalInformationScreen', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockProfileData = {
-      profile: mockProfile,
-      loading: false,
-      error: undefined,
-      refetch: jest.fn(() => Promise.resolve()),
-    };
+    expect(row('email').value).toBe('cook@example.com');
+    expect(row('firstName').value).toBe('Ana');
+    expect(row('profileVisibility').value).toBe(ProfileVisibility.Private);
   });
 
-  // Every write needs the profile's id; blank fields would take edits that go
-  // nowhere.
-  it('shows the error state with a retry when the profile could not be read', async () => {
-    mockProfileData = {
-      profile: null,
-      loading: false,
-      error: new Error('network'),
-      refetch: jest.fn(() => Promise.resolve()),
-    };
-    renderWithApollo(<PersonalInformationScreen />);
+  it.each([
+    ['firstName', 'Annie', { firstName: 'Annie' }],
+    ['lastName', 'Silva', { lastName: 'Silva' }],
+    ['displayName', 'Chef A', { displayName: 'Chef A' }],
+    ['bio', 'Cooks on Sundays', { bio: 'Cooks on Sundays' }],
+    ['phone', '555 0100', { phone: '555 0100' }],
+    ['gender', 'female', { gender: 'female' }],
+    ['dateOfBirth', '', { dateOfBirth: null }],
+    [
+      'profileVisibility',
+      ProfileVisibility.Friends,
+      { profileVisibility: ProfileVisibility.Friends },
+    ],
+  ])('saves %s as edited', async (key, value, sent) => {
+    const update = updated();
+    await openInfo({ answers: [update] });
 
-    expect(screen.queryByTestId('setting-firstName')).toBeNull();
-    expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    await saveRow(key, value);
+    await log.requested(UpdateUserProfileDocument);
 
-    await userEvent.press(screen.getByRole('button', { name: 'Try again' }));
-    expect(mockProfileData.refetch).toHaveBeenCalled();
+    expect(inputOf(update.fired[0] ?? {})).toMatchObject(sent);
   });
 
-  it('shows the loading state while a cold profile read is in flight', () => {
-    mockProfileData = {
-      profile: null,
-      loading: true,
-      error: undefined,
-      refetch: jest.fn(() => Promise.resolve()),
-    };
-    renderWithApollo(<PersonalInformationScreen />);
+  it('sends no visibility it does not know', async () => {
+    const update = updated();
+    await openInfo({ answers: [update] });
 
-    expect(screen.getByTestId(kitTestIDs.stateLoading)).toBeTruthy();
-    expect(screen.queryByTestId('setting-firstName')).toBeNull();
+    await saveRow('profileVisibility', 'EVERYONE');
+
+    expect(update.fired).toEqual([]);
   });
 
-  it('renders the screen with correct title', () => {
-    renderWithApollo(<PersonalInformationScreen />);
-    // Twice: the screen header and the first section share
-    // `labels.personalInformation`, exactly as the real config does.
-    expect(screen.getAllByText('Personal Information')).toHaveLength(2);
+  it('offers to read it again when it could not be read', async () => {
+    await openInfo({ readFails: true });
+
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+    await log.landed(GetUserProfileDocument, 2);
+
+    expect(row('firstName').value).toBe('Ana');
   });
 
-  // Section titles come from `titleKey`, resolved here. Looking them up in a
-  // map keyed on the English title instead makes a renamed section render its
-  // English name in every language with nothing failing.
-  it('resolves section titles from their i18n keys', () => {
-    renderWithApollo(<PersonalInformationScreen />);
-    expect(screen.getAllByText('Personal Information').length).toBeGreaterThan(
-      0,
-    );
-    expect(screen.getByText('Privacy Settings')).toBeTruthy();
-  });
+  it('reads it again on a pull', async () => {
+    await openInfo();
 
-  it('resolves field labels and modal option labels from their i18n keys', () => {
-    renderWithApollo(<PersonalInformationScreen />);
-    // A field label…
-    expect(screen.getByText('First Name')).toBeTruthy();
-    // …and an option label inside a modal field, which travelled through a
-    // second English-keyed map of its own.
-    const gender = screen.getByTestId('setting-gender');
-    expect(gender).toBeTruthy();
-  });
-
-  it('displays email value', () => {
-    renderWithApollo(<PersonalInformationScreen />);
-    expect(screen.getByTestId('value-email')).toBeTruthy();
-    expect(screen.getByText('john@example.com')).toBeTruthy();
-  });
-
-  it('displays firstName value', () => {
-    renderWithApollo(<PersonalInformationScreen />);
-    expect(screen.getByTestId('value-firstName')).toBeTruthy();
-    expect(screen.getByText('John')).toBeTruthy();
-  });
-
-  it('displays lastName value', () => {
-    renderWithApollo(<PersonalInformationScreen />);
-    expect(screen.getByTestId('value-lastName')).toBeTruthy();
-    expect(screen.getByText('Doe')).toBeTruthy();
-  });
-
-  it('displays displayName value', () => {
-    renderWithApollo(<PersonalInformationScreen />);
-    expect(screen.getByTestId('value-displayName')).toBeTruthy();
-    expect(screen.getByText('JohnDoe')).toBeTruthy();
-  });
-
-  it('says under the display name who sees it', () => {
-    renderWithApollo(<PersonalInformationScreen />);
-
-    expect(screen.getByText('Visible to everyone')).toBeTruthy();
-  });
-
-  describe('profileVisibility', () => {
-    const renderWith = (operationMocks: MockedResponse[]) =>
-      renderWithApollo(<PersonalInformationScreen />, { operationMocks });
-
-    // The picker hands back a plain string, so tsc cannot catch an option
-    // value the schema has no member for; the server refuses such a selection.
-    it('sends a value the schema defines', async () => {
-      const { mock, fired } = recordMock(UpdateUserProfileDocument, {
-        data: {
-          updateProfile: {
-            __typename: 'UpdateProfilePayload',
-            userProfile: {
-              __typename: 'UserProfile',
-              id: 'profile-1',
-              profileVisibility: ProfileVisibility.Friends,
-            },
-          },
-        },
-      });
-      renderWith([mock]);
-
-      await userEvent.press(
-        screen.getByTestId('option-profileVisibility-FRIENDS'),
-      );
-
-      await drainTimers();
-      expect(fired).toHaveLength(1);
-      const sent = fired[0]!.input as { profileVisibility: string };
-      expect(Object.values(ProfileVisibility)).toContain(
-        sent.profileVisibility,
-      );
+    act(() => {
+      screen.UNSAFE_getByType(SubScreen).props.refresh.onRefresh();
     });
 
-    // Without this the optimistic write was reverted and the row just snapped
-    // back with nothing said.
-    it('tells the user when the server refuses the change', async () => {
-      const { mock } = recordMock(UpdateUserProfileDocument, {
-        data: {
-          updateProfile: {
-            __typename: 'ValidationError',
-            code: ErrorCode.ValidationFailed,
-            message: 'Invalid visibility',
-            field: 'profileVisibility',
-          },
-        },
-      });
-      renderWith([mock]);
-
-      await userEvent.press(
-        screen.getByTestId('option-profileVisibility-PRIVATE'),
-      );
-
-      await drainTimers();
-      expect(alertService.alert).toHaveBeenCalled();
-    });
+    await log.requested(GetUserProfileDocument, 2);
   });
 });

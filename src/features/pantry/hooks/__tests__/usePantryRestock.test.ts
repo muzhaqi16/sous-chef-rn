@@ -1,4 +1,5 @@
 import { act } from '@testing-library/react-native';
+import { pantryTrackingExamples as examples } from '#/test-utils/fixtures/pantryTrackingFixtures';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
@@ -380,6 +381,30 @@ describe('usePantryRestock', () => {
 
       expect(restock.fired[0]?.input).toMatchObject({
         amount: { packages: { count: 1, size } },
+      });
+    });
+    it('IN-02: restocks a six-pack as six cans of 250 mL, which the API holds as 1500 mL', async () => {
+      const { packageSize } = examples['IN-02'];
+      const restock = queuedRestock();
+      const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
+        cache: makeCache(),
+        operationMocks: [restock.mock],
+      });
+
+      await act(async () => {
+        await result.current.restock(ROW_ID, {
+          bought: { count: 6, packageSize, item: OATS },
+          present: 'none',
+        });
+      });
+
+      expect(restock.fired[0]?.input).toMatchObject({
+        amount: {
+          packages: {
+            count: 6,
+            size: { netWeight: 250, netWeightUnitId: 'unit-ml' },
+          },
+        },
       });
     });
   });

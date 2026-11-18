@@ -294,10 +294,10 @@ query GetItemPurchaseHistory($itemId: ID!, $first: Int, $after: String) {
             code
           }
           unitSymbol
-          # Who recorded the purchase. `email` is nullable by design (the API
-          # gates it to self-or-admin), which the row's
-          # displayName -> email -> "Someone" fallback already covers.
-          user {
+          # Who recorded the purchase; null once their account is gone. `email`
+          # is nullable by design (the API gates it to self-or-admin), which
+          # the row's displayName -> email -> "Someone" fallback covers.
+          purchasedBy {
             id
             email
             displayName
@@ -777,35 +777,6 @@ mutation RemoveItemFromShoppingList($input: RemoveItemFromShoppingListInput!) {
     ... on RemoveItemFromShoppingListPayload {
       shoppingListItem {
         id
-      }
-      shoppingList {
-        id
-        ...ShoppingListReaders
-      }
-    }
-    ... on Error {
-      code
-      disposition
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
-  moveShoppingListItem(input: $input) {
-    __typename
-    ... on MoveShoppingListItemPayload {
-      shoppingListItem {
-        id
-        ...ShoppingListItemReaders
-        ...useItemReordering_moveResult
       }
       shoppingList {
         id

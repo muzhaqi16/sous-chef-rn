@@ -24,6 +24,8 @@ export const kitTestIDs = {
   tabBar: 'tab-bar',
   tabBarAddButton: 'tab-bar-add-button',
   tabBarAddMenuScrim: 'tab-bar-add-menu-scrim',
+  /** An add menu entry that names no id of its own, by its key. */
+  tabBarAddAction: (key: string) => `tab-bar-add-action-${key}`,
   toastMessage: 'toast-message',
   toastDetail: 'toast-detail',
   filterTabsPrefix: 'filter-tab',

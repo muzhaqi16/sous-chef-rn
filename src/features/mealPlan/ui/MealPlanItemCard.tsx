@@ -51,8 +51,12 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
   if (!fragmentResult.complete) return null;
   const item = fragmentResult.data;
 
+  // A meal names a recipe or itself, so neither means the recipe is gone, or
+  // shared by a member who left the household.
   const recipeName =
-    item.recipe?.name ?? item.customMealName ?? t('mealPlanItem.unnamedMeal');
+    item.recipe?.name ??
+    item.customMealName ??
+    t('mealPlanItem.recipeUnavailable');
   const imageUrl = item.recipe?.imageUrl;
   const totalTime = item.recipe?.totalTimeMinutes;
   const usedPantryItems = item.usedPantryItems;

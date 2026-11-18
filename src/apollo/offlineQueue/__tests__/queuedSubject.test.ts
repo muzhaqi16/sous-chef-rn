@@ -12,7 +12,7 @@ import {
 } from '#features/recipes/graphql/recipe.generated';
 import {
   AddItemToShoppingListDocument,
-  MoveShoppingListItemDocument,
+  CompleteShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
@@ -66,13 +66,6 @@ describe('queuedSubject', () => {
   });
 
   it.each([
-    [
-      'a move names the row it moves',
-      MoveShoppingListItemDocument,
-      { id: 'row-1', afterItemId: 'row-0' },
-      ['row-1'],
-      [],
-    ],
     [
       'a shopping line edit or tick names the line',
       UpdateShoppingListItemDocument,
@@ -220,7 +213,7 @@ describe('subjectTypeOf', () => {
   it.each([
     ['a subject another field names', UpdatePantryItemQuantityDocument],
     ['a batch of rows', AddItemToShoppingListDocument],
-    ['an input named by no entity verb', MoveShoppingListItemDocument],
+    ['an input named by no entity verb', CompleteShoppingListDocument],
   ])('names no type for %s', (_label, mutation) => {
     expect(subjectTypeOf({ mutation })).toBeNull();
   });

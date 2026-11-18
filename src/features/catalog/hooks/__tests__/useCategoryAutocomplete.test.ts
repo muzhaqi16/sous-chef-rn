@@ -175,8 +175,6 @@ describe('useCategoryAutocomplete', () => {
         name: 'Dairy',
         type: CategoryType.General,
         icon: null,
-        color: null,
-        slug: 'dairy',
       },
       {
         __typename: 'CategorySuggestion',
@@ -184,8 +182,6 @@ describe('useCategoryAutocomplete', () => {
         name: 'Produce',
         type: CategoryType.General,
         icon: null,
-        color: null,
-        slug: 'produce',
       },
     ];
     const recorded: Array<Record<string, unknown>> = [];

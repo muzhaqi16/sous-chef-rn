@@ -67,7 +67,6 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   onTogglePurchase,
   onMoveToPantry,
   onQuantityPress,
-  onSortOrderUpdate,
   disabled = false,
   ListHeaderComponent,
   ListFooterComponent,
@@ -75,7 +74,6 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   onSwipeableClose: externalOnSwipeableClose,
   onRefresh,
   refreshing = false,
-  reorderable,
   onEndReached,
   onEndReachedThreshold = FLASHLIST_DEFAULTS.fullScreen.onEndReachedThreshold,
   ListEmptyComponent,
@@ -148,16 +146,12 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     onQuantityPress,
     onSwipeableWillOpen: handleSwipeableWillOpen,
     onSwipeableClose: handleSwipeableClose,
-    onSortOrderUpdate,
   };
 
-  // Reordering takes BOTH: the tab has to offer it and the user has to be
-  // allowed to edit. Everything else is the account's answer, unchanged.
   const permissions: SortableListPermissions = {
     canRemoveItems: listPermissions.canRemoveItems,
     canEditItems: listPermissions.canEditItems,
     canMarkPurchased: listPermissions.canMarkPurchased,
-    canReorderItems: reorderable && listPermissions.canEditItems,
     disabled,
   };
 
@@ -190,7 +184,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
                   ref={flashListRef}
                   CellRendererComponent={perfCallbacks.CellRendererComponent}
                   data={items}
-                  extraData={`${disabled}-${permissions.canRemoveItems}-${permissions.canEditItems}-${permissions.canMarkPurchased}-${permissions.canReorderItems}`}
+                  extraData={`${disabled}-${permissions.canRemoveItems}-${permissions.canEditItems}-${permissions.canMarkPurchased}`}
                   keyExtractor={keyExtractor}
                   getItemType={getItemType}
                   renderItem={renderItem}

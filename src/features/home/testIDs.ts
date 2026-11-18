@@ -4,6 +4,8 @@
  */
 export const homeTestIDs = {
   homeActions: 'home-actions',
+  managementScroll: 'home-management-scroll',
+  setDefaultButton: (homeId: string) => `home-set-default-${homeId}`,
   managementAddButton: 'home-management-add-button',
   createHomeNameInput: 'create-home-name-input',
   createHomeCancelButton: 'create-home-cancel-button',

@@ -4,9 +4,10 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#/i18n';
-import { useMoney } from '#domain/money';
+import { useReceiptMoney } from '../hooks/useReceiptCurrency';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { Text } from '#components/atoms/Text';
 import { FormInput } from '#components/atoms/FormInput';
 import { DropdownStack } from '#components/atoms/DropdownStack';
@@ -17,6 +18,8 @@ import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
+import { PackageContentsFields } from '#features/pantry/ui/PackageContentsFields';
+import { statesContents, takesContents } from '#domain/stockAmount';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { reportValidationErrors } from '#/utils/validation/common';
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
@@ -27,14 +30,21 @@ import {
   receiptLineDefaults,
   receiptLineSchema,
   toLineChoice,
+  type ReceiptLineAmountSeed,
   type ReceiptLineFormContext,
   type ReceiptLineFormValues,
 } from './receiptLineFormConfig';
 import { receiptsTestIDs } from '../testIDs';
+import { useEarlierPurchases } from './useEarlierPurchases';
+
+// The picker's choice for a line that is a purchase of its own.
+const NEW_PURCHASE = 'new';
 
 interface ReceiptLineFormProps {
   line: ReceiptReviewLine;
   choice: ReceiptLineChoice | undefined;
+  /** What its list line asked for, which a line whose amount is asked opens with. */
+  asked?: ReceiptLineAmountSeed;
   /** False for a line already left out, where leaving it out does nothing. */
   canLeaveOut: boolean;
   /** Items the API proposes for the line, best first. */
@@ -52,6 +62,7 @@ interface ReceiptLineFormProps {
 const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   line,
   choice,
+  asked,
   canLeaveOut,
   candidates,
   listItemNameFor,
@@ -61,22 +72,75 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   onRemove,
 }) => {
   const { t } = useTranslation();
-  const money = useMoney();
-  const { resolveUnitId } = useResolveUnit();
-  const { control, handleSubmit, getValues, setValue, setError } = useForm<
-    ReceiptLineFormValues,
-    ReceiptLineFormContext
-  >({
+  const money = useReceiptMoney();
+  const { resolveUnitId, heldUnitFor } = useResolveUnit();
+  const unitTypeOf = (unitText: string) => heldUnitFor(unitText)?.type ?? null;
+  const {
+    control,
+    handleSubmit,
+    getValues,
+    getFieldState,
+    setValue,
+    setError,
+    trigger,
+  } = useForm<ReceiptLineFormValues, ReceiptLineFormContext>({
     resolver: yupResolver(receiptLineSchema),
     context: { free: line.price === 0 && (line.discount ?? 0) > 0 },
-    defaultValues: receiptLineDefaults(line, choice),
+    defaultValues: receiptLineDefaults(line, choice, unitTypeOf, asked),
   });
 
   // `useWatch`, not `watch`: the compiler cannot memoize the latter's function.
   const itemId = useWatch({ control, name: 'itemId' });
   const unitId = useWatch({ control, name: 'unitId' });
   const unitText = useWatch({ control, name: 'unitValue' });
+  const unitType = useWatch({ control, name: 'unitType' });
+  // A bare count, or one in a counted unit, can say what each package holds.
+  const countsPackages = takesContents(unitType);
+  // The whole-packages and size-unit rules read the size and the unit's kind.
+  const recheckPackages = () => {
+    if (getFieldState('quantityInput').invalid) void trigger('quantityInput');
+    if (getFieldState('sizeUnitDisplay').invalid) {
+      void trigger('sizeUnitDisplay');
+    }
+  };
+  const existingPurchaseId = useWatch({ control, name: 'existingPurchaseId' });
+  // A purchase picked is one of the product the line named: another product
+  // leaves the line a new purchase until one of its own is picked.
+  const dropEarlierPick = () => {
+    setValue('existingPurchaseId', null);
+    setValue('existingPurchaseVersion', null);
+  };
   const listItemName = listItemNameFor({ itemId, unitId, unitText });
+  // Offered, never picked for the user: a similar purchase may be another one.
+  const earlier = useEarlierPurchases(itemId);
+  const pickedElsewhere =
+    existingPurchaseId !== null &&
+    !earlier.some(purchase => purchase.id === existingPurchaseId);
+  const earlierOptions = [
+    {
+      key: NEW_PURCHASE,
+      label: t('receipts.review.newPurchase'),
+      testID: receiptsTestIDs.lineNewPurchase,
+    },
+    ...earlier.map(purchase => ({
+      key: purchase.id,
+      label: t('receipts.review.earlierPurchase', {
+        amount: purchase.amount,
+        date: purchase.boughtOn,
+      }),
+      testID: receiptsTestIDs.lineEarlierPurchase(purchase.id),
+    })),
+    ...(pickedElsewhere
+      ? [
+          {
+            key: existingPurchaseId,
+            label: t('receipts.review.earlierPicked'),
+            testID: receiptsTestIDs.lineEarlierPurchase(existingPurchaseId),
+          },
+        ]
+      : []),
+  ];
+  const attached = existingPurchaseId !== null;
   const chipLabel = ({ itemName, detail }: ReceiptCandidate): string =>
     detail === null
       ? itemName
@@ -93,23 +157,35 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
       });
       return;
     }
-    onSave(toLineChoice({ ...values, unitId: resolvedUnitId }));
+    const sized = statesContents(values);
+    const typedSizeUnit = values.sizeUnitDisplay.trim();
+    const sizeUnitId = sized
+      ? await resolveUnitId(values.sizeUnitId, typedSizeUnit)
+      : null;
+    if (sized && !sizeUnitId) {
+      setError('sizeUnitDisplay', {
+        message: t('itemForm.unknownUnit', { unit: typedSizeUnit }),
+      });
+      return;
+    }
+    onSave(toLineChoice({ ...values, unitId: resolvedUnitId, sizeUnitId }));
     onClose();
   }, reportValidationErrors);
 
   return (
     <>
-      <SheetHeader
-        contentPadding="md"
-        title={t('receipts.review.editTitle')}
-        onClose={onClose}
-        confirm={{
-          onPress: () => {
-            void save();
-          },
-          testID: receiptsTestIDs.lineSave,
-        }}
-      />
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={t('receipts.review.editTitle')}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void save();
+            },
+            testID: receiptsTestIDs.lineSave,
+          }}
+        />
+      </SheetHeaderSlot>
 
       <View style={styles.printed}>
         <Text role="caption" tone="secondary">
@@ -138,6 +214,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                 onChangeText={text => {
                   field.onChange(text);
                   setValue('itemId', null);
+                  dropEarlierPick();
                 }}
                 // No unit from the suggestion: its default is the unit a recipe
                 // uses, and a blank one stocks the item in its tracking unit.
@@ -169,6 +246,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                     candidate => candidate.itemId === key,
                   );
                   if (!picked) return;
+                  if (picked.itemId !== itemId) dropEarlierPick();
                   setValue('itemName', picked.itemName, {
                     shouldValidate: true,
                   });
@@ -181,7 +259,31 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
           )}
         </View>
 
-        {!!listItemName && (
+        {earlierOptions.length > 1 && (
+          <View style={styles.suggestions}>
+            <Text role="caption" tone="secondary">
+              {t('receipts.review.earlierTitle')}
+            </Text>
+            <ChipScrollRow
+              options={earlierOptions}
+              selected={existingPurchaseId ?? NEW_PURCHASE}
+              onSelect={key => {
+                const picked = earlier.find(purchase => purchase.id === key);
+                if (key !== NEW_PURCHASE && !picked) return;
+                setValue('existingPurchaseId', picked?.id ?? null);
+                setValue('existingPurchaseVersion', picked?.version ?? null);
+              }}
+              edgeFadeColor="surface"
+            />
+            {attached ? (
+              <Text role="caption" tone="tertiary">
+                {t('receipts.review.earlierBody')}
+              </Text>
+            ) : null}
+          </View>
+        )}
+
+        {!!listItemName && !attached && (
           <Controller
             control={control}
             name="offList"
@@ -200,26 +302,30 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
           />
         )}
 
-        <Controller
-          control={control}
-          name="notStocked"
-          render={({ field }) => (
-            <SettingSwitch
-              title={t('receipts.review.notStockedTitle')}
-              description={t('receipts.review.notStockedBody')}
-              value={field.value}
-              onValueChange={on => {
-                field.onChange(on);
-                // A purchase still names what was bought: what the receipt prints.
-                if (on && !getValues('itemName').trim()) {
-                  setValue('itemName', line.printed, { shouldValidate: true });
-                }
-              }}
-              testID={receiptsTestIDs.lineNotStocked}
-              containerStyle={styles.listToggle}
-            />
-          )}
-        />
+        {!attached && (
+          <Controller
+            control={control}
+            name="notStocked"
+            render={({ field }) => (
+              <SettingSwitch
+                title={t('receipts.review.notStockedTitle')}
+                description={t('receipts.review.notStockedBody')}
+                value={field.value}
+                onValueChange={on => {
+                  field.onChange(on);
+                  // A purchase still names what was bought: what the receipt prints.
+                  if (on && !getValues('itemName').trim()) {
+                    setValue('itemName', line.printed, {
+                      shouldValidate: true,
+                    });
+                  }
+                }}
+                testID={receiptsTestIDs.lineNotStocked}
+                containerStyle={styles.listToggle}
+              />
+            )}
+          />
+        )}
 
         <View style={styles.amountRow}>
           <View style={styles.quantityField}>
@@ -249,8 +355,17 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                   onChangeText={text => {
                     field.onChange(text);
                     setValue('unitId', null);
+                    setValue('unitType', unitTypeOf(text));
+                    recheckPackages();
                   }}
-                  onUnitSelected={id => setValue('unitId', id)}
+                  onUnitSelected={(id, _name, pickedType) => {
+                    setValue('unitId', id);
+                    setValue(
+                      'unitType',
+                      pickedType ?? unitTypeOf(getValues('unitValue')),
+                    );
+                    recheckPackages();
+                  }}
                   placeholder={t('labels.pcsKgEtc')}
                   error={fieldState.error?.message}
                 />
@@ -258,6 +373,45 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
             />
           </View>
         </View>
+
+        {!!countsPackages && (
+          <View style={styles.section}>
+            <Controller
+              control={control}
+              name="sizeInput"
+              render={({ field: size, fieldState: sizeState }) => (
+                <Controller
+                  control={control}
+                  name="sizeUnitDisplay"
+                  render={({ field: unit, fieldState: unitState }) => (
+                    <PackageContentsFields
+                      variant="inline"
+                      size={size.value}
+                      onSizeChange={text => {
+                        size.onChange(text);
+                        recheckPackages();
+                      }}
+                      sizeError={sizeState.error?.message}
+                      unit={unit.value}
+                      onUnitChange={text => {
+                        unit.onChange(text);
+                        setValue('sizeUnitId', null);
+                        setValue('sizeUnitType', null);
+                      }}
+                      onUnitSelected={(id, _name, pickedType) => {
+                        setValue('sizeUnitId', id);
+                        setValue('sizeUnitType', pickedType ?? null);
+                      }}
+                      unitError={unitState.error?.message}
+                      sizeTestID={receiptsTestIDs.lineSize}
+                      unitTestID={receiptsTestIDs.lineSizeUnit}
+                    />
+                  )}
+                />
+              )}
+            />
+          </View>
+        )}
 
         <View style={styles.section}>
           <Controller
@@ -303,6 +457,7 @@ export const ReceiptLineSheet: React.FC<ReceiptLineSheetProps> = ({
 }) => (
   <Sheet
     mode="form"
+    headerFromContent
     visible={visible ? !!line : false}
     onDismiss={form.onClose}
     snapPoints={['85%']}

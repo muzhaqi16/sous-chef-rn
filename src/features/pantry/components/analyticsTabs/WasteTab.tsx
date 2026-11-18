@@ -1,13 +1,14 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { moneyByCurrency } from '#/domain/money';
-import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
+import { formatPercent, UNKNOWN_AMOUNT } from '#/utils/formatters/number';
 import { useTranslation } from '#/i18n';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { ChartSection } from '#features/pantry/components/analytics/ChartSection';
 import { BreakdownPieChart } from '#features/pantry/components/charts/BreakdownPieChart';
 import {
+  totalsByItem,
   AnalyticsSummaryCard,
   OfflineTabState,
   TopItemsBarChart,
@@ -42,14 +43,15 @@ export const WasteTab: React.FC<
       value: item.count,
       percentage: item.percentage,
     })) ?? [];
-  const topWastedItemsData =
-    wasteData?.topWastedItems.map(item => ({
+  const topWastedItemsData = totalsByItem(wasteData?.topWastedItems ?? []).map(
+    item => ({
       label: item.itemName,
       value: item.count,
       secondaryLabel: showsCost
         ? moneyByCurrency(item.valueByCurrency)
         : undefined,
-    })) ?? [];
+    }),
+  );
 
   if (wasteOffline) {
     return <OfflineTabState refreshing={refreshing} onRefresh={onRefresh} />;
@@ -77,7 +79,7 @@ export const WasteTab: React.FC<
         />
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.wasteRate')}
-          value={`${(wasteData?.wasteRate ?? 0).toFixed(1)}%`}
+          value={formatPercent(wasteData?.wasteRate ?? 0)}
           icon="pie-chart"
           uniProps={theme => ({ color: theme.colors.warning })}
           subtitle={t('pantryAnalytics.ofTotal')}

@@ -11,6 +11,7 @@ fragment PantryItemBatchReaders on PantryItemBatch {
   depletedAt
   expiresAtIsManual
   expiresOn
+  expiryKind
   isOpened
   netWeight
   notes
@@ -23,6 +24,11 @@ fragment PantryItemBatchReaders on PantryItemBatch {
   purchase {
     id
     purchaseDate
+    purchasedBy {
+      id
+    }
+    quantity
+    unitSymbol
     version
   }
   quantity

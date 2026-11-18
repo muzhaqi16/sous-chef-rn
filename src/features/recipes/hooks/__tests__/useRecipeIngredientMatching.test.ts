@@ -15,6 +15,7 @@ import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   MarkRecipeAsCookedDocument,
   MatchRecipeIngredientsToPantryDocument,
+  RecipeCookUsesDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import { logger } from '#/utils/environment';
 import type { RootState } from '#store';
@@ -71,6 +72,7 @@ jest.mock('#store/useAppStore', () => ({
 const mockToastSuccess = jest.mocked(toastService.success);
 const mockToastError = jest.mocked(toastService.error);
 const mockToastInfo = jest.mocked(toastService.info);
+const mockToastWarning = jest.mocked(toastService.warning);
 
 // Deterministic client-minted cooking-log id so we can assert the cook sends it.
 jest.mock('#/utils/generateEntityId', () => ({
@@ -437,8 +439,48 @@ const secondMatch = match('ing-2', {
   suggestedUnit: null,
 });
 
+/** A row the cook recorded: what its stack gave, and what the stack holds now. */
+interface Use {
+  stack: string;
+  quantity: number;
+  unit: string;
+  left?: number;
+}
+
+// Every stack these tests draw on, recorded as the review asked.
+const DRAWN_AS_ASKED: Use[] = [
+  { stack: 'pi-1', quantity: 2, unit: 'su-1' },
+  { stack: 'pi-2', quantity: 3, unit: 'u-ing-2' },
+  { stack: 'pi-evoo', quantity: 2, unit: 'su-1' },
+  { stack: 'stack-milk', quantity: 2, unit: 'u-cup' },
+  { stack: 'stack-lemon', quantity: 2, unit: 'u-tbsp' },
+];
+
+const usesPage = (uses: Use[], hasNextPage = false) => ({
+  edges: uses.map((use, index) => ({
+    node: {
+      id: `use-${index}`,
+      quantityUsed: use.quantity,
+      usageUnit: {
+        id: use.unit,
+        name: use.unit,
+        symbol: use.unit,
+        localizedSymbolForms: null,
+      },
+      pantryItem: { id: use.stack, quantity: use.left ?? 5 },
+    },
+  })),
+  pageInfo: { hasNextPage, endCursor: hasNextPage ? 'cursor-1' : null },
+});
+
 type CookOutcome =
-  | { kind: 'success'; skipped?: string[]; converged?: boolean }
+  | {
+      kind: 'success';
+      skipped?: string[];
+      converged?: boolean;
+      uses?: Use[];
+      hasNextPage?: boolean;
+    }
   | { kind: 'queued' }
   | { kind: 'rejected' }
   | { kind: 'transport' };
@@ -477,6 +519,15 @@ function cookMock(outcome: CookOutcome) {
           itemName,
           code: ErrorCode.UnitInvalid,
         })),
+        // What each stack recorded: a skipped entry's stack records no row.
+        cookingLog: {
+          id: 'client-cooklog-1',
+          pantryItemsUsedConnection: usesPage(
+            outcome.uses ?? DRAWN_AS_ASKED,
+            outcome.hasNextPage,
+          ),
+        },
+        mealPlanItem: null,
       },
     },
   });
@@ -959,17 +1010,18 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     },
   );
 
-  it('counts every entry sent when the cook is queued offline', async () => {
+  // Queued work is never described as taken by the server.
+  it('says a cook queued offline is saved, never that it deducted', async () => {
     const cook = cookMock({ kind: 'queued' });
     const { result } = await loadMatchesFor([includedMatch, secondMatch], cook);
 
     await drained(() => result.current.confirmConsumption());
 
     expect(cook.fired).toHaveLength(1);
-    // No response to count: every entry replays on reconnect.
-    expect(mockToastSuccess).toHaveBeenCalledWith(
-      'Deducted 2 ingredients from pantry',
+    expect(mockToastInfo).toHaveBeenCalledWith(
+      'Cooked. Your pantry updates when it syncs.',
     );
+    expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(mockToastError).not.toHaveBeenCalled();
     await drainTimers();
     expect(result.current.isSheetVisible).toBe(false);
@@ -1006,5 +1058,144 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.isSheetVisible).toBe(true);
     expect(result.current.editableMatches).toHaveLength(1);
+  });
+});
+
+describe('useRecipeIngredientMatching — what a cook recorded', () => {
+  // COOK-03: eggs drawn by another member between the review and the cook.
+  const eggsMatch = match('ing-1', {
+    matchedPantryItem: { id: 'pi-1', itemName: 'Eggs', unit: { id: 'pc' } },
+    suggestedQuantity: 4,
+    suggestedUnit: { id: 'pc' },
+  });
+
+  async function cookEggs(
+    answers: ReturnType<typeof recordMock>[],
+    context: Parameters<typeof useRecipeIngredientMatching>[1] = {},
+  ) {
+    const rendered = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1', context),
+      {
+        operationMocks: [
+          matchesMock([eggsMatch]).mock,
+          ...answers.map(answer => answer.mock),
+        ],
+        cache: seedIngredientCache(['ing-1']),
+      },
+    );
+    await drained(() => rendered.result.current.loadMatches(4));
+    await drained(() => rendered.result.current.confirmConsumption());
+    return rendered;
+  }
+
+  it('COOK-03 states the 3 eggs the stack gave, never that 4 were deducted', async () => {
+    await cookEggs([
+      cookMock({
+        kind: 'success',
+        uses: [{ stack: 'pi-1', quantity: 3, unit: 'pc', left: 0 }],
+      }),
+    ]);
+
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(mockToastWarning).toHaveBeenCalledWith(
+      'Deducted 1 ingredient from pantry. Only 3 pc Eggs was left.',
+    );
+  });
+
+  it('counts a stack another use emptied, which recorded no row, as not deducted', async () => {
+    await cookEggs([cookMock({ kind: 'success', uses: [] })]);
+
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Deducted 0 ingredients from pantry (1 not deducted)',
+    );
+  });
+
+  it("reads the cook's rows past its answer's first page", async () => {
+    const page = recordMock(RecipeCookUsesDocument, {
+      data: {
+        recipeCookingLogs: {
+          edges: [
+            {
+              node: {
+                id: 'client-cooklog-1',
+                pantryItemsUsedConnection: usesPage([
+                  { stack: 'pi-1', quantity: 4, unit: 'pc', left: 8 },
+                ]),
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    await cookEggs([
+      cookMock({ kind: 'success', uses: [], hasNextPage: true }),
+      page,
+    ]);
+
+    expect(page.fired).toEqual([
+      { recipeId: 'recipe-1', after: 'cursor-1', usesFirst: 100 },
+    ]);
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Deducted 1 ingredient from pantry',
+    );
+  });
+
+  it('claims no outcome for rows it could not read', async () => {
+    // Another cook of the recipe landed first, so its newest log is not this one.
+    const page = recordMock(RecipeCookUsesDocument, {
+      data: {
+        recipeCookingLogs: {
+          edges: [{ node: { id: 'another-cook' } }],
+        },
+      },
+    });
+
+    await cookEggs([
+      cookMock({ kind: 'success', uses: [], hasNextPage: true }),
+      page,
+    ]);
+
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(mockToastInfo).toHaveBeenCalledWith(
+      'Cooked. Check your pantry for what was deducted.',
+    );
+  });
+
+  it('COOK-02 sends the planned meal it completes, at the version read', async () => {
+    const cook = cookMock({ kind: 'success' });
+
+    await cookEggs([cook], { plannedMeal: { id: 'mpi-1', version: 2 } });
+
+    expect(inputOf(cook.fired[0]!)).toMatchObject({
+      id: 'client-cooklog-1',
+      exactStacks: true,
+      mealPlanItemId: 'mpi-1',
+      mealPlanItemVersion: 2,
+    });
+  });
+
+  it('shows the meal as it stands when another cook already completed it', async () => {
+    const onMealChanged = jest.fn();
+    const refused = recordMock(MarkRecipeAsCookedDocument, {
+      data: {
+        markRecipeAsCooked: {
+          __typename: 'ConflictError',
+          code: ErrorCode.Conflict,
+        },
+      },
+    });
+
+    const { result } = await cookEggs([refused], {
+      plannedMeal: { id: 'mpi-1', version: 2 },
+      onMealChanged,
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      'This meal was already cooked, so nothing more was deducted.',
+    );
+    expect(onMealChanged).toHaveBeenCalledTimes(1);
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(result.current.isSheetVisible).toBe(true);
   });
 });

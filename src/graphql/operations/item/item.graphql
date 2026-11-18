@@ -61,7 +61,8 @@ query SearchItemsSemantic(
         level
         imageUrl
         netWeight
-        defaultConsumeUnit {
+        # The household's one-tap unit, as autocomplete's defaultUnit.
+        quickAddUnit {
           id
           name
           symbol

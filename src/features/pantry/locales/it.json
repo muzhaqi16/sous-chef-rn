@@ -3,6 +3,9 @@
     "inLocation": " in {{location}}",
     "inThePantry": "Nella dispensa",
     "expiring": "Scadenza",
+    "expiryDaysAgo_one": "{{count}} giorno fa",
+    "expiryDaysAgo_other": "{{count}} giorni fa",
+    "expiryApprox": "≈ {{when}}",
     "noExpiry": "Nessuna scadenza",
     "amount": "Quantità",
     "nutrition": "Nutrizione",
@@ -56,7 +59,8 @@
     "removedTitle": "Questo articolo non è più nella tua dispensa",
     "removedBody": "È stato rimosso, forse da un altro dispositivo.",
     "hiddenTitle": "Questo articolo non ti viene mostrato",
-    "hiddenBody": "Si trova in una dispensa che non puoi vedere. Chi gestisce la casa può permetterti di vederla."
+    "hiddenBody": "Si trova in una dispensa che non puoi vedere. Chi gestisce la casa può permetterti di vederla.",
+    "expiryEstimated": "Data stimata"
   },
   "pantrySettings": {
     "createTitle": "Crea nuova dispensa",
@@ -177,7 +181,6 @@
     "composted": "Compostato",
     "recycledPackaging": "Riciclato (imballaggio)",
     "notesPlaceholder": "Aggiungi note su questo spreco...",
-    "reasonExpired": "Scaduto",
     "reasonSpoiled": "Andato a male",
     "reasonSpilled": "Versato",
     "reasonBurnt": "Bruciato",
@@ -191,8 +194,7 @@
     "differentSize": "Un formato diverso?",
     "newQuantityPrefix": "Nuova quantità: ",
     "costPerUnit": "Costo per unità",
-    "notesPlaceholder": "Aggiungi note su questo rifornimento...",
-    "expirationPlaceholder": "Imposta nuova scadenza"
+    "notesPlaceholder": "Aggiungi note su questo rifornimento..."
   },
   "consumeItem": {
     "title": "Consuma articolo",
@@ -202,7 +204,9 @@
     "purpose": "Scopo *",
     "notesPlaceholder": "Aggiungi note su questo utilizzo...",
     "purposeCooking": "Cucina",
-    "purposeTransfer": "Trasferimento"
+    "purposeTransfer": "Trasferimento",
+    "useAll": "Usa tutto",
+    "optionalDetails": "Dettagli facoltativi"
   },
   "moveToPantry": {
     "cannotAddTitle": "Non puoi aggiungere alla dispensa di questa casa",
@@ -310,7 +314,28 @@
     "outOfStock": "Esaurito",
     "runningLow": "Sta finendo",
     "stockGuideSubtitle": "Tocca + e scansiona uno scontrino recente: ciò che hai comprato va dritto in dispensa.",
-    "stockGuideOffline": "Scansionare uno scontrino richiede una connessione. Riprova quando sarai di nuovo online."
+    "stockGuideOffline": "Scansionare uno scontrino richiede una connessione. Riprova quando sarai di nuovo online.",
+    "pendingAmount": "{{amount}} in attesa di sincronizzazione",
+    "stockCheckEntry_one": "{{count}} prodotto da controllare",
+    "stockCheckEntry_other": "{{count}} prodotti da controllare",
+    "stockCheckTitle": "Li hai ancora?",
+    "stockCheckStillHave": "Ce l'ho ancora",
+    "stockCheckSomeLeft": "Ne resta un po'",
+    "stockCheckUsedUp": "Finito",
+    "stockCheckThrewOut": "Buttato",
+    "stockCheckLeft": "Ne resta, in {{unit}}",
+    "stockCheckInside": "Quanto contengono, in {{unit}}",
+    "stockCheckStale": "È cambiato da quando l'hai visto. Controllalo di nuovo.",
+    "stockCheckFailed": "Impossibile salvare il controllo. Riprova.",
+    "stockCheckNoneAnswered": "Scegli una risposta per almeno un articolo.",
+    "stockDoubtNotConfirmed": "Non controllato da un po'",
+    "stockDoubtPastExpiry": "Oltre la data",
+    "stockDoubtPastRunOut": "Di solito a quest'ora è finito",
+    "stockDoubtRunOutSoon": "Di solito finisce presto",
+    "stockLevelHigh": "Probabilmente c'è ancora",
+    "stockLevelMedium": "Meglio controllare",
+    "stockLevelLow": "Probabilmente non c'è più",
+    "stockLevelUnknown": "Non si sa"
   },
   "storageState": {
     "AMBIENT": "Temperatura ambiente",
@@ -333,11 +358,11 @@
   },
   "deduction": {
     "invalidWaste": "Inserisci una quantità di spreco valida",
-    "stillCalculating": "Calcolo della quantità disponibile in corso...",
     "exceedsAvailableConsume": "Non puoi consumare più della quantità disponibile ({{amount}} {{unit}})",
     "exceedsAvailableWaste": "Non puoi sprecare più della quantità disponibile ({{amount}} {{unit}})",
     "remainingAfter": "Rimanente: {{amount}} {{unit}}",
-    "exceedsAvailable": "Supera la disponibilità ({{amount}} {{unit}})"
+    "exceedsAvailable": "Supera la disponibilità ({{amount}} {{unit}})",
+    "conversionUnavailable": "Impossibile convertire questa unità. Scegli un’altra unità."
   },
   "duplicateItem": {
     "title": "Articolo già in dispensa"

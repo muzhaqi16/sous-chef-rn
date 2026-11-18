@@ -5,7 +5,19 @@ const ITEM = 'pantry-item';
  * has no imports: Detox's Jest reads it by relative path, outside the aliases.
  */
 export const pantryTestIDs = {
+  stockCheckEntry: 'pantry-stock-check-entry',
+  stockCheckSave: 'pantry-stock-check-save',
+  stockCheckRow: (pantryItemId: string) => `pantry-stock-check-${pantryItemId}`,
+  stockCheckLeft: (pantryItemId: string) =>
+    `pantry-stock-check-${pantryItemId}-left`,
+  stockCheckAnswer: (pantryItemId: string, answer: string) =>
+    `pantry-stock-check-${pantryItemId}-${answer}`,
   screen: 'pantry-screen',
+  /** Confirm on the consume, waste and restock sheets. */
+  actionConfirm: 'pantry-action-confirm',
+  consumeQuantity: 'pantry-consume-quantity',
+  consumeUseAll: 'pantry-consume-use-all',
+  consumeDetails: 'pantry-consume-details',
   loading: 'pantry-loading',
   list: 'pantry-list',
   listSkeletonOverlay: 'pantry-list-skeleton-overlay',
@@ -20,6 +32,8 @@ export const pantryTestIDs = {
   addAllLowStockButton: 'add-all-low-stock',
 
   itemDetail: 'pantry-item-detail',
+  /** The amount left, beside the item's name on its detail. */
+  detailAmount: 'pantry-item-detail-amount',
   itemRemoved: 'pantry-item-removed',
   itemHidden: 'pantry-item-hidden',
   itemPartial: 'pantry-item-partial',

@@ -94,6 +94,10 @@ export function useFirstShopTour({
     hasFeatureHintBeenShown(featureId, userId),
   );
 
+  // Started from Getting started, it runs whatever came before.
+  const guideCanStart =
+    hasList &&
+    (!finishedEarlier || session.startedGuides.has(GUIDE_TOURS.shop));
   const guide = useTutorialSequence({
     tourId: GUIDE_TOURS.shop,
     steps: [
@@ -127,18 +131,20 @@ export function useFirstShopTour({
       },
     ],
     targetRects,
-    // Started from Getting started, it runs whatever came before.
-    canStart:
-      hasList &&
-      (!finishedEarlier || session.startedGuides.has(GUIDE_TOURS.shop)),
+    canStart: guideCanStart,
     isPaused,
     startDelay,
   });
 
+  // A tour names its next target before it starts, so the target can measure:
+  // one that cannot start shows nothing and holds no other tip back.
   const guideIdle =
-    guide.currentStep === null &&
-    guide.inlineStep === null &&
-    guide.activeRectKey === null;
+    !guideCanStart ||
+    (guide.currentStep === null &&
+      guide.inlineStep === null &&
+      guide.activeRectKey === null);
+  const swipeCanStart =
+    guideIdle && tabShown === 'shopping' && unpurchasedCount >= SWIPE_TIP_ROWS;
   const swipeTip = useTutorialSequence({
     tourId: 'list_swipe',
     steps: [
@@ -151,17 +157,15 @@ export function useFirstShopTour({
       },
     ],
     targetRects,
-    canStart:
-      guideIdle &&
-      tabShown === 'shopping' &&
-      unpurchasedCount >= SWIPE_TIP_ROWS,
+    canStart: swipeCanStart,
     isPaused,
     startDelay,
   });
 
   // Once bought items wait to go in, a tip offers scanning the trip's receipt.
   const swipeIdle =
-    swipeTip.currentStep === null && swipeTip.activeRectKey === null;
+    !swipeCanStart ||
+    (swipeTip.currentStep === null && swipeTip.activeRectKey === null);
   const receiptTip = useTutorialSequence({
     tourId: 'list_receipt',
     steps: [

@@ -221,7 +221,7 @@ grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/Scr
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
-**Verified against `react-native-unistyles@3.8.0` (2026-11-02, in source).**
+**Verified against `react-native-unistyles@3.8.2` (2026-11-17, in source).**
 `withUnistyles.native.tsx` builds the forwarded style with
 `Object.assign(acc, secret.uni__getStyles())`. For a function-valued `style`
 that is the function itself, and an arrow function has no own enumerable
@@ -241,10 +241,14 @@ React, and the next React commit can put the old values back on a view that a
 Reanimated animated style has registered, and on everything under it.
 Reanimated re-applies only the props it owns.
 
-**Verified against `react-native-unistyles@3.8.0` +
-`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-11-02, iOS
+**Verified against `react-native-unistyles@3.8.2` +
+`react-native-reanimated@4.7.2` + `react-native@0.86.3` (2026-11-17, iOS
 simulator; first measured on 3.5.0, and on Android on 3.5.3),** by running
-`UnistylesShadowRegistry.verify()` after every commit. On a freshly mounted
+`UnistylesShadowRegistry.verify()` after every commit. On 3.8.2 + 4.7.2, a
+freshly mounted gallery `PantryItemDetail` with every `ThemeEpochSentinel`
+rendering nothing left one `dot` on the old theme from 261 ms through 3 s; with
+the sentinels, 0 in both directions, and 0 on pantry rows, list rows under a
+toast, an open form sheet and a rotation. On a freshly mounted
 four-photo `PantryItemDetail` with every `ThemeEpochSentinel` rendering nothing,
 the first theme change left 3 or 4 views (`dot`, `heroInner`) on the old theme
 through 3 s, on 3.7.0 and on 3.8.0, and a screenshot showed the same. With the
@@ -273,7 +277,8 @@ re-keyed on each theme commit. Upstream:
 
 Re-check: make `ThemeEpochSentinel` render nothing, reload, open a fresh
 `PantryItemDetail` for an item with several photos (one photo has no dots and
-passes either way), and `setTheme('DARK')`.
+passes either way), and `setTheme('DARK')`. It is the only screen whose hero
+sets `parallax`; the list `ItemDetail`'s gallery passes either way.
 `UnistylesShadowRegistry.verify()` (module
 `react-native-unistyles/src/specs/ShadowRegistry`) through `debugger-evaluate`
 then reports `dot` / `heroInner` mismatches. In source:
@@ -289,7 +294,7 @@ grep -n -B 3 "getHasBeenPromoted" node_modules/react-native-unistyles/cxx/hybrid
 not `UnistylesRuntime.updateTheme` giving the scoped theme itself new values.
 A view styled by `StyleSheet.create` is updated natively and does follow.
 
-**Verified against `react-native-unistyles@3.8.0` (2026-11-02, in source; on
+**Verified against `react-native-unistyles@3.8.2` (2026-11-17, in source; on
 an Android emulator on 3.5.2).** `useProxifiedUnistyles` builds its listener
 with `updateTheme: () => { if (scopedTheme) return; … }`, and inside a scope
 `scopedTheme` is the scope's name.
@@ -1085,17 +1090,4 @@ Re-check: in the dev app on the phone, wrap `nativeModuleProxy.RNKeychainManager
 
 ```
 grep -n "errSecUserCanceled" -A1 node_modules/react-native-keychain/ios/RNKeychainManager/RNKeychainManager.m
-```
-
-### typescript-eslint single-run mode loads overlapping tsconfigs twice
-
-Verified 2026-11-10 with `@typescript-eslint/parser` 8.72.2 on this repository.
-
-**Claim:** from 8.72.1, single-run mode builds a standalone Program for each tsconfig, and a file that falls back to the project service (a `#!` script, a file its nearest tsconfig excludes, a tsconfig another one overlaps) loads that project again; the two share no source files (typescript-eslint#13109, open). Single-run mode turns on by itself under `CI=true` or the `eslint` binary. With it, `eslint .` crashed at a 4 GB heap after 130 s, as PR Checks did from `6d3b80c3e` (8.70.0 → 8.72.2); with it off it passed in 106 s, and still crashed at 3 GB. `eslint/project.js` sets `disallowAutomaticSingleRunInference: true` on every typed block, and PR Checks gives ESLint the 6 GB the pre-commit hook does.
-
-Re-check: on a cold cache, single-run forced back on, then the config as it is:
-
-```
-TSESTREE_SINGLE_RUN=true CI=true NODE_OPTIONS=--max-old-space-size=4096 npx eslint --cache-location /tmp/eslint-a --max-warnings 0 .
-CI=true NODE_OPTIONS=--max-old-space-size=4096 npx eslint --cache-location /tmp/eslint-b --max-warnings 0 .
 ```

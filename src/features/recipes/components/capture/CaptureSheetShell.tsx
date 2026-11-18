@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
 import { AlertBanner } from '#components/molecules/AlertBanner';
@@ -33,6 +34,7 @@ export function CaptureSheetShell<Payload>({
   return (
     <Sheet
       mode="form"
+      headerFromContent
       visible={visible}
       onDismiss={onDismiss}
       snapPoints={[snapPoint]}
@@ -74,7 +76,9 @@ export const CaptureFormFrame: React.FC<CaptureFormFrameProps> = ({
 
   return (
     <>
-      <SheetHeader contentPadding="md" title={title} onClose={onClose} />
+      <SheetHeaderSlot>
+        <SheetHeader title={title} onClose={onClose} />
+      </SheetHeaderSlot>
       {children}
       {unavailable ? (
         <Text role="caption" tone="warning" style={styles.note}>

@@ -9,7 +9,11 @@ import {
 } from '@apollo/client';
 import { ApolloProvider, useApolloClient } from '@apollo/client/react';
 import { Text } from '#components/atoms/Text';
-import { render, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
+import {
+  TabBarActionsProvider,
+  useTabBarSetters,
+} from '#/context/TabBarActionsContext';
 import { RESYNC_SCOPE } from '#/apollo/scopedClient';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 
@@ -27,6 +31,7 @@ interface NavigatorConfig {
     route: { name: string };
     children: ReactNode;
   }) => ReactElement;
+  tabBar?: (props: Record<string, never>) => ReactElement<{ tabs: unknown }>;
 }
 let mockNavigatorConfig: NavigatorConfig | undefined;
 
@@ -44,11 +49,6 @@ jest.mock('../ShoppingListStack', () => ({
 }));
 jest.mock('../RecipeStack', () => ({ RecipeStack: 'RecipeStack' }));
 jest.mock('../MealPlanStack', () => ({ MealPlanStack: 'MealPlanStack' }));
-let mockAddMenuOpen = false;
-jest.mock('#/context/TabBarActionsContext', () => ({
-  TabBarActionsProvider: ({ children }: { children: ReactNode }) => children,
-  useTabBarState: () => ({ isAddMenuOpen: mockAddMenuOpen }),
-}));
 jest.mock('#app/FloatingTabBar/FloatingTabBar', () => ({
   FloatingTabBar: 'FloatingTabBar',
 }));
@@ -120,38 +120,62 @@ describe('HomeTabs', () => {
     expect(layout).toBeDefined();
 
     render(
-      <ApolloProvider client={client}>
-        {layout?.({ route: { name: 'Pantry' }, children: <Probe /> })}
-      </ApolloProvider>,
+      <TabBarActionsProvider>
+        <ApolloProvider client={client}>
+          {layout?.({ route: { name: 'Pantry' }, children: <Probe /> })}
+        </ApolloProvider>
+      </TabBarActionsProvider>,
     );
 
     expect(watched?.options.context).toEqual({ [RESYNC_SCOPE]: 'Pantry' });
   });
 
-  it('takes the tab out of the screen reader while the add menu covers it', () => {
+  it('takes the tab out of either screen reader while the add menu covers it', () => {
     const layout = mockNavigatorConfig?.screenLayout;
     const client = new ApolloClient({
       cache: new InMemoryCache(),
       defaultOptions: APOLLO_DEFAULT_OPTIONS,
       link: ApolloLink.empty(),
     });
-    const tab = (open: boolean) => {
-      mockAddMenuOpen = open;
-      return (
+    let openMenu: (open: boolean) => void = () => undefined;
+    const Opener = () => {
+      openMenu = useTabBarSetters().setAddMenuOpen;
+      return null;
+    };
+    render(
+      <TabBarActionsProvider>
+        <Opener />
         <ApolloProvider client={client}>
           {layout?.({ route: { name: 'Pantry' }, children: <Text>Row</Text> })}
         </ApolloProvider>
-      );
+      </TabBarActionsProvider>,
+    );
+    /** The tab's own wrapper: the nearest view above the row that hides it. */
+    const wrapper = () => {
+      let node = screen.getByText('Row', {
+        includeHiddenElements: true,
+      }).parent;
+      while (node && node.props.importantForAccessibility === undefined) {
+        node = node.parent;
+      }
+      if (!node) throw new Error('the tab has no wrapper');
+      return node.props;
     };
-
-    const { rerender } = render(tab(false));
     expect(screen.getByText('Row')).toBeTruthy();
 
-    rerender(tab(true));
+    act(() => {
+      openMenu(true);
+    });
+
     expect(screen.queryByText('Row')).toBeNull();
-    expect(
-      screen.getByText('Row', { includeHiddenElements: true }),
-    ).toBeTruthy();
+    expect(wrapper()).toMatchObject({
+      importantForAccessibility: 'no-hide-descendants',
+      accessibilityElementsHidden: true,
+    });
+  });
+
+  it('hands the tab bar its appearance', () => {
+    expect(mockNavigatorConfig?.tabBar?.({}).props.tabs).toBe(TAB_APPEARANCE);
   });
 
   it('keeps blurred tabs mounted rather than pausing them', () => {

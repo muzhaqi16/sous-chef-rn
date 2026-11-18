@@ -56,13 +56,14 @@ type PurchaseNode = {
   totalPrice: number | null;
   currency: { __typename: 'Currency'; id: string; code: string };
   unitSymbol: string;
-  user: {
+  // Null once the buyer's account is gone; the purchase stays the home's.
+  purchasedBy: {
     __typename: 'User';
     id: string;
     email: string | null;
     displayName: string | null;
     profile: null;
-  };
+  } | null;
 };
 
 // Distinct ids matter: two fixtures sharing one id are the SAME normalized
@@ -71,7 +72,7 @@ const purchaser = (
   displayName: string | null,
   email: string | null = null,
   id = 'u1',
-): PurchaseNode['user'] => ({
+): NonNullable<PurchaseNode['purchasedBy']> => ({
   __typename: 'User',
   id,
   email,
@@ -114,7 +115,7 @@ const purchase: PurchaseNode = {
   totalPrice: 5,
   currency: { __typename: 'Currency', id: 'c1', code: 'USD' },
   unitSymbol: 'kg',
-  user: purchaser('Sam'),
+  purchasedBy: purchaser('Sam'),
 };
 
 // The shape a failure takes on this query: every hop from `Purchase.currency`
@@ -265,7 +266,7 @@ describe('PurchaseHistoryScreen', () => {
       totalPrice: null,
       currency: { __typename: 'Currency', id: 'c1', code: 'USD' },
       unitSymbol: 'kg',
-      user: purchaser('Sam'),
+      purchasedBy: purchaser('Sam'),
     };
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [historyMock([unpriced])],
@@ -287,7 +288,7 @@ describe('PurchaseHistoryScreen', () => {
       totalPrice: 0,
       currency: { __typename: 'Currency', id: 'c1', code: 'USD' },
       unitSymbol: 'kg',
-      user: purchaser('Sam'),
+      purchasedBy: purchaser('Sam'),
     };
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [historyMock([free])],
@@ -392,18 +393,27 @@ describe('PurchaseHistoryScreen', () => {
     expect(screen.getByText('Sam')).toBeTruthy();
   });
 
+  it('reads "Someone" for a purchase whose buyer\'s account is gone', async () => {
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [historyMock([{ ...purchase, purchasedBy: null }])],
+    });
+
+    await drainTimers();
+    expect(screen.getByText('Someone')).toBeTruthy();
+  });
+
   it('falls back through email to "Someone" when there is no display name', async () => {
     const noProfile: PurchaseNode = {
       ...purchase,
       id: 'p3',
-      user: purchaser(null, 'sam@example.com', 'u2'),
+      purchasedBy: purchaser(null, 'sam@example.com', 'u2'),
     };
     const anonymous: PurchaseNode = {
       ...purchase,
       id: 'p4',
       // `email` is null for every purchaser but the caller themself — the API
       // gates the address to self-or-admin.
-      user: purchaser(null, null, 'u3'),
+      purchasedBy: purchaser(null, null, 'u3'),
     };
 
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {

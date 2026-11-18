@@ -5,7 +5,7 @@ import path from 'path';
 /**
  * The API finds store builds by tag, and a suffixed tag is no store version.
  * Each job's own step runs here through bash, as CI runs it. A build from a
- * branch skips this step and tags its own commit.
+ * branch skips this step.
  */
 
 const workflow = (name: string): string =>
@@ -14,17 +14,20 @@ const workflow = (name: string): string =>
     'utf8',
   );
 
+/** Any version: what reads a tag judges its shape, never its number. */
+const VERSION = '1.2.3';
+
 const STORE_TAGS = [
-  'refs/tags/playstore-v4.9.0',
-  'refs/tags/prod-v4.9.0',
-  'refs/tags/ios-v4.9.0',
-  'refs/tags/v4.9.0',
+  `refs/tags/playstore-v${VERSION}`,
+  `refs/tags/prod-v${VERSION}`,
+  `refs/tags/ios-v${VERSION}`,
+  `refs/tags/v${VERSION}`,
 ];
 
 const OTHER_REFS = [
-  'refs/tags/dev-v4.9.0',
-  'refs/tags/stg-v4.9.0',
-  'refs/tags/playstore-v4.9.0-rc1',
+  `refs/tags/dev-v${VERSION}`,
+  `refs/tags/stg-v${VERSION}`,
+  `refs/tags/playstore-v${VERSION}-rc1`,
 ];
 
 const jobsBuildingBundles = workflow('build-android.yml')
@@ -78,7 +81,7 @@ describe('the iOS build', () => {
     expect(step).toContain('name: Refuse a build without a store tag');
   });
 
-  it.each(['refs/tags/ios-v4.9.0', 'refs/tags/v4.9.0'])(
+  it.each([`refs/tags/ios-v${VERSION}`, `refs/tags/v${VERSION}`])(
     'builds from %s',
     ref => {
       expect(exitCodeOn(scriptOf(step), ref)).toBe(0);
@@ -86,8 +89,8 @@ describe('the iOS build', () => {
   );
 
   it.each([
-    'refs/tags/ios-v4.9.0-rc1',
-    'refs/tags/v4.9.0-rc1',
+    `refs/tags/ios-v${VERSION}-rc1`,
+    `refs/tags/v${VERSION}-rc1`,
     'refs/tags/version-note',
   ])('refuses %s', ref => {
     expect(exitCodeOn(scriptOf(step), ref)).toBe(1);

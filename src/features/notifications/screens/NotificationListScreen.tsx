@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
@@ -29,11 +29,23 @@ import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollCom
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const NotificationListScreen: React.FC = () => {
-  const { t } = useTranslation();
   useScreenTransition('NotificationListScreen');
+  return (
+    <NotificationActionHandler>
+      {({ handleNotificationAction }) => (
+        <NotificationFeed onAction={handleNotificationAction} />
+      )}
+    </NotificationActionHandler>
+  );
+};
+
+/** The feed; a notification that asks for an action goes to `onAction`. */
+const NotificationFeed: React.FC<{
+  onAction: (notification: NotificationType) => void;
+}> = ({ onAction }) => {
+  const { t } = useTranslation();
   const listInset = useScreenListInset();
-  const { toPantryMain, toNotificationDetail, toNotificationSettings } =
-    useAppNavigation();
+  const { toNotificationDetail, toNotificationSettings } = useAppNavigation();
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);
 
@@ -68,51 +80,20 @@ export const NotificationListScreen: React.FC = () => {
     isEmpty: notifications.length === 0,
   });
 
-  const handleNotificationPress = async (
-    notification: NotificationType,
-    actionHandler?: (notification: NotificationType) => void,
-  ) => {
-    // Mark as read
-    if (!notification.isRead) {
-      await handleMarkAsRead(notification.id);
-    }
+  const handleNotificationPress = (notification: NotificationType) => {
+    // Never awaited: the read shows at once, and a tap must not wait on the
+    // server. A read row is left alone by the hook.
+    void handleMarkAsRead(notification.id);
 
-    // Handle actionable notifications first
-    if (
-      notification.requiresAction &&
-      notification.actionType &&
-      actionHandler
-    ) {
-      actionHandler(notification);
-      return;
-    }
-
-    // Navigate based on type and action
     if (notification.requiresAction && notification.actionType) {
-      switch (notification.actionType) {
-        case 'ACCEPT_HOME_INVITE':
-        case 'ACCEPT_SHOPPING_LIST_INVITE':
-          if (actionHandler) {
-            actionHandler(notification);
-          }
-          break;
-        case 'VIEW_EXPIRING_ITEMS':
-          if (actionHandler) {
-            actionHandler(notification);
-          } else {
-            toPantryMain();
-          }
-          break;
-        default:
-          toNotificationDetail({ id: notification.id, notification });
-      }
+      onAction(notification);
     } else if (
       notification.category !== NotificationCategory.Pantry &&
       notification.category !== NotificationCategory.Shopping
     ) {
       // Pantry/Shopping notifications have no dedicated destination to jump
-      // to — tapping just marks them read (handled above). Other categories
-      // open the detail screen, which has real content to show.
+      // to — tapping just marks them read. Other categories open the detail
+      // screen, which has real content to show.
       toNotificationDetail({ id: notification.id, notification });
     }
   };
@@ -125,106 +106,83 @@ export const NotificationListScreen: React.FC = () => {
   const keyExtractor = (row: NotificationFeedRow) =>
     row.kind === 'header' ? `header:${row.title}` : row.notification.id;
 
-  const notificationActionRef = useRef<
-    ((notification: NotificationType) => void) | null
-  >(null);
-
   const renderRow = ({ item }: { item: NotificationFeedRow }) =>
     item.kind === 'header' ? (
       <NotificationGroupHeader title={item.title} />
     ) : (
       <NotificationItem
         notification={item.notification}
-        onPress={notification =>
-          handleNotificationPress(
-            notification,
-            notificationActionRef.current ?? undefined,
-          )
-        }
+        onPress={handleNotificationPress}
         onDismiss={handleRemoveNotification}
       />
     );
 
   return (
-    <NotificationActionHandler>
-      {({ handleNotificationAction }) => {
-        notificationActionRef.current = handleNotificationAction;
-        return (
-          <SubScreen
-            title={t('labels.notifications')}
-            actions={[
-              {
-                icon: 'settings',
-                accessibilityLabel: t('a11y.notificationSettings'),
-                onPress: toNotificationSettings,
-              },
-            ]}
-            scroll="list"
-            gutter="none"
-          >
-            <UrgentNotificationsBanner
-              urgentNotifications={filteredGroups.urgent}
-            />
+    <SubScreen
+      title={t('labels.notifications')}
+      actions={[
+        {
+          icon: 'settings',
+          accessibilityLabel: t('a11y.notificationSettings'),
+          onPress: toNotificationSettings,
+        },
+      ]}
+      scroll="list"
+      gutter="none"
+    >
+      <UrgentNotificationsBanner urgentNotifications={filteredGroups.urgent} />
 
-            <NotificationFilters
-              selectedCategory={filterCategory}
-              onCategoryChange={setFilterCategory}
-            />
+      <NotificationFilters
+        selectedCategory={filterCategory}
+        onCategoryChange={setFilterCategory}
+      />
 
-            <NotificationHeader
-              onMarkAllRead={handleMarkAllAsRead}
-              onClearRead={() =>
-                handleClearRead(
-                  notifications.filter(n => n.isRead).map(n => n.id),
-                )
-              }
-              hasNotifications={hasNotifications}
-            />
+      <NotificationHeader
+        onMarkAllRead={handleMarkAllAsRead}
+        onClearRead={() =>
+          handleClearRead(notifications.filter(n => n.isRead).map(n => n.id))
+        }
+        hasNotifications={hasNotifications}
+      />
 
-            <FlashList
-              data={rows}
-              keyExtractor={keyExtractor}
-              renderItem={renderRow}
-              getItemType={row => row.kind}
-              renderScrollComponent={SwipeAwareScrollComponent}
-              ListHeaderComponent={
-                mayHoldMore && hasNotifications ? (
-                  <PartialDataNote onRetry={refetchHistory} />
-                ) : null
-              }
-              ListEmptyComponent={
-                // An empty feed looks like a failed fetch unless the query is
-                // asked, and "all caught up" is wrong for a feed that never
-                // loaded.
-                mayHoldMore ? (
-                  <DataStateView state="offline" onRetry={refetchHistory} />
-                ) : historyState === 'error' || historyState === 'offline' ? (
-                  <DataStateView
-                    state={historyState}
-                    onRetry={refetchHistory}
-                  />
-                ) : (
-                  <EmptyNotifications />
-                )
-              }
-              ListFooterComponent={
-                <PaginationFooter
-                  hasMore={hasMore}
-                  isFetchingMore={loadingMore}
-                  itemCount={notifications.length}
-                />
-              }
-              onEndReached={loadMore}
-              onEndReachedThreshold={0.4}
-              contentContainerStyle={[
-                !hasNotifications && styles.emptyInset,
-                listInset,
-              ]}
-            />
-          </SubScreen>
-        );
-      }}
-    </NotificationActionHandler>
+      <FlashList
+        data={rows}
+        keyExtractor={keyExtractor}
+        renderItem={renderRow}
+        getItemType={row => row.kind}
+        renderScrollComponent={SwipeAwareScrollComponent}
+        ListHeaderComponent={
+          mayHoldMore && hasNotifications ? (
+            <PartialDataNote onRetry={refetchHistory} />
+          ) : null
+        }
+        ListEmptyComponent={
+          // An empty feed looks like a failed fetch unless the query is
+          // asked, and "all caught up" is wrong for a feed that never
+          // loaded.
+          mayHoldMore ? (
+            <DataStateView state="offline" onRetry={refetchHistory} />
+          ) : historyState === 'error' || historyState === 'offline' ? (
+            <DataStateView state={historyState} onRetry={refetchHistory} />
+          ) : (
+            <EmptyNotifications />
+          )
+        }
+        ListFooterComponent={
+          <PaginationFooter
+            hasMore={hasMore}
+            isFetchingMore={loadingMore}
+            itemCount={notifications.length}
+          />
+        }
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.4}
+        contentContainerStyle={[
+          !hasNotifications && styles.emptyInset,
+          listInset,
+        ]}
+      />
+    </SubScreen>
   );
 };
 

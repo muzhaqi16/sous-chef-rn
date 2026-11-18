@@ -25,7 +25,6 @@ import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppin
 import { useAddShoppingItem } from '#features/shoppingList/hooks/mutations/useAddShoppingItem';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { alertService } from '#/services/alertService';
-import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { reportValidationErrors } from '#/utils/validation/common';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
@@ -108,20 +107,16 @@ export const ShoppingListDetailsStep: React.FC<
     setFieldValue('selectedUnitId', unitId);
   };
 
-  const handleBrandSelected = makeIdNameHandler(
-    id => setFieldValue('brandId', id),
-    name => setFieldValue('brand', name),
-  );
-  // Not `makeIdNameHandler`: it writes the display NAME over the symbol
-  // `UnitAutocompleteField` already wrote, turning "g" into "gram". That handler
-  // is still right for brand and store, where the name IS the display value.
+  // Each picker has handed its pick over as text; the form keeps its id.
+  const handleBrandSelected = (id: string | null) => {
+    setFieldValue('brandId', id);
+  };
   const handleNetWeightUnitSelected = (id: string | null) => {
     setFieldValue('netWeightUnitId', id);
   };
-  const handleStoreSelected = makeIdNameHandler(
-    id => setFieldValue('storeId', id),
-    name => setFieldValue('storeName', name),
-  );
+  const handleStoreSelected = (id: string | null) => {
+    setFieldValue('storeId', id);
+  };
 
   // `handleSubmit` runs the schema first and only calls this on a valid form;
   // an invalid one renders its message on the offending field instead.
@@ -140,17 +135,10 @@ export const ShoppingListDetailsStep: React.FC<
           estimatedPrice: (showPrices && estimatedPrice) || undefined,
           brandName: brand.trim() || undefined,
           brandId: brandId ?? undefined,
-          // Both or neither: the schema refuses a weight without a resolved
-          // unit id, so reaching here with one and not the other is not
-          // possible.
-          netWeight:
-            netWeightValue !== undefined && netWeightUnitId
-              ? netWeightValue
-              : undefined,
-          netWeightUnitId:
-            netWeightValue !== undefined
-              ? netWeightUnitId ?? undefined
-              : undefined,
+          // The add sends a weight only with its unit, and the schema
+          // refuses either without the other.
+          netWeight: netWeightValue,
+          netWeightUnitId: netWeightUnitId ?? undefined,
           priority,
           preferredStoreId: storeId ?? undefined,
         });

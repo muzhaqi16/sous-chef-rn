@@ -132,6 +132,7 @@ describe('IngredientMatchingSheet', () => {
     onUpdate: jest.fn(),
     onConfirm: jest.fn(),
     onSkip: jest.fn(),
+    onRecordOnly: jest.fn(),
     onClose: jest.fn(),
     confirmLoading: false,
   };
@@ -192,5 +193,24 @@ describe('IngredientMatchingSheet', () => {
     render(<IngredientMatchingSheet {...defaultProps} />);
     await user.press(screen.getByText('Confirm & Deduct (2)'));
     expect(defaultProps.onConfirm).toHaveBeenCalled();
+  });
+
+  // Nothing to draw never traps the cook: it can still be recorded, and says
+  // so, rather than a confirm that silently does nothing.
+  it('offers to record the cook without deducting when nothing is included', async () => {
+    const user = userEvent.setup();
+    render(
+      <IngredientMatchingSheet
+        {...defaultProps}
+        matchSummary={{ ...matchSummary, included: 0 }}
+      />,
+    );
+
+    expect(screen.queryByText(/Confirm & Deduct/)).toBeNull();
+    const [, bottom] = screen.getAllByText('Record cook without deducting');
+    await user.press(bottom!);
+
+    expect(defaultProps.onRecordOnly).toHaveBeenCalled();
+    expect(defaultProps.onConfirm).not.toHaveBeenCalled();
   });
 });

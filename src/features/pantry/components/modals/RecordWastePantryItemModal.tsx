@@ -14,7 +14,6 @@ import { WasteReason } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import { PantryActionModal } from '#features/pantry/components/modals/PantryActionModal';
-import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { Text } from '#components/atoms/Text';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import {
@@ -41,7 +40,7 @@ const WASTE_REASON_OPTIONS: Array<{
   labelKey: TranslationKey;
   value: WasteReason;
 }> = [
-  { labelKey: 'recordWaste.reasonExpired', value: WasteReason.Expired },
+  { labelKey: 'labels.expired', value: WasteReason.Expired },
   { labelKey: 'recordWaste.reasonSpoiled', value: WasteReason.Spoiled },
   { labelKey: 'labels.mold', value: WasteReason.Mold },
   { labelKey: 'labels.pest', value: WasteReason.Pest },
@@ -59,27 +58,38 @@ export const RecordWastePantryItemModal: React.FC<
   RecordWastePantryItemModalProps
 > = ({ visible, pantryItemId, onClose, onConfirm }) => {
   const { t } = useTranslation();
-  const [wasteAmountInput, setWasteAmountInput] = useState('');
+  // Null until typed: the amount then reads all the stack holds.
+  const [typedAmount, setTypedAmount] = useState<string | null>(null);
   const [wasteReason, setWasteReason] = useState<WasteReason>(
     WasteReason.Expired,
   );
   const [isComposted, setIsComposted] = useState(false);
   const [isRecycled, setIsRecycled] = useState(false);
 
-  const handleReset = (item: PantryActionModal_PantryItemFragment) => {
-    setWasteAmountInput(
-      formatQuantityForInput(item.quantity, {
-        notation: resolveQuantityNotation(null, item.unit.displayAsFraction),
-      }),
-    );
+  const [prevVisible, setPrevVisible] = useState(visible);
+  const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItemId);
+  if (visible !== prevVisible || pantryItemId !== prevPantryItemId) {
+    setPrevVisible(visible);
+    setPrevPantryItemId(pantryItemId);
+    setTypedAmount(null);
     setWasteReason(WasteReason.Expired);
     setIsComposted(false);
     setIsRecycled(false);
-  };
+  }
+
+  const amountOf = (shared: PantryActionSharedState) =>
+    typedAmount ??
+    formatQuantityForInput(shared.trackingQuantity, {
+      notation: resolveQuantityNotation(
+        null,
+        shared.displayAsFractionOf(shared.trackingUnitId),
+      ),
+    });
 
   const handleConfirm = (shared: PantryActionSharedState) => {
     if (!pantryItemId) return;
 
+    const wasteAmountInput = amountOf(shared);
     const wasteValue = validateDeductionQuantity(
       wasteAmountInput,
       shared,
@@ -117,11 +127,10 @@ export const RecordWastePantryItemModal: React.FC<
       unitToggleLabel={t('recordWaste.wasteBy')}
       operation={PantryOperation.Waste}
       onConfirm={handleConfirm}
-      onReset={handleReset}
       renderActionFields={shared => (
         <WasteActionFields
-          wasteAmountInput={wasteAmountInput}
-          setWasteAmountInput={setWasteAmountInput}
+          wasteAmountInput={amountOf(shared)}
+          setWasteAmountInput={setTypedAmount}
           wasteReason={wasteReason}
           setWasteReason={setWasteReason}
           isComposted={isComposted}

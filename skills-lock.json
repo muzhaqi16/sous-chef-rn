@@ -1,311 +1,337 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "apollo-client": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/apollo-client/SKILL.md",
-      "computedHash": "008c067a3d480ab905aa37aab113b8dc54028e29e593610866b7ea8131377ce1"
+      "computedHash": "6b6c1f7aaf200477970e397920366de87d9120836b6ddb0461d4f48b106c9c2e"
     },
     "apollo-connectors": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/apollo-connectors/SKILL.md",
-      "computedHash": "3f46a2c204ef81113075d1b16284661521db077e333abda3983dd6f4593574c0"
+      "computedHash": "4b873587fc0e34d6a2e848efdf6280f5a96773dab65398e2a6137d8b1b7f1699"
     },
     "apollo-federation": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/apollo-federation/SKILL.md",
-      "computedHash": "91ef44a3d6f60b60610c00dfed2037fe01819e8355a40e990d8bb3549df935b4"
+      "computedHash": "e8050344a9dfa0672e2ad0d9cdae82926385dc1437a836c341390c558743fbed"
     },
     "apollo-ios": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/apollo-ios/SKILL.md",
-      "computedHash": "0a0f898406d8c72eb8eebfdd026e62aa976451fca5894da4e2296540033826df"
+      "computedHash": "9b95c6e72d9a8dd873139394fea7eb11aba606e090a7f6cfd5c730d6bad727d7"
     },
     "apollo-kotlin": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/apollo-kotlin/SKILL.md",
-      "computedHash": "8d2b5199c730c443d33a687d3fceb9e397282d3d41c08f57cf1470d674426196"
+      "computedHash": "5a394a8ab6c09e8c0c85e4f3dc4a8a667416fd93a39c40afb39796d47bd5f124"
     },
     "apollo-mcp-server": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/apollo-mcp-server/SKILL.md",
-      "computedHash": "f6dd064c87653cba5adcd6125b148ec82a8f24110624b9a65f8b1b90f66613e0"
+      "computedHash": "6c99f375cc5a7405039b70818da247a6851eaadda9526e52bf369f02fef87b47"
     },
     "apollo-router": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/apollo-router/SKILL.md",
-      "computedHash": "fe0ca97e47381fa7edc12501bcf354a16353c93080ebc12b52bbdfef2aecb401"
+      "computedHash": "6df8364af578eef2b9443d6a3894775452625461ac711ab0921fa6278efb1f04"
     },
     "apollo-router-plugin-creator": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/apollo-router-plugin-creator/SKILL.md",
-      "computedHash": "dae6c2958115ffc842f73fee0da3364bc5582f80f04bc905048b49f4794fa8f2"
+      "computedHash": "f2d349ab57b3a30aac317c20d55ee1b27662d1c5ae30f4b77ae8d20cd354a687"
     },
     "apollo-server": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/apollo-server/SKILL.md",
-      "computedHash": "48e0099a2515d5c3b905f5c3891e8d5291a3466d194524b5a8b49e56e0689533"
+      "computedHash": "1eca761ae31f0b95aed093eb4a98ba5315067fe09401ea1c9f8815d96c8a42f9"
     },
     "argent-android-emulator-setup": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-android-emulator-setup/SKILL.md",
-      "computedHash": "6fa124aaf45d2accd3d8767ea23349ef587c77ec83d09081d6c58e96355a8ca4"
+      "computedHash": "48907bf240b710b5e20acb88b62325a7057d9b11f18a8b6b49830986873eb61d"
     },
     "argent-create-e2e": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-create-e2e/SKILL.md",
-      "computedHash": "1268361afa73e8ad1676dd0bf5cb10efaa6a430a074f0f5c5b4f8cc396421ac4"
+      "computedHash": "ab8ba31e0712a5b791faeb02a5859f01fca81266ecd45351b5f36a258012b766"
     },
     "argent-device-interact": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-device-interact/SKILL.md",
-      "computedHash": "cde2c9815cb48d35a8f6f23de498dcade811cac78f81adcc900d143ef362c309"
+      "computedHash": "3ff4f8d40b2d63edb15ece5f5c2d894a0786da773280032edd26fc820c681c54"
     },
     "argent-ios-device-interact": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-ios-device-interact/SKILL.md",
-      "computedHash": "a461cc06e0c271a63ff04102395acd33d597925674f2bb42046fc17d44f75b8a"
+      "computedHash": "d5f7b21c397c4689102c9d54b7f9632122d5e3f75eeee579122e9c592396a270"
     },
     "argent-ios-device-setup": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-ios-device-setup/SKILL.md",
-      "computedHash": "124d617cb9f01e4c331a3ac55d456e4be2d174496b91f9d97a5e77dd659d9377"
+      "computedHash": "32d0a95573c9dad3885184d48c0ae18b261c13a1684f930e2565c35a93b3083b"
     },
     "argent-ios-simulator-setup": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-ios-simulator-setup/SKILL.md",
-      "computedHash": "dab55a17d90dc9f364c87bd37b6f1826bdf7d2ef783fa7e020939953baa1cdfa"
+      "computedHash": "4f6f84ee611af91064e2aafc621adda42634331c053ab4a3864236704889e584"
     },
     "argent-lens": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-lens/SKILL.md",
-      "computedHash": "7e4a3f9f6f521f86af522316a9eaaf53417ad0692fa9e87c6b3e2126bcb5b3f1"
+      "computedHash": "90a88bc49b6ccaf3294341d9188604a98cb63b0ccf417e8aecff068ec98cdbdb"
+    },
+    "argent-macos-app-interact": {
+      "source": "software-mansion/argent",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
+      "sourceType": "github",
+      "skillPath": "packages/skills/skills/argent-macos-app-interact/SKILL.md",
+      "computedHash": "13b216d3fa3f0f375b6c6f50d0aef2f1c839aa0647d3af22462c262c3807abe6"
     },
     "argent-metro-debugger": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-metro-debugger/SKILL.md",
-      "computedHash": "e0e49e7e67c31ebeb517aa86ca388205548dc79e271e88bd14316c9c3f93dc52"
+      "computedHash": "88f956eae611408b45696d2aaedbdaeac16811e6adee2b64701ab9e40a53147e"
     },
     "argent-native-profiler": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-native-profiler/SKILL.md",
-      "computedHash": "2b6b274373c4fb2374de423ff1133d9983a7cd4135a7248b03a5561e80dae611"
+      "computedHash": "8cbe4850f47e8ad1fe559d9044e813a13cb776c2520776a0715edf944de512b4"
     },
     "argent-qa-e2e": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-qa-e2e/SKILL.md",
-      "computedHash": "6c50939c63bef3083bf898576cf1bb11ab9021b3b5443593e1a51427631e0bb0"
+      "computedHash": "85473dec9223bd7aafc8c7a9124ec859c62e0f1662cc127aea3c579a658a3242"
     },
     "argent-react-native-app-workflow": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-react-native-app-workflow/SKILL.md",
-      "computedHash": "e83aae056a295a22b90b44fbc2b02eaf8f4bd0675a557e628de2e3ee29c54bd1"
+      "computedHash": "c96d20925a6b490223b3c0c81c7675fa002b933430751d80b27607c6bb364e0d"
     },
     "argent-react-native-optimization": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-react-native-optimization/SKILL.md",
-      "computedHash": "93f8b70aa7f4adf4c2ff3286b9182ca40895f1744dda7f9b9cc16f3162f69a2a"
+      "computedHash": "d245c8f8e46f5c26159d78bd5aee73bd50ef4b45e6753ba582dec42b5f07adac"
     },
     "argent-react-native-profiler": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-react-native-profiler/SKILL.md",
-      "computedHash": "0558a067c2a64ffbbc6cf32c7c0502d1e5352d9976fe6c08595dd8ff50e4cee5"
+      "computedHash": "0923d9509d27445f6f2f1a5b7c1bc0edf4368a83144130e0f669d889a2011fdc"
     },
     "argent-screen-recording": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-screen-recording/SKILL.md",
-      "computedHash": "f3df21f4a11d357e689e191e48412d6159713db5837b3a6cfab893eb3d586864"
+      "computedHash": "7d4b38f67847f7f22c64df3567c806a072fc8086af0935fb4cf1a9d94196ea99"
     },
     "argent-screenshot-diff": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-screenshot-diff/SKILL.md",
-      "computedHash": "51578d0ccd500ed42efdb554a27a853ef8b6b11df70ed1de151c54f2a9dd78a1"
+      "computedHash": "3d5a105a11b29b44557a2b7955f838929efb97e396cfaa1c1bc29fe31c121aa4"
     },
     "argent-settings-permissions": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-settings-permissions/SKILL.md",
-      "computedHash": "ec24339ae9c6f12c3d205531047b84aa8954dc3a72019a39181228d9cb8b8220"
+      "computedHash": "2e41fa14816e5ddc86d64552367dd242dbc1c9200e2b6265769469dccc973339"
     },
     "argent-test-ui-flow": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-test-ui-flow/SKILL.md",
-      "computedHash": "549daeb8417a5cdc6460b7e9ff2ee904e52f7b84304b416b32bcf7ed28180575"
+      "computedHash": "ce05975f0c5adc2d02d12fa3b226d0d589a1119236c04ef506a7f79840240d04"
     },
     "argent-tv-interact": {
       "source": "software-mansion/argent",
-      "ref": "v0.32.0",
+      "ref": "v0.33.0",
+      "commit": "18eeafba0da9e3b6f09f5969e3d187a70f3787d9",
       "sourceType": "github",
       "skillPath": "packages/skills/skills/argent-tv-interact/SKILL.md",
-      "computedHash": "7bb0b79d34aab37cf781cc5fa99d6720f25d269ff3e72213ff53b1feb7edf007"
+      "computedHash": "5e49242510cf666da19c1b0dd08a05919769f55cc97741606cbeaf04ace3f01f"
     },
     "assess-react-native-migration": {
       "source": "callstackincubator/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/assess-react-native-migration/SKILL.md",
-      "computedHash": "c07f3265bc8d51ae6dfe929f2034bea3dfa3afd73d7a3fe9910cd8944cf3c970"
+      "computedHash": ""
     },
     "create-react-native-library": {
       "source": "callstackincubator/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/create-react-native-library/SKILL.md",
-      "computedHash": "3bac367718298bbdb0a1169bc7ea2478d77e6c88b3f02d45406027cbf1e93169"
+      "computedHash": ""
     },
     "github-actions": {
       "source": "callstackincubator/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/github-actions/SKILL.md",
-      "computedHash": "c90128be4f55bc8b6dbdcba75ba2a540f3fb89ba91be1ccbe487e01ea70be122"
+      "computedHash": ""
     },
     "grafana-dashboards": {
       "source": "wshobson/agents",
       "sourceType": "github",
       "skillPath": "plugins/observability-monitoring/skills/grafana-dashboards/SKILL.md",
-      "computedHash": "e9b692daf06faf96fa28b2b98f50b362e68b974db5ab503963a610c719cda79b"
+      "computedHash": ""
     },
     "graphos-factory": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/graphos-factory/SKILL.md",
-      "computedHash": "52d519b90e0d6b4851634dcdedb55b709e6b39120f5d357ca352f7fd2c54353b"
+      "computedHash": "80fc1753c949c200f0da574c4f0698dd783923fd9589504d2494078cac6ad62a"
     },
     "graphql-operations": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/graphql-operations/SKILL.md",
-      "computedHash": "a158d0ceac9f203827af14ca4ad9fc2951e4c47ea34f61bf0873f02cfa65f18d"
+      "computedHash": "fbd5cf6835031c44a882369774d4e1b18060a31c96672ae3871304c6842db9aa"
     },
     "graphql-schema": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/graphql-schema/SKILL.md",
-      "computedHash": "f09f5117528041abf9098c5ecf2e62ffb0c158fa7098cb1a745515d9ef4aeb67"
+      "computedHash": "0b256b74d90106da9be91b2d9bec3090e054fd9c6c11ce70be38f57a3de600ff"
     },
     "react-native-architecture": {
       "source": "wshobson/agents",
       "sourceType": "github",
       "skillPath": "plugins/frontend-mobile-development/skills/react-native-architecture/SKILL.md",
-      "computedHash": "a83762db6ab371eb25e1b33e49d7895bb73df9d3952e26a3bdca90903d6ac91a"
+      "computedHash": ""
     },
     "react-native-best-practices": {
       "source": "callstackincubator/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/react-native-best-practices/SKILL.md",
-      "computedHash": "4b2b9561ff7b4b9d15ff76d2dd2a6191e3cdc7f36c06d171e377bfefcbcb2bfb"
+      "computedHash": ""
     },
     "react-native-brownfield-migration": {
       "source": "callstackincubator/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/react-native-brownfield-migration/SKILL.md",
-      "computedHash": "d4aa733c792b2a8d46c91f9bc009b8aeb5c8478d55bd02b8d904b93f7d25a061"
+      "computedHash": ""
     },
     "react-native-design": {
       "source": "wshobson/agents",
       "sourceType": "github",
       "skillPath": "plugins/ui-design/skills/react-native-design/SKILL.md",
-      "computedHash": "8a044b22f5296c463d328ba6144d978b15b382754344e596bce8e827c4ca699f"
+      "computedHash": ""
     },
     "react-native-tv-best-practices": {
       "source": "callstackincubator/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/react-native-tv-best-practices/SKILL.md",
-      "computedHash": "a451fa4bf7ba73a6cbd18a8e0a4c61e73e39d588f8f186e7c718540b7201862e"
+      "computedHash": ""
     },
     "react-native-unistyles-v3": {
       "source": "jpudysz/react-native-unistyles",
       "sourceType": "github",
       "skillPath": "skills/react-native-unistyles-v3/SKILL.md",
-      "computedHash": "2808e55f1c2e1f9c1bcc33aaf6a19cc69dfdb8a223fba60a38e96aa9239dacd0"
+      "computedHash": "cef492eb1a0501844456d5d63941ea8c2edace3d0457e2824994bb887f6d6da6"
     },
     "react-navigation": {
       "source": "callstackincubator/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/react-navigation/SKILL.md",
-      "computedHash": "f09111c137b0bac6e43ff5ff57297afc93ae51583797acf779733ace4d1ced60"
+      "computedHash": ""
     },
     "rover": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/rover/SKILL.md",
-      "computedHash": "98f38c0f99b244b4ac29372a974aa25b181a2e8848774660d0fdfb3af85dba32"
+      "computedHash": "cb9dcdc95bed069c45139cac86c04484a2991bfa63c01e01a792cfcfac6698e9"
     },
     "rust-best-practices": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/rust-best-practices/SKILL.md",
-      "computedHash": "a3db351ec552ed9d36b59e547d6c1d94077867eb5bcb98b3f802dfebb0a8a248"
+      "computedHash": "7e12e68aa50152eb7ba9ea1f88ca5380c846ea0175f8ab6788bb79b7faf12ca0"
     },
     "skill-creator": {
       "source": "apollographql/skills",
       "sourceType": "github",
       "skillPath": "skills/skill-creator/SKILL.md",
-      "computedHash": "62ff91c275f2924abed8047ef742ab68dd35233567a702294579fa992d396c98"
+      "computedHash": "39353f596a40c4309ac9aa38331ed98f28bb26e1f0d200bcfe089971d68cbee8"
     },
     "upgrade-react-navigation": {
       "source": "react-navigation/skills",
       "sourceType": "github",
       "skillPath": "skills/upgrade-react-navigation/SKILL.md",
-      "computedHash": "9e56923400804c716df8ebb6e402c5cf86291a208a9a8bee335cd9ba102362a7"
+      "computedHash": ""
     },
     "upgrading-react-native": {
       "source": "callstackincubator/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/upgrading-react-native/SKILL.md",
-      "computedHash": "91434efaa15e8134ba1a388ac829d06d0c8746455ce1b4a0cb27cb4b6d701d2a"
+      "computedHash": ""
     },
     "validate-skills": {
       "source": "callstackincubator/agent-skills",
       "sourceType": "github",
       "skillPath": ".claude/skills/validate-skills/SKILL.md",
-      "computedHash": "330cb59114b97e7b4727ff838b637682fff8820f752a950de3e7bd703608b56f"
+      "computedHash": ""
     },
     "vercel-react-native-skills": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/react-native-skills/SKILL.md",
-      "computedHash": "41d24eafa7c3d82e270439808f7cfbc4d51aeb2d14f2809a2267c16275784d06"
+      "computedHash": ""
     }
   }
 }

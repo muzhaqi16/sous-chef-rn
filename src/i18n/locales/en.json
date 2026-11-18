@@ -542,6 +542,8 @@
     "durationDays_other": "{{count}} days",
     "currency": "Currency",
     "today": "Today",
+    "tomorrow": "Tomorrow",
+    "expired": "Expired",
     "typicalFor": "Typical for {{concept}}",
     "seeAll": "See all",
     "addPantryItem": "Add pantry item",
@@ -589,7 +591,8 @@
     "pointCamera": "Point your camera at a barcode",
     "barcodeVisible": "Make sure the barcode is clearly visible",
     "swipeToDelete": "Swipe left to delete",
-    "pullToRefresh": "Pull down to refresh"
+    "pullToRefresh": "Pull down to refresh",
+    "expiryOptional": "Leave blank for an estimate"
   },
   "status": {
     "scanning": "Scanning…",

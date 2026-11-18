@@ -66,11 +66,11 @@ export const DebugInfo: React.FC = () => {
       rows: [
         {
           label: t('debugInfo.rows.apiUrl'),
-          value: env.API_URL ?? apiConfig.baseUrl,
+          value: apiConfig.baseUrl,
         },
         {
           label: t('debugInfo.rows.webSocketUrl'),
-          value: env.WEB_SOCKET_URL ?? apiConfig.wsUrl,
+          value: apiConfig.wsUrl,
         },
         // Presence only. This screen is reachable by a production account with
         // dev-tools access and everything here is copyable, so no part of a

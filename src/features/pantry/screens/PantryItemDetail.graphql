@@ -53,6 +53,9 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   updatedAt
   storageState
   expiresOn
+  # Whether that date was stated (typed, or read from a label or receipt) or is
+  # a shelf-life estimate; null with no date.
+  expiryKind
   lowStockAlert
   isLowStock
   minQuantity

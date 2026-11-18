@@ -1,7 +1,7 @@
 import type { ApolloCache } from '@apollo/client';
 import type { Unmasked } from '@apollo/client/masking';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { BatchStatus, ExpiryKind } from '#/graphql/generated/schemaTypes';
 import { isRecord } from '#/utils/isRecord';
 import type { WriteRestatedBatches_PageFragment } from './restatedStack.generated';
 
@@ -20,6 +20,10 @@ export function writeRestatedBatches(
     data: { __typename: 'Query', pantryItemBatchesConnection: page },
   });
 }
+
+/** A typed date is stated (`LABEL`); no date has no kind. */
+export const typedExpiryKind = (expiresOn: string | null): ExpiryKind | null =>
+  expiresOn ? ExpiryKind.Label : null;
 
 /**
  * A date edit as the server applies it: every active batch the detail holds
@@ -41,7 +45,11 @@ export function dateActiveBatches(
   for (const { node } of active) {
     cache.modify({
       id: cache.identify(node),
-      fields: { expiresOn: () => expiresOn, expiresAtIsManual: () => true },
+      fields: {
+        expiresOn: () => expiresOn,
+        expiresAtIsManual: () => true,
+        expiryKind: () => typedExpiryKind(expiresOn),
+      },
     });
   }
   return active.length > 0;

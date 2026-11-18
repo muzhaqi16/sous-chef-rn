@@ -16,9 +16,10 @@ import type {
 function alertExceeds(
   actionVerb: 'consume' | 'waste',
   cap: ShownQuantity,
+  report: (title: string, message: string) => void,
 ): void {
   const notation = resolveQuantityNotation(null, cap.displayAsFraction);
-  alertService.alert(
+  report(
     t('labels.error'),
     t(
       actionVerb === 'waste'
@@ -42,10 +43,13 @@ export function validateDeductionQuantity(
   quantityInput: string,
   shared: PantryActionSharedState,
   actionVerb: 'consume' | 'waste',
+  onError?: (message: string) => void,
 ): number | null {
+  const report = (title: string, message: string) =>
+    onError ? onError(message) : alertService.alert(title, message);
   const value = parseFractionalInput(quantityInput);
   if (value === null || isNaN(value) || value <= 0) {
-    alertService.alert(
+    report(
       t('labels.error'),
       actionVerb === 'waste'
         ? t('deduction.invalidWaste')
@@ -61,32 +65,36 @@ export function validateDeductionQuantity(
     const cap = shared.trackingQuantity;
     const deduction = snapDeductionToCap(value, cap / factor);
     if (inCountedUnit(deduction, factor) > cap) {
-      alertExceeds(actionVerb, shared.leftAfter(0));
+      alertExceeds(actionVerb, shared.leftAfter(0), report);
       return null;
     }
     return deduction;
   }
 
-  if (shared.isConvertedUnit && shared.availableLoading) {
-    alertService.alert(t('labels.pleaseWait'), t('deduction.stillCalculating'));
+  // Missing conversion evidence stays pending; never compare ounces with pounds
+  // or cartons. A refused conversion leaves the stack's own unit usable.
+  const cap =
+    shared.availableInSelectedUnit ??
+    (shared.activeUnitId === shared.trackingUnitId
+      ? shared.trackingQuantity
+      : null);
+  if (cap === null) {
+    if (!shared.conversionUnavailable) return value;
+    report(t('labels.error'), t('deduction.conversionUnavailable'));
     return null;
   }
 
-  // For dual-tracked items where the tracking unit matches the net-weight unit,
-  // useConvertAvailableQuantity publishes remainingNetWeight as availableInSelectedUnit
-  // even with the tracking unit selected. Prefer the larger of the two so the user
-  // can waste/consume up to the actual remaining amount.
-  const cap = shared.isConvertedUnit
-    ? shared.availableInSelectedUnit ?? shared.trackingQuantity
-    : Math.max(shared.availableInSelectedUnit ?? 0, shared.trackingQuantity);
-
   const deduction = snapDeductionToCap(value, cap);
   if (deduction > cap) {
-    alertExceeds(actionVerb, {
-      quantity: cap,
-      unit: shared.activeUnit,
-      displayAsFraction: shared.displayAsFractionOf(shared.activeUnitId),
-    });
+    alertExceeds(
+      actionVerb,
+      {
+        quantity: cap,
+        unit: shared.activeUnit,
+        displayAsFraction: shared.displayAsFractionOf(shared.activeUnitId),
+      },
+      report,
+    );
     return null;
   }
 

@@ -1,3 +1,4 @@
+import { GraphQLError } from 'graphql';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
@@ -206,6 +207,33 @@ describe('useHomeQuery', () => {
       operationMocks: [errorMock('Query failed')],
     });
     await drainTimers();
+    expect(result.current.loading).toBe(false);
+    expect(result.current.homes).toEqual([]);
+    expect(result.current.hasResult).toBe(false);
+  });
+
+  // One home the server cannot resolve nulls the whole answer: `data` comes
+  // back defined with no `homes`, which must read as a failure, never as 0 homes.
+  it('has no result when the server answers with errors and no homes', async () => {
+    const { mock } = recordMock(GetHomesDocument, { data: { homes: null } });
+    const { result } = renderHookWithApollo(() => useHomeQuery(), {
+      operationMocks: [
+        {
+          ...mock,
+          result: {
+            data: null,
+            errors: [
+              new GraphQLError("Home with ID 'h-gone' not found", {
+                path: ['homes', 'edges', 0, 'node', 'membersConnection'],
+                extensions: { code: 'RESOURCE_NOT_FOUND' },
+              }),
+            ],
+          },
+        },
+      ],
+    });
+    await drainTimers();
+
     expect(result.current.loading).toBe(false);
     expect(result.current.homes).toEqual([]);
     expect(result.current.hasResult).toBe(false);

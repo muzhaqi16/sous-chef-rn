@@ -3,7 +3,10 @@ import { drainTimers } from '#/test-utils/drainTimers';
 import {
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
+import { UseDefaultHome_HomeFragmentDoc } from '../useDefaultHome.generated';
 import {
   GetHomesDocument,
   type GetHomesQuery,
@@ -288,6 +291,28 @@ describe('useDefaultHome', () => {
 
     await drainTimers();
     expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(true);
+  });
+
+  // The quick check reads the one list every reader of a home's pantries
+  // shares, so a home the homes query holds answers it, default or not.
+  it('checks a persisted pantry against the list the homes query holds', () => {
+    const cache = makeCache();
+    const home = buildHomeNode({
+      id: 'home-2',
+      pantries: [{ id: 'pantry-2', isDefault: true }],
+    });
+    const homes = buildGetHomesMock([home]).result;
+    if (!homes || !('data' in homes) || !homes.data) throw new Error('No data');
+    seedQuery(cache, { query: GetHomesDocument, data: homes.data });
+
+    const held = cache.readFragment({
+      id: 'Home:home-2',
+      fragment: UseDefaultHome_HomeFragmentDoc,
+    });
+
+    expect(held?.pantriesConnection.edges.map(edge => edge.node.id)).toEqual([
+      'pantry-2',
+    ]);
   });
 
   it('does not set early ready when already ready', () => {
@@ -609,6 +634,124 @@ describe('useDefaultHome', () => {
       await drainTimers();
       expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(true);
       expect(markDefault.fired).toEqual([]);
+    });
+  });
+
+  describe('when the account default changes after a selection was made', () => {
+    // The store as the app holds it: what is selected is what the next render reads.
+    beforeEach(() => {
+      mockStoreState.setSelectedHomeId.mockImplementation(
+        (id: string | null) => {
+          mockStoreState.selectedHomeId = id;
+        },
+      );
+      mockStoreState.setSelectedPantryId.mockImplementation(
+        (id: string | null) => {
+          mockStoreState.selectedPantryId = id;
+        },
+      );
+    });
+
+    const homesOf = (homes: Array<ReturnType<typeof buildHomeNode>>) => {
+      const { result } = buildGetHomesMock(homes);
+      if (!result || !('data' in result) || !result.data) {
+        throw new Error('No data');
+      }
+      return result.data;
+    };
+    const home = (id: string, isDefault = false) =>
+      buildHomeNode({
+        id,
+        isDefault,
+        pantries: [{ id: `${id}-pantry`, isDefault: true }],
+      });
+
+    /**
+     * Renders on a cache holding `held`, runs `meanwhile` (what the user does
+     * before the answer), then lands `answered` as a resync would.
+     */
+    const startThenAnswer = async (
+      held: Array<ReturnType<typeof buildHomeNode>>,
+      answered: Array<ReturnType<typeof buildHomeNode>>,
+      meanwhile: () => void = () => undefined,
+    ) => {
+      const cache = makeCache();
+      seedQuery(cache, { query: GetHomesDocument, data: homesOf(held) });
+      const { rerender } = renderHookWithApollo(() => useDefaultHome(), {
+        cache,
+        operationMocks: [],
+      });
+      const settle = async () => {
+        for (let pass = 0; pass < 4; pass += 1) {
+          rerender({});
+          await drainTimers();
+        }
+      };
+      await settle();
+      meanwhile();
+      await settle();
+      seedQuery(cache, { query: GetHomesDocument, data: homesOf(answered) });
+      await settle();
+    };
+
+    it('follows the new default once the server answers for a deleted selection', async () => {
+      mockStoreState.selectedHomeId = 'deleted';
+      mockStoreState.selectedPantryId = 'deleted-pantry';
+
+      await startThenAnswer(
+        [home('deleted', true), home('kept')],
+        [home('kept'), home('fresh', true)],
+      );
+
+      expect(mockStoreState.selectedHomeId).toBe('fresh');
+      expect(mockStoreState.selectedPantryId).toBe('fresh-pantry');
+    });
+
+    it('follows a default changed on another device', async () => {
+      mockStoreState.selectedHomeId = 'old';
+      mockStoreState.selectedPantryId = 'old-pantry';
+
+      await startThenAnswer(
+        [home('old', true), home('other')],
+        [home('old'), home('other', true)],
+      );
+
+      expect(mockStoreState.selectedHomeId).toBe('other');
+      expect(mockStoreState.selectedPantryId).toBe('other-pantry');
+    });
+
+    it('follows the server past a default deleted here, from the stand-in picked meanwhile', async () => {
+      mockStoreState.selectedHomeId = 'deleted';
+      mockStoreState.selectedPantryId = 'deleted-pantry';
+
+      await startThenAnswer(
+        [home('deleted', true), home('stand-in'), home('picked')],
+        [home('stand-in'), home('picked', true)],
+        () => {
+          mockStoreState.selectedHomeId = 'stand-in';
+          mockStoreState.selectedPantryId = 'stand-in-pantry';
+        },
+      );
+
+      expect(mockStoreState.selectedHomeId).toBe('picked');
+      expect(mockStoreState.selectedPantryId).toBe('picked-pantry');
+    });
+
+    it('leaves a home picked this session, as a join or a deep link picks one', async () => {
+      mockStoreState.selectedHomeId = 'old';
+      mockStoreState.selectedPantryId = 'old-pantry';
+
+      await startThenAnswer(
+        [home('old', true), home('joined'), home('other')],
+        [home('old'), home('joined'), home('other', true)],
+        () => {
+          mockStoreState.selectedHomeId = 'joined';
+          mockStoreState.selectedPantryId = 'joined-pantry';
+        },
+      );
+
+      expect(mockStoreState.selectedHomeId).toBe('joined');
+      expect(mockStoreState.selectedPantryId).toBe('joined-pantry');
     });
   });
 });

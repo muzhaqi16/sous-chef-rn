@@ -12,6 +12,18 @@ beforeEach(() => {
   Environment.clearCache();
 });
 
+/** Runs `fn` as a build whose `__DEV__` is `value`. */
+const withDev = (value: boolean, fn: () => void) => {
+  const g = global as unknown as { __DEV__: boolean };
+  const previous = g.__DEV__;
+  g.__DEV__ = value;
+  try {
+    fn();
+  } finally {
+    g.__DEV__ = previous;
+  }
+};
+
 describe('environment', () => {
   describe('Environment', () => {
     it('returns a config object', () => {
@@ -22,6 +34,56 @@ describe('environment', () => {
       expect(config).toHaveProperty('isTesting');
       expect(config).toHaveProperty('platform');
       expect(config).toHaveProperty('buildMode');
+    });
+
+    describe("the API's endpoints", () => {
+      /** Runs `fn` as a build whose env file states `API_URL` and `WEB_SOCKET_URL`. */
+      const withBuiltUrls = (fn: () => void) => {
+        const mutable = installedEnv();
+        const previous = [mutable.API_URL, mutable.WEB_SOCKET_URL];
+        mutable.API_URL = 'https://stg-api.example.test/graphql';
+        mutable.WEB_SOCKET_URL = 'wss://stg-api.example.test/graphql';
+        try {
+          fn();
+        } finally {
+          [mutable.API_URL, mutable.WEB_SOCKET_URL] = previous;
+        }
+      };
+
+      it("are the build's URLs, for every transport", () => {
+        withBuiltUrls(() => {
+          expect(Environment.getApiConfig()).toMatchObject({
+            baseUrl: 'https://stg-api.example.test/graphql',
+            wsUrl: 'wss://stg-api.example.test/graphql',
+          });
+        });
+      });
+
+      it("take a debug run's override over the build's URLs", () => {
+        withBuiltUrls(() => {
+          Environment.overrideApiUrl('http://localhost:4100/graphql');
+          expect(Environment.getApiConfig()).toMatchObject({
+            baseUrl: 'http://localhost:4100/graphql',
+            wsUrl: 'ws://localhost:4100/graphql',
+          });
+        });
+      });
+
+      it('routes the API and its socket through the given host', () => {
+        Environment.overrideApiUrl('http://localhost:4100/graphql');
+        expect(Environment.getApiConfig()).toMatchObject({
+          baseUrl: 'http://localhost:4100/graphql',
+          wsUrl: 'ws://localhost:4100/graphql',
+        });
+      });
+
+      it('is never taken by a release build', () => {
+        const configured = Environment.getApiConfig().baseUrl;
+        withDev(false, () => {
+          Environment.overrideApiUrl('http://localhost:4100/graphql');
+        });
+        expect(Environment.getApiConfig().baseUrl).toBe(configured);
+      });
     });
 
     it('caches config on second call', () => {
@@ -91,17 +153,6 @@ describe('environment', () => {
     // that merely forgot to say it was production, and `isDevelopment()` reads
     // `NODE_ENV` from the bundled env — which `.env` sets to `development`, so
     // a local RELEASE build resolved it true.
-    const withDev = (value: boolean, fn: () => void) => {
-      const g = global as unknown as { __DEV__: boolean };
-      const previous = g.__DEV__;
-      g.__DEV__ = value;
-      try {
-        fn();
-      } finally {
-        g.__DEV__ = previous;
-      }
-    };
-
     const withFlag = (value: string | undefined, fn: () => void) => {
       // The installed environment the real `env` reads, not a mock: this suite
       // tests the real Environment, and the gate reads the build value directly.

@@ -63,7 +63,6 @@ async function executeClearItems(
 }
 
 /**
- * Sort-order updates are NOT here — `useItemReordering` is the one handler.
  * Each action fires its own haptic, so every control that runs it gives the
  * same feedback, and a clear with nothing to remove gives none.
  */

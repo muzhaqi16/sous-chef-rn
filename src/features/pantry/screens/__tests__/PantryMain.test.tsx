@@ -1,656 +1,473 @@
 'use no memo';
 
-import React from 'react';
-import { act, screen } from '@testing-library/react-native';
-// PantryMain reads the notification badge straight from the Apollo cache
-// (`useUnreadNotificationCount`, cache-only) rather than from a store mirror,
-// so it needs a client in context even though every other dependency here is
-// mocked out.
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { PantryMain } from '../PantryMain';
-import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
-import { t } from '#/i18n';
-import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
+import React, { useEffect } from 'react';
+
+import { act, fireEvent, screen } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderWithApollo,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
+import { makeCache } from '#/apollo/cache';
+import { useStore } from '#store';
+import { GetHomesDocument } from '#operations/home/home.generated';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import {
+  homesWithRole,
+  type HomeFixture,
+} from '#/test-utils/fixtures/homeFixtures';
+import {
+  pantryData,
+  type PantryFixture,
+} from '#/test-utils/fixtures/pantryFixtures';
+import {
+  TabBarActionsProvider,
+  useTabBarSetters,
+  useTabBarState,
+  type TabBarAddAction,
+} from '#/context/TabBarActionsContext';
 import { tutorialSession } from '#hooks/ui/tutorialSession';
 import { GUIDE_TOURS } from '#domain/guides';
-import type {
-  PantryContentProps,
-  PantryContentRef,
-  PantryItemsFailure,
-} from '#features/pantry/components/pantryDisplay/types';
+import { Telemetry } from '#services/telemetry';
+import { pantryTestIDs } from '#features/pantry/testIDs';
+import { t } from '#/i18n';
+import { PantryMain } from '../PantryMain';
 
-// --- Prop capture for PantryContent ---
-let capturedPantryContentProps: Partial<PantryContentProps> = {};
-
-// --- Navigation ---
 jest.mock('#hooks/navigation/useAppNavigation');
-jest.mock('#features/pantry/hooks/usePantryPermissions');
-jest.mock('#features/pantry/hooks/useCurrentHome', () => ({
-  useCurrentHome: () => ({
-    currentHome: { id: 'h1', name: "Sam's home" },
-    homeCount: 1,
-    selectedHomeId: 'h1',
-    isHomeSelectionReady: true,
-  }),
-}));
-jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: jest.fn(),
-  useRoute: jest.fn(() => ({ params: {} })),
-}));
-
-// --- Tab bar ---
-jest.mock('#/context/TabBarActionsContext', () => ({
-  useTabBarSetters: () => ({ setOverlayOpen: jest.fn() }),
-  useTabBarState: () => ({
-    addButtonRect: { x: 160, y: 760, width: 56, height: 56 },
-    isOverlayOpen: false,
-  }),
-}));
-jest.mock('#hooks/ui/useTutorialSequence', () => ({
-  useTutorialSequence: jest.fn(() => ({
-    currentStep: null,
-    advance: jest.fn(),
-    advanceInPlace: jest.fn(),
-    skipAll: jest.fn(),
-  })),
-}));
-jest.mock('#hooks/navigation/useTabBarAddMenu', () => ({
-  useTabBarAddMenu: jest.fn(),
-}));
-
-// --- Store (useStore for getState in focus handler) ---
-jest.mock('#store', () => {
-  const fn = Object.assign(jest.fn(), {
-    getState: () => ({
-      pendingPantryScrollToTop: false,
-      setPendingPantryScrollToTop: jest.fn(),
-      featureHintsShown: {},
-      markFeatureHintShown: jest.fn(),
-    }),
-    setState: jest.fn(),
-    subscribe: jest.fn(),
-  });
-  return { useStore: fn, storeApi: fn };
-});
-
-// --- Facade hook: usePantryScreen ---
-const defaultPantryScreen = {
-  // Home / Pantry resolution
-  pantry: { id: 'p1', name: 'Kitchen' } as { id: string; name: string } | null,
-  pantries: [{ id: 'p1', name: 'Kitchen' }],
-  selectedHomeId: 'h1' as string | null,
-  setSelectedPantryId: jest.fn(),
-  noHomeSelected: false,
-  noHomes: false,
-  noPantries: false,
-  pantriesHidden: false,
-
-  // Store state
-  unreadCount: 0,
-  pantrySortOption: 'recent',
-  pantrySortDirection: 'desc',
-
-  // Pantry data
-  pantryItems: [] as Array<{ id: string; itemName: string; quantity: number }>,
-  totalCount: 0,
-  itemsFailure: null as PantryItemsFailure | null,
-
-  // Loading states
-  loading: false,
-  isLoadingInitial: false,
-  isRefreshing: false,
-
-  // Search
-  searchQuery: '',
-  setSearchQuery: jest.fn(),
-  searchActive: false,
-  useServerSort: false,
-
-  // Pagination
-  loadMore: jest.fn(),
-  hasMore: false,
-  isLoadingMore: false,
-
-  // Location filter
-  locationFilter: 'all',
-  handleLocationFilterChange: jest.fn(),
-  combinedTabs: [
-    { id: 'all', label: 'All' },
-    { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline' },
-    { id: 'freezer', label: 'Freezer', icon: 'snow-outline' },
-    { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
-  ],
-  completeCounts: {},
-
-  // Sort
-  handleSortChange: jest.fn(),
-
-  // Mutations / actions
-  handleRemoveItem: jest.fn(),
-  handleRefresh: jest.fn(),
-  createLocation: jest.fn(),
-  creatingLocation: false,
-};
-
-const mockUsePantryScreen = jest.fn(() => ({ ...defaultPantryScreen }));
-jest.mock('#features/pantry/screens/usePantryScreen', () => ({
-  usePantryScreen: () => mockUsePantryScreen(),
-}));
-
-// --- Lifecycle hook ---
-jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
-  useTabScreenLifecycle: jest.fn(),
-}));
-
-// --- Pantry modals context ---
-const mockPantryModals = {
-  handleConsumeItem: jest.fn(),
-  handleWasteItem: jest.fn(),
-  handleRestockItem: jest.fn(),
-  handleEditItem: jest.fn(),
-  handleDeleteItem: jest.fn(),
-  openAddSheet: jest.fn(),
-  openAddManually: jest.fn(),
-  setAddLocationSheetVisible: jest.fn(),
-};
-jest.mock('#features/pantry/context/PantryModalsContext', () => ({
-  PantryModalsProvider: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
-  usePantryModals: () => mockPantryModals,
-}));
-
-// --- Pantry hooks still used directly by PantryMainInner ---
-jest.mock('#features/pantry/screens/usePantrySelectorConfig', () => ({
-  usePantrySelectorConfig: () => ({ items: [], selectedId: null }),
-}));
-
-// --- Performance / scanner / UI hooks ---
-jest.mock('#features/barcode/screens/useScannerSetup', () => ({
-  useScannerSetup: jest.fn(),
-}));
-jest.mock('#hooks/ui/useSelectorManagement', () => ({
-  useSelectorManagement: () => ({
-    handleOpenSelector: jest.fn(),
-    handleOverlayOpen: jest.fn(),
-    handleOverlayClose: jest.fn(),
-  }),
-}));
-// Spread the real module: a partial factory breaks the moment anything else in
-// the app imports another of its exports — `useTutorialSequence` now calls
-// `hasFeatureHintBeenShown`, and this mock omitting it failed all 22 tests here
-// with "is not a function".
-jest.mock('#hooks/settings/useFeatureHint', () => ({
-  ...jest.requireActual('#hooks/settings/useFeatureHint'),
-  useFeatureHint: () => ({
-    isVisible: false,
-    hasBeenShown: true,
-    actions: { show: jest.fn(), dismiss: jest.fn() },
-  }),
-}));
-// --- Error boundary & performance ---
-jest.mock('#components/providers/ScreenErrorBoundary', () => ({
-  PantryErrorBoundary: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
-}));
-jest.mock('#components/performance/DeferredScreen', () => ({
-  DeferredScreen: ({
-    component: Component,
-  }: {
-    component: React.FC;
-    fallback: React.ReactNode;
-  }) => <Component />,
-}));
-
-// --- Heavy child components (shallow render) ---
-jest.mock('#features/pantry/components/PantryContent', () => {
-  const { forwardRef, useImperativeHandle, useEffect } = require('react');
-  const { View, Text } = require('react-native');
+// Navigation is the boundary: there is no navigator, so the screen counts as
+// focused while mounted, on the route the test gives it.
+const mockRoute: { params: Record<string, unknown> } = { params: {} };
+jest.mock('@react-navigation/native', () => {
+  const { useEffect: useMountEffect } = jest.requireActual('react');
   return {
-    PantryContent: forwardRef(
-      (props: PantryContentProps, ref: React.Ref<PantryContentRef>) => {
-        useImperativeHandle(ref, () => ({ scrollToTop: jest.fn() }));
-        useEffect(() => {
-          capturedPantryContentProps = props;
-        });
-        return (
-          <View testID="pantry-content">
-            <Text>{props.pantryName}</Text>
-            <Text testID="prop-totalCount">{String(props.totalCount)}</Text>
-            <Text testID="prop-loading">{String(props.loading)}</Text>
-            <Text testID="prop-itemCount">
-              {String(props.items?.length ?? 0)}
-            </Text>
-            <Text testID="prop-hasMore">{String(props.hasMore)}</Text>
-            <Text testID="prop-isLoadingMore">
-              {String(props.isLoadingMore)}
-            </Text>
-          </View>
-        );
-      },
-    ),
+    ...jest.requireActual('@react-navigation/native'),
+    useFocusEffect: (effect: () => undefined | (() => void)) =>
+      useMountEffect(effect, [effect]),
+    useIsFocused: () => true,
+    useRoute: () => mockRoute,
   };
 });
-jest.mock(
-  '#components/organisms/AnimatedItemSelector/AnimatedItemSelector',
-  () => {
-    const { forwardRef } = require('react');
-    const { View } = require('react-native');
-    return {
-      AnimatedItemSelector: forwardRef(() => <View testID="item-selector" />),
-    };
-  },
-);
-jest.mock(
-  '#components/organisms/SpotlightCoachMark/SpotlightCoachMark',
-  () => ({
-    SpotlightCoachMark: () => null,
-  }),
-);
-jest.mock('#features/pantry/components/skeletons/PantryScreenSkeleton', () => ({
-  PantryScreenSkeleton: () => null,
-}));
-jest.mock('#components/molecules/TabScreenHeader', () => ({
-  TabScreenHeader: () => null,
-}));
-jest.mock('#components/molecules/SearchBar', () => ({ SearchBar: () => null }));
-jest.mock('#components/organisms/FilterTabs/FilterTabs', () => ({
-  FilterTabs: () => null,
-}));
+// Jest lays nothing out, so a measured target reports a fixed rect.
+jest.mock('#hooks/ui/useMeasuredRect', () => {
+  const { useEffect: useMountEffect } = jest.requireActual('react');
+  return {
+    useMeasuredRect: (
+      onMeasure?: (rect: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      }) => void,
+    ) => {
+      useMountEffect(() => {
+        onMeasure?.({ x: 16, y: 60, width: 140, height: 28 });
+      }, [onMeasure]);
+      return { ref: { current: null }, measure: () => undefined };
+    },
+  };
+});
 
-const defaultPermissionsImpl = jest
-  .mocked(usePantryPermissions)
-  .getMockImplementation();
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
-// --- Per-test mock override helper ---
-function mockPantryScreen(overrides: Partial<typeof defaultPantryScreen> = {}) {
-  mockUsePantryScreen.mockReturnValue({ ...defaultPantryScreen, ...overrides });
+/** The tab shows only to a signed-in member. */
+const member = {
+  id: 'user-1',
+  email: 'member@example.com',
+  emailVerified: true,
+  onBoarded: true,
+};
+
+const kitchen: PantryFixture = {
+  id: 'p1',
+  name: 'Kitchen',
+  items: [
+    { id: 'i1', itemName: 'Rice' },
+    { id: 'i2', itemName: 'Beans' },
+  ],
+};
+const home: HomeFixture = {
+  id: 'h1',
+  name: 'Smith Home',
+  pantries: [{ id: 'p1', name: 'Kitchen' }],
+};
+
+/** What the shell's tab bar reads from the screen. */
+const shell: { addMenu?: readonly TabBarAddAction[] } = {};
+
+/** Stands where FloatingTabBar does: marks the tab active, places +, reads its menu. */
+function TabBar() {
+  const { setActiveTab, setAddButtonRect } = useTabBarSetters();
+  const { addMenu } = useTabBarState();
+  useEffect(() => {
+    setActiveTab('Pantry');
+    setAddButtonRect({ x: 300, y: 760, width: 56, height: 56 });
+  }, [setActiveTab, setAddButtonRect]);
+  useEffect(() => {
+    shell.addMenu = addMenu;
+  });
+  return null;
 }
 
-describe('PantryMain', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest
-      .mocked(usePantryPermissions)
-      .mockImplementation(defaultPermissionsImpl);
-    capturedPantryContentProps = {};
-    mockUsePantryScreen.mockReturnValue({ ...defaultPantryScreen });
-  });
+const menuAction = (key: string) =>
+  shell.addMenu?.find(action => action.key === key);
 
-  describe('the + menu', () => {
-    const menu = () =>
-      jest.mocked(useTabBarAddMenu).mock.calls.at(-1)?.[0] ?? [];
-    const entry = (key: string) => menu().find(action => action.key === key);
-
-    it('offers every way to add, in order', () => {
-      renderWithApollo(<PantryMain />);
-      expect(menu().map(action => action.key)).toEqual([
-        'search',
-        'barcode',
-        'receipt',
-        'manual',
-      ]);
-    });
-
-    it('takes the next step instead with no home yet, so + is never a dead end', () => {
-      mockUsePantryScreen.mockReturnValue({
-        ...defaultPantryScreen,
-        noHomes: true,
-      });
-      renderWithApollo(<PantryMain />);
-
-      // One action runs straight from the bar, with no menu.
-      expect(menu().map(action => action.key)).toEqual(['getStarted']);
-      expect(entry('getStarted')?.disabledReason).toBeUndefined();
-    });
-
-    it('offers to make a pantry when the home has none', () => {
-      mockUsePantryScreen.mockReturnValue({
-        ...defaultPantryScreen,
-        noPantries: true,
-      });
-      renderWithApollo(<PantryMain />);
-
-      expect(menu().map(action => action.key)).toEqual(['createPantry']);
-    });
-
-    it('tells a member who may not add why, naming the home', () => {
-      jest.mocked(usePantryPermissions).mockReturnValue({
-        canAddItems: false,
-        canEditItems: true,
-        canRemoveItems: false,
-        canCreatePantry: false,
-        canDeletePantry: false,
-      });
-      renderWithApollo(<PantryMain />);
-
-      expect(entry('search')?.disabledReason).toBe(
-        t('moveToPantry.cannotAddBody', { home: "Sam's home" }),
-      );
-    });
-
-    it('opens each flow directly', () => {
-      renderWithApollo(<PantryMain />);
-      const nav = jest.mocked(useAppNavigation)();
-
-      entry('search')?.onPress();
-      expect(mockPantryModals.openAddSheet).toHaveBeenCalled();
-
-      entry('barcode')?.onPress();
-      expect(nav.toBarcode).toHaveBeenCalledWith({
-        source: 'pantry',
-        pantryId: 'p1',
-      });
-
-      entry('receipt')?.onPress();
-      expect(nav.toReceiptScan).toHaveBeenCalled();
-
-      entry('manual')?.onPress();
-      expect(mockPantryModals.openAddManually).toHaveBeenCalled();
+let log = operationLog();
+/** Resolves when the tour shows the step, the signal the spotlight is up. */
+const stepViewed = (featureId: string) =>
+  new Promise<void>(resolve => {
+    jest.mocked(Telemetry.trackEvent).mockImplementation((name, props) => {
+      if (name === 'tour_step_viewed' && props?.feature_id === featureId) {
+        resolve();
+      }
     });
   });
 
-  it('renders the pantry screen container', () => {
-    renderWithApollo(<PantryMain />);
-    expect(screen.getByTestId('pantry-screen')).toBeTruthy();
+/** The pantry tab as HomeTabs mounts it, over homes the app has already read. */
+async function renderPantryTab({
+  homes = [home],
+  pantry = kitchen,
+  role = MembershipRole.Owner,
+  morePages = false,
+}: {
+  homes?: HomeFixture[];
+  pantry?: PantryFixture | null;
+  role?: MembershipRole;
+  morePages?: boolean;
+} = {}) {
+  // The app fetches the homes before any tab mounts (`useDefaultHome`); the
+  // tab reads them cache-only.
+  const cache = makeCache();
+  seedQuery(cache, {
+    query: GetHomesDocument,
+    data: homesWithRole(homes, role),
+  });
+  const answer = pantry ? pantryData(pantry) : null;
+  if (answer?.pantry && morePages) {
+    answer.pantry.itemsConnection.pageInfo = {
+      ...answer.pantry.itemsConnection.pageInfo,
+      hasNextPage: true,
+      endCursor: 'page-1',
+    };
+  }
+  const pantryRead = answer
+    ? recordMock(GetPantryDocument, { data: answer, maxUsageCount: 10 })
+    : null;
+  renderWithApollo(
+    <TabBarActionsProvider>
+      <TabBar />
+      <PantryMain />
+    </TabBarActionsProvider>,
+    {
+      cache,
+      links: [log.link],
+      operationMocks: pantryRead ? [pantryRead.mock] : [],
+    },
+  );
+  if (pantry) await log.landed(GetPantryDocument);
+  return { pantryReads: pantryRead?.fired ?? [] };
+}
+
+/** The pantry reads that asked for a further page. */
+const pageRequests = (reads: Array<Record<string, unknown>>) =>
+  reads.filter(variables => variables.itemsCursor !== undefined);
+
+const reachListEnd = () =>
+  fireEvent(screen.getByTestId(pantryTestIDs.list), 'endReached');
+
+/** The swipe actions a row offers, by the name assistive tech reads them by. */
+function rowActions(itemName: string) {
+  const label = screen.getByText(itemName);
+  let node: typeof label | null = label;
+  while (node && !node.props.accessibilityActions) node = node.parent;
+  return (node?.props.accessibilityActions ?? []).map(
+    (action: { name: string }) => action.name,
+  );
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockRoute.params = {};
+  shell.addMenu = undefined;
+  log = operationLog();
+  useStore.setState({
+    user: member,
+    selectedHomeId: 'h1',
+    selectedPantryId: 'p1',
+    isHomeSelectionReady: true,
+    isOnline: true,
+    apiReachable: true,
+    pendingPantryScrollToTop: false,
+  });
+  mockNav.navigation.getState.mockReturnValue({
+    type: 'tab',
+    index: 0,
+    routes: [{ name: 'Pantry' }],
+  });
+});
+
+describe('the + menu', () => {
+  it('offers every way to add, in order', async () => {
+    await renderPantryTab();
+
+    expect(shell.addMenu?.map(action => action.key)).toEqual([
+      'search',
+      'barcode',
+      'receipt',
+      'manual',
+    ]);
   });
 
-  it("renders PantryContent with the pantry's name", () => {
-    renderWithApollo(<PantryMain />);
+  it('opens each way to add', async () => {
+    await renderPantryTab();
+
+    act(() => menuAction('barcode')?.onPress());
+    expect(mockNav.toBarcode).toHaveBeenCalledWith({
+      source: 'pantry',
+      pantryId: 'p1',
+    });
+
+    act(() => menuAction('receipt')?.onPress());
+    expect(mockNav.toReceiptScan).toHaveBeenCalled();
+
+    act(() => menuAction('search')?.onPress());
+    expect(Telemetry.trackEvent).toHaveBeenCalledWith(
+      'add_pantry_item_clicked',
+    );
+  });
+
+  it('with no home yet, takes the one step that gets one', async () => {
+    useStore.setState({ selectedHomeId: null, selectedPantryId: null });
+    await renderPantryTab({ homes: [], pantry: null });
+
+    expect(shell.addMenu).toEqual([
+      expect.objectContaining({
+        key: 'getStarted',
+        label: t('labels.getStarted'),
+      }),
+    ]);
+    act(() => shell.addMenu?.[0]?.onPress());
+    expect(mockNav.toHomeManagement).toHaveBeenCalled();
+  });
+
+  it('with homes but none chosen, asks to choose one', async () => {
+    useStore.setState({ selectedHomeId: null, selectedPantryId: null });
+    await renderPantryTab({ pantry: null });
+
+    expect(shell.addMenu).toEqual([
+      expect.objectContaining({
+        key: 'chooseHome',
+        label: t('pantryScreen.noHomeSelectedAction'),
+      }),
+    ]);
+  });
+
+  it('with no pantry in the home, offers to make one, under the plain title', async () => {
+    useStore.setState({ selectedPantryId: null });
+    await renderPantryTab({
+      homes: [{ ...home, pantries: [] }],
+      pantry: null,
+    });
+
+    expect(shell.addMenu).toEqual([
+      expect.objectContaining({ key: 'createPantry' }),
+    ]);
+    act(() => shell.addMenu?.[0]?.onPress());
+    expect(mockNav.toPantrySettings).toHaveBeenCalled();
+    expect(screen.getByText(t('labels.pantry'))).toBeTruthy();
+  });
+
+  it('tells a member who may not add why, naming the home', async () => {
+    await renderPantryTab({ role: MembershipRole.Guest });
+
+    const reason = t('moveToPantry.cannotAddBody', { home: 'Smith Home' });
+    expect(
+      shell.addMenu?.map(action => [action.key, action.disabledReason]),
+    ).toEqual([
+      ['search', reason],
+      ['barcode', reason],
+      ['receipt', reason],
+      ['manual', reason],
+    ]);
+  });
+});
+
+describe('the list', () => {
+  it("shows the pantry's items under its name, and opens one when pressed", async () => {
+    await renderPantryTab();
+
     expect(screen.getByText('Kitchen')).toBeTruthy();
+    fireEvent.press(screen.getByText('Rice'));
+
+    expect(mockNav.toPantryItemDetail).toHaveBeenCalledWith({ itemId: 'i1' });
   });
 
-  it('renders the item selector', () => {
-    renderWithApollo(<PantryMain />);
-    expect(screen.getByTestId('item-selector')).toBeTruthy();
+  it('offers the swipe actions only a member who may take them', async () => {
+    await renderPantryTab();
+    expect(rowActions('Rice')).toEqual(
+      expect.arrayContaining(['edit', 'delete']),
+    );
   });
 
-  it('does not render modals when not visible', () => {
-    renderWithApollo(<PantryMain />);
-    // Modals are mocked to null, just confirm no crash
-    expect(screen.getByTestId('pantry-screen')).toBeTruthy();
+  it('offers a guest no edit or delete', async () => {
+    await renderPantryTab({ role: MembershipRole.Guest });
+
+    expect(rowActions('Rice')).not.toContain('edit');
+    expect(rowActions('Rice')).not.toContain('delete');
   });
 
-  // The API refuses a delete without `canRemoveItems`, which a member lacks by
-  // default — the swipe action must not be offered to one who may only edit.
-  it('offers the swipe delete only to a member who may remove items', () => {
-    jest.mocked(usePantryPermissions).mockReturnValue({
-      canAddItems: true,
-      canEditItems: true,
-      canRemoveItems: false,
-      canCreatePantry: true,
-      canDeletePantry: false,
-    });
-    renderWithApollo(<PantryMain />);
-    expect(capturedPantryContentProps.onItemEdit).toBeDefined();
-    expect(capturedPantryContentProps.onItemDelete).toBeUndefined();
+  it('offers to add from an empty pantry only to a member who may', async () => {
+    await renderPantryTab({ pantry: { ...kitchen, items: [] } });
+    expect(screen.getByText(t('labels.addItems'))).toBeTruthy();
   });
 
-  it('renders without crashing when no items', () => {
-    renderWithApollo(<PantryMain />);
-    expect(screen.getByTestId('pantry-content')).toBeTruthy();
+  it('offers a guest no add from an empty pantry', async () => {
+    await renderPantryTab({
+      pantry: { ...kitchen, items: [] },
+      role: MembershipRole.Guest,
+    });
+
+    expect(screen.queryByText(t('labels.addItems'))).toBeNull();
   });
 
-  describe('passes hook data as props to PantryContent', () => {
-    it("titles the header with the current pantry's name", () => {
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.pantryName).toBe('Kitchen');
-    });
+  it('says no more pages can come offline', async () => {
+    useStore.setState({ apiReachable: false });
+    await renderPantryTab({ morePages: true });
 
-    it('titles it "Pantry" before one resolves', () => {
-      mockPantryScreen({ pantry: null });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.pantryName).toBe('Pantry');
-    });
-
-    it('passes totalCount to PantryContent', () => {
-      mockPantryScreen({ totalCount: 42 });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.totalCount).toBe(42);
-      expect(screen.getByTestId('prop-totalCount')).toHaveTextContent('42');
-    });
-
-    it('passes loading=true when isLoadingInitial is true', () => {
-      mockPantryScreen({ isLoadingInitial: true });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.loading).toBe(true);
-      expect(screen.getByTestId('prop-loading')).toHaveTextContent('true');
-    });
-
-    it('passes items array to PantryContent', () => {
-      const items = [
-        { id: 'i1', itemName: 'Milk', quantity: 1 },
-        { id: 'i2', itemName: 'Eggs', quantity: 12 },
-      ];
-      mockPantryScreen({ pantryItems: items, totalCount: 2 });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.items).toHaveLength(2);
-      expect(screen.getByTestId('prop-itemCount')).toHaveTextContent('2');
-    });
-
-    it('passes a failed items read to PantryContent', () => {
-      const itemsFailure: PantryItemsFailure = {
-        state: 'error',
-        onRetry: jest.fn(),
-      };
-      mockPantryScreen({ itemsFailure });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.itemsFailure).toBe(itemsFailure);
-    });
-
-    it('passes pagination props (hasMore, isLoadingMore, onEndReached)', () => {
-      const loadMore = jest.fn();
-      mockPantryScreen({
-        hasMore: true,
-        isLoadingMore: true,
-        loadMore,
-        pantryItems: [{ id: 'i1', itemName: 'Milk', quantity: 1 }],
-      });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.hasMore).toBe(true);
-      expect(capturedPantryContentProps.isLoadingMore).toBe(true);
-      expect(capturedPantryContentProps.onEndReached).toBe(loadMore);
-    });
+    expect(screen.getByText(t('errors.offlineNoMorePages'))).toBeTruthy();
   });
 
-  describe('no-home states', () => {
-    it('passes noHomeSelected=true when ready, no home selected, but homes exist', () => {
-      mockPantryScreen({
-        pantry: null,
-        pantries: [],
-        selectedHomeId: null,
-        noHomeSelected: true,
-        noHomes: false,
-      });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.noHomeSelected).toBe(true);
-      expect(capturedPantryContentProps.noHomes).toBe(false);
+  it('pages nothing while a server search shows, and pages again once cleared', async () => {
+    // A pantry larger than a page reads again in server order once its size
+    // is known, then searches on the server.
+    const { pantryReads } = await renderPantryTab({
+      pantry: { ...kitchen, totalItems: 500 },
+      morePages: true,
     });
+    await log.landed(GetPantryDocument, 2);
+    const search = screen.getByPlaceholderText(
+      t('pantryScreen.searchPlaceholder'),
+    );
 
-    it('passes noHomes=true when ready, no home selected, and no homes exist', () => {
-      mockPantryScreen({
-        pantry: null,
-        pantries: [],
-        selectedHomeId: null,
-        noHomeSelected: false,
-        noHomes: true,
-      });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.noHomes).toBe(true);
-      expect(capturedPantryContentProps.noHomeSelected).toBe(false);
-    });
+    fireEvent.changeText(search, 'ri');
+    // A term is debounced, so its request is awaited before its answer.
+    await log.requested(GetPantryDocument, 3);
+    await log.landed(GetPantryDocument, 3);
+    expect(pantryReads[2]?.itemsFilter).toMatchObject({ search: 'ri' });
 
-    it('passes onSelectHome callback that navigates to HomeManagement', () => {
-      mockPantryScreen({
-        pantry: null,
-        pantries: [],
-        selectedHomeId: null,
-        noHomeSelected: true,
-        noHomes: false,
-      });
-      renderWithApollo(<PantryMain />);
-      expect(typeof capturedPantryContentProps.onSelectHome).toBe('function');
-    });
+    reachListEnd();
+    // A page the end asked for would go before the next term's answer lands.
+    fireEvent.changeText(search, 'ric');
+    await log.requested(GetPantryDocument, 4);
+    await log.landed(GetPantryDocument, 4);
+    expect(pageRequests(pantryReads)).toEqual([]);
 
-    it('passes noHomeSelected=false and noHomes=false when home is selected', () => {
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.noHomeSelected).toBe(false);
-      expect(capturedPantryContentProps.noHomes).toBe(false);
-    });
-
-    it('passes noPantries=true and onCreatePantry when home has no pantries', () => {
-      mockPantryScreen({
-        pantry: null,
-        pantries: [],
-        selectedHomeId: 'h1',
-        noHomeSelected: false,
-        noHomes: false,
-        noPantries: true,
-      });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.noPantries).toBe(true);
-      expect(typeof capturedPantryContentProps.onCreatePantry).toBe('function');
-      // Add CTA must NOT appear when there's nowhere to add to
-      expect(capturedPantryContentProps.onAddItem).toBeUndefined();
-    });
-
-    it('passes pantriesHidden when the member may not view the pantries', () => {
-      mockPantryScreen({
-        pantry: null,
-        pantries: [],
-        selectedHomeId: 'h1',
-        noPantries: true,
-        pantriesHidden: true,
-      });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.pantriesHidden).toBe(true);
-      expect(capturedPantryContentProps.onAddItem).toBeUndefined();
-    });
+    fireEvent.changeText(search, '');
+    reachListEnd();
+    await log.requested(GetPantryDocument, 5);
+    expect(pageRequests(pantryReads)).toHaveLength(1);
   });
 
-  describe('hybrid search integration', () => {
-    it('passes useServerSort from hook to PantryContent', () => {
-      mockPantryScreen({
-        useServerSort: true,
-        searchActive: true,
-        hasMore: true,
-        totalCount: 55,
-      });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.useServerSort).toBe(true);
+  it('asks for no further page when the first held none', async () => {
+    const { pantryReads } = await renderPantryTab({
+      homes: [
+        {
+          ...home,
+          pantries: [
+            { id: 'p1', name: 'Kitchen' },
+            { id: 'p2', name: 'Garage' },
+          ],
+        },
+      ],
+      pantry: { ...kitchen, items: [] },
+      morePages: true,
     });
 
-    it('suppresses pagination indicators when search is active', () => {
-      mockPantryScreen({
-        searchActive: true,
-        useServerSort: true,
-        hasMore: true,
-        isLoadingMore: true,
-        pantryItems: [{ id: 'i1', itemName: 'Milk', quantity: 1 }],
-      });
-      renderWithApollo(<PantryMain />);
-      // PantryMainContent passes searchActive ? false : screen.isLoadingMore
-      // onEndReached is gated on hasMore && items.length > 0
-      expect(capturedPantryContentProps.hasMore).toBe(false);
-      expect(capturedPantryContentProps.isLoadingMore).toBe(false);
-      expect(capturedPantryContentProps.onEndReached).toBe(
-        defaultPantryScreen.loadMore,
-      );
+    reachListEnd();
+    // Switching pantries reads again; a page the end asked for went first, so
+    // it is in the reads by the time that answer lands.
+    act(() => {
+      useStore.setState({ selectedPantryId: 'p2' });
     });
+    await log.landed(GetPantryDocument, 2);
 
-    it('passes items from hook as activeItems to PantryContent', () => {
-      const items = [
-        { id: 'i1', itemName: 'Milk', quantity: 1 },
-        { id: 'i2', itemName: 'Eggs', quantity: 12 },
-      ];
-      mockPantryScreen({ pantryItems: items, totalCount: 2 });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.items).toHaveLength(2);
-    });
+    expect(pageRequests(pantryReads)).toEqual([]);
+  });
+});
 
-    it('uses local search when useServerSort is false', () => {
-      mockPantryScreen({
-        useServerSort: false,
-        totalCount: 55,
-        hasMore: false,
-      });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.useServerSort).toBe(false);
-    });
+describe('arriving on the tab', () => {
+  it('switches to the home a link names', async () => {
+    mockRoute.params = { homeId: 'h2' };
+    await renderPantryTab();
 
-    it('passes searchQuery and setSearchQuery from hook to PantryContent', () => {
-      mockPantryScreen({ searchQuery: 'test' });
-      renderWithApollo(<PantryMain />);
-      expect(capturedPantryContentProps.searchQuery).toBe('test');
-      expect(typeof capturedPantryContentProps.onSearchChange).toBe('function');
-    });
+    expect(useStore.getState().selectedHomeId).toBe('h2');
   });
 
-  describe('tutorial', () => {
-    // The screen's own tour, beside the guide Getting started may start.
-    const lastTutorial = () =>
-      jest
-        .mocked(useTutorialSequence)
-        .mock.calls.map(([options]) => options)
-        .filter(options => options.tourId === undefined)
-        .pop();
-    const stockGuide = () =>
-      jest
-        .mocked(useTutorialSequence)
-        .mock.calls.map(([options]) => options)
-        .filter(options => options.tourId === GUIDE_TOURS.stock)
-        .pop();
+  it('clears a scroll to the top it was asked for', async () => {
+    useStore.setState({ pendingPantryScrollToTop: true });
+    await renderPantryTab();
 
-    it('points Select pantry at the title and keeps the + step', () => {
-      const titleRect = { x: 16, y: 60, width: 120, height: 28 };
-      renderWithApollo(<PantryMain />);
-      act(() => capturedPantryContentProps.onSettingsIconLayout?.(titleRect));
+    expect(useStore.getState().pendingPantryScrollToTop).toBe(false);
+  });
+});
 
-      expect(lastTutorial()?.steps.map(step => step.featureId)).toEqual([
-        'pantry_tutorial_settings',
-        'pantry_tutorial_add',
-      ]);
-      expect(lastTutorial()?.targetRects).toEqual({
-        settingsIcon: titleRect,
-        addButton: { x: 160, y: 760, width: 56, height: 56 },
-      });
+describe('its tours', () => {
+  const PANTRY_TOUR = 'pantry_tutorial_settings';
+
+  beforeEach(() => {
+    tutorialSession.endGuide(PANTRY_TOUR);
+    tutorialSession.endGuide(GUIDE_TOURS.stock);
+  });
+
+  it('with one pantry, starts at adding: switching needs a second', async () => {
+    tutorialSession.startGuide(PANTRY_TOUR);
+    const viewed = stepViewed('pantry_tutorial_add');
+
+    await renderPantryTab();
+    // Its step shows through a render, which `act` would hold while awaited.
+    await viewed;
+
+    expect(
+      screen.getByLabelText(t('pantryScreen.tutorialAddItemsTitle')),
+    ).toBeTruthy();
+  });
+
+  it('with two pantries, starts at switching between them', async () => {
+    tutorialSession.startGuide(PANTRY_TOUR);
+    const viewed = stepViewed('pantry_tutorial_settings');
+
+    await renderPantryTab({
+      homes: [
+        {
+          ...home,
+          pantries: [
+            { id: 'p1', name: 'Kitchen' },
+            { id: 'p2', name: 'Garage' },
+          ],
+        },
+      ],
     });
+    // Its step shows through a render, which `act` would hold while awaited.
+    await viewed;
 
-    it('One pantry: no tip about switching or creating pantries', () => {
-      mockPantryScreen({ pantries: [{ id: 'p1' }] as never });
-      renderWithApollo(<PantryMain />);
+    expect(screen.getByLabelText(t('labels.pantrySettings'))).toBeTruthy();
+  });
 
-      expect(
-        lastTutorial()
-          ?.steps.filter(step => step.when?.() ?? true)
-          .map(step => step.featureId),
-      ).toEqual(['pantry_tutorial_add']);
-    });
+  it('offline, says a receipt needs a connection and opens no scanner', async () => {
+    useStore.setState({ apiReachable: false });
+    tutorialSession.startGuide(GUIDE_TOURS.stock);
+    const viewed = stepViewed('stock_guide_receipt');
 
-    it('A second pantry: a later visit may show the switching tip', () => {
-      mockPantryScreen({ pantries: [{ id: 'p1' }, { id: 'p2' }] as never });
-      renderWithApollo(<PantryMain />);
+    await renderPantryTab();
+    // Its step shows through a render, which `act` would hold while awaited.
+    await viewed;
+    expect(screen.getByText(t('pantryScreen.stockGuideOffline'))).toBeTruthy();
 
-      expect(
-        lastTutorial()
-          ?.steps.filter(step => step.when?.() ?? true)
-          .map(step => step.featureId),
-      ).toEqual(['pantry_tutorial_settings', 'pantry_tutorial_add']);
-    });
+    fireEvent.press(screen.getByLabelText(t('labels.scanReceipt')));
 
-    it('Stock your pantry: started from the card, + shows Scan receipt while the own tour waits', () => {
-      act(() => tutorialSession.startGuide(GUIDE_TOURS.stock));
-      renderWithApollo(<PantryMain />);
-
-      expect(stockGuide()?.canStart).toBe(true);
-      expect(stockGuide()?.targetRects).toEqual({
-        addButton: { x: 160, y: 760, width: 56, height: 56 },
-      });
-      expect(lastTutorial()?.isPaused).toBe(true);
-      act(() => tutorialSession.endGuide(GUIDE_TOURS.stock));
-    });
+    expect(mockNav.toReceiptScan).not.toHaveBeenCalled();
   });
 });

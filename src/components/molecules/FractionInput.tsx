@@ -79,6 +79,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
       label={label ?? ''}
       error={hasError ? error ?? formatsHint : undefined}
       required={required}
+      inputTestID={testID}
     >
       <InputComponent
         style={variantStyles.input}

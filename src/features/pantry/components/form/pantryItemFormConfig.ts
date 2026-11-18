@@ -15,16 +15,13 @@ type NetWeightSiblings = Partial<
   Pick<PantryItemFormData, 'netWeight' | 'netWeightUnitId'>
 >;
 
-// Drives the per-tab error indicators on PageIndicator. Tags lives inside the
-// Inventory "More options" expander.
+// Drives the per-tab error indicators on PageIndicator.
 export const TAB_FIELDS: Record<PageName, readonly FieldName[]> = {
   Basics: ['itemName', 'brand'],
   Product: ['netWeight', 'netWeightUnit'],
   Storage: ['storageState', 'condition', 'location', 'expirationDate', 'notes'],
   Inventory: ['quantityInput', 'unit', 'minQuantity', 'restockQuantity'],
 };
-
-export const INVENTORY_ADVANCED_FIELDS: readonly FieldName[] = ['tags'];
 
 // The SAME message keys as `addPantryItemFormConfig.ts`, so the two cannot drift.
 export const editItemSchema = object({

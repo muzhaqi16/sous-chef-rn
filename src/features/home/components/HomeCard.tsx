@@ -15,6 +15,9 @@ import { Icon } from '#components/atoms/Icon';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
+import { hitSlop } from '#/theme/foundations/sizes';
+import { homeTestIDs } from '#features/home/testIDs';
 import { Text } from '#components/atoms/Text';
 import { HomeCard_HomeFragmentDoc } from './HomeCard.generated';
 import { motion } from '#/theme/motion';
@@ -22,6 +25,8 @@ import { motion } from '#/theme/motion';
 interface HomeCardProps {
   homeId: string;
   isDefault: boolean;
+  /** The home this device is on; a default it is not on offers the switch back. */
+  isCurrent: boolean;
   isHighlighted?: boolean;
   canInvite?: boolean;
   canDelete?: boolean;
@@ -34,6 +39,7 @@ interface HomeCardProps {
 export const HomeCard: React.FC<HomeCardProps> = ({
   homeId,
   isDefault,
+  isCurrent,
   isHighlighted = false,
   canInvite,
   canDelete,
@@ -122,12 +128,22 @@ export const HomeCard: React.FC<HomeCardProps> = ({
               {t('joinHome.pantryCount', { count: pantryCount })}
             </Text>
           </View>
-          {!!isDefault && (
+          {isDefault && isCurrent ? (
             <View style={styles.defaultBadge}>
               <Text role="label" tone="onPrimaryLight">
                 {t('homeManagement.cardDefault')}
               </Text>
             </View>
+          ) : (
+            <AppPressable
+              onPress={() => onSetDefault(home.id)}
+              hitSlop={hitSlop.lg}
+              accessibilityRole="button"
+              accessibilityLabel={t('labels.setDefault')}
+              testID={homeTestIDs.setDefaultButton(home.id)}
+            >
+              <Icon name="star-outline" size={22} tone="textSecondary" />
+            </AppPressable>
           )}
           {!!onPress && (
             <Icon name="chevron-forward" size={20} tone="textSecondary" />
@@ -136,10 +152,8 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 
         <HomeActions
           homeId={home.id}
-          isDefault={isDefault}
           canInvite={canInvite}
           canDelete={canDelete}
-          onSetDefault={onSetDefault}
           onInvite={onInvite}
           onDelete={handleDelete}
         />

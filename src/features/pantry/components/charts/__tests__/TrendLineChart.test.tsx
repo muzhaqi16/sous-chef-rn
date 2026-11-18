@@ -39,24 +39,18 @@ jest.mock('@shopify/react-native-skia', () => ({
 }));
 
 describe('TrendLineChart', () => {
-  const sampleData: TimeSeriesDataPoint[] = [
+  const sampleData: Pick<TimeSeriesDataPoint, 'date' | 'count'>[] = [
     {
-      __typename: 'TimeSeriesDataPoint',
       date: '2024-01-01',
       count: 10,
-      value: 10,
     },
     {
-      __typename: 'TimeSeriesDataPoint',
       date: '2024-01-02',
       count: 20,
-      value: 20,
     },
     {
-      __typename: 'TimeSeriesDataPoint',
       date: '2024-01-03',
       count: 15,
-      value: 15,
     },
   ];
 

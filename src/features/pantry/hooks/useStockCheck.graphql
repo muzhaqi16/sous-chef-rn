@@ -1,0 +1,188 @@
+# The stacks most worth a "still have it?" check today, in the server's order,
+# with why each is doubtful. At most five: a check stays small.
+query StockToConfirm($pantryId: ID!, $today: LocalDate!) {
+  pantry(id: $pantryId) {
+    id
+    version
+    stockToConfirm(limit: 5, today: $today) {
+      id
+      version
+      itemName
+      # The stack's own unit, which "Some left" counts in; as the stock
+      # writers select it, since the check's local write rewrites it.
+      unit {
+        id
+        symbol
+        localizedSymbolForms {
+          one
+          other
+        }
+      }
+      amountLeft {
+        value
+        unitId
+        metric {
+          value
+          unitId
+          symbol
+          localizedSymbol
+          displayAsFraction
+          type
+        }
+        imperial {
+          value
+          unitId
+          symbol
+          localizedSymbol
+          displayAsFraction
+          type
+        }
+      }
+      # A package's contents, in the net-weight unit "Some left" can count them in.
+      packageSize {
+        value
+        unitId
+        metric {
+          value
+          unitId
+          symbol
+          localizedSymbol
+          displayAsFraction
+          type
+        }
+        imperial {
+          value
+          unitId
+          symbol
+          localizedSymbol
+          displayAsFraction
+          type
+        }
+      }
+      netWeightUnit {
+        id
+        symbol
+      }
+      stockConfidence(today: $today) {
+        level
+        reasons
+        lastConfirmedAt
+      }
+    }
+  }
+}
+
+# What the household found, row by row. Each row names the version it saw and
+# the check its observation time, so a stale count fails alone.
+mutation RecordPantryStockCheck(
+  $input: RecordPantryStockCheckInput!
+  $today: LocalDate!
+) {
+  recordPantryStockCheck(input: $input) {
+    __typename
+    ... on RecordPantryStockCheckPayload {
+      converged
+      pantry {
+        id
+        ...PantryReaders
+        # What is left to check once these rows are answered: an emptied
+        # stack leaves it, a confirmed one past its date may stay.
+        stockToConfirm(limit: 5, today: $today) {
+          id
+          version
+          itemName
+          unit {
+            id
+            symbol
+            localizedSymbolForms {
+              one
+              other
+            }
+          }
+          amountLeft {
+            value
+            unitId
+            metric {
+              value
+              unitId
+              symbol
+              localizedSymbol
+              displayAsFraction
+              type
+            }
+            imperial {
+              value
+              unitId
+              symbol
+              localizedSymbol
+              displayAsFraction
+              type
+            }
+          }
+          packageSize {
+            value
+            unitId
+            metric {
+              value
+              unitId
+              symbol
+              localizedSymbol
+              displayAsFraction
+              type
+            }
+            imperial {
+              value
+              unitId
+              symbol
+              localizedSymbol
+              displayAsFraction
+              type
+            }
+          }
+          netWeightUnit {
+            id
+            symbol
+          }
+          stockConfidence(today: $today) {
+            level
+            reasons
+            lastConfirmedAt
+          }
+        }
+      }
+      results {
+        pantryItemId
+        answer
+        success
+        failure {
+          code
+          disposition
+          field
+        }
+        pantryItem {
+          id
+          ...PantryItemReaders
+          # A row used up leaves its location holding one stack fewer.
+          storageLocation {
+            version
+            id
+            ...StorageLocationReaders
+          }
+          stockConfidence(today: $today) {
+            level
+            reasons
+            lastConfirmedAt
+          }
+        }
+      }
+    }
+    ... on Error {
+      code
+      disposition
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

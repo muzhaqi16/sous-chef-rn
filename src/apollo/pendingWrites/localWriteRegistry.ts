@@ -95,12 +95,14 @@ import {
 } from '#features/mealPlan/offline/localWrites';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
+import { RecordPantryStockCheckDocument } from '#features/pantry/hooks/useStockCheck.generated';
 import {
   addStock,
   createItem,
   createPantry,
   discardExpired,
   drawStock,
+  recordStockCheck,
   removeItem,
   removePantry,
   setStock,
@@ -112,6 +114,7 @@ import {
   DeleteRecipeDocument,
   DeleteRecipeFolderDocument,
   ForkRecipeDocument,
+  MarkRecipeAsCookedDocument,
   RemoveRecipeFromFavoritesDocument,
   UpdateFavoriteRecipeDocument,
   UpdateRecipeDocument,
@@ -151,6 +154,7 @@ import { checkIn } from '#features/receipts/offline/localWrites';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import {
   addFavorite,
+  cookRecipe,
   createRecipe,
   moveFolder,
   removeFavorite,
@@ -169,7 +173,6 @@ import {
   MarkShoppingListActiveDocument,
   MarkShoppingListAsDefaultDocument,
   MoveShoppingItemToPantryDocument,
-  MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
   RemoveItemsFromShoppingListDocument,
   UpdateShoppingListDocument,
@@ -182,7 +185,6 @@ import {
   moveToPantry,
   removeList,
   removeRows,
-  reorderRow,
   updateRow,
 } from '#features/shoppingList/offline/localWrites';
 import { entityFields } from './entityFields';
@@ -205,7 +207,6 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [UpdateShoppingListItemDocument, updateRow],
   [RemoveItemFromShoppingListDocument, removeRows],
   [RemoveItemsFromShoppingListDocument, removeRows],
-  [MoveShoppingListItemDocument, reorderRow],
   [UpdateShoppingListDocument, entityFields],
   [CompleteShoppingListDocument, entityFields],
   [MarkShoppingListActiveDocument, entityFields],
@@ -220,8 +221,10 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [UpdatePantryItemDocument, updatePantryRow],
   [UpdatePantryItemQuantityDocument, setStock],
   [AdjustPantryItemQuantityDocument, setStock],
+  [RecordPantryStockCheckDocument, recordStockCheck],
   [DeletePantryItemDocument, removeItem],
   [CreatePantryItemUsageDocument, drawStock],
+  [MarkRecipeAsCookedDocument, cookRecipe],
   [RestockPantryItemDocument, addStock],
   [ConvertExpiredToWasteDocument, discardExpired],
   [OpenPantryItemBatchDocument, entityFields],

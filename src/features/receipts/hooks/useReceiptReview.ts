@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useApolloClient, useFragment } from '@apollo/client/react';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { useToday } from '#hooks/app/useToday';
 import { errorService } from '#/services/errorService';
+import { toastService } from '#/services/toastService';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
@@ -22,6 +23,14 @@ import {
   type ReceiptReviewLine,
 } from '../utils/receiptReviewLines';
 import { checkInLineOf, type CheckInLineNeed } from '../utils/checkInLine';
+import {
+  receiptLineAmount,
+  type ListLineAmount,
+} from '../utils/receiptLineAmount';
+import {
+  formatQuantityDisplay,
+  type UnitLabelSource,
+} from '#/utils/formatQuantity';
 import { forgetReceipt } from '../utils/forgetReceipt';
 import {
   linkReceiptLines,
@@ -34,7 +43,11 @@ import {
   type CheckInLineToSend,
   type ReceiptCheckInOutcome,
 } from './useReceiptCheckIn';
-import { useReceiptMatches, type ReceiptCandidate } from './useReceiptMatches';
+import {
+  useReceiptMatches,
+  type PrintedStoreChoice,
+  type ReceiptCandidate,
+} from './useReceiptMatches';
 import { UseReceiptReview_StoreFragmentDoc } from './useReceiptReview.generated';
 import { useHeldStores } from './useHeldStores';
 import { unlocatedStoreNamed } from '../utils/unlocatedStoreNamed';
@@ -42,6 +55,7 @@ import { merchantInputOf } from '../utils/merchantInput';
 import { storeOfferOf } from '../utils/storeOfferOf';
 import { purchaseMomentOf } from '../utils/receiptDate';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
+import { useCreateStoreFromPlace } from '#features/catalog/hooks/useCreateStoreFromPlace';
 import { useUsualStores } from '#features/catalog/hooks/useUsualStores';
 import { useUsualStoreWrites } from '#features/catalog/hooks/useUsualStoreWrites';
 import type { NewUsualStore } from '#features/catalog/cache/usualStores';
@@ -52,15 +66,65 @@ import {
 } from '#domain/stores';
 import { toDateKey } from '#/utils/dateUtils';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { useReceiptCurrency } from './useReceiptCurrency';
 
 // The chain and its store number print above the items (`ALDI` / `Store #027`).
 const HEADER_LINES = 6;
 
-const NEED_COPY: Record<CheckInLineNeed, TranslationKey> = {
+const NEED_COPY: Record<Exclude<CheckInLineNeed, 'amount'>, TranslationKey> = {
   item: 'errors.itemNameRequired',
   unit: 'receipts.review.needsUnit',
+  sizeUnit: 'packageSize.unitRequired',
+  quantity: 'errors.invalidQuantity',
   price: 'receipts.review.totalNeeded',
 };
+
+/** An amount the review shows in its list line's unit. */
+interface ListAmount {
+  quantity: number;
+  unitId: string;
+  /** The unit as the line sheet's unit field shows it. */
+  unitText: string;
+  unit: UnitLabelSource;
+}
+
+/** A choice with its typed units, the amount's and its package size's, as ids. */
+async function withUnitIds(
+  choice: ReceiptLineChoice,
+  resolveUnitId: (id: string | null, text: string) => Promise<string | null>,
+): Promise<ReceiptLineChoice> {
+  const unitId = await resolveUnitId(choice.unitId, choice.unitText);
+  const { packageSize } = choice;
+  if (!packageSize) return { ...choice, unitId };
+  const sizeUnitId = await resolveUnitId(
+    packageSize.unitId,
+    packageSize.unitText,
+  );
+  return {
+    ...choice,
+    unitId,
+    packageSize: { ...packageSize, unitId: sizeUnitId },
+  };
+}
+
+/** What a linked list line asked for, in its own unit; null with no unit. */
+const askedBy = (
+  listLine:
+    | (Omit<ListLineAmount, 'unit'> & {
+        unit:
+          | (ListLineAmount['unit'] & { symbol: string } & UnitLabelSource)
+          | null;
+      })
+    | undefined,
+): ListAmount | null =>
+  listLine?.unit
+    ? {
+        quantity: listLine.quantity ?? 1,
+        unitId: listLine.unit.id,
+        unitText: listLine.unit.symbol,
+        unit: listLine.unit,
+      }
+    : null;
 
 /**
  * What adding does with a line: `add` it, retry it once `failed`; or nothing:
@@ -86,6 +150,10 @@ export interface ReceiptReviewRow extends ReceiptReviewLine {
   failure?: string;
   /** Adding it ticks a shopping-list line off rather than adding it again. */
   onList: boolean;
+  /** The amount its list line supplied for a bare count, shown so it can be corrected. */
+  fromList?: ListAmount;
+  /** What its list line asked for, which the question about its amount starts from. */
+  asked?: ListAmount;
 }
 
 /** A store new to the household, which the receipt's check-in adds to it. */
@@ -116,6 +184,7 @@ const stockedBy = (
 export function useReceiptReview() {
   const { t } = useTranslation();
   const draft = useReceiptDraft();
+  const currency = useReceiptCurrency();
   const {
     chooseLine,
     setPurchasedOn,
@@ -166,6 +235,7 @@ export function useReceiptReview() {
     resolvedStore,
     proposedStore,
     completableStore,
+    storeChoices,
   } = useReceiptMatches(
     lines.map(line => ({
       index: line.index,
@@ -297,7 +367,17 @@ export function useReceiptReview() {
   // told from its code.
   const failureOf = (index: number): string | undefined => {
     const need = needs[index];
-    if (need) return t(NEED_COPY[need]);
+    if (need === 'amount') {
+      // Asked against its list line; once unlinked, its count stands alone.
+      const asked = askedBy(links.get(index));
+      if (asked) {
+        return t('receipts.review.needsAmount', {
+          amount: formatQuantityDisplay(asked.quantity, asked.unit),
+        });
+      }
+    } else if (need) {
+      return t(NEED_COPY[need]);
+    }
     const code = draft?.failed?.[index];
     if (code === undefined) return undefined;
     return code
@@ -308,6 +388,15 @@ export function useReceiptReview() {
   const rows: ReceiptReviewRow[] = chosen.map(entry => {
     const { line, match, choice } = entry;
     const failure = failureOf(line.index);
+    const listLine = links.get(line.index);
+    const asked = askedBy(listLine);
+    // A linked line in a unit reads its amount without the held stack.
+    const bought =
+      choice && asked ? receiptLineAmount(choice, listLine, null) : null;
+    const measured =
+      bought && 'amount' in bought && bought.fromList
+        ? bought.amount.measured
+        : undefined;
     return {
       ...line,
       status: statusOf(entry, failure),
@@ -315,7 +404,13 @@ export function useReceiptReview() {
       candidates: match?.candidates ?? [],
       ...(match?.guess && !choice ? { suggestion: match.guess } : {}),
       failure,
-      onList: links.has(line.index),
+      onList: !!listLine,
+      ...(asked && measured
+        ? { fromList: { ...asked, quantity: measured.quantity } }
+        : {}),
+      ...(asked && bought && 'needs' in bought && bought.needs === 'amount'
+        ? { asked }
+        : {}),
     };
   });
 
@@ -344,6 +439,27 @@ export function useReceiptReview() {
     });
     if (created) chooseStore(created);
     return created?.id;
+  };
+
+  const { createStoreFromPlace } = useCreateStoreFromPlace();
+  // Picks answer in any order, so only the last place picked becomes the store.
+  const lastStoreChoice = useRef<string | null>(null);
+  // The place picked among those the printed address could be, made a store
+  // once for every household, or completing the receipt's store of that
+  // number; it needs the search, so not offline.
+  const chooseStoreChoice = async ({
+    placeId,
+    chainId,
+    storeNumber,
+  }: PrintedStoreChoice) => {
+    lastStoreChoice.current = placeId;
+    const created = await createStoreFromPlace(
+      placeId,
+      chainId ? { chainId, storeNumber } : undefined,
+    );
+    if (lastStoreChoice.current !== placeId) return;
+    if (created) chooseStore(created);
+    else toastService.error(t('receipts.review.storeChoiceFailed'));
   };
 
   /**
@@ -399,13 +515,7 @@ export function useReceiptReview() {
     const resolved = await Promise.all(
       pending.map(async entry => ({
         ...entry,
-        choice: {
-          ...entry.choice,
-          unitId: await resolveUnitId(
-            entry.choice.unitId,
-            entry.choice.unitText,
-          ),
-        },
+        choice: await withUnitIds(entry.choice, resolveUnitId),
       })),
     );
     setPreparing(false);
@@ -443,7 +553,8 @@ export function useReceiptReview() {
         index: entry.index,
         input: built.input,
         itemName: entry.choice.itemName,
-        ...(listLine ? { listLine } : {}),
+        // The receipt for an earlier purchase ticks no list line.
+        ...(listLine && !entry.choice.existingPurchase ? { listLine } : {}),
       });
     }
     setNeeds(lacking);
@@ -466,6 +577,7 @@ export function useReceiptReview() {
           ...(phoneMerchant ? { merchant: phoneMerchant } : {}),
           ...(!store && merchantHeader ? { merchantHeader } : {}),
           ...(orderDiscount ? { orderDiscount } : {}),
+          ...(currency ? { currency } : {}),
         },
         toSend,
       );
@@ -506,6 +618,13 @@ export function useReceiptReview() {
      * complete, offered before adding a new one; picked with `chooseStore`.
      */
     storeOffer,
+    /**
+     * The places the printed address could be, when the search could not
+     * settle on one; picked with `chooseStoreChoice`. Unpicked, the receipt's
+     * own name and address are added.
+     */
+    storeChoices,
+    chooseStoreChoice,
     /** Neither the receipt nor the API names the shop, so the user is asked for it. */
     storeUnrecognized: !resolvedStore && !draft?.parsed?.merchant,
     /** The day of the shop, YYYY-MM-DD; the scan's day when none was read. */

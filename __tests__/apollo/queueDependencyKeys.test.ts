@@ -49,6 +49,7 @@ const NEVER_QUEUED_REFERENCE: Record<string, string> = {
   portionUnitId: 'unit vocabulary is server-owned',
   newQuantityUnitId: 'unit vocabulary is server-owned',
   remainingNetWeightUnitId: 'unit vocabulary is server-owned',
+  quantityUnitId: 'unit vocabulary is server-owned',
   grossWeightUnitId: 'unit vocabulary is server-owned',
   brandId: 'catalog rows are created online only',
   chainId: 'store chains are server-owned reference data',

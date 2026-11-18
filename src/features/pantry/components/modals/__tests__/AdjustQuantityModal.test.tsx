@@ -1,154 +1,17 @@
 import React from 'react';
-import { screen, userEvent } from '@testing-library/react-native';
+import { fireEvent, screen, userEvent } from '@testing-library/react-native';
 import { AdjustQuantityModal } from '#features/pantry/components/modals/AdjustQuantityModal';
+import { AdjustQuantityModal_PantryItemFragmentDoc } from '../AdjustQuantityModal.generated';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
-import { drainTimers } from '#/test-utils/drainTimers';
-import { t } from '#/i18n';
-import { AdjustQuantityModal_PantryItemFragmentDoc } from '#features/pantry/components/modals/AdjustQuantityModal.generated';
-import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import {
   asAbbreviation,
   readingAsAbbreviation,
 } from '#/test-utils/fixtures/unitLabels';
+import { t } from '#/i18n';
+import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
 
-jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
-  useStandardBottomSheet: jest.fn(() => ({
-    ref: { current: null },
-    modalProps: {},
-    contentContainerStyle: {},
-  })),
-  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
-}));
-
-jest.mock('#components/atoms/BottomSheetKeyboardAwareScrollView', () => {
-  const RN = require('react-native');
-  return {
-    BottomSheetKeyboardAwareScrollView: (
-      props: React.ComponentProps<
-        typeof import('#components/atoms/BottomSheetKeyboardAwareScrollView').BottomSheetKeyboardAwareScrollView
-      >,
-    ) => require('react').createElement(RN.View, props),
-  };
-});
-
-jest.mock('#components/molecules/BottomSheetHeader', () => {
-  const RN = require('react-native');
-  const R = require('react');
-  return {
-    BottomSheetHeader: ({
-      title,
-      onCancel,
-      onConfirm,
-      confirmLabel,
-    }: React.ComponentProps<
-      typeof import('#components/molecules/BottomSheetHeader').BottomSheetHeader
-    >) =>
-      R.createElement(
-        RN.View,
-        { testID: 'header' },
-        R.createElement(RN.Text, null, title),
-        R.createElement(
-          RN.Pressable,
-          { onPress: onCancel, testID: 'cancel-btn' },
-          R.createElement(RN.Text, null, 'Cancel'),
-        ),
-        R.createElement(
-          RN.Pressable,
-          { onPress: onConfirm, testID: 'confirm-btn' },
-          R.createElement(RN.Text, null, confirmLabel),
-        ),
-      ),
-  };
-});
-
-jest.mock('#components/molecules/FractionInput', () => {
-  const RN = require('react-native');
-  const R = require('react');
-  return {
-    FractionInput: ({
-      label,
-      value,
-      onChangeText,
-      placeholder,
-    }: React.ComponentProps<
-      typeof import('#components/molecules/FractionInput').FractionInput
-    >) =>
-      R.createElement(
-        RN.View,
-        null,
-        R.createElement(RN.Text, null, label),
-        R.createElement(RN.TextInput, {
-          value,
-          onChangeText,
-          placeholder,
-          testID: 'fraction-input',
-        }),
-      ),
-  };
-});
-
-jest.mock('#components/atoms/FormInput', () => {
-  const RN = require('react-native');
-  const R = require('react');
-  return {
-    FormInput: ({
-      label,
-      value,
-      onChangeText,
-      placeholder,
-    }: React.ComponentProps<
-      typeof import('#components/atoms/FormInput').FormInput
-    >) =>
-      R.createElement(
-        RN.View,
-        null,
-        R.createElement(RN.Text, null, label),
-        R.createElement(RN.TextInput, {
-          value,
-          onChangeText,
-          placeholder,
-          testID: `form-input-${label?.replace(/\s+/g, '-').toLowerCase()}`,
-        }),
-      ),
-  };
-});
-
-jest.mock('#components/molecules/FormattedItemSubtitle', () => {
-  const RN = require('react-native');
-  return {
-    FormattedItemSubtitle: ({
-      quantity,
-      unit,
-    }: React.ComponentProps<
-      typeof import('#components/molecules/FormattedItemSubtitle').FormattedItemSubtitle
-    >) =>
-      require('react').createElement(
-        RN.Text,
-        null,
-        `${quantity} ${unit?.symbol || ''}`,
-      ),
-  };
-});
-
-jest.mock('#/styles/commonStyles', () => ({
-  commonStyles: {
-    bottomSheetScrollView: {},
-    bottomSheetContent: {},
-    bottomSheetItemInfo: {},
-    bottomSheetItemName: {},
-    bottomSheetItemRow: {},
-    bottomSheetItemLabel: {},
-    bottomSheetSection: {},
-  },
-}));
-
-jest.mock('#/utils/fractionUtils', () => ({
-  parseFractionalInput: (input: string) => {
-    const val = parseFloat(input);
-    return isNaN(val) ? null : val;
-  },
-}));
+type Props = React.ComponentProps<typeof AdjustQuantityModal>;
 
 const PANTRY_ITEM_ID = 'pantry-1';
 
@@ -182,10 +45,18 @@ const NO_READING = measure(
   reading(0, 'unit-none', ''),
 );
 
-function makeCache(overrides: Record<string, unknown> = {}) {
+const grams = asAbbreviation({
+  __typename: 'Unit',
+  id: 'u-g',
+  symbol: 'g',
+  displayAsFraction: false,
+});
+
+/** Three cups of sugar, as the sheet's own selection holds them. */
+function stockedCache(overrides: Record<string, unknown> = {}) {
   return seedCache([
     {
-      // The production selection the consumer reads, so a thin fixture fails
+      // The production selection the sheet reads, so a thin fixture fails
       // here instead of defining its own idea of complete.
       fragment: AdjustQuantityModal_PantryItemFragmentDoc,
       data: {
@@ -222,16 +93,11 @@ function makeCache(overrides: Record<string, unknown> = {}) {
 }
 
 // 1360.78 g of honey, which the row reads as "3 lb" for an imperial user.
-function honeyCache() {
-  const cache = makeCache({
+function honeyCache(overrides: Record<string, unknown> = {}) {
+  const cache = stockedCache({
     itemName: 'Honey',
     quantity: 1360.78,
-    unit: asAbbreviation({
-      __typename: 'Unit',
-      id: 'u-g',
-      symbol: 'g',
-      displayAsFraction: false,
-    }),
+    unit: grams,
     displayAmount: {
       __typename: 'DisplayAmount',
       quantity: 1360.78,
@@ -245,216 +111,259 @@ function honeyCache() {
       reading(1.36, 'u-kg', 'kg'),
       reading(3, 'u-lb', 'lb'),
     ),
+    ...overrides,
   });
   writeUnitSystemSettings(cache, UnitSystem.Imperial, UnitSystem.Imperial);
   return cache;
 }
 
+const onClose = jest.fn();
+const onConfirm = jest.fn();
+
+const sheet = (over: Partial<Props> = {}) => (
+  <AdjustQuantityModal
+    visible
+    pantryItemId={PANTRY_ITEM_ID}
+    onClose={onClose}
+    onConfirm={onConfirm}
+    {...over}
+  />
+);
+
+const renderSheet = (cache = stockedCache(), over: Partial<Props> = {}) =>
+  renderWithApollo(sheet(over), { cache });
+
+const reasonField = () =>
+  screen.getByPlaceholderText(t('adjustQuantity.reasonPlaceholder'));
+
+/** Gives a reason and confirms, as the user does; the form validates first. */
+async function adjust(reason = 'Recount') {
+  const user = userEvent.setup();
+  await user.type(reasonField(), reason);
+  await user.press(screen.getByLabelText(t('adjustQuantity.adjust')));
+}
+
+async function retype(current: string, next: string) {
+  const user = userEvent.setup();
+  const field = screen.getByDisplayValue(current);
+  await user.clear(field);
+  await user.type(field, next);
+}
+
 beforeEach(() => {
-  jest.useFakeTimers();
+  jest.clearAllMocks();
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+describe('opening on a stack', () => {
+  it('names it and what it holds now', () => {
+    renderSheet();
 
-describe('AdjustQuantityModal', () => {
-  const defaultProps = {
-    visible: true,
-    pantryItemId: PANTRY_ITEM_ID,
-    onClose: jest.fn(),
-    onConfirm: jest.fn(),
-  };
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('renders Adjust Quantity title', () => {
-    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
-      cache: makeCache(),
-    });
-    expect(screen.getByText('Adjust Quantity')).toBeTruthy();
-  });
-
-  it('displays item name', () => {
-    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
-      cache: makeCache(),
-    });
+    expect(screen.getByText(t('adjustQuantity.title'))).toBeTruthy();
     expect(screen.getByText('Sugar')).toBeTruthy();
+    expect(screen.getByText(/3 cups/)).toBeTruthy();
   });
 
-  it('renders New Quantity input', () => {
-    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
-      cache: makeCache(),
-    });
-    expect(screen.getByText('New Quantity')).toBeTruthy();
-  });
+  it('opens on nothing when there is no stack', () => {
+    renderSheet(stockedCache(), { pantryItemId: null });
 
-  it('renders Reason input', () => {
-    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
-      cache: makeCache(),
-    });
-    expect(screen.getByText('Reason')).toBeTruthy();
-  });
-
-  it('renders Adjust confirm button', () => {
-    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
-      cache: makeCache(),
-    });
-    expect(screen.getByText('Adjust')).toBeTruthy();
-  });
-
-  it('calls onClose when cancel is pressed', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
-      cache: makeCache(),
-    });
-    await user.press(screen.getByTestId('cancel-btn'));
-    expect(defaultProps.onClose).toHaveBeenCalled();
-  });
-
-  it('does not render item info when pantryItemId is null', () => {
-    renderWithApollo(
-      <AdjustQuantityModal {...defaultProps} pantryItemId={null} />,
-      { cache: makeCache() },
-    );
     expect(screen.queryByText('Sugar')).toBeNull();
   });
 
-  it('seeds the new quantity with a cooking fraction for a fraction unit', () => {
-    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
-      cache: makeCache({
-        quantity: 0.33333334,
-        unit: asAbbreviation({
-          __typename: 'Unit',
-          id: 'u1',
-          symbol: 'cups',
-          displayAsFraction: true,
+  it.each([
+    { unit: 'reads in fractions', displayAsFraction: true, seeded: '1/3' },
+    {
+      unit: 'opts out of fractions',
+      displayAsFraction: false,
+      seeded: '0.333',
+    },
+  ])(
+    'seeds the count as a unit that $unit reads it',
+    ({ displayAsFraction, seeded }) => {
+      renderSheet(
+        stockedCache({
+          quantity: 0.33333334,
+          unit: asAbbreviation({
+            __typename: 'Unit',
+            id: 'u1',
+            symbol: 'cups',
+            displayAsFraction,
+          }),
         }),
-      }),
-    });
-    expect(screen.getByDisplayValue('1/3')).toBeTruthy();
+      );
+
+      expect(screen.getByDisplayValue(seeded)).toBeTruthy();
+    },
+  );
+
+  it('starts over each time it opens', async () => {
+    const view = renderSheet();
+    await retype('3', '7');
+
+    view.rerender(sheet({ visible: false }));
+    view.rerender(sheet());
+
+    expect(screen.getByDisplayValue('3')).toBeTruthy();
+  });
+});
+
+describe('adjusting', () => {
+  // The seed rounds to three places, and confirm submits the seed. Sent as
+  // is, opening the sheet to record a reason would rewrite the stock.
+  it('sends the stored count untouched when it was not changed, and closes', async () => {
+    renderSheet(stockedCache({ quantity: 2.7182818 }));
+
+    await adjust('  Recount  ');
+
+    expect(onConfirm).toHaveBeenCalledWith(2.7182818, 'Recount', undefined, {});
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('seeds a decimal rounded to three places for a unit that opts out of fractions', () => {
-    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
-      cache: makeCache({ quantity: 0.33333334 }),
-    });
-    expect(screen.getByDisplayValue('0.333')).toBeTruthy();
-  });
+  it('sends a changed count', async () => {
+    renderSheet(stockedCache({ quantity: 2.7182818 }));
 
-  // The seed rounds to three places, and confirm submits the seed. Sent as-is,
-  // opening the sheet to record a reason rewrites the stock and books an
-  // ADJUSTMENT for a difference nobody asked for.
-  it('sends the stored quantity untouched when the person did not change it', async () => {
-    const onConfirm = jest.fn();
-    renderWithApollo(
-      <AdjustQuantityModal {...defaultProps} onConfirm={onConfirm} />,
-      { cache: makeCache({ quantity: 2.7182818 }) },
-    );
-    expect(screen.getByDisplayValue('2.718')).toBeTruthy();
+    await retype('2.718', '5');
+    await adjust();
 
-    const user = userEvent.setup();
-    await user.type(
-      screen.getByPlaceholderText(t('adjustQuantity.reasonPlaceholder')),
-      'Recount',
-    );
-    await user.press(screen.getByTestId('confirm-btn'));
-
-    await drainTimers();
-    expect(onConfirm).toHaveBeenCalled();
-    expect(onConfirm.mock.calls[0]?.[0]).toBe(2.7182818);
-  });
-
-  it('sends the new quantity when the person changed it', async () => {
-    const onConfirm = jest.fn();
-    renderWithApollo(
-      <AdjustQuantityModal {...defaultProps} onConfirm={onConfirm} />,
-      { cache: makeCache({ quantity: 2.7182818 }) },
-    );
-
-    const user = userEvent.setup();
-    const quantity = screen.getByDisplayValue('2.718');
-    await user.clear(quantity);
-    await user.type(quantity, '5');
-    await user.type(
-      screen.getByPlaceholderText(t('adjustQuantity.reasonPlaceholder')),
-      'Recount',
-    );
-    await user.press(screen.getByTestId('confirm-btn'));
-
-    await drainTimers();
-    expect(onConfirm).toHaveBeenCalled();
     expect(onConfirm.mock.calls[0]?.[0]).toBe(5);
   });
 
-  describe('in the user’s unit system', () => {
-    it('opens on the count as the row reads it', () => {
-      renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
-        cache: honeyCache(),
-      });
-      expect(screen.getByText('3 lb')).toBeTruthy();
-      expect(screen.getByDisplayValue('3')).toBeTruthy();
-    });
+  it('asks for a reason on its field before adjusting', async () => {
+    renderSheet();
 
-    // USM-8: the server converts 2.5 lb onto the gram stack exactly.
-    it('sends a recount of 2.5 lb with the pound', async () => {
-      const onConfirm = jest.fn();
-      renderWithApollo(
-        <AdjustQuantityModal {...defaultProps} onConfirm={onConfirm} />,
-        { cache: honeyCache() },
-      );
+    await userEvent
+      .setup()
+      .press(screen.getByLabelText(t('adjustQuantity.adjust')));
 
-      const user = userEvent.setup();
-      const quantity = screen.getByDisplayValue('3');
-      await user.clear(quantity);
-      await user.type(quantity, '2.5');
-      await user.type(
-        screen.getByPlaceholderText(t('adjustQuantity.reasonPlaceholder')),
-        'Recount',
-      );
-      await user.press(screen.getByTestId('confirm-btn'));
-
-      await drainTimers();
-      expect(onConfirm).toHaveBeenCalled();
-      expect(onConfirm.mock.calls[0]).toEqual([
-        2.5,
-        'Recount',
-        undefined,
-        { newQuantityUnitId: 'u-lb' },
-      ]);
-    });
-
-    it('sends the stored grams, and no unit, when the count is unchanged', async () => {
-      const onConfirm = jest.fn();
-      renderWithApollo(
-        <AdjustQuantityModal {...defaultProps} onConfirm={onConfirm} />,
-        { cache: honeyCache() },
-      );
-
-      const user = userEvent.setup();
-      await user.type(
-        screen.getByPlaceholderText(t('adjustQuantity.reasonPlaceholder')),
-        'Recount',
-      );
-      await user.press(screen.getByTestId('confirm-btn'));
-
-      await drainTimers();
-      expect(onConfirm).toHaveBeenCalled();
-      expect(onConfirm.mock.calls[0]).toEqual([
-        1360.78,
-        'Recount',
-        undefined,
-        {},
-      ]);
-    });
+    expect(screen.getByText(t('adjustQuantity.reasonRequired'))).toBeTruthy();
+    expect(onConfirm).not.toHaveBeenCalled();
   });
 
-  it('shows current quantity info', () => {
-    renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
-      cache: makeCache(),
+  it('closes on Cancel, adjusting nothing', () => {
+    renderSheet();
+
+    fireEvent.press(screen.getByLabelText(t('labels.cancel')));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+});
+
+describe('in the user’s unit system', () => {
+  it('opens on the count as the row reads it', () => {
+    renderSheet(honeyCache());
+
+    expect(screen.getByText('3 lb')).toBeTruthy();
+    expect(screen.getByDisplayValue('3')).toBeTruthy();
+  });
+
+  // The server converts 2.5 lb onto the gram stack exactly.
+  it('sends a recount of 2.5 lb with the pound', async () => {
+    renderSheet(honeyCache());
+
+    await retype('3', '2.5');
+    await adjust();
+
+    expect(onConfirm.mock.calls[0]).toEqual([
+      2.5,
+      'Recount',
+      undefined,
+      { newQuantityUnitId: 'u-lb' },
+    ]);
+  });
+
+  it('sends the stored grams, and no unit, when the count is unchanged', async () => {
+    renderSheet(honeyCache());
+
+    await adjust();
+
+    expect(onConfirm.mock.calls[0]).toEqual([
+      1360.78,
+      'Recount',
+      undefined,
+      {},
+    ]);
+  });
+});
+
+describe('the weight left of an opened stack', () => {
+  const opened = {
+    lastUsedAt: '2026-11-01T10:00:00Z',
+    remainingNetWeight: 400,
+    netWeightUnit: grams,
+  };
+  const weightField = () =>
+    screen.queryByPlaceholderText(
+      t('adjustQuantity.remainingWeightPlaceholder'),
+    );
+
+  it('is not asked of a stack nothing was used from', () => {
+    renderSheet(
+      stockedCache({ remainingNetWeight: 400, netWeightUnit: grams }),
+    );
+
+    expect(weightField()).toBeNull();
+  });
+
+  it('is sent as typed, in the stack’s own unit', async () => {
+    renderSheet(stockedCache(opened));
+
+    await userEvent.setup().type(weightField()!, '300');
+    await adjust();
+
+    expect(onConfirm.mock.calls[0]?.[2]).toBe(300);
+    expect(onConfirm.mock.calls[0]?.[3]).toEqual({});
+  });
+
+  // A weight read in the unit the stack counts in would read as a count.
+  it('reads as stored when the reading names the stack’s counting unit', () => {
+    const ounces = asAbbreviation({
+      __typename: 'Unit',
+      id: 'u-oz',
+      symbol: 'oz',
+      displayAsFraction: false,
     });
-    expect(screen.getByText(/3 cups/)).toBeTruthy();
+    renderSheet(
+      honeyCache({
+        lastUsedAt: '2026-11-01T10:00:00Z',
+        remainingNetWeight: 32,
+        netWeightUnit: ounces,
+        unit: asAbbreviation({
+          __typename: 'Unit',
+          id: 'u-lb',
+          symbol: 'lb',
+          displayAsFraction: false,
+        }),
+        remaining: measure(
+          32,
+          'u-oz',
+          reading(907.18, 'u-g', 'g'),
+          reading(2, 'u-lb', 'lb'),
+        ),
+      }),
+    );
+
+    expect(screen.getByText(/32 oz/)).toBeTruthy();
+  });
+
+  it('reads in the user’s system, and is sent in the unit it reads in', async () => {
+    renderSheet(
+      honeyCache({
+        ...opened,
+        remaining: measure(
+          400,
+          'u-g',
+          reading(400, 'u-g', 'g'),
+          reading(14.11, 'u-oz', 'oz'),
+        ),
+      }),
+    );
+    expect(screen.getByText(/14\.11 oz/)).toBeTruthy();
+
+    await userEvent.setup().type(weightField()!, '10');
+    await adjust();
+
+    expect(onConfirm.mock.calls[0]?.[3]).toEqual({
+      remainingNetWeightUnitId: 'u-oz',
+    });
   });
 });

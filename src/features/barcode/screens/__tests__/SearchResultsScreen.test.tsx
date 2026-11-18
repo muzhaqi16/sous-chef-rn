@@ -1,223 +1,244 @@
-'use no memo';
-
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { screen, userEvent, within } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderWithApollo,
+  type MockDataFor,
+} from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
+import { isRecord } from '#/utils/isRecord';
+import { useStore } from '#store';
+import { resetSessionScopedStores } from '#store/sessionScopedStores';
+import { t } from '#/i18n';
+import { ItemByLookupDocument } from '#features/barcode/hooks/useSearchResults.generated';
+import { useBarcodeScannerStore } from '#features/barcode/store/barcodeScannerStore';
+import { barcodeTestIDs } from '#features/barcode/testIDs';
+import { ItemNotFound } from '../../components/ItemNotFound';
 import { SearchResultsScreen } from '../SearchResultsScreen';
-
-type ScreenProps = React.ComponentProps<typeof SearchResultsScreen>;
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-const mockHideBottomSheet = jest.fn();
-const mockShowBottomSheet = jest.fn();
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
 
-jest.mock('#features/barcode/store/barcodeScannerStore', () => ({
-  useBottomSheetState: jest.fn(() => ({
-    scannerSheetVisible: false,
-    hideBottomSheet: mockHideBottomSheet,
-    showBottomSheet: mockShowBottomSheet,
-  })),
-}));
+let log = operationLog();
 
-jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
-  useStandardBottomSheet: () => ({
-    ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
-    modalProps: {},
-  }),
-  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
-}));
+const BARCODE = '051500255162';
 
-const searchResult = (
-  overrides: Partial<{
-    item: { id: string; name: string; canEdit: boolean; canSuggest: boolean };
-    loading: boolean;
-    error: string | null;
-  }> = {},
-) => ({
-  item: null,
-  loading: false,
-  error: null,
-  addingItem: false,
-  handleAddItem: jest.fn(),
-  handleRetry: jest.fn(),
-  ...overrides,
+type Lookup = MockDataFor<typeof ItemByLookupDocument>;
+type FoundNode = NonNullable<
+  NonNullable<
+    NonNullable<NonNullable<Lookup['items']>['edges']>[number]
+  >['node']
+>;
+
+const found = (node: FoundNode = {}): Lookup => ({
+  items: {
+    __typename: 'ItemConnection',
+    edges: [
+      {
+        __typename: 'ItemEdge',
+        cursor: 'c0',
+        node: {
+          __typename: 'Item',
+          id: 'item-1',
+          name: 'Oat Milk',
+          canEdit: false,
+          canSuggest: true,
+          ...node,
+        },
+      },
+    ],
+  },
 });
 
-const mockShowPrices = jest.fn(() => false);
-jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
-  useBudgetAndPricesEnabled: () => mockShowPrices(),
-}));
-jest.mock('../../hooks/useSearchResults', () => ({
-  useSearchResults: jest.fn(),
-}));
+const NOTHING: Lookup = {
+  items: { __typename: 'ItemConnection', edges: [] },
+};
 
-jest.mock('#components/molecules/ErrorState', () => ({
-  ErrorState: ({ message }: { message: string }) => {
-    const { Text } = require('react-native');
-    return <Text>{message}</Text>;
-  },
-}));
+/** Answers a lookup by the code it was asked for: the barcode, else the SKU. */
+const lookingUp = (
+  by: 'upc' | 'sku',
+  data: Lookup,
+  extra: { maxUsageCount?: number } = {},
+) =>
+  recordMock(ItemByLookupDocument, {
+    match: vars => isRecord(vars.lookup) && by in vars.lookup,
+    data,
+    ...extra,
+  });
 
-jest.mock('../../components/ItemNotFound', () => ({
-  ItemNotFound: ({ barcode }: { barcode: string }) => {
-    const { Text } = require('react-native');
-    return <Text>No results for {barcode}</Text>;
-  },
-}));
+interface Visit {
+  source?: 'pantry' | 'shoppingList' | 'storeMode';
+  answers?: ReturnType<typeof recordMock>[];
+}
 
-jest.mock('../../components/SearchResults', () => ({
-  SearchResults: ({ item }: { item: { name: string } }) => {
-    const { Text } = require('react-native');
-    return <Text>Found: {item.name}</Text>;
-  },
-}));
-
-jest.mock('#components/organisms/Header', () => ({
-  Header: ({ title }: { title?: string }) => {
-    const { Text } = require('react-native');
-    return <Text>{title}</Text>;
-  },
-}));
-
-jest.mock('#features/catalog/ui/AddItemForm/AddItemForm', () => {
-  const { View } = require('react-native');
-  return { __esModule: true, default: () => <View /> };
-});
-
-jest.mock('#components/atoms/BottomSheetKeyboardAwareScrollView', () => ({
-  BottomSheetKeyboardAwareScrollView: ({
-    children,
-  }: {
-    children: React.ReactNode;
-  }) => children,
-}));
+async function openResults({ source = 'pantry', answers = [] }: Visit = {}) {
+  renderWithApollo(
+    <SearchResultsScreen
+      route={{
+        params: {
+          barcode: BARCODE,
+          format: 'ean-13',
+          source,
+          pantryId: 'pantry-1',
+          shoppingListId: 'list-1',
+        },
+      }}
+    />,
+    {
+      links: [log.link],
+      operationMocks: answers.map(answer => answer.mock),
+    },
+  );
+  await log.landed(ItemByLookupDocument);
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
-  // Restore default mock implementations after clearAllMocks
-  const storeModule = require('#features/barcode/store/barcodeScannerStore');
-  storeModule.useBottomSheetState.mockReturnValue({
-    scannerSheetVisible: false,
-    hideBottomSheet: mockHideBottomSheet,
-    showBottomSheet: mockShowBottomSheet,
+  log = operationLog();
+  resetSessionScopedStores();
+  useBarcodeScannerStore.setState({ scannerSheetVisible: false });
+  // A household with prices on: the lookup asks for prices where they apply.
+  useStore.setState({
+    isOnline: true,
+    apiReachable: true,
+    selectedHomeId: 'home-1',
+    budgetAndPrices: true,
   });
-
-  const { useSearchResults } = require('../../hooks/useSearchResults');
-  useSearchResults.mockReturnValue(searchResult());
 });
 
-describe('SearchResultsScreen', () => {
-  const defaultProps: ScreenProps = {
-    route: {
-      params: {
-        barcode: '1234567890',
-        format: 'ean-13',
+describe('a scanned code', () => {
+  it('says it is searching until the lookup answers', () => {
+    renderWithApollo(
+      <SearchResultsScreen
+        route={{ params: { barcode: BARCODE, format: 'ean-13' } }}
+      />,
+      {
+        operationMocks: [recordMock(ItemByLookupDocument, { held: true }).mock],
       },
-    },
-  };
-
-  it('renders search results header', () => {
-    const { getByText } = render(<SearchResultsScreen {...defaultProps} />);
-    expect(getByText('Search Results')).toBeTruthy();
-  });
-
-  it('shows item not found when no results', () => {
-    const { getByText } = render(<SearchResultsScreen {...defaultProps} />);
-    expect(getByText('No results for 1234567890')).toBeTruthy();
-  });
-
-  it('shows loading state when searching', () => {
-    const { useSearchResults } = require('../../hooks/useSearchResults');
-    useSearchResults.mockReturnValue(searchResult({ loading: true }));
-
-    const { getByLabelText, getByText } = render(
-      <SearchResultsScreen {...defaultProps} />,
-    );
-    // The brand loader draws its banner letter by letter and reads it out as
-    // one label; the barcode reads back below it so a wrong scan is visible.
-    expect(getByLabelText('Searching for item...')).toBeTruthy();
-    expect(getByText('Barcode: 1234567890')).toBeTruthy();
-  });
-
-  it('shows search results when found', () => {
-    const { useSearchResults } = require('../../hooks/useSearchResults');
-    useSearchResults.mockReturnValue(
-      searchResult({
-        item: {
-          id: 'item-1',
-          name: 'Test Product',
-          canEdit: false,
-          canSuggest: true,
-        },
-      }),
     );
 
-    const { getByText } = render(<SearchResultsScreen {...defaultProps} />);
-    expect(getByText('Found: Test Product')).toBeTruthy();
+    expect(screen.getByLabelText(t('searchResults.searching'))).toBeTruthy();
   });
 
-  it('shows error state when search error exists', () => {
-    const { useSearchResults } = require('../../hooks/useSearchResults');
-    useSearchResults.mockReturnValue(searchResult({ error: 'Network error' }));
+  it('shows the product found', async () => {
+    await openResults({ answers: [lookingUp('upc', found())] });
 
-    const { getByText } = render(<SearchResultsScreen {...defaultProps} />);
-    expect(getByText('Network error')).toBeTruthy();
+    expect(screen.getByText('Oat Milk')).toBeTruthy();
   });
 
-  it('passes source and pantryId from route params', () => {
-    const { useSearchResults } = require('../../hooks/useSearchResults');
-    useSearchResults.mockReturnValue(
-      searchResult({
-        item: { id: 'item-1', name: 'Test', canEdit: false, canSuggest: true },
-      }),
-    );
+  it('says the code is unknown, and offers to add it', async () => {
+    await openResults({
+      answers: [lookingUp('upc', NOTHING), lookingUp('sku', NOTHING)],
+    });
+    await log.landed(ItemByLookupDocument, 2);
 
-    const propsWithSource: ScreenProps = {
-      route: {
-        params: {
-          barcode: '123',
-          format: 'ean-13',
-          source: 'pantry',
-          pantryId: 'pantry-1',
-        },
-      },
-    };
+    // A miss opens the add sheet by itself; the add is offered on the page too.
+    useBarcodeScannerStore.setState({ scannerSheetVisible: false });
+    await userEvent
+      .setup()
+      .press(
+        within(screen.UNSAFE_getByType(ItemNotFound)).getByText(
+          t('labels.addItem'),
+        ),
+      );
 
-    const { getByText } = render(<SearchResultsScreen {...propsWithSource} />);
-    expect(getByText('Found: Test')).toBeTruthy();
+    expect(useBarcodeScannerStore.getState().scannerSheetVisible).toBe(true);
   });
 
-  // What the household paid rides the lookup only where it is shown.
-  it('asks the lookup for prices in store mode only with budget and prices on', () => {
-    const { useSearchResults } = require('../../hooks/useSearchResults');
-    useSearchResults.mockReturnValue(searchResult());
-    const storeMode: ScreenProps = {
-      route: {
-        params: {
-          barcode: '123',
-          format: 'ean-13',
-          source: 'storeMode',
-          shoppingListId: 'list-1',
-        },
-      },
-    };
+  it('says a lookup failed, and looks again on retry', async () => {
+    await openResults({
+      answers: [
+        recordMock(ItemByLookupDocument, {
+          error: new Error('Network request failed'),
+          maxUsageCount: 1,
+        }),
+        lookingUp('upc', found()),
+      ],
+    });
 
-    mockShowPrices.mockReturnValue(true);
-    render(<SearchResultsScreen {...storeMode} />);
-    expect(useSearchResults).toHaveBeenLastCalledWith(
-      '123',
-      'ean-13',
-      undefined,
-      'list-1',
-    );
+    expect(screen.getByText(t('errors.searchFailed'))).toBeTruthy();
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+    await log.landed(ItemByLookupDocument, 2);
 
-    mockShowPrices.mockReturnValue(false);
-    render(<SearchResultsScreen {...storeMode} />);
-    expect(useSearchResults).toHaveBeenLastCalledWith(
-      '123',
-      'ean-13',
-      undefined,
-      undefined,
-    );
+    expect(screen.getByText('Oat Milk')).toBeTruthy();
+  });
+
+  it('asks for prices only in store mode', async () => {
+    const asked = lookingUp('upc', found());
+    await openResults({ source: 'storeMode', answers: [asked] });
+
+    expect(asked.fired[0]).toMatchObject({
+      listId: 'list-1',
+      withPrices: true,
+    });
+  });
+
+  it('asks no prices in store mode with budget and prices off', async () => {
+    useStore.setState({ budgetAndPrices: false });
+    const asked = lookingUp('upc', found());
+    await openResults({ source: 'storeMode', answers: [asked] });
+
+    expect(asked.fired[0]?.withPrices).not.toBe(true);
+  });
+
+  it('asks no prices outside store mode', async () => {
+    const asked = lookingUp('upc', found());
+    await openResults({ source: 'shoppingList', answers: [asked] });
+
+    expect(asked.fired[0]?.withPrices).not.toBe(true);
+  });
+});
+
+describe('the found product', () => {
+  it('is offered to its owner as an edit', async () => {
+    await openResults({
+      answers: [lookingUp('upc', found({ canEdit: true, canSuggest: false }))],
+    });
+
+    expect(
+      screen.getByTestId(barcodeTestIDs.productEditActionLabel),
+    ).toHaveTextContent(t('labels.edit'));
+  });
+
+  it('is offered to anyone else as a suggestion', async () => {
+    await openResults({ answers: [lookingUp('upc', found())] });
+
+    expect(
+      screen.getByTestId(barcodeTestIDs.productEditActionLabel),
+    ).toHaveTextContent(t('labels.suggestEdit'));
+  });
+
+  it('offers no edit to someone who may neither edit nor suggest', async () => {
+    await openResults({
+      answers: [lookingUp('upc', found({ canEdit: false, canSuggest: false }))],
+    });
+
+    expect(
+      screen.queryByTestId(barcodeTestIDs.productEditAction),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('opens a new version with its details filled in', async () => {
+    await openResults({ answers: [lookingUp('upc', found())] });
+
+    await userEvent.setup().press(screen.getByText(t('barcode.newVersion')));
+
+    expect(useBarcodeScannerStore.getState().scannerSheetVisible).toBe(true);
+    expect(screen.getByDisplayValue('Oat Milk')).toBeTruthy();
+  });
+});
+
+describe('the header', () => {
+  it('scans another', async () => {
+    await openResults({ answers: [lookingUp('upc', found())] });
+
+    await userEvent
+      .setup()
+      .press(screen.getByLabelText(t('labels.scanAnother')));
+
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 });

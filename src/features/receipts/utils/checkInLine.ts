@@ -13,7 +13,13 @@ import type { ReceiptReviewLine } from './receiptReviewLines';
 import { receiptLineAmount, type ListLineAmount } from './receiptLineAmount';
 
 /** What a line still lacks before the API can record it. */
-export type CheckInLineNeed = 'item' | 'unit' | 'price';
+export type CheckInLineNeed =
+  | 'item'
+  | 'unit'
+  | 'sizeUnit'
+  | 'amount'
+  | 'quantity'
+  | 'price';
 
 export type CheckInLine =
   | { input: ReceiptCheckInLineInput }
@@ -46,6 +52,8 @@ const itemOf = (
  * The check-in's input for one confirmed line, or what it still needs. The
  * total is what was paid after the line's discounts, which it states apart, so
  * the API records the original price; a line its discount made free is paid 0.
+ * A total the receipt left unread goes unstated: the API records an unknown
+ * price, never zero.
  */
 export function checkInLineOf({
   line,
@@ -57,14 +65,15 @@ export function checkInLineOf({
 }: CheckInLineSource): CheckInLine {
   const item = itemOf(choice, ids);
   if (!item) return { needs: 'item' };
-  const amount = receiptLineAmount(choice, listLine, heldUnit);
-  if (!amount) return { needs: 'unit' };
+  const bought = receiptLineAmount(choice, listLine, heldUnit);
+  if ('needs' in bought) return { needs: bought.needs };
+  const { amount } = bought;
   const discount =
     line.discount !== undefined && toCents(line.discount) > 0
       ? line.discount
       : undefined;
   const { price } = choice;
-  if (price === null || (toCents(price) <= 0 && discount === undefined)) {
+  if (price !== null && toCents(price) <= 0 && discount === undefined) {
     return { needs: 'price' };
   }
   return {
@@ -77,9 +86,15 @@ export function checkInLineOf({
         : { pantryItemId: ids.pantryItemId }),
       item,
       amount,
-      totalPaid: price,
+      ...(price === null ? {} : { totalPaid: price }),
       ...(discount === undefined ? {} : { discount }),
-      ...(listLine ? { shoppingListItemId: listLine.id } : {}),
+      // The receipt for a purchase already stocked fills it in, and ticks no
+      // list line: that purchase already did.
+      ...(choice.existingPurchase
+        ? { existingPurchase: choice.existingPurchase }
+        : listLine
+        ? { shoppingListItemId: listLine.id }
+        : {}),
       rawText: line.printed,
       resolvedBy: proposed?.method ?? null,
       // Only a preselected product is accepted; a pick among suggestions is a

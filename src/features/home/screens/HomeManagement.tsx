@@ -36,10 +36,12 @@ import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { homeTestIDs } from '#features/home/testIDs';
 import type { CreateHomeFormValues } from '#features/home/components/createHomeFormConfig';
+import { useSelectedHomeId } from '#store/useAppStore';
 
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
   const { t } = useTranslation();
+  const selectedHomeId = useSelectedHomeId();
   const { toHomeDetail } = useAppNavigation();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -190,7 +192,8 @@ export const HomeManagement: React.FC = () => {
   };
 
   // The default home sorts first, keyed off the server's `Home.isDefault`, not
-  // the local selection: the two may differ, and the "Default" chip claims it.
+  // the local selection: a home picked this session (a join, a deep link) may
+  // differ, and the default's card then offers the switch back.
   const sortedHomes = [...homes].sort((a, b) => {
     if (a.id === remoteDefaultHomeId) return -1;
     if (b.id === remoteDefaultHomeId) return 1;
@@ -216,6 +219,7 @@ export const HomeManagement: React.FC = () => {
         title={t('homeManagement.title')}
         actions={headerActions}
         scroll="scroll"
+        scrollTestID={homeTestIDs.managementScroll}
         refresh={{ refreshing, onRefresh: handleRefresh }}
         // Create and join are local-first; an open form outranks an unanswered read.
         state={
@@ -375,6 +379,7 @@ export const HomeManagement: React.FC = () => {
                 <HomeCard
                   homeId={home.id}
                   isDefault={home.id === remoteDefaultHomeId}
+                  isCurrent={home.id === selectedHomeId}
                   isHighlighted={home.id === highlightedHomeId}
                   canInvite={userCanInvite}
                   canDelete={userCanDelete}

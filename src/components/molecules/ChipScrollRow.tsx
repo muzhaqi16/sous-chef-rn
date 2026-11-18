@@ -69,6 +69,8 @@ export function ChipScrollRow<T>({
         onPress={() => onSelect(opt.key)}
         onLayout={e => onItemLayout(opt.key, e)}
         testID={opt.testID}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isActive }}
       >
         <View
           style={[

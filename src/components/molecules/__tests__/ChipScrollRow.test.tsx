@@ -53,6 +53,23 @@ describe('ChipScrollRow', () => {
     expect(mockOnSelect).toHaveBeenCalledWith('expired');
   });
 
+  // A screen reader hears which choice is made, as with the kit's other chips.
+  it('announces each chip as a button, and the chosen one as selected', () => {
+    render(
+      <ChipScrollRow
+        options={options}
+        selected="active"
+        onSelect={mockOnSelect}
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Active', selected: true }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'All', selected: false }),
+    ).toBeTruthy();
+  });
+
   it('renders without crashing with empty options', () => {
     const { toJSON } = render(
       <ChipScrollRow options={[]} selected="" onSelect={mockOnSelect} />,

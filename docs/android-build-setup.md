@@ -3,14 +3,14 @@
 ## Overview
 
 A single GitHub Actions workflow (`build-android.yml`) handles every Android build
-environment, selected by the tag prefix that triggered it:
+environment, selected by the tag prefix that triggered it, or by a merge to `main`:
 
-| Command                 | Tag Pattern    | Workflow          | Environment | Keystore            | Output        |
-| ----------------------- | -------------- | ----------------- | ----------- | ------------------- | ------------- |
-| `npm run tag:dev`       | `dev-v*`       | build-android.yml | dev         | Dev keystore        | APK (dev)     |
-| `npm run tag:stg`       | `stg-v*`       | build-android.yml | stg         | Dev keystore        | APK (staging) |
-| `npm run tag:prod`      | `prod-v*`      | build-android.yml | prod        | Prod keystore       | APK (prod)    |
-| `npm run tag:playstore` | `playstore-v*` | build-android.yml | prod        | Play Store keystore | AAB (prod)    |
+| Command            | Tag Pattern | Workflow          | Environment | Keystore            | Output        |
+| ------------------ | ----------- | ----------------- | ----------- | ------------------- | ------------- |
+| `npm run tag:dev`  | `dev-v*`    | build-android.yml | dev         | Dev keystore        | APK (dev)     |
+| `npm run tag:stg`  | `stg-v*`    | build-android.yml | stg         | Dev keystore        | APK (staging) |
+| `npm run tag:prod` | `prod-v*`   | build-android.yml | prod        | Prod keystore       | APK (prod)    |
+| merge to `main`    | —           | build-android.yml | prod        | Play Store keystore | AAB (prod)    |
 
 ---
 
@@ -207,15 +207,17 @@ npm run tag:prod
 ### Play Store AAB Build
 
 ```bash
-# 1. Create and push Play Store tag
-npm run tag:playstore
+# 1. Merge to main (or dispatch Build Android on main: playstore, prod)
 
 # 2. GitHub Actions automatically:
+#    - Takes the next version code from Play
 #    - Builds with production environment (.env.production)
 #    - Signs with Play Store upload key
-#    - Creates AAB bundle
-#    - Creates GitHub Release
-#    - Uploads AAB file
+#    - Archives the AAB in MinIO
+#    - Uploads it to Play's internal track
+
+# 3. To release it: Actions → Promote Android on main, with its version code.
+#    The promotion writes playstore-v{version} (CI_CD.md § Play distribution).
 ```
 
 ---
@@ -271,12 +273,13 @@ app-release.aab  # Android App Bundle for Play Store
 
 **Problem:** Pushing tag doesn't start build
 
-**Solution:** Check the tag prefix — all four are handled by `build-android.yml`:
+**Solution:** Check the tag prefix — all three are handled by `build-android.yml`:
 
 - `dev-v1.7.1` → dev
 - `stg-v1.7.1` → stg
 - `prod-v1.7.1` → prod APK
-- `playstore-v1.7.1` → prod AAB
+
+A `playstore-v1.7.1` tag starts no build: a promotion writes it, and a Play bundle comes from `main`.
 
 ### "APK won't install" or "App not signed"
 

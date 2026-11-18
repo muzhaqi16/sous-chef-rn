@@ -6,6 +6,8 @@ import {
   inCountedUnit,
   shownStock,
   type DisplayUnitShape,
+  heldAfterDraw,
+  packagesStarted,
 } from '#domain/stockDisplay';
 
 const PIECE = { id: 'pc', symbol: 'pc' };
@@ -238,5 +240,34 @@ describe('fullPackagesAfter', () => {
 
   it('stays unknown while the server has not counted', () => {
     expect(fullPackagesAfter(null, 2, 1)).toBeNull();
+  });
+});
+
+describe('heldAfterDraw', () => {
+  it.each([
+    // USE-02: 56 of a 64 fl oz carton.
+    [1, 64, 56, 0.875],
+    // Two 16 oz jars in one batch, 8 oz used: 24 / 16.
+    [2, 32, 24, 1.5],
+    // Emptied.
+    [1, 64, 0, 0],
+  ])(
+    '%p packages holding %p, left with %p, hold %p',
+    (held, before, after, expected) => {
+      expect(heldAfterDraw(held, before, after)).toBe(expected);
+    },
+  );
+});
+
+describe('packagesStarted', () => {
+  it.each([
+    [0.875, 1],
+    [1.5, 2],
+    [1, 1],
+    // Float noise past the ninth decimal is not another package.
+    [1.0000000001, 1],
+    [0, 0],
+  ])('%p held counts as %p', (held, expected) => {
+    expect(packagesStarted(held)).toBe(expected);
   });
 });

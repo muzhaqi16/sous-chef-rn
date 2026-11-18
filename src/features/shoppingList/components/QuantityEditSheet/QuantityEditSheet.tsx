@@ -56,11 +56,7 @@ interface QuantityEditSheetProps {
   visible: boolean;
   item: QuantityEditSheetItem | null;
   onClose: () => void;
-  onSave: (
-    quantity: string,
-    unitName: string | null,
-    unitId: string | null,
-  ) => void;
+  onSave: (quantity: string, unitId: string | null) => void;
   loading?: boolean;
 }
 
@@ -194,7 +190,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   };
 
   const handleSave = () => {
-    onSave(quantityInput, unitName, unitId);
+    onSave(quantityInput, unitId);
   };
 
   const originalQuantityInput = item ? seedText(item) : '';

@@ -51,7 +51,7 @@
     "expandToMonth": "Espandi a vista mensile"
   },
   "mealPlanItem": {
-    "unnamedMeal": "Pasto senza nome",
+    "recipeUnavailable": "Ricetta non disponibile",
     "pantryUpdated": "Dispensa aggiornata",
     "calories": "{{count}} cal"
   },
@@ -147,7 +147,6 @@
     "preview": "Anteprima",
     "emptyPreview": "Nessun pasto in questo modello",
     "day": "Giorno {{day}}",
-    "customMeal": "Personalizzato",
     "metaLine": "{{days}} giorni · {{servings}} porzioni",
     "duplicateTemplate": "Duplica modello",
     "deleteTemplate": "Elimina modello",

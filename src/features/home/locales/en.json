@@ -41,7 +41,6 @@
     "emailPlaceholder": "Enter email address"
   },
   "invitationAcceptance": {
-    "invalidInvitation": "Invalid invitation",
     "shoppingListAccepted": "Shopping list invitation accepted!",
     "homeAccepted": "Home invitation accepted!",
     "unknownType": "Unknown invitation type",

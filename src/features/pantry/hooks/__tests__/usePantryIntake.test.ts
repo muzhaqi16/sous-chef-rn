@@ -1,500 +1,368 @@
 import { act } from '@testing-library/react-native';
-import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import {
+  type MockDataFor,
   recordMock,
   renderHookWithApollo,
-  type MockDataFor,
-  seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { operationLog } from '#/test-utils/operationLog';
+import {
+  pantryReadOf,
+  pantryRows,
+  seedPantry,
+  type PantryItemFixture,
+} from '#/test-utils/fixtures/pantryFixtures';
+import { cacheShows } from '#/test-utils/cacheWaits';
+import { t } from '#/i18n';
+import { todayKey } from '#/utils/dateUtils';
 import {
   AcquisitionMethod,
   ErrorCode,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
+import {
+  CreatePantryItemDocument,
+  GetPantryDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { PantryDetailInfo_PantryItemFragmentDoc } from '#features/pantry/components/PantryDetailInfo.generated';
 import { usePantryIntake } from '../usePantryIntake';
 
+type Cache = ReturnType<typeof makeCache>;
+type Input = Parameters<ReturnType<typeof usePantryIntake>['addItem']>[1];
+type Options = Parameters<ReturnType<typeof usePantryIntake>['addItem']>[2];
+
 const PANTRY_ID = 'p-1';
+const MILK: Input = { item: { id: 'item-milk' }, quantity: 1 };
 
-// Args are load-bearing: the connection is keyed on them.
-const STOCKED_PANTRY = gql`
-  query SeedIntakePantry(
-    $id: ID!
-    $itemsFirst: Int
-    $itemsFilter: PantryItemFilters
-    $itemsOrderBy: PantryItemOrderBy
-  ) {
-    pantry(id: $id) {
-      __typename
-      id
-      itemsConnection(
-        first: $itemsFirst
-        filters: $itemsFilter
-        orderBy: $itemsOrderBy
-      ) {
-        __typename
-        totalCount
-        edges {
-          __typename
-          cursor
-          node {
-            __typename
-            id
-          }
-        }
-      }
-    }
-  }
-`;
-
-function cacheHolding(pantryItemId: string) {
+/** The pantry as its screen holds it. */
+function pantryHolding(items: PantryItemFixture[] = []) {
   const cache = makeCache();
-  seedQuery(cache, {
-    query: STOCKED_PANTRY,
-    variables: {
-      id: PANTRY_ID,
-      itemsFirst: 100,
-      itemsFilter: undefined,
-      itemsOrderBy: undefined,
-    },
-    data: {
-      pantry: {
-        __typename: 'Pantry',
-        id: PANTRY_ID,
-        itemsConnection: {
-          __typename: 'PantryItemConnection',
-          totalCount: 1,
-          edges: [
-            {
-              __typename: 'PantryItemEdge',
-              cursor: pantryItemId,
-              node: { __typename: 'PantryItem', id: pantryItemId },
-            },
-          ],
-        },
-      },
-    },
-  });
+  seedPantry(cache, { id: PANTRY_ID, items });
   return cache;
 }
 
-const ROW = gql`
-  fragment _IntakeRowProbe on PantryItem {
-    id
-    item {
-      id
-    }
-    unit {
-      id
-    }
-    acquisitionMethod
-  }
-`;
+const rows = (cache: Cache) => pantryRows(cache, PANTRY_ID);
 
-const createAnswering = (pantryItemId?: string) =>
+/** The row the add published: the one the pantry did not hold. */
+const addedRow = (cache: Cache) => {
+  const [row] = rows(cache).filter(node => node.id !== 'pi-1');
+  if (!row) throw new Error('the add published no row');
+  return row;
+};
+
+/**
+ * Resolves once the pantry's rows, as the cache shows them, satisfy `ok`. A
+ * confirmed write's layer is rebuilt after a short window, not on its answer.
+ */
+const rowsSettle = (
+  cache: Cache,
+  ok: (shown: ReturnType<typeof rows>) => boolean,
+) =>
+  act(async () => {
+    await cacheShows(
+      cache,
+      { query: GetPantryDocument, variables: pantryReadOf(PANTRY_ID) },
+      () => rows(cache),
+      ok,
+    );
+  });
+
+/** The id the create was sent under. */
+const sentId = (variables: Record<string, unknown>) => {
+  const { input } = variables;
+  return typeof input === 'object' &&
+    input !== null &&
+    'id' in input &&
+    typeof input.id === 'string'
+    ? input.id
+    : '';
+};
+
+/** The server's answer: the add's own row, unless it `joined` a held stack. */
+const created = ({
+  joined,
+  matchedItem,
+  held,
+}: { joined?: string; matchedItem?: string; held?: boolean } = {}) =>
   recordMock(CreatePantryItemDocument, {
-    dataFor: (vars): MockDataFor<typeof CreatePantryItemDocument> => ({
+    dataFor: (variables): MockDataFor<typeof CreatePantryItemDocument> => ({
       createPantryItem: {
         __typename: 'CreatePantryItemPayload',
         pantryItem: {
-          __typename: 'PantryItem',
-          id:
-            pantryItemId ??
-            String((vars.input as { id: string } | undefined)?.id),
+          id: joined ?? sentId(variables),
+          version: 1,
+          ...(matchedItem ? { item: { id: matchedItem, version: 1 } } : {}),
         },
       },
     }),
+    held,
   });
 
-describe('usePantryIntake', () => {
-  beforeEach(() => jest.clearAllMocks());
+const refused = (field: string) =>
+  recordMock(CreatePantryItemDocument, {
+    data: {
+      createPantryItem: {
+        __typename: 'ValidationError',
+        code: ErrorCode.ValidationFailed,
+        message: 'The server’s own words',
+        field,
+      },
+    },
+  });
 
-  it('sends the day of the add on the input, for its default expiry', async () => {
-    const create = createAnswering('pi-new');
-    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
-      operationMocks: [create.mock],
-    });
+let log = operationLog();
 
+function renderIntake(
+  cache: Cache,
+  answers: ReturnType<typeof recordMock>[],
+  { pantryId }: { pantryId: string | undefined } = { pantryId: PANTRY_ID },
+) {
+  const { result } = renderHookWithApollo(() => usePantryIntake(pantryId), {
+    cache,
+    links: [log.link],
+    operationMocks: answers.map(answer => answer.mock),
+  });
+  /** Adds and waits for the outcome, as a caller does. */
+  const add = async (name: string, input: Input, options?: Options) => {
+    let outcome: Awaited<ReturnType<typeof result.current.addItem>> | undefined;
     await act(async () => {
-      await result.current.addItem('Milk', {
-        item: { id: 'cat-milk' },
-        quantity: 1,
+      outcome = await result.current.addItem(name, input, options);
+    });
+    return outcome;
+  };
+  /** Starts an add whose answer is held, and returns its settling. */
+  const start = async (name: string, input: Input, options?: Options) => {
+    let added: Promise<unknown> = Promise.resolve();
+    await act(async () => {
+      added = result.current.addItem(name, input, options);
+      await log.requested(CreatePantryItemDocument);
+    });
+    return () =>
+      act(async () => {
+        await added;
       });
-    });
+  };
+  return { result, add, start };
+}
 
-    const [fired] = create.fired;
-    expect(fired?.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(fired?.input).toMatchObject({ today: fired?.today });
+beforeEach(() => {
+  jest.clearAllMocks();
+  log = operationLog();
+});
+
+describe('an add', () => {
+  it('is sent forced, for the day it was made, under the id its row shows', async () => {
+    const cache = pantryHolding();
+    const create = created({ held: true });
+    const { start } = renderIntake(cache, [create]);
+
+    await start('Milk', MILK);
+
+    expect(create.fired[0]).toMatchObject({
+      input: {
+        id: addedRow(cache).id,
+        pantryId: PANTRY_ID,
+        forceAdd: true,
+        today: todayKey(),
+      },
+      today: todayKey(),
+    });
   });
 
-  it('shows the row with what the caller knows beyond the input', async () => {
-    const cache = makeCache();
-    const create = createAnswering();
-    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
-      cache,
-      operationMocks: [create.mock],
-    });
+  it('holds its row back from a detail read until the server has it', async () => {
+    const cache = pantryHolding();
+    const create = created({ held: true });
+    const { start } = renderIntake(cache, [create]);
 
-    let row;
-    await act(async () => {
-      const added = result.current.addItem(
-        'Oats',
-        { item: { variation: 'esm-1' }, quantity: 1 },
-        {
-          local: {
-            itemId: 'item-oats',
-            unitId: 'unit-bag',
-            acquisitionMethod: AcquisitionMethod.BarcodeScan,
-          },
+    const settle = await start('Milk', MILK);
+    const { id } = addedRow(cache);
+    expect(unconfirmedCreates.has(id)).toBe(true);
+
+    create.release();
+    await settle();
+    expect(unconfirmedCreates.has(id)).toBe(false);
+  });
+
+  it('shows its row with what the caller knows beyond the input', async () => {
+    const cache = pantryHolding();
+    const { start } = renderIntake(cache, [created({ held: true })]);
+
+    await start(
+      'Oats',
+      { item: { variation: 'esm-1' }, quantity: 1 },
+      {
+        local: {
+          itemId: 'item-oats',
+          unitId: 'unit-bag',
+          acquisitionMethod: AcquisitionMethod.BarcodeScan,
         },
-      );
-      // Read before the answer lands: the row is written before the create fires.
-      const [published] = Object.keys(cache.extract(true)).filter(key =>
-        key.startsWith('PantryItem:'),
-      );
-      row = published
-        ? cache.readFragment({ optimistic: true, id: published, fragment: ROW })
-        : undefined;
-      await added;
-    });
+      },
+    );
 
+    const row = addedRow(cache);
     expect(row).toMatchObject({
+      itemName: 'Oats',
       item: { id: 'item-oats' },
       unit: { id: 'unit-bag' },
-      acquisitionMethod: AcquisitionMethod.BarcodeScan,
     });
+    expect(
+      cache.readFragment({
+        fragment: PantryDetailInfo_PantryItemFragmentDoc,
+        id: `PantryItem:${row.id}`,
+        optimistic: true,
+      })?.acquisitionMethod,
+    ).toBe(AcquisitionMethod.BarcodeScan);
   });
 
   it('shows what a package holds as a count until the server answers', async () => {
-    const cache = makeCache();
-    const create = createAnswering();
-    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
-      cache,
-      operationMocks: [create.mock],
+    const cache = pantryHolding();
+    const { start } = renderIntake(cache, [created({ held: true })]);
+
+    await start('Diet Coke Mini', {
+      item: { id: 'item-soda' },
+      amount: { packages: { count: 1, unitId: 'unit-case' } },
+      measurementProfile: {
+        portionUnitId: 'unit-can',
+        portionsPerTrackingUnit: 10,
+      },
     });
 
-    let row;
-    await act(async () => {
-      const added = result.current.addItem('Diet Coke Mini', {
-        item: { id: 'item-soda' },
-        amount: { packages: { count: 1, unitId: 'unit-case' } },
-        measurementProfile: {
-          portionUnitId: 'unit-can',
-          portionsPerTrackingUnit: 10,
-        },
-      });
-      const [published] = Object.keys(cache.extract(true)).filter(key =>
-        key.startsWith('PantryItem:'),
-      );
-      row = published
-        ? cache.readFragment<{
-            portionUnitId: string;
-            remainingPortions: number;
-          }>({
-            optimistic: true,
-            id: published,
-            fragment: gql`
-              fragment IntakePortions on PantryItem {
-                portionUnitId
-                remainingPortions
-              }
-            `,
-          })
-        : undefined;
-      await added;
-    });
-
-    expect(row).toMatchObject({
+    expect(addedRow(cache)).toMatchObject({
       portionUnitId: 'unit-can',
       remainingPortions: 10,
     });
   });
 
-  it('sends a typed item under a minted id, which the row names at once', async () => {
-    const cache = makeCache();
-    const create = createAnswering();
-    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
-      cache,
-      operationMocks: [create.mock],
+  it('is refused, sending nothing, with no pantry', async () => {
+    const create = created();
+    const { add } = renderIntake(makeCache(), [create], {
+      pantryId: undefined,
     });
 
-    let named: unknown;
-    await act(async () => {
-      const added = result.current.addItem('Cubanelle pepper', {
-        item: { inline: { name: 'Cubanelle pepper', brand: 'Farm' } },
-        quantity: 1,
-      });
-      const [published] = Object.keys(cache.extract(true)).filter(key =>
-        key.startsWith('PantryItem:'),
-      );
-      named = published ? cache.extract(true)[published]?.item : undefined;
-      await added;
+    expect(await add('Milk', MILK)).toEqual({
+      status: 'rejected',
+      reason: t('errors.addItemFailedRetry'),
     });
+    expect(create.fired).toEqual([]);
+  });
+});
 
-    const [fired] = create.fired;
-    const sent = (fired?.input as { item: { inline: { id?: string } } }).item;
-    expect(sent).toEqual({
-      inline: {
-        id: expect.any(String),
-        name: 'Cubanelle pepper',
-        brand: 'Farm',
+describe('a typed item', () => {
+  const PEPPER: Input = {
+    item: { inline: { name: 'Cubanelle pepper', brand: 'Farm' } },
+    quantity: 1,
+  };
+
+  it('is sent under an id of its own, which the row names at once', async () => {
+    const cache = pantryHolding();
+    const create = created({ held: true });
+    const { start } = renderIntake(cache, [create]);
+
+    await start('Cubanelle pepper', PEPPER);
+
+    const itemId = addedRow(cache).item?.id;
+    expect(itemId).toEqual(expect.any(String));
+    expect(create.fired[0]).toMatchObject({
+      input: {
+        item: {
+          inline: { id: itemId, name: 'Cubanelle pepper', brand: 'Farm' },
+        },
       },
     });
-    expect(named).toEqual({ __ref: `Item:${sent.inline.id}` });
   });
 
   it('keeps an item id the caller already minted', async () => {
-    const create = createAnswering();
-    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
-      operationMocks: [create.mock],
-    });
+    const create = created();
+    const { add } = renderIntake(pantryHolding(), [create]);
 
-    await act(async () => {
-      await result.current.addItem('Mayonnaise', {
-        item: { inline: { id: 'item-receipt', name: 'Mayonnaise' } },
-        quantity: 1,
-      });
-    });
-
-    expect(create.fired[0]?.input).toMatchObject({
+    await add('Mayonnaise', {
       item: { inline: { id: 'item-receipt', name: 'Mayonnaise' } },
+      quantity: 1,
+    });
+
+    expect(create.fired[0]).toMatchObject({
+      input: { item: { inline: { id: 'item-receipt' } } },
     });
   });
 
-  it('re-points a typed item the API matched to one it holds', async () => {
-    const cache = makeCache();
-    const create = recordMock(CreatePantryItemDocument, {
-      dataFor: (vars): MockDataFor<typeof CreatePantryItemDocument> => ({
-        createPantryItem: {
-          __typename: 'CreatePantryItemPayload',
-          pantryItem: {
-            __typename: 'PantryItem',
-            id: String((vars.input as { id: string } | undefined)?.id),
-            item: { __typename: 'Item', id: 'item-held' },
-          },
-        },
-      }),
-    });
-    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
-      cache,
-      operationMocks: [create.mock],
-    });
+  it('shows the item the server matched it to, and leaves no other', async () => {
+    const cache = pantryHolding();
+    const create = created({ matchedItem: 'item-held', held: true });
+    const { start } = renderIntake(cache, [create]);
+    const settle = await start('Cubanelle pepper', PEPPER);
+    const mintedItem = addedRow(cache).item?.id;
 
-    await act(async () => {
-      await result.current.addItem('Cubanelle pepper', {
-        item: { inline: { name: 'Cubanelle pepper' } },
-        quantity: 1,
-      });
-    });
+    create.release();
+    await settle();
+    await rowsSettle(cache, ([row]) => row?.item?.id === 'item-held');
 
-    pendingWritesOf(cache).rebuild();
+    expect(cache.extract(true)).not.toHaveProperty(`Item:${mintedItem}`);
+  });
+});
 
-    const input = create.fired[0]?.input as {
-      id: string;
-      item: { inline: { id: string } };
-    };
-    expect(cache.extract(true)[`PantryItem:${input.id}`]?.item).toEqual({
-      __ref: 'Item:item-held',
-    });
-    expect(cache.extract(true)).not.toHaveProperty(
-      `Item:${input.item.inline.id}`,
-    );
+describe('the server’s answer', () => {
+  it('drops the row when it joins the add to a stack the pantry holds', async () => {
+    const cache = pantryHolding([{ id: 'pi-1' }]);
+    const { add } = renderIntake(cache, [created({ joined: 'pi-1' })]);
+
+    expect(await add('Milk', MILK)).toEqual({ status: 'added' });
+    await rowsSettle(cache, shown => shown.length === 1);
+
+    expect(rows(cache).map(row => row.id)).toEqual(['pi-1']);
   });
 
-  it('drops the minted row when the server answers with the stack it holds', async () => {
-    const cache = cacheHolding('pi-held');
-    const create = createAnswering('pi-held');
-    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
-      cache,
-      operationMocks: [create.mock],
-    });
+  it('keeps the row under its own id when it stands the add apart', async () => {
+    const cache = pantryHolding([{ id: 'pi-1' }]);
+    const create = created();
+    const { add } = renderIntake(cache, [create]);
 
-    await act(async () => {
-      await result.current.addItem('Milk', {
-        item: { id: 'cat-milk' },
-        quantity: 1,
-      });
-    });
+    expect(await add('Milk', MILK)).toEqual({ status: 'added' });
 
-    pendingWritesOf(cache).rebuild();
-
-    const [fired] = create.fired;
-    const minted = (fired?.input as { id: string }).id;
-    const snapshot = cache.extract(true);
-    expect(snapshot).not.toHaveProperty(`PantryItem:${minted}`);
-    expect(snapshot).not.toHaveProperty(`Item:local-item-${minted}`);
-    expect(JSON.stringify(snapshot[`Pantry:${PANTRY_ID}`])).not.toContain(
-      minted,
-    );
+    expect(rows(cache).map(row => row.id)).toContain(sentId(create.fired[0]!));
   });
+});
 
-  // USM-2: every add is forced. A held product joins its stack (the answer
-  // names it, covered above) or opens its own under the minted id.
-  it('forces every add, so a held product is never refused', async () => {
-    const create = createAnswering();
-    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
-      operationMocks: [create.mock],
+describe('a refusal', () => {
+  // The server's `message` is English only.
+  it('is reported by the field it names, in the app’s words, and told to no one', async () => {
+    const { add } = renderIntake(pantryHolding(), [refused('quantity')]);
+
+    expect(await add('Milk', MILK)).toEqual({
+      status: 'rejected',
+      reason: t('errors.field.quantity'),
+      field: 'quantity',
     });
-
-    await act(async () => {
-      await result.current.addItem('Milk', {
-        item: { id: 'cat-milk' },
-        quantity: 1,
-      });
-    });
-
-    expect(create.fired[0]).toMatchObject({ input: { forceAdd: true } });
-  });
-
-  it('keeps the row of an add the server stood apart, under its minted id', async () => {
-    const cache = cacheHolding('pi-held');
-    const create = createAnswering();
-    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
-      cache,
-      operationMocks: [create.mock],
-    });
-
-    let outcome: unknown;
-    await act(async () => {
-      outcome = await result.current.addItem('Milk', {
-        item: { id: 'cat-milk' },
-        quantity: 1,
-      });
-    });
-
-    const minted = (create.fired[0]?.input as { id: string }).id;
-    expect(outcome).toEqual({ status: 'added' });
-    expect(
-      JSON.stringify(cache.extract(true)[`Pantry:${PANTRY_ID}`]),
-    ).toContain(minted);
-  });
-
-  it('tells the user about a refusal only when asked to', async () => {
-    const refusal = () =>
-      recordMock(CreatePantryItemDocument, {
-        data: {
-          createPantryItem: {
-            __typename: 'ValidationError',
-            code: ErrorCode.ValidationFailed,
-            field: 'quantity',
-          },
-        },
-      });
-    const quiet = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
-      operationMocks: [refusal().mock],
-    });
-    let outcome;
-    await act(async () => {
-      outcome = await quiet.result.current.addItem('Milk', {
-        item: { id: 'cat-milk' },
-        quantity: 1,
-      });
-    });
-    expect(outcome).toMatchObject({ status: 'rejected', field: 'quantity' });
     expect(alertService.alert).not.toHaveBeenCalled();
-
-    const told = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
-      operationMocks: [refusal().mock],
-    });
-    await act(async () => {
-      await told.result.current.addItem(
-        'Milk',
-        { item: { id: 'cat-milk' }, quantity: 1 },
-        { present: 'alert' },
-      );
-    });
-    expect(alertService.alert).toHaveBeenCalledTimes(1);
   });
 
-  it('names the unit the pantry holds an item in, and null for one it does not', () => {
-    const cache = makeCache();
-    seedQuery(cache, {
-      query: gql`
-        query SeedHeldUnit(
-          $id: ID!
-          $itemsFirst: Int
-          $itemsFilter: PantryItemFilters
-          $itemsOrderBy: PantryItemOrderBy
-        ) {
-          pantry(id: $id) {
-            __typename
-            id
-            itemsConnection(
-              first: $itemsFirst
-              filters: $itemsFilter
-              orderBy: $itemsOrderBy
-            ) {
-              __typename
-              totalCount
-              edges {
-                __typename
-                cursor
-                node {
-                  __typename
-                  id
-                  itemName
-                  quantity
-                  item {
-                    __typename
-                    id
-                  }
-                  unit {
-                    __typename
-                    id
-                    type
-                  }
-                }
-              }
-            }
-          }
-        }
-      `,
-      variables: {
-        id: PANTRY_ID,
-        itemsFirst: 100,
-        itemsFilter: undefined,
-        itemsOrderBy: undefined,
-      },
-      data: {
-        pantry: {
-          __typename: 'Pantry',
-          id: PANTRY_ID,
-          itemsConnection: {
-            __typename: 'PantryItemConnection',
-            totalCount: 1,
-            edges: [
-              {
-                __typename: 'PantryItemEdge',
-                cursor: 'pi-bananas',
-                node: {
-                  __typename: 'PantryItem',
-                  id: 'pi-bananas',
-                  itemName: 'Bananas',
-                  quantity: 4,
-                  item: { __typename: 'Item', id: 'cat-bananas' },
-                  unit: {
-                    __typename: 'Unit',
-                    id: 'unit-piece',
-                    type: UnitType.Count,
-                  },
-                },
-              },
-            ],
-          },
-        },
-      },
-    });
-    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
-      cache,
-    });
+  it('is told to the user when the caller asks', async () => {
+    const { add } = renderIntake(pantryHolding(), [refused('quantity')]);
 
-    expect(result.current.heldUnitOf('cat-bananas')).toMatchObject({
-      id: 'unit-piece',
-      type: UnitType.Count,
-    });
-    expect(result.current.heldUnitOf('cat-milk')).toBeNull();
+    await add('Milk', MILK, { present: 'alert' });
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('errors.field.quantity'),
+    );
   });
+
+  it('reads the caller’s copy when the app has no words for its field', async () => {
+    const { add } = renderIntake(pantryHolding(), [refused('shelfLife')]);
+
+    expect(
+      await add('Milk', MILK, { fallback: t('errors.addItemFailed') }),
+    ).toMatchObject({ reason: t('errors.addItemFailed') });
+  });
+});
+
+it('names the unit the pantry holds an item in, and none for one it does not', () => {
+  const { result } = renderIntake(pantryHolding([{ id: 'bananas' }]), []);
+
+  expect(result.current.heldUnitOf('item-bananas')).toMatchObject({
+    id: 'unit-piece',
+    type: UnitType.Count,
+  });
+  expect(result.current.heldUnitOf('item-milk')).toBeNull();
 });

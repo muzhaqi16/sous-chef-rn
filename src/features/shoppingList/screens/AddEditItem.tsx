@@ -113,9 +113,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     }
   }, [isEdit, initialItemName, setFieldValue]);
 
-  // Handle autocomplete item selection
+  // The field has handed over the picked name; its unit and category follow.
   const handleItemSelect = (item: ItemSuggestion) => {
-    setFieldValue('itemName', item.name);
     const seededUnit = unitLabel(item.defaultUnit);
     if (seededUnit) setFieldValue('unit', seededUnit);
     if (item.defaultUnit?.id) {
@@ -131,11 +130,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     setFieldValue('selectedUnitId', unitId);
   };
 
-  // The brand field hands back (id, name); the name is kept only when a
-  // suggestion was actually picked, so free typing keeps the text as typed.
-  const handleBrandSelect = (id: string | null, name: string | null) => {
+  // The field hands a picked brand's name over as text; this keeps its id,
+  // cleared again when the name is typed instead.
+  const handleBrandSelect = (id: string | null) => {
     setFieldValue('brandId', id);
-    if (name) setFieldValue('brand', name);
   };
 
   // Only the id: `UnitAutocompleteField` has already written the SYMBOL through
@@ -417,10 +415,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         label={t('shoppingListScreens.store')}
         value={storeName}
         onChangeText={text => setFieldValue('storeName', text)}
-        onStoreSelected={(id, name) => {
-          setFieldValue('storeId', id);
-          if (name) setFieldValue('storeName', name);
-        }}
+        onStoreSelected={id => setFieldValue('storeId', id)}
         placeholder={t('shoppingListScreens.storePlaceholder')}
         helperText={t('labels.storeSelectHint')}
       />

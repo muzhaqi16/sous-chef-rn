@@ -28,14 +28,12 @@ function semanticItemToSuggestion(node: SemanticItem): ItemSuggestion {
     imageUrl: node.imageUrl,
     netWeight: node.netWeight,
     displayUnit: null,
-    defaultUnit: node.defaultConsumeUnit
-      ? {
-          ...node.defaultConsumeUnit,
-          __typename: 'ItemUnitSuggestion',
-          isDefault: true,
-          isPreferred: false,
-        }
-      : null,
+    defaultUnit: {
+      ...node.quickAddUnit,
+      __typename: 'ItemUnitSuggestion',
+      isDefault: true,
+      isPreferred: false,
+    },
     brands: node.brands.map(b => ({
       __typename: 'BrandSuggestion',
       id: b.brand.id,

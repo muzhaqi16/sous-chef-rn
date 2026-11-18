@@ -141,7 +141,7 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
           label={t('labels.expirationDate')}
           value={expirationDate}
           onChange={setExpirationDate}
-          placeholder={t('labels.selectDate')}
+          placeholder={t('instructions.expiryOptional')}
           minimumDate={new Date()}
         />
 

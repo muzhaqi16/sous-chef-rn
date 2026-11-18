@@ -4,6 +4,7 @@ import { firstNonBlank } from '#/utils/firstNonBlank';
 import type { PrintedStore } from '../store/receiptDraftStore';
 import type {
   ParsedLineKind,
+  ParsedPackages,
   ParsedReceipt,
   ParsedReceiptLine,
 } from './parsedReceipt';
@@ -17,16 +18,24 @@ type ServerReceiptLine = ServerReceipt['lines'][number];
  */
 interface ApiReceipt {
   merchant: Pick<ServerReceipt['merchant'], 'name'>;
+  currency?: string | null;
   lines: readonly (Omit<
     ServerReceiptLine,
-    '__typename' | 'kind' | 'measureUnit'
+    '__typename' | 'kind' | 'measureUnit' | 'packages'
   > & {
     kind: `${ReceiptLineKind}`;
     // The phone's own reading names no measure unit.
     measureUnit?: ServerReceiptLine['measureUnit'];
+    packages: {
+      count: number;
+      size: Omit<ServerPackSize, '__typename' | 'measureUnit'> & {
+        measureUnit?: ServerPackSize['measureUnit'];
+      };
+    } | null;
   })[];
 }
 type ApiReceiptLine = ApiReceipt['lines'][number];
+type ServerPackSize = NonNullable<ServerReceiptLine['packages']>['size'];
 
 // OTHER includes a discount the API found was never taken off (a co-op's
 // `Markdown:` under a price that already has it), and a weight or count line
@@ -43,6 +52,14 @@ const KIND_OF: Record<`${ReceiptLineKind}`, ParsedLineKind> = {
   [ReceiptLineKind.Other]: 'other',
 };
 
+const packagesOf = ({
+  count,
+  size: { quantity, unit, measureUnit },
+}: NonNullable<ApiReceiptLine['packages']>): ParsedPackages => ({
+  count,
+  size: { quantity, unit, ...(measureUnit ? { measureUnit } : {}) },
+});
+
 const toLine = (line: ApiReceiptLine, index: number): ParsedReceiptLine => ({
   index,
   rawText: line.text,
@@ -56,13 +73,19 @@ const toLine = (line: ApiReceiptLine, index: number): ParsedReceiptLine => ({
   ...(line.unitPrice == null ? {} : { unitPrice: line.unitPrice }),
   ...(line.amount == null ? {} : { lineTotal: line.amount }),
   ...(line.appliesTo == null ? {} : { appliesToIndex: line.appliesTo }),
+  ...(line.packages ? { packages: packagesOf(line.packages) } : {}),
 });
 
 /** The API's reading, the server's or the rules' on the phone, in the shape the review reads. */
 export function fromServerReceipt(receipt: ApiReceipt): ParsedReceipt {
   const lines = receipt.lines.map(toLine);
   const merchant = receipt.merchant.name?.trim();
-  return merchant ? { merchant, lines } : { lines };
+  const currency = firstNonBlank(receipt.currency)?.trim();
+  return {
+    ...(merchant ? { merchant } : {}),
+    ...(currency ? { currency } : {}),
+    lines,
+  };
 }
 
 /** The shop a reading read, the server's or the rules' on the phone, when it read a name. */

@@ -968,8 +968,7 @@ export class QueueManager {
       ) {
         continue;
       }
-      // As a replay's answer would: a write that sent no version (a reorder)
-      // still moves the writes built on it, and never adds one to theirs.
+      // As a replay's answer would: the writes built on it move with it.
       this.rebasePending(
         entry,
         row.entityId,
@@ -1192,6 +1191,14 @@ export class QueueManager {
    * replayable again, and a restored or rotated session never signs in to say so.
    */
   onSessionToken(userId: string): void {
+    // A session that began without a sign-in through `authService` (restored
+    // storage, an injected session) still owns its queue: without this its
+    // pending layers are never restored, as `getPendingWrites` reads this user.
+    const queueUser = queueStore.getCurrentUserId();
+    if (queueUser !== userId) {
+      this.onUserChange(userId, queueUser);
+      return;
+    }
     if (queueStore.revivePendingAuthErrors(userId) === 0) return;
     this.drainAfterPass();
   }

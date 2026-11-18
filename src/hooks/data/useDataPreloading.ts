@@ -121,8 +121,6 @@ export function useDataPreloading() {
             name: edge.node.name,
             type: edge.node.type,
             icon: edge.node.icon,
-            color: edge.node.color,
-            slug: edge.node.slug,
           }),
         ),
         store.setCachedCategories,

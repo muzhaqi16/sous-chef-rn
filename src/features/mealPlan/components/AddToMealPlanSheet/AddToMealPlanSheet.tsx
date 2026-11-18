@@ -6,10 +6,8 @@ import {
   ThemedActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { parseISO, startOfDay } from 'date-fns';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import {
@@ -33,6 +31,8 @@ interface AddToMealPlanSheetProps {
   initialMealType?: MealType;
 }
 
+const SNAP_POINTS = ['65%'];
+
 export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
   visible,
   onClose,
@@ -40,12 +40,6 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
   initialMealType,
 }) => {
   const { t } = useTranslation();
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['65%'],
-  });
-
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [selectedMealType, setSelectedMealType] = useState<MealType>(
     initialMealType ?? MealType.Dinner,
@@ -97,12 +91,14 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
   };
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetScrollView
-        contentContainerStyle={[styles.content, contentContainerStyle]}
-      >
+    <Sheet
+      mode="form"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={SNAP_POINTS}
+      contentContainerStyle={styles.content}
+      header={
         <BottomSheetHeader
-          contentPadding="lg"
           title={t('addToMealPlan.title')}
           onCancel={onClose}
           onConfirm={handleConfirm}
@@ -110,137 +106,137 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
           confirmDisabled={adding || !hasPlan}
           confirmColor="primary"
         />
+      }
+    >
+      {!hasPlan && (
+        <Text
+          role="caption"
+          tone="warning"
+          align="center"
+          style={styles.warningText}
+        >
+          {t('errors.noActiveMealPlan')}
+        </Text>
+      )}
 
-        {!hasPlan && (
-          <Text
-            role="caption"
-            tone="warning"
-            align="center"
-            style={styles.warningText}
+      {hasPlan && (mealPlans.length > 1 || hasMorePlans) ? (
+        <>
+          <SectionHeader variant="overline" style={styles.sectionLabel}>
+            {t('labels.mealPlan')}
+          </SectionHeader>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.planChipRow}
+            style={styles.planChipScroll}
           >
-            {t('errors.noActiveMealPlan')}
-          </Text>
-        )}
-
-        {hasPlan && (mealPlans.length > 1 || hasMorePlans) ? (
-          <>
-            <SectionHeader variant="overline" style={styles.sectionLabel}>
-              {t('labels.mealPlan')}
-            </SectionHeader>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.planChipRow}
-              style={styles.planChipScroll}
-            >
-              {mealPlans.map(plan => {
-                const isSelected = plan.id === activePlanId;
-                return (
-                  <Pressable
-                    key={plan.id}
-                    onPress={() => setSelectedPlanId(plan.id)}
-                    style={[
-                      styles.planChip,
-                      isSelected && styles.planChipSelected,
-                    ]}
-                  >
-                    <Text
-                      role="label"
-                      style={[
-                        styles.planChipText,
-                        isSelected && styles.planChipTextSelected,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {plan.name}
-                    </Text>
-                    <Text
-                      role="caption"
-                      style={[
-                        styles.planChipDate,
-                        isSelected && styles.planChipDateSelected,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {formatMonthDay(parseISO(plan.startDate))} –{' '}
-                      {formatMonthDay(parseISO(plan.endDate))}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-              {hasMorePlans ? (
+            {mealPlans.map(plan => {
+              const isSelected = plan.id === activePlanId;
+              return (
                 <Pressable
-                  onPress={loadMorePlans}
-                  disabled={loadingMorePlans}
-                  style={styles.morePlansChip}
+                  key={plan.id}
+                  onPress={() => setSelectedPlanId(plan.id)}
+                  style={[
+                    styles.planChip,
+                    isSelected && styles.planChipSelected,
+                  ]}
                 >
-                  {loadingMorePlans ? (
-                    <ThemedActivityIndicator size="small" />
-                  ) : (
-                    <Text role="label" tone="accent">
-                      {t('addToMealPlan.morePlans')}
-                    </Text>
-                  )}
+                  <Text
+                    role="label"
+                    style={[
+                      styles.planChipText,
+                      isSelected && styles.planChipTextSelected,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {plan.name}
+                  </Text>
+                  <Text
+                    role="caption"
+                    style={[
+                      styles.planChipDate,
+                      isSelected && styles.planChipDateSelected,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {formatMonthDay(parseISO(plan.startDate))} –{' '}
+                    {formatMonthDay(parseISO(plan.endDate))}
+                  </Text>
                 </Pressable>
-              ) : null}
-            </ScrollView>
-          </>
-        ) : null}
+              );
+            })}
+            {hasMorePlans ? (
+              <Pressable
+                onPress={loadMorePlans}
+                disabled={loadingMorePlans}
+                style={styles.morePlansChip}
+              >
+                {loadingMorePlans ? (
+                  <ThemedActivityIndicator size="small" />
+                ) : (
+                  <Text role="label" tone="accent">
+                    {t('addToMealPlan.morePlans')}
+                  </Text>
+                )}
+              </Pressable>
+            ) : null}
+          </ScrollView>
+        </>
+      ) : null}
 
-        {hasPlan ? (
-          <>
-            <SectionHeader variant="overline" style={styles.sectionLabel}>
-              {t('addToMealPlan.dateLabel')}
-            </SectionHeader>
-            <WeekStrip
-              weekDays={calendar.weekDays}
-              selectedDate={calendar.selectedDate}
-              onSelectDate={calendar.selectDate}
-              onPrevWeek={calendar.goToPrevWeek}
-              onNextWeek={calendar.goToNextWeek}
-              canGoPrev={calendar.canGoPrevWeek}
-              canGoNext={calendar.canGoNextWeek}
-              minDate={minDate}
-              maxDate={maxDate}
-            />
+      {hasPlan ? (
+        <>
+          <SectionHeader variant="overline" style={styles.sectionLabel}>
+            {t('addToMealPlan.dateLabel')}
+          </SectionHeader>
+          <WeekStrip
+            weekDays={calendar.weekDays}
+            selectedDate={calendar.selectedDate}
+            onSelectDate={calendar.selectDate}
+            onPrevWeek={calendar.goToPrevWeek}
+            onNextWeek={calendar.goToNextWeek}
+            canGoPrev={calendar.canGoPrevWeek}
+            canGoNext={calendar.canGoNextWeek}
+            minDate={minDate}
+            maxDate={maxDate}
+          />
+          <Text
+            role="bodyStrong"
+            align="center"
+            style={styles.selectedDateLabel}
+          >
+            {formatFullWeekdayMonthDay(calendar.selectedDate)}
+          </Text>
+        </>
+      ) : null}
+
+      <SectionHeader variant="overline" style={styles.sectionLabel}>
+        {t('labels.mealType')}
+      </SectionHeader>
+
+      <View style={styles.mealTypeRow}>
+        {MEAL_TYPE_ORDER.map(type => (
+          <Pressable
+            key={type}
+            onPress={() => setSelectedMealType(type)}
+            style={[
+              styles.mealTypeChip,
+              selectedMealType === type && styles.mealTypeChipSelected,
+            ]}
+          >
             <Text
-              role="bodyStrong"
-              align="center"
-              style={styles.selectedDateLabel}
-            >
-              {formatFullWeekdayMonthDay(calendar.selectedDate)}
-            </Text>
-          </>
-        ) : null}
-
-        <SectionHeader variant="overline" style={styles.sectionLabel}>
-          {t('labels.mealType')}
-        </SectionHeader>
-
-        <View style={styles.mealTypeRow}>
-          {MEAL_TYPE_ORDER.map(type => (
-            <Pressable
-              key={type}
-              onPress={() => setSelectedMealType(type)}
+              role="caption"
               style={[
-                styles.mealTypeChip,
-                selectedMealType === type && styles.mealTypeChipSelected,
+                styles.mealTypeText,
+                selectedMealType === type && styles.mealTypeTextSelected,
               ]}
             >
-              <Text
-                role="caption"
-                style={[
-                  styles.mealTypeText,
-                  selectedMealType === type && styles.mealTypeTextSelected,
-                ]}
-              >
-                {t(MEAL_TYPE_LABEL_KEYS[type])}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </BottomSheetScrollView>
-    </BottomSheetModal>
+              {t(MEAL_TYPE_LABEL_KEYS[type])}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </Sheet>
   );
 };
 

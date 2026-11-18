@@ -227,20 +227,17 @@ query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
     id
     usageAnalytics(filters: $filter) {
       totalUsageCount
-      totalQuantityUsed
-      averageUsagePerDay
+      averageUsageCountPerDay
       periodStart
       periodEnd
       usageByPurpose {
         purpose
         count
-        totalQuantity
         percentage
       }
       usageBySource {
         source
         count
-        totalQuantity
         percentage
       }
       topUsedItems {
@@ -248,12 +245,10 @@ query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
         itemName
         imageUrl
         count
-        totalQuantity
         unitName
       }
       usageTrend {
         date
-        value
         count
       }
     }
@@ -266,12 +261,10 @@ query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
     id
     wasteAnalytics(filters: $filter) {
       totalWasteCount
-      totalWasteQuantity
       valueByCurrency {
         currencyCode
         amount
       }
-      averageWastePerDay
       wasteRate
       composted
       recycled
@@ -280,7 +273,6 @@ query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
       wasteByReason {
         reason
         count
-        totalQuantity
         percentage
       }
       topWastedItems {
@@ -288,7 +280,6 @@ query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
         itemName
         imageUrl
         count
-        totalQuantity
         unitName
         valueByCurrency {
           currencyCode
@@ -297,7 +288,6 @@ query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
       }
       wasteTrend {
         date
-        value
         count
       }
     }
@@ -360,10 +350,9 @@ query GetPantryLedgerAnalytics(
         periodStart
         periodEnd
         periodLabel
-        added
-        consumed
-        wasted
-        net
+        additionCount
+        consumptionCount
+        wasteCount
         # One amount per currency: the server never sums across currencies.
         additionCost {
           amount
@@ -416,7 +405,6 @@ query GetPantryLedgerAnalytics(
         itemId
         itemName
         imageUrl
-        totalQuantity
         unitName
         count
       }
@@ -810,7 +798,7 @@ mutation RestockPantryItem(
         totalCost
         pantryItem {
           id
-          ...useRestockPantryItem_pantryItem
+          ...PantryItemReaders
         }
       }
     }

@@ -92,6 +92,8 @@ export function useTodayOverview() {
     actions: { refetch: refetchPlans },
   } = useMealPlans({ ...standDown, current });
   // The plan covering today, not the one last opened on the Meal Plan tab.
+  // While the server is naming it, its answer brings the plan: a list that
+  // answers first must not read it again.
   const {
     items,
     itemDetails,
@@ -99,11 +101,15 @@ export function useTodayOverview() {
     loading: activePlanLoading,
     error: activePlanError,
     refetch: refetchPlan,
-  } = useMealPlan(currentPlan?.id ?? null, standDown);
+  } = useMealPlan(currentPlan?.id ?? null, {
+    ...standDown,
+    skip: !isFocused || current.waiting,
+  });
   // Meals the device does not hold are not the same as nothing planned.
   const mealsState = useDataState({
     // Before the first answer only: a refetch keeps the meals it shows.
-    loading: plansLoading || (activePlanLoading && !activePlan),
+    loading:
+      plansLoading || current.waiting || (activePlanLoading && !activePlan),
     error: activePlanError,
     hasResult: !!activePlan,
     isEmpty: false,

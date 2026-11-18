@@ -68,6 +68,8 @@ fragment writeHeldStock_readingUnit on Unit {
 # are the stack's own, so a whole package moves these figures with no conversion.
 fragment writeHeldStock_inside on PantryItem {
   id
+  activeBatchCount
+  heldQuantity
   netWeight
   remainingNetWeight
   netWeightUnit {

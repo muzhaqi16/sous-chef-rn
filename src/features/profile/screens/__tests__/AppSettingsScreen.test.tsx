@@ -1,496 +1,232 @@
-'use no memo';
 import React from 'react';
 import {
-  render,
-  screen,
+  act,
   fireEvent,
-  within,
+  screen,
+  userEvent,
 } from '@testing-library/react-native';
-import { AppSettingsScreen } from '../AppSettingsScreen';
-import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
-import { hasFeatureHintBeenShown } from '#hooks/settings/useFeatureHint';
-import { featureHintKey } from '#store/slices/tutorialSlice';
+import {
+  inputOf,
+  recordMock,
+  renderWithApollo,
+  type MockDataFor,
+} from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
 import { useStore } from '#store';
+import { t } from '#/i18n';
+import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
+import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
+import {
+  GetUserSettingsDocument,
+  UpdateUserPreferencesDocument,
+} from '#operations/auth/user.generated';
+import { useReceiptPhotoConsentStore } from '#features/receipts/store/receiptPhotoConsentStore';
 import { profileTestIDs } from '#features/profile/testIDs';
-
-// --- Mocks ---
-
-const mockUpdateAppSetting = jest.fn().mockResolvedValue(true);
-const mockResetToDefaults = jest.fn().mockResolvedValue(true);
-
-// A function, not a const: a const initialised to `undefined` narrows to it, and
-// a case below returns an Error in its place.
-const noError = (): Error | undefined => undefined;
-
-const mockAppSettings = jest.fn(() => ({
-  settings: {
-    preferredUnitSystem: 'METRIC',
-    showTutorials: true,
-    storeMode: false,
-    budgetAndPrices: null,
-  },
-  loading: false,
-  hasLoadedSettings: true,
-  error: noError(),
-  refetch: jest.fn(),
-  updateAppSetting: mockUpdateAppSetting,
-  resetToDefaults: mockResetToDefaults,
-}));
-jest.mock('#features/profile/hooks/useAppSettings', () => ({
-  useAppSettings: () => mockAppSettings(),
-}));
-
-jest.mock('#store/useAppStore', () => {
-  const getState = () => ({
-    hapticFeedbackEnabled: true,
-    setHapticFeedbackEnabled: jest.fn(),
-    showNavigationLabels: true,
-    setShowNavigationLabels: jest.fn(),
-    userConsent: true,
-    setUserConsent: jest.fn(),
-  });
-  type MockState = ReturnType<typeof getState>;
-  return {
-    useAppStore: (selector: (state: MockState) => unknown) =>
-      selector(getState()),
-    useShowNavigationLabels: () => getState().showNavigationLabels,
-    useUserId: () => 'account-a',
-  };
-});
-
-const mockUpdatePreference = jest.fn();
-jest.mock('#hooks/settings/useUserPreferences', () => ({
-  useUserPreferences: () => ({
-    preferences: { showShoppingListImages: true },
-    updatePreference: mockUpdatePreference,
-    resetPreferences: jest.fn(),
-  }),
-}));
-
-jest.mock('#hooks/settings/useFeatureFlag', () => ({
-  useFeatureFlag: jest.fn(() => true),
-}));
-
-jest.mock('#/styles/commonStyles', () => ({
-  commonStyles: {
-    loadingContainer: {},
-    loadingText: {},
-    subtitle: {},
-    chip: {},
-    chipText: {},
-  },
-}));
-
-jest.mock('#components/templates/SubScreen', () => {
-  const { View, Text } = require('react-native');
-  return {
-    SubScreen: ({
-      children,
-      title,
-      testID,
-    }: {
-      children?: React.ReactNode;
-      title?: string;
-      testID?: string;
-    }) => (
-      <View testID={testID}>
-        <Text>{title}</Text>
-        {children}
-      </View>
-    ),
-  };
-});
+import { AppSettingsScreen } from '../AppSettingsScreen';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#components/molecules/SettingSwitch', () => {
-  const { View, Text, Pressable } = require('react-native');
-  return {
-    SettingSwitch: ({
-      title,
-      description,
-      value,
-      onValueChange,
-      testID,
-    }: {
-      title: string;
-      description?: string;
-      value: boolean;
-      onValueChange: (value: boolean) => void;
-      testID?: string;
-    }) => (
-      <View testID={testID || `switch-${title}`}>
-        <Text>{title}</Text>
-        {description ? <Text>{description}</Text> : null}
-        <Pressable
-          testID={`toggle-${title}`}
-          onPress={() => onValueChange(!value)}
-        >
-          <Text>{value ? 'ON' : 'OFF'}</Text>
-        </Pressable>
-      </View>
-    ),
-  };
-});
+const ME = 'user-1';
 
-jest.mock('#components/organisms/SettingsSection', () => {
-  const { View, Text } = require('react-native');
-  return {
-    SettingsSection: ({
-      title,
-      children,
-    }: {
-      title: string;
-      children?: React.ReactNode;
-    }) => (
-      <View testID={`section-${title}`}>
-        <Text>{title}</Text>
-        {children}
-      </View>
-    ),
-  };
-});
+let log = operationLog();
 
-// Stands in for the tray so the OPTIONS are reachable without driving gorhom's
-// present/animate cycle. The seam is the screen's contract with ModalPicker —
-// `visible` in, `onSelect` out — which is the part this screen owns.
-jest.mock('#components/molecules/ModalPicker', () => {
-  const { View, Text, Pressable } = require('react-native');
-  return {
-    ModalPicker: ({
-      visible,
-      options,
-      selected,
-      onSelect,
-    }: {
-      visible: boolean;
-      options: { label: string; value: string }[];
-      selected: string;
-      onSelect: (value: string) => void;
-    }) =>
-      visible ? (
-        <View testID="modal-picker">
-          <Text testID="modal-picker-selected">{selected}</Text>
-          {options.map(opt => (
-            <Pressable
-              key={opt.value}
-              testID={`modal-picker-option-${opt.value}`}
-              onPress={() => onSelect(opt.value)}
-            >
-              <Text>{opt.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null,
-  };
-});
+type Settings = NonNullable<
+  NonNullable<MockDataFor<typeof GetUserSettingsDocument>['me']>['settings']
+>;
 
-describe('AppSettingsScreen', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+const SETTINGS: Settings = {
+  __typename: 'UserSettings',
+  id: 'settings-1',
+  theme: AppTheme.System,
+  compactMode: false,
+  showTutorials: false,
+  shareUsageData: true,
+  shareWithPartners: false,
+  personalizedAds: false,
+  preferredUnitSystem: UnitSystem.Imperial,
+  deviceUnitSystem: UnitSystem.Imperial,
+  language: 'en',
+  timezone: 'UTC',
+  preferredCurrency: 'USD',
+  storeMode: false,
+  budgetAndPrices: true,
+};
+
+async function openSettings({
+  readFails = false,
+  answers = [],
+}: { readFails?: boolean; answers?: ReturnType<typeof recordMock>[] } = {}) {
+  renderWithApollo(<AppSettingsScreen />, {
+    links: [log.link],
+    operationMocks: [
+      ...answers.map(each => each.mock),
+      ...(readFails
+        ? [
+            recordMock(GetUserSettingsDocument, {
+              error: new Error('Network request failed'),
+              maxUsageCount: 1,
+            }).mock,
+          ]
+        : []),
+      recordMock(GetUserSettingsDocument, {
+        data: { me: { __typename: 'User', id: ME, settings: SETTINGS } },
+      }).mock,
+    ],
   });
+  await log.landed(GetUserSettingsDocument);
+}
 
-  it('shows only the data state when the settings query has nothing', () => {
-    mockAppSettings.mockReturnValueOnce({
-      settings: {
-        preferredUnitSystem: 'METRIC',
-        showTutorials: true,
-        storeMode: false,
-        budgetAndPrices: null,
-      },
-      loading: false,
-      hasLoadedSettings: false,
-      error: new Error('offline'),
-      refetch: jest.fn(),
-      updateAppSetting: mockUpdateAppSetting,
-      resetToDefaults: mockResetToDefaults,
-    });
+const saved = () => recordMock(UpdateUserPreferencesDocument, { held: true });
 
-    render(<AppSettingsScreen />);
+const flip = (testID: string, value: boolean) => {
+  fireEvent(screen.getByTestId(testID), 'valueChange', value);
+};
+
+/** Presses a button of the last alert raised. */
+async function answerAlert(text: string) {
+  const [, , buttons] = jest.mocked(alertService.alert).mock.lastCall ?? [];
+  const onPress = buttons?.find(button => button.text === text)?.onPress;
+  if (!onPress) throw new Error(`no "${text}" in the last alert`);
+  await act(async () => {
+    onPress();
+  });
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  log = operationLog();
+  useReceiptPhotoConsentStore.setState({ consent: null });
+  useStore.setState({
+    user: {
+      id: ME,
+      email: 'cook@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    hapticFeedbackEnabled: true,
+    showNavigationLabels: true,
+    userConsent: null,
+    isOnline: true,
+    apiReachable: true,
+  });
+});
+
+describe('app settings', () => {
+  it('offers to read them again when they could not be read', async () => {
+    await openSettings({ readFails: true });
 
     expect(screen.getByTestId(profileTestIDs.settingsState)).toBeTruthy();
-    expect(
-      screen.queryByTestId(profileTestIDs.settingsShowTutorialsSwitch),
-    ).toBeNull();
-  });
-
-  it('offers no offline or sync setting', () => {
-    render(<AppSettingsScreen />);
-
-    expect(screen.queryByText('Sync & Offline')).toBeNull();
-    expect(screen.queryByText('Offline Mode')).toBeNull();
-    expect(screen.queryByText('Auto Sync')).toBeNull();
-  });
-
-  it('renders the settings screen', () => {
-    render(<AppSettingsScreen />);
-    expect(screen.getByTestId('settings-screen')).toBeTruthy();
-  });
-
-  // Kept with the account, so every device shows the same switch.
-  it('turns store mode on for the account', () => {
-    render(<AppSettingsScreen />);
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+    await log.landed(GetUserSettingsDocument, 2);
 
     expect(
-      screen.getByTestId(profileTestIDs.settingsStoreModeSwitch),
+      screen.getByTestId(profileTestIDs.settingsUnitSystemPicker),
     ).toBeTruthy();
-    fireEvent.press(screen.getByTestId('toggle-Store mode'));
-
-    expect(mockUpdateAppSetting).toHaveBeenCalledWith('storeMode', true);
   });
 
-  it('offers no store mode switch where the build leaves it out', () => {
-    jest.mocked(useFeatureFlag).mockReturnValue(false);
-    render(<AppSettingsScreen />);
+  it('names the unit system chosen, and saves another picked', async () => {
+    const update = saved();
+    await openSettings({ answers: [update] });
+    const picker = screen.getByTestId(profileTestIDs.settingsUnitSystemPicker);
+    expect(picker.props.accessibilityValue).toEqual({
+      text: t('settings.unitImperial'),
+    });
+    const user = userEvent.setup();
+
+    await user.press(picker);
+    await user.press(screen.getByText(t('settings.unitMetric')));
+    await log.requested(UpdateUserPreferencesDocument);
+
+    expect(inputOf(update.fired[0] ?? {})).toMatchObject({
+      regional: { preferredUnitSystem: UnitSystem.Metric },
+    });
+  });
+
+  it.each([
+    [
+      profileTestIDs.settingsShowTutorialsSwitch,
+      { ui: { showTutorials: true } },
+    ],
+    [profileTestIDs.settingsStoreModeSwitch, { shopping: { storeMode: true } }],
+  ])('saves the switch %s', async (testID, sent) => {
+    const update = saved();
+    await openSettings({ answers: [update] });
+
+    flip(testID, true);
+    await log.requested(UpdateUserPreferencesDocument);
+
+    expect(inputOf(update.fired[0] ?? {})).toMatchObject(sent);
+  });
+
+  it('keeps the device switches on the device', async () => {
+    await openSettings();
+
+    flip(profileTestIDs.settingsHapticFeedbackSwitch, false);
+    flip(profileTestIDs.settingsNavigationLabelsSwitch, false);
+    flip(profileTestIDs.settingsShowShoppingListImagesSwitch, false);
+    flip(profileTestIDs.settingsShareUsageDataSwitch, false);
+    flip(profileTestIDs.settingsReceiptPhotosSwitch, false);
+
+    const state = useStore.getState();
+    expect(state.hapticFeedbackEnabled).toBe(false);
+    expect(state.showNavigationLabels).toBe(false);
+    expect(state.userConsent).toBe(false);
+    expect(useReceiptPhotoConsentStore.getState().consent).toBe('declined');
+    expect(
+      screen.getByTestId(profileTestIDs.settingsShowShoppingListImagesSwitch)
+        .props.value,
+    ).toBe(false);
+  });
+
+  it('reads usage sharing as on before it is chosen', async () => {
+    await openSettings();
 
     expect(
-      screen.queryByTestId(profileTestIDs.settingsStoreModeSwitch),
-    ).toBeNull();
-    jest.mocked(useFeatureFlag).mockReturnValue(true);
+      screen.getByTestId(profileTestIDs.settingsShareUsageDataSwitch).props
+        .value,
+    ).toBe(true);
   });
 
-  // Off until answered; turning it on by hand shows prices at once.
-  it('turns budget and prices on for the account', () => {
-    render(<AppSettingsScreen />);
+  it('replays the tips, turning them on, and says so', async () => {
+    const update = saved();
+    await openSettings({ answers: [update] });
 
-    expect(
-      screen.getByTestId(profileTestIDs.settingsBudgetAndPricesSwitch),
-    ).toBeTruthy();
-    fireEvent.press(screen.getByTestId('toggle-Budget & prices'));
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(profileTestIDs.settingsReplayTips));
+    await log.requested(UpdateUserPreferencesDocument);
 
-    expect(mockUpdateAppSetting).toHaveBeenCalledWith('budgetAndPrices', true);
-  });
-
-  it('offers no budget and prices switch where the build leaves it out', () => {
-    jest.mocked(useFeatureFlag).mockReturnValue(false);
-    render(<AppSettingsScreen />);
-
-    expect(
-      screen.queryByTestId(profileTestIDs.settingsBudgetAndPricesSwitch),
-    ).toBeNull();
-    jest.mocked(useFeatureFlag).mockReturnValue(true);
-  });
-
-  it('renders the screen title', () => {
-    render(<AppSettingsScreen />);
-    expect(screen.getByText('App Settings')).toBeTruthy();
-  });
-
-  it('renders Units & Measurements section', () => {
-    render(<AppSettingsScreen />);
-    expect(screen.getByText('Units & Measurements')).toBeTruthy();
-  });
-
-  it('renders Features section', () => {
-    render(<AppSettingsScreen />);
-    expect(screen.getByText('Features')).toBeTruthy();
-  });
-
-  it('keeps store mode and budget and prices together under Shopping', () => {
-    render(<AppSettingsScreen />);
-
-    const shopping = within(screen.getByTestId('section-Shopping'));
-    expect(
-      shopping.getByTestId(profileTestIDs.settingsStoreModeSwitch),
-    ).toBeTruthy();
-    expect(
-      shopping.getByTestId(profileTestIDs.settingsBudgetAndPricesSwitch),
-    ).toBeTruthy();
-
-    const experience = within(screen.getByTestId('section-Experience'));
-    expect(
-      experience.getByTestId(profileTestIDs.settingsHapticFeedbackSwitch),
-    ).toBeTruthy();
-    expect(
-      experience.queryByTestId(profileTestIDs.settingsStoreModeSwitch),
-    ).toBeNull();
-    expect(
-      experience.queryByTestId(profileTestIDs.settingsBudgetAndPricesSwitch),
-    ).toBeNull();
-  });
-
-  it('shows no Shopping section where the build offers neither switch', () => {
-    jest.mocked(useFeatureFlag).mockReturnValue(false);
-    render(<AppSettingsScreen />);
-
-    expect(screen.queryByTestId('section-Shopping')).toBeNull();
-    jest.mocked(useFeatureFlag).mockReturnValue(true);
-  });
-
-  it('renders Experience section with haptic feedback toggle', () => {
-    render(<AppSettingsScreen />);
-    expect(screen.getByText('Experience')).toBeTruthy();
-    expect(screen.getByText('Haptic Feedback')).toBeTruthy();
-  });
-
-  it('renders Navigation Labels toggle', () => {
-    render(<AppSettingsScreen />);
-    expect(screen.getByText('Navigation Labels')).toBeTruthy();
-  });
-
-  it('renders Share Usage Data toggle', () => {
-    render(<AppSettingsScreen />);
-    expect(screen.getByText('Share Usage Data')).toBeTruthy();
-  });
-
-  it('renders Reset section', () => {
-    render(<AppSettingsScreen />);
-    expect(screen.getByText('Reset')).toBeTruthy();
-    expect(screen.getByText('Reset to Defaults')).toBeTruthy();
-  });
-
-  it('renders the unit system picker closed, and opens it on press', () => {
-    render(<AppSettingsScreen />);
-    expect(screen.queryByTestId('modal-picker')).toBeNull();
-
-    fireEvent.press(screen.getByTestId('settings-unit-system-picker'));
-
-    expect(screen.getByTestId('modal-picker')).toBeTruthy();
-    // The tray opens on the current value, not on a default.
-    expect(screen.getByTestId('modal-picker-selected')).toHaveTextContent(
-      'METRIC',
+    expect(inputOf(update.fired[0] ?? {})).toMatchObject({
+      ui: { showTutorials: true },
+    });
+    expect(toastService.success).toHaveBeenCalledWith(
+      t('settings.replayTipsDone'),
     );
   });
 
-  it('writes the selected unit system through and closes the picker', () => {
-    render(<AppSettingsScreen />);
-    fireEvent.press(screen.getByTestId('settings-unit-system-picker'));
+  it('resets to defaults once confirmed, and says so', async () => {
+    const update = recordMock(UpdateUserPreferencesDocument, {
+      data: {
+        updateSettings: {
+          __typename: 'UpdateSettingsPayload',
+          userSettings: SETTINGS,
+        },
+      },
+    });
+    await openSettings({ answers: [update] });
 
-    fireEvent.press(screen.getByTestId('modal-picker-option-IMPERIAL'));
+    // The reset is the last switch, and has no id of its own.
+    const reset = screen.getAllByRole('switch').at(-1);
+    if (!reset) throw new Error('no reset switch');
+    fireEvent(reset, 'valueChange', true);
+    await answerAlert(t('settings.resetSection'));
+    await log.landed(UpdateUserPreferencesDocument);
+    await act(async () => undefined);
 
-    expect(mockUpdateAppSetting).toHaveBeenCalledWith(
-      'preferredUnitSystem',
-      'IMPERIAL',
+    expect(update.fired).toHaveLength(1);
+    expect(toastService.success).toHaveBeenCalledWith(
+      t('settings.resetSuccess'),
     );
-    expect(screen.queryByTestId('modal-picker')).toBeNull();
-  });
-});
-
-/**
- * The gate is `loading && !hasLoadedSettings`, not `loading`. Under
- * `cache-and-network` Apollo reports `loading: true` for the whole network leg
- * on EVERY mount — `nextFetchPolicy` lives on the ObservableQuery and useQuery
- * builds a new one each time — so gating on `loading` alone blanked this screen
- * on every visit for as long as the request took, which against a stalled API
- * is the 10s httpLink abort deadline.
- */
-describe('AppSettingsScreen - Replay tips', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    useStore.setState({
-      featureHintsShown: {
-        [featureHintKey('account-a', 'first_shop')]: true,
-        [featureHintKey('account-b', 'first_shop')]: true,
-      },
-      lastUnpromptedTipAt: { 'account-a': 1, 'account-b': 1 },
-    });
-  });
-
-  it('Two accounts on one phone: brings back only this account’s tips', () => {
-    render(<AppSettingsScreen />);
-
-    fireEvent.press(screen.getByTestId(profileTestIDs.settingsReplayTips));
-
-    expect(hasFeatureHintBeenShown('first_shop', 'account-a')).toBe(false);
-    expect(hasFeatureHintBeenShown('first_shop', 'account-b')).toBe(true);
-    expect(useStore.getState().lastUnpromptedTipAt).toEqual({
-      'account-b': 1,
-    });
-  });
-
-  it('turns tips back on for the account when they are off', () => {
-    mockAppSettings.mockReturnValueOnce({
-      settings: {
-        preferredUnitSystem: 'METRIC',
-        showTutorials: false,
-        storeMode: false,
-        budgetAndPrices: null,
-      },
-      loading: false,
-      hasLoadedSettings: true,
-      error: noError(),
-      refetch: jest.fn(),
-      updateAppSetting: mockUpdateAppSetting,
-      resetToDefaults: mockResetToDefaults,
-    });
-    render(<AppSettingsScreen />);
-
-    fireEvent.press(screen.getByTestId(profileTestIDs.settingsReplayTips));
-
-    expect(mockUpdateAppSetting).toHaveBeenCalledWith('showTutorials', true);
-  });
-
-  it('leaves the switch alone when tips are already on', () => {
-    render(<AppSettingsScreen />);
-
-    fireEvent.press(screen.getByTestId(profileTestIDs.settingsReplayTips));
-
-    expect(mockUpdateAppSetting).not.toHaveBeenCalled();
-  });
-});
-
-describe('AppSettingsScreen - loading state', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest
-      .spyOn(
-        require('#features/profile/hooks/useAppSettings'),
-        'useAppSettings',
-      )
-      .mockReturnValue({
-        settings: {
-          preferredUnitSystem: 'METRIC',
-          showTutorials: true,
-          storeMode: false,
-          budgetAndPrices: null,
-        },
-        loading: true,
-        hasLoadedSettings: false,
-        error: undefined,
-        refetch: jest.fn(),
-        updateAppSetting: mockUpdateAppSetting,
-        resetToDefaults: mockResetToDefaults,
-      });
-  });
-
-  it('shows loading text when nothing has been loaded yet', () => {
-    render(<AppSettingsScreen />);
-    expect(screen.getByTestId('settings-state')).toBeTruthy();
-  });
-
-  it('keeps the header and back button while it waits', () => {
-    render(<AppSettingsScreen />);
-    // A loading branch that returns a bare View leaves the user on a blank
-    // screen with no way off it while a request stalls.
-    expect(screen.getByTestId('settings-screen')).toBeTruthy();
-    expect(screen.getByText('App Settings')).toBeTruthy();
-  });
-
-  it('renders the settings while a background refresh is in flight', () => {
-    jest
-      .spyOn(
-        require('#features/profile/hooks/useAppSettings'),
-        'useAppSettings',
-      )
-      .mockReturnValue({
-        settings: {
-          preferredUnitSystem: 'METRIC',
-          showTutorials: true,
-          storeMode: false,
-          budgetAndPrices: null,
-        },
-        loading: true,
-        hasLoadedSettings: true,
-        updateAppSetting: mockUpdateAppSetting,
-        resetToDefaults: mockResetToDefaults,
-      });
-
-    render(<AppSettingsScreen />);
-
-    expect(screen.queryByText('Loading settings...')).toBeNull();
-    expect(screen.getByTestId('settings-screen')).toBeTruthy();
-    expect(
-      screen.getByTestId(profileTestIDs.settingsShowTutorialsSwitch),
-    ).toBeTruthy();
   });
 });

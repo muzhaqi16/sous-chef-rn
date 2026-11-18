@@ -5,6 +5,7 @@ import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { ChartSection } from '#features/pantry/components/analytics/ChartSection';
 import { BreakdownPieChart } from '#features/pantry/components/charts/BreakdownPieChart';
 import {
+  totalsByItem,
   AnalyticsSummaryCard,
   OfflineTabState,
   TopItemsBarChart,
@@ -45,11 +46,12 @@ export const UsageTab: React.FC<
       value: item.count,
       percentage: item.percentage,
     })) ?? [];
-  const topUsedItemsData =
-    usageData?.topUsedItems.map(item => ({
+  const topUsedItemsData = totalsByItem(usageData?.topUsedItems ?? []).map(
+    item => ({
       label: item.itemName,
       value: item.count,
-    })) ?? [];
+    }),
+  );
 
   if (usageOffline) {
     return <OfflineTabState refreshing={refreshing} onRefresh={onRefresh} />;
@@ -76,7 +78,7 @@ export const UsageTab: React.FC<
         />
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.avgPerDay')}
-          value={(usageData?.averageUsagePerDay ?? 0).toFixed(1)}
+          value={(usageData?.averageUsageCountPerDay ?? 0).toFixed(1)}
           icon="time-outline"
           subtitle={t('pantryAnalytics.itemsPerDay')}
         />

@@ -103,7 +103,8 @@ const isDegraded = (page: { catalogAvailable: boolean } | undefined): boolean =>
  * time. Not `enabled`, only the ingredient picker's pantry watch runs.
  */
 export function useCatalogDiscovery(
-  diet: DiscoveryDiet,
+  /** Null until the person's dietary profile has answered. */
+  diet: DiscoveryDiet | null,
   { enabled = true }: { enabled?: boolean } = {},
 ): CatalogDiscoveryResult {
   // From the cache: `useDefaultHome` owns the homes fetch.
@@ -134,7 +135,13 @@ export function useCatalogDiscovery(
   // A pantry that has answered keeps its items through a refetch or a next
   // page, so only one that never has holds discovery back.
   const pantryPending = pantryLoading && !pantryHasResult;
-  const mode = modeOf(enabled && !pantryPending, ingredients.length);
+  // Random ideas are screened by the person's diet, so they wait for it: read
+  // before the profile answers, they would be recipes the person avoids.
+  const dietPending = diet === null && ingredients.length === 0;
+  const mode = modeOf(
+    enabled && !pantryPending && !dietPending,
+    ingredients.length,
+  );
 
   const pantryVariables =
     mode === 'pantry' ? { ingredients, first: DISCOVERY_FETCH_SIZE } : null;
@@ -155,7 +162,7 @@ export function useCatalogDiscovery(
   );
 
   const randomVariables =
-    mode === 'random'
+    mode === 'random' && diet
       ? {
           diets: diet.diets,
           intolerances: diet.intolerances,
@@ -222,7 +229,9 @@ export function useCatalogDiscovery(
   const activeError = mode === 'pantry' ? byIngredients.error : random.error;
   const loading =
     enabled &&
-    (pantryPending || (mode !== 'none' && active.loading && !active.data));
+    (pantryPending ||
+      dietPending ||
+      (mode !== 'none' && active.loading && !active.data));
   const failed =
     mode !== 'none' &&
     !loading &&

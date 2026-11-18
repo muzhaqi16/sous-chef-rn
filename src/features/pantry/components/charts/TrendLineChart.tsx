@@ -22,7 +22,8 @@ const axisFont = matchFont({
 });
 
 interface TrendLineChartProps {
-  data: TimeSeriesDataPoint[];
+  /** One point per day: how many rows it holds. */
+  data: readonly Pick<TimeSeriesDataPoint, 'date' | 'count'>[];
   height?: number;
   showArea?: boolean;
   color?: string;

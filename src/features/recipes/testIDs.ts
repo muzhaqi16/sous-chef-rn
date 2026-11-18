@@ -39,6 +39,11 @@ export const recipesTestIDs = {
   recipeDetail: 'recipe-detail',
   recipeDetailSkeleton: 'recipe-detail-skeleton',
   mealPlanButton: 'recipe-mealplan-button',
+  /** The detail's cook entry, and the sheets a cook goes through. */
+  markCookedButton: 'recipe-mark-cooked-button',
+  cookServings: 'recipe-cook-servings',
+  cookConfirm: 'recipe-cook-confirm',
+  cookReviewConfirm: 'recipe-cook-review-confirm',
   editButton: 'recipe-edit-button',
   publishButton: 'recipe-publish-button',
   forkButton: 'recipe-fork-button',

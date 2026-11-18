@@ -207,7 +207,6 @@ describe('reconcileReplaySuccess — a queued pantry create joining a held stack
   const answer = (id: string) => ({
     createPantryItem: {
       __typename: 'CreatePantryItemPayload',
-      outcome: id === 'minted-1' ? 'CREATED' : 'MERGED',
       pantryItem: { __typename: 'PantryItem', id, version: 4 },
     },
   });

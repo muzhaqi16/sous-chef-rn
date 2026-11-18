@@ -1,1448 +1,556 @@
-'use no memo';
-
 import React from 'react';
-import type { TextInputProps } from 'react-native';
+import { gql, type InMemoryCache } from '@apollo/client';
 import { fireEvent, screen, userEvent } from '@testing-library/react-native';
-import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
 import {
+  inputOf,
   recordMock,
   renderWithApollo,
-  seedFragment,
+  seedQuery,
+  type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
-import { ShoppingListItem_ListedFragmentDoc } from '#features/shoppingList/cache/shoppingListItemListed.generated';
+import { operationLog } from '#/test-utils/operationLog';
+import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
+import {
+  HELD_UNITS,
+  LITER,
+  catalogSearches,
+} from '#/test-utils/fixtures/catalogSearches';
 import { useStore } from '#store';
-import { drainTimers } from '#/test-utils/drainTimers';
-import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
-import type { AlertButton } from '#platform/presenters';
-import { DisplayFormat, ErrorCode } from '#/graphql/generated/schemaTypes';
-import { AddEditItem } from '../AddEditItem';
-import type { ShoppingItemFormData } from '#features/shoppingList/hooks/shoppingItemFormConfig';
+import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+import { ErrorCode, UnitSystem } from '#/graphql/generated/schemaTypes';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 import {
   AddItemToShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ShoppingListItemForEditDocument } from '#features/shoppingList/hooks/useShoppingListItemWrites.generated';
-import type { AddedShoppingListItemFieldsFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { t } from '#/i18n';
-import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+import {
+  AutocompleteItemsDocument,
+  SearchBrandsDocument,
+} from '#operations/item/item.generated';
+import { SearchUnitsDocument } from '#operations/item/unit.generated';
+import { SearchStoresDocument } from '#operations/store/store.generated';
+import { AddEditItem } from '../AddEditItem';
 
-jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
-  useBudgetAndPricesEnabled: jest.fn(() => true),
-}));
-
+jest.mock('#hooks/navigation/useAppNavigation');
+// The keypad's decimal separator is the device's.
 jest.mock('#/utils/deviceLocale', () => ({
   ...jest.requireActual('#/utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
 
-jest.mock('#hooks/navigation/useAppNavigation');
 const mockNav = jest
   .requireMock('#hooks/navigation/useAppNavigation')
   .useAppNavigation();
 
-// Delegates to the REAL hook, recording writes on the way through.
-//
-// Not a hand-rolled stub: the screen renders its fields through
-// `Controller control={control}` and react-hook-form's `control` is not
-// something a plain object can stand in for. Delegating also means these tests
-// exercise the real yup schema, which is what gates Save — a stub would let an
-// invalid form submit.
-const mockSetFieldValue = jest.fn();
-jest.mock('#features/shoppingList/hooks/useShoppingListItemForm', () => ({
-  useShoppingListItemForm: (
-    ...args: Parameters<
-      typeof import('#features/shoppingList/hooks/useShoppingListItemForm').useShoppingListItemForm
-    >
-  ) => {
-    const actual = jest
-      .requireActual('#features/shoppingList/hooks/useShoppingListItemForm')
-      .useShoppingListItemForm(...args);
-    const RN = require('react');
-    // Stable identity: AddEditItem lists `setFieldValue` in an effect's deps,
-    // and a fresh function each render turns that effect into a render loop.
-    const setFieldValue = RN.useCallback((field: string, value: unknown) => {
-      mockSetFieldValue(field, value);
-      actual.setFieldValue(field, value);
-    }, []);
-    return { ...actual, setFieldValue };
-  },
-}));
+const ADD = shoppingListTestIDs.addItemForm;
+const EDIT = shoppingListTestIDs.editItemForm;
 
-jest.mock('#features/shoppingList/cache/connections', () => ({
-  addNewItemToShoppingListCache: jest.fn(),
-}));
+type Line = NonNullable<
+  MockDataFor<typeof ShoppingListItemForEditDocument>['shoppingListItem']
+>;
 
-jest.mock('#features/shoppingList/cache/items', () => ({
-  addLocalShoppingListItem: jest.fn(),
-  createLocalShoppingListItem: jest.fn((id: string) => ({ id })),
-}));
-jest.mock('#/services/errorService');
-jest.mock('#/utils/finallyHelpers');
-
-jest.mock('#components/templates/FormScreen', () => ({
-  FormScreen: ({
-    title,
-    children,
-    onClose,
-    onSave,
-    testID,
-    submitButtonTestID,
-  }: {
-    title?: string;
-    children?: React.ReactNode;
-    onClose?: () => void;
-    onSave?: () => void;
-    testID?: string;
-    submitButtonTestID?: string;
-  }) => {
-    const { View, Text, Pressable } = require('react-native');
-    return (
-      <View testID={testID}>
-        <Text>{title}</Text>
-        {children}
-        <Pressable testID={submitButtonTestID} onPress={onSave}>
-          <Text>Submit</Text>
-        </Pressable>
-        <Pressable testID="close-button" onPress={onClose}>
-          <Text>Close</Text>
-        </Pressable>
-      </View>
-    );
-  },
-}));
-jest.mock('#components/molecules/BaseInput/BaseInput', () => ({
-  BaseInput: ({
-    label,
-    testID,
-    ...props
-  }: TextInputProps & { label?: string }) => {
-    const { View, Text, TextInput } = require('react-native');
-    return (
-      <View>
-        <Text>{label}</Text>
-        <TextInput testID={testID} {...props} />
-      </View>
-    );
-  },
-}));
-jest.mock('#features/catalog/ui/autocomplete/ItemAutocompleteField', () => ({
-  ItemAutocompleteField: ({
-    label,
-    testID,
-    error,
-  }: {
-    label?: string;
-    testID?: string;
-    error?: string;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID={testID}>
-        <Text>{label}</Text>
-        {error ? <Text>{error}</Text> : null}
-      </View>
-    );
-  },
-}));
-jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
-  // Renders the current `value` and offers a "pick" button that reproduces
-  // the real component's call ORDER: it writes the SYMBOL through
-  // `onChangeText` first, then reports the selection. A handler that writes
-  // the unit's `name` back in `onUnitSelected` therefore overwrites the
-  // symbol, which is the bug this stub exists to expose.
-  UnitAutocompleteField: ({
-    label,
-    testID,
-    value,
-    error,
-    onChangeText,
-    onUnitSelected,
-  }: {
-    label?: string;
-    testID?: string;
-    value?: string;
-    error?: string;
-    onChangeText?: (text: string) => void;
-    onUnitSelected?: (
-      id: string | null,
-      name: string | null,
-      type?: string | null,
-      symbol?: string | null,
-    ) => void;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID={testID}>
-        <Text>{label}</Text>
-        <Text testID={`${testID}-value`}>{value}</Text>
-        {error ? <Text>{error}</Text> : null}
-        <Text
-          testID={`${testID}-pick`}
-          onPress={() => {
-            onChangeText?.('g');
-            onUnitSelected?.('unit-g', 'gram', 'WEIGHT', 'g');
-          }}
-        >
-          pick
-        </Text>
-      </View>
-    );
-  },
-}));
-jest.mock('#features/catalog/ui/autocomplete/BrandAutocompleteField', () => ({
-  BrandAutocompleteField: ({
-    label,
-    testID,
-  }: {
-    label?: string;
-    testID?: string;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID={testID}>
-        <Text>{label}</Text>
-      </View>
-    );
-  },
-}));
-jest.mock(
-  '#features/catalog/ui/autocomplete/CategoryAutocompleteField',
-  () => ({
-    CategoryAutocompleteField: ({ label }: { label?: string }) => {
-      const { View, Text } = require('react-native');
-      return (
-        <View>
-          <Text>{label}</Text>
-        </View>
-      );
-    },
-  }),
-);
-// The stub unless a test switches the real counter on to press its steppers.
-const mockRealCounter = { current: false };
-jest.mock('#components/molecules/EditableCounter', () => {
-  const Real = jest.requireActual(
-    '#components/molecules/EditableCounter',
-  ).EditableCounter;
-  return {
-    // Renders `error` — validation now reports on the field, so a test asserting
-    // a refusal has to be able to see it. The real component paints it as a red
-    // border plus this message.
-    EditableCounter: (props: {
-      label?: string;
-      testID?: string;
-      error?: string;
-    }) => {
-      if (mockRealCounter.current) return <Real {...props} />;
-      const { View, Text } = require('react-native');
-      return (
-        <View testID={props.testID}>
-          <Text>{props.label}</Text>
-          {props.error ? <Text>{props.error}</Text> : null}
-        </View>
-      );
-    },
-  };
-});
-jest.mock('#components/atoms/FieldRow', () => ({
-  FieldRow: ({ children }: { children?: React.ReactNode }) => {
-    const { View } = require('react-native');
-    return <View>{children}</View>;
-  },
-}));
-
-/**
- * The three operations this screen fires return three different shapes, so
- * there are three fixtures.
- *
- * There was one, stating the union of all three plus `purchasesConnection`,
- * which none of them selects. A fixture is executed against the real schema, so
- * every field the operation does not select is dropped before the result
- * reaches Apollo: the add mock was describing `priority`, `addedBy` and a
- * purchase connection that its response could never carry, and each test read
- * as though it had asserted on them.
- *
- * What each one may state:
- *   add    — `AddedShoppingListItemFields`
- *   update — the same, plus the brand / net-weight fields `UpdateShoppingListItem`
- *            selects inline beside the fragment
- *   get    — `ItemDetail_shoppingListItem` + `useShoppingListItemForm_item`,
- *            which carry the detail fields but NOT `sortOrder`
- *
- * `useFragment` still reports `complete: true` for the form's populate effect:
- * the schema-backed mock link fills whatever a fixture leaves out, so a fixture
- * states what the test asserts on rather than the whole selection.
- */
-const SHOPPING_LIST_ITEM_CORE: MockPart<AddedShoppingListItemFieldsFragment> = {
+/** One litre of milk, as the edit form reads it. */
+const MILK: Line = {
+  __typename: 'ShoppingListItem',
+  id: 'item1',
   itemName: 'Milk',
   quantity: 1,
   quantityInput: '1',
-  displayFormat: DisplayFormat.Auto,
-  purchaseInfo: {
-    isPurchased: false,
-  },
-  version: 1,
-  updatedAt: '2025-01-01T00:00:00.000Z',
-  category: null,
+  unitName: 'L',
   notes: null,
-  unitName: null,
-  unit: null,
-  item: null,
+  category: null,
+  priority: 0,
+  version: 4,
+  unit: { __typename: 'Unit', id: 'unit-l' },
+  priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+  storeInfo: { __typename: 'ShoppingListItemStoreInfo', preferredStore: null },
+  brand: null,
+  netWeight: null,
+  netWeightUnit: null,
 };
 
-/** The shape `AddItemToShoppingList` returns on `results.item`. */
-function buildAddedShoppingListItem(id: string) {
-  return { ...SHOPPING_LIST_ITEM_CORE, id, sortOrder: 0 };
-}
+type Suggestion = NonNullable<
+  MockDataFor<typeof AutocompleteItemsDocument>['autocompleteItems']
+>['suggestions'];
 
-/** The added shape plus what `UpdateShoppingListItem` selects beside it. */
-function buildUpdatedShoppingListItem(id: string) {
-  return {
-    ...buildAddedShoppingListItem(id),
-    brand: null,
-    netWeight: null,
-    netWeightUnit: null,
-  };
-}
-
-/** The line the edit form opens on: exactly what its query selects. */
-function buildItemForEdit(id: string) {
-  return {
-    id,
-    itemName: SHOPPING_LIST_ITEM_CORE.itemName,
-    quantity: SHOPPING_LIST_ITEM_CORE.quantity,
-    quantityInput: SHOPPING_LIST_ITEM_CORE.quantityInput,
-    unitName: null,
-    notes: null,
-    category: null,
-    priority: 0,
-    version: 1,
-    unit: null,
-    priceEstimate: { estimated: null },
-    storeInfo: { preferredStore: null },
-    brand: null,
-    netWeight: null,
-    netWeightUnit: null,
-  };
-}
-
-function buildAddItemMock(): MockFor<typeof AddItemToShoppingListDocument> {
-  return {
-    request: { query: AddItemToShoppingListDocument, variables: () => true },
-    result: {
-      data: {
-        addItemsToShoppingList: {
-          __typename: 'AddItemsToShoppingListPayload',
-          results: [
-            {
-              index: 0,
-              clientId: null,
-              success: true,
-              failure: null,
-              item: buildAddedShoppingListItem('new-item'),
-            },
-          ],
-        },
-      },
+/** What the catalog finds for any search. */
+const catalogRead = (suggestions: Suggestion = []) =>
+  recordMock(AutocompleteItemsDocument, {
+    data: {
+      autocompleteItems: { __typename: 'AutocompleteResult', suggestions },
     },
-    maxUsageCount: 10,
-  };
+  });
+
+let log = operationLog();
+
+interface Open {
+  /** The line an edit opens; none opens the add form. */
+  line?: Line;
+  answers?: ReturnType<typeof recordMock>[];
+  initialItemName?: string;
 }
 
-function buildAddItemRefusedMock(): MockFor<
-  typeof AddItemToShoppingListDocument
-> {
-  return {
-    request: { query: AddItemToShoppingListDocument, variables: () => true },
-    result: {
-      data: {
-        addItemsToShoppingList: {
-          __typename: 'ForbiddenError',
-          code: ErrorCode.Forbidden,
-          message: 'No item',
-        },
-      },
+/** The form as the list opens it, its user's settings held. */
+function renderForm({ line, answers = [], initialItemName }: Open = {}) {
+  const cache = makeCache();
+  writeUnitSystemSettings(cache, UnitSystem.Metric, UnitSystem.Metric);
+  renderWithApollo(
+    <AddEditItem
+      route={{
+        params: line
+          ? { listId: 'sl1', itemId: line.id ?? '' }
+          : { listId: 'sl1', initialItemName },
+      }}
+    />,
+    {
+      cache,
+      links: [log.link],
+      operationMocks: [
+        ...answers.map(answer => answer.mock),
+        ...(line
+          ? [
+              recordMock(ShoppingListItemForEditDocument, {
+                data: { shoppingListItem: line },
+              }).mock,
+            ]
+          : []),
+        catalogRead().mock,
+        ...catalogSearches().map(answer => answer.mock),
+      ],
     },
-    maxUsageCount: 10,
-  };
+  );
+  return cache;
 }
 
-/** What `queueLink` emits for a queued mutation: the field present but null. */
-function buildAddItemQueuedMock(): MockFor<
-  typeof AddItemToShoppingListDocument
-> {
-  return {
-    request: { query: AddItemToShoppingListDocument, variables: () => true },
-    result: { data: { addItemsToShoppingList: null } },
-    maxUsageCount: 10,
-  };
+async function openEdit(line: Line = MILK, answers: Open['answers'] = []) {
+  const cache = renderForm({ line, answers });
+  await log.landed(ShoppingListItemForEditDocument);
+  return cache;
 }
 
-function buildAddItemErrorMock(): MockFor<
-  typeof AddItemToShoppingListDocument
-> {
-  return {
-    request: { query: AddItemToShoppingListDocument, variables: () => true },
-    error: new Error('Network error'),
-    maxUsageCount: 10,
-  };
-}
-
-function buildUpdateItemMock(): MockFor<typeof UpdateShoppingListItemDocument> {
-  return {
-    request: { query: UpdateShoppingListItemDocument, variables: () => true },
-    result: {
-      data: {
-        updateShoppingListItem: {
-          __typename: 'UpdateShoppingListItemPayload',
-          shoppingListItem: buildUpdatedShoppingListItem('item1'),
-        },
-      },
-    },
-    maxUsageCount: 10,
-  };
-}
-
-function buildUpdateItemRefusedMock(): MockFor<
-  typeof UpdateShoppingListItemDocument
-> {
-  return {
-    request: { query: UpdateShoppingListItemDocument, variables: () => true },
-    result: {
-      data: {
-        updateShoppingListItem: {
-          __typename: 'ForbiddenError',
-          code: ErrorCode.Forbidden,
-          message: 'No item',
-        },
-      },
-    },
-    maxUsageCount: 10,
-  };
-}
-
-/** What `queueLink` emits for a queued mutation: the field present but null. */
-function buildUpdateItemQueuedMock(): MockFor<
-  typeof UpdateShoppingListItemDocument
-> {
-  return {
-    request: { query: UpdateShoppingListItemDocument, variables: () => true },
-    result: { data: { updateShoppingListItem: null } },
-    maxUsageCount: 10,
-  };
-}
-
-function buildUpdateItemConflictMock(): MockFor<
-  typeof UpdateShoppingListItemDocument
-> {
-  return {
-    request: { query: UpdateShoppingListItemDocument, variables: () => true },
-    result: {
-      data: {
-        updateShoppingListItem: {
-          __typename: 'ConflictError',
-          code: ErrorCode.VersionConflict,
-          message: 'Stale version',
-        },
-      },
-    },
-    maxUsageCount: 10,
-  };
-}
-
-function buildItemForEditMock(
-  itemId: string,
-): MockFor<typeof ShoppingListItemForEditDocument> {
-  return {
-    request: {
-      query: ShoppingListItemForEditDocument,
-      variables: { id: itemId },
-    },
-    result: {
-      data: { shoppingListItem: buildItemForEdit(itemId) },
-    },
-    maxUsageCount: 10,
-  };
-}
-
-/**
- * Builds a hook IMPLEMENTATION (not a return value) that seeds the real hook.
- *
- * A frozen object standing in for the whole hook cannot work: the screen
- * renders through `Controller control={control}`, and react-hook-form's
- * `control` has no plain-object equivalent. Seeding the real hook keeps these
- * tests honest — Save is gated by the real yup schema, so a case that expects a
- * refusal gets one for the real reason.
- *
- * Use with `.mockImplementation(...)`, not `.mockReturnValue(...)`.
- */
-const mockUseShoppingListItemForm =
-  (
-    overrides: {
-      values?: Partial<ShoppingItemFormData>;
-      [key: string]: unknown;
-    } = {},
-  ) =>
-  () => {
-    const { values, ...rest } = overrides;
-    const actual = jest
-      .requireActual('#features/shoppingList/hooks/useShoppingListItemForm')
-      .useShoppingListItemForm(values ?? {});
-    const RN = require('react');
-    const setFieldValue = RN.useCallback((field: string, value: unknown) => {
-      mockSetFieldValue(field, value);
-      actual.setFieldValue(field, value);
-    }, []);
-    return { ...actual, setFieldValue, ...rest };
-  };
-
-// Force the next executeWithLoadingState invocation to call its onError with
-// the supplied error: a throw no write outcome describes.
-function forceExecuteWithLoadingStateOnError(error: unknown) {
-  const { executeWithLoadingState } = require('#/utils/finallyHelpers');
-  executeWithLoadingState.mockImplementationOnce(
-    (
-      _fn: () => Promise<void>,
-      _setLoading: (value: boolean) => void,
-      onError?: (error: unknown) => void,
-    ) => {
-      onError?.(error);
-    },
+/** Types into a picker's search and presses its first row. */
+async function pick(
+  fieldTestID: string,
+  search: string,
+  document: Parameters<typeof log.landed>[0],
+  nth = 1,
+) {
+  fireEvent.changeText(screen.getByTestId(fieldTestID), search);
+  await log.requested(document, nth);
+  await log.landed(document, nth);
+  fireEvent.press(
+    screen.getByTestId(catalogTestIDs.suggestion(fieldTestID, 0)),
   );
 }
 
+/** Save, settled as a press settles: the form validates before it submits. */
+const save = (ids: typeof ADD) =>
+  userEvent.setup().press(screen.getByTestId(ids.submitButton));
+
+/** An add the server took, as the queue reports one it holds. */
+const addTaken = () =>
+  recordMock(AddItemToShoppingListDocument, {
+    data: { addItemsToShoppingList: null },
+  });
+
+/** The line an add sent. */
+function sentLine(add: ReturnType<typeof recordMock>) {
+  const [variables] = add.fired;
+  if (!variables) throw new Error('nothing was added');
+  const [line] = (inputOf(variables).items as Record<string, unknown>[]) ?? [];
+  if (!line) throw new Error('the add held no line');
+  return line;
+}
+
+const ROW = gql`
+  fragment AddEditItemTestRow on ShoppingListItem {
+    itemName
+    unit {
+      id
+    }
+  }
+`;
+
+/** The row an add put in the cache, under the id it sent. */
+function addedRow(cache: InMemoryCache, add: ReturnType<typeof recordMock>) {
+  const line = sentLine(add);
+  const id = String(line.id);
+  return cache.readFragment<{ itemName: string; unit: { id: string } | null }>({
+    id: cache.identify({ __typename: 'ShoppingListItem', id }),
+    fragment: ROW,
+    optimistic: true,
+  });
+}
+
+/** Presses `label` on the last alert raised, as the person answers it. */
+function answerAlert(label: string) {
+  const [, , buttons] = jest.mocked(alertService.alert).mock.calls.at(-1) ?? [];
+  const button = buttons?.find(candidate => candidate.text === label);
+  if (!button?.onPress) throw new Error(`no ${label} on the last alert`);
+  button.onPress();
+}
+
 beforeEach(() => {
-  jest.useFakeTimers();
+  jest.clearAllMocks();
+  jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
+  log = operationLog();
+  useStore.setState({
+    user: {
+      id: 'u1',
+      email: 'cook@example.com',
+      emailVerified: true,
+      onBoarded: true,
+    },
+    budgetAndPrices: true,
+    isOnline: true,
+    apiReachable: true,
+    cachedUnits: HELD_UNITS,
+    lastUnitsFetchedAt: Date.now(),
+  });
 });
 
-afterEach(() => {
-  jest.useRealTimers();
-});
+describe('an edit', () => {
+  it('opens on the line, and saves only what changed, at its version', async () => {
+    const update = recordMock(UpdateShoppingListItemDocument, { held: true });
+    await openEdit(MILK, [update]);
 
-describe('AddEditItem', () => {
-  const addRoute = { params: { listId: 'sl1' } };
-  const editRoute = { params: { listId: 'sl1', itemId: 'item1' } };
+    expect(screen.getByTestId(EDIT.nameInput)).toHaveDisplayValue('Milk');
+    // A line's name is renamed, not looked up in the catalog.
+    expect(
+      screen.queryByTestId(catalogTestIDs.autocompleteSearch(EDIT.nameInput)),
+    ).not.toBeOnTheScreen();
+    fireEvent.changeText(screen.getByTestId(EDIT.nameInput), 'Oat milk');
+    await save(EDIT);
+    await log.requested(UpdateShoppingListItemDocument);
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
-  });
-
-  // `clearAllMocks` resets call records but NOT a spy's implementation, so a
-  // `jest.spyOn(...).mockImplementation(...)` in one test leaked its seeded
-  // form into every test after it — which is how a case expecting an empty
-  // form got one pre-filled with another test's values.
-  afterEach(() => {
-    jest.restoreAllMocks();
-    jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
-    mockRealCounter.current = false;
-  });
-
-  it('renders add item title', () => {
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    expect(screen.getByText('Add Item')).toBeTruthy();
-  });
-
-  it('renders edit item title', () => {
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildItemForEditMock('item1')],
-    });
-    expect(screen.getByText('Edit Item')).toBeTruthy();
-  });
-
-  it('shows the add-item modal testID when adding', () => {
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    expect(screen.getByTestId('add-item-modal')).toBeTruthy();
-  });
-
-  it('shows the edit-item modal testID when editing', () => {
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildItemForEditMock('item1')],
-    });
-    expect(screen.getByTestId('edit-item-modal')).toBeTruthy();
-  });
-
-  it('shows item name autocomplete field when adding', () => {
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    expect(screen.getByTestId('add-item-name-input')).toBeTruthy();
-  });
-
-  describe('with the server out of reach', () => {
-    const noServer = (): MockFor<typeof ShoppingListItemForEditDocument> => ({
-      request: {
-        query: ShoppingListItemForEditDocument,
-        variables: { id: 'item1' },
+    expect(update.fired[0]).toEqual({
+      input: {
+        id: 'item1',
+        version: 4,
+        itemName: 'Oat milk',
+        idempotencyKey: expect.any(String),
       },
-      error: new Error('Network request failed'),
-      maxUsageCount: 10,
     });
+  });
 
-    beforeEach(() => {
-      useStore.setState({ isOnline: false, apiReachable: null });
-    });
+  it('leaves an unchanged line without writing it', async () => {
+    const update = recordMock(UpdateShoppingListItemDocument, { held: true });
+    await openEdit(MILK, [update]);
 
-    afterEach(() => {
-      useStore.setState({ isOnline: true, apiReachable: null });
-    });
+    await save(EDIT);
 
-    it('opens a listed line on its values, and saves it at its version', async () => {
-      const user = userEvent.setup();
-      const cache = makeCache();
-      seedFragment(cache, {
-        fragment: ShoppingListItem_ListedFragmentDoc,
-        fragmentName: 'shoppingListItem_listed',
-        data: {
-          __typename: 'ShoppingListItem',
-          id: 'item1',
-          itemName: 'Held milk',
-          version: 7,
-        },
-      });
-      const update = recordMock(UpdateShoppingListItemDocument, {
-        held: true,
+    expect(mockNav.goBack).toHaveBeenCalled();
+    expect(update.fired).toEqual([]);
+  });
+
+  it('leaves once the edit is applied', async () => {
+    await openEdit(MILK, [
+      recordMock(UpdateShoppingListItemDocument, {
         data: {
           updateShoppingListItem: {
             __typename: 'UpdateShoppingListItemPayload',
-            shoppingListItem: { id: 'item1' },
+            shoppingListItem: { __typename: 'ShoppingListItem', id: 'item1' },
           },
         },
-      });
-
-      renderWithApollo(<AddEditItem route={editRoute} />, {
-        cache,
-        operationMocks: [noServer(), update.mock],
-      });
-      await drainTimers();
-
-      const name = screen.getByTestId('edit-item-name-input');
-      expect(name.props.value).toBe('Held milk');
-      fireEvent.changeText(name, 'Oat milk');
-      await user.press(screen.getByTestId('edit-item-submit-button'));
-      await drainTimers();
-
-      expect(update.fired[0]).toMatchObject({
-        input: { id: 'item1', version: 7, itemName: 'Oat milk' },
-      });
-      expect(
-        cache.readFragment({
-          id: cache.identify({ __typename: 'ShoppingListItem', id: 'item1' }),
-          fragment: ShoppingListItem_ListedFragmentDoc,
-          fragmentName: 'shoppingListItem_listed',
-          optimistic: true,
-        }),
-      ).toMatchObject({ itemName: 'Oat milk' });
-    });
-
-    it('offers no Save for a line the device does not hold', async () => {
-      renderWithApollo(<AddEditItem route={editRoute} />, {
-        operationMocks: [noServer()],
-      });
-      await drainTimers();
-
-      expect(screen.getByTestId('state-offline')).toBeTruthy();
-      expect(screen.queryByTestId('edit-item-submit-button')).toBeNull();
-    });
-  });
-
-  it('shows base input for item name when editing', async () => {
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildItemForEditMock('item1')],
-    });
-    await drainTimers();
-    expect(screen.getByTestId('edit-item-name-input')).toBeTruthy();
-  });
-
-  it('shows quantity field', () => {
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    expect(screen.getByText('Quantity')).toBeTruthy();
-  });
-
-  it('shows notes field', () => {
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    expect(screen.getByText('Notes')).toBeTruthy();
-  });
-
-  it('shows estimated price field', () => {
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    expect(screen.getByText('Estimated Price')).toBeTruthy();
-  });
-
-  it('asks for no price, and sends none, with prices turned off', async () => {
-    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
-    const user = userEvent.setup();
-    const added = recordMock(AddItemToShoppingListDocument, {
-      data: { addItemsToShoppingList: null },
-    });
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: {
-            itemName: 'Steak',
-            quantityInput: '1',
-            estimatedPrice: '12.99',
-          },
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [added.mock],
-    });
-    expect(screen.queryByText('Estimated Price')).toBeNull();
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await drainTimers();
-    expect(added.fired).toHaveLength(1);
-    expect(added.fired[0]).toEqual({
-      input: expect.objectContaining({
-        items: [expect.not.objectContaining({ pricing: expect.anything() })],
       }),
-    });
-  });
+    ]);
 
-  it('shows category field', () => {
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    expect(screen.getByText('Category')).toBeTruthy();
-  });
+    fireEvent.changeText(screen.getByTestId(EDIT.nameInput), 'Oat milk');
+    await save(EDIT);
+    await log.landed(UpdateShoppingListItemDocument);
 
-  it('shows unit field', () => {
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    expect(screen.getByText('Unit')).toBeTruthy();
-  });
-
-  it('shows brand and net weight fields when adding', () => {
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    expect(screen.getByTestId('add-item-brand-input')).toBeTruthy();
-    expect(screen.getByTestId('add-item-net-weight-input')).toBeTruthy();
-    expect(screen.getByTestId('add-item-net-weight-unit-picker')).toBeTruthy();
-  });
-
-  // The unit's SYMBOL is what `setFromItem` repopulates the field with and what
-  // ItemDetail renders, so a pick must leave the symbol in the field. It used
-  // to leave the unit's full name, because the selection handler wrote `name`
-  // over the symbol `onChangeText` had just written.
-  it('keeps the unit symbol in the net-weight unit field after a pick', () => {
-    renderWithApollo(<AddEditItem route={addRoute} />);
-
-    fireEvent.press(screen.getByTestId('add-item-net-weight-unit-picker-pick'));
-
-    expect(
-      screen.getByTestId('add-item-net-weight-unit-picker-value'),
-    ).toHaveTextContent('g');
-  });
-
-  it('shows brand and net weight fields when editing', async () => {
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildItemForEditMock('item1')],
-    });
-    await drainTimers();
-    expect(screen.getByTestId('edit-item-brand-input')).toBeTruthy();
-    expect(screen.getByTestId('edit-item-net-weight-input')).toBeTruthy();
-    expect(screen.getByTestId('edit-item-net-weight-unit-picker')).toBeTruthy();
-  });
-
-  it('refuses to save a net weight that has no unit', async () => {
-    // Restored at the end: `clearAllMocks` in beforeEach resets call records,
-    // not a spy's return value, and the validation tests after this one render
-    // with the module mock's own form state.
-    const formSpy = jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Oats', quantityInput: '1', netWeight: '500' },
-        }),
-      );
-
-    const user = userEvent.setup();
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    // On the FIELD now, not in a modal: the message names the unit picker the
-    // user has to fill in, and the alert is gone entirely.
-    await drainTimers();
-    expect(
-      screen.getByText('Please select a unit for the net weight.'),
-    ).toBeTruthy();
-    expect(alertService.alert).not.toHaveBeenCalled();
-    formSpy.mockRestore();
-  });
-
-  it('shows correct submit button testID for adding', () => {
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    expect(screen.getByTestId('add-item-submit-button')).toBeTruthy();
-  });
-
-  it('shows correct submit button testID for editing', async () => {
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildItemForEditMock('item1')],
-    });
-    await drainTimers();
-    expect(screen.getByTestId('edit-item-submit-button')).toBeTruthy();
-  });
-
-  it('navigates back when close button pressed', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    await user.press(screen.getByTestId('close-button'));
-    expect(mockNav.goBack).toHaveBeenCalled();
-  });
-
-  it('shows add-item-quantity-input testID for adding', () => {
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    expect(screen.getByTestId('add-item-quantity-input')).toBeTruthy();
-  });
-
-  it('shows edit-item-quantity-input testID for editing', async () => {
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildItemForEditMock('item1')],
-    });
-    await drainTimers();
-    expect(screen.getByTestId('edit-item-quantity-input')).toBeTruthy();
-  });
-
-  it('shows add-item-unit-picker testID for adding', () => {
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    expect(screen.getByTestId('add-item-unit-picker')).toBeTruthy();
-  });
-
-  it('shows edit-item-unit-picker testID for editing', async () => {
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildItemForEditMock('item1')],
-    });
-    await drainTimers();
-    expect(screen.getByTestId('edit-item-unit-picker')).toBeTruthy();
-  });
-
-  it('renders with initialItemName route param', () => {
-    const routeWithInitial = {
-      params: { listId: 'sl1', initialItemName: 'Bread' },
-    };
-    renderWithApollo(<AddEditItem route={routeWithInitial} />);
-    expect(mockSetFieldValue).toHaveBeenCalledWith('itemName', 'Bread');
-  });
-
-  it('reports an empty item name on the field, not in an alert', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await drainTimers();
-    expect(screen.getByText('Please enter an item name')).toBeTruthy();
-    expect(alertService.alert).not.toHaveBeenCalled();
-  });
-
-  it('reports an empty quantity on the field, not in an alert', async () => {
-    const user = userEvent.setup();
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '' },
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={addRoute} />);
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await drainTimers();
-    expect(screen.getByText('Please enter a quantity')).toBeTruthy();
-    expect(alertService.alert).not.toHaveBeenCalled();
-  });
-
-  it('navigates back when edit mode and no dirty fields', async () => {
-    const user = userEvent.setup();
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '1', unit: 'pcs' },
-          hasDirtyFields: false,
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildItemForEditMock('item1')],
-    });
-    await drainTimers();
-    await user.press(screen.getByTestId('edit-item-submit-button'));
-    expect(mockNav.goBack).toHaveBeenCalled();
-  });
-
-  it('calls addItem mutation for new item (success path navigates back)', async () => {
-    const user = userEvent.setup();
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: {
-            itemName: 'Milk',
-            quantityInput: '2',
-            unit: 'pcs',
-            notes: 'whole milk',
-            category: 'Dairy',
-            estimatedPrice: '4.99',
-          },
-          buildUnitInput: jest.fn(() => ({ unitId: 'unit-1' })),
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [buildAddItemMock()],
-    });
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await drainTimers();
-    expect(mockNav.goBack).toHaveBeenCalled();
-  });
-
-  it('calls updateItem mutation for edit mode with dirty fields', async () => {
-    const user = userEvent.setup();
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: {
-            itemName: 'Updated Milk',
-            quantityInput: '3',
-            unit: 'pcs',
-            category: 'Dairy',
-          },
-          buildDirtyInput: jest.fn(() => ({
-            itemName: 'Updated Milk',
-            quantity: '3',
-          })),
-          hasDirtyFields: true,
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildItemForEditMock('item1'), buildUpdateItemMock()],
-    });
-    await drainTimers();
-    await user.press(screen.getByTestId('edit-item-submit-button'));
-
-    await drainTimers();
-    expect(mockNav.goBack).toHaveBeenCalled();
-  });
-
-  it('navigates back when the edit is queued offline (null payload, no error)', async () => {
-    // `UpdateShoppingListItem` is on the queue's replay allowlist, so an offline
-    // edit IS saved. A payload check alone reads its null field as a refusal,
-    // which alerted and stranded the user on the form.
-    const user = userEvent.setup();
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '3' },
-          buildDirtyInput: jest.fn(() => ({ quantity: '3' })),
-          hasDirtyFields: true,
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [
-        buildItemForEditMock('item1'),
-        buildUpdateItemQueuedMock(),
-      ],
-    });
-    await drainTimers();
-    await user.press(screen.getByTestId('edit-item-submit-button'));
-
-    await drainTimers();
-    expect(mockNav.goBack).toHaveBeenCalled();
-    expect(alertService.alert).not.toHaveBeenCalled();
-  });
-
-  it('navigates back when the add is queued offline (null data, no error)', async () => {
-    // Local-first (Pattern B): the item is written to cache optimistically BEFORE
-    // the mutation fires. A queued create resolves with null data and no error —
-    // that's success (the queue replays it), so we navigate back, NOT alert.
-    const user = userEvent.setup();
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '1' },
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [buildAddItemQueuedMock()],
-    });
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await drainTimers();
-    expect(mockNav.goBack).toHaveBeenCalled();
-    expect(alertService.alert).not.toHaveBeenCalled();
-  });
-
-  it('alerts a refused add once and stays on the form', async () => {
-    const user = userEvent.setup();
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '1' },
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [buildAddItemRefusedMock()],
-    });
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await drainTimers();
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      expect.stringContaining('Server error'),
-    );
-    expect(alertService.alert).toHaveBeenCalledTimes(1);
-    expect(mockNav.goBack).not.toHaveBeenCalled();
-  });
-
-  it('offers Refresh on a version conflict, which leaves the form', async () => {
-    const user = userEvent.setup();
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '1' },
-          buildDirtyInput: jest.fn(() => ({ itemName: 'Milk' })),
-          hasDirtyFields: true,
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [
-        buildItemForEditMock('item1'),
-        buildUpdateItemConflictMock(),
-      ],
-    });
-    await drainTimers();
-    await user.press(screen.getByTestId('edit-item-submit-button'));
-
-    await drainTimers();
-    expect(alertService.alert).toHaveBeenCalledTimes(1);
-    expect(mockNav.goBack).not.toHaveBeenCalled();
-
-    const buttons = (alertService.alert as jest.Mock).mock
-      .calls[0][2] as AlertButton[];
-    buttons.find(button => button.style !== 'cancel')?.onPress?.();
     expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 
-  it('alerts a failed add once and stays on the form', async () => {
-    const user = userEvent.setup();
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '1' },
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [buildAddItemErrorMock()],
-    });
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await drainTimers();
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      expect.stringContaining('Server error'),
-    );
-    expect(alertService.alert).toHaveBeenCalledTimes(1);
-    expect(mockNav.goBack).not.toHaveBeenCalled();
-  });
-
-  it('alerts a throw during save that no write outcome describes', async () => {
-    const user = userEvent.setup();
-    forceExecuteWithLoadingStateOnError(new Error('Unknown'));
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '1' },
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [buildAddItemMock()],
-    });
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await drainTimers();
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      expect.stringContaining('Failed to add item'),
-    );
-  });
-
-  it('includes estimatedPrice in add mutation when provided (success navigates back)', async () => {
-    const user = userEvent.setup();
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: {
-            itemName: 'Steak',
-            quantityInput: '1',
-            unit: 'lb',
-            category: 'Meat',
-            estimatedPrice: '12.99',
-          },
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [buildAddItemMock()],
-    });
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await drainTimers();
-    expect(mockNav.goBack).toHaveBeenCalled();
-  });
-
-  it('populates form from existing item data in edit mode', async () => {
-    const mockSetFromItem = jest.fn();
-
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Bread', quantityInput: '1' },
-          setFromItem: mockSetFromItem,
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [buildItemForEditMock('item1')],
-    });
-
-    await drainTimers();
-    expect(mockSetFromItem).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'item1' }),
-    );
-  });
-
-  it('alerts a refused update once and stays on the form', async () => {
-    const user = userEvent.setup();
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '1' },
-          buildDirtyInput: jest.fn(() => ({ itemName: 'Milk' })),
-          hasDirtyFields: true,
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [
-        buildItemForEditMock('item1'),
-        buildUpdateItemRefusedMock(),
-      ],
-    });
-    await drainTimers();
-    await user.press(screen.getByTestId('edit-item-submit-button'));
-
-    await drainTimers();
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      expect.stringContaining('Server error'),
-    );
-    expect(alertService.alert).toHaveBeenCalledTimes(1);
-    expect(mockNav.goBack).not.toHaveBeenCalled();
-  });
-
-  it('sends a comma-device quantity as API text', async () => {
-    jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
-    const user = userEvent.setup();
-    const added = recordMock(AddItemToShoppingListDocument, {
-      data: { addItemsToShoppingList: null },
-    });
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Flour', quantityInput: '2,2' },
-        }),
-      );
-    const { createLocalShoppingListItem } = jest.requireMock(
-      '#features/shoppingList/cache/items',
-    );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [added.mock],
-    });
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await drainTimers();
-    expect(added.fired).toHaveLength(1);
-    expect(added.fired[0]).toEqual({
-      input: expect.objectContaining({
-        items: [expect.objectContaining({ quantity: '2.2' })],
-      }),
-    });
-    expect(createLocalShoppingListItem).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({ quantity: 2.2, quantityInput: '2.2' }),
-    );
-  });
-
-  it('sends the typed name inline under a minted item id, which the row names', async () => {
-    const user = userEvent.setup();
-    const added = recordMock(AddItemToShoppingListDocument, {
-      data: { addItemsToShoppingList: null },
-    });
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Flour', quantityInput: '2' },
-        }),
-      );
-    const { createLocalShoppingListItem } = jest.requireMock(
-      '#features/shoppingList/cache/items',
-    );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [added.mock],
-    });
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await drainTimers();
-    expect(added.fired).toHaveLength(1);
-    const [line] = (
-      added.fired[0]?.input as {
-        items: { item: { inline?: { id: string } } }[];
-      }
-    ).items;
-    expect(line?.item).toEqual({
-      inline: { id: expect.any(String), name: 'Flour' },
-    });
-    expect(createLocalShoppingListItem).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({ itemId: line?.item.inline?.id }),
-    );
-  });
-
-  // The stepper writes the device's separator back into the field, so the
-  // stepped value reaches the API only through the same normalisation.
-  it('sends a comma-device quantity stepped with the increment control as API text', async () => {
-    jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
-    mockRealCounter.current = true;
-    const user = userEvent.setup();
-    const added = recordMock(AddItemToShoppingListDocument, {
-      data: { addItemsToShoppingList: null },
-    });
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Flour', quantityInput: '2,2' },
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [added.mock],
-    });
-    await user.press(screen.getByLabelText(t('editableCounter.increase')));
-    expect(screen.getByTestId('add-item-quantity-input')).toHaveProp(
-      'value',
-      '3,2',
-    );
-    await user.press(screen.getByTestId('add-item-submit-button'));
-
-    await drainTimers();
-    expect(added.fired).toHaveLength(1);
-    expect(added.fired[0]).toEqual({
-      input: expect.objectContaining({
-        items: [expect.objectContaining({ quantity: '3.2' })],
-      }),
-    });
-  });
-
-  it('keeps what the user typed when the edit is refused', async () => {
-    const user = userEvent.setup();
-    const stored = recordMock(ShoppingListItemForEditDocument, {
-      data: { shoppingListItem: buildItemForEdit('item1') },
-    });
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [stored.mock, buildUpdateItemRefusedMock()],
-    });
-    await drainTimers();
-    const nameInput = screen.getByTestId(
-      shoppingListTestIDs.editItemForm.nameInput,
-    );
-    expect(nameInput.props.value).toBe('Milk');
-
-    fireEvent.changeText(nameInput, 'Oat Milk');
-    fireEvent.changeText(
-      screen.getByTestId(shoppingListTestIDs.editItemForm.priceInput),
-      '3.50',
-    );
-    await user.press(screen.getByTestId('edit-item-submit-button'));
-
-    await drainTimers();
-
-    expect(alertService.alert).toHaveBeenCalledTimes(1);
-    expect(
-      screen.getByTestId(shoppingListTestIDs.editItemForm.nameInput).props
-        .value,
-    ).toBe('Oat Milk');
-    expect(
-      screen.getByTestId(shoppingListTestIDs.editItemForm.priceInput).props
-        .value,
-    ).toBe('3.50');
-  });
-
-  it("names the input the server refused, in the app's own words", async () => {
-    const user = userEvent.setup();
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '1' },
-          buildDirtyInput: jest.fn(() => ({
-            netWeight: { netWeightUnitId: 'unit-g' },
-          })),
-          hasDirtyFields: true,
-        }),
-      );
-
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [
-        buildItemForEditMock('item1'),
-        {
-          request: {
-            query: UpdateShoppingListItemDocument,
-            variables: () => true,
-          },
-          result: {
-            data: {
-              updateShoppingListItem: {
-                __typename: 'ValidationError',
-                code: ErrorCode.ValidationFailed,
-                message:
-                  'Provide a netWeight value when specifying netWeightUnitId.',
-                field: 'netWeight',
-              },
-            },
+  // The refusal re-reads the line: what was typed must survive it.
+  it('stays on a refusal, keeping what was typed', async () => {
+    await openEdit(MILK, [
+      recordMock(UpdateShoppingListItemDocument, {
+        data: {
+          updateShoppingListItem: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            message: 'No item',
           },
         },
+      }),
+    ]);
+
+    fireEvent.changeText(screen.getByTestId(EDIT.nameInput), 'Oat milk');
+    await save(EDIT);
+    await log.landed(UpdateShoppingListItemDocument);
+
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(mockNav.goBack).not.toHaveBeenCalled();
+    expect(screen.getByTestId(EDIT.nameInput)).toHaveDisplayValue('Oat milk');
+  });
+
+  it('offers Refresh on a version conflict, which leaves the form', async () => {
+    await openEdit(MILK, [
+      recordMock(UpdateShoppingListItemDocument, {
+        data: {
+          updateShoppingListItem: {
+            __typename: 'ConflictError',
+            code: ErrorCode.VersionConflict,
+            message: 'Stale version',
+          },
+        },
+      }),
+    ]);
+
+    fireEvent.changeText(screen.getByTestId(EDIT.nameInput), 'Oat milk');
+    await save(EDIT);
+    await log.landed(UpdateShoppingListItemDocument);
+    answerAlert(t('labels.refresh'));
+
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers no Save for a line it cannot read, and reads it again on a retry', async () => {
+    renderForm({
+      line: MILK,
+      answers: [
+        recordMock(ShoppingListItemForEditDocument, {
+          error: new Error('Network request failed'),
+        }),
       ],
     });
-    await drainTimers();
-    await user.press(screen.getByTestId('edit-item-submit-button'));
+    await log.landed(ShoppingListItemForEditDocument);
 
-    // The update carries brand, netWeight, unit and storage in one call, so the
-    // generic "couldn't update" does not say which was refused — `field` does.
-    // Localized copy for that field, never the server's English message.
-    await drainTimers();
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Enter both a package size and its unit, or leave both empty.',
+    expect(screen.queryByTestId(EDIT.submitButton)).not.toBeOnTheScreen();
+    fireEvent.press(screen.getByText(t('labels.tryAgain')));
+
+    await expect(
+      log.requested(ShoppingListItemForEditDocument, 2),
+    ).resolves.toBeUndefined();
+  });
+
+  // Held from the list, the line seeds the form before the handed name could.
+  it('never takes a name handed to an add', async () => {
+    const cache = makeCache();
+    seedQuery(cache, {
+      query: ShoppingListItemForEditDocument,
+      variables: { id: 'item1' },
+      data: { __typename: 'Query', shoppingListItem: MILK },
+    });
+    renderWithApollo(
+      <AddEditItem
+        route={{
+          params: { listId: 'sl1', itemId: 'item1', initialItemName: 'Eggs' },
+        }}
+      />,
+      {
+        cache,
+        links: [log.link],
+        operationMocks: [
+          recordMock(ShoppingListItemForEditDocument, {
+            data: { shoppingListItem: MILK },
+          }).mock,
+          ...catalogSearches().map(answer => answer.mock),
+        ],
+      },
     );
+    await log.landed(ShoppingListItemForEditDocument);
+
+    expect(screen.getByTestId(EDIT.nameInput)).toHaveDisplayValue('Milk');
+  });
+});
+
+describe('an add', () => {
+  it('opens on the name it was handed', () => {
+    renderForm({ initialItemName: 'Eggs' });
+
+    expect(screen.getByTestId(ADD.nameInput)).toHaveDisplayValue('Eggs');
   });
 
-  it('navigates back on successful add', async () => {
-    const user = userEvent.setup();
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(
-        mockUseShoppingListItemForm({
-          values: { itemName: 'Milk', quantityInput: '1' },
+  it('sends a typed line with all it was given, puts it in the list, and leaves', async () => {
+    const add = addTaken();
+    const cache = renderForm({ answers: [add] });
+
+    fireEvent.changeText(screen.getByTestId(ADD.nameInput), 'Oat milk');
+    fireEvent.changeText(screen.getByTestId(ADD.quantityInput), '2');
+    await pick(ADD.unitPicker, 'li', SearchUnitsDocument);
+    await pick(ADD.brandInput, 'Hor', SearchBrandsDocument);
+    fireEvent.changeText(screen.getByTestId(ADD.netWeightInput), '500');
+    await pick(ADD.netWeightUnitPicker, 'gr', SearchUnitsDocument, 2);
+    fireEvent.changeText(screen.getByTestId(ADD.priceInput), '3.50');
+    fireEvent.press(screen.getByText(t('shoppingListScreens.priorityHigh')));
+    fireEvent.changeText(
+      screen.getByPlaceholderText(t('shoppingListScreens.storePlaceholder')),
+      'Cor',
+    );
+    await log.landed(SearchStoresDocument);
+    fireEvent.press(screen.getByText('Corner Shop'));
+    fireEvent.changeText(
+      screen.getByPlaceholderText(t('shoppingListScreens.notesPlaceholder')),
+      'the big one',
+    );
+    await save(ADD);
+    await log.landed(AddItemToShoppingListDocument);
+
+    expect(sentLine(add)).toMatchObject({
+      item: { inline: { name: 'Oat milk' } },
+      quantity: '2',
+      unit: { id: 'unit-l' },
+      brand: { id: 'brand-horizon' },
+      netWeight: { netWeight: 500, netWeightUnitId: 'unit-g' },
+      pricing: { estimatedPrice: 3.5 },
+      priority: 2,
+      storePrefs: { preferredStoreId: 'store-tj' },
+      notes: 'the big one',
+    });
+    expect(addedRow(cache, add)).toMatchObject({
+      itemName: 'Oat milk',
+      unit: { id: 'unit-l' },
+    });
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('takes a catalog item’s name, unit and category', async () => {
+    const add = addTaken();
+    renderForm({
+      answers: [
+        add,
+        catalogRead([
+          {
+            __typename: 'ItemSuggestion',
+            id: 'item-milk',
+            name: 'Whole milk',
+            defaultUnit: { ...LITER, __typename: 'ItemUnitSuggestion' },
+            category: {
+              __typename: 'ItemCategorySuggestion',
+              id: 'cat-dairy',
+              name: 'Dairy',
+            },
+          },
+        ]),
+      ],
+    });
+
+    await pick(ADD.nameInput, 'Whole', AutocompleteItemsDocument);
+    expect(screen.getByTestId(ADD.nameInput)).toHaveDisplayValue('Whole milk');
+    expect(screen.getByTestId(ADD.unitPicker)).toHaveDisplayValue('L');
+    expect(
+      screen.getByPlaceholderText(t('labels.eGDairyProduce')),
+    ).toHaveDisplayValue('Dairy');
+    await save(ADD);
+    await log.landed(AddItemToShoppingListDocument);
+
+    expect(sentLine(add)).toMatchObject({
+      unit: { id: 'unit-l' },
+      category: 'Dairy',
+    });
+  });
+
+  it('sends a comma device’s quantity as the API reads it', async () => {
+    jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
+    const add = addTaken();
+    renderForm({ answers: [add] });
+
+    fireEvent.changeText(screen.getByTestId(ADD.nameInput), 'Flour');
+    fireEvent.changeText(screen.getByTestId(ADD.quantityInput), '2,5');
+    await save(ADD);
+    await log.landed(AddItemToShoppingListDocument);
+
+    expect(sentLine(add)).toMatchObject({ quantity: '2.5' });
+  });
+
+  it('asks for no price, and sends none, with prices turned off', async () => {
+    useStore.setState({ budgetAndPrices: false });
+    const add = addTaken();
+    renderForm({ answers: [add] });
+
+    expect(screen.queryByTestId(ADD.priceInput)).not.toBeOnTheScreen();
+    fireEvent.changeText(screen.getByTestId(ADD.nameInput), 'Flour');
+    await save(ADD);
+    await log.landed(AddItemToShoppingListDocument);
+
+    expect(sentLine(add)).not.toHaveProperty('pricing');
+  });
+
+  it('reports a missing name and quantity on their fields', async () => {
+    const add = addTaken();
+    renderForm({ answers: [add] });
+
+    fireEvent.changeText(screen.getByTestId(ADD.quantityInput), '');
+    await save(ADD);
+
+    expect(screen.getByText(t('errors.itemNameRequired'))).toBeTruthy();
+    expect(
+      screen.getByText(t('shoppingListScreens.pleaseEnterQuantity')),
+    ).toBeTruthy();
+    expect(add.fired).toEqual([]);
+  });
+
+  it('reports a weight with no unit on the unit', async () => {
+    renderForm();
+
+    fireEvent.changeText(screen.getByTestId(ADD.nameInput), 'Flour');
+    fireEvent.changeText(screen.getByTestId(ADD.netWeightInput), '500');
+    await save(ADD);
+
+    expect(
+      screen.getByText(t('labels.pleaseSelectAUnitForTheNetWeight')),
+    ).toBeTruthy();
+  });
+
+  it('reports a weight unit with no weight on the weight', async () => {
+    renderForm();
+
+    fireEvent.changeText(screen.getByTestId(ADD.nameInput), 'Flour');
+    await pick(ADD.netWeightUnitPicker, 'gr', SearchUnitsDocument);
+    await save(ADD);
+
+    expect(screen.getByText(t('errors.field.netWeight'))).toBeTruthy();
+  });
+
+  it('stays on a refusal, saying so once', async () => {
+    renderForm({
+      answers: [
+        recordMock(AddItemToShoppingListDocument, {
+          data: {
+            addItemsToShoppingList: {
+              __typename: 'ForbiddenError',
+              code: ErrorCode.Forbidden,
+              message: 'No item',
+            },
+          },
         }),
-      );
-
-    renderWithApollo(<AddEditItem route={addRoute} />, {
-      operationMocks: [buildAddItemMock()],
+      ],
     });
-    await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await drainTimers();
-    expect(mockNav.goBack).toHaveBeenCalled();
+    fireEvent.changeText(screen.getByTestId(ADD.nameInput), 'Flour');
+    await save(ADD);
+    await log.landed(AddItemToShoppingListDocument);
+
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(mockNav.goBack).not.toHaveBeenCalled();
   });
 
-  it('does not prepopulate item name when in edit mode even with initialItemName', () => {
-    jest
-      .spyOn(
-        require('#features/shoppingList/hooks/useShoppingListItemForm'),
-        'useShoppingListItemForm',
-      )
-      .mockImplementation(mockUseShoppingListItemForm());
-
-    const routeWithBoth = {
-      params: { listId: 'sl1', itemId: 'item1', initialItemName: 'Bread' },
-    };
-    renderWithApollo(<AddEditItem route={routeWithBoth} />, {
-      operationMocks: [buildItemForEditMock('item1')],
+  it('cannot be saved again while it is saving', async () => {
+    renderForm({
+      answers: [recordMock(AddItemToShoppingListDocument, { held: true })],
     });
-    expect(mockSetFieldValue).not.toHaveBeenCalledWith('itemName', 'Bread');
+
+    fireEvent.changeText(screen.getByTestId(ADD.nameInput), 'Flour');
+    await save(ADD);
+    await log.requested(AddItemToShoppingListDocument);
+
+    expect(screen.getByTestId(ADD.submitButton)).toBeDisabled();
+  });
+
+  it('closes without adding', () => {
+    renderForm();
+
+    const [close] = screen.getAllByLabelText(t('labels.close'));
+    if (!close) throw new Error('no Close');
+    fireEvent.press(close);
+
+    expect(mockNav.goBack).toHaveBeenCalled();
   });
 });

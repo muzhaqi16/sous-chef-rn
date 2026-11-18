@@ -103,6 +103,7 @@ describe('FolderPicker', () => {
         onRenameFolder={jest.fn()}
         onDeleteFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
     expect(
@@ -186,6 +187,7 @@ describe('FolderPicker', () => {
         onRenameFolder={jest.fn()}
         onDeleteFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
     // Manage folder sheet content should show
@@ -198,6 +200,7 @@ describe('FolderPicker', () => {
         {...defaultProps}
         onRenameFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
     // "Rename" appears as both section label and button text
@@ -210,6 +213,7 @@ describe('FolderPicker', () => {
         {...defaultProps}
         onDeleteFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
     expect(screen.getByText('Delete Folder')).toBeTruthy();
@@ -359,6 +363,7 @@ describe('FolderPicker', () => {
         onRenameFolder={jest.fn()}
         onDeleteFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
     expect(screen.getAllByText('Rename').length).toBeGreaterThanOrEqual(1);
@@ -371,6 +376,7 @@ describe('FolderPicker', () => {
         {...defaultProps}
         onRenameFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
     expect(screen.getAllByText('Rename').length).toBeGreaterThanOrEqual(1);
@@ -383,6 +389,7 @@ describe('FolderPicker', () => {
         {...defaultProps}
         onDeleteFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
     expect(screen.queryByText('Rename')).toBeNull();
@@ -396,6 +403,7 @@ describe('FolderPicker', () => {
         onRenameFolder={jest.fn()}
         onDeleteFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
     // The delete confirmation is toggled via showDeleteConfirm state
@@ -417,6 +425,7 @@ describe('FolderPicker', () => {
         {...defaultProps}
         onRenameFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
     expect(
@@ -431,6 +440,7 @@ describe('FolderPicker', () => {
         folders={[]}
         onRenameFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
     expect(
@@ -451,6 +461,7 @@ describe('FolderPicker', () => {
         onRenameFolder={jest.fn()}
         onDeleteFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
     expect(screen.getByText('Manage Folder')).toBeTruthy();
@@ -462,6 +473,7 @@ describe('FolderPicker', () => {
         {...defaultProps}
         onRenameFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
     expect(
@@ -475,6 +487,7 @@ describe('FolderPicker', () => {
         {...defaultProps}
         onDeleteFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
     expect(screen.getByText('Recipes will be moved to No Folder')).toBeTruthy();
@@ -513,6 +526,7 @@ describe('FolderPicker protected folders', () => {
         onRenameFolder={jest.fn()}
         onDeleteFolder={jest.fn()}
         protectedFolders={[]}
+        onSelectedFolderMoved={jest.fn()}
       />,
     );
 

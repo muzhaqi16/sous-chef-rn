@@ -9,7 +9,6 @@ import { ShoppingListErrorBoundary } from '#components/providers/ScreenErrorBoun
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { ShoppingListSkeleton } from '#features/shoppingList/components/skeletons/ShoppingListSkeleton';
 
-import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useStore } from '#store';
 import { useShoppingListScreen } from '#features/shoppingList/screens/useShoppingListScreen';
 import { ShoppingListModalsProvider } from '#features/shoppingList/context/ShoppingListModalsContext';
@@ -26,8 +25,6 @@ import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
  * Only mounts after DeferredScreen gates rendering, so the skeleton paints instantly.
  */
 const ShoppingListMainInner: React.FC = () => {
-  const { toListSettings } = useAppNavigation();
-
   // Deep link `shopping/:listId` selects that list; the selection store drives
   // which list `useShoppingListScreen` resolves. RN's global param-list
   // registration types tab-route params as `object`, so read the segment off
@@ -78,7 +75,6 @@ const ShoppingListMainInner: React.FC = () => {
         recordPurchase={screenData.actions.recordPurchase}
         searchQuery={screenData.state.searchQuery}
         onSearchQueryClear={() => screenData.actions.setSearchQuery('')}
-        onNavigateToListSettings={() => toListSettings()}
       >
         <ShoppingListMainContent screenData={screenData} />
       </ShoppingListModalsProvider>

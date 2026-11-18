@@ -2,7 +2,7 @@ import React from 'react';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
-import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
+import { daysUntilExpiry, expiryLabel, isExpiryEstimate } from '#domain/expiry';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -156,6 +156,11 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
             {!!batch.expiresAtIsManual && (
               <Icon name="lock-closed-outline" size={12} tone="textTertiary" />
             )}
+            {isExpiryEstimate(batch.expiryKind) ? (
+              <Text role="caption" tone="tertiary">
+                {t('pantryItemDetail.expiryEstimated')}
+              </Text>
+            ) : null}
           </View>
         ) : null}
 

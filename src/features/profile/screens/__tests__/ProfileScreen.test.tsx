@@ -1,333 +1,483 @@
-'use no memo';
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
-import type { RootState } from '#store/index';
-import type { SettingsSectionProps } from '#components/organisms/SettingsSection';
-import type {
-  ActionTrayProps,
-  ActionTrayRef,
-} from '#components/templates/ActionTray/types';
-import { ProfileScreen } from '../ProfileScreen';
-import { kitTestIDs } from '#components/testIDs';
-
-// --- Mocks ---
-
-const mockNav = {
-  goBack: jest.fn(),
-  toProfilePhotoUpload: jest.fn(),
-  toDeleteAccount: jest.fn(),
-  toPersonalInformation: jest.fn(),
-  toAppearance: jest.fn(),
-  toNotificationSettings: jest.fn(),
-  toDietaryProfile: jest.fn(),
-  toAppSettings: jest.fn(),
-  toDebugInfo: jest.fn(),
-  toPerformanceDashboard: jest.fn(),
-  toChangePassword: jest.fn(),
-  toChangesNotSaved: jest.fn(),
-};
-jest.mock('#hooks/navigation/useAppNavigation', () => ({
-  useAppNavigation: jest.fn(() => mockNav),
-}));
-
-jest.mock('#features/profile/hooks/useProfileData', () => ({
-  useProfileData: () => ({
-    profile: {
-      firstName: 'John',
-      lastName: 'Doe',
-      displayName: 'JohnDoe',
-      avatar: 'https://example.com/avatar.jpg',
-      bio: 'Test bio',
-    },
-    user: { email: 'john@example.com' },
-    loading: false,
-  }),
-}));
-
-jest.mock('#features/profile/screens/useConfigurableSettings', () => ({
-  useConfigurableSettings: () => ({
-    sections: [
-      {
-        title: 'Account',
-        items: [
-          {
-            key: 'personalInformation',
-            label: 'Personal Information',
-            type: 'navigation',
-            onPress: () => mockNav.toPersonalInformation(),
-          },
-          {
-            key: 'changePassword',
-            label: 'Change Password',
-            type: 'navigation',
-            onPress: () => mockNav.toChangePassword(),
-          },
-        ],
-      },
-      {
-        title: 'Preferences',
-        items: [
-          {
-            key: 'dietaryProfile',
-            label: 'Dietary Profile',
-            type: 'navigation',
-            onPress: () => mockNav.toDietaryProfile(),
-          },
-          {
-            key: 'appSettings',
-            label: 'App Settings',
-            type: 'navigation',
-            onPress: () => mockNav.toAppSettings(),
-          },
-          {
-            key: 'notifications',
-            label: 'Notifications',
-            type: 'navigation',
-            onPress: () => mockNav.toNotificationSettings(),
-          },
-        ],
-      },
-    ],
-    BiometricModal: null,
-    logout: jest.fn(),
-  }),
-}));
-
-let mockHasUnverifiedEmail = false;
-
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: <T,>(selector: (state: RootState) => T): T => {
-    const state = { canAccessDevTools: false };
-    return selector(state as Partial<RootState> as RootState);
-  },
-  useCanAccessDevTools: jest.fn(() => false),
-  useHasUnverifiedEmail: jest.fn(() => mockHasUnverifiedEmail),
-}));
-
-const mockResumeVerification = jest.fn();
-jest.mock('#hooks/auth/useEmailVerification', () => ({
-  useEmailVerificationActions: () => ({
-    skipVerification: jest.fn(),
-    resumeVerification: mockResumeVerification,
-  }),
-}));
-
-let mockChangesNotSaved: { id: string }[] = [];
-jest.mock('#features/profile/hooks/useChangesNotSaved', () => ({
-  useChangesNotSaved: () => ({ changes: mockChangesNotSaved }),
-}));
-
-jest.mock('#hooks/performance/useScreenTransition');
-
-// Environment is auto-mocked via jest.setup.js. ProfileScreen tests want
-// `shouldEnableDebugFeatures` to return false (debug section hidden in
-// non-dev contexts), so we override it below.
+import { screen, userEvent } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
+import {
+  recordMock,
+  renderWithApollo,
+  seedQuery,
+  type MockDataFor,
+} from '#/test-utils/apolloMockProvider';
+import { operationLog } from '#/test-utils/operationLog';
+import {
+  makeQueuedMutation,
+  queuedMutationFor,
+} from '#/test-utils/queuedMutation';
+import { useStore } from '#store';
+import { t } from '#/i18n';
 import { Environment } from '#/utils/environment';
+import { authService } from '#/services/authService';
+import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { QueueStatus } from '#/apollo/offlineQueue/types';
+import { storage } from '#/store/deviceStorage';
+import { GetUserProfileDocument } from '#operations/auth/user.generated';
+import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { profileTestIDs } from '#features/profile/testIDs';
+import { isRecord } from '#/utils/isRecord';
+import { alertService } from '#/services/alertService';
+import { biometricService } from '#/services/biometric/deviceCredential';
+import { authoritativeBiometryName } from '#components/organisms/biometric/biometryLabel';
+import { SettingsSection } from '#components/organisms/SettingsSection';
+import { BiometricSetupModal } from '#features/profile/components/BiometricSetupModal';
+import { GetCurrenciesDocument } from '#features/profile/graphql/currency.generated';
+import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
+import { inputOf } from '#/test-utils/apolloMockProvider';
+import { act } from '@testing-library/react-native';
+import { ProfileScreen } from '../ProfileScreen';
+
+jest.mock('#hooks/navigation/useAppNavigation');
+
+const mockNav = jest
+  .requireMock('#hooks/navigation/useAppNavigation')
+  .useAppNavigation();
+
+const ME = 'user-1';
+
+let log = operationLog();
+
+type Profile = NonNullable<
+  NonNullable<MockDataFor<typeof GetUserProfileDocument>['me']>['profile']
+>;
+
+const profileOf = (overrides: Partial<Profile> = {}): Profile => ({
+  __typename: 'UserProfile',
+  id: 'profile-1',
+  firstName: 'Ana',
+  lastName: 'Lima',
+  displayName: null,
+  bio: null,
+  avatar: null,
+  phone: null,
+  dateOfBirth: null,
+  gender: null,
+  ...overrides,
+});
+
+const answer = (
+  profile: Profile,
+): MockDataFor<typeof GetUserProfileDocument> => ({
+  me: { __typename: 'User', id: ME, profile },
+});
+
+async function openProfile({
+  profile = profileOf(),
+  /** The profile the device already holds, read again while the screen opens. */
+  held = false,
+  answers = [],
+  currenciesFail = false,
+}: {
+  profile?: Profile;
+  held?: boolean;
+  answers?: ReturnType<typeof recordMock>[];
+  currenciesFail?: boolean;
+} = {}) {
+  const cache = makeCache();
+  if (held) {
+    seedQuery(cache, { query: GetUserProfileDocument, data: answer(profile) });
+  }
+  renderWithApollo(<ProfileScreen />, {
+    cache,
+    links: [log.link],
+    operationMocks: [
+      ...answers.map(each => each.mock),
+      recordMock(GetUserProfileDocument, {
+        held,
+        data: answer(profile),
+      }).mock,
+      currenciesFail
+        ? recordMock(GetCurrenciesDocument, {
+            error: new Error('Network request failed'),
+          }).mock
+        : recordMock(GetCurrenciesDocument, {
+            data: {
+              currencies: [
+                {
+                  __typename: 'Currency',
+                  id: 'cur-usd',
+                  code: 'USD',
+                  name: 'US Dollar',
+                  symbol: '$',
+                  decimalPlaces: 2,
+                },
+                {
+                  __typename: 'Currency',
+                  id: 'cur-eur',
+                  code: 'EUR',
+                  name: 'Euro',
+                  symbol: '€',
+                  decimalPlaces: 2,
+                },
+              ],
+            },
+          }).mock,
+    ],
+  });
+  if (!held) await log.landed(GetUserProfileDocument);
+  // The device's biometrics answer a few promise turns after mount.
+  await act(async () => undefined);
+}
+
+/** A settings row as its section is handed it, by its key. */
+const row = (key: string) => {
+  const items: unknown[] = screen
+    .UNSAFE_getAllByType(SettingsSection)
+    .flatMap(section => section.props.items);
+  const found = items.find(item => isRecord(item) && item.key === key);
+  if (!isRecord(found)) throw new Error(`no row ${key}`);
+  return found;
+};
+
+const call = async (key: string, handler: string, ...args: unknown[]) => {
+  const fn = row(key)[handler];
+  if (typeof fn !== 'function') throw new Error(`row ${key} has no ${handler}`);
+  await act(async () => {
+    fn(...args);
+  });
+};
+
+/** The device's biometrics, as the credential service reports them. */
+const device = ({
+  available = true,
+  stored = false,
+  forgets = true,
+}: { available?: boolean; stored?: boolean; forgets?: boolean } = {}) => {
+  jest.spyOn(biometricService, 'getBiometricInfo').mockResolvedValue({
+    isAvailable: available,
+    biometryType: 'FaceID',
+  });
+  jest
+    .spyOn(biometricService, 'checkStoredCredentials')
+    .mockResolvedValue(stored);
+  return jest
+    .spyOn(biometricService, 'forgetStoredSignIn')
+    .mockResolvedValue(forgets);
+};
+
+/** Presses a button of the last alert raised. */
+async function answerAlert(text: string) {
+  const [, , buttons] = jest.mocked(alertService.alert).mock.lastCall ?? [];
+  const onPress = buttons?.find(button => button.text === text)?.onPress;
+  if (!onPress) throw new Error(`no "${text}" in the last alert`);
+  await act(async () => {
+    onPress();
+  });
+}
+
+const FACE_ID = authoritativeBiometryName('FaceID') ?? '';
+
+const signOut = () => jest.spyOn(authService, 'logout').mockResolvedValue();
+
 beforeEach(() => {
-  (Environment.shouldEnableDebugFeatures as jest.Mock).mockReturnValue(false);
+  jest.clearAllMocks();
+  log = operationLog();
+  storage.clearAll();
+  queueStore.invalidateCache();
+  queueStore.setCurrentUserId(ME);
+  jest.mocked(Environment.shouldEnableDebugFeatures).mockReturnValue(false);
+  device();
+  useStore.setState({
+    user: {
+      id: ME,
+      email: 'cook@example.com',
+      emailVerified: true,
+      onBoarded: true,
+      canAccessDevTools: false,
+    },
+    isOnline: true,
+    apiReachable: true,
+  });
 });
 
-jest.mock('#components/atoms/Icon', () => ({
-  Icon: 'Icon',
-}));
+describe('the profile screen', () => {
+  it('names the person by their full name and shows their email', async () => {
+    await openProfile();
 
-jest.mock('#features/profile/components/ProfileHero', () => {
-  const { View, Text, Pressable } = require('react-native');
-  return {
-    ProfileHero: ({
-      name,
-      subtitle,
-      onAvatarPress,
-    }: {
-      name?: string;
-      subtitle?: string;
-      onAvatarPress?: () => void;
-    }) => (
-      <View testID="profile-hero">
-        <Text>{name}</Text>
-        {subtitle ? <Text>{subtitle}</Text> : null}
-        <Pressable testID="avatar-button" onPress={onAvatarPress}>
-          <Text>Avatar</Text>
-        </Pressable>
-      </View>
-    ),
-  };
-});
-
-jest.mock('#components/organisms/SettingsSection', () => {
-  const { View, Text, Pressable } = require('react-native');
-  return {
-    SettingsSection: ({
-      title,
-      items,
-    }: {
-      title?: SettingsSectionProps['title'];
-      items: SettingsSectionProps['items'];
-    }) => (
-      <View testID={`settings-section-${title || 'actions'}`}>
-        {title ? <Text>{title}</Text> : null}
-        {items?.map(item => (
-          <Pressable
-            key={item.key}
-            testID={item.testID || `setting-${item.key}`}
-            onPress={item.onPress}
-          >
-            <Text>{item.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-    ),
-  };
-});
-
-jest.mock('#components/templates/ActionTray/ActionTray', () => {
-  const R = require('react');
-  const RN = require('react-native');
-  const ActionTray = R.forwardRef(function MockActionTray(
-    props: ActionTrayProps,
-    ref: React.Ref<ActionTrayRef>,
-  ) {
-    R.useImperativeHandle(ref, () => ({
-      open: jest.fn(),
-      close: jest.fn(),
-    }));
-    return R.createElement(RN.View, { testID: 'action-tray' }, props.children);
-  });
-  return { ActionTray };
-});
-
-jest.mock('#features/profile/components/ProfileSkeleton', () => ({
-  ProfileSkeleton: () => 'ProfileSkeleton',
-}));
-
-describe('ProfileScreen', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockHasUnverifiedEmail = false;
-    mockChangesNotSaved = [];
+    expect(screen.getByText('Ana Lima')).toBeTruthy();
+    expect(screen.getByText('cook@example.com')).toBeTruthy();
   });
 
-  it('shows no way to changes not saved while there are none', () => {
-    render(<ProfileScreen />);
-    expect(screen.queryByTestId('changes-not-saved-banner')).toBeNull();
+  it('names the person by their display name when they have one', async () => {
+    await openProfile({ profile: profileOf({ displayName: 'Annie' }) });
+
+    expect(screen.getByText('Annie')).toBeTruthy();
   });
 
-  it('opens changes not saved from the banner while it holds any', async () => {
-    mockChangesNotSaved = [{ id: 'change' }];
-    const user = userEvent.setup();
-    render(<ProfileScreen />);
+  it('shows the profile it holds while reading it again', async () => {
+    await openProfile({ held: true });
 
-    await user.press(screen.getByTestId('changes-not-saved-banner'));
-
-    expect(mockNav.toChangesNotSaved).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Ana Lima')).toBeTruthy();
   });
 
-  it('hides the verify-email banner when the address is verified', () => {
-    render(<ProfileScreen />);
-    expect(screen.queryByTestId('verify-email-banner')).toBeNull();
-  });
+  it('opens the photo upload from the avatar', async () => {
+    await openProfile();
 
-  it('shows the verify-email banner for an unverified address', () => {
-    mockHasUnverifiedEmail = true;
-    render(<ProfileScreen />);
-    expect(screen.getByTestId('verify-email-banner')).toBeTruthy();
-  });
+    await userEvent.setup().press(screen.getByLabelText(t('a11y.changePhoto')));
 
-  it('renders the profile screen', () => {
-    render(<ProfileScreen />);
-    expect(screen.getByTestId('profile-hero')).toBeTruthy();
-  });
-
-  it('renders the profile header with user name', () => {
-    render(<ProfileScreen />);
-    expect(screen.getByText('JohnDoe')).toBeTruthy();
-  });
-
-  it('renders the user email in the header', () => {
-    render(<ProfileScreen />);
-    expect(screen.getByText('john@example.com')).toBeTruthy();
-  });
-
-  it('renders Account settings section', () => {
-    render(<ProfileScreen />);
-    expect(screen.getByText('Account')).toBeTruthy();
-    expect(screen.getByText('Personal Information')).toBeTruthy();
-    expect(screen.getByText('Change Password')).toBeTruthy();
-  });
-
-  it('renders Preferences settings section', () => {
-    render(<ProfileScreen />);
-    expect(screen.getByText('Preferences')).toBeTruthy();
-    expect(screen.getByText('Dietary Profile')).toBeTruthy();
-    expect(screen.getByText('App Settings')).toBeTruthy();
-  });
-
-  it('navigates to PersonalInformation on press', async () => {
-    const user = userEvent.setup();
-    render(<ProfileScreen />);
-    await user.press(screen.getByTestId('profile-menu-personalInformation'));
-    expect(mockNav.toPersonalInformation).toHaveBeenCalledTimes(1);
-  });
-
-  it('navigates to DietaryProfile on press', async () => {
-    const user = userEvent.setup();
-    render(<ProfileScreen />);
-    await user.press(screen.getByTestId('profile-menu-dietaryProfile'));
-    expect(mockNav.toDietaryProfile).toHaveBeenCalledTimes(1);
-  });
-
-  it('navigates to AppSettings on press', async () => {
-    const user = userEvent.setup();
-    render(<ProfileScreen />);
-    await user.press(screen.getByTestId('profile-menu-appSettings'));
-    expect(mockNav.toAppSettings).toHaveBeenCalledTimes(1);
-  });
-
-  it('navigates to ChangePassword on press', async () => {
-    const user = userEvent.setup();
-    render(<ProfileScreen />);
-    await user.press(screen.getByTestId('profile-menu-changePassword'));
-    expect(mockNav.toChangePassword).toHaveBeenCalledTimes(1);
-  });
-
-  it('calls goBack when back button is pressed', async () => {
-    const user = userEvent.setup();
-    render(<ProfileScreen />);
-    await user.press(screen.getByTestId(kitTestIDs.headerBackButton));
-    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
-  });
-
-  it('navigates to ProfilePhotoUpload when avatar is pressed', async () => {
-    const user = userEvent.setup();
-    render(<ProfileScreen />);
-    await user.press(screen.getByTestId('avatar-button'));
     expect(mockNav.toProfilePhotoUpload).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the delete account option in action tray', () => {
-    render(<ProfileScreen />);
-    expect(screen.getByText('Delete Account')).toBeTruthy();
+  it.each([
+    ['personalInformation', 'toPersonalInformation'],
+    ['dietaryProfile', 'toDietaryProfile'],
+  ])('opens %s from its row', async (key, opened) => {
+    await openProfile();
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(profileTestIDs.menuItem(key)));
+
+    expect(mockNav[opened]).toHaveBeenCalledTimes(1);
+  });
+
+  it('saves a language picked', async () => {
+    await openProfile();
+
+    await call('language', 'onSave', 'es');
+
+    expect(row('language').value).toBe('es');
+  });
+
+  it('saves a currency picked', async () => {
+    const saved = recordMock(UpdateUserPreferencesDocument, { held: true });
+    await openProfile({ answers: [saved] });
+
+    await log.landed(GetCurrenciesDocument);
+    await call('currency', 'onSave', 'EUR');
+    // It asks first: prices already held keep their own currency.
+    await answerAlert(t('labels.confirm'));
+    await log.requested(UpdateUserPreferencesDocument);
+
+    expect(inputOf(saved.fired[0] ?? {})).toMatchObject({
+      regional: { preferredCurrency: 'EUR' },
+    });
+  });
+
+  it('says when the currencies cannot be read', async () => {
+    await openProfile({ currenciesFail: true });
+    await log.landed(GetCurrenciesDocument);
+    await act(async () => undefined);
+
+    expect(row('currency').unavailable).toBeTruthy();
   });
 });
 
-describe('ProfileScreen - loading state', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    jest
-      .spyOn(
-        require('#features/profile/hooks/useProfileData'),
-        'useProfileData',
-      )
-      .mockReturnValue({
-        profile: null,
-        user: null,
-        loading: true,
-      });
+describe('its banners', () => {
+  it('ask an unverified address to be verified, and open that', async () => {
+    useStore.setState(state => ({
+      user: state.user ? { ...state.user, emailVerified: false } : null,
+    }));
+    await openProfile();
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(profileTestIDs.verifyEmailBanner));
+
+    expect(mockNav.toVerifyEmail).toHaveBeenCalledTimes(1);
   });
 
-  it('shows skeleton when loading with no profile data', () => {
-    const { toJSON } = render(<ProfileScreen />);
-    // ProfileSkeleton is rendered as a string in the mock
-    expect(toJSON()).toBeTruthy();
+  it('show none for a verified address with every change saved', async () => {
+    await openProfile();
+
+    expect(
+      screen.queryByTestId(profileTestIDs.verifyEmailBanner),
+    ).not.toBeOnTheScreen();
+    expect(
+      screen.queryByTestId(profileTestIDs.changesNotSavedBanner),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('point at changes not saved, and open them', async () => {
+    queueStore.addMutation(
+      makeQueuedMutation({
+        id: 'change',
+        ...queuedMutationFor(UpdatePantryItemDocument),
+        status: QueueStatus.REFUSED,
+        refusedResource: 'PantryItem',
+      }),
+    );
+    await openProfile();
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(profileTestIDs.changesNotSavedBanner));
+
+    expect(mockNav.toChangesNotSaved).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('the developer section', () => {
+  const developer = () => screen.queryByText(t('profile.sections.developer'));
+
+  it('is hidden from a release build without dev access', async () => {
+    await openProfile();
+
+    expect(developer()).not.toBeOnTheScreen();
+    // The other sections stay.
+    expect(
+      screen.getByTestId(profileTestIDs.menuItem('dietaryProfile')),
+    ).toBeTruthy();
+  });
+
+  it('shows in a build that enables debug features', async () => {
+    jest.mocked(Environment.shouldEnableDebugFeatures).mockReturnValue(true);
+    await openProfile();
+
+    expect(developer()).toBeOnTheScreen();
+  });
+
+  it('shows for an account with dev-tool access', async () => {
+    useStore.setState(state => ({
+      user: state.user ? { ...state.user, canAccessDevTools: true } : null,
+    }));
+    await openProfile();
+
+    expect(developer()).toBeOnTheScreen();
+  });
+});
+
+describe('leaving', () => {
+  it('signs out from the last row, keeping the biometric sign-in', async () => {
+    const logout = signOut();
+    await openProfile();
+
+    await userEvent.setup().press(screen.getByTestId(profileTestIDs.logoutRow));
+
+    expect(logout).toHaveBeenCalledWith({ keepBiometricCredentials: true });
+  });
+
+  it('signs out, or opens account deletion, from the more menu', async () => {
+    const logout = signOut();
+    await openProfile();
+    const user = userEvent.setup();
+
+    await user.press(screen.getByTestId(profileTestIDs.moreButton));
+    await user.press(screen.getByTestId(profileTestIDs.logoutButton));
+    expect(logout).toHaveBeenCalledTimes(1);
+
+    await user.press(screen.getByTestId(profileTestIDs.moreButton));
+    await user.press(screen.getByText(t('account.deleteTitle')));
+    expect(mockNav.toDeleteAccount).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('biometric sign-in', () => {
+  const setup = () => screen.UNSAFE_getByType(BiometricSetupModal);
+
+  it('is offered by name once the device says it has it', async () => {
+    await openProfile();
+
+    expect(row('biometricAuthentication')).toMatchObject({
+      value: false,
+      disabled: false,
+      subtitle: t('biometrics.useToLogin', { method: FACE_ID }),
+    });
+  });
+
+  it('says the device has none, and does nothing on a tap', async () => {
+    device({ available: false });
+    await openProfile();
+
+    expect(row('biometricAuthentication')).toMatchObject({
+      disabled: true,
+      subtitle: t('biometrics.notAvailable'),
+    });
+    await call('biometricAuthentication', 'onPress');
+    expect(setup().props.visible).toBe(false);
+  });
+
+  it('is offered again to someone who once declined it', async () => {
+    useStore.getState().setUserNavigationState(ME, {
+      biometricDeclinedPermanently: true,
+    });
+    await openProfile();
+
+    expect(row('biometricAuthentication').subtitle).toBe(
+      t('biometrics.tapToEnable', { method: FACE_ID }),
+    );
+  });
+
+  it('is set up on a tap, and on once done, no longer counted declined', async () => {
+    useStore.getState().setUserNavigationState(ME, {
+      biometricDeclinedPermanently: true,
+    });
+    await openProfile();
+
+    await call('biometricAuthentication', 'onPress');
+    expect(setup().props.visible).toBe(true);
+    await act(async () => {
+      await setup().props.onComplete(true);
+    });
+
+    expect(row('biometricAuthentication').value).toBe(true);
+    expect(
+      useStore.getState().getUserNavigationState(ME)
+        ?.biometricDeclinedPermanently,
+    ).toBe(false);
+  });
+
+  it('stays off when its setup is cancelled', async () => {
+    await openProfile();
+    await call('biometricAuthentication', 'onPress');
+
+    await act(async () => {
+      await setup().props.onComplete(false);
+    });
+
+    expect(row('biometricAuthentication').value).toBe(false);
+  });
+
+  it('is turned off once confirmed', async () => {
+    const forget = device({ stored: true });
+    await openProfile();
+    expect(row('biometricAuthentication').value).toBe(true);
+
+    await call('biometricAuthentication', 'onPress');
+    await answerAlert(t('biometrics.disable'));
+
+    expect(forget).toHaveBeenCalledWith('cook@example.com');
+    expect(row('biometricAuthentication').value).toBe(false);
+  });
+
+  it('says so when it cannot be turned off', async () => {
+    device({ stored: true, forgets: false });
+    await openProfile();
+
+    await call('biometricAuthentication', 'onPress');
+    await answerAlert(t('biometrics.disable'));
+
+    expect(alertService.alert).toHaveBeenLastCalledWith(
+      t('labels.error'),
+      t('biometrics.disableFailed'),
+    );
+    expect(row('biometricAuthentication').value).toBe(true);
+  });
+});
+
+describe('signing out with changes waiting', () => {
+  it('asks first, and signs out only once confirmed', async () => {
+    const logout = signOut();
+    queueStore.addMutation(
+      makeQueuedMutation({
+        id: 'waiting',
+        ...queuedMutationFor(UpdatePantryItemDocument),
+        status: QueueStatus.PENDING,
+      }),
+    );
+    await openProfile();
+
+    await userEvent.setup().press(screen.getByTestId(profileTestIDs.logoutRow));
+    expect(logout).not.toHaveBeenCalled();
+    await answerAlert(t('profile.labels.logout'));
+
+    expect(logout).toHaveBeenCalledWith({ keepBiometricCredentials: true });
   });
 });

@@ -95,7 +95,7 @@ export const AddMenu: React.FC<AddMenuProps> = ({
             >
               <Pressable
                 ref={index === stacked.length - 1 ? firstEntryRef : undefined}
-                testID={action.testID}
+                testID={action.testID ?? kitTestIDs.tabBarAddAction(action.key)}
                 style={styles.entry}
                 disabled={!!action.disabledReason}
                 accessibilityRole="menuitem"

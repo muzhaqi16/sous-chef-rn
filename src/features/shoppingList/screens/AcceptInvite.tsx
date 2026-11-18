@@ -45,24 +45,12 @@ export const AcceptInvite: React.FC = () => {
     decline,
   } = useInviteByToken(token);
 
-  // The invite only ever resolves from the route token, so that token is the
-  // credential the accept/decline mutations need.
-  const resolveInviteToken = (): string | undefined =>
-    invitationType === 'unknown' ? undefined : token;
-
+  // Accept and Decline show only for an invite the route token resolved, so
+  // that token is the credential they send.
   const handleAccept = () => {
-    const inviteToken = resolveInviteToken();
-
-    if (!inviteToken) {
-      alertService.alert(
-        t('labels.error'),
-        t('invitationAcceptance.invalidInvitation'),
-      );
-      return;
-    }
-
+    if (!token) return;
     void executeWithLoadingState(async () => {
-      if (!(await accept(inviteToken))) return;
+      if (!(await accept(token))) return;
       // Leaves at once: an answered invite reads as unavailable from its token.
       toastService.success(
         invitationType === 'home'
@@ -73,23 +61,14 @@ export const AcceptInvite: React.FC = () => {
     }, setProcessing);
   };
 
-  const handleDecline = async () => {
-    const inviteToken = resolveInviteToken();
-
-    if (!inviteToken) {
-      alertService.alert(
-        t('labels.error'),
-        t('invitationAcceptance.invalidInvitation'),
-      );
-      return;
-    }
-
+  const handleDecline = () => {
+    if (!token) return;
     alertService.alert(
       t('confirmations.declineInvitationTitle'),
       t('invitationAcceptance.declineConfirm'),
       destructiveConfirm(t('labels.decline'), () => {
         void executeWithLoadingState(async () => {
-          if (await decline(inviteToken)) goBack();
+          if (await decline(token)) goBack();
         }, setProcessing);
       }),
     );

@@ -301,6 +301,50 @@ describe('useItemAutocomplete', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
+    it("offers a semantic hit in the household's quick-add unit", async () => {
+      const semanticMock = createSemanticMock();
+      const { result } = renderHookWithApollo(
+        () => useItemAutocomplete({ debounceMs: 0 }),
+        {
+          operationMocks: [
+            createItemsMock([]),
+            {
+              ...semanticMock,
+              result: {
+                data: {
+                  searchItemsSemantic: {
+                    edges: [
+                      {
+                        node: {
+                          id: 'lava',
+                          name: 'Chocolate Lava Cakes',
+                          quickAddUnit: { id: 'unit-pc', symbol: 'pc' },
+                        },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      );
+
+      act(() => {
+        result.current.handleSearchTermChange('choclate lava');
+      });
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(2000);
+      });
+
+      expect(result.current.displayItems).toEqual([
+        expect.objectContaining({
+          id: 'lava',
+          defaultUnit: expect.objectContaining({ id: 'unit-pc', symbol: 'pc' }),
+        }),
+      ]);
+    });
+
     it('does not ask when autocomplete finds the item', async () => {
       const prompts: string[] = [];
       const itemsMock = createItemsMock([]);

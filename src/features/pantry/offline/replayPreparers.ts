@@ -7,8 +7,8 @@ import { isRecord } from '#/utils/isRecord';
 /**
  * A queued create replays with `forceAdd`: a stack for the same item and unit
  * that another member added while it sat queued absorbs it under its own id
- * (`outcome: MERGED`, adopted by `reconcileCreatePantryItemReplay`) rather than
- * refusing it as a duplicate.
+ * (adopted by `reconcileCreatePantryItemReplay`) rather than refusing it as a
+ * duplicate.
  */
 export const preparePantryItemCreate: ReplayPreparer = async (
   mutation,

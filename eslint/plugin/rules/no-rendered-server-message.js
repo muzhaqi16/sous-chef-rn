@@ -26,7 +26,6 @@ const LIBRARY_ERROR_TYPES = new Set([
  */
 const SERVER_COPY_FIELDS = [
   { typeName: 'Notification', fieldName: 'title' },
-  { typeName: 'UserEvent', fieldName: 'reason' },
   { typeName: 'MyModerationStatus', fieldName: 'banReason' },
   { typeName: 'MyModerationStatus', fieldName: 'suspensionReason' },
   { typeName: 'MyModerationStatus', fieldName: 'restrictionReason' },

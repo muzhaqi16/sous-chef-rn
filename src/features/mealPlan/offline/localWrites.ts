@@ -33,6 +33,7 @@ import {
 import {
   addTemplateItemToCache,
   hideTemplateItem,
+  linkTemplateItem,
   localTemplateItem,
   removeTemplateItemFromCache,
 } from '#features/mealPlan/cache/mealTemplateItem';
@@ -161,8 +162,19 @@ const showTemplateItem: LocalWrite<AddTemplateItemInputs>['apply'] = (
 
 export const addTemplateItem: LocalWrite<AddTemplateItemInputs> = {
   apply: showTemplateItem,
-  // Its answer states the template alone, so the row and its edge are written.
-  commit: showTemplateItem,
+  // The answer states the row, so only its edge is the write's; an answer
+  // without one leaves the row as the device wrote it.
+  commit(cache, write, data) {
+    const payload: unknown = appliedPayload(data);
+    const answered = idOf(
+      isRecord(payload) ? payload.mealTemplateItem : undefined,
+    );
+    if (answered) {
+      linkTemplateItem(cache, write.inputs.item.templateId, answered);
+      return;
+    }
+    showTemplateItem(cache, write);
+  },
 };
 
 export type RemoveTemplateItemInputs = { templateId: string };

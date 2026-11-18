@@ -1027,7 +1027,6 @@ describe('direct cache helpers', () => {
     fragment ProbeStorageLocation on StorageLocation {
       id
       name
-      updatedAt
     }
   `;
 
@@ -1044,7 +1043,6 @@ describe('direct cache helpers', () => {
         __typename: 'StorageLocation',
         id,
         name,
-        updatedAt: '2020-01-01T00:00:00.000Z',
       },
     });
   };

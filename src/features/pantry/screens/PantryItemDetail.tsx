@@ -14,7 +14,7 @@ import { DataStateView } from '#components/organisms/DataStateView';
 import { PantryItemHeldDetail } from '#features/pantry/components/PantryItemHeldDetail';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { useDataState } from '#hooks/data/useDataState';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslateFn } from '#/i18n';
 import { usePantryItemDetailData } from './usePantryItemDetailData';
 import {
   useSelectedHomeId,
@@ -68,13 +68,41 @@ import {
 import { catalogHintOf } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
 import { commonStyles } from '#/styles/commonStyles';
-import { daysUntilExpiry } from '#domain/expiry';
+import { daysUntilExpiry, isExpiryEstimate } from '#domain/expiry';
 import { catalogKey } from '#domain/catalogRecipes';
 import { useToday } from '#hooks/app/useToday';
 
 /**
- * Extracted so `styles.useVariants` is called once per instance.
+ * The summary's expiry, on one line like its neighbours: the header names the
+ * state, so the value is only when. A shelf-life guess is marked "≈", quietly.
  */
+function expiryColumnOf(
+  expiresOn: string | null | undefined,
+  today: string,
+  estimated: boolean,
+  t: TranslateFn,
+): { header: string; value: string } {
+  if (!expiresOn) {
+    return {
+      header: t('pantryItemDetail.expiring'),
+      value: t('pantryItemDetail.noExpiry'),
+    };
+  }
+  const days = daysUntilExpiry(expiresOn, today);
+  const when =
+    days < 0
+      ? t('pantryItemDetail.expiryDaysAgo', { count: -days })
+      : days === 0
+      ? t('labels.today')
+      : days === 1
+      ? t('labels.tomorrow')
+      : t('labels.durationDays', { count: days });
+  return {
+    header: t(days < 0 ? 'labels.expired' : 'pantryItemDetail.expiring'),
+    value: estimated ? t('pantryItemDetail.expiryApprox', { when }) : when,
+  };
+}
+
 const ExpiryColumnText: React.FC<{
   text: string;
   isUrgent: boolean;
@@ -179,6 +207,12 @@ export const PantryItemDetail: React.FC<
 
   const imageUrl = resolveImageUrl(item, 'large');
   const expiryInfo = getExpiryInfo(item?.expiresOn, today, t);
+  const expiryColumn = expiryColumnOf(
+    item?.expiresOn,
+    today,
+    isExpiryEstimate(item?.expiryKind),
+    t,
+  );
   const daysInPantry = getDaysInPantry(item?.createdAt);
   const storageStateDisplay = formatStorageState(item?.storageState, t);
   const brandName = item?.brand?.name ?? null;
@@ -416,7 +450,11 @@ export const PantryItemDetail: React.FC<
           title={item.itemName}
           numberOfLines={2}
           trailing={
-            <Text role="heading" style={styles.quantityBadge}>
+            <Text
+              role="heading"
+              style={styles.quantityBadge}
+              testID={pantryTestIDs.detailAmount}
+            >
               {quantityText}
             </Text>
           }
@@ -448,10 +486,10 @@ export const PantryItemDetail: React.FC<
             </View>
             <View style={styles.infoColumn}>
               <Text role="caption" style={styles.infoColumnLabel}>
-                {t('pantryItemDetail.expiring')}
+                {expiryColumn.header}
               </Text>
               <ExpiryColumnText
-                text={expiryInfo?.text ?? t('pantryItemDetail.noExpiry')}
+                text={expiryColumn.value}
                 isUrgent={!!expiryInfo?.isUrgent}
                 isExpired={!!expiryInfo?.isExpired}
               />

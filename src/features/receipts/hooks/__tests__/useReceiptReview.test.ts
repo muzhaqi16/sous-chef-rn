@@ -55,6 +55,8 @@ import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { useReceiptReview } from '../useReceiptReview';
 import { UseReceiptReview_StoreFragmentDoc } from '../useReceiptReview.generated';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
+import { CreateStoreFromPlaceDocument } from '#features/catalog/hooks/useCreateStoreFromPlace.generated';
+import { toastService } from '#/services/toastService';
 import { RemoveUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { ResolveReceiptLinesDocument } from '../useReceiptMatches.generated';
@@ -188,6 +190,34 @@ const listItems = (
     },
   };
 };
+
+// Milk open on the list as `quantity` bottles: a counted unit, unlike a weight.
+const BOTTLE = {
+  id: 'unit-bottle',
+  name: 'bottle',
+  symbol: 'btl',
+  type: UnitType.Count,
+};
+const milkInBottles =
+  (quantity: number): typeof listItems =>
+  vars => {
+    const asked = Array.isArray(vars.itemIds) ? vars.itemIds : null;
+    const open = !asked || asked.includes('cat-milk');
+    const milk = {
+      id: 'sli-milk',
+      itemName: 'Milk',
+      quantity,
+      unit: BOTTLE,
+      item: { id: 'cat-milk' },
+      purchaseInfo: { isPurchased: false, movedToPantryAt: null },
+    };
+    return {
+      shoppingList: {
+        id: 'list-1',
+        itemsConnection: connectionOf(open && !vars.isPurchased ? [milk] : []),
+      },
+    };
+  };
 
 const fired = (checkIn: Recorded) => checkIn.fired.map(vars => inputOf(vars));
 const sent = (checkIn: Recorded) => sentLinesOf(checkIn.fired[0] ?? {});
@@ -568,11 +598,6 @@ describe('useReceiptReview', () => {
 
   it.each<[string, Partial<ReceiptLineChoice>, string]>([
     [
-      'no price was read',
-      { price: null },
-      'Enter what you paid for this line.',
-    ],
-    [
       'it was bought in a unit the device cannot name',
       { unitText: 'flagon' },
       'Give it a unit to add it',
@@ -600,6 +625,66 @@ describe('useReceiptReview', () => {
       expect(review().pendingCount).toBe(1);
     },
   );
+
+  // IN-01: a line whose price went unread goes in with the rest, nothing
+  // typed, its cost unknown: no total is stated, never zero.
+  it('adds a line whose price was not read, stating no total for it', async () => {
+    const { choose, checkIn, addChosen } = await setup();
+    await choose({ 1: { ...MILK, price: null }, 3: PICKED_BANANAS });
+
+    expect(await addChosen()).toMatchObject({ sent: 2, held: 0 });
+
+    const [milk] = sent(checkIn).filter(line => line.clientId === '1');
+    expect(milk).toBeDefined();
+    expect(milk).not.toHaveProperty('totalPaid');
+  });
+
+  // IN-04: the milk already moved to the pantry gets its receipt: the line
+  // fills that purchase in, records it, and adds no stock or second purchase.
+  it('sends a line picked as the receipt for an earlier purchase as that purchase', async () => {
+    const { choose, checkIn, addChosen, cache } = await setup();
+    await choose({
+      1: {
+        ...MILK,
+        notStocked: true,
+        existingPurchase: { id: 'IN-04-existing-purchase', version: 3 },
+      },
+    });
+
+    expect(await addChosen()).toMatchObject({ sent: 1, recorded: 1 });
+
+    const [attached] = sent(checkIn);
+    expect(attached).toMatchObject({
+      clientId: '1',
+      stock: false,
+      existingPurchase: { id: 'IN-04-existing-purchase', version: 3 },
+    });
+    expect(attached).not.toHaveProperty('pantryItemId');
+    expect(attached).not.toHaveProperty('shoppingListItemId');
+    expect(pantryItems(cache)).toEqual([]);
+  });
+
+  // REL-01: two confirms in flight carry the identities the first minted, so
+  // the API records the receipt once; once it has, a confirm sends nothing.
+  it('sends confirms made together under one set of ids, and none once landed', async () => {
+    const { review, choose, checkIn, addChosen } = await setup();
+    await choose({ 1: MILK, 3: PICKED_BANANAS });
+
+    await drained(() =>
+      Promise.all([review().addChosen(), review().addChosen()]),
+    );
+    await drainTimers();
+
+    const [first, second] = checkIn.fired.map(vars => ({
+      id: inputOf(vars).id,
+      purchases: sentLinesOf(vars).map(line => line.purchaseId),
+    }));
+    expect(second ?? first).toEqual(first);
+    const sends = checkIn.fired.length;
+
+    expect(await addChosen()).toMatchObject({ sent: 0 });
+    expect(checkIn.fired).toHaveLength(sends);
+  });
 
   it('says a line refused with no code this build knows was not added', async () => {
     const { review, run } = await setup();
@@ -632,6 +717,20 @@ describe('useReceiptReview', () => {
 
     expect(fired(checkIn)[0]).toEqual(
       expect.objectContaining({ receiptParseId: 'parse-1', orderDiscount: 2 }),
+    );
+  });
+
+  it('books the check-in in the currency the receipt prints, as read', async () => {
+    seedKroger({
+      parsed: { ...parsedReceipt(KROGER_LINES, 'KROGER'), currency: 'MXN' },
+    });
+    const { choose, checkIn, addChosen } = await setup();
+    await choose({ 1: MILK });
+
+    await addChosen();
+
+    expect(fired(checkIn)[0]).toEqual(
+      expect.objectContaining({ currency: 'MXN' }),
     );
   });
 
@@ -751,6 +850,23 @@ describe('useReceiptReview', () => {
       await drainTimers();
       expect(review().matchState).toBe('done');
       expect(statuses()).toEqual(['add', 'unmatched']);
+    });
+
+    // IN-01: what the receipt and the API resolve goes in as read, with
+    // nothing typed, a line whose price went unread included at no cost.
+    it('adds the lines it is sure of with nothing typed, an unread price unknown', async () => {
+      seedKroger({}, [
+        { rawText: 'KROGER', kind: 'other' },
+        { rawText: 'KRO WHL MILK', kind: 'item', product: 'KRO WHL MILK' },
+        { rawText: 'BALANCE 3.29', kind: 'total', lineTotal: 3.29 },
+      ]);
+      const { checkIn, addChosen } = await setup({ resolve: resolved() });
+
+      expect(await addChosen()).toMatchObject({ sent: 1, held: 0 });
+
+      const [milk] = sent(checkIn);
+      expect(milk).toMatchObject({ clientId: '1', item: { id: 'cat-milk' } });
+      expect(milk).not.toHaveProperty('totalPaid');
     });
 
     it('adds the item it is sure of, and only suggests the one it guesses', async () => {
@@ -1076,6 +1192,140 @@ describe('useReceiptReview', () => {
     });
   });
 
+  describe('asking which place the printed address is', () => {
+    const TRADER_JOES = { id: 'chain-tj', name: "Trader Joe's" };
+    const CHOICES = [
+      {
+        placeId: 'osm-1',
+        name: "Trader Joe's",
+        address: '6343 Penn Ave, Pittsburgh',
+        credit: '© OpenStreetMap contributors',
+        storeNumber: '0638',
+        chain: TRADER_JOES,
+      },
+      {
+        placeId: 'osm-2',
+        name: "Trader Joe's",
+        address: '6343 Penn Ave Suite 2, Pittsburgh',
+        credit: '© OpenStreetMap contributors',
+        storeNumber: '0638',
+        chain: TRADER_JOES,
+      },
+    ];
+    // As the review offers them: the receipt's chain and number ride along.
+    const OFFERED = CHOICES.map(({ chain, ...choice }) => ({
+      ...choice,
+      chainId: chain.id,
+    }));
+    const [, SECOND] = OFFERED;
+    // The search could not settle on one place for the printed street.
+    const unsettled = () =>
+      recordMock(ResolveReceiptLinesDocument, {
+        data: {
+          resolveReceiptLines: {
+            ...RESOLVED.resolveReceiptLines,
+            store: null,
+            proposedStore: {
+              name: "Trader Joe's",
+              address: '6343 Penn Ave, Pittsburgh, PA 15206',
+              storeNumber: null,
+              chain: null,
+            },
+            storeChoices: CHOICES,
+          },
+        },
+        maxUsageCount: 1,
+      });
+    // Asked again for the picked store, which the API places.
+    const placed = () =>
+      recordMock(ResolveReceiptLinesDocument, {
+        data: {
+          resolveReceiptLines: {
+            ...RESOLVED.resolveReceiptLines,
+            store: { id: 'store-tj', name: "Trader Joe's" },
+            storeChoices: [],
+          },
+        },
+      });
+
+    it('checks in at the place picked, made a store', async () => {
+      seedKroger();
+      const fromPlace = recordMock(CreateStoreFromPlaceDocument, {
+        data: {
+          createStoreFromPlace: {
+            __typename: 'CreateStorePayload',
+            outcome: CreateOutcome.Created,
+            store: { id: 'store-tj', name: "Trader Joe's" },
+          },
+        },
+      });
+      const { review, choose, checkIn, addChosen } = await setup({
+        resolve: unsettled(),
+        mocks: [fromPlace, placed()],
+      });
+      expect(review().storeChoices).toEqual(OFFERED);
+      // Asked, never placed.
+      expect(review().store).toBeNull();
+
+      await drained(() => review().chooseStoreChoice(SECOND!));
+      await drainTimers();
+
+      // The receipt's chain and number: the store of that number completes.
+      expect(fired(fromPlace)).toEqual([
+        { placeId: 'osm-2', chainId: 'chain-tj', storeNumber: '0638' },
+      ]);
+      expect(review().store).toEqual({ id: 'store-tj', name: "Trader Joe's" });
+      expect(review().storeChoices).toEqual([]);
+
+      await choose({ 1: MILK });
+      await addChosen();
+
+      expect(fired(checkIn)[0]).toEqual(
+        expect.objectContaining({ storeId: 'store-tj' }),
+      );
+    });
+
+    it('keeps asking, and says why, when the place cannot be made a store', async () => {
+      seedKroger();
+      const shown = jest.spyOn(toastService, 'error');
+      const { review } = await setup({
+        resolve: unsettled(),
+        mocks: [
+          recordMock(CreateStoreFromPlaceDocument, {
+            error: new Error('Network request failed'),
+          }),
+        ],
+      });
+
+      await drained(() => review().chooseStoreChoice(SECOND!));
+      await drainTimers();
+
+      expect(shown).toHaveBeenCalledWith(
+        t('receipts.review.storeChoiceFailed'),
+      );
+      expect(review().store).toBeNull();
+      expect(review().storeChoices).toEqual(OFFERED);
+    });
+
+    it('asks beside the store it placed when that store has no address', async () => {
+      seedKroger();
+      const { review } = await setup({
+        resolve: recordMock(ResolveReceiptLinesDocument, {
+          data: {
+            resolveReceiptLines: {
+              ...RESOLVED.resolveReceiptLines,
+              store: { id: 'store-tj', name: "Trader Joe's" },
+              storeChoices: CHOICES,
+            },
+          },
+        }),
+      });
+
+      expect(review().store).toEqual({ id: 'store-tj', name: "Trader Joe's" });
+      expect(review().storeChoices).toEqual(OFFERED);
+    });
+  });
+
   describe('offering a store the receipt would locate', () => {
     // The household's "Kroger", added before any receipt located it, and a
     // branch of that name, which has its address.
@@ -1323,6 +1573,46 @@ describe('useReceiptReview', () => {
         listLoading,
         onList: rows[0]?.onList,
       }).toMatchObject(expected);
+    });
+
+    it('shows the amount a bare count takes from a counted list line, and sends it', async () => {
+      const { review, checkIn, chooseOnList, addChosen } = await setup({
+        listFor: milkInBottles(2),
+      });
+      // The receipt printed only "1": one of what the list asked for. The API
+      // would count a bare package of a counted line as one bottle.
+      await chooseOnList({ 1: MILK });
+      expect(review().rows[0]?.fromList).toMatchObject({
+        quantity: 2,
+        unitId: 'unit-bottle',
+      });
+
+      await addChosen();
+
+      expect(sent(checkIn)).toEqual([
+        expect.objectContaining({
+          shoppingListItemId: 'sli-milk',
+          amount: { measured: { quantity: 2, unitId: 'unit-bottle' } },
+        }),
+      ]);
+    });
+
+    it('asks the amount of a count a counted list line cannot read, starting from the list', async () => {
+      const { review, checkIn, chooseOnList, confirm } = await setup({
+        listFor: milkInBottles(2),
+      });
+      // Three of what: bottles, or packs of them? Nothing is sent for it.
+      await chooseOnList({ 1: { ...MILK, quantity: 3 } });
+
+      await confirm();
+
+      expect(checkIn.fired).toEqual([]);
+      expect(review().rows[0]).toMatchObject({
+        status: 'failed',
+        failure: t('receipts.review.needsAmount', { amount: '2 btl' }),
+        asked: { quantity: 2, unitId: 'unit-bottle', unitText: 'btl' },
+      });
+      expect(review().rows[0]).not.toHaveProperty('fromList');
     });
 
     it('counts a line no unit names in the counted stack the pantry holds', async () => {

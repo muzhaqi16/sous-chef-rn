@@ -3,8 +3,18 @@ import { makeCache } from '#/apollo/cache';
 import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
 import { writeLocalPantryItem } from '../writeLocalPantryItem';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
+import { ExpiryKind, StorageType } from '#/graphql/generated/schemaTypes';
+import { LocalRefs_StorageLocationFragmentDoc } from '#features/catalog/cache/localRefs.generated';
+import { UseUpdatePantryItem_PantryItemFragmentDoc } from '#features/pantry/hooks/mutations/useUpdatePantryItem.generated';
 
 const NOW = '2026-10-30T10:00:00.000Z';
+
+const EXPIRY = gql`
+  fragment _WriteLocalExpiryProbe on PantryItem {
+    expiresOn
+    expiryKind
+  }
+`;
 
 /**
  * A local row fills in what the create cannot know and never what the device
@@ -229,6 +239,29 @@ describe('writeLocalPantryItem', () => {
     });
   });
 
+  // IN-06 before the answer: a date typed on a new row is stated, and a row
+  // with none has no date and no kind until the server estimates one.
+  it.each([
+    ['2026-11-20', ExpiryKind.Label],
+    [null, null],
+  ])('reads a typed date %s as kind %s', (expiresOn, expiryKind) => {
+    const cache = makeCache();
+
+    writeLocalPantryItem(
+      cache,
+      'row-date',
+      { pantryId: 'pantry-1', itemName: 'Spinach', expiresOn },
+      NOW,
+    );
+
+    expect(
+      cache.readFragment({
+        id: 'PantryItem:row-date',
+        fragment: EXPIRY,
+      }),
+    ).toEqual({ __typename: 'PantryItem', expiresOn, expiryKind });
+  });
+
   it('counts in the stated unit and guesses none', () => {
     const cache = makeCache();
 
@@ -256,5 +289,68 @@ describe('writeLocalPantryItem', () => {
     // No stated unit: the neutral stand-in, never the catalog's display unit,
     // which a replay would send as a choice the server did not make.
     expect(detail(cache, 'row-8').result?.pantryItem?.unit?.id).toBe('');
+  });
+
+  // IN-05: an acquisition keeps the size it was bought in.
+  it('holds what two jars of a stated size contain, in that size', () => {
+    const cache = makeCache();
+
+    writeLocalPantryItem(
+      cache,
+      'row-9',
+      {
+        pantryId: 'pantry-1',
+        itemName: 'Salsa',
+        quantity: 2,
+        unitId: 'unit-jar',
+        packageSize: { netWeight: 24, netWeightUnitId: 'unit-oz' },
+      },
+      NOW,
+    );
+
+    // 2 x 24 = 48 oz, in the jar's own size.
+    expect(detail(cache, 'row-9').result?.pantryItem).toMatchObject({
+      netWeight: 24,
+      remainingNetWeight: 48,
+      netWeightUnit: { id: 'unit-oz' },
+    });
+  });
+
+  // Offline, the row is all there is until the queue drains: a picked
+  // location must place it, as a typed one does.
+  it('shows a picked location as the pantry holds it', () => {
+    const cache = makeCache();
+    seedFragment(cache, {
+      fragment: LocalRefs_StorageLocationFragmentDoc,
+      fragmentName: 'localRefs_storageLocation',
+      data: {
+        __typename: 'StorageLocation',
+        id: 'loc-1',
+        name: 'Chest freezer',
+        type: StorageType.Freezer,
+        version: 4,
+      },
+    });
+
+    writeLocalPantryItem(
+      cache,
+      'row-9',
+      { pantryId: 'pantry-1', itemName: 'Peas', storageLocationId: 'loc-1' },
+      NOW,
+    );
+
+    expect(
+      cache.readFragment({
+        fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
+        fragmentName: 'useUpdatePantryItem_pantryItem',
+        id: 'PantryItem:row-9',
+      })?.storageLocation,
+    ).toEqual({
+      __typename: 'StorageLocation',
+      id: 'loc-1',
+      name: 'Chest freezer',
+      type: StorageType.Freezer,
+      version: 4,
+    });
   });
 });

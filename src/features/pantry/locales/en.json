@@ -3,6 +3,9 @@
     "inLocation": " in {{location}}",
     "inThePantry": "In the pantry",
     "expiring": "Expiring",
+    "expiryDaysAgo_one": "{{count}} day ago",
+    "expiryDaysAgo_other": "{{count}} days ago",
+    "expiryApprox": "≈ {{when}}",
     "noExpiry": "No expiry",
     "amount": "Amount",
     "nutrition": "Nutrition",
@@ -56,7 +59,8 @@
     "removedTitle": "This item is no longer in your pantry",
     "removedBody": "It was removed, perhaps from another device.",
     "hiddenTitle": "This item isn't shown to you",
-    "hiddenBody": "It's in a pantry you can't view. Someone who manages the home can let you see it."
+    "hiddenBody": "It's in a pantry you can't view. Someone who manages the home can let you see it.",
+    "expiryEstimated": "Estimated date"
   },
   "pantrySettings": {
     "createTitle": "Create New Pantry",
@@ -177,7 +181,6 @@
     "composted": "Composted",
     "recycledPackaging": "Recycled (packaging)",
     "notesPlaceholder": "Add any notes about this waste...",
-    "reasonExpired": "Expired",
     "reasonSpoiled": "Spoiled",
     "reasonSpilled": "Spilled",
     "reasonBurnt": "Burnt",
@@ -191,8 +194,7 @@
     "differentSize": "A different size?",
     "newQuantityPrefix": "New quantity: ",
     "costPerUnit": "Cost per Unit",
-    "notesPlaceholder": "Add any notes about this restock...",
-    "expirationPlaceholder": "Set new expiration"
+    "notesPlaceholder": "Add any notes about this restock..."
   },
   "consumeItem": {
     "title": "Consume Item",
@@ -202,7 +204,9 @@
     "purpose": "Purpose *",
     "notesPlaceholder": "Add any notes about this usage...",
     "purposeCooking": "Cooking",
-    "purposeTransfer": "Transfer"
+    "purposeTransfer": "Transfer",
+    "useAll": "Use all",
+    "optionalDetails": "Optional details"
   },
   "moveToPantry": {
     "cannotAddTitle": "Can't add to this home's pantry",
@@ -310,7 +314,28 @@
     "outOfStock": "Out of stock",
     "runningLow": "Running low",
     "stockGuideSubtitle": "Tap + and scan a recent receipt: what you bought goes straight into your pantry.",
-    "stockGuideOffline": "Scanning a receipt needs a connection. Try it once you’re back online."
+    "stockGuideOffline": "Scanning a receipt needs a connection. Try it once you’re back online.",
+    "pendingAmount": "{{amount}} waiting to sync",
+    "stockCheckEntry_one": "{{count}} item to check",
+    "stockCheckEntry_other": "{{count}} items to check",
+    "stockCheckTitle": "Still have these?",
+    "stockCheckStillHave": "Still have",
+    "stockCheckSomeLeft": "Some left",
+    "stockCheckUsedUp": "Used up",
+    "stockCheckThrewOut": "Threw out",
+    "stockCheckLeft": "Left, in {{unit}}",
+    "stockCheckInside": "What they hold, in {{unit}}",
+    "stockCheckStale": "This changed since you looked. Check it again.",
+    "stockCheckFailed": "Couldn't save the check. Try again.",
+    "stockCheckNoneAnswered": "Pick an answer for at least one item.",
+    "stockDoubtNotConfirmed": "Not checked in a while",
+    "stockDoubtPastExpiry": "Past its date",
+    "stockDoubtPastRunOut": "Usually gone by now",
+    "stockDoubtRunOutSoon": "Usually runs out soon",
+    "stockLevelHigh": "Likely still here",
+    "stockLevelMedium": "Worth a check",
+    "stockLevelLow": "Probably gone",
+    "stockLevelUnknown": "Not known"
   },
   "storageState": {
     "AMBIENT": "Ambient",
@@ -333,11 +358,11 @@
   },
   "deduction": {
     "invalidWaste": "Please enter a valid waste amount",
-    "stillCalculating": "Still calculating available quantity...",
     "exceedsAvailableConsume": "Cannot consume more than available quantity ({{amount}} {{unit}})",
     "exceedsAvailableWaste": "Cannot waste more than available quantity ({{amount}} {{unit}})",
     "remainingAfter": "Remaining: {{amount}} {{unit}}",
-    "exceedsAvailable": "Exceeds available ({{amount}} {{unit}})"
+    "exceedsAvailable": "Exceeds available ({{amount}} {{unit}})",
+    "conversionUnavailable": "This unit cannot be converted. Choose another unit."
   },
   "duplicateItem": {
     "title": "Item Already in Pantry"

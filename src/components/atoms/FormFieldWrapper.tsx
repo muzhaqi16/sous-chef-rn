@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { Label } from '#components/atoms/Label';
+import { kitTestIDs } from '#components/testIDs';
 
 interface FormFieldWrapperProps {
   label: string;
@@ -12,6 +13,8 @@ interface FormFieldWrapperProps {
   children: React.ReactNode;
   containerStyle?: ViewStyle;
   accessibilityLabel?: string;
+  /** The field's input id; its error text takes `kitTestIDs.inputError` of it. */
+  inputTestID?: string;
 }
 
 /**
@@ -25,6 +28,7 @@ export const FormFieldWrapper: React.FC<FormFieldWrapperProps> = ({
   children,
   containerStyle,
   accessibilityLabel,
+  inputTestID,
 }) => {
   return (
     <View
@@ -35,7 +39,12 @@ export const FormFieldWrapper: React.FC<FormFieldWrapperProps> = ({
       <Label required={required}>{label}</Label>
       {children}
       {error ? (
-        <Text role="error" tone="error" style={styles.errorText}>
+        <Text
+          role="error"
+          tone="error"
+          style={styles.errorText}
+          testID={inputTestID ? kitTestIDs.inputError(inputTestID) : undefined}
+        >
           {error}
         </Text>
       ) : null}

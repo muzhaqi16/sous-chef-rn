@@ -125,9 +125,7 @@ export function AddItemSheet<
     }
   };
 
-  // useStandardBottomSheet handles present/dismiss. Effect-driven side
-  // tasks: clear the search bar when the sheet opens, reset autocomplete on
-  // close. Effect runs after commit so ref access is safe.
+  // useStandardBottomSheet handles present/dismiss.
   const isOpen = visible && !!contextId;
 
   // Reset the drill-down whenever the sheet's open state changes so it always
@@ -142,9 +140,10 @@ export function AddItemSheet<
     setStep(openingStep);
   }
 
+  // Nothing clears the search bar on open: the sheet's content mounts on every
+  // present, holding the query it was opened with.
   useEffect(() => {
     if (isOpen) {
-      searchBarRef.current?.clear();
       // Opened on the form: the owner preps its inputs, as "Add manually" does.
       if (startStep === 'details') onAddManually('');
     } else {

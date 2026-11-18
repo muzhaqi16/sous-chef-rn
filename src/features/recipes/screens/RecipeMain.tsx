@@ -249,9 +249,7 @@ const RecipeMainInner: React.FC = () => {
 
   // Two ways to search: by name with the diet filters, or by what the pantry
   // holds. The API cannot combine them, so they are modes, not filters.
-  const [chosenSearchMode, setSearchMode] = useState<RecipeSearchMode>(
-    screen.selectedIngredients.size > 0 ? 'ingredients' : 'name',
-  );
+  const [chosenSearchMode, setSearchMode] = useState<RecipeSearchMode>('name');
   const searchMode: RecipeSearchMode = screen.hasPantryItems
     ? chosenSearchMode
     : 'name';
@@ -520,9 +518,10 @@ const RecipeMainInner: React.FC = () => {
         activeFilters={screen.activeFilters}
         onApplyFilters={screen.applyFilters}
         onSheetChange={handleSheetChange}
+        // The sheet opens only in name search, where picks are left over
+        // from the other mode: only the pantry's suggestions take no filters.
         isIngredientSearch={
-          screen.selectedIngredients.size > 0 ||
-          (!screen.showSearchResults && screen.discovery.mode === 'pantry')
+          !screen.showSearchResults && screen.discovery.mode === 'pantry'
         }
       />
 

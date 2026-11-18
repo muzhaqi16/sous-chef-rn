@@ -28,7 +28,7 @@ the cache immediately and replay through an offline queue.
 ```bash
 npm start / npm run ios / npm run android    # dev loop
 npm run codegen      # re-pull schema + regenerate types (after any .graphql change)
-npm run typecheck    # app, test AND e2e tsconfigs
+npm run typecheck    # app (tests included), core AND e2e tsconfigs
 npm run lint         # ESLint incl. every .graphql vs the pulled schema; --max-warnings 0
 npm test             # full suite, unfiltered (~830 suites)
 

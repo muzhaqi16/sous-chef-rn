@@ -272,7 +272,15 @@ export const RecipeFormScreen: React.FC<
         <RecipeBasicFields
           state={form.state}
           updateField={form.updateField}
-          errors={form.errors}
+          // By value: a refusal set on the form changes its errors object in
+          // place, so the object alone would leave the fields as they were.
+          errors={{
+            name: form.errors.name?.message,
+            imageUrl: form.errors.imageUrl?.message,
+            videoUrl: form.errors.videoUrl?.message,
+            tips: form.errors.tips?.message,
+            tags: form.errors.tags?.message,
+          }}
         />
 
         {/* Category fields */}

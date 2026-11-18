@@ -1,9 +1,3 @@
-'use no memo';
-
-jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
-  possibleTypes: {},
-}));
-
 import { InMemoryCache } from '@apollo/client';
 import { parse, type DocumentNode } from 'graphql';
 import { makeCache } from '../cache';
@@ -92,7 +86,7 @@ describe('makeCache', () => {
 });
 
 describe.each([
-  ['Home', 'shoppingListsConnection', 'ShoppingList'],
+  ['Pantry', 'storageLocationsConnection', 'StorageLocation'],
   ['ShoppingList', 'itemsConnection', 'ShoppingListItem'],
   ['Pantry', 'itemsConnection', 'PantryItem'],
 ])('%s.%s', (parentType, field, nodeType) => {
@@ -264,37 +258,6 @@ describe('connections keyed on their real arguments', () => {
     expect(readIds({ homeId: 'h1', first: 50 })).toEqual(idRange('sl-', 30));
     expect(readIds({ homeId: 'h2', first: 20 })).toEqual(['other']);
   });
-
-  it('Pantry.storageLocationsConnection keeps each ordering its own entry', () => {
-    const cache = makeCache();
-    const query = parse(
-      `query Locations($id: ID!, $orderBy: StorageLocationOrderBy) { pantry(id: $id) { id storageLocationsConnection(orderBy: $orderBy) { ${CONNECTION} } } }`,
-    );
-    const write = (orderBy: Record<string, string>, ids: string[]) =>
-      seedQuery(cache, {
-        query,
-        variables: { id: 'p1', orderBy },
-        data: {
-          pantry: {
-            __typename: 'Pantry',
-            id: 'p1',
-            storageLocationsConnection: pageOf('StorageLocation', ids),
-          },
-        },
-      });
-    const readIds = (orderBy: Record<string, string>) =>
-      idsOf(
-        cache.readQuery<{
-          pantry: { storageLocationsConnection: ConnectionRead };
-        }>({ query, variables: { id: 'p1', orderBy } })?.pantry
-          .storageLocationsConnection,
-      );
-    write({ name: 'ASC' }, ['a', 'b']);
-    write({ createdAt: 'DESC' }, ['b', 'a']);
-
-    expect(readIds({ name: 'ASC' })).toEqual(['a', 'b']);
-    expect(readIds({ createdAt: 'DESC' })).toEqual(['b', 'a']);
-  });
 });
 
 describe('a null answer keeps what the cache holds', () => {
@@ -342,52 +305,61 @@ describe('a null answer keeps what the cache holds', () => {
   });
 });
 
+/** A list selected bare, and with `args` as a screen reads it, on entity `p1`. */
+const oneListOf = (
+  typename: string,
+  field: string,
+  nodeType: string,
+  args: string,
+) => {
+  const selecting = (selected: string) =>
+    parse(
+      `fragment List on ${typename} { id ${field}${selected} { ${CONNECTION} } }`,
+    );
+  const paged = selecting(args);
+  const bare = selecting('');
+  const write = (
+    cache: InMemoryCache,
+    fragment: DocumentNode,
+    ids: string[],
+    { after, ...page }: Page = {},
+  ) =>
+    seedFragment(cache, {
+      fragment,
+      variables: { first: 2, after },
+      data: {
+        __typename: typename,
+        id: 'p1',
+        [field]: pageOf(nodeType, ids, page),
+      },
+    });
+  const read = (cache: InMemoryCache, fragment: DocumentNode) =>
+    cache.readFragment<Record<string, ConnectionRead>>({
+      id: `${typename}:p1`,
+      fragment,
+      variables: { first: 2 },
+    })?.[field];
+  return { paged, bare, write, read };
+};
+
+// A screen reads the list with arguments; a derived or local write names none.
 describe.each([
-  ['MealPlan', 'mealPlanItemsConnection', 'MealPlanItem'],
-  ['Recipe', 'ingredientsConnection', 'RecipeIngredient'],
+  [
+    'MealPlan',
+    'mealPlanItemsConnection',
+    'MealPlanItem',
+    '(first: $first, after: $after)',
+  ],
+  ['Recipe', 'ingredientsConnection', 'RecipeIngredient', '(first: $first)'],
 ])(
   '%s.%s is one list whatever arguments read it',
-  (typename, field, nodeType) => {
-    const selecting = (args: string) =>
-      parse(
-        `fragment List on ${typename} { id ${field}${args} { ${CONNECTION} } }`,
-      );
-    // A screen pages the list; a derived or local write names no arguments.
-    const paged = selecting('(first: $first, after: $after)');
-    const bare = selecting('');
-
-    const write = (
-      cache: InMemoryCache,
-      fragment: DocumentNode,
-      ids: string[],
-      { after, ...page }: Page = {},
-    ) =>
-      seedFragment(cache, {
-        fragment,
-        variables: { first: 2, after },
-        data: {
-          __typename: typename,
-          id: 'p1',
-          [field]: pageOf(nodeType, ids, page),
-        },
-      });
-    const read = (cache: InMemoryCache, fragment: DocumentNode) =>
-      cache.readFragment<Record<string, ConnectionRead>>({
-        id: `${typename}:p1`,
-        fragment,
-        variables: { first: 2 },
-      })?.[field];
-
-    it('merges the pages a screen loads into the list a bare selection reads', () => {
-      const cache = makeCache();
-      write(cache, paged, ['n1', 'n2'], { hasNextPage: true, endCursor: 'c2' });
-      write(cache, paged, ['n3'], { after: 'c2' });
-
-      for (const fragment of [bare, paged]) {
-        expect(idsOf(read(cache, fragment))).toEqual(['n1', 'n2', 'n3']);
-        expect(read(cache, fragment)?.pageInfo.hasNextPage).toBe(false);
-      }
-    });
+  (typename, field, nodeType, args) => {
+    const { paged, bare, write, read } = oneListOf(
+      typename,
+      field,
+      nodeType,
+      args,
+    );
 
     it('reads a list written with no arguments through a selection that carries them', () => {
       const cache = makeCache();
@@ -397,6 +369,26 @@ describe.each([
     });
   },
 );
+
+describe('MealPlan.mealPlanItemsConnection', () => {
+  const { paged, bare, write, read } = oneListOf(
+    'MealPlan',
+    'mealPlanItemsConnection',
+    'MealPlanItem',
+    '(first: $first, after: $after)',
+  );
+
+  it('merges the pages a screen loads into the list a bare selection reads', () => {
+    const cache = makeCache();
+    write(cache, paged, ['n1', 'n2'], { hasNextPage: true, endCursor: 'c2' });
+    write(cache, paged, ['n3'], { after: 'c2' });
+
+    for (const fragment of [bare, paged]) {
+      expect(idsOf(read(cache, fragment))).toEqual(['n1', 'n2', 'n3']);
+      expect(read(cache, fragment)?.pageInfo.hasNextPage).toBe(false);
+    }
+  });
+});
 
 describe('entity merges', () => {
   /** Writes each `[selection, fields]` to one entity in turn, then reads every selection back. */

@@ -269,10 +269,15 @@ export const ReceiptScanScreen: React.FC = () => {
               variant={itemCount > 0 ? 'secondary' : 'primary'}
               onPress={scanReplacing}
               icon="receipt-outline"
+              testID={receiptsTestIDs.savedScanAnother}
             >
               {t('receipts.saved.scanAnother')}
             </Button>
-            <Button variant="ghost" onPress={discard}>
+            <Button
+              variant="ghost"
+              onPress={discard}
+              testID={receiptsTestIDs.savedDiscard}
+            >
               {t('labels.discard')}
             </Button>
           </View>
@@ -300,6 +305,7 @@ export const ReceiptScanScreen: React.FC = () => {
               label: t('a11y.choosePhoto'),
               onPress: startPick,
               icon: 'images-outline',
+              testID: receiptsTestIDs.choosePhoto,
             }}
           />
         );
@@ -361,6 +367,7 @@ export const ReceiptScanScreen: React.FC = () => {
               label: t('labels.scanReceipt'),
               onPress: startScan,
               icon: 'scan-outline',
+              testID: receiptsTestIDs.startScan,
             }}
           />
         );

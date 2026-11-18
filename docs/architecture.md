@@ -478,11 +478,10 @@ PantryItemCard.generated.ts   # generated — committed
 ```
 
 Codegen output is gitignored and rebuilt — by CI, and by the `npm run codegen`
-that setup already asks for. Two artifacts are tracked because nothing else
-carries what they hold: `schema.graphql`, where a live server change lands in
-the branch, and `persisted-query-manifest.json`, which is what the server
-matches an operation against. A pre-push hook fails if either is stale, and its
-pathspec names exactly those two — a gitignored path there would check nothing.
+that setup already asks for. One artifact is tracked because nothing else
+carries what it holds: `schema.graphql`, where a live server change lands in the
+branch. A pre-push hook fails if it is stale, and its pathspec names exactly
+that file — a gitignored path there would check nothing.
 
 `npm run lint` validates every `.graphql` file against the pulled schema through
 `@graphql-eslint`'s `flat/operations-recommended`, so a renamed or newly
@@ -655,7 +654,14 @@ those repos.
 - Its ids are minted once and kept in the draft (`receiptDraftStore.checkIn`): the check-in's own, and each line's purchase, stack and typed item. A retry, a restart and a replay send the same ids, so nothing is recorded twice.
 - Every line's local rows are written before the call fires, by the writers the pantry add and the list move use (`writeLocalIntake`, `writeLocalMove`). `applyReceiptCheckIn` settles each line from its result: a refused line withdraws only its own writes, and a merged stack or a matched item is adopted.
 - Queued, it replays through `reconcileReceiptCheckInReplay`, which also settles the saved receipt. Refused for good, `withdrawReceiptCheckIn` and `restoreReceiptCheckInListLines` undo every line.
-- A line that still lacks its product, unit or price is held back and named on the review. A refused line stays on the saved receipt with its cause, and Add sends only the lines not yet recorded.
+- Every line states its amount through `resolveIntakeDraft`, as every intake route does. A line that still lacks its product, unit or amount is held back and named on the review. A price is not required: a line whose price went unread is sent with no `totalPaid`, so its purchase and stack keep an unknown cost and no price is observed (C1). A refused line stays on the saved receipt with its cause, and Add sends only the lines not yet recorded.
+- A line can be the receipt for an earlier purchase, picked by the user and never inferred. The line sheet offers the user's own purchases of the line's product that stocked this pantry in the 14 days before the receipt's day (`useEarlierPurchases`), beside "A new purchase", the default. Only the buyer may attach a receipt, so another member's purchases are not offered. A picked line goes as `existingPurchase { id, version }` with `stock: false`: it fills in that purchase's price, store and day, and adds no stock, no second purchase and no list tick (C2). The API answers that purchase's id, which differs from the line's own `purchaseId`.
+- Worked examples, by line:
+  - **Resolved:** the API is sure of the product and the receipt states the amount, so the line goes in with nothing typed.
+  - **Ambiguous:** a bare count against a counted list line ("2" against 12 eggs) asks for the amount, opening on the list line's.
+  - **Unpriced:** it goes in with its cost unknown, never zero.
+  - **Reconciled:** the receipt for milk already moved to the pantry fills in that purchase, and the pantry still holds what it held.
+  - **Partially refused:** the accepted lines stay recorded, and the refused one keeps the user's edits for the next Add.
 
 Four rules keep parallel work apart:
 
@@ -665,7 +671,7 @@ Four rules keep parallel work apart:
 - **New GraphQL operations live in the owning feature's folder,** not the shared
   `src/graphql/operations/item/item.graphql`.
 - **Generated files are regenerated after a rebase, never hand-merged:**
-  `schema.graphql`, `schemaTypes.ts` and the persisted-query manifest. One
+  `schema.graphql` and `schemaTypes.ts`. One
   session pulls the schema at a time, and commits it on its own.
 - **Append-only shared files** (`registry.ts`, `registry.static.ts`,
   `src/i18n/localeTypes.ts`, `useAppNavigation.ts`,
@@ -812,8 +818,7 @@ too. Changing that config needs a Metro restart with `--reset-cache`.
 
 **FlashList v2** for anything that can grow — it's in ~60 files. Plain
 `ScrollView` is for static, bounded content (settings, forms).
-`SortableShoppingList` handles drag-and-drop. Never `.map()` an unbounded list
-inside a `ScrollView`.
+Never `.map()` an unbounded list inside a `ScrollView`.
 
 FlashList v2 takes no `estimatedItemSize`. List
 `data` must never come through `useDeferredValue` / `startTransition` —
@@ -855,9 +860,13 @@ i18n:check` (also a pre-push hook) fails on drift between locale files.
 
 ### Type-level gates
 
-Three projects own the tree — `tsconfig.json` (app), `__tests__/tsconfig.json`
-(the root test tree) and `e2e/tsconfig.json` — and `npm run typecheck` runs all
-three. ESLint reaches them through `parserOptions.projectService`, which resolves
+Two projects own the tree — `tsconfig.json` (the app and its tests) and
+`e2e/tsconfig.json`, apart because Detox's globals clash with Jest's — and
+`npm run typecheck` runs both, plus `tsconfig.core.json`. The tests stay in the
+app's project: a project of their own holds a second copy of `src`, and ESLint's
+single-run mode builds one Program per `tsconfig.json` with nothing shared
+(typescript-eslint#13109), which ran CI's lint out of heap.
+ESLint reaches them through `parserOptions.projectService`, which resolves
 each file against the project that owns it rather than a named one. That matters
 because a type-aware rule guards with `if (!services?.program) return {}`: a file
 no project claims reports nothing, which reads exactly like a clean file.

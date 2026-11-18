@@ -72,6 +72,19 @@ export function useQuantityFeedback(
   });
   let remaining: ShownQuantity | null = null;
   let available: ShownQuantity | null = null;
+  // A dual-tracked stack typed in its own net-weight unit draws just that much
+  // of what it holds; another unit waits for the API to convert it into that.
+  const inNetWeightUnit =
+    shared.isDualTracked &&
+    shared.activeUnitId !== shared.trackingUnitId &&
+    shared.activeUnitId === shared.netWeightUnitId;
+  const netWeightDrawn = inNetWeightUnit
+    ? hasInput
+      ? inputQuantity
+      : null
+    : shared.isConvertedUnit
+    ? conversion.convertedValue
+    : null;
 
   // What is left always reads as the row will ("9 cans", "1 lb", "2 doz"),
   // whatever unit the amount was typed in.
@@ -88,39 +101,42 @@ export function useQuantityFeedback(
           ),
         )
       : null;
-  } else if (!shared.isConvertedUnit) {
-    // Tracking unit selected — prefer the converter's cap when available
-    // (handles dual-tracked items where tracking unit matches net-weight unit).
-    const availableInUnit = Math.max(
-      shared.availableInSelectedUnit ?? 0,
-      shared.trackingQuantity,
-    );
-    available = inActiveUnit(availableInUnit);
-    remaining = hasInput
-      ? shared.leftAfter(snapDeductionToCap(inputQuantity, availableInUnit))
-      : null;
   } else if (
     shared.isDualTracked &&
-    conversion.convertedValue != null &&
+    (inNetWeightUnit || netWeightDrawn !== null) &&
     shared.remainingNetWeight != null &&
     shared.netWeightUnit !== undefined
   ) {
-    // The API converted the input to net weight, which the stack's own package
-    // size turns into packages. Dual tracking implies both the remaining weight
-    // and its unit are present.
+    // An amount in net weight, which the stack's own package size turns into
+    // packages. Dual tracking implies both the remaining weight and its unit
+    // are present.
     const unit = shared.netWeightUnit;
     const inNetWeight = (quantity: number): ShownQuantity => ({
       quantity,
       unit,
       displayAsFraction: shared.displayAsFractionOf(shared.netWeightUnitId),
     });
-    const drawn = shared.packagesOfNetWeight(conversion.convertedValue);
     available = inNetWeight(shared.remainingNetWeight);
-    if (hasInput) {
+    if (netWeightDrawn !== null) {
+      const drawn = shared.packagesOfNetWeight(netWeightDrawn);
       remaining =
         drawn === null
-          ? inNetWeight(shared.remainingNetWeight - conversion.convertedValue)
+          ? inNetWeight(shared.remainingNetWeight - netWeightDrawn)
           : shared.leftAfter(drawn);
+    }
+  } else if (!shared.isConvertedUnit) {
+    // Tracking unit selected — prefer the converter's cap when available
+    // (handles dual-tracked items where tracking unit matches net-weight unit).
+    const availableInUnit =
+      shared.availableInSelectedUnit ??
+      (shared.activeUnitId === shared.trackingUnitId
+        ? shared.trackingQuantity
+        : null);
+    if (availableInUnit !== null) {
+      available = inActiveUnit(availableInUnit);
+      remaining = hasInput
+        ? shared.leftAfter(snapDeductionToCap(inputQuantity, availableInUnit))
+        : null;
     }
   } else if (shared.availableInSelectedUnit != null) {
     // A converted unit on a stack with no net weight: what is available was

@@ -75,7 +75,6 @@ function seed(completedItems: number) {
         isPurchased: true,
         movedToPantryAt: null,
         purchaseDate: null,
-        purchasedById: null,
         purchasedPrice: null,
         purchasedQuantity: null,
         purchasedBy: null,

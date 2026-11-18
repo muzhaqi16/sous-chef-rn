@@ -48,7 +48,7 @@ function writeZoneOnce(
 /**
  * Points both account zones ("UTC" until written) at the device's, app-wide so a
  * traveller re-syncs. The API times every send in `quietHoursTimezone`, quiet
- * hours on or off, or `timezone` while that is UTC; `registerDevice`'s is unused.
+ * hours on or off, or `timezone` while that is UTC; `registerDevice`'s times none.
  */
 export const useDeviceTimezoneSync = (): void => {
   const user = useUser();

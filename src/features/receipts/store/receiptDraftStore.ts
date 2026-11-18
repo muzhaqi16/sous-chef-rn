@@ -17,12 +17,22 @@ export interface ReceiptLineChoice {
   unitId: string | null;
   /** The unit as typed, sent by name when none was picked. */
   unitText: string;
+  /**
+   * What one package holds: `quantity` is then that many packages, counted in
+   * the unit or in none.
+   */
+  packageSize?: { quantity: number; unitId: string | null; unitText: string };
   /** The total paid for the line. */
   price: number | null;
   /** Added on its own, leaving the shopping list line it matches open. */
   offList?: boolean;
   /** Recorded as bought without adding it to the pantry. */
   notStocked?: boolean;
+  /**
+   * The purchase, already recorded without a receipt, that this line is the
+   * receipt for, at the version read: picked by the user, never inferred.
+   */
+  existingPurchase?: { id: string; version: number };
 }
 
 /**

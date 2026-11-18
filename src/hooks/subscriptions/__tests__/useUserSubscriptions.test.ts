@@ -12,6 +12,8 @@ import { useStore } from '#store/index';
 import { getDeviceId } from '#/services/auth/deviceId';
 import { onWorkSettled } from '#/services/subscriptions/settledWork';
 import { useUserSubscriptions } from '../useUserSubscriptions';
+import { useApolloClient } from '@apollo/client/react';
+import { GetHomesDocument } from '#operations/home/home.generated';
 
 const mockRegister = jest.fn().mockReturnValue({});
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
@@ -154,6 +156,47 @@ describe('useUserSubscriptions', () => {
       expect(mockToastError).toHaveBeenCalledWith(
         'Your account has been banned',
       );
+    });
+  });
+
+  describe('the account default moved', () => {
+    const THIS_DEVICE = 'device_this';
+
+    const drive = (updatedFields: string[], originatorClientId: string) => {
+      jest.mocked(getDeviceId).mockReturnValue(THIS_DEVICE);
+      const getOnData = captureOnData(mockRegister);
+      const { result } = renderHookWithApollo(() => {
+        useUserSubscriptions('user-1');
+        return useApolloClient();
+      });
+      const refetch = jest
+        .spyOn(result.current, 'refetchQueries')
+        .mockReturnValue(Promise.resolve([]) as never);
+      getOnData()({
+        __typename: 'UserEvent',
+        subtype: UserSubtype.AccountUpdated,
+        updatedFields,
+        actorUserId: 'user-1',
+        originatorClientId,
+      });
+      return refetch;
+    };
+
+    it('reads the homes again when another device moved it', () => {
+      expect(drive(['defaultHomeId'], 'device_other')).toHaveBeenCalledWith({
+        include: [GetHomesDocument],
+      });
+    });
+
+    // Leaving or deleting the default home lets the server pick the next.
+    it('reads the homes again when this device moved it', () => {
+      expect(drive(['defaultHomeId'], THIS_DEVICE)).toHaveBeenCalledWith({
+        include: [GetHomesDocument],
+      });
+    });
+
+    it('leaves the homes for any other account change', () => {
+      expect(drive(['displayName'], 'device_other')).not.toHaveBeenCalled();
     });
   });
 

@@ -431,6 +431,10 @@ function PantryMainContent({
   });
   const stockStep = stockGuide.currentStep;
 
+  // A server search answers with one page of results, so the list behind it is
+  // not paged while it shows: a further page would load rows the search hides.
+  const pagesTheList = !screen.searchActive;
+
   return (
     <Screen testID={pantryTestIDs.screen} scroll="list" gutter="none">
       <PantryContent
@@ -465,12 +469,12 @@ function PantryMainContent({
         onAddItem={handleAddItem}
         onRefresh={screen.handleRefresh}
         onEndReached={
-          screen.hasMore && screen.pantryItems.length > 0
+          pagesTheList && screen.hasMore && screen.pantryItems.length > 0
             ? screen.loadMore
             : undefined
         }
-        isLoadingMore={screen.searchActive ? false : screen.isLoadingMore}
-        hasMore={screen.searchActive ? false : screen.hasMore}
+        isLoadingMore={pagesTheList ? screen.isLoadingMore : false}
+        hasMore={pagesTheList ? screen.hasMore : false}
         mayHoldMore={screen.mayHoldMore}
         refreshing={screen.isRefreshing}
         loading={screen.isLoadingInitial}

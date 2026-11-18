@@ -60,11 +60,10 @@ fi
 
 npm run codegen || exit 1
 
-# The codegen outputs git TRACKS. The rest are gitignored and rebuilt by CI, so
-# naming them here checks nothing: `*.generated.ts` matched no tracked file at
-# all. `schema.graphql` carries a live server change into the branch, and the
-# manifest is what the server matches an operation against.
-codegen_outputs="src/graphql/generated/schema.graphql persisted-query-manifest.json"
+# The codegen output git TRACKS. The rest is gitignored and rebuilt by CI, so
+# naming it here checks nothing: `*.generated.ts` matched no tracked file at
+# all. `schema.graphql` carries a live server change into the branch.
+codegen_outputs="src/graphql/generated/schema.graphql"
 
 # shellcheck disable=SC2086
 if ! git diff --quiet HEAD -- $codegen_outputs; then

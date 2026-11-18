@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
@@ -72,13 +72,6 @@ export function useShoppingListSelectorModal({
     () => new Set(),
   );
 
-  // Mirrored into refs so `onSelect` below can stay a stable identity.
-  const isDeleteModeRef = useRef(isDeleteMode);
-  const selectedForDeletionRef = useRef(selectedForDeletion);
-  useEffect(() => {
-    isDeleteModeRef.current = isDeleteMode;
-    selectedForDeletionRef.current = selectedForDeletion;
-  });
   const longPressItemRef = useRef<string | null>(null);
   const { deleteShoppingList } = useDeleteShoppingList();
 
@@ -94,8 +87,8 @@ export function useShoppingListSelectorModal({
     setSelectedForDeletion(new Set([item.id]));
   };
 
+  // A list nobody may delete has its row disabled, so it never reaches here.
   const toggleDeleteSelection = (item: ShoppingListSelectorItem) => {
-    if (!item._canDelete) return;
     if (longPressItemRef.current === item.id) {
       longPressItemRef.current = null;
       return;
@@ -141,11 +134,7 @@ export function useShoppingListSelectorModal({
       return;
     }
 
-    // Clear selection — useShoppingListSelection auto-selects the next list
-    if (currentListId && deletedIds.includes(currentListId)) {
-      useStore.getState().setSelectedShoppingListId(null);
-    }
-
+    // The removal has already moved the List off a deleted current list.
     // The hook already toasted each refusal, so this counts what actually went.
     toastService.success(
       t('shoppingListSelector.deletedToast', { count: deletedIds.length }),
@@ -367,11 +356,9 @@ export function useShoppingListSelectorModal({
   // extraData signals FlashList to re-render items when delete state changes
   const selectorExtraData = { isDeleteMode, selectedForDeletion };
 
-  // Stable identity: volatile state is read from the refs and the store directly,
-  // never from a closure this function would have to be rebuilt for.
+  // Reached only from a list's own row: a header takes no press, and in delete
+  // mode a row toggles its pick instead.
   const onSelect = (id: string) => {
-    if (isDeleteModeRef.current) return;
-    if (id.startsWith('header-')) return;
     useStore.getState().setSelectedShoppingListId(id);
     selectorRef.current?.close();
   };

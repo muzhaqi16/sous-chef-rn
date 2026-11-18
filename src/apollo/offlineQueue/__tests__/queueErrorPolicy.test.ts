@@ -28,12 +28,12 @@ describe('classifyReplayResult', () => {
   });
 
   it('returns applied for a converged success payload (favorites / cooking logs / sync ops)', () => {
-    // A re-favorite / re-cook / sync replay converges as a SUCCESS payload with
-    // converged:true — it doesn't end in `Error`, so it's already applied.
+    // A re-favorite / re-cook / sync replay converges as a SUCCESS payload: its
+    // typename doesn't end in `Error`, so it's already applied.
     expect(
       classifyReplayResult({
         __typename: 'AddRecipeToFavoritesPayload',
-        converged: true,
+        savedRecipe: { __typename: 'SavedRecipe', id: 'saved-1' },
       }),
     ).toEqual({ status: 'applied' });
     expect(
@@ -540,22 +540,6 @@ describe('classifyError — real Apollo error shapes', () => {
       type: 'unknown',
       code: 'PAYLOAD_TOO_LARGE',
       retryable: false,
-    });
-  });
-
-  it('keeps a write refused as OPERATION_NOT_ALLOWED, this build having drifted', () => {
-    const queueError = classifyError(
-      refusedBeforeExecution(403, {
-        code: 'OPERATION_NOT_ALLOWED',
-        disposition: 'RESOLVE',
-      }),
-    );
-
-    expect(queueError).toMatchObject({
-      type: 'server',
-      retryable: false,
-      entryScoped: true,
-      fault: true,
     });
   });
 

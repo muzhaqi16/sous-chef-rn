@@ -238,7 +238,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
                     >
                       {item.recipe?.name ??
                         item.customMealName ??
-                        t('templatePreview.customMeal')}
+                        t('mealPlanItem.recipeUnavailable')}
                     </Text>
                   </View>
                 ))}

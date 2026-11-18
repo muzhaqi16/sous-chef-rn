@@ -20,12 +20,6 @@ export interface SortableListActions {
   onSwipeableClose?: () => void;
   /** Runs a row's `removesRow` action, so the list can reflow around it. */
   onRemoveRow?: (commit: () => void) => void;
-  /** Drag-to-reorder. The neighbour ids are null at the ends of the list. */
-  onSortOrderUpdate?: (
-    itemId: string,
-    afterItemId: string | null,
-    beforeItemId: string | null,
-  ) => void;
 }
 
 export interface SortableListPermissions {
@@ -34,7 +28,6 @@ export interface SortableListPermissions {
   canRemoveItems: boolean;
   canEditItems: boolean;
   canMarkPurchased: boolean;
-  canReorderItems: boolean;
   disabled?: boolean;
 }
 
@@ -80,7 +73,6 @@ export const SortableListActionsProvider: React.FC<
     stablePermissions.canRemoveItems !== permissions.canRemoveItems ||
     stablePermissions.canEditItems !== permissions.canEditItems ||
     stablePermissions.canMarkPurchased !== permissions.canMarkPurchased ||
-    stablePermissions.canReorderItems !== permissions.canReorderItems ||
     stablePermissions.disabled !== permissions.disabled
   ) {
     setStablePermissions(permissions);
@@ -123,9 +115,6 @@ function permittedActions(
       permissions.canEditItems && permissions.canRemoveItems
         ? actions.onMoveToPantry
         : undefined,
-    onSortOrderUpdate: permissions.canReorderItems
-      ? actions.onSortOrderUpdate
-      : undefined,
   };
 }
 

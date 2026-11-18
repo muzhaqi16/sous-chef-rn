@@ -2,7 +2,11 @@
  * What each pantry write changes on the device, as a pending layer. The server's
  * answer writes its own rows; `commit` adds what it cannot state.
  */
-import type { ApolloCache, OperationVariables } from '@apollo/client';
+import type {
+  ApolloCache,
+  OperationVariables,
+  Reference,
+} from '@apollo/client';
 import { rowBaseline } from '#/apollo/pendingWrites/conflictRead';
 import { inputIdOf } from '#/apollo/pendingWrites/inputId';
 import {
@@ -37,6 +41,7 @@ import {
 import {
   dateActiveBatches,
   dropBatchesPage,
+  typedExpiryKind,
   isBatchesPage,
   writeRestatedBatches,
 } from '#features/pantry/cache/restatedStack';
@@ -44,6 +49,7 @@ import {
   bumpStock,
   countNewBatch,
   drawInside,
+  moveContentsTo,
   rememberConsumeUnit,
   writeHeldStock,
 } from '#features/pantry/cache/stock';
@@ -134,6 +140,49 @@ export const setStock: LocalWrite<SetStockInputs> = {
   },
 };
 
+/**
+ * A stock check's rows, as found: what each stack holds now, absolute, or null
+ * where the answer moves nothing (still have) or only the server can say.
+ */
+export type StockCheckInputs = {
+  pantryId: string;
+  rows: readonly { pantryItemId: string; held: number | null }[];
+  now: string;
+};
+
+/** The server checks only stacks that hold stock, so an emptied one leaves. */
+function leaveStockCheck(
+  cache: ApolloCache,
+  pantryId: string,
+  emptied: ReadonlySet<string>,
+): void {
+  cache.modify({
+    id: cache.identify({ __typename: 'Pantry', id: pantryId }),
+    fields: {
+      stockToConfirm(existing: readonly Reference[], { readField }) {
+        return existing.filter(
+          row => !emptied.has(readField<string>('id', row) ?? ''),
+        );
+      },
+    },
+  });
+}
+
+export const recordStockCheck: LocalWrite<StockCheckInputs> = {
+  apply(cache, { inputs: { pantryId, rows, now } }) {
+    const emptied = new Set<string>();
+    for (const { pantryItemId, held } of rows) {
+      const stack = stackRef(pantryItemId);
+      if (held === null || !isHeld(cache, stack)) continue;
+      moveContentsTo(cache, pantryItemId, held);
+      writeEntityFields(cache, stack, { quantity: held, updatedAt: now });
+      writeHeldStock(cache, pantryItemId, held);
+      if (held === 0) emptied.add(pantryItemId);
+    }
+    if (emptied.size > 0) leaveStockCheck(cache, pantryId, emptied);
+  },
+};
+
 type StockDeltaInputs = {
   /** In tracking units; null when only the server can convert the amount. */
   delta: number | null;
@@ -164,13 +213,16 @@ export const drawStock: LocalWrite<DrawStockInputs> = {
   },
 };
 
-export type AddStockInputs = StockDeltaInputs & { pantryId?: string };
+export type AddStockInputs = StockDeltaInputs & {
+  pantryId?: string;
+  contents?: Parameters<typeof bumpStock>[4];
+};
 
 export const addStock: LocalWrite<AddStockInputs> = {
-  apply(cache, { variables, inputs: { delta, now } }) {
+  apply(cache, { variables, inputs: { delta, now, contents } }) {
     const stack = stackOf(variables);
     if (!stack) return;
-    if (delta !== null) bumpStock(cache, stack.id, delta, now);
+    if (delta !== null) bumpStock(cache, stack.id, delta, now, contents);
     countNewBatch(cache, stack.id);
   },
   commit(cache, { variables, inputs: { pantryId } }, data) {
@@ -312,6 +364,7 @@ export const updatePantryRow: LocalWrite<EntityFieldsInputs> = {
     const stack = stackOf(write.variables);
     const expiresOn = expiryOf(write.variables);
     if (!stack || expiresOn === undefined) return;
+    writeEntityFields(cache, stack, { expiryKind: typedExpiryKind(expiresOn) });
     if (dateActiveBatches(cache, stack.id, expiresOn)) {
       writeEntityFields(cache, stack, { earliestBatchExpiresOn: expiresOn });
     }

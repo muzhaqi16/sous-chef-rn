@@ -18,7 +18,10 @@ import { TemplateSheets } from '#features/mealPlan/components/TemplateSheets';
 import { GenerateShoppingListSheet } from '#features/mealPlan/components/GenerateShoppingListSheet';
 import { MealPlanSettingsSheet } from '#features/mealPlan/components/MealPlanSettingsSheet';
 import { DuplicatePlanSheet } from '#features/mealPlan/components/DuplicatePlanSheet';
-import { MarkCookedModal } from '#features/recipes/ui/MarkCookedModal';
+import {
+  PlannedMealCook,
+  type PlannedCook,
+} from '#features/mealPlan/components/PlannedMealCook';
 import { NutritionSummaryCard } from '#features/mealPlan/components/NutritionSummaryCard';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
@@ -126,14 +129,9 @@ const MealPlanMainInner: React.FC = () => {
   const [shoppingListSheetVisible, setShoppingListSheetVisible] =
     useState(false);
 
-  // Mark cooked modal state — only what MarkCookedModal renders plus the id
-  // we hand back to `toggleCompleted`.
+  // The meal being cooked, kept once its sheet closes: a review follows it.
   const [markCookedVisible, setMarkCookedVisible] = useState(false);
-  const [pendingCook, setPendingCook] = useState<{
-    id: string;
-    recipeName: string;
-    defaultServings: number;
-  } | null>(null);
+  const [pendingCook, setPendingCook] = useState<PlannedCook | null>(null);
 
   // Settings and duplicate state
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -302,23 +300,26 @@ const MealPlanMainInner: React.FC = () => {
     const item = itemDetails.find(i => i.id === id);
     if (!item) return;
 
-    // Show MarkCookedModal when marking a recipe meal as complete
-    if (!isCompleted && hasRecipe) {
+    // A recipe meal is cooked as it is completed, once: a meal a cook already
+    // completed is checked again with nothing more cooked or deducted.
+    if (!isCompleted && hasRecipe && item.recipe && !item.cookingLogId) {
       setPendingCook({
         id: item.id,
-        recipeName: item.recipe?.name ?? '',
-        defaultServings: item.servings ?? item.recipe?.servings ?? 1,
+        version: item.version,
+        recipeId: item.recipe.id,
+        recipeName: item.recipe.name,
+        defaultServings: item.servings ?? item.recipe.servings,
       });
       setMarkCookedVisible(true);
       return;
     }
 
-    // For unchecking or custom meals, toggle directly
+    // Unchecking, a custom meal, or a meal already cooked
     void toggleCompleted(id);
   };
 
-  // Granular deduction isn't part of the meal-plan flow — the API derives the
-  // pantry deduction from the recipe's ingredients when deductFromPantry is set.
+  // Without the reviewed cook, completing the meal lets the API deduct its
+  // recipe's ingredients when deductFromPantry is set.
   const handleMarkCooked = (input: {
     servings: number;
     deductFromPantry: boolean;
@@ -728,17 +729,14 @@ const MealPlanMainInner: React.FC = () => {
         loading={duplicatingPlan}
       />
 
-      {/* Mark Cooked Modal */}
-      <MarkCookedModal
+      <PlannedMealCook
+        meal={pendingCook}
         visible={markCookedVisible}
-        recipeName={pendingCook?.recipeName ?? ''}
-        defaultServings={pendingCook?.defaultServings ?? 1}
-        wholeServings
-        onClose={() => {
-          setMarkCookedVisible(false);
-          setPendingCook(null);
+        onClose={() => setMarkCookedVisible(false)}
+        onComplete={handleMarkCooked}
+        onMealChanged={() => {
+          void refetch();
         }}
-        onConfirm={handleMarkCooked}
       />
 
       {/* Plan Selector */}

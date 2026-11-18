@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useMoney } from '#/domain/money';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
@@ -19,7 +19,8 @@ import {
 } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { StorageState, type UnitType } from '#/graphql/generated/schemaTypes';
-import { contentsOf, stockAmountOf } from '#domain/stockAmount';
+import { contentsOf } from '#domain/stockAmount';
+import { resolveIntakeDraft, type IntakeField } from '#domain/intakeDraft';
 import type { MoveToPantryInput } from '#features/shoppingList/hooks/useMoveToPantry';
 import { useMoveToPantryItem } from '#features/shoppingList/components/moveToPantry/useMoveToPantryItem';
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
@@ -69,6 +70,31 @@ interface MoveToPantryModalProps {
   askPrice?: boolean;
 }
 
+/** The field stating a fact the amount still lacks, and what it says. */
+function missingFactField(
+  missing: IntakeField,
+  statedTheOtherWay: boolean,
+): {
+  field: 'unitValue' | 'quantityInput' | 'packageSizeInput';
+  key: TranslationKey;
+} {
+  switch (missing) {
+    case 'unit':
+      return { field: 'unitValue', key: 'moveToPantry.selectUnitError' };
+    case 'quantity':
+      // Stated the other way round, the package count is in the size's field.
+      return {
+        field: statedTheOtherWay ? 'packageSizeInput' : 'quantityInput',
+        key: 'errors.invalidQuantity',
+      };
+    case 'packageSize':
+      return {
+        field: statedTheOtherWay ? 'quantityInput' : 'packageSizeInput',
+        key: 'errors.field.netWeight',
+      };
+  }
+}
+
 export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   visible,
   shoppingListItemId,
@@ -97,6 +123,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     getValues,
     trigger,
     getFieldState,
+    setError,
     formState: { errors },
   } = useForm<MoveToPantryFormValues>({
     resolver: yupResolver(moveToPantrySchema),
@@ -339,7 +366,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   );
 
   // Reaching here means the schema passed, so every field rule has already
-  // reported itself ON its own field.
+  // reported itself ON its own field; what the resolver still finds missing is
+  // reported on its field too.
   const [isMoving, setIsMoving] = useState(false);
   const onValid = async (values: MoveToPantryFormValues) => {
     if (!shoppingListItem) return;
@@ -357,7 +385,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       packageSizeUnitType,
     } = values;
     const quantityValue = parseFractionalInput(confirmedQuantity);
-    if (quantityValue === null) return;
+    if (quantityValue === null) {
+      setError('quantityInput', { message: t('errors.invalidQuantity') });
+      return;
+    }
 
     // The schema passed, so a stated size carries its unit and goes with a
     // whole count in a counted unit: that many packages of the picked unit,
@@ -375,20 +406,34 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     const { packageSize, measurementProfile } = contentsOf(
       statedTheOtherWay ? null : contents,
     );
-    const amount = statedTheOtherWay
-      ? stockAmountOf(contents.amount, {
-          asPackages: true,
-          packageSize: {
-            netWeight: quantityValue,
-            netWeightUnitId: confirmedUnitId,
+    const { amount, unresolved } = statedTheOtherWay
+      ? resolveIntakeDraft({
+          purchased: {
+            quantity: contents.amount,
+            intent: 'packages',
+            packageSize: {
+              netWeight: quantityValue,
+              netWeightUnitId: confirmedUnitId,
+            },
+            unitId: contents.unitId,
           },
-          unitId: contents.unitId,
         })
-      : stockAmountOf(quantityValue, {
-          asPackages: contents !== null,
-          packageSize,
-          unitId: confirmedUnitId,
+      : resolveIntakeDraft({
+          purchased: {
+            quantity: quantityValue,
+            intent: contents === null ? 'measured' : 'packages',
+            packageSize,
+            unitId: confirmedUnitId,
+          },
+          // A unit typed and not resolved goes as the list line's.
+          unitFromRoute: true,
         });
+    if (!amount) {
+      const [missing = 'quantity'] = unresolved;
+      const { field, key } = missingFactField(missing, statedTheOtherWay);
+      setError(field, { message: t(key) });
+      return;
+    }
 
     // The field asks for the TOTAL paid, as Mark Purchased does; the server
     // records it exactly and derives the unit price.
@@ -419,25 +464,24 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       snapPoints={['75%', '95%']}
       contentContainerStyle={styles.contentContainer}
       style={styles.scrollView}
+      header={
+        <SheetHeader
+          title={t('moveToPantry.title')}
+          onClose={onClose}
+          confirm={{
+            accessibilityLabel: t('moveToPantry.title'),
+            onPress: () => {
+              void resolveTypedUnits().then(() =>
+                handleSubmit(onValid, reportValidationErrors)(),
+              );
+            },
+            disabled: confirmDisabled,
+            loading: isMoving,
+            testID: shoppingListTestIDs.moveToPantryConfirm,
+          }}
+        />
+      }
     >
-      {/* Header */}
-      <SheetHeader
-        contentPadding="md"
-        title={t('moveToPantry.title')}
-        onClose={onClose}
-        confirm={{
-          accessibilityLabel: t('moveToPantry.title'),
-          onPress: () => {
-            void resolveTypedUnits().then(() =>
-              handleSubmit(onValid, reportValidationErrors)(),
-            );
-          },
-          disabled: confirmDisabled,
-          loading: isMoving,
-          testID: shoppingListTestIDs.moveToPantryConfirm,
-        }}
-      />
-
       {!!shoppingListItem && (
         <>
           {/* Item Info */}
@@ -583,6 +627,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
               label={t('labels.expirationDate')}
               value={expirationDate ?? null}
               onChange={date => setValue('expirationDate', date ?? undefined)}
+              placeholder={t('instructions.expiryOptional')}
               minimumDate={new Date()}
               clearable
             />

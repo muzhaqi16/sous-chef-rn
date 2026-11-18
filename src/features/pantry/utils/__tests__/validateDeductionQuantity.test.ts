@@ -127,3 +127,79 @@ describe('validateDeductionQuantity', () => {
     );
   });
 });
+
+describe('conversion evidence', () => {
+  it.each(['4', '4,5', '1/2'])(
+    'keeps %s oz as pending intent when the pound conversion is unknown',
+    input => {
+      const expected = input === '4' ? 4 : input === '4,5' ? 4.5 : 0.5;
+      expect(
+        validateDeductionQuantity(
+          input,
+          shared(2, {
+            exactFactor: null,
+            activeUnitId: 'oz',
+            trackingUnitId: 'lb',
+            isConvertedUnit: true,
+            availableInSelectedUnit: null,
+          }),
+          'consume',
+        ),
+      ).toBe(expected);
+    },
+  );
+  it('reports a refused conversion on the field without guessing a cap', () => {
+    const report = jest.fn();
+    expect(
+      validateDeductionQuantity(
+        '4',
+        shared(2, {
+          exactFactor: null,
+          activeUnitId: 'oz',
+          trackingUnitId: 'lb',
+          isConvertedUnit: true,
+          conversionUnavailable: true,
+        }),
+        'consume',
+        report,
+      ),
+    ).toBeNull();
+    expect(report).toHaveBeenCalledWith(
+      'This unit cannot be converted. Choose another unit.',
+    );
+  });
+  it('caps the stack own unit by its count when the conversion is refused', () => {
+    const report = jest.fn();
+    expect(
+      validateDeductionQuantity(
+        '1',
+        shared(2, {
+          exactFactor: null,
+          activeUnitId: 'carton',
+          trackingUnitId: 'carton',
+          isConvertedUnit: false,
+          availableInSelectedUnit: null,
+          conversionUnavailable: true,
+        }),
+        'consume',
+        report,
+      ),
+    ).toBe(1);
+    expect(report).not.toHaveBeenCalled();
+  });
+  it('validates the converted cap rather than the package count', () => {
+    expect(
+      validateDeductionQuantity(
+        '8',
+        shared(1, {
+          exactFactor: null,
+          activeUnitId: 'fl-oz',
+          trackingUnitId: 'carton',
+          isConvertedUnit: true,
+          availableInSelectedUnit: 64,
+        }),
+        'consume',
+      ),
+    ).toBe(8);
+  });
+});

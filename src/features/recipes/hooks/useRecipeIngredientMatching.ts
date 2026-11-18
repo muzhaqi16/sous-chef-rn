@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslateFn } from '#/i18n';
 import {
   useApolloClient,
   useLazyQuery,
@@ -8,16 +8,22 @@ import {
 import {
   MatchRecipeIngredientsToPantryDocument,
   MarkRecipeAsCookedDocument,
+  RecipeCookUsesDocument,
+  type MarkRecipeAsCookedMutationVariables,
   type MatchRecipeIngredientsToPantryQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import {
   RecipeIngredientFragmentDoc,
   type RecipeIngredientFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
+import { RecipeIngredientMatchKind } from '#/graphql/generated/schemaTypes';
 import {
-  RecipeIngredientMatchKind,
-  type IngredientUsageInput,
-} from '#/graphql/generated/schemaTypes';
+  cookOutcome,
+  type CookDraw,
+  type CookOutcome,
+  type RecordedUse,
+} from '#features/recipes/utils/cookOutcome';
+import { cappedNames } from '#/utils/cappedNames';
 import { useSelectedHomeId, useSelectedPantryId } from '#store/useAppStore';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { formatQuantityWithUnit } from '#/utils/formatQuantity';
@@ -28,6 +34,12 @@ import {
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { inTrackingUnit } from '#features/pantry/cache/stock';
+import type {
+  CookDrawInputs,
+  CookRecipeInputs,
+} from '#features/recipes/offline/localWrites';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -42,6 +54,48 @@ export interface CookEntry {
   servings: number;
   notes?: string;
 }
+
+/** The planned meal a cook completes with it, at the version last read. */
+interface PlannedMeal {
+  id: string;
+  version: number;
+}
+
+export interface CookContext {
+  plannedMeal?: PlannedMeal | null;
+  /** Shows the meal as it now stands: changed, or cooked by someone else. */
+  onMealChanged?: () => void;
+}
+
+/** A cook's link to its planned meal, sent with the meal's version. */
+export const plannedMealInput = (plannedMeal: PlannedMeal | null | undefined) =>
+  plannedMeal
+    ? {
+        mealPlanItemId: plannedMeal.id,
+        mealPlanItemVersion: plannedMeal.version,
+      }
+    : {};
+
+/**
+ * How a planned meal's cook is refused: the meal changed since it was read, or
+ * another cook completed it. Either way the meal is shown as it now stands.
+ */
+export const plannedMealSettle = (
+  t: TranslateFn,
+  { plannedMeal, onMealChanged }: CookContext,
+) =>
+  plannedMeal
+    ? {
+        onVersionConflict: onMealChanged,
+        copy: {
+          CONFLICT: {
+            title: t('labels.error'),
+            body: t('recipes.mealAlreadyCooked'),
+          },
+        },
+        ...(onMealChanged && { on: { CONFLICT: onMealChanged } }),
+      }
+    : {};
 
 export type PantryStackOption = NonNullable<
   IngredientMatch['matchedPantryItem']
@@ -127,51 +181,34 @@ export function getAvailabilityStatus(
   return 'missing';
 }
 
-/** One entry a reviewed cook sends, under the stack it draws on. */
-interface CookDraw {
-  stackName: string;
-  stackUnitId: string;
-  usage: IngredientUsageInput;
+/** A cook row as the answer and the page read state it. */
+interface CookedUseRow {
+  quantityUsed: number;
+  usageUnit: RecordedUse['unit'];
+  pantryItem: { id: string; quantity: number } | null;
 }
 
-/**
- * The ingredients a cook left undeducted. The API names a skip only by its
- * stack's name and units, so each skip claims an entry of its own: two entries
- * drawn from stacks of one name are two skips. A skip no entry claims counts
- * on its own, so none is hidden.
- */
-function undeductedIngredients(
-  draws: readonly CookDraw[],
-  skips: readonly {
-    itemName: string;
-    fromUnitId?: string | null;
-    toUnitId: string;
-  }[],
-): Set<string> {
-  const claimed = new Set<number>();
-  const claim = (fits: (draw: CookDraw) => boolean) => {
-    const index = draws.findIndex(
-      (draw, position) => !claimed.has(position) && fits(draw),
-    );
-    if (index === -1) return null;
-    claimed.add(index);
-    return draws[index] ?? null;
-  };
-  const undeducted = new Set<string>();
-  skips.forEach((skip, position) => {
-    const draw =
-      claim(
-        candidate =>
-          candidate.stackName === skip.itemName &&
-          candidate.usage.actualUnitId === skip.fromUnitId &&
-          candidate.stackUnitId === skip.toUnitId,
-      ) ?? claim(candidate => candidate.stackName === skip.itemName);
-    undeducted.add(draw?.usage.recipeIngredientId ?? `skip:${position}`);
-  });
-  return undeducted;
-}
+const recordedUses = (rows: readonly { node: CookedUseRow }[]) =>
+  rows.flatMap(({ node }): RecordedUse[] =>
+    node.pantryItem
+      ? [
+          {
+            pantryItemId: node.pantryItem.id,
+            quantityUsed: node.quantityUsed,
+            unit: node.usageUnit,
+            stackLeft: node.pantryItem.quantity,
+          },
+        ]
+      : [],
+  );
 
-export function useRecipeIngredientMatching(recipeId: string | undefined) {
+// Each page is a request; a cook draws far fewer stacks than this many pages hold.
+const MAX_USE_PAGES = 5;
+
+export function useRecipeIngredientMatching(
+  recipeId: string | undefined,
+  { plannedMeal, onMealChanged }: CookContext = {},
+) {
   const { t } = useTranslation();
   const pantryId = useSelectedPantryId();
   const homeId = useSelectedHomeId();
@@ -286,6 +323,60 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     MarkRecipeAsCookedDocument,
     { context: { localFirst: true } },
   );
+  const cooking = useRef(false);
+
+  /** A reviewed cook, held as a pending layer that draws what it states. */
+  const sendCook = (
+    variables: MarkRecipeAsCookedMutationVariables,
+    inputs: CookRecipeInputs,
+  ) =>
+    pendingWritesOf(client.cache).send(
+      MarkRecipeAsCookedDocument,
+      variables,
+      write =>
+        settleMutation(() => confirmMutation(write), {
+          document: MarkRecipeAsCookedDocument,
+          fallback: t('recipes.markCookedFailed'),
+          // The review sheet reports the cook as a toast and stays open to retry.
+          present: 'toast',
+          ...plannedMealSettle(t, { plannedMeal, onMealChanged }),
+        }),
+      inputs,
+    );
+
+  /**
+   * The rows a cook recorded past its answer's page, read while it is still the
+   * recipe's newest log; null when they could not all be read.
+   */
+  const remainingUses = async (
+    cookingLogId: string,
+    after: string | null | undefined,
+  ): Promise<RecordedUse[] | null> => {
+    if (!recipeId) return null;
+    const uses: RecordedUse[] = [];
+    let cursor = after;
+    for (let page = 0; page < MAX_USE_PAGES; page++) {
+      if (!cursor) return uses;
+      let result;
+      try {
+        result = await client.query({
+          query: RecipeCookUsesDocument,
+          variables: { recipeId, after: cursor },
+          fetchPolicy: 'network-only',
+        });
+      } catch (error) {
+        errorService.reportError(error, { operation: 'Read cook uses' });
+      }
+      const [edge] = result?.data?.recipeCookingLogs.edges ?? [];
+      if (edge?.node.id !== cookingLogId) return null;
+      const connection = edge.node.pantryItemsUsedConnection;
+      uses.push(...recordedUses(connection.edges));
+      cursor = connection.pageInfo.hasNextPage
+        ? connection.pageInfo.endCursor
+        : null;
+    }
+    return cursor ? null : uses;
+  };
 
   const loadMatches = async (servings: number) => {
     if (!recipeId || !pantryId) {
@@ -412,22 +503,35 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     if (!recipeId || !pantryId) return;
 
     // Each entry keeps its stack's name and unit: a skip reports it by them.
+    // Its ask in the stack's own unit is what the device can draw at once.
+    const entry = (
+      stack: PantryStackOption,
+      usage: CookDraw['usage'],
+    ): CookDraw => ({
+      stackName: stack.itemName,
+      stackUnitId: stack.unit.id,
+      usage,
+      inStackUnit: inTrackingUnit(
+        client.cache,
+        stack.id,
+        usage.actualQuantity,
+        usage.actualUnitId,
+      ),
+    });
     const entries: CookDraw[] = editableMatches.flatMap(em => {
       const swap = em.selectedSubstitute;
       if (swap) {
         if (!em.isIncluded) return [];
         // Its parts are drawn instead; the ingredient's own stacks are not.
-        return swap.parts.map(part => ({
-          stackName: part.stack.itemName,
-          stackUnitId: part.stack.unit.id,
-          usage: {
+        return swap.parts.map(part =>
+          entry(part.stack, {
             recipeIngredientId: em.ingredient.id,
             pantryItemId: part.stack.id,
             actualQuantity: part.quantity,
             actualUnitId: part.unitId,
             substituteId: swap.id,
-          },
-        }));
+          }),
+        );
       }
       const pantryItem = em.selectedStack;
       const quantity = em.adjustedQuantity;
@@ -435,60 +539,87 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
         return [];
       }
       return [
-        {
-          stackName: pantryItem.itemName,
-          stackUnitId: pantryItem.unit.id,
-          usage: {
-            recipeIngredientId: em.ingredient.id,
-            pantryItemId: pantryItem.id,
-            actualQuantity: quantity,
-            actualUnitId:
-              em.adjustedUnitId ??
-              em.match.suggestedUnit?.id ??
-              pantryItem.unit.id,
-          },
-        },
+        entry(pantryItem, {
+          recipeIngredientId: em.ingredient.id,
+          pantryItemId: pantryItem.id,
+          actualQuantity: quantity,
+          actualUnitId:
+            em.adjustedUnitId ??
+            em.match.suggestedUnit?.id ??
+            pantryItem.unit.id,
+        }),
       ];
     });
-    const ingredientsUsed = entries.map(entry => entry.usage);
+    const ingredientsUsed = entries.map(({ usage }) => usage);
 
     if (ingredientsUsed.length === 0) {
       toastService.info(t('recipes.noIngredientsForDeduction'));
       return;
     }
 
-    // Mint the cooking-log id client-side and queue + replay (`localFirst`) when
-    // the API is unreachable. The shared id means a re-synced cook converges on
-    // the same cooking log instead of creating a duplicate and re-deducting.
-    const settled = await settleMutation(
-      () =>
-        confirmMutation({
-          variables: {
-            input: {
-              id: generateEntityId(),
-              recipeId,
-              pantryId,
-              deductFromPantry: true,
-              // Each entry draws on the stack it names and no other; an
-              // ingredient with no entry is left alone.
-              exactStacks: true,
-              ingredientsUsed,
-              servings: cook?.servings,
-              notes: cook?.notes,
+    // One cooking-log id per confirmed cook, queued with it, so a replay
+    // converges on the same log instead of deducting again. A tap while it is
+    // in flight is the same cook.
+    if (cooking.current) return;
+    cooking.current = true;
+    // What the device can prove moves at once, as a use does; the rest waits.
+    const draws: CookDrawInputs[] = entries.flatMap(({ usage, inStackUnit }) =>
+      usage.pantryItemId
+        ? [
+            {
+              pantryItemId: usage.pantryItemId,
+              delta: inStackUnit === null ? null : -inStackUnit,
+              stated: {
+                amount: usage.actualQuantity,
+                unitId: usage.actualUnitId,
+              },
             },
-          },
-        }),
-      {
-        document: MarkRecipeAsCookedDocument,
-        fallback: t('recipes.markCookedFailed'),
-        // The review sheet reports the cook as a toast and stays open to retry.
-        present: 'toast',
-      },
+          ]
+        : [],
     );
+    const cookingLogId = generateEntityId();
+    const variables = {
+      input: {
+        id: cookingLogId,
+        recipeId,
+        pantryId,
+        deductFromPantry: true,
+        // Each entry draws on the stack it names and no other; an
+        // ingredient with no entry is left alone.
+        exactStacks: true,
+        ingredientsUsed,
+        servings: cook?.servings,
+        notes: cook?.notes,
+        ...plannedMealInput(plannedMeal),
+      },
+    };
+    const inputs: CookRecipeInputs = {
+      draws,
+      now: new Date().toISOString(),
+      ...(plannedMeal && { meal: { id: plannedMeal.id, cookingLogId } }),
+    };
+    // A send that throws releases the guard too, or every later confirm is lost.
+    let settled: Awaited<ReturnType<typeof sendCook>>;
+    try {
+      settled = await sendCook(variables, inputs);
+    } catch (error) {
+      cooking.current = false;
+      errorService.reportError(error, { operation: 'Record reviewed cook' });
+      toastService.error(t('recipes.markCookedFailed'));
+      return;
+    }
+    cooking.current = false;
     // Applied and queued both succeed; a queued cook replays later.
     if (settled.failure) return;
     emitTutorialEvent('recipe.cooked');
+    setIsSheetVisible(false);
+    setEditableMatches([]);
 
+    // Queued, nothing is deducted yet: the server has not taken it.
+    if (settled.status === 'queued') {
+      toastService.info(t('recipes.cookedQueued'));
+      return;
+    }
     const data = appliedPayload(settled.data);
     // Replay diagnostics: `converged: true` means this client-minted cooking-log
     // id already existed (an idempotent replay), not a fresh cook.
@@ -497,37 +628,67 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
         recipeId,
       });
     }
-    // The cook commits whole. What it reports apart are the entries no
-    // conversion could take to their stack's unit; queued, every entry replays.
-    // The toast counts ingredients, and a swap's parts are entries of one.
-    const notDeducted = undeductedIngredients(
+    // What each stack recorded, not what was asked: another use may have left
+    // a stack shorter than the review saw. The toast counts ingredients, and a
+    // swap's parts are entries of one.
+    const page = data?.cookingLog.pantryItemsUsedConnection;
+    const rest = page?.pageInfo.hasNextPage
+      ? await remainingUses(cookingLogId, page.pageInfo.endCursor)
+      : [];
+    const outcome = cookOutcome(
       entries,
       data?.skippedIngredients ?? [],
+      [...recordedUses(page?.edges ?? []), ...(rest ?? [])],
+      { complete: !!page && rest !== null },
     );
-    const skippedCount = notDeducted.size;
+    const failed = outcome.undeducted.size;
     const deductedCount = Math.max(
       0,
       new Set(ingredientsUsed.map(usage => usage.recipeIngredientId)).size -
-        skippedCount,
+        failed -
+        outcome.unconfirmed.size,
     );
-    toastService.success(
-      skippedCount > 0
-        ? t('recipes.deductedFromPantryFailed', {
-            count: deductedCount,
-            failed: skippedCount,
-          })
-        : t('recipes.deductedFromPantry', { count: deductedCount }),
-    );
+    reportCook(deductedCount, failed, outcome);
 
     Telemetry.trackEvent('recipe_consumption_confirmed', {
       recipe_id: recipeId,
       pantry_id: pantryId,
-      consumed_count: data ? deductedCount : 0,
-      failed_count: skippedCount,
+      consumed_count: deductedCount,
+      failed_count: failed,
     });
+  };
 
-    setIsSheetVisible(false);
-    setEditableMatches([]);
+  /** What the cook drew, stated from what it recorded. */
+  const reportCook = (
+    count: number,
+    failed: number,
+    { short, unconfirmed }: CookOutcome,
+  ) => {
+    if (unconfirmed.size > 0) {
+      toastService.info(t('recipes.cookedUnconfirmed'));
+      return;
+    }
+    const drawn =
+      failed > 0
+        ? t('recipes.deductedFromPantryFailed', { count, failed })
+        : t('recipes.deductedFromPantry', { count });
+    if (short.length === 0) {
+      toastService.success(drawn);
+      return;
+    }
+    const { shown, remainder } = cappedNames(
+      short.map(draw =>
+        t('recipes.substitutes.part', {
+          amount: formatQuantityWithUnit(draw.recorded, draw.unit),
+          name: draw.stackName,
+        }),
+      ),
+    );
+    toastService.warning(
+      remainder > 0
+        ? t('recipes.onlyLeftMore', { drawn, left: shown, count: remainder })
+        : t('recipes.onlyLeft', { drawn, left: shown, count: short.length }),
+    );
   };
 
   const closeSheet = () => {

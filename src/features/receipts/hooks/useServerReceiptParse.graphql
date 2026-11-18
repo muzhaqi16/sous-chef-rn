@@ -38,6 +38,7 @@ query ReceiptParse($id: ID!) {
       }
       purchasedOn
       purchaseTime
+      currency
       lines {
         text
         kind
@@ -59,6 +60,22 @@ query ReceiptParse($id: ID!) {
         unitPrice
         amount
         appliesTo
+        # A size the product prints, checked in as that many packages of it.
+        packages {
+          count
+          size {
+            quantity
+            unit
+            measureUnit {
+              id
+              symbol
+              localizedSymbolForms {
+                one
+                other
+              }
+            }
+          }
+        }
       }
     }
   }

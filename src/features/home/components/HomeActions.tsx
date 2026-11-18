@@ -9,46 +9,24 @@ import { homeTestIDs } from '#features/home/testIDs';
 
 interface HomeActionsProps {
   homeId: string;
-  isDefault: boolean;
   canInvite?: boolean;
   canDelete?: boolean;
-  onSetDefault: (homeId: string) => void;
   onInvite: (homeId: string) => void;
   onDelete: (homeId: string) => void;
 }
 
 export const HomeActions: React.FC<HomeActionsProps> = ({
   homeId,
-  isDefault,
   canInvite = true, // Default to true for backward compatibility
   canDelete = true, // Default to true for backward compatibility
-  onSetDefault,
   onInvite,
   onDelete,
 }) => {
   const { t } = useTranslation();
-  const hasVisibleActions = !isDefault || canInvite || canDelete;
-  if (!hasVisibleActions) return null;
+  if (!canInvite && !canDelete) return null;
 
   return (
     <View style={styles.homeActions} testID={homeTestIDs.homeActions}>
-      {!isDefault && (
-        <AppPressable
-          style={styles.actionButton}
-          onPress={() => onSetDefault(homeId)}
-          accessibilityRole="button"
-        >
-          <Icon name="star-outline" size={22} tone="textSecondary" />
-          <Text
-            role="caption"
-            tone="secondary"
-            numberOfLines={2}
-            style={styles.actionText}
-          >
-            {t('labels.setDefault')}
-          </Text>
-        </AppPressable>
-      )}
       {!!canInvite && (
         <AppPressable
           style={styles.actionButton}

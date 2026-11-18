@@ -10,7 +10,6 @@ import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantr
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
 import {
   AddItemToShoppingListDocument,
-  MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -38,5 +37,4 @@ export const REPLAY_PREPARATIONS: Readonly<Record<string, ReplayPreparer>> =
     [AddItemToShoppingListFromPantryItemDocument, withCurrentUnits],
     [UpdateShoppingListItemDocument, withCurrentUnits],
     [RemoveItemFromShoppingListDocument, asQueued],
-    [MoveShoppingListItemDocument, asQueued],
   ]);

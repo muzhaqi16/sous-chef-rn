@@ -147,6 +147,23 @@ const snapStock = (value: number): number =>
   Math.round(value * STOCK_NOISE_SCALE) / STOCK_NOISE_SCALE + 0;
 
 /**
+ * What one batch holds after a draw on what is inside it: one batch is one
+ * package size, so its packages scale with its contents (56 of 64 fl oz is
+ * 0.875 carton). Across batches only the server knows which package was drawn.
+ */
+export const heldAfterDraw = (
+  held: number,
+  insideBefore: number,
+  insideAfter: number,
+): number => snapStock((held * insideAfter) / insideBefore);
+
+/** The API's `countOf`: packages held, a part-used one counted whole; 0 when none is. */
+export function packagesStarted(held: number): number {
+  const packages = snapStock(held);
+  return packages <= 0 ? 0 : Math.ceil(packages);
+}
+
+/**
  * The API's `nearestCommonFraction`: a part never rounds to 0 or up to a whole,
  * and part-used packages that come to whole ones (two halves) read as that.
  */

@@ -542,6 +542,8 @@
     "durationDays_other": "{{count}} ditë",
     "currency": "Monedha",
     "today": "Sot",
+    "tomorrow": "Nesër",
+    "expired": "Skaduar",
     "typicalFor": "Vlera tipike për {{concept}}",
     "seeAll": "Shiko të gjitha",
     "addPantryItem": "Shto artikull në qilar",
@@ -589,7 +591,8 @@
     "pointCamera": "Drejtoje kamerën nga një barkod",
     "barcodeVisible": "Sigurohu që barkodi është qartë i dukshëm",
     "swipeToDelete": "Rrëshqit majtas për ta fshirë",
-    "pullToRefresh": "Tërhiq poshtë për të rifreskuar"
+    "pullToRefresh": "Tërhiq poshtë për të rifreskuar",
+    "expiryOptional": "Lëre bosh për një vlerësim"
   },
   "status": {
     "scanning": "Po skanohet…",

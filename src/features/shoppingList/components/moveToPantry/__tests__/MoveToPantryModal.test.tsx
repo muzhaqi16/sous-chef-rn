@@ -381,7 +381,7 @@ describe('MoveToPantryModal', () => {
     ['the Storage Type section', ['Storage Type']],
     ['every storage state', ['Ambient', 'Refrigerated', 'Frozen']],
     ['the Expiration Date section', ['Expiration Date']],
-    ['Select date while no expiration date is set', ['Select date']],
+    ['a blank date as estimated', ['Leave blank for an estimate']],
     ['the Remove from shopping list toggle', ['Remove from shopping list']],
     ['the notes input', ['Notes (Optional)']],
     // The same question Mark Purchased asks.
@@ -523,6 +523,36 @@ describe('MoveToPantryModal', () => {
       };
       return { onConfirm, onClose, reopen };
     }
+
+    // The six-pack bought goes in as six cans with nothing typed; the API
+    // sizes them from the item's own 250 mL record, so 1500 mL lands.
+    it('IN-02: moves six cans bought as six cans, with nothing typed', async () => {
+      const { onConfirm } = await openWithPurchase({
+        line: {
+          unitName: 'can',
+          unit: asAbbreviation({
+            __typename: 'Unit',
+            id: 'unit-can',
+            symbol: 'can',
+            name: 'Cans',
+            type: UnitType.Count,
+          }),
+        },
+        quantity: 6,
+        price: 0.5,
+        unit: { symbol: 'can', type: UnitType.Count },
+        header: 'Purchased: 6 can',
+      });
+
+      confirm();
+      await drainTimers();
+
+      expect(onConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: { measured: { quantity: 6, unitId: 'unit-can' } },
+        }),
+      );
+    });
 
     it('prefills the amounts that were bought, not the ones requested', async () => {
       await openWithPurchase();

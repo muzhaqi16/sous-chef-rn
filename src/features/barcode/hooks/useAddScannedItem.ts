@@ -6,9 +6,13 @@ import {
   type StockAmountInput,
 } from '#/graphql/generated/schemaTypes';
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
-import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
+import {
+  usePantryIntake,
+  type AddPantryItemOutcome,
+} from '#features/pantry/hooks/usePantryIntake';
 import { refByIdOrName } from '#/utils/refInput';
-import { contentsOf, stockAmountOf } from '#domain/stockAmount';
+import { contentsOf } from '#domain/stockAmount';
+import { resolveIntakeDraft } from '#domain/intakeDraft';
 import { useTranslation } from '#/i18n';
 
 /** A list line from a scan is one container: the per-container weight is separate. */
@@ -31,14 +35,21 @@ const scannedUnitId = (item: ScannedItem) =>
  * Packages always name their COUNT unit: left to the API, they land in the
  * item's tracking unit, which can be a measure, and a can becomes 3.4 cup.
  */
-const scannedAmountOf = (amount: ScanAmount): StockAmountInput =>
-  amount.packaged
-    ? stockAmountOf(amount.count, {
-        asPackages: true,
-        packageSize: contentsOf(amount.contents).packageSize,
-        unitId: amount.unitId,
-      })
-    : stockAmountOf(amount.quantity, { unitId: amount.unitId });
+const scannedAmountOf = (amount: ScanAmount): StockAmountInput | null =>
+  resolveIntakeDraft({
+    purchased: amount.packaged
+      ? {
+          intent: 'packages',
+          quantity: amount.count,
+          unitId: amount.unitId,
+          packageSize: contentsOf(amount.contents).packageSize,
+        }
+      : {
+          intent: 'measured',
+          quantity: amount.quantity,
+          unitId: amount.unitId,
+        },
+  }).amount;
 
 const scannedProfileOf = (amount: ScanAmount) =>
   amount.packaged ? contentsOf(amount.contents).measurementProfile : undefined;
@@ -73,12 +84,22 @@ export function useAddScannedItem({
 
   // A size goes only when the user gave one: one sent is kept as the user's,
   // not the record's. A refusal is the caller's to show, on the field it names.
-  const addToPantry = (item: ScannedItem, amount: ScanAmount) =>
-    addItem(
+  const addToPantry = async (
+    item: ScannedItem,
+    amount: ScanAmount,
+  ): Promise<AddPantryItemOutcome> => {
+    const resolved = scannedAmountOf(amount);
+    if (!resolved)
+      return {
+        status: 'rejected',
+        reason: t('errors.invalidQuantity'),
+        field: 'amount',
+      };
+    return addItem(
       item.name,
       {
         item: scannedPantrySource(item),
-        amount: scannedAmountOf(amount),
+        amount: resolved,
         measurementProfile: scannedProfileOf(amount),
       },
       {
@@ -90,6 +111,7 @@ export function useAddScannedItem({
         present: 'none',
       },
     );
+  };
 
   const addToShoppingList = async (
     item: ScannedItem,

@@ -46,6 +46,7 @@ export const seedDraft = (draft: Partial<ReceiptDraft> = {}) =>
 /** A line as a check-in sends it. */
 export interface SentCheckInLine {
   clientId: string;
+  purchaseId: string;
   pantryItemId?: string | null;
   shoppingListItemId?: string | null;
   item: { id?: string | null; inline?: { id: string; name: string } | null };

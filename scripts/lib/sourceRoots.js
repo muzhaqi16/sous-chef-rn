@@ -3,8 +3,8 @@
  * added here and nowhere else.
  *
  * `PRODUCTION_ROOTS` hold production code. `OPERATION_ROOTS` hold the `.graphql`
- * documents that codegen, the persisted-query manifest, the readers and
- * GraphQL lint read; the first is the core's, where the readers are written.
+ * documents that codegen, the release check's operation list, the readers
+ * and GraphQL lint read; the first is the core's, where the readers are written.
  *
  * Repo-relative. CommonJS because the ESLint and Jest configs load it before
  * any transform runs.

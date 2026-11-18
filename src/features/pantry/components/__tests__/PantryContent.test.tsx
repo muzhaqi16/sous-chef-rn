@@ -1,1197 +1,346 @@
 'use no memo';
+
 import React from 'react';
-import { pantryTestIDs } from '#features/pantry/testIDs';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
-import { screen, act, fireEvent, within } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
-  renderWithApollo,
-  seedFragment,
-} from '#/test-utils/apolloMockProvider';
-import { PantryContent } from '../PantryContent';
-import type { PantryItem } from '#/graphql/generated/schemaTypes';
-import { StorageState } from '#/graphql/generated/schemaTypes';
-import type { EmptyStateProps } from '#components/molecules/EmptyState';
+  pantryRows,
+  seedPantry,
+  type PantryItemFixture,
+} from '#/test-utils/fixtures/pantryFixtures';
+import { t } from '#/i18n';
+
+import {
+  PantrySortDirection,
+  PantrySortOption,
+} from '#store/slices/preferenceTypes';
 import { kitTestIDs } from '#components/testIDs';
-import type {
-  FilterTabConfig,
-  FilterTabsProps,
-} from '#components/organisms/FilterTabs/types';
 import {
-  PantryItemCard_PantryItemFragmentDoc,
-  type PantryItemCard_PantryItemFragment,
-} from '../PantryItemCard.generated';
-import { toDateKey } from '#/utils/dateUtils';
-import {
-  asAbbreviation,
-  readingAsAbbreviation,
-} from '#/test-utils/fixtures/unitLabels';
+  OverlayBackdropProvider,
+  useBackdropClaim,
+} from '#components/providers/OverlayBackdropProvider';
 
-// PantryContent now reads `useApolloClient` for the image-preload effect and
-// each `PantryItemCard` cell subscribes to its own entity via `useFragment`.
-// Seed the cache with the items so the cells unmask successfully.
-function renderContent(
-  ui: React.ReactElement,
-  items: Array<{ __typename: string; id: string } & Record<string, unknown>>,
-) {
+import { pantryTestIDs } from '#features/pantry/testIDs';
+import type { PantryListNode } from '../pantryDisplay/renderItem';
+import type { PantryContentProps } from '../pantryDisplay/types';
+import { sortOptionLabelKey } from '../PantrySortModal';
+import { PantryContent } from '../PantryContent';
+
+/** The rows the screen hands over, each readable by its card from the cache. */
+function stocked(rows: PantryItemFixture[]) {
   const cache = makeCache();
-  for (const item of items) {
-    seedFragment(cache, {
-      id:
-        cache.identify({ __typename: item.__typename, id: item.id }) ??
-        `PantryItem:${item.id}`,
-      fragment: PantryItemCard_PantryItemFragmentDoc,
-      fragmentName: 'PantryItemCard_pantryItem',
-      data: item as PantryItemCard_PantryItemFragment,
-    });
-  }
-  return renderWithApollo(ui, { cache });
+  seedPantry(cache, { id: 'p1', items: rows });
+  const items: PantryListNode[] = pantryRows(cache, 'p1', false);
+  return { cache, items };
 }
 
-// Helper that extracts items from props before delegating to renderContent so
-// the existing test bodies keep working as-is.
-function render(ui: React.ReactElement) {
-  const props = (ui as { props?: { items?: MockPantryItem[] } }).props;
-  const items = (props?.items ?? []) as Array<
-    { __typename: string; id: string } & Record<string, unknown>
-  >;
-  return renderContent(ui, items);
+/** A sheet's claim on the backdrop, as every sheet makes it. */
+function Sheet({ open }: { open: boolean }) {
+  useBackdropClaim(open);
+  return null;
 }
 
-type DeepPartial<T> = T extends object
-  ? { [P in keyof T]?: DeepPartial<T[P]> }
-  : T;
+const props = (over: Partial<PantryContentProps> = {}): PantryContentProps => ({
+  pantryName: 'Kitchen',
+  items: [],
+  locationFilter: 'all',
+  onLocationFilterChange: jest.fn(),
+  locationCounts: { all: 0 },
+  searchQuery: '',
+  onSearchChange: jest.fn(),
+  onItemPress: jest.fn(),
+  ...over,
+});
 
-const countReading = (value: number, id = 'unit-piece', symbol = 'pc') =>
-  readingAsAbbreviation({
-    __typename: 'MeasureReading',
-    value,
-    unitId: id,
-    symbol,
-    type: 'COUNT',
-  });
-
-function createMockPantryItem(overrides: DeepPartial<PantryItem> = {}) {
-  const held = overrides.heldQuantity ?? overrides.quantity ?? 1;
-  const item = {
-    __typename: 'PantryItem',
-    id: 'mock-id',
-    image: null,
-    itemName: 'Mock Item',
-    quantity: 1,
-    heldQuantity: held,
-    displayAmount: {
-      __typename: 'DisplayAmount',
-      quantity: held,
-      localizedSymbol: overrides.unit?.symbol ?? 'pc',
-      unit: asAbbreviation({
-        __typename: 'Unit',
-        id: overrides.unit?.id ?? 'unit-piece',
-        symbol: overrides.unit?.symbol ?? 'pc',
-      }),
-    },
-    // A count reads the same in both unit systems.
-    held: {
-      __typename: 'Measure',
-      value: held,
-      unitId: overrides.unit?.id ?? 'unit-piece',
-      metric: countReading(held, overrides.unit?.id, overrides.unit?.symbol),
-      imperial: countReading(held, overrides.unit?.id, overrides.unit?.symbol),
-    },
-    expiresOn: null,
-    storageState: 'AMBIENT',
-    storageLocation: null,
-    item: {
-      __typename: 'Item',
-      id: 'item-1',
-      name: 'Mock Item',
-      images: [],
-      aliases: [],
-    },
-    unit: asAbbreviation({
-      __typename: 'Unit',
-      id: overrides.unit?.id ?? 'unit-piece',
-      symbol: overrides.unit?.symbol ?? 'pc',
-    }),
-    tags: [],
-    photos: [],
-    pantry: { __typename: 'Pantry', id: 'pantry-1' },
-    changeHistory: {
-      __typename: 'PantryItemChangeConnection',
-      edges: [],
-      pageInfo: {
-        __typename: 'PageInfo',
-      },
-    },
-    usageRecordsConnection: {
-      __typename: 'PantryItemUsageConnection',
-      edges: [],
-      pageInfo: {
-        __typename: 'PageInfo',
-      },
-    },
-    ledger: { __typename: 'LedgerSummary' },
-    ...overrides,
-  } as PantryItem;
-  // The schema's item carries no aliases; the list's documents label its units.
+/** The content as the pantry tab mounts it, under the app's backdrop. */
+function renderContent(
+  over: Partial<PantryContentProps> = {},
+  rows: PantryItemFixture[] = [],
+) {
+  const { cache, items } = stocked(rows);
+  const ui = (next: Partial<PantryContentProps>, sheetOpen = false) => (
+    <OverlayBackdropProvider>
+      <Sheet open={sheetOpen} />
+      <PantryContent {...props({ items, ...over, ...next })} />
+    </OverlayBackdropProvider>
+  );
+  const view = renderWithApollo(ui({}), { cache });
   return {
-    ...item,
-    unit: asAbbreviation(item.unit),
-    displayAmount: {
-      ...item.displayAmount,
-      unit: asAbbreviation(item.displayAmount.unit),
+    items,
+    /** The same content with props the screen has since changed. */
+    update: (next: Partial<PantryContentProps>, sheetOpen = false) => {
+      view.rerender(ui(next, sheetOpen));
     },
   };
 }
 
-type MockPantryItem = ReturnType<typeof createMockPantryItem>;
+const MILK: PantryItemFixture[] = [{ id: 'i1', itemName: 'Milk' }];
 
-jest.mock('#hooks/performance/useDeferredRender', () => ({
-  useDeferredRender: jest.fn(() => true),
-}));
+const shownNames = () =>
+  screen
+    .queryAllByText(/^(Milk|Rice|Beans|Apples)$/)
+    .map(node => node.props.children);
 
-let mockOverlayPresent = false;
-jest.mock('#components/providers/OverlayBackdropProvider', () => ({
-  useOverlayBackdropPresence: () => mockOverlayPresent,
-}));
+const skeletonShown = () =>
+  screen.queryByTestId(pantryTestIDs.listSkeletonOverlay) !== null ||
+  screen.queryByTestId(pantryTestIDs.loading) !== null;
 
-jest.mock('#hooks/performance/useCommitTracking', () => ({
-  useCommitTracking: jest.fn(),
-}));
+const tab = (id: string) =>
+  screen.getByTestId(kitTestIDs.filterTab(pantryTestIDs.locationTabPrefix, id));
 
-jest.mock('#components/atoms/Icon', () => ({
-  Icon: () => null,
-}));
+describe('waiting on rows', () => {
+  // Offline-first: the stats survive a cold read whose rows have not arrived.
+  it('holds skeletons while the stats say rows are coming', () => {
+    const { update } = renderContent({ locationCounts: { all: 1 } }, MILK);
 
-jest.mock('#/utils/imageUtils', () => ({
-  resolveImageUrl: jest.fn(() => null),
-}));
+    update({ loading: true, items: [] });
 
-jest.mock('#components/atoms/CachedImage', () => ({
-  preloadImages: jest.fn(),
-  CachedImage: () => null,
-}));
-
-jest.mock('#features/pantry/components/skeletons/PantryScreenSkeleton', () => ({
-  PantryScreenSkeleton: () => {
-    const { View } = require('react-native');
-    return <View testID="pantry-skeleton" />;
-  },
-}));
-
-jest.mock('#components/molecules/EmptyState', () => ({
-  EmptyState: ({
-    title,
-    description,
-    action,
-    testID,
-  }: Pick<EmptyStateProps, 'title' | 'description' | 'action' | 'testID'>) => {
-    const { Text, View, Pressable } = require('react-native');
-    return (
-      <View testID={testID}>
-        <Text>{title}</Text>
-        {description ? <Text>{description}</Text> : null}
-        {action ? (
-          <Pressable testID="empty-state-action" onPress={action.onPress}>
-            <Text>{action.label}</Text>
-          </Pressable>
-        ) : null}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/atoms/PaginationFooter', () => ({
-  PaginationFooter: () => null,
-}));
-
-jest.mock('../PantrySortModal', () => ({
-  ...jest.requireActual('../PantrySortModal'),
-  PantrySortModal: ({ visible }: { visible: boolean }) => {
-    const { View } = require('react-native');
-    return visible ? <View testID="sort-modal" /> : null;
-  },
-}));
-
-jest.mock('../PantryItemCard', () => ({
-  // Reads its row from the cache by id, as the real card does.
-  PantryItemCard: ({ pantryItemId }: { pantryItemId: string }) => {
-    const { Text, View } = require('react-native');
-    const { useFragment } = jest.requireActual<
-      typeof import('@apollo/client/react')
-    >('@apollo/client/react');
-    const generated = jest.requireActual<
-      typeof import('../PantryItemCard.generated')
-    >('../PantryItemCard.generated');
-    const { data } = useFragment({
-      fragment: generated.PantryItemCard_PantryItemFragmentDoc,
-      fragmentName: 'PantryItemCard_pantryItem',
-      from: { __typename: 'PantryItem', id: pantryItemId },
-    });
-    return (
-      <View testID={`pantry-item-${pantryItemId}`}>
-        <Text>{data.itemName}</Text>
-      </View>
-    );
-  },
-  ItemVariant: {},
-  ExpirationVariant: {},
-}));
-
-jest.mock('#components/molecules/SearchBar', () => ({
-  SearchBar: ({
-    placeholder,
-    testID,
-    accessory,
-  }: {
-    placeholder?: string;
-    testID?: string;
-    accessory?: {
-      accessibilityLabel: string;
-      onPress: () => void;
-      testID?: string;
-    };
-  }) => {
-    const { Pressable, TextInput, View } = require('react-native');
-    return (
-      <View>
-        <TextInput testID={testID} placeholder={placeholder} />
-        {accessory ? (
-          <Pressable
-            testID={accessory.testID}
-            accessibilityLabel={accessory.accessibilityLabel}
-            onPress={accessory.onPress}
-          />
-        ) : null}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/organisms/FilterTabs/FilterTabs', () => ({
-  FilterTabs: ({
-    tabs,
-    onTabChange,
-    testIDPrefix,
-    counts,
-  }: Pick<
-    FilterTabsProps,
-    'tabs' | 'onTabChange' | 'testIDPrefix' | 'counts'
-  >) => {
-    const { Text, Pressable, View } = require('react-native');
-    return (
-      <View testID="filter-tabs">
-        {tabs.map((tab: FilterTabConfig) => (
-          <Pressable
-            key={tab.id}
-            testID={`${testIDPrefix}-${tab.id}`}
-            onPress={() => (tab.onPress ? tab.onPress() : onTabChange(tab.id))}
-          >
-            <Text>{tab.label}</Text>
-            {counts?.[tab.id] !== undefined && <Text>{counts[tab.id]}</Text>}
-          </Pressable>
-        ))}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
-  getExpirationStatus: jest.fn(() => ({
-    text: '3 days left',
-    type: 'warning',
-  })),
-  formatPackageBreakdown: jest.fn(() => null),
-  formatRemainingNetWeight: jest.fn(() => null),
-}));
-
-jest.mock('#/utils/formatQuantity', () => ({
-  formatQuantityDisplay: jest.fn(
-    (qty, unit) => `${qty}${unit ? ` ${unit}` : ''}`,
-  ),
-}));
-
-jest.mock('../hooks/usePantrySorting', () => ({
-  usePantrySorting: jest.fn(() => ({
-    sortOption: 'recent',
-    sortDirection: 'desc',
-    sortModalVisible: false,
-    openSortModal: jest.fn(),
-    closeSortModal: jest.fn(),
-    handleSortSelect: jest.fn(),
-    sortItems: jest.fn(<T,>(items: T[]): T[] => items),
-  })),
-}));
-
-jest.mock('#features/pantry/utils/pantryFilters', () => ({
-  LocationFilter: {},
-}));
-
-const defaultProps = {
-  pantryName: 'My Kitchen',
-  items: [] as MockPantryItem[],
-  locationFilter: 'all',
-  onLocationFilterChange: jest.fn(),
-  // Default to an empty pantry (all counts 0). While `loading`, the skeleton
-  // gate holds skeletons whenever stats-backed `locationCounts[filter]` says
-  // items exist but `items` is empty, so tests asserting the *empty state* must
-  // use counts that agree there are no items. Tests that expect items pass them
-  // explicitly.
-  locationCounts: { all: 0, fridge: 0, freezer: 0, pantry: 0 },
-  searchQuery: '',
-  onSearchChange: jest.fn(),
-  onItemPress: jest.fn(),
-};
-
-describe('PantryContent', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
+    expect(skeletonShown()).toBe(true);
+    expect(screen.queryByTestId(pantryTestIDs.emptyState)).toBeNull();
   });
 
-  it('renders without crashing', () => {
-    render(<PantryContent {...defaultProps} />);
-    expect(screen.getByTestId('pantry-list')).toBeTruthy();
+  it('draws one skeleton, the overlay, while it is up', () => {
+    const { update } = renderContent({ locationCounts: { all: 1 } }, MILK);
+
+    update({ loading: true, items: [] });
+
+    expect(screen.getByTestId(pantryTestIDs.listSkeletonOverlay)).toBeTruthy();
+    expect(screen.queryByTestId(pantryTestIDs.loading)).toBeNull();
   });
 
-  it("titles the header with the pantry's name, which opens Select pantry", () => {
+  it('settles on the empty state once the read lands, whatever stale stats say', () => {
+    const { update } = renderContent({ locationCounts: { all: 1 } }, MILK);
+
+    update({ loading: false, items: [] });
+
+    expect(skeletonShown()).toBe(false);
+    expect(screen.getByTestId(pantryTestIDs.emptyState)).toBeTruthy();
+  });
+
+  it('says a search found nothing rather than waiting on rows', () => {
+    const { update } = renderContent({ locationCounts: { all: 1 } }, MILK);
+
+    update({ loading: true, items: [], searchQuery: 'zzz' });
+
+    expect(skeletonShown()).toBe(false);
+    expect(screen.getByTestId(pantryTestIDs.emptyState)).toBeTruthy();
+  });
+
+  it('waits on skeletons until a server search answers', () => {
+    const { update } = renderContent({ locationCounts: { all: 1 } }, MILK);
+
+    update({ searching: true, items: [], searchQuery: 'mil' });
+
+    expect(skeletonShown()).toBe(true);
+    expect(screen.queryByTestId(pantryTestIDs.emptyState)).toBeNull();
+  });
+});
+
+describe('the order of the rows', () => {
+  const unsorted: PantryItemFixture[] = [
+    { id: 'i1', itemName: 'Rice' },
+    { id: 'i2', itemName: 'Beans' },
+    { id: 'i3', itemName: 'Apples' },
+  ];
+  const byName = {
+    initialSortOption: PantrySortOption.NAME,
+    initialSortDirection: PantrySortDirection.ASC,
+  };
+
+  it('sorts the loaded rows itself', () => {
+    renderContent(byName, unsorted);
+
+    expect(shownNames()).toEqual(['Apples', 'Beans', 'Rice']);
+  });
+
+  it("keeps the server's order when the server sorts", () => {
+    renderContent({ ...byName, useServerSort: true }, unsorted);
+
+    expect(shownNames()).toEqual(['Rice', 'Beans', 'Apples']);
+  });
+
+  it('names the sort on the sort button', () => {
+    renderContent(byName, unsorted);
+
+    expect(
+      screen.getByLabelText(
+        t('pantryScreen.sortedBy', {
+          field: t(sortOptionLabelKey(PantrySortOption.NAME)),
+        }),
+      ),
+    ).toBeTruthy();
+  });
+});
+
+// A server-mode switch refetches: the old tab's rows must not pose as the new.
+describe('switching what the list shows', () => {
+  const counts = { all: 1, fridge: 0, freezer: 0, pantry: 0 };
+
+  it('covers the stale rows while the new tab is fetched, then lifts for good', () => {
+    const { update } = renderContent(
+      { serverMode: true, locationCounts: counts },
+      MILK,
+    );
+
+    fireEvent.press(tab('fridge'));
+    update({ locationFilter: 'fridge', fetching: true });
+    expect(shownNames()).toEqual([]);
+    expect(skeletonShown()).toBe(true);
+
+    update({ locationFilter: 'fridge', fetching: false });
+    expect(shownNames()).toEqual(['Milk']);
+
+    update({ locationFilter: 'fridge', fetching: true });
+    expect(shownNames()).toEqual(['Milk']);
+  });
+
+  it('covers the stale order while a new sort is fetched, then lifts', () => {
+    const { update } = renderContent(
+      { serverMode: true, useServerSort: true, locationCounts: counts },
+      MILK,
+    );
+
+    fireEvent.press(screen.getByTestId(pantryTestIDs.sortButton));
+    fireEvent.press(
+      screen.getByTestId(pantryTestIDs.sortOption(PantrySortOption.EXPIRY)),
+    );
+    update({ fetching: true });
+    expect(skeletonShown()).toBe(true);
+
+    update({ fetching: false });
+    expect(shownNames()).toEqual(['Milk']);
+  });
+
+  // A latch armed in server mode, with the fetch never started, must not blank
+  // the rows at the next background fetch once the pantry reads client-side.
+  it('drops a pending switch when the list stops fetching per tab', () => {
+    const { update } = renderContent(
+      { serverMode: true, locationCounts: counts },
+      MILK,
+    );
+
+    fireEvent.press(tab('fridge'));
+    update({ serverMode: false });
+    update({ serverMode: false, fetching: true });
+
+    expect(shownNames()).toEqual(['Milk']);
+  });
+});
+
+// Each write behind a sheet would re-render every mounted row unseen.
+describe('rows behind a sheet', () => {
+  const twoRows: PantryItemFixture[] = [
+    { id: 'i1', itemName: 'Milk' },
+    { id: 'i2', itemName: 'Rice' },
+  ];
+
+  it('hold still while a sheet covers them, and catch up once it closes', () => {
+    const { items, update } = renderContent({}, twoRows);
+    const [milk] = items;
+    if (!milk) throw new Error('no first row');
+
+    update({ items }, true);
+    update({ items: [milk] }, true);
+    expect(shownNames()).toEqual(['Milk', 'Rice']);
+
+    update({ items: [milk] }, false);
+    expect(shownNames()).toEqual(['Milk']);
+
+    update({ items: [milk] }, true);
+    expect(shownNames()).toEqual(['Milk']);
+  });
+});
+
+describe('the chrome', () => {
+  it("opens Select pantry from the pantry's name", () => {
     const onSettingsPress = jest.fn();
-    render(
-      <PantryContent {...defaultProps} onSettingsPress={onSettingsPress} />,
-    );
+    renderContent({ onSettingsPress }, MILK);
 
     fireEvent.press(screen.getByTestId(pantryTestIDs.selectPantryButton));
 
-    expect(screen.getByText('My Kitchen')).toBeTruthy();
     expect(onSettingsPress).toHaveBeenCalledTimes(1);
   });
 
-  it('shows no status counts: they are on Today', () => {
-    render(<PantryContent {...defaultProps} />);
-    expect(screen.queryByText(/expired|expiring|low stock/i)).toBeNull();
+  it("shows each tab's count", () => {
+    renderContent({ locationCounts: { all: 3, fridge: 2 } }, MILK);
+
+    expect(screen.getByText('3')).toBeTruthy();
   });
 
-  it('renders the search bar with correct placeholder', () => {
-    render(<PantryContent {...defaultProps} />);
-    expect(screen.getByTestId('pantry-search-input')).toBeTruthy();
-  });
-
-  // Pull-to-refresh drops its spinner from the list's top edge, so whatever the
-  // list contains moves with the pull. Every tab keeps its chrome still.
-  it('keeps the header, search and tabs outside the refreshable list', () => {
-    render(<PantryContent {...defaultProps} onRefresh={jest.fn()} />);
-    const list = within(screen.getByTestId('pantry-list'));
-
-    expect(screen.getByText('My Kitchen')).toBeTruthy();
-    expect(list.queryByText('My Kitchen')).toBeNull();
-    expect(screen.getByTestId('pantry-search-input')).toBeTruthy();
-    expect(list.queryByTestId('pantry-search-input')).toBeNull();
-    expect(screen.getByTestId('filter-tabs')).toBeTruthy();
-    expect(list.queryByTestId('filter-tabs')).toBeNull();
-  });
-
-  it('renders filter tabs', () => {
-    render(<PantryContent {...defaultProps} />);
-    expect(screen.getByTestId('filter-tabs')).toBeTruthy();
-    expect(screen.getByText('All')).toBeTruthy();
-    // The built-in tabs name the STORAGE STATE they filter — a user's own
-    // Fridge/Freezer LOCATIONS get their own tabs beside these.
-    expect(screen.getByText('Refrigerated')).toBeTruthy();
-    expect(screen.getByText('Frozen')).toBeTruthy();
-    expect(screen.getByText('Ambient')).toBeTruthy();
-  });
-
-  it('shows empty state when no items and no search query', () => {
-    render(<PantryContent {...defaultProps} items={[]} />);
-    expect(screen.getByText('Your pantry is empty')).toBeTruthy();
-    expect(
-      screen.getByText('Start tracking your food to reduce waste'),
-    ).toBeTruthy();
-  });
-
-  it('shows the failure with a retry, never the empty state, when the items read failed', () => {
-    const onRetry = jest.fn();
-    render(
-      <PantryContent
-        {...defaultProps}
-        items={[]}
-        searchQuery="milk"
-        onAddItem={jest.fn()}
-        itemsFailure={{ state: 'error', onRetry }}
-      />,
-    );
-    expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
-    expect(screen.queryByText('Your pantry is empty')).toBeNull();
-    expect(screen.queryByText('No results for "milk"')).toBeNull();
-
-    fireEvent.press(screen.getByText('Try again'));
-    expect(onRetry).toHaveBeenCalledTimes(1);
-  });
-
-  it('counts nothing on the location tabs when the items read failed', () => {
-    render(
-      <PantryContent
-        {...defaultProps}
-        items={[]}
-        itemsFailure={{ state: 'offline', onRetry: jest.fn() }}
-      />,
-    );
-    const allTab = screen.getByTestId('pantry-location-tab-all');
-
-    expect(within(allTab).queryByText('0')).toBeNull();
-  });
-
-  it('keeps the no-home state above a failed items read', () => {
-    render(
-      <PantryContent
-        {...defaultProps}
-        items={[]}
-        noHomes={true}
-        itemsFailure={{ state: 'offline', onRetry: jest.fn() }}
-      />,
-    );
-    expect(screen.getByText('No home yet')).toBeTruthy();
-    expect(screen.queryByTestId(kitTestIDs.stateOffline)).toBeNull();
-  });
-
-  it('shows search empty state with add action when search query has no results', () => {
-    const onAddItem = jest.fn();
-    render(
-      <PantryContent
-        {...defaultProps}
-        items={[]}
-        searchQuery="nonexistent"
-        onAddItem={onAddItem}
-      />,
-    );
-    expect(screen.getByText('No results for "nonexistent"')).toBeTruthy();
-    expect(
-      screen.getByText('Would you like to add it to your pantry?'),
-    ).toBeTruthy();
-    expect(screen.getByText('Add Item')).toBeTruthy();
-  });
-
-  it('shows a skeleton, not "no results", while a server search has not answered', () => {
-    const view = render(
-      <PantryContent
-        {...defaultProps}
-        items={[]}
-        searchQuery="nonexistent"
-        searching
-      />,
-    );
-    expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
-    expect(screen.queryByText('No results for "nonexistent"')).toBeNull();
-
-    view.rerender(
-      <PantryContent
-        {...defaultProps}
-        items={[]}
-        searchQuery="nonexistent"
-        searching={false}
-      />,
-    );
-    expect(screen.getByText('No results for "nonexistent"')).toBeTruthy();
-  });
-
-  it('shows location-specific empty state when filter is active with existing items and loading is false', () => {
-    // First render with items to set hasEverShownContent = true
-    const { unmount } = render(
-      <PantryContent
-        {...defaultProps}
-        items={[
-          createMockPantryItem({
-            id: '1',
-            itemName: 'X',
-            quantity: 1,
-            expiresOn: null,
-          }),
-        ]}
-      />,
-    );
-    unmount();
-    // Now render with empty items in a specific location. The fridge filter is
-    // genuinely empty (locationCounts.fridge === 0) while the pantry overall has
-    // items (locationCounts.all > 0), which triggers the location-specific
-    // message via overallItemCount — and keeps the skeleton-gate from firing,
-    // since the active tab's expected count is 0.
-    render(
-      <PantryContent
-        {...defaultProps}
-        items={[]}
-        locationFilter={'fridge'}
-        locationCounts={{ all: 5, fridge: 0, freezer: 1, pantry: 4 }}
-        totalCount={0}
-      />,
-    );
-    expect(screen.getByText('No items in Refrigerated')).toBeTruthy();
-  });
-
-  describe('skeleton hold (offline-first cache gap)', () => {
-    it('holds skeletons while loading when stats say items exist but the list is momentarily empty', () => {
-      // Cold-start cache gap: `pantry.stats` resolves so locationCounts is
-      // populated, but `itemsConnection` reads empty while the query is still
-      // settling (`loading` is true — `isLoadingInitial` stays true until items
-      // arrive). The list must show skeletons, NOT a blank / "empty" state.
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={[]}
-          loading={true}
-          locationCounts={{ all: 18, fridge: 3, freezer: 0, pantry: 15 }}
-        />,
-      );
-      expect(screen.getByTestId('pantry-list-skeleton-overlay')).toBeTruthy();
-      expect(screen.queryByText('Your pantry is empty')).toBeNull();
+  // A failed read holds no rows: its zeros are unknown, not counts.
+  it('counts nothing on the tabs when the read failed', () => {
+    renderContent({
+      locationCounts: { all: 3, fridge: 2 },
+      itemsFailure: { state: 'error', onRetry: jest.fn() },
     });
 
-    // The overlay sits under the list, so anything the footer draws while it
-    // is up paints over it — offset shimmer rows, or the empty state reading as
-    // "empty" over a loading list.
-    it('renders no footer over the overlay while it is up', () => {
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={[]}
-          loading={true}
-          locationCounts={{ all: 18, fridge: 3, freezer: 0, pantry: 15 }}
-        />,
-      );
-
-      expect(screen.getByTestId('pantry-list-skeleton-overlay')).toBeTruthy();
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-      expect(screen.queryByTestId('pantry-loading')).toBeNull();
-      expect(screen.queryByText('Your pantry is empty')).toBeNull();
-    });
-
-    it('shows the empty state (not skeletons) once settled, even if stats are stale', () => {
-      // The query has settled (`loading=false`) with an empty list while stats
-      // still report items — e.g. the last item in a tab was removed offline,
-      // where `pantry.stats` can't re-sync. The list is now authoritative, so
-      // the real empty state must win rather than skeletons that would otherwise
-      // never clear.
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={[]}
-          loading={false}
-          locationCounts={{ all: 18, fridge: 3, freezer: 0, pantry: 15 }}
-        />,
-      );
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-      expect(screen.getByText('Your pantry is empty')).toBeTruthy();
-    });
-
-    it('shows the empty state (not skeletons) when counts agree the pantry is empty', () => {
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={[]}
-          loading={false}
-          locationCounts={{ all: 0, fridge: 0, freezer: 0, pantry: 0 }}
-        />,
-      );
-      expect(screen.getByText('Your pantry is empty')).toBeTruthy();
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-    });
-
-    it('does not hold skeletons for an empty search result even when items exist', () => {
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={[]}
-          loading={false}
-          searchQuery="zzz"
-          locationCounts={{ all: 18, fridge: 3, freezer: 0, pantry: 15 }}
-          onAddItem={jest.fn()}
-        />,
-      );
-      expect(screen.getByText('No results for "zzz"')).toBeTruthy();
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-    });
+    expect(screen.queryByText('3')).toBeNull();
   });
 
-  it('renders pantry items when provided', () => {
-    const items = [
-      createMockPantryItem({ id: '1', itemName: 'Milk', quantity: 2 }),
-      createMockPantryItem({ id: '2', itemName: 'Eggs', quantity: 12 }),
-    ];
-    render(<PantryContent {...defaultProps} items={items} />);
-    expect(screen.getByText('Milk')).toBeTruthy();
-    expect(screen.getByText('Eggs')).toBeTruthy();
-  });
-
-  describe('list data and end-reached', () => {
-    const manyItems = Array.from({ length: 30 }, (_, i) =>
-      createMockPantryItem({ id: String(i + 1), itemName: `Item-${i + 1}` }),
-    );
-
-    it('hands FlashList the whole loaded set, not a slice', () => {
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={manyItems}
-          locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
-        />,
-      );
-      // There is deliberately no local render window: FlashList mounts by
-      // `drawDistance`, not by `data.length`.
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(30);
-    });
-
-    it('forwards end-reached to server pagination', () => {
-      const onEndReached = jest.fn();
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={manyItems}
-          hasMore
-          onEndReached={onEndReached}
-          locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
-        />,
-      );
-      act(() => {
-        screen.getByTestId('pantry-list').props.onEndReached?.();
-      });
-      expect(onEndReached).toHaveBeenCalledTimes(1);
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(30);
-    });
-
-    it('keeps onEndReached identity stable across re-renders', () => {
-      // Load-bearing: FlashList re-renders every mounted cell when this prop's
-      // identity changes, and the incoming prop flips to `undefined` once there
-      // is nothing left to fetch.
-      const { rerender } = render(
-        <PantryContent
-          {...defaultProps}
-          items={manyItems}
-          hasMore
-          onEndReached={jest.fn()}
-          locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
-        />,
-      );
-      const first = screen.getByTestId('pantry-list').props.onEndReached;
-      rerender(
-        <PantryContent
-          {...defaultProps}
-          items={manyItems}
-          onEndReached={undefined}
-          locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
-        />,
-      );
-      expect(screen.getByTestId('pantry-list').props.onEndReached).toBe(first);
-    });
-  });
-
-  describe('rows held still behind a sheet', () => {
-    const twoItems = [
-      createMockPantryItem({ id: '1', itemName: 'One' }),
-      createMockPantryItem({ id: '2', itemName: 'Two' }),
-    ];
-
-    afterEach(() => {
-      mockOverlayPresent = false;
-    });
-
-    it('keeps FlashList data identical while an overlay covers the rows', () => {
-      // A pantry write behind the Add sheet must not re-render every mounted
-      // cell for a list nobody can see — that is ~2 full passes per quick-add.
-      mockOverlayPresent = true;
-      const { rerender } = render(
-        <PantryContent {...defaultProps} items={twoItems} />,
-      );
-      const before = screen.getByTestId('pantry-list').props.data;
-
-      rerender(
-        <PantryContent
-          {...defaultProps}
-          items={[
-            ...twoItems,
-            createMockPantryItem({ id: '3', itemName: 'Three' }),
-          ]}
-        />,
-      );
-      expect(screen.getByTestId('pantry-list').props.data).toBe(before);
-    });
-
-    it('picks the new rows up as soon as the overlay clears', () => {
-      mockOverlayPresent = true;
-      const { rerender } = render(
-        <PantryContent {...defaultProps} items={twoItems} />,
-      );
-      const threeItems = [
-        ...twoItems,
-        createMockPantryItem({ id: '3', itemName: 'Three' }),
-      ];
-      rerender(<PantryContent {...defaultProps} items={threeItems} />);
-
-      mockOverlayPresent = false;
-      rerender(<PantryContent {...defaultProps} items={threeItems} />);
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(3);
-    });
-  });
-
-  it('includes add location tab when onAddLocation is provided', () => {
+  it('offers adding a location as the last tab', () => {
     const onAddLocation = jest.fn();
-    render(<PantryContent {...defaultProps} onAddLocation={onAddLocation} />);
-    // The add button should be in the filter tabs
-    const addTab = screen.getByTestId('pantry-location-tab-__add__');
-    expect(addTab).toBeTruthy();
+    renderContent({ onAddLocation }, MILK);
+
+    fireEvent.press(tab('__add__'));
+
+    expect(onAddLocation).toHaveBeenCalledTimes(1);
   });
 
-  it('renders empty state with action when onAddItem is provided', () => {
-    const onAddItem = jest.fn();
-    render(
-      <PantryContent {...defaultProps} items={[]} onAddItem={onAddItem} />,
-    );
-    // The empty state is rendered (onAddItem creates an action object, but text may not be directly in the tree)
-    expect(screen.getByTestId('pantry-empty-state')).toBeTruthy();
-  });
-
-  // --- Additional branch coverage tests ---
-
-  // Sort is the one control beside search, and says which sort is active.
-  it('offers sort beside the search field, naming the active sort', () => {
-    const items = [createMockPantryItem({ id: '1' })];
-    render(<PantryContent {...defaultProps} items={items} />);
-    expect(
-      screen.getByTestId(pantryTestIDs.sortButton).props.accessibilityLabel,
-    ).toBe('Sort, now by Recently Added');
-  });
-
-  it('names a changed sort on the sort button', () => {
-    const { usePantrySorting } = require('../hooks/usePantrySorting');
-    usePantrySorting.mockReturnValue({
-      sortOption: 'name',
-      sortDirection: 'asc',
-      sortModalVisible: false,
-      openSortModal: jest.fn(),
-      closeSortModal: jest.fn(),
-      handleSortSelect: jest.fn(),
-      sortItems: jest.fn(<T,>(items: T[]): T[] => items),
-    });
-
-    const sortItems = [createMockPantryItem({ id: '1' })];
-    render(<PantryContent {...defaultProps} items={sortItems} />);
-    expect(
-      screen.getByTestId(pantryTestIDs.sortButton).props.accessibilityLabel,
-    ).toBe('Sort, now by Name');
-
-    // Restore
-    usePantrySorting.mockReturnValue({
-      sortOption: 'recent',
-      sortDirection: 'desc',
-      sortModalVisible: false,
-      openSortModal: jest.fn(),
-      closeSortModal: jest.fn(),
-      handleSortSelect: jest.fn(),
-      sortItems: jest.fn(<T,>(items: T[]): T[] => items),
-    });
-  });
-
-  it('renders items with expiration dates', () => {
-    const futureDate = toDateKey(new Date(Date.now() + 2 * 86400000));
-    const items = [
-      createMockPantryItem({
-        id: '1',
-        itemName: 'Yogurt',
-        quantity: 1,
-        expiresOn: futureDate,
-      }),
-    ];
-    render(<PantryContent {...defaultProps} items={items} />);
-    expect(screen.getByText('Yogurt')).toBeTruthy();
-  });
-
-  it('renders items with expired dates', () => {
-    const pastDate = toDateKey(new Date(Date.now() - 2 * 86400000));
-    const items = [
-      createMockPantryItem({
-        id: '1',
-        itemName: 'Old Milk',
-        quantity: 1,
-        expiresOn: pastDate,
-      }),
-    ];
-    render(<PantryContent {...defaultProps} items={items} />);
-    expect(screen.getByText('Old Milk')).toBeTruthy();
-  });
-
-  it('renders items with zero quantity (out of stock)', () => {
-    const items = [
-      createMockPantryItem({ id: '1', itemName: 'Rice', quantity: 0 }),
-    ];
-    render(<PantryContent {...defaultProps} items={items} />);
-    expect(screen.getByText('Rice')).toBeTruthy();
-  });
-
-  it('does not include add tab when onAddLocation is not provided', () => {
-    render(<PantryContent {...defaultProps} />);
-    expect(screen.queryByTestId('pantry-location-tab-__add__')).toBeNull();
-  });
-
-  it('passes refreshControl when onRefresh is provided', () => {
+  it('refreshes on a pull', () => {
     const onRefresh = jest.fn();
-    render(<PantryContent {...defaultProps} onRefresh={onRefresh} />);
-    // RefreshControl is passed as a prop to FlashList, which may not render it in test environment.
-    // Verify the component renders without error when onRefresh is provided.
-    expect(screen.getByTestId('pantry-list')).toBeTruthy();
+    renderContent({ onRefresh }, MILK);
+
+    // Jest cannot pull: the gesture's outcome is the control's `onRefresh`.
+    act(() => {
+      screen
+        .getByTestId(pantryTestIDs.list)
+        .props.refreshControl.props.onRefresh();
+    });
+
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('a partial list offline', () => {
+  it('says a narrowed tab may miss rows the device never loaded', () => {
+    renderContent(
+      { mayHoldMore: true, onRefresh: jest.fn(), locationFilter: 'fridge' },
+      MILK,
+    );
+
+    expect(screen.getByTestId(pantryTestIDs.listPartial)).toBeTruthy();
   });
 
-  it('does not render refreshControl when onRefresh is not provided', () => {
-    render(<PantryContent {...defaultProps} />);
-    // Without onRefresh, no RefreshControl is passed
-    expect(screen.getByTestId('pantry-list')).toBeTruthy();
+  it('says nothing on the whole pantry, whose rows are all it claims', () => {
+    renderContent({ mayHoldMore: true, onRefresh: jest.fn() }, MILK);
+
+    expect(screen.queryByTestId(pantryTestIDs.listPartial)).toBeNull();
+  });
+});
+
+describe('the rows', () => {
+  it('asks for the next page at the end of the list', () => {
+    const onEndReached = jest.fn();
+    renderContent({ onEndReached }, MILK);
+
+    fireEvent(screen.getByTestId(pantryTestIDs.list), 'endReached');
+
+    expect(onEndReached).toHaveBeenCalledTimes(1);
   });
 
-  it('renders with loading true showing skeletons initially', () => {
-    // The module-level hasEverShownContent flag may already be true from prior tests,
-    // which means skeletons won't be shown even with loading=true.
-    // We can only verify the component renders without crashing when loading is true.
-    const {
-      useDeferredRender,
-    } = require('#hooks/performance/useDeferredRender');
-    useDeferredRender.mockReturnValue(false);
+  it('deletes a row once it has slid away', async () => {
+    const deleted = new Promise<string>(resolve => {
+      renderContent({ onItemDelete: resolve }, MILK);
+    });
+    let node = screen.getByText('Milk').parent;
+    while (node && !node.props.accessibilityActions) node = node.parent;
+    if (!node) throw new Error('the row offers no actions');
 
-    render(<PantryContent {...defaultProps} loading={true} items={[]} />);
-    // The pantry-list is always present; skeleton overlay depends on module-level state
-    expect(screen.getByTestId('pantry-list')).toBeTruthy();
-
-    useDeferredRender.mockReturnValue(true);
-  });
-
-  it('renders custom tabs when provided', () => {
-    const customTabs = [
-      { id: 'all', label: 'Everything' },
-      { id: 'custom', label: 'Custom Loc' },
-    ];
-    render(<PantryContent {...defaultProps} tabs={customTabs} />);
-    expect(screen.getByText('Everything')).toBeTruthy();
-    expect(screen.getByText('Custom Loc')).toBeTruthy();
-  });
-
-  it('renders items with storage location name', () => {
-    const items = [
-      createMockPantryItem({
-        id: '1',
-        itemName: 'Cheese',
-        quantity: 2,
-        storageLocation: { id: 'loc-1', name: 'Kitchen Cabinet' },
-      }),
-    ];
-    render(<PantryContent {...defaultProps} items={items} />);
-    expect(screen.getByText('Cheese')).toBeTruthy();
-  });
-
-  it('renders items with Refrigerated storage state', () => {
-    const items = [
-      createMockPantryItem({
-        id: '1',
-        itemName: 'Butter',
-        quantity: 1,
-        storageState: StorageState.Refrigerated,
-      }),
-    ];
-    render(<PantryContent {...defaultProps} items={items} />);
-    expect(screen.getByText('Butter')).toBeTruthy();
-  });
-
-  it('renders items with Frozen storage state', () => {
-    const items = [
-      createMockPantryItem({
-        id: '1',
-        itemName: 'Ice Cream',
-        quantity: 1,
-        storageState: StorageState.Frozen,
-      }),
-    ];
-    render(<PantryContent {...defaultProps} items={items} />);
-    expect(screen.getByText('Ice Cream')).toBeTruthy();
-  });
-
-  it('renders items with unit symbol', () => {
-    const items = [
-      createMockPantryItem({
-        id: '1',
-        itemName: 'Flour',
-        quantity: 500,
-        unit: asAbbreviation({ __typename: 'Unit', id: 'unit-g', symbol: 'g' }),
-      }),
-    ];
-    render(<PantryContent {...defaultProps} items={items} />);
-    expect(screen.getByText('Flour')).toBeTruthy();
-  });
-
-  it('renders empty state without action when onAddItem is not provided', () => {
-    render(<PantryContent {...defaultProps} items={[]} />);
-    expect(screen.getByText('Your pantry is empty')).toBeTruthy();
-  });
-
-  describe('loading skeleton (chrome stays, skeleton rows below)', () => {
-    it('shows skeleton rows below the visible chrome while the first load is in flight', () => {
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={[]}
-          loading={true}
-          locationCounts={{ all: 2, fridge: 0, freezer: 0, pantry: 0 }}
-        />,
-      );
-      // The chrome (header/search/tabs) stays visible above the list; the
-      // overlay covers only the list area below it.
-      expect(screen.getByTestId('pantry-list-skeleton-overlay')).toBeTruthy();
-      expect(screen.getByTestId('pantry-search-input')).toBeTruthy();
+    fireEvent(node, 'accessibilityAction', {
+      nativeEvent: { actionName: 'delete' },
     });
 
-    it('shows rows with no skeleton once items are present', () => {
-      const items = [
-        createMockPantryItem({ id: '1', itemName: 'Milk' }),
-        createMockPantryItem({ id: '2', itemName: 'Eggs' }),
-      ];
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={items}
-          locationCounts={{ all: 2, fridge: 0, freezer: 0, pantry: 0 }}
-        />,
-      );
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-      expect(screen.getByText('Milk')).toBeTruthy();
-    });
-
-    it('shows no skeleton for a genuinely empty pantry', () => {
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={[]}
-          locationCounts={{ all: 0, fridge: 0, freezer: 0, pantry: 0 }}
-        />,
-      );
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-      expect(screen.getByText('Your pantry is empty')).toBeTruthy();
-    });
-  });
-
-  describe('switch skeleton (server-mode tab fetch)', () => {
-    const items = [createMockPantryItem({ id: '1', itemName: 'Milk' })];
-    const counts = { all: 1, fridge: 0, freezer: 0, pantry: 0 };
-
-    it('covers the stale rows with a skeleton while the new tab is fetching, then lifts when it settles', () => {
-      // Start with fetching=false (settled state) to exercise the real race:
-      // setSwitching(true) fires before the Apollo refetch sets fetching=true.
-      const view = render(
-        <PantryContent
-          {...defaultProps}
-          items={items}
-          fetching={false}
-          serverMode
-          locationCounts={counts}
-        />,
-      );
-      // Items present, no fetch in flight → real rows, no skeleton.
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-
-      // Switch tabs: setSwitching(true) commits before fetching becomes true.
-      fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
-      // No skeleton yet — fetching hasn't started (switching=true, fetching=false).
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-
-      // Apollo refetch starts (fetching → true) → skeleton covers stale rows.
-      view.rerender(
-        <PantryContent
-          {...defaultProps}
-          items={items}
-          fetching={true}
-          serverMode
-          locationCounts={counts}
-        />,
-      );
-      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
-
-      // The fetch settles (fetching → false) → skeleton lifts.
-      view.rerender(
-        <PantryContent
-          {...defaultProps}
-          items={items}
-          fetching={false}
-          serverMode
-          locationCounts={counts}
-        />,
-      );
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-      expect(screen.getByText('Milk')).toBeTruthy();
-    });
-
-    it('does not flash a skeleton when switching in client mode (no fetch)', () => {
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={items}
-          fetching={false}
-          locationCounts={counts}
-        />,
-      );
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-
-      // Instant client-side switch — no fetch, so no skeleton.
-      fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-    });
-
-    it('arms the skeleton for a server-mode sort change and lifts it when the re-sorted page lands', () => {
-      const sortingMock = jest.requireMock(
-        '../hooks/usePantrySorting',
-      ).usePantrySorting;
-      const sortingValue = (sortOption: string) => ({
-        sortOption,
-        sortDirection: 'desc',
-        sortModalVisible: false,
-        openSortModal: jest.fn(),
-        closeSortModal: jest.fn(),
-        handleSortSelect: jest.fn(),
-        sortItems: jest.fn(<T,>(rows: T[]): T[] => rows),
-      });
-      sortingMock.mockImplementation(() => sortingValue('recent'));
-
-      const view = render(
-        <PantryContent
-          {...defaultProps}
-          items={items}
-          fetching={false}
-          serverMode
-          locationCounts={counts}
-        />,
-      );
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-
-      // Sort changes and the refetch for the new order starts.
-      sortingMock.mockImplementation(() => sortingValue('expiry'));
-      view.rerender(
-        <PantryContent
-          {...defaultProps}
-          items={items}
-          fetching={true}
-          serverMode
-          locationCounts={counts}
-        />,
-      );
-      expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
-
-      // The re-sorted page lands → skeleton lifts.
-      view.rerender(
-        <PantryContent
-          {...defaultProps}
-          items={items}
-          fetching={false}
-          serverMode
-          locationCounts={counts}
-        />,
-      );
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-      expect(screen.getByText('Milk')).toBeTruthy();
-
-      sortingMock.mockImplementation(() => sortingValue('recent'));
-    });
-
-    it('does not blank the list when a client-mode tab switch is followed by a server-mode fetch', () => {
-      // Client mode: tab tap must not arm the switch latch (nothing will
-      // fetch, so nothing could ever clear it).
-      const view = render(
-        <PantryContent
-          {...defaultProps}
-          items={items}
-          fetching={false}
-          serverMode={false}
-          locationCounts={counts}
-        />,
-      );
-      fireEvent.press(screen.getByTestId('pantry-location-tab-fridge'));
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-
-      // The pantry later qualifies for server mode and a background fetch
-      // starts — the populated rows must stay visible (a stale latch would
-      // swap them for skeletons here).
-      view.rerender(
-        <PantryContent
-          {...defaultProps}
-          items={items}
-          fetching={true}
-          serverMode
-          locationCounts={counts}
-        />,
-      );
-      expect(screen.queryByTestId('pantry-skeleton')).toBeNull();
-      expect(screen.getByText('Milk')).toBeTruthy();
-    });
-  });
-
-  describe('no-home empty states', () => {
-    it('shows "No home yet" when noHomes is true', () => {
-      render(<PantryContent {...defaultProps} items={[]} noHomes={true} />);
-      expect(screen.getByText('No home yet')).toBeTruthy();
-      expect(
-        screen.getByText('Create or join a home to start tracking food'),
-      ).toBeTruthy();
-    });
-
-    it('shows "Get Started" action when noHomes and onSelectHome provided', () => {
-      const onSelectHome = jest.fn();
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={[]}
-          noHomes={true}
-          onSelectHome={onSelectHome}
-        />,
-      );
-      expect(screen.getByText('Get Started')).toBeTruthy();
-    });
-
-    it('shows "No home selected" when noHomeSelected is true', () => {
-      render(
-        <PantryContent {...defaultProps} items={[]} noHomeSelected={true} />,
-      );
-      expect(screen.getByText('No home selected')).toBeTruthy();
-      expect(
-        screen.getByText('Select a home to view your pantry'),
-      ).toBeTruthy();
-    });
-
-    it('shows "Go to My Homes" action when noHomeSelected and onSelectHome provided', () => {
-      const onSelectHome = jest.fn();
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={[]}
-          noHomeSelected={true}
-          onSelectHome={onSelectHome}
-        />,
-      );
-      expect(screen.getByText('Go to My Homes')).toBeTruthy();
-    });
-
-    it('prioritizes noHomes over noHomeSelected', () => {
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={[]}
-          noHomes={true}
-          noHomeSelected={true}
-        />,
-      );
-      expect(screen.getByText('No home yet')).toBeTruthy();
-      expect(screen.queryByText('No home selected')).toBeNull();
-    });
-
-    it('prioritizes no-home states over search empty state', () => {
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={[]}
-          noHomeSelected={true}
-          searchQuery="test"
-        />,
-      );
-      expect(screen.getByText('No home selected')).toBeTruthy();
-      expect(screen.queryByText('No items found')).toBeNull();
-    });
+    expect(await deleted).toBe('i1');
   });
 });

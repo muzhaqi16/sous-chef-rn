@@ -23,9 +23,8 @@ export function useShoppingListSelection(
     ? allLists.filter(l => !deniedListIds.has(l.id))
     : allLists;
 
-  const currentListId = useActiveShoppingListId(lists);
-  const currentList = lists.find(list => list.id === currentListId);
-  const isInLists = currentListId === selectedShoppingListId;
+  const activeListId = useActiveShoppingListId(lists);
+  const isInLists = activeListId === selectedShoppingListId;
 
   // An explicit switch (creating a list, say) can target a list the query results
   // do not hold yet; tracking it as pending stops auto-select overriding it.
@@ -57,19 +56,19 @@ export function useShoppingListSelection(
   // Auto-select when lists load and current selection is invalid. Never over
   // a pending user selection: the cache hasn't caught up yet.
   useEffect(() => {
-    if (!currentListId || isInLists || pendingId) return;
-    setSelectedShoppingListId(currentListId);
-  }, [currentListId, isInLists, pendingId, setSelectedShoppingListId]);
+    if (!activeListId || isInLists || pendingId) return;
+    setSelectedShoppingListId(activeListId);
+  }, [activeListId, isInLists, pendingId, setSelectedShoppingListId]);
 
-  // The persisted id is trusted before the lists load, so the detail/items
-  // queries need not wait on GetShoppingListsLite. A stale id reads as null data
-  // and the auto-select effect falls back to the default list.
-  const optimisticListId = selectedShoppingListId ?? currentListId;
+  // The list on screen, for its reads and for everything done to it: the
+  // persisted id is trusted before the lists load, so nothing waits on
+  // GetShoppingListsLite. A stale id reads as null data and the auto-select
+  // effect falls back to the default list.
+  const currentListId = selectedShoppingListId ?? activeListId;
 
   return {
-    optimisticListId,
     currentListId,
-    currentList,
+    currentList: lists.find(list => list.id === currentListId),
     setSelectedShoppingListId,
   };
 }

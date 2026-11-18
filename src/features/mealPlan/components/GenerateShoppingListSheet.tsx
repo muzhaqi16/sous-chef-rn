@@ -80,21 +80,21 @@ export const GenerateShoppingListSheet: React.FC<
       mode="form"
       style={styles.scrollView}
       contentContainerStyle={styles.contentContainer}
+      // No title; the "Generate" action already names the intent.
+      header={
+        <BottomSheetHeader
+          onCancel={onClose}
+          onConfirm={handleGenerate}
+          confirmLabel={
+            loading
+              ? t('generateShoppingList.generating')
+              : t('generateShoppingList.generate')
+          }
+          confirmDisabled={loading || disabled || !canGenerate}
+          confirmColor="primary"
+        />
+      }
     >
-      {/* No title; the "Generate" action already names the intent. */}
-      <BottomSheetHeader
-        contentPadding="md"
-        onCancel={onClose}
-        onConfirm={handleGenerate}
-        confirmLabel={
-          loading
-            ? t('generateShoppingList.generating')
-            : t('generateShoppingList.generate')
-        }
-        confirmDisabled={loading || disabled || !canGenerate}
-        confirmColor="primary"
-      />
-
       {/* Home sharing info */}
       {!!homeName && (
         <View style={styles.infoNote}>

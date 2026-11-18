@@ -8,6 +8,7 @@
  * shape so the real `normalizePantry` runs end-to-end in tests.
  */
 
+import type { ApolloCache } from '@apollo/client';
 import type { Unmasked } from '@apollo/client/masking';
 import {
   ItemCondition,
@@ -15,7 +16,12 @@ import {
   StorageType,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
-import type { GetPantryQuery } from '#features/pantry/graphql/pantry.generated';
+import {
+  GetPantryDocument,
+  type GetPantryQuery,
+} from '#features/pantry/graphql/pantry.generated';
+import { todayKey } from '#/utils/dateUtils';
+import { seedQuery } from '../apolloMockProvider';
 import { asAbbreviation, readingAsAbbreviation } from './unitLabels';
 
 // The document's own shapes. Annotating a builder with one narrows every
@@ -82,14 +88,16 @@ function connection<TN extends string, ET extends string, T>(
 
 // A count reads as stored in both systems.
 function countHeld(value: number): PantryItemNode['amountLeft'] {
-  const reading: PantryItemNode['amountLeft']['metric'] = readingAsAbbreviation({
-    __typename: 'MeasureReading',
-    value,
-    unitId: 'unit-piece',
-    symbol: 'pc',
-    displayAsFraction: false,
-    type: UnitType.Count,
-  });
+  const reading: PantryItemNode['amountLeft']['metric'] = readingAsAbbreviation(
+    {
+      __typename: 'MeasureReading',
+      value,
+      unitId: 'unit-piece',
+      symbol: 'pc',
+      displayAsFraction: false,
+      type: UnitType.Count,
+    },
+  );
   return {
     __typename: 'Measure',
     value,
@@ -235,3 +243,38 @@ export function pantryData(pantry: PantryFixture): Unmasked<GetPantryQuery> {
     },
   };
 }
+
+/** The pantry read's variables, as its screen asks: the first page, today. */
+export const pantryReadOf = (id: string) => ({
+  id,
+  itemsFirst: 50,
+  storageLocationsFirst: 20,
+  today: todayKey(),
+});
+
+/** Seeds a pantry as its screen reads it; `data` when a row needs shaping. */
+export function seedPantry(
+  cache: ApolloCache,
+  pantry: PantryFixture,
+  data: Unmasked<GetPantryQuery> = pantryData(pantry),
+): void {
+  seedQuery(cache, {
+    query: GetPantryDocument,
+    variables: pantryReadOf(pantry.id),
+    data,
+  });
+}
+
+/** A pantry as its screen reads it now; `optimistic: false` is the server's. */
+export const readPantry = (cache: ApolloCache, id: string, optimistic = true) =>
+  cache.readQuery({
+    query: GetPantryDocument,
+    variables: pantryReadOf(id),
+    optimistic,
+  })?.pantry;
+
+/** The pantry's rows, as its screen lists them now. */
+export const pantryRows = (cache: ApolloCache, id: string, optimistic = true) =>
+  readPantry(cache, id, optimistic)?.itemsConnection.edges.map(
+    edge => edge.node,
+  ) ?? [];

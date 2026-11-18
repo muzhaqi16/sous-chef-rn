@@ -348,7 +348,6 @@ describe('adding a dietary restriction', () => {
     answered(screen, addHeldKind(screen), {
       addRestriction: {
         __typename: 'AddRestrictionPayload',
-        converged: false,
         dietaryRestriction: {
           __typename: 'DietaryRestriction',
           id: 'minted',
@@ -507,7 +506,6 @@ describe('what the server screened by the restrictions before', () => {
     answered(screen, write, {
       addRestriction: {
         __typename: 'AddRestrictionPayload',
-        converged: false,
         dietaryRestriction: {
           __typename: 'DietaryRestriction',
           id: 'minted',

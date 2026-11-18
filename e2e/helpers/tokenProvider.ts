@@ -5,7 +5,7 @@
 
 import { TEST_USER } from '../fixtures/testData';
 
-const GRAPHQL_ENDPOINT = 'http://localhost:4000/graphql';
+export const GRAPHQL_ENDPOINT = 'http://localhost:4000/graphql';
 const TOKEN_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 interface AuthTokens {

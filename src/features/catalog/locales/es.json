@@ -86,9 +86,6 @@
       "favorites": "Tus favoritos",
       "popular": "Popular"
     },
-    "noListTitle": "Ninguna lista seleccionada",
-    "noListBody": "Selecciona o crea primero una lista de compras.",
-    "createList": "Crear lista",
     "searchPlaceholder": "Buscar un artículo...",
     "added": "Se añadió {{name}}",
     "emptyTitle": "Aún no hay sugerencias",

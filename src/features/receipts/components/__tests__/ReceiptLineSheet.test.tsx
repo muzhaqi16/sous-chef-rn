@@ -4,14 +4,25 @@ import { ReceiptLineSheet } from '../ReceiptLineSheet';
 import { t } from '#/i18n';
 import { receiptsTestIDs } from '../../testIDs';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
+import { seedChoice } from '../../utils/receiptReviewLines';
 import { drainTimers } from '#/test-utils/drainTimers';
 
+// The real slot, so the form's bar renders where the sheet holds it.
 jest.mock('#components/templates/Sheet', () => {
   const { View } = require('react-native');
+  const slot = jest.requireActual('#components/templates/SheetHeaderSlot');
   return {
-    Sheet: ({ children }: { children?: React.ReactNode }) => (
-      <View>{children}</View>
-    ),
+    Sheet: ({ children }: { children?: React.ReactNode }) => {
+      const store = slot.useSheetHeaderStore();
+      return (
+        <slot.SheetHeaderStoreProvider value={store}>
+          <View>
+            <slot.SheetHeaderOutlet store={store} />
+            {children}
+          </View>
+        </slot.SheetHeaderStoreProvider>
+      );
+    },
   };
 });
 
@@ -47,29 +58,60 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
       value,
       onChangeText,
       error,
+      testID = 'field-unit',
     }: {
       value?: string;
       onChangeText?: (text: string) => void;
       error?: string;
+      testID?: string;
     }) => (
       <View>
-        <TextInput
-          testID="field-unit"
-          value={value}
-          onChangeText={onChangeText}
-        />
-        {error ? <Text testID="field-unit-error">{error}</Text> : null}
+        <TextInput testID={testID} value={value} onChangeText={onChangeText} />
+        {error ? <Text testID={`${testID}-error`}>{error}</Text> : null}
       </View>
     ),
   };
 });
 
-// The units the device holds: "lb" resolves, anything else does not.
-jest.mock('#features/catalog/hooks/useResolveUnit', () => ({
-  useResolveUnit: () => ({
-    resolveUnitId: async (current: string | null, text: string) =>
-      current ?? (text === 'lb' ? 'unit-lb' : null),
-  }),
+// The units the device holds: "lb", "fl oz" and "carton" resolve, anything else does not.
+jest.mock('#features/catalog/hooks/useResolveUnit', () => {
+  const { UnitType } = jest.requireActual<
+    typeof import('#/graphql/generated/schemaTypes')
+  >('#/graphql/generated/schemaTypes');
+  const held = new Map([
+    ['lb', { id: 'unit-lb', type: UnitType.Weight }],
+    ['fl oz', { id: 'unit-floz', type: UnitType.Volume }],
+    ['carton', { id: 'unit-carton', type: UnitType.Count }],
+  ]);
+  return {
+    useResolveUnit: () => ({
+      heldUnitFor: (text: string) => {
+        const unit = held.get(text);
+        return unit ? { ...unit, symbol: text, label: text } : null;
+      },
+      resolveUnitId: async (current: string | null, text: string) =>
+        current ?? held.get(text)?.id ?? null,
+    }),
+  };
+});
+
+// The earlier purchases a line may be the receipt for, read through the API.
+let mockEarlier: {
+  id: string;
+  version: number;
+  amount: string;
+  boughtOn: string;
+}[] = [];
+jest.mock('../useEarlierPurchases', () => ({
+  useEarlierPurchases: () => mockEarlier,
+}));
+
+// The receipt's own currency is read through the API; here, the account's.
+jest.mock('../../hooks/useReceiptCurrency', () => ({
+  useReceiptMoney: () =>
+    jest
+      .requireActual<typeof import('#domain/money')>('#domain/money')
+      .useMoney(),
 }));
 
 jest.mock('#components/molecules/FractionInput', () => ({
@@ -103,7 +145,8 @@ jest.mock('#components/atoms/FormInput', () => {
   };
 });
 
-const TOTAL_NEEDED = 'Enter what you paid for this line.';
+const TOTAL_NEEDED =
+  "Enter what you paid for this line, or leave it empty if the receipt doesn't show it.";
 
 const MILK = { index: 0, printed: 'MILK 2%', price: 2.5 };
 
@@ -190,21 +233,32 @@ describe('the total paid on a receipt line', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it.each(['', '0'])(
-    'asks for what was paid when the total is %p',
-    async typed => {
-      const { onSave } = renderSheet();
+  it('asks for what was paid when the total is 0 and no discount made it free', async () => {
+    const { onSave } = renderSheet();
 
-      typeTotal(typed);
-      fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+    typeTotal('0');
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-      await drainTimers();
-      expect(screen.getByTestId('field-Total paid-error')).toHaveTextContent(
-        TOTAL_NEEDED,
-      );
-      expect(onSave).not.toHaveBeenCalled();
-    },
-  );
+    await drainTimers();
+    expect(screen.getByTestId('field-Total paid-error')).toHaveTextContent(
+      TOTAL_NEEDED,
+    );
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  // IN-01: an unreadable total is left empty and the line still goes in, its
+  // price unknown rather than zero.
+  it('saves an emptied total as a price the receipt did not show', async () => {
+    const { onSave } = renderSheet();
+
+    typeTotal('');
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ price: null }),
+    );
+  });
 
   it('saves a line its discount made free at nothing paid', async () => {
     const { onSave } = renderSheet({ ...MILK, price: 0, discount: 2.5 });
@@ -214,6 +268,50 @@ describe('the total paid on a receipt line', () => {
 
     await drainTimers();
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ price: 0 }));
+  });
+});
+
+describe('the receipt for an earlier purchase', () => {
+  const EGGS_BOUGHT = {
+    id: 'IN-04-existing-purchase',
+    version: 3,
+    amount: '12 pc',
+    boughtOn: '11/15/2026',
+  };
+  beforeEach(() => {
+    mockEarlier = [EGGS_BOUGHT];
+  });
+  afterEach(() => {
+    mockEarlier = [];
+  });
+
+  // IN-04: picked, the line fills in that purchase and stocks nothing again.
+  it('saves the line as the receipt for the purchase picked', async () => {
+    const { onSave } = renderSheet();
+
+    fireEvent.press(screen.getByText('12 pc on 11/15/2026'));
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        existingPurchase: { id: 'IN-04-existing-purchase', version: 3 },
+        notStocked: true,
+      }),
+    );
+  });
+
+  // A similar purchase may be another one: it is offered, never assumed.
+  it('keeps the line a new purchase unless one is picked', async () => {
+    const { onSave } = renderSheet();
+
+    expect(screen.getByText('A new purchase')).toBeTruthy();
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.not.objectContaining({ existingPurchase: expect.anything() }),
+    );
   });
 });
 
@@ -241,6 +339,105 @@ describe('the unit of a receipt line', () => {
       '"tin" isn\'t a unit we recognise. Pick one from the list.',
     );
     expect(onSave).not.toHaveBeenCalled();
+  });
+});
+
+describe('a receipt line that counts packages', () => {
+  const EACH_HOLDS = `field-${t('packageSize.eachHolds')}`;
+  const SIZE_UNIT = receiptsTestIDs.lineSizeUnit;
+  const MILK_CARTON = {
+    index: 0,
+    printed: 'WHOLE MILK 64 FL OZ',
+    price: 4.29,
+    packages: { count: 1, size: { quantity: 64, unit: 'fl oz' } },
+  };
+
+  const renderCarton = () => {
+    const onSave = jest.fn();
+    render(
+      <ReceiptLineSheet
+        visible
+        line={MILK_CARTON}
+        choice={{
+          ...seedChoice(MILK_CARTON),
+          itemId: 'cat-milk',
+          itemName: 'Whole milk',
+        }}
+        candidates={[]}
+        listItemNameFor={() => undefined}
+        onPickItem={jest.fn()}
+        opening={1}
+        onClose={jest.fn()}
+        onSave={onSave}
+        onRemove={jest.fn()}
+        canLeaveOut
+      />,
+    );
+    return { onSave };
+  };
+
+  it('opens a printed size as one package holding it, and saves it so', async () => {
+    const { onSave } = renderCarton();
+
+    expect(screen.getByTestId(EACH_HOLDS)).toHaveProp('value', '64');
+    expect(screen.getByTestId(SIZE_UNIT)).toHaveProp('value', 'fl oz');
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quantity: 1,
+        unitText: '',
+        packageSize: { quantity: 64, unitId: 'unit-floz', unitText: 'fl oz' },
+      }),
+    );
+  });
+
+  it('refuses a size unit it cannot resolve on its field, and does not save', async () => {
+    const { onSave } = renderCarton();
+
+    fireEvent.changeText(screen.getByTestId(SIZE_UNIT), 'tin');
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(screen.getByTestId(`${SIZE_UNIT}-error`)).toHaveTextContent(
+      t('itemForm.unknownUnit', { unit: 'tin' }),
+    );
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('asks for the unit of a size given without one', async () => {
+    const { onSave } = renderCarton();
+
+    fireEvent.changeText(screen.getByTestId(SIZE_UNIT), '');
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(screen.getByTestId(`${SIZE_UNIT}-error`)).toHaveTextContent(
+      t('packageSize.unitRequired'),
+    );
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('takes a size only for a count: an amount in a measure holds nothing', async () => {
+    const { onSave } = renderCarton();
+
+    fireEvent.changeText(screen.getByTestId('field-unit'), 'fl oz');
+
+    expect(screen.queryByTestId(EACH_HOLDS)).toBeNull();
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.not.objectContaining({ packageSize: expect.anything() }),
+    );
+  });
+
+  it('takes a size for a count in a counted unit', () => {
+    renderCarton();
+
+    fireEvent.changeText(screen.getByTestId('field-unit'), 'carton');
+
+    expect(screen.getByTestId(EACH_HOLDS)).toBeOnTheScreen();
   });
 });
 
@@ -291,6 +488,40 @@ describe('a receipt line not for the pantry', () => {
         notStocked: true,
         itemId: null,
         itemName: 'MILK 2%',
+      }),
+    );
+  });
+});
+
+describe('a line whose amount is asked', () => {
+  it('opens on what its list line asked for, so one save confirms it', async () => {
+    const onSave = jest.fn();
+    render(
+      <ReceiptLineSheet
+        visible
+        line={MILK}
+        choice={lineChoice({ quantity: 3, price: MILK.price })}
+        asked={{ quantity: 2, unitId: 'unit-bottle', unitText: 'btl' }}
+        candidates={[]}
+        listItemNameFor={() => undefined}
+        onPickItem={jest.fn()}
+        opening={1}
+        onClose={jest.fn()}
+        onSave={onSave}
+        onRemove={jest.fn()}
+        canLeaveOut
+      />,
+    );
+    expect(screen.getByTestId('field-unit')).toHaveProp('value', 'btl');
+
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quantity: 2,
+        unitId: 'unit-bottle',
+        unitText: 'btl',
       }),
     );
   });

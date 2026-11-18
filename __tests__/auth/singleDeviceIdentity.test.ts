@@ -3,129 +3,122 @@
 // them diverging is invisible to typecheck and to every other suite — each one
 // keeps passing against its own id.
 
-const mockMutate = jest.fn().mockResolvedValue({ data: {} });
-const mockQuery = jest.fn().mockResolvedValue({ data: {} });
 jest.mock('#/apollo/client', () => ({
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
+jest.mock('#native/storage/keychain', () =>
+  jest.requireActual('#/test-utils/memoryKeychain').memoryKeychainModule(),
+);
 
-jest.mock('#/services/auth/deviceId');
-
-const mockStoreState: Record<string, unknown> = {
-  isOnline: true,
-  user: { id: 'u1', email: 'chef@example.com' },
-  resetStore: jest.fn().mockResolvedValue(undefined),
-  setAuthIsLoading: jest.fn(),
-  setAuthIsLoadingCredentials: jest.fn(),
-  setNavigationState: jest.fn(),
-  getUserNavigationState: jest.fn().mockReturnValue({}),
-  setUserNavigationState: jest.fn(),
-};
-jest.mock('#store', () => ({
-  useStore: { getState: () => mockStoreState },
-}));
-
-jest.mock('#native/storage/keychain', () => ({
-  clearCredentials: jest.fn().mockResolvedValue(undefined),
-  loadCredentials: jest.fn().mockResolvedValue({
-    status: 'read',
-    username: 'chef@example.com',
-    password: 'dc1:secret',
-  }),
-  saveCredentials: jest.fn().mockResolvedValue(true),
-  hasCredentials: jest.fn().mockResolvedValue(true),
-  getStoredAccounts: jest.fn().mockResolvedValue([]),
-  getBiometricCapability: jest
-    .fn()
-    .mockResolvedValue({ isAvailable: true, biometryType: 'Fingerprint' }),
-  getLastBiometricEmail: jest.fn().mockResolvedValue('chef@example.com'),
-}));
-
-jest.mock('#/apollo/logoutCleanup', () => ({
-  LogoutCleanup: {
-    performLogoutCleanup: jest.fn().mockResolvedValue(undefined),
-    completeLogout: jest.fn(),
-  },
-}));
-
-jest.mock('#/apollo/offlineQueue/queueManager', () => ({
-  queueManager: { onLogout: jest.fn(), onUserChange: jest.fn() },
-}));
-
-jest.mock('#/apollo/offlineQueue/queueStore', () => ({
-  queueStore: { getCurrentUserId: jest.fn(), getPendingCount: () => 0 },
-}));
-
-jest.mock('#/services/push/pushTokenProvider', () => ({
-  acquirePushToken: jest.fn().mockResolvedValue(null),
-  getPushTokenProvider: () => ({ getToken: jest.fn() }),
-  onPushTokenRefresh: () => jest.fn(),
-}));
-
-jest.mock('#/hooks/settings/useFeatureHint', () => ({
-  incrementLoginCount: jest.fn(),
-}));
-
-import { registerApolloClient } from '#/apollo/clientRegistry';
-import type { ApolloClient } from '@apollo/client';
-import { biometricService } from '#/services/biometric/deviceCredential';
-import { MOCK_DEVICE_ID as DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
-import { LoginDocument } from '#operations/auth/auth.generated';
 import { print } from 'graphql';
+import { recordMock } from '#/test-utils/apolloMockProvider';
+import { registerTestClient } from '#/test-utils/registeredClient';
+import { memoryKeychain } from '#/test-utils/memoryKeychain';
+import { useStore } from '#store';
+import { ensureDeviceId, getDeviceId } from '#/services/auth/deviceId';
+import { biometricService } from '#/services/biometric/deviceCredential';
+import { ErrorCode, ErrorDisposition } from '#/graphql/generated/schemaTypes';
+import {
+  ExchangeDeviceCredentialDocument,
+  IssueDeviceCredentialDocument,
+  LoginDocument,
+  MyDeviceCredentialsDocument,
+  RevokeDeviceCredentialDocument,
+} from '#operations/auth/auth.generated';
 
-// The client the code under test reads from the registry.
-registerApolloClient({
-  mutate: (...args: unknown[]) => mockMutate(...args),
-  query: (...args: unknown[]) => mockQuery(...args),
-} as unknown as ApolloClient);
+const EMAIL = 'chef@example.com';
 
-/** Variables of the one mutate call whose input carries `key`. */
-const inputWith = (key: string) =>
-  mockMutate.mock.calls
-    .map(([opts]) => opts?.variables?.input)
-    .find(input => !!input && key in input);
+let thisDevice = '';
+
+beforeAll(async () => {
+  thisDevice = (await ensureDeviceId()) ?? '';
+});
 
 beforeEach(() => {
-  mockMutate.mockClear();
-  mockQuery.mockClear();
-  mockMutate.mockResolvedValue({ data: {} });
+  memoryKeychain.reset();
+  memoryKeychain.hold(EMAIL, 'dc1:secret');
+  useStore.setState({
+    user: { id: 'u1', email: EMAIL, emailVerified: true, onBoarded: true },
+    isOnline: true,
+    apiReachable: true,
+    biometricRetryAt: 0,
+  });
 });
 
 describe('every identity surface presents one value', () => {
-  it('issuing a device credential binds it to the same device', async () => {
-    await biometricService.enrolDeviceCredential('chef@example.com');
+  it('the header reads the id the device holds', () => {
+    expect(thisDevice).not.toBe('');
+    expect(getDeviceId()).toBe(thisDevice);
+  });
 
-    expect(inputWith('deviceId')).toEqual(
-      expect.objectContaining({ deviceId: DEVICE_ID }),
-    );
+  it('issuing a device credential binds it to the same device', async () => {
+    const issue = recordMock(IssueDeviceCredentialDocument, {
+      data: {
+        issueDeviceCredential: {
+          __typename: 'DeviceCredentialPayload',
+          credential: 'issued',
+        },
+      },
+    });
+    registerTestClient([issue]);
+
+    await biometricService.enrolDeviceCredential(EMAIL);
+
+    expect(issue.fired).toEqual([{ input: { deviceId: thisDevice } }]);
   });
 
   it('exchanging a device credential presents the same device', async () => {
-    await biometricService.signInWithDeviceCredential('chef@example.com');
+    const exchange = recordMock(ExchangeDeviceCredentialDocument, {
+      data: {
+        exchangeDeviceCredential: {
+          __typename: 'AuthenticationError',
+          code: ErrorCode.AuthCredentialsInvalid,
+          disposition: ErrorDisposition.Fail,
+          message: 'Refused',
+        },
+      },
+    });
+    registerTestClient([exchange]);
 
-    expect(inputWith('credential')).toEqual(
-      expect.objectContaining({ deviceId: DEVICE_ID }),
-    );
+    await biometricService.signInWithDeviceCredential(EMAIL);
+
+    expect(exchange.fired).toEqual([
+      { input: { credential: 'secret', deviceId: thisDevice } },
+    ]);
   });
 
   it('revoking finds this device by the same value', async () => {
-    mockQuery.mockResolvedValueOnce({
+    const revoke = recordMock(RevokeDeviceCredentialDocument, {
       data: {
-        deviceCredentials: [
-          {
-            __typename: 'DeviceCredential',
-            id: 'other',
-            deviceId: 'device_someone_else',
-          },
-          { __typename: 'DeviceCredential', id: 'mine', deviceId: DEVICE_ID },
-        ],
+        revokeDeviceCredential: {
+          __typename: 'RevokeDeviceCredentialPayload',
+        },
       },
     });
+    registerTestClient([
+      recordMock(MyDeviceCredentialsDocument, {
+        data: {
+          deviceCredentials: [
+            {
+              __typename: 'DeviceCredential',
+              id: 'other',
+              deviceId: 'device_someone_else',
+            },
+            {
+              __typename: 'DeviceCredential',
+              id: 'mine',
+              deviceId: thisDevice,
+            },
+          ],
+        },
+      }),
+      revoke,
+    ]);
 
     await biometricService.revokeDeviceCredentialForThisDevice();
 
-    expect(inputWith('id')).toEqual(expect.objectContaining({ id: 'mine' }));
+    expect(revoke.fired).toEqual([{ input: { id: 'mine' } }]);
   });
 });
 

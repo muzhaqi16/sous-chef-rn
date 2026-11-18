@@ -1,211 +1,202 @@
-// Unit tests for `authService.register`.
-//
 // `register` is existence-blind and issues no tokens, so a successful one signs
 // in with the password just chosen: `login` admits an unverified account, and
 // the verification gate (with its skip) takes over. An address that refuses
 // that password — one held by another account, or a deleted one pending
 // restoration — reports `verificationSent`, silently, and code entry follows.
-// `register` uses the singleton Apollo client, so `client.mutate` is mocked
-// directly, answering Register first and Login second.
 
-const mockMutate = jest.fn();
-const mockReadFragment = jest.fn();
 jest.mock('#/apollo/client', () => ({
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
-
-const mockStore = {
-  user: null as unknown,
-  setAuth: jest.fn(() => true),
-  clearAuth: jest.fn(),
-  setAuthIsLoading: jest.fn(),
-  setNavigationState: jest.fn(),
-  setPostLoginCredentials: jest.fn(),
-  setHomeAndPantry: jest.fn(),
-  setIsHomeSelectionReady: jest.fn(),
-  setSelectedShoppingListId: jest.fn(),
-  setPreferredCurrency: jest.fn(),
-  updateUser: jest.fn(),
-  getUserNavigationState: jest.fn(),
-  setUserNavigationState: jest.fn(),
-};
-jest.mock('#store', () => ({ useStore: { getState: () => mockStore } }));
-
-const mockKeychainWrites = jest.fn();
-jest.mock(
-  '#native/storage/keychain',
-  () =>
-    new Proxy(
-      {},
-      {
-        get:
-          (_target, name: string) =>
-          (...args: unknown[]) =>
-            mockKeychainWrites(name, ...args),
-      },
-    ),
+jest.mock('#native/storage/keychain', () =>
+  jest.requireActual('#/test-utils/memoryKeychain').memoryKeychainModule(),
 );
-
+// Registering the device runs in the background over native device APIs;
+// `deviceRegistration.test.ts` covers it.
 jest.mock('#/services/device/deviceRegistration', () => ({
   registerDeviceInBackground: jest.fn(),
 }));
-jest.mock('#/hooks/settings/useFeatureHint', () => ({
-  incrementLoginCount: jest.fn(),
-}));
-jest.mock('#/apollo/offlineQueue/queueManager', () => ({
-  queueManager: { onLogout: jest.fn(), onUserChange: jest.fn() },
-}));
-jest.mock('#/apollo/offlineQueue/queueStore', () => ({
-  queueStore: { getCurrentUserId: jest.fn(), getPendingCount: () => 0 },
-}));
-jest.mock('#/services/auth/deviceId');
 
-const mockToastError = jest.mocked(toastService.error);
-
-import { registerApolloClient } from '#/apollo/clientRegistry';
-import type { ApolloClient } from '@apollo/client';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { recordMock, type MockDataFor } from '#/test-utils/apolloMockProvider';
+import { registerTestClient } from '#/test-utils/registeredClient';
+import { memoryKeychain } from '#/test-utils/memoryKeychain';
+import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
-import { LoginDocument } from '#operations/auth/auth.generated';
+import { ErrorCode, ErrorDisposition } from '#/graphql/generated/schemaTypes';
+import {
+  LoginDocument,
+  RegisterDocument,
+} from '#operations/auth/auth.generated';
 import { authService } from '#/services/authService';
 import { registerMobileSessionHost } from '#/app/mobileSessionHost';
 
-// The keychain is reached only through the steps the mobile app registers.
 registerMobileSessionHost();
-
-// The client the code under test reads from the registry.
-registerApolloClient({
-  mutate: (...args: unknown[]) => mockMutate(...args),
-  cache: { readFragment: (...args: unknown[]) => mockReadFragment(...args) },
-} as unknown as ApolloClient);
 
 const INPUT = { name: 'Ada', email: 'ada@example.com', password: 'pw-12345' };
 const USER_ID = 'u1';
 
-const registered = {
-  data: {
-    register: {
-      __typename: 'RegisterPayload',
-      status: 'VERIFICATION_SENT',
-      message: 'A verification link was sent.',
+const registered = () =>
+  recordMock(RegisterDocument, {
+    data: {
+      register: {
+        __typename: 'RegisterPayload',
+        message: 'A verification link was sent.',
+      },
+    },
+  });
+
+const signingIn = (
+  login: MockDataFor<typeof LoginDocument>['login'] = {
+    __typename: 'AuthPayload',
+    accessToken: 'at',
+    refreshToken: 'rt',
+    user: {
+      __typename: 'User',
+      id: USER_ID,
+      email: INPUT.email,
+      emailVerified: false,
+      onBoarded: false,
     },
   },
-};
+) => recordMock(LoginDocument, { data: { login } });
 
-const signedIn = {
-  data: {
-    login: {
-      __typename: 'AuthPayload',
-      accessToken: 'at',
-      refreshToken: 'rt',
-      user: { __typename: 'User', id: USER_ID },
-    },
-  },
-};
-
-const loginRefused = (code: string) => ({
-  data: {
-    login: { __typename: 'AuthenticationError', code, message: 'Refused' },
-  },
-});
-
-const loginCalls = () =>
-  mockMutate.mock.calls.filter(
-    ([options]: [{ mutation: unknown }]) => options.mutation === LoginDocument,
-  );
+const refusedSignIn = (code: ErrorCode) =>
+  signingIn({
+    __typename: 'AuthenticationError',
+    code,
+    disposition: ErrorDisposition.Fail,
+    message: 'Refused',
+  });
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockReadFragment.mockReturnValue({
-    __typename: 'User',
-    id: USER_ID,
-    email: INPUT.email,
-    emailVerified: false,
-    onBoarded: false,
-    defaultHomeId: null,
+  memoryKeychain.reset();
+  useStore.getState().clearAuth();
+  useStore.setState({
+    isOnline: true,
+    apiReachable: true,
+    authIsLoading: false,
+    navigationState: 'auth',
   });
 });
 
-describe('authService.register', () => {
-  it('signs a new account in, so the verification gate and its skip take over', async () => {
-    mockMutate.mockResolvedValueOnce(registered).mockResolvedValue(signedIn);
+describe('a new account', () => {
+  it('is signed in with the password chosen, so the verification gate takes over', async () => {
+    const login = signingIn();
+    registerTestClient([registered(), login]);
 
     const outcome = await authService.register(INPUT);
 
     expect(outcome).toBe('signedIn');
-    expect(loginCalls()).toHaveLength(1);
-    expect(loginCalls()[0]?.[0]).toMatchObject({
-      variables: { input: { email: INPUT.email, password: INPUT.password } },
-    });
-    expect(mockStore.setAuth).toHaveBeenCalledTimes(1);
-    expect(mockStore.setNavigationState).toHaveBeenCalledWith('verification');
-    expect(mockStore.setAuthIsLoading).toHaveBeenLastCalledWith(false);
+    expect(login.fired).toEqual([
+      { input: { email: INPUT.email, password: INPUT.password } },
+    ]);
+    const state = useStore.getState();
+    expect(state.user?.id).toBe(USER_ID);
+    expect(state.navigationState).toBe('verification');
+    expect(state.authIsLoading).toBe(false);
   });
 
-  it.each(['AUTH_CREDENTIALS_INVALID', 'AUTH_EMAIL_NOT_VERIFIED'])(
-    'falls back to code entry without a word when sign-in is refused with %s',
+  it('starts at the verification step even after an earlier skip', async () => {
+    useStore
+      .getState()
+      .setUserNavigationState(USER_ID, { verificationSkipped: true });
+    registerTestClient([registered(), signingIn()]);
+
+    await authService.register(INPUT);
+
+    expect(
+      useStore.getState().getUserNavigationState(USER_ID)?.verificationSkipped,
+    ).toBe(false);
+  });
+
+  it('never has its password written down', async () => {
+    registerTestClient([registered(), signingIn()]);
+
+    await authService.register(INPUT);
+
+    expect(memoryKeychain.slotOf(INPUT.email)).toBeUndefined();
+    expect(JSON.stringify(useStore.getState())).not.toContain(INPUT.password);
+  });
+});
+
+describe('an address that refuses the new password', () => {
+  it.each([ErrorCode.AuthCredentialsInvalid, ErrorCode.AuthEmailNotVerified])(
+    'falls back to code entry without a word on %s',
     async code => {
       // A taken address refuses the new password; a deleted one pending
       // restoration refuses every password until the code is redeemed.
-      mockMutate
-        .mockResolvedValueOnce(registered)
-        .mockResolvedValueOnce(loginRefused(code));
+      registerTestClient([registered(), refusedSignIn(code)]);
 
       const outcome = await authService.register(INPUT);
 
       expect(outcome).toBe('verificationSent');
-      expect(mockStore.setAuth).not.toHaveBeenCalled();
-      expect(mockToastError).not.toHaveBeenCalled();
-      expect(mockStore.setAuthIsLoading).toHaveBeenLastCalledWith(false);
+      expect(useStore.getState().user).toBeNull();
+      expect(toastService.error).not.toHaveBeenCalled();
+      expect(useStore.getState().authIsLoading).toBe(false);
     },
   );
 
-  it('falls back to code entry without a word when sign-in fails in transit', async () => {
-    mockMutate
-      .mockResolvedValueOnce(registered)
-      .mockRejectedValueOnce(new Error('Network request failed'));
+  it('falls back to code entry without a word when the sign-in fails in transit', async () => {
+    registerTestClient([
+      registered(),
+      recordMock(LoginDocument, { error: new Error('Network request failed') }),
+    ]);
 
     const outcome = await authService.register(INPUT);
 
     expect(outcome).toBe('verificationSent');
-    expect(mockToastError).not.toHaveBeenCalled();
+    expect(toastService.error).not.toHaveBeenCalled();
   });
+});
 
-  it('never writes the password down', async () => {
-    mockMutate.mockResolvedValueOnce(registered).mockResolvedValue(signedIn);
-
-    await authService.register(INPUT);
-
-    expect(mockKeychainWrites).not.toHaveBeenCalled();
-    const storeCalls = Object.values(mockStore).flatMap(value =>
-      jest.isMockFunction(value) ? value.mock.calls : [],
-    );
-    expect(JSON.stringify(storeCalls)).not.toContain(INPUT.password);
-  });
-
-  it('toasts the app’s own copy and attempts no sign-in on an error union member', async () => {
-    mockMutate.mockResolvedValueOnce({
-      data: {
-        register: {
-          __typename: 'ValidationError',
-          field: 'email',
-          code: 'VALIDATION',
-          message: 'Email is invalid.',
+describe('a refused registration', () => {
+  it("says the app's own copy and tries no sign-in", async () => {
+    const login = signingIn();
+    registerTestClient([
+      recordMock(RegisterDocument, {
+        data: {
+          register: {
+            __typename: 'ValidationError',
+            field: 'email',
+            code: ErrorCode.ValidationFailed,
+            disposition: ErrorDisposition.Fail,
+            message: 'Email is invalid.',
+          },
         },
-      },
-    });
+      }),
+      login,
+    ]);
 
     const outcome = await authService.register(INPUT);
 
     expect(outcome).toBe('failed');
-    // Never the server's sentence: it is English by construction (no
-    // `Accept-Language` is sent and the token carries no locale). The refusal
-    // resolves through the field it names, then its code, then the app's
-    // localized generic.
-    expect(mockToastError).not.toHaveBeenCalledWith('Email is invalid.');
-    expect(mockToastError).toHaveBeenCalledTimes(1);
-    expect(loginCalls()).toHaveLength(0);
-    expect(mockStore.setAuth).not.toHaveBeenCalled();
-    expect(mockStore.setAuthIsLoading).toHaveBeenLastCalledWith(false);
+    // Never the server's sentence: it is English by construction.
+    expect(toastService.error).not.toHaveBeenCalledWith('Email is invalid.');
+    expect(toastService.error).toHaveBeenCalledTimes(1);
+    expect(login.fired).toEqual([]);
+    expect(useStore.getState().authIsLoading).toBe(false);
+  });
+
+  it('drops a sign-in token the server no longer honours', async () => {
+    useStore.setState({ accessToken: 'stale', refreshToken: 'stale-rt' });
+    registerTestClient([
+      recordMock(RegisterDocument, {
+        error: new CombinedGraphQLErrors({
+          data: null,
+          errors: [
+            {
+              message: 'Token expired',
+              extensions: { code: ErrorCode.AuthTokenExpired },
+            },
+          ],
+        }),
+      }),
+    ]);
+
+    await authService.register(INPUT);
+
+    expect(useStore.getState().accessToken).toBeNull();
   });
 });

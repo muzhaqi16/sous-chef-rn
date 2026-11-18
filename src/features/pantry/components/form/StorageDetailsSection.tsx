@@ -47,7 +47,6 @@ interface StorageDetailsSectionProps {
     locationId: string | null,
     location: StorageLocationOption | null,
   ) => void;
-  onAddNewLocation?: (name: string) => void;
 }
 
 export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
@@ -61,7 +60,6 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   onDateChange,
   storageLocations = [],
   onStorageLocationSelected,
-  onAddNewLocation,
 }) => {
   const { t } = useTranslation();
   const conditionOptions: ChipOption<ItemCondition>[] =
@@ -75,7 +73,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
       label: t('itemForm.location'),
       placeholder: t('itemForm.locationPlaceholder'),
       component: 'storageLocationAutocomplete',
-      props: { storageLocations, onStorageLocationSelected, onAddNewLocation },
+      props: { storageLocations, onStorageLocationSelected },
     },
   ];
 

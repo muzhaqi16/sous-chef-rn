@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { errorService } from '#/services/errorService';
+import { alertService } from '#/services/alertService';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { UnitPicker } from '#features/pantry/components/UnitPicker';
 import {
   useOperationUnits,
@@ -43,13 +44,7 @@ interface PantryActionModalProps {
   currentQuantityLabel?: string;
   /** Selects which unit-eligibility query runs. */
   operation: PantryOperation;
-  onConfirm: (shared: PantryActionSharedState) => void;
-  /** Fires when the modal opens; reset consumer-specific state here. */
-  onReset?: (
-    pantryItem: PantryActionModal_PantryItemFragment,
-    defaultUnit: SelectedUnitInfo | null,
-    defaultIncrement: number | null,
-  ) => void;
+  onConfirm: (shared: PantryActionSharedState) => void | Promise<unknown>;
   renderActionFields: (
     shared: PantryActionSharedState,
     pantryItem: PantryActionModal_PantryItemFragment,
@@ -73,7 +68,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   currentQuantityLabel,
   operation,
   onConfirm,
-  onReset,
   renderActionFields,
 }) => {
   const { t } = useTranslation();
@@ -82,12 +76,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     unitToggleLabel ?? t('pantryAction.useByDefault');
   const resolvedCurrentQuantityLabel =
     currentQuantityLabel ?? t('pantryAction.availableDefault');
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible: visible && !!pantryItemId,
-    onDismiss: onClose,
-    snapPoints,
-  });
-
   const {
     pantryItem,
     loading: itemQueryLoading,
@@ -98,6 +86,8 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   const [selectedUnitInfo, setSelectedUnitInfo] =
     useState<SelectedUnitInfo | null>(null);
   const [notes, setNotes] = useState('');
+  const submitting = useRef(false);
+  const [saving, setSaving] = useState(false);
 
   // A row created offline holds a neutral unit with an empty id. Sent as
   // `usageUnitId` it names no unit; omitted, the server uses the stack's own.
@@ -208,7 +198,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   const packagesOfNetWeight = (amount: number) =>
     pantryItem?.netWeight ? amount / pantryItem.netWeight : null;
 
-  const { availableInSelectedUnit, availableLoading } =
+  const { availableInSelectedUnit, availableLoading, conversionUnavailable } =
     useConvertAvailableQuantity({
       pantryItemId: pantryItem?.id,
       selectedUnitId: activeUnitId,
@@ -230,7 +220,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     if (visible && pantryItem) {
       setNotes('');
       setSelectedUnitInfo(defaultUnit);
-      onReset?.(pantryItem, defaultUnit, defaultIncrement);
     }
   }
 
@@ -274,10 +263,12 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     pantryItemId: pantryItem?.id,
     defaultUnit,
     defaultIncrement: selectedRankedUnit?.defaultIncrement ?? defaultIncrement,
+    defaultUnitIncrement: defaultIncrement,
     commonFractions:
       selectedRankedUnit?.commonFractions ?? defaultCommonFractions,
     availableInSelectedUnit,
     availableLoading,
+    conversionUnavailable,
     remainingNetWeight: effectiveNetWeight,
     netWeightUnit: pantryItem?.netWeightUnit ?? undefined,
     netWeightUnitId: pantryItem?.netWeightUnit?.id,
@@ -285,67 +276,86 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     portionUnitId: pantryItem?.portionUnitId ?? null,
   };
 
+  const presented = visible && !!pantryItemId;
+
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetFormScrollView
-        style={commonStyles.bottomSheetScrollView}
-        contentContainerStyle={[
-          commonStyles.bottomSheetContent,
-          contentContainerStyle,
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
+    <Sheet
+      mode="form"
+      visible={presented}
+      onDismiss={onClose}
+      snapPoints={snapPoints}
+      style={commonStyles.bottomSheetScrollView}
+      contentContainerStyle={commonStyles.bottomSheetContent}
+      header={
         <BottomSheetHeader
-          contentPadding="md"
           title={title}
           onCancel={onClose}
-          onConfirm={() => onConfirm(shared)}
+          onConfirm={async () => {
+            if (submitting.current) return;
+            submitting.current = true;
+            setSaving(true);
+            try {
+              await onConfirm(shared);
+            } catch (error) {
+              errorService.reportError(error, {
+                operation: 'Confirm pantry action',
+              });
+              alertService.alert(
+                t('labels.error'),
+                t('errors.codes.genericRetry'),
+              );
+            }
+            submitting.current = false;
+            setSaving(false);
+          }}
+          saving={saving}
           confirmLabel={confirmLabel}
           confirmColor={confirmColor}
+          confirmTestID={pantryTestIDs.actionConfirm}
         />
-
-        {!!pantryItem && (
-          <>
-            {/* Item Info */}
-            <View style={commonStyles.bottomSheetItemInfo}>
-              <Text role="heading" style={commonStyles.bottomSheetItemName}>
-                {pantryItem.itemName}
+      }
+    >
+      {!!pantryItem && (
+        <>
+          {/* Item Info */}
+          <View style={commonStyles.bottomSheetItemInfo}>
+            <Text role="heading" style={commonStyles.bottomSheetItemName}>
+              {pantryItem.itemName}
+            </Text>
+            <View style={commonStyles.bottomSheetItemRow}>
+              <Text role="body" tone="secondary">
+                {resolvedCurrentQuantityLabel}{' '}
               </Text>
-              <View style={commonStyles.bottomSheetItemRow}>
-                <Text role="body" tone="secondary">
-                  {resolvedCurrentQuantityLabel}{' '}
-                </Text>
-                <Text role="bodyStrong">
-                  {formatAmountLeft(pantryItem, readingSystem)}
-                </Text>
-              </View>
+              <Text role="bodyStrong">
+                {formatAmountLeft(pantryItem, readingSystem)}
+              </Text>
             </View>
-
-            {/* Unit Picker */}
-            <UnitPicker
-              label={resolvedUnitToggleLabel}
-              ranked={allUnits}
-              groups={groups}
-              selectedUnitId={selectedUnitInfo?.unitId}
-              onSelect={setSelectedUnitInfo}
-              loading={unitsLoading}
-            />
-
-            {/* Action-specific fields */}
-            {renderActionFields(shared, pantryItem)}
-          </>
-        )}
-
-        {!pantryItem && !!pantryItemId && itemQueryLoading ? (
-          <View style={commonStyles.bottomSheetLoading}>
-            <ThemedActivityIndicator />
           </View>
-        ) : null}
 
-        {itemState === 'error' || itemState === 'offline' ? (
-          <DataStateView state={itemState} onRetry={retryItem} />
-        ) : null}
-      </BottomSheetFormScrollView>
-    </BottomSheetModal>
+          {/* Unit Picker */}
+          <UnitPicker
+            label={resolvedUnitToggleLabel}
+            ranked={allUnits}
+            groups={groups}
+            selectedUnitId={selectedUnitInfo?.unitId}
+            onSelect={setSelectedUnitInfo}
+            loading={unitsLoading}
+          />
+
+          {/* Action-specific fields */}
+          {renderActionFields(shared, pantryItem)}
+        </>
+      )}
+
+      {!pantryItem && !!pantryItemId && itemQueryLoading ? (
+        <View style={commonStyles.bottomSheetLoading}>
+          <ThemedActivityIndicator />
+        </View>
+      ) : null}
+
+      {itemState === 'error' || itemState === 'offline' ? (
+        <DataStateView state={itemState} onRetry={retryItem} />
+      ) : null}
+    </Sheet>
   );
 };

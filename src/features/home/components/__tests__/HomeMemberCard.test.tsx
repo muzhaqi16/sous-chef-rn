@@ -83,6 +83,7 @@ function renderCard(
     />,
     { cache },
   );
+  if (memberRow()) fireEvent.press(memberRow()!);
   return { onChangeRole, onRemove };
 }
 
@@ -111,7 +112,6 @@ describe('HomeMemberCard', () => {
 
   it('sets a role from the sheet, and not the one the member holds', () => {
     const { onChangeRole } = renderCard(false, jest.fn());
-    fireEvent.press(memberRow()!);
 
     fireEvent.press(screen.getByText(t('labels.guest')));
     expect(onChangeRole).toHaveBeenCalledWith(MembershipRole.Guest);

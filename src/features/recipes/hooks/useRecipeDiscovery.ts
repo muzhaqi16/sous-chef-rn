@@ -14,7 +14,7 @@ const noLaterPage = () => undefined;
  * when the server has nothing, and is all there is with the flag off.
  */
 export function useRecipeDiscovery(
-  diet: DiscoveryDiet,
+  diet: DiscoveryDiet | null,
 ): CatalogDiscoveryResult {
   const serverEnabled = useFeatureFlag('pantrySuggestions');
   const server = useServerRecipeSuggestions(serverEnabled);

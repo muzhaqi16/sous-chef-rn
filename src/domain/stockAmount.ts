@@ -163,17 +163,22 @@ export function boughtAmountOf(
 }
 
 /**
- * The row's amount until the server answers. Only the server turns packages
- * into grams, so a weighed line counted in packages keeps its own amount
- * meanwhile; every other count is that many of the unit.
+ * The row's amount until the server answers: what was stated. Only the server
+ * sizes packages of a weighed stack (`packagesNeedSizing`), so their row shows
+ * the count, never the line's requested amount as if it were the weight.
  */
-export function localQuantity(
-  amount: StockAmountInput,
-  line: { quantity?: number | null; unit?: { type: UnitType } | null },
-): number {
-  if (amount.measured) return amount.measured.quantity;
-  const { count, unitId } = amount.packages;
-  return unitId || !line.unit || line.unit.type === UnitType.Count
-    ? count
-    : line.quantity ?? count;
+export function localQuantity(amount: StockAmountInput): number {
+  return amount.measured ? amount.measured.quantity : amount.packages.count;
 }
+
+/**
+ * Whether the server, not the device, turns these packages into the stack's
+ * amount: packages in no counted unit, landing on a line that is not counted.
+ */
+export const packagesNeedSizing = (
+  amount: StockAmountInput,
+  line: { unit?: { type: UnitType } | null },
+): boolean =>
+  !!amount.packages &&
+  !amount.packages.unitId &&
+  line.unit?.type !== UnitType.Count;

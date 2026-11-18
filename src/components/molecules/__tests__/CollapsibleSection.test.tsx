@@ -61,6 +61,21 @@ describe('CollapsibleSection', () => {
     expect(screen.queryByText(/\(/)).toBeNull();
   });
 
+  // A screen reader hears the header as a control, and whether it is open.
+  it.each([false, true])(
+    'announces its header as a button, expanded: %s',
+    expanded => {
+      render(
+        <CollapsibleSection {...defaultProps} expanded={expanded}>
+          <Text>Content</Text>
+        </CollapsibleSection>,
+      );
+      expect(
+        screen.getByRole('button', { name: 'Section Title', expanded }),
+      ).toBeTruthy();
+    },
+  );
+
   it('calls onToggle when header is pressed', async () => {
     const user = userEvent.setup();
     const onToggle = jest.fn();

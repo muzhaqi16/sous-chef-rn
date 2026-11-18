@@ -10,24 +10,12 @@ jest.mock('#components/atoms/Icon', () => ({
 describe('HomeActions', () => {
   const defaultProps = {
     homeId: 'home-1',
-    isDefault: false,
-    onSetDefault: jest.fn(),
     onInvite: jest.fn(),
     onDelete: jest.fn(),
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  it('renders "Set Default" button when not default', () => {
-    render(<HomeActions {...defaultProps} />);
-    expect(screen.getByText('Set Default')).toBeTruthy();
-  });
-
-  it('does not render "Set Default" when isDefault is true', () => {
-    render(<HomeActions {...defaultProps} isDefault={true} />);
-    expect(screen.queryByText('Set Default')).toBeNull();
   });
 
   it('renders "Invite" button by default', () => {
@@ -45,16 +33,17 @@ describe('HomeActions', () => {
     expect(screen.getByText('Delete')).toBeTruthy();
   });
 
-  it('hides "Delete" button when canDelete is false', () => {
-    render(<HomeActions {...defaultProps} canDelete={false} />);
+  it('renders nothing when it may neither invite nor delete', () => {
+    render(
+      <HomeActions {...defaultProps} canInvite={false} canDelete={false} />,
+    );
+    expect(screen.queryByText('Invite')).toBeNull();
     expect(screen.queryByText('Delete')).toBeNull();
   });
 
-  it('calls onSetDefault with homeId when pressed', async () => {
-    const user = userEvent.setup();
-    render(<HomeActions {...defaultProps} />);
-    await user.press(screen.getByText('Set Default'));
-    expect(defaultProps.onSetDefault).toHaveBeenCalledWith('home-1');
+  it('hides "Delete" button when canDelete is false', () => {
+    render(<HomeActions {...defaultProps} canDelete={false} />);
+    expect(screen.queryByText('Delete')).toBeNull();
   });
 
   it('calls onInvite with homeId when pressed', async () => {
@@ -71,17 +60,14 @@ describe('HomeActions', () => {
     expect(defaultProps.onDelete).toHaveBeenCalledWith('home-1');
   });
 
-  // Pins: a chip sizes to the row, not to its label. A chip sized to its label
-  // and sitting BESIDE it makes sq "Vendos si parazgjedhur" / es "Establecer
-  // Predeterminado" wider than a third of the card and pushes Delete onto a
-  // second row. The label is stacked under the icon, so each button is a fixed
-  // third and the label wraps into the button's full width instead of widening
-  // it. Jest has no Yoga layout pass, so this asserts the style contract that
+  // Pins: a chip sizes to the row, not to its label, so a long translation
+  // wraps under its icon instead of pushing the next chip onto a second row.
+  // Jest has no Yoga layout pass, so this asserts the style contract that
   // guarantees it; confirm the wrap on device.
-  it('stacks each label under its icon in an equal-width third of one row', () => {
+  it('stacks each label under its icon in an equal-width share of one row', () => {
     render(<HomeActions {...defaultProps} />);
 
-    for (const label of ['Set Default', 'Invite', 'Delete']) {
+    for (const label of ['Invite', 'Delete']) {
       const text = screen.getByText(label);
       expect(text.props.numberOfLines).toBe(2);
 
