@@ -467,7 +467,7 @@ describe('making a home the default', () => {
 
     await userEvent
       .setup()
-      .press(within(cardOf(CABIN.id)).getByText(t('labels.setDefault')));
+      .press(within(cardOf(CABIN.id)).getByLabelText(t('labels.setDefault')));
     await log.landed(MarkHomeAsDefaultDocument);
     await act(async () => undefined);
 
@@ -494,7 +494,7 @@ describe('making a home the default', () => {
 
     await userEvent
       .setup()
-      .press(within(cardOf(CABIN.id)).getByText(t('labels.setDefault')));
+      .press(within(cardOf(CABIN.id)).getByLabelText(t('labels.setDefault')));
     await log.landed(MarkHomeAsDefaultDocument);
     await act(async () => undefined);
 
