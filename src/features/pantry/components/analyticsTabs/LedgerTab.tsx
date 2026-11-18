@@ -23,6 +23,7 @@ import {
   TopItemsBarChart,
   money,
   styles,
+  totalsByItem,
 } from './shared';
 import type { AnalyticsResult, SharedTabProps } from './shared';
 
@@ -82,11 +83,9 @@ export const LedgerTab: React.FC<
       consumptions: period.consumptionCount,
       wastes: period.wasteCount,
     })) ?? [];
-  const topRestockedItemsData =
-    ledgerData?.topRestockedItems.map(item => ({
-      label: item.itemName,
-      value: item.totalQuantity,
-    })) ?? [];
+  const topRestockedItemsData = totalsByItem(
+    ledgerData?.topRestockedItems ?? [],
+  ).map(item => ({ label: item.itemName, value: item.count }));
 
   const granularityOptions = [
     {

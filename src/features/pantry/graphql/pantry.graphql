@@ -405,7 +405,6 @@ query GetPantryLedgerAnalytics(
         itemId
         itemName
         imageUrl
-        totalQuantity
         unitName
         count
       }
