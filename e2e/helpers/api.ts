@@ -5,8 +5,8 @@ const REQUEST_TIMEOUT_MS = 15000;
 
 /**
  * Runs an operation against the dev API as the e2e test user, for setup and
- * for reading back what a flow persisted. Throws on any GraphQL error, and on a
- * typed `Error` payload where `field` names the mutation's result.
+ * for reading back what a flow persisted. Throws on any GraphQL error or a
+ * missing `data`; a mutation's typed `Error` result is `payloadOf`'s to throw.
  */
 export async function asTestUser<T>(
   query: string,
