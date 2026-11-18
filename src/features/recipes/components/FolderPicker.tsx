@@ -50,6 +50,7 @@ interface FolderPickerBaseProps {
 interface FolderPickerWithoutActionsProps {
   onRenameFolder?: undefined;
   onDeleteFolder?: undefined;
+  onSelectedFolderMoved?: undefined;
   protectedFolders?: string[];
 }
 
@@ -62,6 +63,11 @@ interface FolderPickerWithActionsProps {
   /** Enables the long-press menu. */
   onRenameFolder?: (oldName: string, newName: string) => Promise<boolean>;
   onDeleteFolder?: (folderName: string) => Promise<boolean>;
+  /**
+   * The selected folder's new name after a rename, or null after a delete.
+   * Not a pick, so the picker stays as it was.
+   */
+  onSelectedFolderMoved: (folder: string | null) => void;
   /** Folders that cannot be renamed or deleted. */
   protectedFolders: string[];
 }
@@ -80,6 +86,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   allowCreate = true,
   onRenameFolder,
   onDeleteFolder,
+  onSelectedFolderMoved,
   protectedFolders,
   folderActionLoading = false,
 }) => {
@@ -202,7 +209,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     const success = await onRenameFolder(managingFolder, newName);
     if (success) {
       if (selectedFolder === managingFolder) {
-        onSelect(newName);
+        onSelectedFolderMoved(newName);
       }
       setManageVisible(false);
       setManagingFolder(null);
@@ -216,7 +223,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     const success = await onDeleteFolder(managingFolder);
     if (success) {
       if (selectedFolder === managingFolder) {
-        onSelect(null);
+        onSelectedFolderMoved(null);
       }
       setManageVisible(false);
       setManagingFolder(null);

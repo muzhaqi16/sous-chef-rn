@@ -366,9 +366,10 @@ export const SavedRecipes: React.FC = () => {
         // This is the picker that offers rename and delete, so it is the one
         // that must say what those actions may not touch.
         protectedFolders={PROTECTED_RECIPE_FOLDERS}
-        // The picker moves the filter off a folder it renames or deletes.
         onRenameFolder={renameFolder}
         onDeleteFolder={deleteFolder}
+        // The filter follows a folder renamed or deleted, picker left open.
+        onSelectedFolderMoved={setSelectedFolder}
         folderActionLoading={folderActionLoading}
       />
 
