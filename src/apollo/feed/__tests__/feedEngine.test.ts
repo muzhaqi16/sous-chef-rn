@@ -467,6 +467,28 @@ describe('a full read for what the feed omits', () => {
     expect(firstReadWhenSecondAsked).toBeGreaterThan(0);
   });
 
+  // A pull carries only what moved, so what a whole read wrote in the old
+  // language stays in it until every held scope is read again.
+  it('reads every held list again in full after a language switch', async () => {
+    hold('list-a', 'same');
+    hold('list-b', 'same');
+    mockClient = clientOver({
+      scopes: () =>
+        listed([
+          { id: 'list-a', cursor: 'same' },
+          { id: 'list-b', cursor: 'same' },
+        ]),
+      snapshot: ({ id }) =>
+        wholeList([line(`${id}-row`, false, id)], { cursor: 'same' }),
+    });
+    await run();
+    expect(snapshots).toEqual([]);
+
+    await run(() => engine.refreshHeld());
+
+    expect(snapshots.map(({ id }) => id).sort()).toEqual(['list-a', 'list-b']);
+  });
+
   it('is asked again by the next pass after a read that failed', async () => {
     let answers = 0;
     await heldAtLatest({

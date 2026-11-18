@@ -132,6 +132,17 @@ export class FeedEngine {
     this.drain();
   }
 
+  /**
+   * Reads every held scope in full: what a pull leaves alone was written in
+   * the language it was asked in, so a language switch re-reads it all.
+   */
+  refreshHeld(): void {
+    for (const [scopeId, { kind }] of heldScopes()) {
+      if (adapterOfKind(kind)) this.fullReadsOwed.set(scopeId, kind);
+    }
+    this.drain();
+  }
+
   /** Owed full reads not waiting on the scope's own create. */
   private fullReadsReady(adapter?: FeedAdapter): string[] {
     return [...this.fullReadsOwed].flatMap(([id, kind]) => {

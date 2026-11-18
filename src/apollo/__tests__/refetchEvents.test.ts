@@ -40,7 +40,7 @@ jest.mock('#/apollo/offlineQueue/queueManager', () => ({
   queueManager: { whenIdle: jest.fn(async () => {}) },
 }));
 jest.mock('#/apollo/feed/feedEngine', () => ({
-  feedEngine: { catchUp: jest.fn() },
+  feedEngine: { catchUp: jest.fn(), refreshHeld: jest.fn() },
 }));
 interface MockSessionState {
   user: { id: string } | null;
@@ -426,6 +426,16 @@ describe('resync', () => {
 
     expect(requests).toEqual([]);
     expect(useStore.getState().lastUnitsFetchedAt).toBe(1);
+  });
+
+  // The feed's pulls carry only what moved, so rows it holds keep the old
+  // language's labels until each held scope is read in full.
+  it('reads every scope the feed holds in full at a switch', async () => {
+    jest.mocked(feedEngine.refreshHeld).mockClear();
+    triggers.languageChanged();
+    await pastTheWindow();
+
+    expect(feedEngine.refreshHeld).toHaveBeenCalledTimes(1);
   });
 
   it("expires the device's common units, named in the old language, at a switch", async () => {
