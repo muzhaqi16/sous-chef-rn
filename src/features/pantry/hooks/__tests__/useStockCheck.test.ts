@@ -99,6 +99,64 @@ it('sends each answer against the version seen, and hands back a stale row', asy
   expect(answered).toEqual({ status: 'applied', refused: [milk] });
 });
 
+// A check moves the list it came from: the server's answer restates it, and
+// before then a row the check emptied leaves, as no empty stack is checked.
+describe('what is left to check after an answer', () => {
+  const eggs = context.items.eggs.stackId;
+  const milk = context.items.milk.stackId;
+  const twoRows = () =>
+    recordMock(StockToConfirmDocument, {
+      data: {
+        pantry: { id: 'P1', stockToConfirm: [stack(eggs, 4), stack(milk, 7)] },
+      },
+    });
+  const useUpEggs = async (result: {
+    current: ReturnType<typeof useStockCheck>;
+  }) => {
+    const [eggRow] = result.current.rows;
+    expect(eggRow?.id).toBe(eggs);
+    await drained(() =>
+      result.current.answer([
+        { row: eggRow!, choice: { answer: StockCheckAnswer.UsedUp } },
+      ]),
+    );
+  };
+
+  it("is the server's list once it answers", async () => {
+    const recorded = recordMock(RecordPantryStockCheckDocument, {
+      data: {
+        recordPantryStockCheck: {
+          __typename: 'RecordPantryStockCheckPayload',
+          pantry: { id: 'P1', stockToConfirm: [stack(milk, 7)] },
+          results: [{ pantryItemId: eggs, success: true, failure: null }],
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(() => useStockCheck(), {
+      operationMocks: [twoRows().mock, recorded.mock],
+    });
+    await drainTimers();
+
+    await useUpEggs(result);
+
+    expect(result.current.rows.map(row => row.id)).toEqual([milk]);
+  });
+
+  it('drops a row the check emptied while the write is queued', async () => {
+    const queued = recordMock(RecordPantryStockCheckDocument, {
+      data: { recordPantryStockCheck: null },
+    });
+    const { result } = renderHookWithApollo(() => useStockCheck(), {
+      operationMocks: [twoRows().mock, queued.mock],
+    });
+    await drainTimers();
+
+    await useUpEggs(result);
+
+    expect(result.current.rows.map(row => row.id)).toEqual([milk]);
+  });
+});
+
 // 4.4: evidence the device does not hold is never stated as a level or a list.
 it('reads a stack with no confidence answer as unknown, never HIGH', async () => {
   const rows = recordMock(StockToConfirmDocument, {

@@ -149,6 +149,7 @@ export function useStockCheck(enabled = true) {
       return { status: 'applied', refused: [] };
     const checkedAt = new Date().toISOString();
     const inputs: StockCheckInputs = {
+      pantryId,
       now: checkedAt,
       rows: answers.map(({ row, choice }) => ({
         pantryItemId: row.id,

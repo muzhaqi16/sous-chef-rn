@@ -85,6 +85,70 @@ mutation RecordPantryStockCheck(
       pantry {
         id
         ...PantryReaders
+        # What is left to check once these rows are answered: an emptied
+        # stack leaves it, a confirmed one past its date may stay.
+        stockToConfirm(limit: 5, today: $today) {
+          id
+          version
+          itemName
+          unit {
+            id
+            symbol
+            localizedSymbolForms {
+              one
+              other
+            }
+          }
+          amountLeft {
+            value
+            unitId
+            metric {
+              value
+              unitId
+              symbol
+              localizedSymbol
+              displayAsFraction
+              type
+            }
+            imperial {
+              value
+              unitId
+              symbol
+              localizedSymbol
+              displayAsFraction
+              type
+            }
+          }
+          packageSize {
+            value
+            unitId
+            metric {
+              value
+              unitId
+              symbol
+              localizedSymbol
+              displayAsFraction
+              type
+            }
+            imperial {
+              value
+              unitId
+              symbol
+              localizedSymbol
+              displayAsFraction
+              type
+            }
+          }
+          netWeightUnit {
+            id
+            symbol
+          }
+          stockConfidence(today: $today) {
+            level
+            reasons
+            lastConfirmedAt
+          }
+        }
       }
       results {
         pantryItemId

@@ -2,7 +2,11 @@
  * What each pantry write changes on the device, as a pending layer. The server's
  * answer writes its own rows; `commit` adds what it cannot state.
  */
-import type { ApolloCache, OperationVariables } from '@apollo/client';
+import type {
+  ApolloCache,
+  OperationVariables,
+  Reference,
+} from '@apollo/client';
 import { rowBaseline } from '#/apollo/pendingWrites/conflictRead';
 import { inputIdOf } from '#/apollo/pendingWrites/inputId';
 import {
@@ -140,18 +144,40 @@ export const setStock: LocalWrite<SetStockInputs> = {
  * where the answer moves nothing (still have) or only the server can say.
  */
 export type StockCheckInputs = {
+  pantryId: string;
   rows: readonly { pantryItemId: string; held: number | null }[];
   now: string;
 };
 
+/** The server checks only stacks that hold stock, so an emptied one leaves. */
+function leaveStockCheck(
+  cache: ApolloCache,
+  pantryId: string,
+  emptied: ReadonlySet<string>,
+): void {
+  cache.modify({
+    id: cache.identify({ __typename: 'Pantry', id: pantryId }),
+    fields: {
+      stockToConfirm(existing: readonly Reference[], { readField }) {
+        return existing.filter(
+          row => !emptied.has(readField<string>('id', row) ?? ''),
+        );
+      },
+    },
+  });
+}
+
 export const recordStockCheck: LocalWrite<StockCheckInputs> = {
-  apply(cache, { inputs: { rows, now } }) {
+  apply(cache, { inputs: { pantryId, rows, now } }) {
+    const emptied = new Set<string>();
     for (const { pantryItemId, held } of rows) {
       const stack = stackRef(pantryItemId);
       if (held === null || !isHeld(cache, stack)) continue;
       writeEntityFields(cache, stack, { quantity: held, updatedAt: now });
       writeHeldStock(cache, pantryItemId, held);
+      if (held === 0) emptied.add(pantryItemId);
     }
+    if (emptied.size > 0) leaveStockCheck(cache, pantryId, emptied);
   },
 };
 
