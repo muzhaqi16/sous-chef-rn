@@ -543,22 +543,6 @@ describe('classifyError — real Apollo error shapes', () => {
     });
   });
 
-  it('keeps a write refused as OPERATION_NOT_ALLOWED, this build having drifted', () => {
-    const queueError = classifyError(
-      refusedBeforeExecution(403, {
-        code: 'OPERATION_NOT_ALLOWED',
-        disposition: 'RESOLVE',
-      }),
-    );
-
-    expect(queueError).toMatchObject({
-      type: 'server',
-      retryable: false,
-      entryScoped: true,
-      fault: true,
-    });
-  });
-
   // The session path's errors carry their code on the error itself.
   it('reads a code carried flat on the error', () => {
     expect(classifyError({ message: 'x', code: 'FORBIDDEN' }).code).toBe(

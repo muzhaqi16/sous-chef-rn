@@ -183,9 +183,7 @@ export class ErrorService {
     OPERATION_RATE_LIMITED: 'rateLimitExceeded',
     RESOURCE_VERSION_CONFLICT: 'versionConflict',
     WS_OPERATION_NOT_ALLOWED: 'operationNotAllowed',
-    // Refused before execution: the operation is not one this server accepts,
-    // or the request is larger than it reads.
-    OPERATION_NOT_ALLOWED: 'operationNotAllowed',
+    // Refused before execution: the request is larger than the server reads.
     PAYLOAD_TOO_LARGE: 'payloadTooLarge',
     INTERNAL_SERVER_ERROR: 'genericLater',
     // Transient server-side conditions: the same request is worth retrying.
