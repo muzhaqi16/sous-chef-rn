@@ -6381,17 +6381,14 @@ type LedgerAnalytics {
 
 """Per-period ledger data for trend analysis"""
 type LedgerPeriodData {
-  added: Float! @deprecated(reason: "Adds amounts in different units. Use additionCount, consumptionCount and wasteCount; summary's per-unit breakdowns carry amounts.")
   """
   What the period's restocks cost, per currency; empty when none was costed
   """
   additionCost: [CurrencyAmount!]!
   """Restocks in the period"""
   additionCount: Int!
-  consumed: Float! @deprecated(reason: "Adds amounts in different units. Use additionCount, consumptionCount and wasteCount; summary's per-unit breakdowns carry amounts.")
   """Consuming uses in the period"""
   consumptionCount: Int!
-  net: Float! @deprecated(reason: "Adds amounts in different units. Use additionCount, consumptionCount and wasteCount; summary's per-unit breakdowns carry amounts.")
   periodEnd: DateTime!
   """
   The bucket's UTC key, not display text: YYYY-MM-DD for DAILY, YYYY-MM-DD of
@@ -6402,7 +6399,6 @@ type LedgerPeriodData {
   periodStart: DateTime!
   """Wastes in the period"""
   wasteCount: Int!
-  wasted: Float! @deprecated(reason: "Adds amounts in different units. Use additionCount, consumptionCount and wasteCount; summary's per-unit breakdowns carry amounts.")
 }
 
 """
@@ -16302,7 +16298,6 @@ type TimeSeriesDataPoint {
   """Rows on this day"""
   count: Int!
   date: DateTime!
-  value: Float! @deprecated(reason: "Adds amounts in different units. Use count.")
 }
 
 """An IANA time zone name, e.g. "Europe/Tirane" or "UTC"."""
@@ -17955,11 +17950,9 @@ input UsageAmountInput @oneOf {
 type UsageAnalytics {
   """totalUsageCount per day of the period"""
   averageUsageCountPerDay: Float!
-  averageUsagePerDay: Float! @deprecated(reason: "Adds amounts in different units. Use averageUsageCountPerDay.")
   periodEnd: DateTime!
   periodStart: DateTime!
   topUsedItems: [UsageByItem!]!
-  totalQuantityUsed: Float! @deprecated(reason: "Adds amounts in different units. Use totalUsageCount, or ledgerAnalytics.summary.consumptionByUnit for amounts in one unit.")
   totalUsageCount: Int!
   usageByPurpose: [UsageByPurpose!]!
   usageBySource: [UsageBySource!]!
@@ -17986,7 +17979,6 @@ type UsageByPurpose {
   count: Int!
   percentage: Float!
   purpose: UsagePurpose!
-  totalQuantity: Float! @deprecated(reason: "Adds amounts in different units. Use count and percentage.")
 }
 
 """Usage breakdown by source (manual, cooking log, meal plan, recipe)"""
@@ -17994,7 +17986,6 @@ type UsageBySource {
   count: Int!
   percentage: Float!
   source: UsageSource!
-  totalQuantity: Float! @deprecated(reason: "Adds amounts in different units. Use count and percentage.")
 }
 
 """Usage breakdown by unit for mixed-unit tracking"""
@@ -18576,14 +18567,12 @@ enum Visibility {
 
 """Comprehensive waste analytics for a pantry"""
 type WasteAnalytics {
-  averageWastePerDay: Float! @deprecated(reason: "Adds amounts in different units. Use totalWasteCount over the period.")
   composted: Float!
   periodEnd: DateTime!
   periodStart: DateTime!
   recycled: Float!
   topWastedItems: [WasteByItem!]!
   totalWasteCount: Int!
-  totalWasteQuantity: Float! @deprecated(reason: "Adds amounts in different units. Use totalWasteCount, or topWastedItems for each item's waste in one unit.")
   """
   What the waste was worth, per currency, at the cost of the batches it
   came from; currencies are never summed together.
@@ -18621,7 +18610,6 @@ type WasteByReason {
   count: Int!
   percentage: Float!
   reason: WasteReason!
-  totalQuantity: Float! @deprecated(reason: "Adds amounts in different units. Use count and percentage.")
 }
 
 """Input for wasting a specific batch"""
