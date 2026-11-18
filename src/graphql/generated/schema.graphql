@@ -2493,9 +2493,8 @@ input CreateShoppingListInput {
   """
   items: [BatchAddShoppingListItemInput!]
   """
-  The meal plan the list is derived from, recorded as linkShoppingListToMealPlan
-  records it: the caller must be able to view the plan, and the list is
-  generatedFromMealPlan.
+  The meal plan the list is derived from, which the caller must be able to
+  view; the plan's generatedShoppingListsConnection then lists it.
   """
   mealPlanId: ID
   name: String!
@@ -3804,7 +3803,7 @@ enum Difficulty {
 }
 
 """
-An amount as it is shown: the number, the unit, and the text a client displays.
+An amount as it is shown: the number, the unit, and the common fraction it reads as.
 """
 type DisplayAmount {
   """
@@ -3822,11 +3821,6 @@ type DisplayAmount {
   localizedSymbol: String!
   """The amount in unit: 0.25 for a quarter dozen."""
   quantity: Float!
-  """
-  Ready to display: ¼ doz, 11 pc. Not localized; a client formatting numbers
-  for its locale composes whole and fraction instead.
-  """
-  text: String!
   unit: Unit!
 }
 
@@ -5306,12 +5300,6 @@ type Item {
   """When the item was created."""
   createdAt: DateTime!
   """
-  The notices this item's catalog data carries, one per external catalog its
-  records come from: Open Food Facts (ODbL), USDA FoodData Central and
-  Spoonacular. A client shows them wherever it shows the item's facts.
-  """
-  dataAttributions: [DataAttribution!]!
-  """
   Where this catalog entry came from: manual entry, a barcode scan, an import or an external source.
   """
   dataSource: DataSource!
@@ -5517,8 +5505,7 @@ type Item {
   """ID of preferredTrackingUnit, or null when not configured."""
   preferredTrackingUnitId: ID
   """
-  Where this item is cheaper, by store and by chain: what itemPriceComparison
-  answers for it, by the same rules, defaults and bounds, so a barcode lookup
+  Where this item is cheaper, by store and by chain, so a barcode lookup
   carries it. The items of one request are compared in one read.
   """
   priceComparison: ItemPriceComparison!
@@ -5955,10 +5942,6 @@ type ItemPriceComparison {
   rows: [PriceComparisonRow!]!
 }
 
-input ItemPriceComparisonInput {
-  itemId: ID!
-}
-
 """
 Mutually-exclusive item reference: supply exactly one of an existing catalog
 item id, a scanned barcode's product record, or an item typed inline. Enforced by
@@ -6369,30 +6352,6 @@ type LedgerSummary {
   unitName: String
   wasteCount: Int!
 }
-
-"""The shopping list to link and the meal plan it was derived from."""
-input LinkShoppingListToMealPlanInput {
-  """
-  The shopping list to link. Named id, because that is the field the
-  resource-access directive reads.
-  """
-  id: ID!
-  """
-  The meal plan the list was derived from, which the caller must be able to view. It replaces any plan the list named, and marks the list generatedFromMealPlan
-  """
-  mealPlanId: ID!
-}
-
-type LinkShoppingListToMealPlanPayload {
-  shoppingList: ShoppingList!
-}
-
-"""
-Result of LinkShoppingListToMealPlan. Select on LinkShoppingListToMealPlanPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union LinkShoppingListToMealPlanResult = ConflictError | ForbiddenError | LinkShoppingListToMealPlanPayload | NotFoundError | ValidationError
 
 """A shopping list's reminder date has come (LIST_REMINDER)."""
 type ListReminderNotificationData {
@@ -7829,36 +7788,6 @@ Always include a __typename so the variant can be discriminated.
 union MoveShoppingItemToPantryResult = ConflictError | ForbiddenError | MoveShoppingItemToPantryPayload | NotFoundError | UnitEligibilityError | ValidationError
 
 """
-Where to place one line among the others on its list: name the line to put
-it after, before, or both. A neighbour must be on the same list and not the
-line itself. When the neighbours' positions collide, every line on the list
-is given a fresh sortOrder first, so other lines' sortOrder can change.
-"""
-input MoveShoppingListItemInput {
-  """
-  The line to place it directly after. Sent alone, the line lands between it and the next line with the same purchased state
-  """
-  afterItemId: ID
-  """
-  The line to place it directly before. Sent alone, the line lands between it and the previous line with the same purchased state
-  """
-  beforeItemId: ID
-  id: ID!
-}
-
-type MoveShoppingListItemPayload {
-  shoppingList: ShoppingList
-  shoppingListItem: ShoppingListItem!
-}
-
-"""
-Result of MoveShoppingListItem. Select on MoveShoppingListItemPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union MoveShoppingListItemResult = ConflictError | ForbiddenError | MoveShoppingListItemPayload | NotFoundError | ValidationError
-
-"""
 A client-minted permanent id for the pantry row one purchased line will create.
 
 Same create-branch-only semantics as MoveShoppingItemToPantryInput.pantryItemId:
@@ -8042,7 +7971,7 @@ type Mutation {
   and number, ticks the shopping-list line it names, and lands its stock: as
   moveShoppingItemToPantry does for a listed line, and as createPantryItem
   with forceAdd does for an unlisted one. The household's choices are
-  remembered as recordReceiptMatches remembers them. Each line commits or
+  remembered by each line's printed text. Each line commits or
   fails on its own, and a check-in sent again records nothing twice.
   """
   createReceiptCheckIn(input: CreateReceiptCheckInInput!): CreateReceiptCheckInResult!
@@ -8259,13 +8188,6 @@ type Mutation {
   joinShoppingListByShareCode(input: JoinShoppingListByShareCodeInput!): JoinShoppingListByShareCodeResult!
   """Leave a home as the current user."""
   leaveHome(input: LeaveHomeInput!): LeaveHomeResult!
-  """
-  Record the meal plan a shopping list was derived from. A list made from a
-  plan names it at createShoppingList (mealPlanId, with its items) instead;
-  this links one that already exists. Both ends are checked: edit access to
-  the list, view access to the plan.
-  """
-  linkShoppingListToMealPlan(input: LinkShoppingListToMealPlanInput!): LinkShoppingListToMealPlanResult!
   """Authenticate a user with credentials and return tokens."""
   login(input: LoginInput!): LoginResult!
   """
@@ -8366,8 +8288,6 @@ type Mutation {
   read, the call is refused rather than disclosing it.
   """
   moveShoppingItemToPantry(input: MoveShoppingItemToPantryInput!): MoveShoppingItemToPantryResult!
-  """Reorder a shopping list item relative to other items."""
-  moveShoppingListItem(input: MoveShoppingListItemInput!): MoveShoppingListItemResult!
   """
   Mark a specific batch as opened.
   Sets isOpened=true and openedAt to current time on the targeted batch.
@@ -8651,57 +8571,8 @@ never carries the moderator, the resolution or any action taken.
 """
 type MyUserReport {
   contentType: ModerationContentType
-  createdAt: DateTime!
   id: ID!
-  status: ReportStatus!
   type: ReportType!
-}
-
-"""
-A page of MyUserReport results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type MyUserReportConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [MyUserReportEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One MyUserReport in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type MyUserReportEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The MyUserReport this edge wraps."""
-  node: MyUserReport!
-}
-
-"""A store, and how far it is from where the search started."""
-type NearbyStore {
-  """In kilometres, to one decimal"""
-  distanceKm: Float!
-  store: Store!
-}
-
-input NearbyStoresInput {
-  """Only this chain's stores"""
-  chainId: ID
-  """How many: 20 when omitted, at most 50"""
-  first: Int
-  near: StoreNearInput!
-  """How far to reach, in kilometres: 15 when omitted, at most 100"""
-  radiusKm: Float
-  """
-  Only stores whose name or address holds this text, at least 2 characters
-  """
-  search: String
 }
 
 """Reusable sub-input for net weight with unit"""
@@ -9767,8 +9638,6 @@ type PantryItem {
   The kind of expiresOn: the kind of the active batch whose date it is, and LABEL when batches of different kinds share it; null exactly when there is no date
   """
   expiryKind: ExpiryKind
-  """displayAmount's quantity in its unit, read in both unit systems."""
-  held: Measure!
   """
   The exact amount held in the tracking unit: each batch by its own package size, a
   partly used package as its fraction (1.25 jars). quantity counts a partly used
@@ -11440,21 +11309,6 @@ type Query {
     id: ID!
   ): Home
   """
-  Fetch a single home by its join code.
-  
-  Requires authentication: you must be signed in to join a home, so there is
-  no anonymous use for this. Serving it anonymously would hand a full Home —
-  including its stat fields — to anyone holding a code.
-  
-  The anonymous pre-join preview is `resolveShareLink`, which is purpose-built
-  for it and returns a curated payload (name, member count, alreadyMember)
-  rather than a whole Home.
-  """
-  homeByJoinCode(
-    """The home's join code"""
-    joinCode: String!
-  ): Home
-  """
   Fetch a home invite by its token for the acceptance flow; null when the
   token names no invite.
   """
@@ -11486,8 +11340,6 @@ type Query {
     """The catalog item's id"""
     itemId: ID!
   ): [ItemUnitConversion!]!
-  """Where an item is cheaper, by store and by chain."""
-  itemPriceComparison(input: ItemPriceComparisonInput!): ItemPriceComparison!
   """
   List items with filtering and cursor-based pagination (Relay spec).
   Use filters for UPC or SKU lookups:
@@ -11593,19 +11445,6 @@ type Query {
     """Page size: default 20, at most 100"""
     first: Int
   ): ReviewSubmissionConnection!
-  """The caller's own reports, newest first, as their reporter sees them."""
-  myUserReports(
-    """Resume after this cursor: a previous page's endCursor"""
-    after: String
-    """Page size: default 20, at most 100"""
-    first: Int
-  ): MyUserReportConnection!
-  """
-  The stores near a zip or a point, nearest first: every store the caller
-  may see, including ones nobody has shopped at. A store without
-  coordinates is never listed.
-  """
-  nearbyStores(input: NearbyStoresInput!): [NearbyStore!]!
   """Fetch a single notification by its ID."""
   notification(
     """The id of the Notification to read"""
@@ -11780,8 +11619,8 @@ type Query {
   """
   Catalog candidates for each line of a receipt, whichever parser read it:
   the printed code first, then a receipt alias at the receipt's chain, then
-  the store's own item number, then scored search. Reads only; send the items
-  the user confirmed to recordReceiptMatches.
+  the store's own item number, then scored search. Reads only; check the
+  lines the user confirmed in with createReceiptCheckIn.
   """
   resolveReceiptLines(input: ResolveReceiptLinesInput!): ResolveReceiptLinesPayload!
   """
@@ -12121,7 +11960,7 @@ input ReceiptCheckInLineInput {
   """
   purchaseId: ID!
   """
-  The line's product text as printed; remembered for the household as recordReceiptMatches remembers it
+  The line's product text as printed; the household's choice for the line is remembered under it
   """
   rawText: String
   """
@@ -13738,20 +13577,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union RemoveUsualStoreResult = ConflictError | ForbiddenError | NotFoundError | RemoveUsualStorePayload | ValidationError
 
-"""
-Where a report stands. Its reporter sees this and nothing else of the outcome.
-"""
-enum ReportStatus {
-  """Closed with no action."""
-  DISMISSED
-  """A moderator has taken it."""
-  INVESTIGATING
-  """Waiting for a moderator."""
-  PENDING
-  """Upheld: a moderator acted on it."""
-  RESOLVED
-}
-
 """Why a user is being reported."""
 enum ReportType {
   COPYRIGHT
@@ -14270,10 +14095,6 @@ type ShoppingList {
   """
   estimatedTotal: Float
   """
-  Whether the list was made from a meal plan: set by linkShoppingListToMealPlan
-  """
-  generatedFromMealPlan: Boolean!
-  """
   The home this list belongs to; null when the caller cannot view that home,
   which includes any caller reading the list through its share code.
   """
@@ -14332,10 +14153,6 @@ type ShoppingList {
     """
     orderBy: ShoppingListItemOrderBy
   ): ShoppingListItemConnection!
-  """
-  The meal plan the list was made from; null when there is none or the caller cannot view it
-  """
-  mealPlan: MealPlan
   """The list's name"""
   name: String!
   """
@@ -14747,8 +14564,8 @@ type ShoppingListItem {
   shoppingList: ShoppingList!
   """
   The line's position key: order lines by it ascending, comparing code points
-  rather than locale order. moveShoppingListItem sets it between the
-  neighbours named; 'a0' when unset.
+  rather than locale order. A client sets it between two neighbours through
+  updateShoppingListItem; 'a0' when unset.
   """
   sortOrder: String!
   """
@@ -14923,7 +14740,7 @@ Where a list's lines cost less, line by line: each comparable line
 (unpurchased, a catalog item, a unit that converts without an assumption)
 priced at the list's store and the household's compared usual stores, at
 most 20 in all, current shelf prices first. Prices are counted as
-itemPriceComparison counts them; no household's prices are revealed.
+Item.priceComparison counts them; no household's prices are revealed.
 """
 type ShoppingListStoreSavings {
   """When the server answered: the prices are as of then"""
@@ -16081,14 +15898,6 @@ enum SyncScopeKind {
   """One pantry, with its stacks and their batches"""
   PANTRY
   SHOPPING_LIST
-}
-
-"""Sub-input for sync settings"""
-input SyncSettingsInput {
-  """Whether the app syncs automatically; on by default, null is refused"""
-  autoSync: Boolean
-  """Whether the app works offline; off by default, null is refused"""
-  offlineMode: Boolean
 }
 
 input SyncSnapshotInput {
@@ -17397,8 +17206,6 @@ input UpdateSettingsInput {
   regional: RegionalSettingsInput
   """Store mode and Budget & prices"""
   shopping: ShoppingSettingsInput
-  """Sync behaviour"""
-  sync: SyncSettingsInput
   """App appearance"""
   ui: UiPreferencesInput
 }
@@ -17491,7 +17298,7 @@ input UpdateShoppingListItemInput {
   """
   quantity: FlexibleQuantity
   """
-  The line's position key (see ShoppingListItem.sortOrder). moveShoppingListItem computes one between two neighbours.
+  The line's position key (see ShoppingListItem.sortOrder), computed by the client between the two neighbours it lands between.
   """
   sortOrder: String
   """Where the line is bought: its store, aisle and section"""
@@ -18145,8 +17952,6 @@ enum UserRole {
 
 """User settings and preferences"""
 type UserSettings {
-  """Whether the app syncs automatically"""
-  autoSync: Boolean!
   """
   Whether the app shows prices, estimates and savings. Null until the user
   sets it, by hand or by answering the price prompt: the app shows no prices
@@ -18170,8 +17975,6 @@ type UserSettings {
   The user's language tag, such as 'en' or 'en-US'. It is the fallback locale for preferredUnitSystem SYSTEM, and receipt matching reads it when a receipt states no language.
   """
   language: String!
-  """Whether the app works offline"""
-  offlineMode: Boolean!
   """The user's consent to personalized ads"""
   personalizedAds: Boolean!
   """
