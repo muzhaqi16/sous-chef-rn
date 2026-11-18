@@ -11,6 +11,7 @@ import { FractionInput } from '#components/molecules/FractionInput';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   StockCheckAnswer,
+  StockConfidence,
   StockDoubtReason,
 } from '#/graphql/generated/schemaTypes';
 import {
@@ -38,6 +39,25 @@ const answerLabel = (answer: StockCheckAnswer): TranslationKey => {
     case StockCheckAnswer.StillHave:
     default:
       return 'pantryScreen.stockCheckStillHave';
+  }
+};
+
+/**
+ * How sure the server is the stack is still there; a stack it gave no answer
+ * for is not known, never sure. Null for a level this build predates.
+ */
+const levelLabel = (level: StockConfidence | null): TranslationKey | null => {
+  switch (level) {
+    case null:
+      return 'pantryScreen.stockLevelUnknown';
+    case StockConfidence.High:
+      return 'pantryScreen.stockLevelHigh';
+    case StockConfidence.Medium:
+      return 'pantryScreen.stockLevelMedium';
+    case StockConfidence.Low:
+      return 'pantryScreen.stockLevelLow';
+    default:
+      return null;
   }
 };
 
@@ -79,6 +99,7 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
   const [inside, setInside] = useState<Partial<Record<string, string>>>({});
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
   const [saving, setSaving] = useState(false);
+  const [noneAnswered, setNoneAnswered] = useState(false);
 
   const choiceOf = (
     row: StockCheckRow,
@@ -123,12 +144,18 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
       return choice ? [{ row, choice }] : [];
     });
     setErrors(found);
-    if (Object.keys(found).length > 0 || answered.length === 0) return;
+    const invalid = Object.keys(found).length > 0;
+    setNoneAnswered(!invalid && answered.length === 0);
+    if (invalid || answered.length === 0) return;
     setSaving(true);
     const { status, refused } = await answer(answered);
     setSaving(false);
     if (status === 'failed') return;
     if (refused.length === 0) {
+      // Sent: a stack still listed next time is asked afresh, not pre-answered.
+      setChoices({});
+      setLeft({});
+      setInside({});
       onDismiss();
       return;
     }
@@ -160,8 +187,10 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
       ) : null}
       {rows.map(row => {
         const picked = choices[row.id] ?? null;
-        const reasons = row.reasons
-          .map(reasonLabel)
+        const evidence = [
+          levelLabel(row.level),
+          ...row.reasons.map(reasonLabel),
+        ]
           .filter((key): key is TranslationKey => key !== null)
           .map(key => t(key));
         return (
@@ -178,9 +207,9 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
                 {row.amount}
               </Text>
             </View>
-            {reasons.length > 0 ? (
+            {evidence.length > 0 ? (
               <Text role="caption" tone="secondary">
-                {reasons.join(' · ')}
+                {evidence.join(' · ')}
               </Text>
             ) : null}
             <ChipScrollRow
@@ -194,6 +223,7 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
                 const next = ANSWERS.find(option => option === key);
                 if (!next) return;
                 setChoices(current => ({ ...current, [row.id]: next }));
+                setNoneAnswered(false);
               }}
               edgeFadeColor="surface"
             />
@@ -230,6 +260,11 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
           </View>
         );
       })}
+      {noneAnswered ? (
+        <Text role="error" tone="error">
+          {t('pantryScreen.stockCheckNoneAnswered')}
+        </Text>
+      ) : null}
       <Button
         title={t('labels.save')}
         onPress={() => {

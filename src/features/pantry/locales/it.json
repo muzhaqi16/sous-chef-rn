@@ -327,10 +327,15 @@
     "stockCheckInside": "Quanto contengono, in {{unit}}",
     "stockCheckStale": "È cambiato da quando l'hai visto. Controllalo di nuovo.",
     "stockCheckFailed": "Impossibile salvare il controllo. Riprova.",
+    "stockCheckNoneAnswered": "Scegli una risposta per almeno un articolo.",
     "stockDoubtNotConfirmed": "Non controllato da un po'",
     "stockDoubtPastExpiry": "Oltre la data",
     "stockDoubtPastRunOut": "Di solito a quest'ora è finito",
-    "stockDoubtRunOutSoon": "Di solito finisce presto"
+    "stockDoubtRunOutSoon": "Di solito finisce presto",
+    "stockLevelHigh": "Probabilmente c'è ancora",
+    "stockLevelMedium": "Meglio controllare",
+    "stockLevelLow": "Probabilmente non c'è più",
+    "stockLevelUnknown": "Non si sa"
   },
   "storageState": {
     "AMBIENT": "Temperatura ambiente",

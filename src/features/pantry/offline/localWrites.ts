@@ -49,6 +49,7 @@ import {
   bumpStock,
   countNewBatch,
   drawInside,
+  moveContentsTo,
   rememberConsumeUnit,
   writeHeldStock,
 } from '#features/pantry/cache/stock';
@@ -173,6 +174,7 @@ export const recordStockCheck: LocalWrite<StockCheckInputs> = {
     for (const { pantryItemId, held } of rows) {
       const stack = stackRef(pantryItemId);
       if (held === null || !isHeld(cache, stack)) continue;
+      moveContentsTo(cache, pantryItemId, held);
       writeEntityFields(cache, stack, { quantity: held, updatedAt: now });
       writeHeldStock(cache, pantryItemId, held);
       if (held === 0) emptied.add(pantryItemId);

@@ -327,10 +327,15 @@
     "stockCheckInside": "Sa përmbajnë, në {{unit}}",
     "stockCheckStale": "Ka ndryshuar që kur e pe. Kontrolloje sërish.",
     "stockCheckFailed": "Kontrolli nuk u ruajt. Provo sërish.",
+    "stockCheckNoneAnswered": "Zgjidh një përgjigje për të paktën një artikull.",
     "stockDoubtNotConfirmed": "Pa u kontrolluar prej kohësh",
     "stockDoubtPastExpiry": "I ka kaluar data",
     "stockDoubtPastRunOut": "Zakonisht do të kishte mbaruar",
-    "stockDoubtRunOutSoon": "Zakonisht mbaron së shpejti"
+    "stockDoubtRunOutSoon": "Zakonisht mbaron së shpejti",
+    "stockLevelHigh": "Ndoshta është ende këtu",
+    "stockLevelMedium": "Ia vlen ta kontrollosh",
+    "stockLevelLow": "Ndoshta ka mbaruar",
+    "stockLevelUnknown": "Nuk dihet"
   },
   "storageState": {
     "AMBIENT": "Ambient",

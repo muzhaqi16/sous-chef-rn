@@ -73,9 +73,6 @@ import { catalogKey } from '#domain/catalogRecipes';
 import { useToday } from '#hooks/app/useToday';
 
 /**
- * Extracted so `styles.useVariants` is called once per instance.
- */
-/**
  * The summary's expiry, on one line like its neighbours: the header names the
  * state, so the value is only when. A shelf-life guess is marked "≈", quietly.
  */

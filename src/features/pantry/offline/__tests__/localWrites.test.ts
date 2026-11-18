@@ -51,6 +51,7 @@ import {
   createPantry,
   discardExpired,
   drawStock,
+  recordStockCheck,
   removeItem,
   removePantry,
   setStock,
@@ -63,7 +64,9 @@ import {
   type RemoveItemInputs,
   type RemovePantryInputs,
   type SetStockInputs,
+  type StockCheckInputs,
 } from '../localWrites';
+import { RecordPantryStockCheckDocument } from '#features/pantry/hooks/useStockCheck.generated';
 
 type Cache = ReturnType<typeof makeCache>;
 type HomeEdge =
@@ -85,6 +88,7 @@ const TABLE = {
   UpdatePantryItem: updatePantryRow,
   CreatePantry: createPantry,
   DeletePantry: removePantry,
+  RecordPantryStockCheck: recordStockCheck,
 };
 
 const unitOf = (id: string, type: UnitType): Row['unit'] =>
@@ -555,6 +559,38 @@ describe('a use', () => {
     );
 
     expect(rowOf(device)).toMatchObject({ quantity: 8, heldQuantity: 8 });
+  });
+});
+
+describe('a stock check', () => {
+  const BAGS: Partial<Row> = {
+    unit: unitOf('bag', UnitType.Count),
+    netWeightUnit: unitOf('lb', UnitType.Weight),
+    netWeight: 5,
+  };
+  const found = ({ writes }: Device, count: number) =>
+    writes.begin(
+      RecordPantryStockCheckDocument,
+      { today: TODAY, input: { pantryId: PANTRY_ID, entries: [] } },
+      {
+        pantryId: PANTRY_ID,
+        rows: [{ pantryItemId: 'held', held: count }],
+        now: NOW,
+      } satisfies StockCheckInputs,
+    );
+
+  it('moves what the packages hold with the count found, before the answer', () => {
+    const device = stocked({ ...BAGS, ...held(2), remainingNetWeight: 10 });
+
+    found(device, 1.5);
+
+    // 1.5 of two 5 lb bags: 7.5 lb, never the 10 lb held before.
+    expect(rowOf(device)).toMatchObject({
+      quantity: 1.5,
+      heldQuantity: 1.5,
+      remainingNetWeight: 7.5,
+      amountLeft: expect.objectContaining({ value: 7.5, unitId: 'lb' }),
+    });
   });
 });
 

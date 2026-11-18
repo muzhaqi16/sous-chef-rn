@@ -327,10 +327,15 @@
     "stockCheckInside": "What they hold, in {{unit}}",
     "stockCheckStale": "This changed since you looked. Check it again.",
     "stockCheckFailed": "Couldn't save the check. Try again.",
+    "stockCheckNoneAnswered": "Pick an answer for at least one item.",
     "stockDoubtNotConfirmed": "Not checked in a while",
     "stockDoubtPastExpiry": "Past its date",
     "stockDoubtPastRunOut": "Usually gone by now",
-    "stockDoubtRunOutSoon": "Usually runs out soon"
+    "stockDoubtRunOutSoon": "Usually runs out soon",
+    "stockLevelHigh": "Likely still here",
+    "stockLevelMedium": "Worth a check",
+    "stockLevelLow": "Probably gone",
+    "stockLevelUnknown": "Not known"
   },
   "storageState": {
     "AMBIENT": "Ambient",
