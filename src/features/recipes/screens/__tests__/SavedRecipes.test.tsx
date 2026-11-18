@@ -327,6 +327,17 @@ describe('a search', () => {
   });
 
   describe('over a page that cannot be read', () => {
+    // `loadMore` records the failure in the continuations of the page's
+    // rejection, which can outlast `landed`'s `act`; every one of them has run
+    // by the next macrotask, whatever the worker's speed.
+    const pageFailureRecorded = () =>
+      act(
+        () =>
+          new Promise<void>(resolve => {
+            setImmediate(resolve);
+          }),
+      );
+
     const withFailingPage = () =>
       openSaved({
         answers: [
@@ -341,6 +352,7 @@ describe('a search', () => {
 
       await search('carrot');
       await log.landed(MySavedRecipesDocument, 2);
+      await pageFailureRecorded();
       expect(screen.getByText(t('recipes.searchIncompleteTitle'))).toBeTruthy();
       expect(
         screen.queryByText(t('empty.noResultsFor', { query: 'carrot' })),
@@ -357,6 +369,7 @@ describe('a search', () => {
 
       await search('apple');
       await log.landed(MySavedRecipesDocument, 2);
+      await pageFailureRecorded();
       expect(shown()).toEqual(['Apple pie']);
       expect(
         screen.getByTestId(recipesTestIDs.searchIncompleteNotice),
