@@ -20,14 +20,13 @@ import {
   openTrackingHome,
   seedRecipe,
   seedStack,
+  selectHome,
   stackOnServer,
   type SeededStack,
   type TrackingHome,
 } from '../../helpers/trackingHome';
 import { pantryTestIDs } from '../../../src/features/pantry/testIDs';
 import { recipesTestIDs } from '../../../src/features/recipes/testIDs';
-import { homeTestIDs } from '../../../src/features/home/testIDs';
-import { todayTestIDs } from '../../../src/features/today/testIDs';
 import { kitTestIDs } from '../../../src/components/testIDs';
 
 const WAIT = 15000;
@@ -73,30 +72,7 @@ describe('Pantry tracking', () => {
       ],
     });
     await bootstrapAuthenticatedSession();
-    // The app opens on the home it last showed; choosing the spec's home as
-    // default in My Homes selects it, as a household switching homes does.
-    await waitFor(element(by.id(todayTestIDs.householdTitle)))
-      .toBeVisible()
-      .withTimeout(WAIT);
-    await element(by.id(todayTestIDs.householdTitle)).tap();
-    await waitFor(element(by.id(homeTestIDs.managementScroll)))
-      .toBeVisible()
-      .withTimeout(WAIT);
-    const setDefault = homeTestIDs.setDefaultButton(home.homeId);
-    // The list opens from the cache; a home made since needs the read's answer.
-    try {
-      await waitFor(element(by.id(setDefault))).toExist().withTimeout(5000);
-    } catch {
-      await element(by.id(homeTestIDs.managementScroll)).swipe('down', 'slow');
-      await waitFor(element(by.id(setDefault))).toExist().withTimeout(WAIT);
-    }
-    await waitFor(element(by.id(setDefault)))
-      .toBeVisible()
-      .whileElement(by.id(homeTestIDs.managementScroll))
-      .scroll(250, 'down');
-    await element(by.id(setDefault)).tap();
-    await waitFor(element(by.id(setDefault))).not.toBeVisible().withTimeout(WAIT);
-    await element(by.id(kitTestIDs.headerBackButton)).tap();
+    await selectHome(home.homeId, WAIT);
     await new PantryScreen().navigateToTab();
     await waitFor(element(by.id(pantryTestIDs.item(eggs.id))))
       .toBeVisible()
@@ -111,7 +87,9 @@ describe('Pantry tracking', () => {
     const row = pantryTestIDs.item(eggs.id);
     await element(by.id(row)).swipe('right', 'slow', 0.5);
     const consume = kitTestIDs.swipeAction(row, 'consume');
-    await waitFor(element(by.id(consume))).toBeVisible().withTimeout(WAIT);
+    await waitFor(element(by.id(consume)))
+      .toBeVisible()
+      .withTimeout(WAIT);
     await element(by.id(consume)).tap();
     await waitForModalReady(pantryTestIDs.actionConfirm, WAIT);
     await element(by.id(pantryTestIDs.consumeQuantity)).replaceText('2');

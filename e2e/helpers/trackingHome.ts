@@ -1,4 +1,8 @@
+import { element, by, waitFor } from 'detox';
 import { asTestUser, payloadOf } from './api';
+import { homeTestIDs } from '../../src/features/home/testIDs';
+import { todayTestIDs } from '../../src/features/today/testIDs';
+import { kitTestIDs } from '../../src/components/testIDs';
 
 const ERROR = '... on Error { code message }';
 
@@ -137,7 +141,12 @@ export async function stackOnServer(
 export async function seedRecipe(recipe: {
   name: string;
   servings: number;
-  ingredients: { name: string; itemId: string; quantity: number; unit: string }[];
+  ingredients: {
+    name: string;
+    itemId: string;
+    quantity: number;
+    unit: string;
+  }[];
 }): Promise<string> {
   const ingredients = await Promise.all(
     recipe.ingredients.map(async ingredient => ({
@@ -165,4 +174,93 @@ export async function seedRecipe(recipe: {
   const created = payloadOf(createRecipe, 'CreateRecipePayload');
   if (!created.recipe) throw new Error('No recipe came back');
   return created.recipe.id;
+}
+
+/** A stack as the API holds it, with what one package holds and what was paid. */
+export interface StackOnServer {
+  id: string;
+  itemName: string;
+  quantity: number;
+  unit: string;
+  netWeight: number | null;
+  netWeightUnit: string | null;
+  remainingNetWeight: number | null;
+  /** The amount a person reads as left (`PantryItem.amountLeft`). */
+  amountLeft: { value: number; unit: string };
+  totalPaid: number | null;
+}
+
+/** Every stack of a pantry, as the API holds it. */
+export async function pantryStacks(pantryId: string): Promise<StackOnServer[]> {
+  type Node = {
+    id: string;
+    itemName: string;
+    quantity: number;
+    unit: { symbol: string };
+    netWeight: number | null;
+    netWeightUnit: { symbol: string } | null;
+    remainingNetWeight: number | null;
+    amountLeft: { value: number; unit: { symbol: string } };
+    purchase: { totalPrice: number | null } | null;
+  };
+  const { pantry } = await asTestUser<{
+    pantry: { itemsConnection: { edges: { node: Node }[] } } | null;
+  }>(
+    `query ($id: ID!) { pantry(id: $id) { id itemsConnection(first: 50) { edges { node {
+      id itemName quantity unit { symbol } netWeight netWeightUnit { symbol }
+      remainingNetWeight amountLeft { value unit { symbol } } purchase { id totalPrice }
+    } } } } }`,
+    { id: pantryId },
+  );
+  if (!pantry) throw new Error(`No pantry ${pantryId}`);
+  return pantry.itemsConnection.edges.map(({ node }) => ({
+    id: node.id,
+    itemName: node.itemName,
+    quantity: node.quantity,
+    unit: node.unit.symbol,
+    netWeight: node.netWeight,
+    netWeightUnit: node.netWeightUnit?.symbol ?? null,
+    remainingNetWeight: node.remainingNetWeight,
+    amountLeft: {
+      value: node.amountLeft.value,
+      unit: node.amountLeft.unit.symbol,
+    },
+    totalPaid: node.purchase?.totalPrice ?? null,
+  }));
+}
+
+/**
+ * Shows `homeId` in the app: the app opens on the home it last showed, and
+ * choosing a home as default in My Homes selects it, as a household switching
+ * homes does. Ends back where My Homes was opened from.
+ */
+export async function selectHome(homeId: string, timeout = 15000) {
+  await waitFor(element(by.id(todayTestIDs.householdTitle)))
+    .toBeVisible()
+    .withTimeout(timeout);
+  await element(by.id(todayTestIDs.householdTitle)).tap();
+  await waitFor(element(by.id(homeTestIDs.managementScroll)))
+    .toBeVisible()
+    .withTimeout(timeout);
+  const setDefault = homeTestIDs.setDefaultButton(homeId);
+  // The list opens from the cache; a home made since needs the read's answer.
+  try {
+    await waitFor(element(by.id(setDefault)))
+      .toExist()
+      .withTimeout(5000);
+  } catch {
+    await element(by.id(homeTestIDs.managementScroll)).swipe('down', 'slow');
+    await waitFor(element(by.id(setDefault)))
+      .toExist()
+      .withTimeout(timeout);
+  }
+  await waitFor(element(by.id(setDefault)))
+    .toBeVisible()
+    .whileElement(by.id(homeTestIDs.managementScroll))
+    .scroll(250, 'down');
+  await element(by.id(setDefault)).tap();
+  await waitFor(element(by.id(setDefault)))
+    .not.toBeVisible()
+    .withTimeout(timeout);
+  await element(by.id(kitTestIDs.headerBackButton)).tap();
 }

@@ -212,6 +212,11 @@ export interface BootstrapOptions {
   };
   /** A guide to run from launch, with the account's tips fresh and on. */
   guide?: string;
+  /**
+   * Full photo access, so the photo picker opens on its grid with no
+   * limited-access banner above it.
+   */
+  photoLibrary?: boolean;
 }
 
 /**
@@ -225,6 +230,11 @@ export async function bootstrapAuthenticatedSession(
 
   // Seeded on BOTH launch paths below. `reloadReactNative` keeps the original
   // launch args and the preference persists, so seeding once holds for the file.
+  const permissions: Detox.DevicePermissions = {
+    notifications: 'YES',
+    camera: 'YES',
+    ...(options.photoLibrary ? { photos: 'YES' } : {}),
+  };
   const preferenceArgs = {
     ...(options.pantrySort
       ? {
@@ -241,7 +251,7 @@ export async function bootstrapAuthenticatedSession(
 
     await launchAppWithFabricWorkaround({
       newInstance: true,
-      permissions: { notifications: 'YES', camera: 'YES' },
+      permissions,
       launchArgs: {
         detoxUserToken: tokens.accessToken,
         detoxRefreshToken: tokens.refreshToken,
@@ -274,7 +284,7 @@ export async function bootstrapAuthenticatedSession(
 
     await launchAppWithFabricWorkaround({
       newInstance: true,
-      permissions: { notifications: 'YES', camera: 'YES' },
+      permissions,
       launchArgs: preferenceArgs,
     });
   }

@@ -5,6 +5,12 @@
 export const receiptsTestIDs = {
   scanScreen: 'receipt-scan-screen',
   savedReview: 'receipt-scan-saved-review',
+  savedScanAnother: 'receipt-scan-saved-scan-another',
+  savedDiscard: 'receipt-scan-saved-discard',
+  /** Starts a scan from the screen's first step. */
+  startScan: 'receipt-scan-start',
+  /** Picks a receipt photo from the library when the phone cannot scan. */
+  choosePhoto: 'receipt-scan-choose-photo',
   /** The server is picking out a saved receipt's items. */
   savedReading: 'receipt-scan-saved-reading',
   /** Lines of a saved receipt the API refused, to fix and add again. */

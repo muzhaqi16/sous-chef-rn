@@ -33,6 +33,7 @@ export interface EmptyStateProps {
     disabled?: boolean;
     /** Measures the button for a spotlight: `useMeasuredRect`'s ref and `measure`. */
     measure?: { ref: React.Ref<View>; onLayout: () => void };
+    testID?: string;
   };
 
   /** Secondary action button */
@@ -41,6 +42,7 @@ export interface EmptyStateProps {
     onPress: () => void;
     /** Optional leading icon, mirroring `action`. */
     icon?: IconName;
+    testID?: string;
   };
 
   /** Icon size */
@@ -168,6 +170,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             size="medium"
             icon={action.icon}
             disabled={action.disabled}
+            testID={action.testID}
           >
             {action.label}
           </Button>
@@ -179,6 +182,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           variant="outline"
           size="medium"
           icon={secondaryAction.icon}
+          testID={secondaryAction.testID}
         >
           {secondaryAction.label}
         </Button>

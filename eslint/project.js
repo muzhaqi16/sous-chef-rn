@@ -200,6 +200,13 @@ const overrides = [
     rules: { 'sous-chef/no-scrollable-in-bottom-sheet-view': 'off' },
   },
   {
+    // iOS's photo picker is drawn by another process, which no Detox matcher
+    // reaches (the system matcher reads SpringBoard only): its first cell is
+    // tapped by point. Only this helper; specs call it.
+    files: ['e2e/helpers/systemPhotoPicker.ts'],
+    rules: { 'sous-chef/testid-from-registry': 'off' },
+  },
+  {
     // This module IS where the RNGH-vs-RN choice is made for every list.
     files: ['src/components/atoms/themedComponents.tsx'],
     rules: { 'sous-chef/rngh-refresh-control-matches-host': 'off' },
