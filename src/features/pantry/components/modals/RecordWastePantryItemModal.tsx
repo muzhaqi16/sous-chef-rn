@@ -40,7 +40,7 @@ const WASTE_REASON_OPTIONS: Array<{
   labelKey: TranslationKey;
   value: WasteReason;
 }> = [
-  { labelKey: 'recordWaste.reasonExpired', value: WasteReason.Expired },
+  { labelKey: 'labels.expired', value: WasteReason.Expired },
   { labelKey: 'recordWaste.reasonSpoiled', value: WasteReason.Spoiled },
   { labelKey: 'labels.mold', value: WasteReason.Mold },
   { labelKey: 'labels.pest', value: WasteReason.Pest },

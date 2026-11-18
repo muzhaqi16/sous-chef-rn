@@ -542,6 +542,8 @@
     "durationDays_other": "{{count}} ditë",
     "currency": "Monedha",
     "today": "Sot",
+    "tomorrow": "Nesër",
+    "expired": "Skaduar",
     "typicalFor": "Vlera tipike për {{concept}}",
     "seeAll": "Shiko të gjitha",
     "addPantryItem": "Shto artikull në qilar",

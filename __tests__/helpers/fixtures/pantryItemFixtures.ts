@@ -8,6 +8,7 @@
  */
 import type { Unmasked } from '@apollo/client/masking';
 import type { GetPantryItemQuery } from '#features/pantry/screens/usePantryItemDetailData.generated';
+import type { ExpiryKind } from '#/graphql/generated/schemaTypes';
 import {
   StorageState,
   StorageType,
@@ -33,6 +34,7 @@ export interface PantryItemFixture {
   heldQuantity?: number;
   storageState?: string;
   expiresOn?: string | null;
+  expiryKind?: ExpiryKind | null;
   earliestBatchExpiresOn?: string | null;
   createdAt?: string;
   brandName?: string | null;
@@ -150,7 +152,7 @@ export function pantryItemData(
         (fixture.storageState as StorageState | undefined) ??
         StorageState.Refrigerated,
       expiresOn: fixture.expiresOn ?? null,
-      expiryKind: null,
+      expiryKind: fixture.expiryKind ?? null,
       lowStockAlert: false,
       isLowStock: false,
       minQuantity: fixture.minQuantity ?? null,

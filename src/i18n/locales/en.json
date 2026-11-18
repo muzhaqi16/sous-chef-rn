@@ -542,6 +542,8 @@
     "durationDays_other": "{{count}} days",
     "currency": "Currency",
     "today": "Today",
+    "tomorrow": "Tomorrow",
+    "expired": "Expired",
     "typicalFor": "Typical for {{concept}}",
     "seeAll": "See all",
     "addPantryItem": "Add pantry item",

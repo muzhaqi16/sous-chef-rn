@@ -31,6 +31,7 @@ import { useStore } from '#store';
 import { t } from '#/i18n';
 import { toDateKey, todayKey } from '#/utils/dateUtils';
 import {
+  ExpiryKind,
   BatchStatus,
   EntryImageSource,
   ErrorCode,
@@ -288,6 +289,36 @@ describe('what the stack is', () => {
     expect(screen.getByText(/Fridge/)).toBeTruthy();
     expect(screen.getByText('Keep cold')).toBeTruthy();
     expect(screen.getByText('organic')).toBeTruthy();
+  });
+
+  describe('the expiry, on one line like its neighbours', () => {
+    const inDays = (days: number) => {
+      const date = new Date();
+      date.setDate(date.getDate() + days);
+      return toDateKey(date);
+    };
+
+    it('marks a shelf-life guess with ≈ and a stated date with nothing', async () => {
+      await openDetail({
+        item: {
+          ...milk,
+          expiresOn: inDays(5),
+          expiryKind: ExpiryKind.PerishableEstimate,
+        },
+      });
+      expect(screen.getByText('≈ 5 days')).toBeTruthy();
+      expect(
+        screen.queryByText(t('pantryItemDetail.expiryEstimated')),
+      ).toBeNull();
+    });
+
+    it('says how long ago under an Expired header', async () => {
+      await openDetail({
+        item: { ...milk, expiresOn: inDays(-3), expiryKind: ExpiryKind.Label },
+      });
+      expect(screen.getByText(t('labels.expired'))).toBeTruthy();
+      expect(screen.getByText('3 days ago')).toBeTruthy();
+    });
   });
 
   it('reads a fractional amount as a cooking fraction', async () => {

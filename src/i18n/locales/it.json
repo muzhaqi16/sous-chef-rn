@@ -542,6 +542,8 @@
     "durationDays_other": "{{count}} giorni",
     "currency": "Valuta",
     "today": "Oggi",
+    "tomorrow": "Domani",
+    "expired": "Scaduto",
     "typicalFor": "Valori tipici di {{concept}}",
     "seeAll": "Vedi tutto",
     "addPantryItem": "Aggiungi articolo alla dispensa",
