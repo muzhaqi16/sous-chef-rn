@@ -24,7 +24,7 @@ import { reportValidationErrors } from '#/utils/validation/common';
 import { ScanAmountSection } from './ScanAmountSection';
 import { ScanNutritionSection } from './ScanNutritionSection';
 import {
-  isMultipack,
+  labelPieceOf,
   packageUnitFields,
   packageUnitOf,
   scanAmountDefaults,
@@ -255,7 +255,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     values =>
       addItem(
         scanAmountOf(values, prefilledAmount, {
-          piecesPrefilled: isMultipack(item),
+          labelPiece: labelPieceOf(item),
         }),
       ),
     errors => {

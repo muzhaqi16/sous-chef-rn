@@ -11,6 +11,7 @@ import {
   statedContents,
   takesContents,
   type HeldUnit,
+  type PackageContents,
   type PackageContentsValues,
 } from '#domain/stockAmount';
 import type { ScanAmount, ScannedItem } from '#features/barcode/types';
@@ -171,16 +172,31 @@ export function scanAmountDefaults(
 }
 
 /**
+ * One piece of a multipack as its label states it (250 mL), not as a reading
+ * shows it: a reading is rounded for display (250 mL reads 1 cup). Null for a
+ * single package.
+ */
+export function labelPieceOf(item: ScannedItem): PackageContents | null {
+  if (!item.packs || !isMultipack(item)) return null;
+  const { each } = item.packs;
+  return {
+    amount: each.value,
+    unitId: each.unitId,
+    unitType: each.metric.type,
+  };
+}
+
+/**
  * What a valid form records. The unit decides what it is: a measure is an
  * amount, and so is a part of a count; a whole count is packages. A size still
  * as prefilled is the record's, which the API applies itself, so only one the
  * user changed is sent. A multipack's prefill is one piece's size, never the
- * record's total, so it always goes.
+ * record's total, so it always goes: as the label states it while unchanged.
  */
 export function scanAmountOf(
   values: ScanAmountFormValues,
   prefilled: ScanAmountFormValues,
-  { piecesPrefilled = false }: { piecesPrefilled?: boolean } = {},
+  { labelPiece = null }: { labelPiece?: PackageContents | null } = {},
 ): ScanAmount | null {
   const quantity = parseFractionalInput(values.quantityInput);
   const { unitId } = values;
@@ -189,13 +205,12 @@ export function scanAmountOf(
     return { packaged: false, quantity, unitId };
   }
   const sizeChanged =
-    piecesPrefilled ||
     values.sizeInput !== prefilled.sizeInput ||
     values.sizeUnitId !== prefilled.sizeUnitId;
   return {
     packaged: true,
     count: quantity,
     unitId,
-    contents: sizeChanged ? statedContents(values) : null,
+    contents: sizeChanged ? statedContents(values) : labelPiece,
   };
 }
