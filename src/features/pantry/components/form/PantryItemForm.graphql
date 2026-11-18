@@ -64,27 +64,6 @@ fragment PantryItemForm_pantryItem on PantryItem {
       other
     }
   }
-  # netWeight as the detail shows it, which the size field opens on.
-  packageSize {
-    value
-    unitId
-    metric {
-      value
-      unitId
-      symbol
-      localizedSymbol
-      displayAsFraction
-      type
-    }
-    imperial {
-      value
-      unitId
-      symbol
-      localizedSymbol
-      displayAsFraction
-      type
-    }
-  }
   storageLocation {
     version
     id

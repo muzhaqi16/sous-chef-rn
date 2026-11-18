@@ -69,12 +69,6 @@ export const CorrectPackageSizeModal: React.FC<
     { value: batch?.remainingNetWeight, unitId: netWeightUnitId },
     readingSystem,
   );
-  // The size is edited as it reads; the server converts it back to the
-  // stack's unit, except from the tracking unit, which it refuses.
-  const seedReading =
-    sizeReading && sizeReading.unitId !== pantryItem?.unit.id
-      ? sizeReading
-      : null;
 
   const { control, handleSubmit, setValue, setError, reset, getValues } =
     useForm<CorrectWeightFormValues>({
@@ -95,12 +89,11 @@ export const CorrectPackageSizeModal: React.FC<
     setPendingSeed(
       nextSeedKey && pantryItem && batch
         ? {
-            weightInput: formatNumberForInput(
-              seedReading?.value ?? batch.netWeight,
-            ),
-            unitDisplay: unitLabel(seedReading ?? pantryItem.netWeightUnit),
-            selectedUnitId:
-              seedReading?.unitId ?? pantryItem.netWeightUnit?.id ?? null,
+            // As stored, not as the reading above rounds it: a correction
+            // that leaves the size as it opened leaves it as it was.
+            weightInput: formatNumberForInput(batch.netWeight),
+            unitDisplay: unitLabel(pantryItem.netWeightUnit),
+            selectedUnitId: pantryItem.netWeightUnit?.id ?? null,
             selectedUnitType: null,
             definesCount: false,
             reason: '',

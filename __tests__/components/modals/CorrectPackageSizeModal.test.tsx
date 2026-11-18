@@ -232,79 +232,36 @@ describe('CorrectPackageSizeModal', () => {
     expect(screen.queryByText('Pasta sauce')).toBeNull();
   });
 
-  describe('in the user’s unit system', () => {
-    it('opens on the size as it reads, never the stored grams', async () => {
-      renderModal(grams, honeyJar, UnitSystem.Imperial);
+  // The size shows as it reads; the field opens as stored, so a correction
+  // that leaves the size as it opened leaves it as it was.
+  describe('the size it opens on', () => {
+    it.each([
+      [UnitSystem.Imperial, 'Package size: 3 lb', 'Remaining: 1.5 lb'],
+      [UnitSystem.Metric, 'Package size: 1.36 kg', 'Remaining: 680 g'],
+    ])('is the stored grams for a %s user', async (system, size, remaining) => {
+      renderModal(grams, honeyJar, system);
       await drainTimers();
-      expect(screen.getByText('Package size: 3 lb')).toBeTruthy();
-      expect(screen.getByText('Remaining: 1.5 lb')).toBeTruthy();
-      expect(screen.getByLabelText('Each holds').props.value).toBe(
-        '3',
-      );
-      expect(screen.getByTestId('unit-field')).toHaveTextContent('lb');
+      expect(screen.getByText(size)).toBeTruthy();
+      expect(screen.getByText(remaining)).toBeTruthy();
+      expect(screen.getByLabelText('Each holds').props.value).toBe('1360.78');
+      expect(screen.getByTestId('unit-field')).toHaveTextContent('g');
     });
 
-    it('opens on kilograms for a metric user', async () => {
-      renderModal(grams, honeyJar, UnitSystem.Metric);
-      await drainTimers();
-      expect(screen.getByText('Package size: 1.36 kg')).toBeTruthy();
-      expect(screen.getByLabelText('Each holds').props.value).toBe(
-        '1.36',
-      );
-    });
-
-    it('saves 2.5 lb as typed, for the server to convert', async () => {
+    it('saves what is typed, in the unit the field holds', async () => {
       renderModal(grams, honeyJar, UnitSystem.Imperial);
       await drainTimers();
-      expect(screen.getByText('Package size: 3 lb')).toBeTruthy();
 
-      fireEvent.changeText(screen.getByLabelText('Each holds'), '2.5');
+      fireEvent.changeText(screen.getByLabelText('Each holds'), '1133.98');
       fireEvent.changeText(screen.getByLabelText('Reason'), 'Misread label');
       fireEvent.press(screen.getByLabelText('confirm'));
 
       await drainTimers();
       expect(onConfirm).toHaveBeenCalledWith({
-        amount: 2.5,
-        unitId: 'u-lb',
+        amount: 1133.98,
+        unitId: 'u-g',
         unitType: null,
         reason: 'Misread label',
       });
-    });
-
-    // The server keeps the stack's grams (1133.98 g) and reads them back.
-    it('reads the corrected size back as 2.5 lb', async () => {
-      renderModal(
-        grams,
-        {
-          ...honeyJar,
-          netWeight: 1133.98,
-          packageSize: measure(
-            1133.98,
-            reading(1.13, 'u-kg', 'kg'),
-            reading(2.5, 'u-lb', 'lb'),
-          ),
-        },
-        UnitSystem.Imperial,
-      );
-      await drainTimers();
-      expect(screen.getByText('Package size: 2.5 lb')).toBeTruthy();
-      expect(screen.getByLabelText('Each holds').props.value).toBe(
-        '2.5',
-      );
-    });
-
-    it('opens on the stored figure where the reading is the tracking unit', async () => {
-      renderModal(
-        { ...grams, unit: { __typename: 'Unit', id: 'u-lb' } },
-        honeyJar,
-        UnitSystem.Imperial,
-      );
-      await drainTimers();
-      expect(screen.getByText('Package size: 3 lb')).toBeTruthy();
-      expect(screen.getByLabelText('Each holds').props.value).toBe(
-        '1360.78',
-      );
-      expect(screen.getByTestId('unit-field')).toHaveTextContent('g');
     });
   });
 });
