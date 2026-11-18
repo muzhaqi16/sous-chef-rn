@@ -1187,6 +1187,7 @@ describe('useReceiptScan', () => {
       unitPrice: null,
       amount: 3.48,
       appliesTo: null,
+      packages: null,
     };
     const read: Omit<RulesReading, 'accepted'> = {
       receipt: {
