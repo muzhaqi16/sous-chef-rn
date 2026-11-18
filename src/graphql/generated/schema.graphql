@@ -6381,13 +6381,17 @@ type LedgerAnalytics {
 
 """Per-period ledger data for trend analysis"""
 type LedgerPeriodData {
-  added: Float!
+  added: Float! @deprecated(reason: "Adds amounts in different units. Use additionCount, consumptionCount and wasteCount; summary's per-unit breakdowns carry amounts.")
   """
   What the period's restocks cost, per currency; empty when none was costed
   """
   additionCost: [CurrencyAmount!]!
-  consumed: Float!
-  net: Float!
+  """Restocks in the period"""
+  additionCount: Int!
+  consumed: Float! @deprecated(reason: "Adds amounts in different units. Use additionCount, consumptionCount and wasteCount; summary's per-unit breakdowns carry amounts.")
+  """Consuming uses in the period"""
+  consumptionCount: Int!
+  net: Float! @deprecated(reason: "Adds amounts in different units. Use additionCount, consumptionCount and wasteCount; summary's per-unit breakdowns carry amounts.")
   periodEnd: DateTime!
   """
   The bucket's UTC key, not display text: YYYY-MM-DD for DAILY, YYYY-MM-DD of
@@ -6396,14 +6400,16 @@ type LedgerPeriodData {
   """
   periodLabel: String!
   periodStart: DateTime!
-  wasted: Float!
+  """Wastes in the period"""
+  wasteCount: Int!
+  wasted: Float! @deprecated(reason: "Adds amounts in different units. Use additionCount, consumptionCount and wasteCount; summary's per-unit breakdowns carry amounts.")
 }
 
 """
-Ledger summary showing additions vs consumption.
-Top-level totals (totalAdded, totalConsumed, totalWasted, netQuantity) are only
-populated when ALL records in the query share the same unit. Otherwise, use the
-per-unit breakdowns (additionsByUnit, consumptionByUnit) for accurate data.
+Ledger summary showing additions vs consumption, in each stack's tracking
+unit. Top-level totals (totalAdded, totalConsumed, totalWasted, netQuantity)
+are only populated when every record shares one tracking unit. Otherwise, use
+the per-unit breakdowns (additionsByUnit, consumptionByUnit).
 """
 type LedgerSummary {
   additionCount: Int!
@@ -16293,9 +16299,10 @@ input TimeEstimatesInput {
 
 """Time series data point for charting usage/waste trends"""
 type TimeSeriesDataPoint {
+  """Rows on this day"""
   count: Int!
   date: DateTime!
-  value: Float!
+  value: Float! @deprecated(reason: "Adds amounts in different units. Use count.")
 }
 
 """An IANA time zone name, e.g. "Europe/Tirane" or "UTC"."""
@@ -17946,14 +17953,17 @@ input UsageAmountInput @oneOf {
 
 """Comprehensive usage analytics for a pantry"""
 type UsageAnalytics {
-  averageUsagePerDay: Float!
+  """totalUsageCount per day of the period"""
+  averageUsageCountPerDay: Float!
+  averageUsagePerDay: Float! @deprecated(reason: "Adds amounts in different units. Use averageUsageCountPerDay.")
   periodEnd: DateTime!
   periodStart: DateTime!
   topUsedItems: [UsageByItem!]!
-  totalQuantityUsed: Float!
+  totalQuantityUsed: Float! @deprecated(reason: "Adds amounts in different units. Use totalUsageCount, or ledgerAnalytics.summary.consumptionByUnit for amounts in one unit.")
   totalUsageCount: Int!
   usageByPurpose: [UsageByPurpose!]!
   usageBySource: [UsageBySource!]!
+  """Rows per day"""
   usageTrend: [TimeSeriesDataPoint!]!
 }
 
@@ -17963,7 +17973,11 @@ type UsageByItem {
   imageUrl: String
   itemId: ID!
   itemName: String!
+  """
+  This item's uses in one tracking unit; an item used in two units is two entries
+  """
   totalQuantity: Float!
+  """The tracking unit totalQuantity is in"""
   unitName: String
 }
 
@@ -17972,7 +17986,7 @@ type UsageByPurpose {
   count: Int!
   percentage: Float!
   purpose: UsagePurpose!
-  totalQuantity: Float!
+  totalQuantity: Float! @deprecated(reason: "Adds amounts in different units. Use count and percentage.")
 }
 
 """Usage breakdown by source (manual, cooking log, meal plan, recipe)"""
@@ -17980,7 +17994,7 @@ type UsageBySource {
   count: Int!
   percentage: Float!
   source: UsageSource!
-  totalQuantity: Float!
+  totalQuantity: Float! @deprecated(reason: "Adds amounts in different units. Use count and percentage.")
 }
 
 """Usage breakdown by unit for mixed-unit tracking"""
@@ -17988,9 +18002,8 @@ type UsageByUnit {
   count: Int!
   totalQuantity: Float!
   """
-  The unit, for its text in the request's language
-  (unit.localizedSymbol(quantity: totalQuantity)); null for records that
-  named no unit, which unitId reports as "unknown".
+  The tracking unit, for its text in the request's language
+  (unit.localizedSymbol(quantity: totalQuantity)).
   """
   unit: Unit
   unitId: ID!
@@ -18563,21 +18576,27 @@ enum Visibility {
 
 """Comprehensive waste analytics for a pantry"""
 type WasteAnalytics {
-  averageWastePerDay: Float!
+  averageWastePerDay: Float! @deprecated(reason: "Adds amounts in different units. Use totalWasteCount over the period.")
   composted: Float!
   periodEnd: DateTime!
   periodStart: DateTime!
   recycled: Float!
   topWastedItems: [WasteByItem!]!
   totalWasteCount: Int!
-  totalWasteQuantity: Float!
+  totalWasteQuantity: Float! @deprecated(reason: "Adds amounts in different units. Use totalWasteCount, or topWastedItems for each item's waste in one unit.")
   """
   What the waste was worth, per currency, at the cost of the batches it
   came from; currencies are never summed together.
   """
   valueByCurrency: [CurrencyAmount!]!
   wasteByReason: [WasteByReason!]!
+  """
+  The share of what left the pantry that was wasted, from 0 to 1: waste over
+  waste plus consumption within each tracking unit, blended by each unit's
+  share of the rows, so grams are never weighed against pieces.
+  """
   wasteRate: Float!
+  """Waste rows per day"""
   wasteTrend: [TimeSeriesDataPoint!]!
 }
 
@@ -18587,7 +18606,11 @@ type WasteByItem {
   imageUrl: String
   itemId: ID!
   itemName: String!
+  """
+  This item's waste in one tracking unit; an item wasted in two units is two entries
+  """
   totalQuantity: Float!
+  """The tracking unit totalQuantity is in"""
   unitName: String
   """What this item's waste was worth, per currency"""
   valueByCurrency: [CurrencyAmount!]!
@@ -18598,7 +18621,7 @@ type WasteByReason {
   count: Int!
   percentage: Float!
   reason: WasteReason!
-  totalQuantity: Float!
+  totalQuantity: Float! @deprecated(reason: "Adds amounts in different units. Use count and percentage.")
 }
 
 """Input for wasting a specific batch"""
