@@ -108,6 +108,8 @@ describe('Receipt intake', () => {
       .toHaveLabel(t('receipts.saved.review_other', { count: 3 }))
       .withTimeout(90000);
     await review.tap();
+    const reviewScreen = element(by.id(receiptsTestIDs.reviewScreen));
+    await waitFor(reviewScreen).toBeVisible().withTimeout(WAIT);
 
     // Every line resolved with nothing typed, so all three are to be added.
     const add = element(by.id(receiptsTestIDs.reviewAdd));
