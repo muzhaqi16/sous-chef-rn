@@ -170,12 +170,11 @@ Run after **any** `.graphql` change and whenever the backend schema moves:
 npm run codegen
 ```
 
-Three steps run in order:
+Two steps run in order:
 
 1. `codegen:schema` — pulls the schema into `src/graphql/generated/schema.graphql`
 2. `graphql-codegen` — emits `*.generated.ts` next to each operation file; one it no longer writes is deleted (`codegen.ts`'s
    `beforeAllFileWrite` hook)
-3. `codegen:manifest` — regenerates `persisted-query-manifest.json`
 
 Generated files are **committed**. The pre-push hook re-runs codegen and fails
 if your committed copies are stale.
@@ -535,7 +534,7 @@ The core/mobile split (`docs/architecture.md` § Layers) is held by:
 | `tsconfig.core.json` (`npm run typecheck`)         | every core file compiles with no host's ambient types, at React Native's language level plus the DOM's                                                                                                                   |
 | `core-portability` (Jest project)                  | every core file loads in node with React Native unloadable, and core flows run there with no device: sign-out, the meal-plan writes                                                                                      |
 | `__tests__/architecture/documentOwnership.test.ts` | no core GraphQL document spreads a fragment a mobile file defines; a list a core hook runs spreads its `<entity>_listed` fragment instead, which `listedFragmentsCoverCells.test.ts` holds to the cells its header names |
-| `scripts/lib/sourceRoots.js`                       | one list of production and operation roots, read by codegen, the manifest, readers, GraphQL lint, the bailout check and the GraphQL scanner tests                                                                        |
+| `scripts/lib/sourceRoots.js`                       | one list of production and operation roots, read by codegen, the release check's operation list, readers, GraphQL lint, the bailout check and the GraphQL scanner tests                                                  |
 
 `core-portability` runs inside `npm test`; the others run with `npm run lint`
 and `npm test`.
@@ -637,13 +636,12 @@ Pipelines, environments, and secrets: [`CI_CD.md`](CI_CD.md) and
 
 **Codegen**
 
-| Command            | Description                                          |
-| ------------------ | ---------------------------------------------------- |
-| `codegen`          | Schema pull + types + persisted query manifest       |
-| `codegen:schema`   | Schema pull only                                     |
-| `codegen:manifest` | Persisted query manifest only                        |
-| `codegen:watch`    | Regenerate on change                                 |
-| `genenv`           | Regenerate `src/config/env.generated.ts` from `.env` |
+| Command          | Description                                          |
+| ---------------- | ---------------------------------------------------- |
+| `codegen`        | Schema pull + types                                  |
+| `codegen:schema` | Schema pull only                                     |
+| `codegen:watch`  | Regenerate on change                                 |
+| `genenv`         | Regenerate `src/config/env.generated.ts` from `.env` |
 
 **Quality**
 
@@ -726,9 +724,8 @@ older app version, and never erases one: that wipes its logins. `--android` or
 of it.
 
 **"codegen produced changes — your committed generated files are stale"** — the
-two tracked artifacts (`schema.graphql`, `persisted-query-manifest.json`) have
-drifted; run
-`npm run codegen`, commit the result, push again.
+tracked `schema.graphql` has drifted; run `npm run codegen`, commit the result,
+push again.
 
 **ProGuard/R8 issues in release builds** —
 [`android-proguard-debugging.md`](android-proguard-debugging.md).

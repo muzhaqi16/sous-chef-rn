@@ -231,7 +231,7 @@ describe('the action’s steps', () => {
 
     expect(status).toBe(0);
     expect(stdout.trim()).toBe(
-      '--url https://api.souschef.dev --manifest persisted-query-manifest.json',
+      `--url https://api.souschef.dev --manifest ${sandbox}/operations.json`,
     );
   });
 
