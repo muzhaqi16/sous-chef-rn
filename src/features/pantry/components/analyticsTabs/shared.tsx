@@ -78,6 +78,47 @@ const REASON_LABEL_KEYS: Record<WasteReason, TranslationKey> = {
   [WasteReason.UnknownLoss]: 'labels.unknownLoss',
 };
 
+interface ItemTotal {
+  itemId: string;
+  count: number;
+  valueByCurrency?: readonly { currencyCode: string; amount: number }[];
+}
+
+/**
+ * One row per item, most first. An item used from stacks in two units comes
+ * back as one entry per unit, and `count` is a number of events, so they add.
+ */
+export function totalsByItem<T extends ItemTotal>(entries: readonly T[]): T[] {
+  const merged = new Map<string, T>();
+  for (const entry of entries) {
+    const held = merged.get(entry.itemId);
+    if (!held) {
+      merged.set(entry.itemId, entry);
+      continue;
+    }
+    const amounts = new Map<string, number>();
+    for (const { currencyCode, amount } of [
+      ...(held.valueByCurrency ?? []),
+      ...(entry.valueByCurrency ?? []),
+    ]) {
+      amounts.set(currencyCode, (amounts.get(currencyCode) ?? 0) + amount);
+    }
+    merged.set(entry.itemId, {
+      ...held,
+      count: held.count + entry.count,
+      ...(held.valueByCurrency || entry.valueByCurrency
+        ? {
+            valueByCurrency: [...amounts].map(([currencyCode, amount]) => ({
+              currencyCode,
+              amount,
+            })),
+          }
+        : {}),
+    });
+  }
+  return [...merged.values()].sort((a, b) => b.count - a.count);
+}
+
 export function formatPurpose(purpose: UsagePurpose, t: Translate): string {
   return isOwnKey(PURPOSE_LABEL_KEYS, purpose)
     ? t(PURPOSE_LABEL_KEYS[purpose])

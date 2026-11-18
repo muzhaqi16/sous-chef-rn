@@ -82,6 +82,19 @@ export function formatDecimal(
   return separator === '.' ? trimmed : trimmed.replace('.', separator);
 }
 
+/** A 0–1 share as the device writes a percentage: `12.4%`, `12,4 %`. */
+export function formatPercent(fraction: number | null | undefined): string {
+  if (fraction == null || !Number.isFinite(fraction)) return '';
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'percent',
+      maximumFractionDigits: 1,
+    }).format(fraction);
+  } catch {
+    return `${formatDecimal(fraction * 100, { maximumFractionDigits: 1 })}%`;
+  }
+}
+
 /**
  * Most money in the app carries no currency of its own — only a shopping list
  * has a `currency` field — and those amounts mean US dollars. One place to

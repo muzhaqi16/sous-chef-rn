@@ -63,7 +63,8 @@ const waste = (stated: Waste = {}): WasteAnswer => ({
     id: 'p1',
     wasteAnalytics: {
       totalWasteCount: 5,
-      wasteRate: 10.5,
+      // A share of 0 to 1, as the server states it.
+      wasteRate: 0.105,
       valueByCurrency: [],
       composted: 0,
       recycled: 1.5,
@@ -314,6 +315,35 @@ describe('waste', () => {
     openTab(t('pantryAnalytics.tabWaste'));
 
     expect(screen.getByText(/\$4\.00/)).toBeTruthy();
+  });
+
+  // The server states an item once per unit it was tracked in; a row is an item.
+  it('adds one item wasted from stacks in two units into one row', async () => {
+    await openAnalytics({
+      wasteAnswer: waste({
+        topWastedItems: [
+          {
+            itemId: 'milk',
+            itemName: 'Milk',
+            count: 2,
+            unitName: 'L',
+            valueByCurrency: [spent(4, 'USD')],
+          },
+          {
+            itemId: 'milk',
+            itemName: 'Milk',
+            count: 1,
+            unitName: 'cup',
+            valueByCurrency: [spent(1, 'USD')],
+          },
+        ],
+      }),
+    });
+
+    openTab(t('pantryAnalytics.tabWaste'));
+
+    expect(screen.getAllByText('Milk')).toHaveLength(1);
+    expect(screen.getByText(/\$5\.00/)).toBeTruthy();
   });
 });
 
