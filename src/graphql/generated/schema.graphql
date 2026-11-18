@@ -16289,10 +16289,6 @@ enum TopLevelErrorCode {
   """
   INTERNAL_SERVER_ERROR
   """
-  The operation is not on the deployment's safelist of first-party operations, over HTTP or the WebSocket. Carries nothing about the operation. Resending the same document cannot succeed.
-  """
-  OPERATION_NOT_ALLOWED
-  """
   Per-operation limit. Names the operation that was limited and carries operation, limit, duration and retryAfter.
   """
   OPERATION_RATE_LIMITED
