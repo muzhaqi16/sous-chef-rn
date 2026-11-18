@@ -10699,6 +10699,26 @@ type ParsedIngredientLine {
   unit: Unit
 }
 
+"""One package's contents as an ITEM's product prints them"""
+type ParsedPackSize {
+  """
+  The vocabulary unit the printed measure names, to send as
+  PackageSizeInput.netWeightUnitId and show in the request's language; null
+  when it names none
+  """
+  measureUnit: Unit
+  quantity: Float!
+  """The measure as printed: fl oz, lb, g"""
+  unit: String!
+}
+
+"""The packages a receipt line bought, and what one holds"""
+type ParsedPackages {
+  """How many packages: 1 unless a count row prints more"""
+  count: Int!
+  size: ParsedPackSize!
+}
+
 type ParsedReceipt {
   """
   The ISO 4217 code of the currency the receipt prints: a printed code, a
@@ -10753,11 +10773,20 @@ type ParsedReceiptLine {
   ranks; product stays what the receipt prints.
   """
   name: String
+  """
+  An ITEM's packages, when its product prints a weight or volume: "WHOLE MILK
+  64 FL OZ" bought 1 package of 64 fl oz, "2 @" before it 2. Null on a
+  weighed line and on any line naming no size. Check it in as
+  StockAmountInput.packages { count, size { netWeight: size.quantity,
+  netWeightUnitId: size.measureUnit.id } }
+  """
+  packages: ParsedPackages
   """The product name as printed, on an ITEM"""
   product: String
   """
   How much the line bought: a weight or count printed with it, else the
-  pack size its product ends with ("Goat Cheese 4 oz" is 4 oz)
+  pack size its product ends with ("Goat Cheese 4 oz" is 4 oz). packages
+  states a sized line as packages and their contents
   """
   quantity: Float
   """The line as the receipt prints it"""
