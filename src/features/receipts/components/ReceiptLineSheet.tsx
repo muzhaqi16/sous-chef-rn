@@ -18,6 +18,8 @@ import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
+import { PackageContentsFields } from '#features/pantry/ui/PackageContentsFields';
+import { statesContents, takesContents } from '#domain/stockAmount';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { reportValidationErrors } from '#/utils/validation/common';
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
@@ -71,20 +73,24 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
 }) => {
   const { t } = useTranslation();
   const money = useReceiptMoney();
-  const { resolveUnitId } = useResolveUnit();
+  const { resolveUnitId, heldUnitFor } = useResolveUnit();
+  const unitTypeOf = (unitText: string) => heldUnitFor(unitText)?.type ?? null;
   const { control, handleSubmit, getValues, setValue, setError } = useForm<
     ReceiptLineFormValues,
     ReceiptLineFormContext
   >({
     resolver: yupResolver(receiptLineSchema),
     context: { free: line.price === 0 && (line.discount ?? 0) > 0 },
-    defaultValues: receiptLineDefaults(line, choice, asked),
+    defaultValues: receiptLineDefaults(line, choice, unitTypeOf, asked),
   });
 
   // `useWatch`, not `watch`: the compiler cannot memoize the latter's function.
   const itemId = useWatch({ control, name: 'itemId' });
   const unitId = useWatch({ control, name: 'unitId' });
   const unitText = useWatch({ control, name: 'unitValue' });
+  const unitType = useWatch({ control, name: 'unitType' });
+  // A bare count, or one in a counted unit, can say what each package holds.
+  const countsPackages = takesContents(unitType);
   const existingPurchaseId = useWatch({ control, name: 'existingPurchaseId' });
   const listItemName = listItemNameFor({ itemId, unitId, unitText });
   // Offered, never picked for the user: a similar purchase may be another one.
@@ -133,7 +139,18 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
       });
       return;
     }
-    onSave(toLineChoice({ ...values, unitId: resolvedUnitId }));
+    const sized = statesContents(values);
+    const typedSizeUnit = values.sizeUnitDisplay.trim();
+    const sizeUnitId = sized
+      ? await resolveUnitId(values.sizeUnitId, typedSizeUnit)
+      : null;
+    if (sized && !sizeUnitId) {
+      setError('sizeUnitDisplay', {
+        message: t('itemForm.unknownUnit', { unit: typedSizeUnit }),
+      });
+      return;
+    }
+    onSave(toLineChoice({ ...values, unitId: resolvedUnitId, sizeUnitId }));
     onClose();
   }, reportValidationErrors);
 
@@ -318,8 +335,15 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                   onChangeText={text => {
                     field.onChange(text);
                     setValue('unitId', null);
+                    setValue('unitType', unitTypeOf(text));
                   }}
-                  onUnitSelected={id => setValue('unitId', id)}
+                  onUnitSelected={(id, _name, pickedType) => {
+                    setValue('unitId', id);
+                    setValue(
+                      'unitType',
+                      pickedType ?? unitTypeOf(getValues('unitValue')),
+                    );
+                  }}
                   placeholder={t('labels.pcsKgEtc')}
                   error={fieldState.error?.message}
                 />
@@ -327,6 +351,42 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
             />
           </View>
         </View>
+
+        {!!countsPackages && (
+          <View style={styles.section}>
+            <Controller
+              control={control}
+              name="sizeInput"
+              render={({ field: size, fieldState: sizeState }) => (
+                <Controller
+                  control={control}
+                  name="sizeUnitDisplay"
+                  render={({ field: unit, fieldState: unitState }) => (
+                    <PackageContentsFields
+                      variant="inline"
+                      size={size.value}
+                      onSizeChange={size.onChange}
+                      sizeError={sizeState.error?.message}
+                      unit={unit.value}
+                      onUnitChange={text => {
+                        unit.onChange(text);
+                        setValue('sizeUnitId', null);
+                        setValue('sizeUnitType', null);
+                      }}
+                      onUnitSelected={(id, _name, pickedType) => {
+                        setValue('sizeUnitId', id);
+                        setValue('sizeUnitType', pickedType ?? null);
+                      }}
+                      unitError={unitState.error?.message}
+                      sizeTestID={receiptsTestIDs.lineSize}
+                      unitTestID={receiptsTestIDs.lineSizeUnit}
+                    />
+                  )}
+                />
+              )}
+            />
+          </View>
+        )}
 
         <View style={styles.section}>
           <Controller

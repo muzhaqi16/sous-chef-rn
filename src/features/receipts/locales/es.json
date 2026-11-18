@@ -72,6 +72,8 @@
       "chosenDetailNotStocked": "{{printed}} · {{amount}} · no va a la despensa",
       "chosenDetailFromList": "{{printed}} · {{amount}}, como en tu lista",
       "chosenDetailFromListNotStocked": "{{printed}} · {{amount}}, como en tu lista · no va a la despensa",
+      "packagesAmount_one": "{{count}} x {{size}}",
+      "packagesAmount_other": "{{count}} x {{size}}",
       "discountOff": "{{amount}} de descuento",
       "free": "Gratis",
       "notAdded": "No añadido",

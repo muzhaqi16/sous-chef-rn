@@ -19,10 +19,11 @@ export interface ListLineAmount {
  */
 export type ReceiptLineAmount =
   | { amount: StockAmountInput; fromList: boolean }
-  | { needs: 'unit' | 'amount' | 'quantity' };
+  | { needs: 'unit' | 'amount' | 'quantity' | 'sizeUnit' };
 
 /**
  * What a receipt line bought, as stated; the API does the package arithmetic.
+ * Packages of a stated size are what was bought, whatever the list asked for.
  * A typed unit is the list line's, the only one it links to. A unitless count is
  * as its stack counts (never 1 g of cheese). Against a list line in a unit, one
  * bought is what the list asked for, and a count equal to the list's is in its
@@ -30,11 +31,14 @@ export type ReceiptLineAmount =
  * counted line's could be cartons or eggs, so it is asked.
  */
 export function receiptLineAmount(
-  choice: Pick<ReceiptLineChoice, 'quantity' | 'unitId' | 'unitText'>,
+  choice: Pick<
+    ReceiptLineChoice,
+    'quantity' | 'unitId' | 'unitText' | 'packageSize'
+  >,
   listLine: ListLineAmount | undefined,
   heldUnit: HeldUnit,
 ): ReceiptLineAmount {
-  const { quantity, unitId, unitText } = choice;
+  const { quantity, unitId, unitText, packageSize } = choice;
   const stated = (facts: IntakeFacts, fromList = false): ReceiptLineAmount => {
     const { amount, unresolved } = resolveIntakeDraft({
       purchased: facts,
@@ -43,6 +47,19 @@ export function receiptLineAmount(
     if (amount) return { amount, fromList };
     return { needs: unresolved.includes('unit') ? 'unit' : 'quantity' };
   };
+  if (packageSize) {
+    if (!packageSize.unitId) return { needs: 'sizeUnit' };
+    if (unitId === null && unitText !== '') return { needs: 'unit' };
+    return stated({
+      quantity,
+      unitId,
+      intent: 'packages',
+      packageSize: {
+        netWeight: packageSize.quantity,
+        netWeightUnitId: packageSize.unitId,
+      },
+    });
+  }
   if (unitId !== null || unitText !== '') {
     const resolved = unitId ?? listLine?.unit?.id;
     return resolved

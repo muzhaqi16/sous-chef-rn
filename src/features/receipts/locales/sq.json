@@ -72,6 +72,8 @@
       "chosenDetailNotStocked": "{{printed}} · {{amount}} · jo për qilarin",
       "chosenDetailFromList": "{{printed}} · {{amount}}, si në listën tënde",
       "chosenDetailFromListNotStocked": "{{printed}} · {{amount}}, si në listën tënde · jo për qilarin",
+      "packagesAmount_one": "{{count}} x {{size}}",
+      "packagesAmount_other": "{{count}} x {{size}}",
       "discountOff": "{{amount}} zbritje",
       "free": "Falas",
       "notAdded": "Nuk u shtua",

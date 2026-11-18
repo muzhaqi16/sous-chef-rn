@@ -2,6 +2,7 @@ import { UnitType } from '#/graphql/generated/schemaTypes';
 import { receiptLineAmount } from '../receiptLineAmount';
 import {
   pantryTrackingExamples as examples,
+  pantryTrackingPackages as packages,
   pantryTrackingUnits as units,
 } from '#/test-utils/fixtures/pantryTrackingFixtures';
 
@@ -26,6 +27,12 @@ const LIST_OF_EGGS = {
   unit: { id: 'unit-pc', type: UnitType.Count },
 };
 const LIST_WITHOUT_UNIT = { quantity: 3, unit: null };
+/** What one carton holds, as the line sheet saves it once its unit resolves. */
+const CARTON_OF_MILK = {
+  quantity: packages.milk.netWeight,
+  unitId: packages.milk.netWeightUnitId,
+  unitText: units.fluidOunce.symbol,
+};
 const HELD_IN_PIECES = { id: 'unit-pc', type: UnitType.Count };
 
 describe('receiptLineAmount', () => {
@@ -178,6 +185,52 @@ describe('receiptLineAmount', () => {
       LIST_IN_POUNDS,
       null,
       { needs: 'unit' },
+    ],
+    [
+      'IN-01: a printed 64 fl oz carton is one package holding it, whatever the list asked',
+      { ...line(1), packageSize: CARTON_OF_MILK },
+      LIST_IN_POUNDS,
+      null,
+      {
+        amount: { packages: { count: 1, size: packages.milk } },
+        fromList: false,
+      },
+    ],
+    [
+      'packages counted in a unit are that many of it, each holding the size',
+      {
+        ...line(2, { unitId: units.carton.id, unitText: 'carton' }),
+        packageSize: CARTON_OF_MILK,
+      },
+      undefined,
+      null,
+      {
+        amount: {
+          packages: { count: 2, size: packages.milk, unitId: units.carton.id },
+        },
+        fromList: false,
+      },
+    ],
+    [
+      'a size whose unit is not resolved asks for it',
+      { ...line(1), packageSize: { ...CARTON_OF_MILK, unitId: null } },
+      undefined,
+      null,
+      { needs: 'sizeUnit' },
+    ],
+    [
+      'a typed count unit that is not resolved asks for it',
+      { ...line(1, { unitText: 'carton' }), packageSize: CARTON_OF_MILK },
+      undefined,
+      null,
+      { needs: 'unit' },
+    ],
+    [
+      'part of a package is refused',
+      { ...line(0.5), packageSize: CARTON_OF_MILK },
+      undefined,
+      null,
+      { needs: 'quantity' },
     ],
   ])('%s', (_case, choice, listLine, heldUnit, expected) => {
     expect(receiptLineAmount(choice, listLine, heldUnit)).toEqual(expected);

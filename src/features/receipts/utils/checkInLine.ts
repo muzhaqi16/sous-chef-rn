@@ -13,7 +13,13 @@ import type { ReceiptReviewLine } from './receiptReviewLines';
 import { receiptLineAmount, type ListLineAmount } from './receiptLineAmount';
 
 /** What a line still lacks before the API can record it. */
-export type CheckInLineNeed = 'item' | 'unit' | 'amount' | 'quantity' | 'price';
+export type CheckInLineNeed =
+  | 'item'
+  | 'unit'
+  | 'sizeUnit'
+  | 'amount'
+  | 'quantity'
+  | 'price';
 
 export type CheckInLine =
   | { input: ReceiptCheckInLineInput }

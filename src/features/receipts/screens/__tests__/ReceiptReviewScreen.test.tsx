@@ -253,6 +253,36 @@ describe('ReceiptReviewScreen rows', () => {
     expect(screen.getByText(/BASIL · 1 bnch/)).toBeTruthy();
     expect(screen.getByText(/ONIONS · 3 kg/)).toBeTruthy();
   });
+
+  it('shows packages as how many, each holding what', () => {
+    const fluidOunce = {
+      symbol: 'fl oz',
+      localizedSymbolForms: { one: 'oz liq', other: 'oz liq' },
+    };
+    const size = { quantity: 64, unit: 'fl oz', measureUnit: fluidOunce };
+    mockRows = [
+      row({
+        printed: 'WHOLE MILK',
+        packages: { count: 1, size },
+        choice: lineChoice({
+          quantity: 1,
+          packageSize: { quantity: 64, unitId: null, unitText: 'fl oz' },
+        }),
+      }),
+      row({
+        index: 1,
+        printed: 'OAT MILK',
+        choice: lineChoice({
+          quantity: 2,
+          packageSize: { quantity: 1, unitId: 'unit-l', unitText: 'L' },
+        }),
+      }),
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.getByText(/WHOLE MILK · 1 x 64 oz liq/)).toBeTruthy();
+    expect(screen.getByText(/OAT MILK · 2 x 1 L/)).toBeTruthy();
+  });
 });
 
 describe('ReceiptReviewScreen Add', () => {

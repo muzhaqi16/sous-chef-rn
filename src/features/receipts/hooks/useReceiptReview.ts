@@ -74,6 +74,7 @@ const HEADER_LINES = 6;
 const NEED_COPY: Record<Exclude<CheckInLineNeed, 'amount'>, TranslationKey> = {
   item: 'errors.itemNameRequired',
   unit: 'receipts.review.needsUnit',
+  sizeUnit: 'packageSize.unitRequired',
   quantity: 'errors.invalidQuantity',
   price: 'receipts.review.totalNeeded',
 };
@@ -85,6 +86,25 @@ interface ListAmount {
   /** The unit as the line sheet's unit field shows it. */
   unitText: string;
   unit: UnitLabelSource;
+}
+
+/** A choice with its typed units, the amount's and its package size's, as ids. */
+async function withUnitIds(
+  choice: ReceiptLineChoice,
+  resolveUnitId: (id: string | null, text: string) => Promise<string | null>,
+): Promise<ReceiptLineChoice> {
+  const unitId = await resolveUnitId(choice.unitId, choice.unitText);
+  const { packageSize } = choice;
+  if (!packageSize) return { ...choice, unitId };
+  const sizeUnitId = await resolveUnitId(
+    packageSize.unitId,
+    packageSize.unitText,
+  );
+  return {
+    ...choice,
+    unitId,
+    packageSize: { ...packageSize, unitId: sizeUnitId },
+  };
 }
 
 /** What a linked list line asked for, in its own unit; null with no unit. */
@@ -491,13 +511,7 @@ export function useReceiptReview() {
     const resolved = await Promise.all(
       pending.map(async entry => ({
         ...entry,
-        choice: {
-          ...entry.choice,
-          unitId: await resolveUnitId(
-            entry.choice.unitId,
-            entry.choice.unitText,
-          ),
-        },
+        choice: await withUnitIds(entry.choice, resolveUnitId),
       })),
     );
     setPreparing(false);

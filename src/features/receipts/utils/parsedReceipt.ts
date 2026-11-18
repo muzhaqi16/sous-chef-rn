@@ -10,6 +10,17 @@ export type ParsedLineKind =
   | 'payment'
   | 'other';
 
+/** Packages a line bought, each holding `size`: "WHOLE MILK 64 FL OZ" is 1 of 64 fl oz. */
+export interface ParsedPackages {
+  count: number;
+  size: {
+    quantity: number;
+    unit: string;
+    /** The known unit `unit` names, where the API names one. */
+    measureUnit?: UnitLabelSource;
+  };
+}
+
 export interface ParsedReceiptLine {
   index: number;
   rawText: string;
@@ -26,6 +37,8 @@ export interface ParsedReceiptLine {
   lineTotal?: number;
   /** A discount's item, or the item a weight or count line describes. */
   appliesToIndex?: number;
+  /** An item's packages, when its product prints a size and it was not weighed. */
+  packages?: ParsedPackages;
 }
 
 /** What a reading's lines add up to, against the printed figure they miss. */

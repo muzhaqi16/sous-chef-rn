@@ -10,7 +10,7 @@ import type { ReceiptParseReadersFragment } from '#/graphql/readers/receiptParse
 import { todayKey } from '#/utils/dateUtils';
 import { classifyCreateResult, outcomeOf } from '../serverReceipt';
 import { fromServerReceipt } from '../fromServerReceipt';
-import { receiptReviewLines } from '../receiptReviewLines';
+import { receiptReviewLines, seedChoice } from '../receiptReviewLines';
 
 // The phone's day: a read purchase day is held to a window around it.
 jest.mock('#/utils/dateUtils', () => ({
@@ -35,6 +35,7 @@ const line = (
   unitPrice: null,
   amount: null,
   appliesTo: null,
+  packages: null,
   ...fields,
 });
 
@@ -148,6 +149,67 @@ describe('fromServerReceipt', () => {
     expect(named).toMatchObject({ unit: 'pc', measureUnit: piece });
     expect(unnamed).toMatchObject({ unit: 'bnch' });
     expect(unnamed).not.toHaveProperty('measureUnit');
+  });
+
+  it('seeds a printed size as packages of it, and a weighed line as its weight', () => {
+    const fluidOunce: NonNullable<
+      ServerLine['packages']
+    >['size']['measureUnit'] = {
+      __typename: 'Unit',
+      id: 'unit-fl-oz',
+      symbol: 'fl oz',
+      localizedSymbolForms: {
+        __typename: 'PluralForms',
+        one: 'fl oz',
+        other: 'fl oz',
+      },
+    };
+    const [milk, bananas] = receiptReviewLines(
+      fromServerReceipt({
+        merchant: merchant(null),
+        lines: [
+          line({
+            text: 'WHOLE MILK 64 FL OZ 4.29',
+            kind: ReceiptLineKind.Item,
+            quantity: 64,
+            unit: 'fl oz',
+            amount: 4.29,
+            packages: {
+              __typename: 'ParsedPackages',
+              count: 1,
+              size: {
+                __typename: 'ParsedPackSize',
+                quantity: 64,
+                unit: 'fl oz',
+                measureUnit: fluidOunce,
+              },
+            },
+          }),
+          line({
+            text: 'BANANAS 2.13 LB 1.26',
+            kind: ReceiptLineKind.Item,
+            quantity: 2.13,
+            unit: 'lb',
+            amount: 1.26,
+          }),
+        ],
+      }),
+    );
+    expect(milk?.packages).toEqual({
+      count: 1,
+      size: { quantity: 64, unit: 'fl oz', measureUnit: fluidOunce },
+    });
+    expect(milk && seedChoice(milk)).toMatchObject({
+      quantity: 1,
+      unitText: '',
+      packageSize: { quantity: 64, unitId: null, unitText: 'fl oz' },
+    });
+    expect(bananas).not.toHaveProperty('packages');
+    expect(bananas && seedChoice(bananas)).toMatchObject({
+      quantity: 2.13,
+      unitText: 'lb',
+    });
+    expect(bananas && seedChoice(bananas)).not.toHaveProperty('packageSize');
   });
 
   it('copies the figures the server gives, and reads none from the text', () => {

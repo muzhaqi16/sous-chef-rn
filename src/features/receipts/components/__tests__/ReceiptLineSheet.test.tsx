@@ -4,6 +4,7 @@ import { ReceiptLineSheet } from '../ReceiptLineSheet';
 import { t } from '#/i18n';
 import { receiptsTestIDs } from '../../testIDs';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
+import { seedChoice } from '../../utils/receiptReviewLines';
 import { drainTimers } from '#/test-utils/drainTimers';
 
 // The real slot, so the form's bar renders where the sheet holds it.
@@ -57,30 +58,42 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
       value,
       onChangeText,
       error,
+      testID = 'field-unit',
     }: {
       value?: string;
       onChangeText?: (text: string) => void;
       error?: string;
+      testID?: string;
     }) => (
       <View>
-        <TextInput
-          testID="field-unit"
-          value={value}
-          onChangeText={onChangeText}
-        />
-        {error ? <Text testID="field-unit-error">{error}</Text> : null}
+        <TextInput testID={testID} value={value} onChangeText={onChangeText} />
+        {error ? <Text testID={`${testID}-error`}>{error}</Text> : null}
       </View>
     ),
   };
 });
 
-// The units the device holds: "lb" resolves, anything else does not.
-jest.mock('#features/catalog/hooks/useResolveUnit', () => ({
-  useResolveUnit: () => ({
-    resolveUnitId: async (current: string | null, text: string) =>
-      current ?? (text === 'lb' ? 'unit-lb' : null),
-  }),
-}));
+// The units the device holds: "lb", "fl oz" and "carton" resolve, anything else does not.
+jest.mock('#features/catalog/hooks/useResolveUnit', () => {
+  const { UnitType } = jest.requireActual<
+    typeof import('#/graphql/generated/schemaTypes')
+  >('#/graphql/generated/schemaTypes');
+  const held = new Map([
+    ['lb', { id: 'unit-lb', type: UnitType.Weight }],
+    ['fl oz', { id: 'unit-floz', type: UnitType.Volume }],
+    ['carton', { id: 'unit-carton', type: UnitType.Count }],
+  ]);
+  return {
+    useResolveUnit: () => ({
+      heldUnitFor: (text: string) => {
+        const unit = held.get(text);
+        return unit ? { ...unit, symbol: text, label: text } : null;
+      },
+      resolveUnitId: async (current: string | null, text: string) =>
+        current ?? held.get(text)?.id ?? null,
+    }),
+  };
+});
 
 // The earlier purchases a line may be the receipt for, read through the API.
 let mockEarlier: {
@@ -326,6 +339,105 @@ describe('the unit of a receipt line', () => {
       '"tin" isn\'t a unit we recognise. Pick one from the list.',
     );
     expect(onSave).not.toHaveBeenCalled();
+  });
+});
+
+describe('a receipt line that counts packages', () => {
+  const EACH_HOLDS = `field-${t('packageSize.eachHolds')}`;
+  const SIZE_UNIT = receiptsTestIDs.lineSizeUnit;
+  const MILK_CARTON = {
+    index: 0,
+    printed: 'WHOLE MILK 64 FL OZ',
+    price: 4.29,
+    packages: { count: 1, size: { quantity: 64, unit: 'fl oz' } },
+  };
+
+  const renderCarton = () => {
+    const onSave = jest.fn();
+    render(
+      <ReceiptLineSheet
+        visible
+        line={MILK_CARTON}
+        choice={{
+          ...seedChoice(MILK_CARTON),
+          itemId: 'cat-milk',
+          itemName: 'Whole milk',
+        }}
+        candidates={[]}
+        listItemNameFor={() => undefined}
+        onPickItem={jest.fn()}
+        opening={1}
+        onClose={jest.fn()}
+        onSave={onSave}
+        onRemove={jest.fn()}
+        canLeaveOut
+      />,
+    );
+    return { onSave };
+  };
+
+  it('opens a printed size as one package holding it, and saves it so', async () => {
+    const { onSave } = renderCarton();
+
+    expect(screen.getByTestId(EACH_HOLDS)).toHaveProp('value', '64');
+    expect(screen.getByTestId(SIZE_UNIT)).toHaveProp('value', 'fl oz');
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        quantity: 1,
+        unitText: '',
+        packageSize: { quantity: 64, unitId: 'unit-floz', unitText: 'fl oz' },
+      }),
+    );
+  });
+
+  it('refuses a size unit it cannot resolve on its field, and does not save', async () => {
+    const { onSave } = renderCarton();
+
+    fireEvent.changeText(screen.getByTestId(SIZE_UNIT), 'tin');
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(screen.getByTestId(`${SIZE_UNIT}-error`)).toHaveTextContent(
+      t('itemForm.unknownUnit', { unit: 'tin' }),
+    );
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('asks for the unit of a size given without one', async () => {
+    const { onSave } = renderCarton();
+
+    fireEvent.changeText(screen.getByTestId(SIZE_UNIT), '');
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(screen.getByTestId(`${SIZE_UNIT}-error`)).toHaveTextContent(
+      t('packageSize.unitRequired'),
+    );
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('takes a size only for a count: an amount in a measure holds nothing', async () => {
+    const { onSave } = renderCarton();
+
+    fireEvent.changeText(screen.getByTestId('field-unit'), 'fl oz');
+
+    expect(screen.queryByTestId(EACH_HOLDS)).toBeNull();
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.not.objectContaining({ packageSize: expect.anything() }),
+    );
+  });
+
+  it('takes a size for a count in a counted unit', () => {
+    renderCarton();
+
+    fireEvent.changeText(screen.getByTestId('field-unit'), 'carton');
+
+    expect(screen.getByTestId(EACH_HOLDS)).toBeOnTheScreen();
   });
 });
 

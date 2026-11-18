@@ -60,6 +60,16 @@ const shownUnitOf = (
     ? row.measureUnit
     : { symbol: choice.unitText };
 
+const shownSizeUnitOf = (
+  row: ReceiptReviewRow,
+  size: NonNullable<ReceiptLineChoice['packageSize']>,
+): UnitLabelSource => {
+  const printed = row.packages?.size;
+  return printed?.measureUnit && size.unitText === printed.unit
+    ? printed.measureUnit
+    : { symbol: size.unitText };
+};
+
 // Lines that will be added first, then those only recorded, those waiting for
 // a match, those with no product to add yet, those left out, and those already in.
 const SECTION_ORDER: readonly ReviewSection[] = [
@@ -231,10 +241,18 @@ export const ReceiptReviewScreen: React.FC = () => {
             : 'receipts.review.chosenDetail',
           {
             printed: row.printed,
-            amount: formatQuantityDisplay(
-              choice.quantity,
-              shownUnitOf(row, choice),
-            ),
+            amount: choice.packageSize
+              ? t('receipts.review.packagesAmount', {
+                  count: choice.quantity,
+                  size: formatQuantityDisplay(
+                    choice.packageSize.quantity,
+                    shownSizeUnitOf(row, choice.packageSize),
+                  ),
+                })
+              : formatQuantityDisplay(
+                  choice.quantity,
+                  shownUnitOf(row, choice),
+                ),
           },
         );
       }

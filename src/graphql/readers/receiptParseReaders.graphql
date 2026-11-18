@@ -17,6 +17,21 @@ fragment ReceiptParseReaders on ReceiptParse {
         symbol
       }
       name
+      packages {
+        count
+        size {
+          measureUnit {
+            id
+            localizedSymbolForms {
+              one
+              other
+            }
+            symbol
+          }
+          quantity
+          unit
+        }
+      }
       product
       quantity
       text

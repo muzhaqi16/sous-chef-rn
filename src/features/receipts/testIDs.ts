@@ -41,6 +41,9 @@ export const receiptsTestIDs = {
   lineEarlierPurchase: (purchaseId: string) =>
     `receipt-line-earlier-purchase-${purchaseId}`,
   lineSave: 'receipt-line-save',
+  /** What one package holds, when the line counts packages. */
+  lineSize: 'receipt-line-size',
+  lineSizeUnit: 'receipt-line-size-unit',
   lineTickOff: 'receipt-line-tick-off',
   lineNotStocked: 'receipt-line-not-stocked',
 };
