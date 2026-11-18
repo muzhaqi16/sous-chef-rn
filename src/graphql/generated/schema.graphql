@@ -298,10 +298,6 @@ union AddRecipeToFavoritesResult = AddRecipeToFavoritesPayload | ConflictError |
 """A dietary restriction to add to the caller's profile."""
 input AddRestrictionInput {
   """
-  A home to label the restriction with; the caller must be an active member of it. The label decides nothing
-  """
-  appliesToHomeId: ID @deprecated(reason: "A restriction is shared per home through Membership.sharesDietaryNeeds (updateDietarySharing); read a home's through Home.dietaryNeeds. This label is stored and decides nothing.")
-  """
   Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   """
   id: ID
@@ -1626,14 +1622,6 @@ type CookingReminderNotificationData {
   recipeName: String!
 }
 
-"""How much cooking experience a dietary profile claims."""
-enum CookingSkillLevel {
-  ADVANCED
-  BEGINNER
-  EXPERT
-  INTERMEDIATE
-}
-
 type CookingStats {
   averageRating: Float
   totalCookingSessions: Int!
@@ -1943,8 +1931,6 @@ input CreateMealPlanItemInput {
   The day of the meal, as YYYY-MM-DD; must fall within the plan's days (ValidationError on date)
   """
   date: LocalDate!
-  """Ignored"""
-  estimatedCost: Float @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   """Fat (g) of one serving, entered as calories is"""
   fat: Float
   """
@@ -3741,8 +3727,6 @@ and cooking limits. One per account. A meal plan linked to it measures its
 nutrition against these goals.
 """
 type DietaryProfile {
-  """The budget for one meal, in the user's preferred currency."""
-  budgetPerMeal: Float @deprecated(reason: "Stored and decides nothing: no meal plan or suggestion reads it.")
   """
   Daily calorie goal in kcal. A meal plan linked to this profile measures its daily average against it; null or 0 when no goal is set.
   """
@@ -3751,8 +3735,6 @@ type DietaryProfile {
   Daily carbohydrate goal in grams, measured as calorieTarget is; null or 0 when no goal is set
   """
   carbsTarget: Int
-  """How much cooking experience the user claims; null when not stated"""
-  cookingSkillLevel: CookingSkillLevel @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it.")
   """
   How many people the user cooks for, 1 to 20: the servings a recipe starts from. Null when not answered, and a recipe starts at its own servings
   """
@@ -3760,29 +3742,15 @@ type DietaryProfile {
   """When the profile was created"""
   createdAt: DateTime!
   """
-  Ingredients the user dislikes, as free text; empty when none. Nothing screens against it: avoided items are restrictions
-  """
-  dislikedIngredients: [String!]! @deprecated(reason: "Stored and decides nothing. Avoid a food with an item restriction (RestrictionKindInput.item), which alerts and recipe screening read.")
-  """
   Daily fat goal in grams, measured as calorieTarget is; null or 0 when no goal is set
   """
   fatTarget: Int
-  """Ingredients the user favours, as free text; empty when none"""
-  favoriteIngredients: [String!]! @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it.")
   """The profile's unique identifier"""
   id: ID!
   """
   The longest cooking time the user wants, in minutes; null when the user set no limit
   """
   maxCookTimeMinutes: Int
-  """
-  The longest preparation time the user wants, in minutes; null when the user set no limit
-  """
-  maxPrepTimeMinutes: Int @deprecated(reason: "Stored and decides nothing. The one time limit a profile offers is maxCookTimeMinutes.")
-  """Meals a day the user plans for; 3 by default"""
-  mealsPerDay: Int! @deprecated(reason: "Stored and decides nothing: no meal plan or suggestion reads it.")
-  """Cuisines the user prefers; empty when none"""
-  preferredCuisines: [Cuisine!]! @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it. Narrow a recipe search with RecipeFilters.cuisines (findRecipes).")
   """
   Daily protein goal in grams, measured as calorieTarget is; null or 0 when no goal is set
   """
@@ -3795,8 +3763,6 @@ type DietaryProfile {
   The diets, intolerances and health goals the user follows, at most 100; empty when none
   """
   restrictions: [DietaryRestriction!]!
-  """Snacks a day the user plans for; 1 by default"""
-  snacksPerDay: Int! @deprecated(reason: "Stored and decides nothing: no meal plan or suggestion reads it.")
   """When the profile was last written"""
   updatedAt: DateTime!
   user: User!
@@ -3805,8 +3771,6 @@ type DietaryProfile {
 }
 
 type DietaryRestriction {
-  """The home named when the restriction was added; decides nothing"""
-  appliesToHomeId: ID @deprecated(reason: "A restriction is shared per home through Membership.sharesDietaryNeeds (updateDietarySharing); read a home's through Home.dietaryNeeds. This label is stored and decides nothing.")
   createdAt: DateTime!
   diet: Diet
   healthGoal: HealthGoal
@@ -4427,14 +4391,6 @@ input FeatureNotificationsInput {
   sharedListUpdates: Boolean
   shoppingListUpdates: Boolean
   weeklyDigest: Boolean
-}
-
-"""Ignored. A feature's availability is myFeatureFlags."""
-input FeatureTogglesInput {
-  """Ignored"""
-  betaFeatures: [String!] @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
-  """Ignored"""
-  enabledFeatures: [String!] @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
 }
 
 """
@@ -5347,12 +5303,6 @@ type Item {
   concept, and for a product not yet placed.
   """
   concept: Item
-  """
-  A PACKAGE netWeight converted to the caller's unit system (see UnitSystem),
-  so two callers reading the same item can get different answers. Null for a
-  serving or reference figure.
-  """
-  convertedNetWeight: ConvertedValue @deprecated(reason: "Use packageSize, which reads in both unit systems.")
   """When the item was created."""
   createdAt: DateTime!
   """
@@ -10979,7 +10929,6 @@ enum PriceSuggestionScope {
 
 """Sub-input for pricing estimates"""
 input PricingEstimatesInput {
-  budgetPrice: Float @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   estimatedPrice: Float
 }
 
@@ -11117,8 +11066,6 @@ type Purchase {
   The unit as written when the purchase was recorded. While it spells unit itself (its name or symbol, in any language) it reads in the request's language, agreeing with quantity, as unit.localizedSymbol(quantity:); a label of the client's own is returned as written
   """
   unitSymbol: String!
-  """The user who recorded the purchase, while their account exists"""
-  user: User! @deprecated(reason: "Use purchasedBy. A home's purchase outlives its buyer's account, and user cannot answer one whose buyer is gone, so such a purchase is left out wherever user is selected.")
   """
   Incremented on every write; send it back with an update to refuse a stale edit
   """
@@ -11273,12 +11220,6 @@ type QuantityBreakdown {
 
 """Sub-input for quantity display preferences"""
 input QuantityDisplayInput {
-  """Ignored"""
-  alwaysShowFractions: Boolean @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
-  """Ignored"""
-  maxDecimalPlaces: Int @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
-  """Ignored"""
-  preferredFractionSet: [Int!] @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   """
   How formatted quantities show: FRACTION or MIXED where a fraction fits, DECIMAL always as decimals, AUTO (the default) by each unit's own rule. Null is refused
   """
@@ -11980,11 +11921,6 @@ type Query {
     ids: [ID!]!
   ): [ShoppingListItem!]!
   """
-  Where a shopping list is cheapest, by branch or by chain. Refused as a read
-  of the list is to a caller who cannot read it.
-  """
-  shoppingListStoreComparison(input: ShoppingListStoreComparisonInput!): ShoppingListStoreComparison! @deprecated(reason: "Use shoppingListStoreSavings: each line priced at the household's usual stores, shelf prices first.")
-  """
   Where a shopping list costs less, line by line. Refused as a read of the
   list is to a caller who cannot read it.
   """
@@ -12180,8 +12116,8 @@ input ReceiptCheckInLineInput {
   pantryItemId: ID
   """
   Client-minted CUID2 for the line's purchase. A line whose purchase exists
-  is reported alreadyRecorded and writes nothing, so a check-in sent again
-  records nothing twice.
+  writes nothing and counts as skipped, so a check-in sent again records
+  nothing twice.
   """
   purchaseId: ID!
   """
@@ -12216,10 +12152,6 @@ input ReceiptCheckInLineInput {
 
 """One line's outcome in createReceiptCheckIn."""
 type ReceiptCheckInLineResult {
-  """
-  True when the line's purchase already existed and this call wrote nothing for it
-  """
-  alreadyRecorded: Boolean! @deprecated(reason: "Compare the purchase id this line answers with the one it sent.")
   """The line's clientId, as sent"""
   clientId: String!
   """Why the line failed; set exactly when success is false"""
@@ -12405,8 +12337,6 @@ input ReceiptRefInput {
   purchasedAt: DateTime
   """The day on the receipt, as YYYY-MM-DD; not later than today."""
   purchasedOn: LocalDate!
-  """Ignored"""
-  receiptNumber: String @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   """
   The store the receipt is from; when the purchase also names one, they must agree.
   """
@@ -14985,50 +14915,7 @@ input ShoppingListPlanningInput {
 
 """Sub-input for shopping list settings"""
 input ShoppingListSettingsInput {
-  """Ignored"""
-  category: String @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   priceTracking: Boolean
-  """Ignored"""
-  priority: Int @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
-}
-
-"""
-Where a list is cheapest, from recorded prices. Each candidate prices the
-list's comparable lines (unpurchased, a catalog item, a unit that converts
-without an assumption) at its own median, a branch filling a gap from its
-chain, then from any store. Prices are counted as itemPriceComparison counts
-them; no household's prices are revealed.
-"""
-type ShoppingListStoreComparison {
-  """
-  The ranked candidates, cheapest first, at most five; then the target, when not among them
-  """
-  candidates: [StoreComparisonCandidate!]!
-  comparableLines: Int!
-  currency: Currency!
-  """
-  Unpurchased lines that cannot be compared: no catalog item, or a unit that does not convert
-  """
-  leftOutLines: Int!
-  scope: PriceComparisonScope!
-  """True when the list held more than the 200 lines a comparison considers"""
-  truncated: Boolean!
-  """Comparable lines no observation prices, left out of every total"""
-  unpricedLines: [ShoppingListItem!]!
-}
-
-input ShoppingListStoreComparisonInput {
-  listId: ID!
-  """Compare store branches (the default) or whole chains"""
-  scope: PriceComparisonScope
-  """
-  Up to five stores to compare instead of the household's own (for a
-  personal list, the caller's): those it bought at or checked a receipt in
-  at within the window, and its live lists' target stores
-  """
-  storeIds: [ID!]
-  """How far back observations count: default 90 days, at most 365"""
-  windowDays: Int
 }
 
 """
@@ -15586,36 +15473,6 @@ type StoreChain {
 }
 
 """
-One branch or chain the list's comparable lines are priced at, in the list's currency.
-"""
-type StoreComparisonCandidate {
-  """Lines filled from the any-store median"""
-  anyStoreFilledLines: Int!
-  """The branch's chain, or the chain compared"""
-  chain: StoreChain
-  """Lines a branch fills from its chain's median"""
-  chainFilledLines: Int!
-  """
-  Every comparable line with a price anywhere, priced here or filled; null
-  when no line has a price anywhere
-  """
-  estimatedTotal: Float
-  """The list's target store, or that store's chain"""
-  isTarget: Boolean!
-  """The newest observation behind the lines it prices itself"""
-  newestObservedAt: DateTime
-  """Lines priced from this branch's or chain's own observations"""
-  pricedLines: Int!
-  """
-  Prices at least half of the comparable lines itself, so its total compares
-  """
-  ranked: Boolean!
-  scope: PriceComparisonScope!
-  """The branch, when scope is STORE"""
-  store: Store
-}
-
-"""
 A page of Store results. Read "edges" for the rows and "pageInfo" to decide
 whether to request another page.
 """
@@ -15801,8 +15658,6 @@ input StorePreferencesInput {
   The line's own store department, over its item's; null follows the item again
   """
   storeDepartmentOverride: StoreDepartment
-  """Ignored"""
-  storeSection: String @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
 }
 
 """
@@ -16860,10 +16715,6 @@ input UpdateDeviceInput {
   deviceType: DeviceType
   id: ID!
   isActive: Boolean
-  """Ignored: a device is neither trusted nor verified"""
-  isTrusted: Boolean @deprecated(reason: "No device is trusted or verified; the value is ignored")
-  """Ignored: a device is neither trusted nor verified"""
-  isVerified: Boolean @deprecated(reason: "No device is trusted or verified; the value is ignored")
   location: NetworkLocationInput
   platform: MobilePlatform
   pushToken: String
@@ -16884,14 +16735,9 @@ union UpdateDeviceResult = ConflictError | ForbiddenError | NotFoundError | Upda
 
 """
 Changes to the caller's own dietary profile. An omitted field stays
-unchanged. Null clears a nullable preference and is refused on the three
-lists, mealsPerDay and snacksPerDay.
+unchanged, and null clears it.
 """
 input UpdateDietaryProfileInput {
-  """
-  Budget for one meal, in the user's preferred currency: 0 to 999,999,999. Null clears it
-  """
-  budgetPerMeal: Float @deprecated(reason: "Stored and decides nothing: no meal plan or suggestion reads it.")
   """
   Daily calorie goal in kcal, a non-negative integer. A meal plan linked to this profile measures its daily average against it; 0 or null sets no goal, and null clears it
   """
@@ -16900,38 +16746,16 @@ input UpdateDietaryProfileInput {
   Daily carbohydrate goal in grams, a non-negative integer, measured as calorieTarget is; 0 or null sets no goal
   """
   carbsTarget: Int
-  """How much cooking experience the user claims; null clears it"""
-  cookingSkillLevel: CookingSkillLevel @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it.")
   """How many people the user cooks for, 1 to 20; null clears it"""
   cooksFor: Int
-  """
-  Ingredients the user dislikes, as free text, replacing the whole list: each 1 to 100 characters after trimming. An empty list clears it, null is refused. Nothing screens against it: an avoided item (RestrictionKindInput.item) is what alerts read
-  """
-  dislikedIngredients: [String!] @deprecated(reason: "Stored and decides nothing. Avoid a food with an item restriction (RestrictionKindInput.item), which alerts and recipe screening read.")
   """
   Daily fat goal in grams, a non-negative integer, measured as calorieTarget is; 0 or null sets no goal
   """
   fatTarget: Int
   """
-  Ingredients the user favours, as free text, replacing the whole list: each 1 to 100 characters after trimming. An empty list clears it, null is refused
-  """
-  favoriteIngredients: [String!] @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it.")
-  """
   The longest cooking time the user wants, in minutes: a non-negative integer. Null clears it: no limit
   """
   maxCookTimeMinutes: Int
-  """
-  The longest preparation time the user wants, in minutes: a non-negative integer. Null clears it: no limit
-  """
-  maxPrepTimeMinutes: Int @deprecated(reason: "Stored and decides nothing. The one time limit a profile offers is maxCookTimeMinutes.")
-  """
-  Meals a day the user plans for, a non-negative integer; 3 by default, null is refused
-  """
-  mealsPerDay: Int @deprecated(reason: "Stored and decides nothing: no meal plan or suggestion reads it.")
-  """
-  Cuisines the user prefers, replacing the whole list; an empty list clears it, null is refused
-  """
-  preferredCuisines: [Cuisine!] @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it. Narrow a recipe search with RecipeFilters.cuisines (findRecipes).")
   """
   Daily protein goal in grams, a non-negative integer, measured as calorieTarget is; 0 or null sets no goal
   """
@@ -16940,10 +16764,6 @@ input UpdateDietaryProfileInput {
   A religious dietary requirement the user follows, held as the profile's one religiousDiet restriction; null removes it
   """
   religiousDiet: ReligiousDiet
-  """
-  Snacks a day the user plans for, a non-negative integer; 1 by default, null is refused
-  """
-  snacksPerDay: Int @deprecated(reason: "Stored and decides nothing: no meal plan or suggestion reads it.")
 }
 
 type UpdateDietaryProfilePayload {
@@ -17192,8 +17012,6 @@ input UpdateMealPlanInput {
 
 """Changes to a planned meal. An omitted field is left as it is."""
 input UpdateMealPlanItemInput {
-  """Ignored"""
-  actualCost: Float @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   """Manual nutrition override"""
   calories: Float
   """Carbohydrates (g) of one serving; null clears it"""
@@ -17210,8 +17028,6 @@ input UpdateMealPlanItemInput {
   Whether to auto-deduct recipe ingredients from pantry on completion (default: true)
   """
   deductFromPantry: Boolean
-  """Ignored"""
-  estimatedCost: Float @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   """Fat (g) of one serving; null clears it"""
   fat: Float
   """The meal to update"""
@@ -17370,10 +17186,6 @@ input UpdatePantryItemInput {
   A CUID2 minted per edit for an offline queue: a resend under a spent key writes nothing and answers the stack as it stands with converged true, whatever version it names
   """
   idempotencyKey: ID
-  """Ignored"""
-  isComposted: Boolean @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
-  """Ignored"""
-  isRecycled: Boolean @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   itemName: String
   """
   Opt-in for low-stock notifications on this stack (default false): with it on
@@ -17579,8 +17391,6 @@ field, stay unchanged. A null field is refused, except in notifications,
 where it leaves that preference unchanged.
 """
 input UpdateSettingsInput {
-  """Ignored"""
-  features: FeatureTogglesInput @deprecated(reason: "Nothing reads it, so nothing is stored; the value is ignored")
   """Notification toggles, written to the caller's notification preferences"""
   notifications: UserNotificationSettingsInput
   """Data-sharing consents"""
@@ -17720,15 +17530,6 @@ union UpdateShoppingListItemResult = ConflictError | ForbiddenError | NotFoundEr
 
 type UpdateShoppingListPayload {
   shoppingList: ShoppingList!
-  """
-  The list's store comparison after this write, as shoppingListStoreComparison
-  reads it: a change of store changes it, and each line's suggestedPrice, which
-  shoppingList.itemsConnection reads. Computed only when selected.
-  """
-  storeComparison(
-    """Compare store branches (the default) or whole chains"""
-    scope: PriceComparisonScope
-  ): ShoppingListStoreComparison! @deprecated(reason: "Use storeSavings, as shoppingListStoreSavings reads them.")
 }
 
 input UpdateShoppingListReminderInput {
