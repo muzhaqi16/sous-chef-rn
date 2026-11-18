@@ -48,7 +48,7 @@ const usage = (): UsageAnswer => ({
     id: 'p1',
     usageAnalytics: {
       totalUsageCount: 42,
-      averageUsagePerDay: 2.5,
+      averageUsageCountPerDay: 2.5,
       usageTrend: [],
       usageByPurpose: [],
       usageBySource: [],
@@ -395,7 +395,12 @@ describe('the ledger', () => {
       shown: 'Jan 2024',
     },
   ])('labels each period by its $by', async ({ granularity, label, shown }) => {
-    const period = { periodLabel: label, added: 5, consumed: 3, wasted: 1 };
+    const period = {
+      periodLabel: label,
+      additionCount: 5,
+      consumptionCount: 3,
+      wasteCount: 1,
+    };
     await openAnalytics({
       answers: [
         recordMock(GetPantryLedgerAnalyticsDocument, {

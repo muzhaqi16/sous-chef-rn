@@ -37,7 +37,7 @@ beforeEach(() => setNetworkBlocked(false));
 const usageData = {
   __typename: 'PantryUsageAnalytics',
   totalUsageCount: 42,
-  averageUsagePerDay: 2.5,
+  averageUsageCountPerDay: 2.5,
   topUsedItems: [],
 };
 

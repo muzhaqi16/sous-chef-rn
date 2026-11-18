@@ -78,7 +78,7 @@ export const UsageTab: React.FC<
         />
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.avgPerDay')}
-          value={(usageData?.averageUsagePerDay ?? 0).toFixed(1)}
+          value={(usageData?.averageUsageCountPerDay ?? 0).toFixed(1)}
           icon="time-outline"
           subtitle={t('pantryAnalytics.itemsPerDay')}
         />

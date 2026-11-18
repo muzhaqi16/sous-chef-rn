@@ -77,10 +77,10 @@ export const LedgerTab: React.FC<
   const ledgerPeriodData =
     ledgerData?.periodData.map(period => ({
       date: formatPeriod(period.periodLabel, ledgerGranularity),
-      added: period.added,
-      consumed: period.consumed,
-      wasted: period.wasted,
-      net: period.net,
+      // Counts of each movement: amounts in different units do not add.
+      additions: period.additionCount,
+      consumptions: period.consumptionCount,
+      wastes: period.wasteCount,
     })) ?? [];
   const topRestockedItemsData =
     ledgerData?.topRestockedItems.map(item => ({
@@ -289,7 +289,7 @@ export const LedgerTab: React.FC<
                     align="right"
                     style={styles.periodValue}
                   >
-                    +{formatQuantityForDisplay(period.added)}
+                    +{formatQuantityForDisplay(period.additions)}
                   </Text>
                   <Text
                     role="label"
@@ -297,7 +297,7 @@ export const LedgerTab: React.FC<
                     align="right"
                     style={styles.periodValue}
                   >
-                    -{formatQuantityForDisplay(period.consumed)}
+                    -{formatQuantityForDisplay(period.consumptions)}
                   </Text>
                   <Text
                     role="label"
@@ -305,7 +305,7 @@ export const LedgerTab: React.FC<
                     align="right"
                     style={styles.periodValue}
                   >
-                    -{formatQuantityForDisplay(period.wasted)}
+                    -{formatQuantityForDisplay(period.wastes)}
                   </Text>
                 </View>
               </View>
