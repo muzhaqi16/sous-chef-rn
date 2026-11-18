@@ -1,5 +1,6 @@
 import { element, by, waitFor } from 'detox';
 import { asTestUser, payloadOf } from './api';
+import { retry } from './waitFor';
 import { homeTestIDs } from '../../src/features/home/testIDs';
 import { todayTestIDs } from '../../src/features/today/testIDs';
 import { kitTestIDs } from '../../src/components/testIDs';
@@ -42,7 +43,12 @@ async function deleteHome(homeId: string): Promise<void> {
  * away before their `afterAll`. A left-over home can stay the account's default,
  * which the next spec would then restore as the default it found.
  */
-async function deleteLeftOverHomes(): Promise<void> {
+/**
+ * Deletes the spec homes left over long enough to be no running spec's, and
+ * answers the home a spec restores as default on closing: the account's own,
+ * never a spec home (a left-over one would be restored by every spec after it).
+ */
+async function deleteLeftOverHomes(): Promise<string | null> {
   const { homes } = await asTestUser<{
     homes: {
       edges: { node: { id: string; name: string; isDefault: boolean } }[];
@@ -57,13 +63,14 @@ async function deleteLeftOverHomes(): Promise<void> {
   const kept = all.find(home => !SPEC_HOME.test(home.name));
   if (kept && leftOver.some(home => home.isDefault)) await markDefault(kept.id);
   for (const home of leftOver) await deleteHome(home.id);
+  const current = all.find(home => home.isDefault);
+  return current && !SPEC_HOME.test(current.name)
+    ? current.id
+    : kept?.id ?? null;
 }
 
 export async function openTrackingHome(name: string): Promise<TrackingHome> {
-  await deleteLeftOverHomes();
-  const { me } = await asTestUser<{ me: { defaultHomeId: string | null } }>(
-    '{ me { id defaultHomeId } }',
-  );
+  const accountDefault = await deleteLeftOverHomes();
   const { createHome } = await asTestUser<{
     createHome: {
       __typename: string;
@@ -87,7 +94,7 @@ export async function openTrackingHome(name: string): Promise<TrackingHome> {
   return {
     homeId: home.id,
     pantryId: pantry.id,
-    previousDefaultHomeId: me.defaultHomeId,
+    previousDefaultHomeId: accountDefault,
   };
 }
 
@@ -300,6 +307,33 @@ export async function pantryStacks(pantryId: string): Promise<StackOnServer[]> {
   }));
 }
 
+/** What a stack's history records, oldest first: the add that made it, then each use. */
+export async function historyOnServer(
+  stackId: string,
+): Promise<{ quantityUsed: number; unit: string | null }[]> {
+  type Node = {
+    quantityUsed: number;
+    usedAt: string;
+    usageUnit: { symbol: string } | null;
+  };
+  const { pantryItem } = await asTestUser<{
+    pantryItem: { usageRecordsConnection: { edges: { node: Node }[] } } | null;
+  }>(
+    `query ($id: ID!) { pantryItem(id: $id) { id usageRecordsConnection(first: 20) { edges { node {
+      id quantityUsed usedAt usageUnit { id symbol }
+    } } } } }`,
+    { id: stackId },
+  );
+  if (!pantryItem) throw new Error(`No stack ${stackId}`);
+  return pantryItem.usageRecordsConnection.edges
+    .map(({ node }) => node)
+    .sort((a, b) => a.usedAt.localeCompare(b.usedAt))
+    .map(node => ({
+      quantityUsed: node.quantityUsed,
+      unit: node.usageUnit?.symbol ?? null,
+    }));
+}
+
 /**
  * Shows `homeId` in the app: the app opens on the home it last showed, and
  * choosing a home as default in My Homes selects it, as a household switching
@@ -330,8 +364,18 @@ export async function selectHome(homeId: string, timeout = 15000) {
     .whileElement(by.id(homeTestIDs.managementScroll))
     .scroll(250, 'down');
   await element(by.id(setDefault)).tap();
-  await waitFor(element(by.id(setDefault)))
-    .not.toBeVisible()
-    .withTimeout(timeout);
+  // Confirmed by the server, not by the star leaving the screen: a list that
+  // re-renders hides it for a moment whether or not the tap landed.
+  await retry(async () => {
+    const { me } = await asTestUser<{ me: { defaultHomeId: string | null } }>(
+      '{ me { id defaultHomeId } }',
+    );
+    if (me.defaultHomeId !== homeId) {
+      throw new Error(`The default home is ${me.defaultHomeId}, not ${homeId}`);
+    }
+  }, 10);
   await element(by.id(kitTestIDs.headerBackButton)).tap();
+  await waitFor(element(by.id(todayTestIDs.householdTitle)))
+    .toBeVisible()
+    .withTimeout(timeout);
 }

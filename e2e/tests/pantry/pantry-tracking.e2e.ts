@@ -20,6 +20,7 @@ import {
 } from '../../helpers/waitFor';
 import {
   closeTrackingHome,
+  historyOnServer,
   localDate,
   openTrackingHome,
   seedRecipe,
@@ -36,6 +37,7 @@ import { recipesTestIDs } from '../../../src/features/recipes/testIDs';
 import { kitTestIDs } from '../../../src/components/testIDs';
 
 const WAIT = 15000;
+const COLD_START = 45000;
 // A dev catalog product whose label states 6 x 250 mL.
 const GINGER_BEER_6_X_250_ML = '9300675091206';
 
@@ -162,6 +164,9 @@ describe('Pantry tracking', () => {
       fullPackages: 0,
       activeBatchCount: 1,
     });
+    // Its history: the add that seeded it, then the one use, as stated.
+    const [, ...uses] = await historyOnServer(carton.id);
+    jestExpect(uses).toEqual([{ quantityUsed: 8, unit: 'fl oz' }]);
 
     // The same remainder on its detail, and after the app restarts.
     await element(by.id(row)).tap();
@@ -171,10 +176,11 @@ describe('Pantry tracking', () => {
     await element(by.id(kitTestIDs.headerBackButton)).tap();
     await bootstrapAuthenticatedSession();
     await new PantryScreen().navigateToTab();
-    // The list mounts under its skeleton once the restored stacks lay out.
+    // The list mounts under its skeleton once the restored stacks lay out,
+    // after a cold start of the debug build has loaded its bundle from Metro.
     await waitFor(element(by.id(row)))
       .toExist()
-      .withTimeout(WAIT);
+      .withTimeout(COLD_START);
     await waitFor(element(by.id(row)))
       .toBeVisible()
       .whileElement(by.id(pantryTestIDs.list))
@@ -224,7 +230,7 @@ describe('Pantry tracking', () => {
     // One package is proposed; reading the barcode alone records nothing.
     await waitFor(element(by.id(barcodeTestIDs.scanAmountSummary)))
       .toBeVisible()
-      .withTimeout(30000);
+      .withTimeout(COLD_START);
     const before = new Set(
       (await pantryStacks(home.pantryId)).map(stack => stack.id),
     );
