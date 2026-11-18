@@ -9,6 +9,7 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 import { Button } from '#components/molecules/Button';
 import { Badge } from '#components/atoms/Badge';
 import { IngredientMatchRow } from '#features/recipes/components/IngredientMatchRow';
@@ -177,6 +178,7 @@ export const IngredientMatchingSheet: React.FC<
             onPress={recordsOnly ? onRecordOnly : onConfirm}
             loading={confirmLoading}
             style={styles.confirm}
+            testID={recipesTestIDs.cookReviewConfirm}
           >
             {recordsOnly
               ? t('ingredientMatching.recordWithoutDeducting')

@@ -551,6 +551,7 @@ const RecipeDetailScreen: React.FC = () => {
               onPress={() => setCookedModalVisible(true)}
               disabled={markingAsCooked}
               accessibilityRole="button"
+              testID={recipesTestIDs.markCookedButton}
             >
               {markingAsCooked ? (
                 <SuccessActivityIndicator size="small" />

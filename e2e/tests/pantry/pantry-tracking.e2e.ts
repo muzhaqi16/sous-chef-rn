@@ -10,18 +10,22 @@ import { element, by, waitFor, expect } from 'detox';
 import { expect as jestExpect } from '@jest/globals';
 import { PantryScreen } from '../../screens/PantryScreen';
 import { bootstrapAuthenticatedSession } from '../../helpers/auth';
+import { getAuthTokens } from '../../helpers/tokenProvider';
+import { launchAppWithFabricWorkaround } from '../../init';
 import { generateItemName } from '../../helpers/data';
 import { waitForModalClosed, waitForModalReady } from '../../helpers/waitFor';
 import {
   closeTrackingHome,
   localDate,
   openTrackingHome,
+  seedRecipe,
   seedStack,
   stackOnServer,
   type SeededStack,
   type TrackingHome,
 } from '../../helpers/trackingHome';
 import { pantryTestIDs } from '../../../src/features/pantry/testIDs';
+import { recipesTestIDs } from '../../../src/features/recipes/testIDs';
 import { homeTestIDs } from '../../../src/features/home/testIDs';
 import { todayTestIDs } from '../../../src/features/today/testIDs';
 import { kitTestIDs } from '../../../src/components/testIDs';
@@ -32,6 +36,9 @@ describe('Pantry tracking', () => {
   let home: TrackingHome;
   let eggs: SeededStack;
   let checked: SeededStack;
+  let cookEggs: SeededStack;
+  let cookMilk: SeededStack;
+  let recipeId: string;
 
   beforeAll(async () => {
     home = await openTrackingHome(generateItemName('Tracking'));
@@ -46,6 +53,24 @@ describe('Pantry tracking', () => {
       quantity: 10,
       unit: 'pc',
       expiresOn: localDate(-3),
+    });
+    cookEggs = await seedStack(home.pantryId, {
+      name: generateItemName('Cook eggs'),
+      quantity: 12,
+      unit: 'pc',
+    });
+    cookMilk = await seedStack(home.pantryId, {
+      name: generateItemName('Cook milk'),
+      quantity: 64,
+      unit: 'fl oz',
+    });
+    recipeId = await seedRecipe({
+      name: generateItemName('Scramble'),
+      servings: 2,
+      ingredients: [
+        { name: 'Eggs', itemId: cookEggs.itemId, quantity: 2, unit: 'pc' },
+        { name: 'Milk', itemId: cookMilk.itemId, quantity: 8, unit: 'fl oz' },
+      ],
     });
     await bootstrapAuthenticatedSession();
     // The app opens on the home it last showed; choosing the spec's home as
@@ -132,5 +157,48 @@ describe('Pantry tracking', () => {
       quantity: 6,
       unit: 'pc',
     });
+  });
+
+  it('COOK-01 cooks 4 servings of a 2-serving recipe once', async () => {
+    // A cold start with the link is the form Detox routes reliably; the app
+    // reopens on the spec's home, now its default.
+    const tokens = await getAuthTokens();
+    await launchAppWithFabricWorkaround({
+      newInstance: true,
+      url: `souschef://recipes/${recipeId}`,
+      launchArgs: {
+        detoxUserToken: tokens.accessToken,
+        detoxRefreshToken: tokens.refreshToken,
+        detoxUser: JSON.stringify(tokens.user),
+      },
+    });
+    await waitFor(element(by.id(recipesTestIDs.markCookedButton)))
+      .toBeVisible()
+      .withTimeout(WAIT);
+    await element(by.id(recipesTestIDs.markCookedButton)).tap();
+    await waitForModalReady(recipesTestIDs.cookConfirm, WAIT);
+    const servings = element(by.id(recipesTestIDs.cookServings));
+    await servings.replaceText('4');
+    await servings.tapReturnKey();
+    await element(by.id(recipesTestIDs.cookConfirm)).tap();
+    await waitForModalReady(recipesTestIDs.cookReviewConfirm, WAIT);
+    await element(by.id(recipesTestIDs.cookReviewConfirm)).tap();
+    await waitForModalClosed(recipesTestIDs.cookReviewConfirm, WAIT);
+
+    // 4 servings of a 2-serving recipe: twice its 2 eggs and 8 fl oz.
+    jestExpect(await stackOnServer(cookEggs.id)).toEqual({
+      quantity: 8,
+      unit: 'pc',
+    });
+    jestExpect(await stackOnServer(cookMilk.id)).toEqual({
+      quantity: 48,
+      unit: 'fl oz',
+    });
+    // A reload replays the launch link; a cold start without it shows the tabs.
+    await bootstrapAuthenticatedSession();
+    await new PantryScreen().navigateToTab();
+    await waitFor(element(by.id(pantryTestIDs.itemQuantity(cookEggs.id))))
+      .toHaveText('8 pc')
+      .withTimeout(WAIT);
   });
 });

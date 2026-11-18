@@ -6,6 +6,7 @@ import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Text } from '#components/atoms/Text';
 import { Sheet } from '#components/templates/Sheet';
@@ -107,6 +108,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
           onConfirm={handleConfirm}
           confirmLabel={t('markCookedModal.markCooked')}
           confirmDisabled={!!servingsError}
+          confirmTestID={recipesTestIDs.cookConfirm}
         />
       }
     >
@@ -127,6 +129,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
             count: defaultServings || 1,
           })}
           error={servingsError}
+          testID={recipesTestIDs.cookServings}
         />
       </View>
 
