@@ -33,6 +33,7 @@ interface Page {
 }
 
 const HOME: Entity = { __typename: 'Home', id: 'home-1' };
+const PANTRY: Entity = { __typename: 'Pantry', id: 'pantry-1' };
 const LIST: Entity = { __typename: 'ShoppingList', id: 'list-1' };
 
 /** A `<type>Connection` page whose end cursor is `after-<its last id>`. */
@@ -123,32 +124,29 @@ const connectionOn =
     };
   };
 
-const HOME_LISTS = gql`
-  query HomeLists($id: ID!, $after: String) {
-    home(id: $id) {
-      id
-      shoppingListsConnection(after: $after) {
-        edges {
-          node {
-            id
-            name
-          }
+const HOMES = gql`
+  query Homes($after: String) {
+    homes(after: $after) {
+      edges {
+        node {
+          id
+          name
         }
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        totalCount
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
   }
 `;
 
-const HOME_MEMBERS = gql`
-  query HomeMembers($id: ID!, $after: String) {
-    home(id: $id) {
+const PANTRY_LOCATIONS = gql`
+  query PantryLocations($id: ID!, $after: String) {
+    pantry(id: $id) {
       id
-      membersConnection(after: $after) {
+      storageLocationsConnection(after: $after) {
         edges {
           node {
             id
@@ -205,8 +203,8 @@ const PANTRY_ITEMS = gql`
 `;
 
 const RECIPES = gql`
-  query Recipes($after: String, $filters: RecipeFilters) {
-    recipes(after: $after, filters: $filters) {
+  query Recipes($after: String) {
+    recipes(after: $after) {
       edges {
         node {
           id
@@ -310,6 +308,9 @@ const LIST_ROWS_SELECTING_LIST = gql`
   }
 `;
 
+// No connection the API pages by cursor has rows that select their owner, so
+// this one pages `membersConnection` as the cache would, which never checks
+// arguments.
 const HOME_ROWS_SELECTING_HOME = gql`
   query HomeRows($after: String) {
     home(id: "home-1") {
@@ -334,19 +335,18 @@ const HOME_ROWS_SELECTING_HOME = gql`
   }
 `;
 
-const homeLists = connectionOn({
-  query: HOME_LISTS,
-  variables: { id: HOME.id },
-  parent: ['home', HOME],
-  field: 'shoppingListsConnection',
-  type: 'ShoppingList',
+const homes = connectionOn({
+  query: HOMES,
+  variables: {},
+  field: 'homes',
+  type: 'Home',
 });
-const homeMembers = connectionOn({
-  query: HOME_MEMBERS,
-  variables: { id: HOME.id },
-  parent: ['home', HOME],
-  field: 'membersConnection',
-  type: 'Membership',
+const pantryLocations = connectionOn({
+  query: PANTRY_LOCATIONS,
+  variables: { id: PANTRY.id },
+  parent: ['pantry', PANTRY],
+  field: 'storageLocationsConnection',
+  type: 'StorageLocation',
 });
 const listItems = connectionOn({
   query: LIST_ITEMS,
@@ -411,8 +411,11 @@ const ABC_LOADED = {
 
 describe('cache pagination integration', () => {
   describe.each([
-    ['Home.shoppingListsConnection (mergeConnectionByNodeId)', homeLists],
-    ['Home.membersConnection (mergeConnectionByNodeId)', homeMembers],
+    ['Query.homes (mergeConnectionByNodeId)', homes],
+    [
+      'Pantry.storageLocationsConnection (mergeConnectionByNodeId)',
+      pantryLocations,
+    ],
     ['Query.recipes (mergeConnectionByNodeId)', recipes],
     [
       'PantryItem.usageRecordsConnection (mergeConnectionByNodeId)',
@@ -466,7 +469,6 @@ describe('cache pagination integration', () => {
       { orderBy: 'NAME_ASC' },
       { orderBy: 'NAME_DESC' },
     ],
-    ['Query.recipes', recipes, {}, { filters: { category: 'DESSERT' } }],
   ])(
     'keeps each key argument of %s in its own entry',
     (_name, open, one, other) => {
@@ -516,9 +518,9 @@ describe('cache pagination integration', () => {
     });
   });
 
-  describe('Home.shoppingListsConnection', () => {
+  describe('Query.homes', () => {
     it("takes a refetched row's new fields and keeps the page after it", () => {
-      const lists = homeLists();
+      const lists = homes();
       lists.write(['a'], { hasNextPage: true });
       lists.write(['b'], { after: 'after-a' });
       lists.write([{ id: 'a', name: 'Renamed' }], { hasNextPage: true });
@@ -528,7 +530,7 @@ describe('cache pagination integration', () => {
     });
 
     it('reads the totalCount of the latest answer', () => {
-      const lists = homeLists();
+      const lists = homes();
       lists.write(['a', 'b'], { hasNextPage: true, totalCount: 5 });
       expect(lists.read()?.totalCount).toBe(5);
 
@@ -540,7 +542,7 @@ describe('cache pagination integration', () => {
     });
 
     it('reads the same object after a refetch that changes nothing', () => {
-      const lists = homeLists();
+      const lists = homes();
       lists.write(['a', 'b'], { hasNextPage: true, totalCount: 5 });
       const before = lists.read();
 
@@ -549,7 +551,7 @@ describe('cache pagination integration', () => {
     });
 
     it('reads a new object after a refetch that changes only totalCount', () => {
-      const lists = homeLists();
+      const lists = homes();
       lists.write(['a'], { hasNextPage: true, totalCount: 3 });
       const before = lists.read();
 

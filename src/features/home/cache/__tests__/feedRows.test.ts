@@ -4,7 +4,6 @@ import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 import { GetStorageLocationsDocument } from '#features/catalog/graphql/storageLocation.generated';
 import {
   dropHomeRows,
-  dropOrderedMembers,
   evictHomeRows,
   homeRowsHeld,
   listInHeldPantries,
@@ -21,19 +20,6 @@ const MEMBERS = gql`
     id
     membersConnection(first: 20) {
       totalCount
-      edges {
-        node {
-          id
-        }
-      }
-    }
-  }
-`;
-
-const OLDEST_MEMBERS = gql`
-  fragment TestOldestMembers on Home {
-    id
-    membersConnection(first: 20, orderBy: { createdAt: ASC }) {
       edges {
         node {
           id
@@ -195,27 +181,6 @@ describe('the rows a home lists', () => {
 });
 
 describe('a member another device added', () => {
-  it('drops a list in another order, read again when next asked', () => {
-    const cache = makeCache();
-    seedHome(cache, { members: ['member-1'] });
-    seedFragment(cache, {
-      id: `Home:${HOME}`,
-      fragment: OLDEST_MEMBERS,
-      data: {
-        __typename: 'Home',
-        id: HOME,
-        membersConnection: { edges: nodes(['member-1'], 'Membership') },
-      },
-    });
-
-    placed(cache, c => dropOrderedMembers(c, HOME));
-
-    expect(
-      cache.readFragment({ id: `Home:${HOME}`, fragment: OLDEST_MEMBERS }),
-    ).toBeNull();
-    expect(idsIn(membersOf(cache))).toEqual(['member-1']);
-  });
-
   it('leaves the list and the cache when it left', () => {
     const cache = makeCache();
     seedHome(cache, { members: ['member-1', 'member-2'] });

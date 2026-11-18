@@ -21,7 +21,7 @@ const catalogPage: FieldPolicy<StoreObject> = {
 };
 
 /**
- * A recipe merges field-wise; `recipes` keys on the whole `filters` input.
+ * A recipe merges field-wise; `recipes` pages are one list.
  * Ingredients are ONE list whatever arguments read them: a paged selection and
  * a local writer naming none hold the same rows.
  */
@@ -35,10 +35,7 @@ export const recipesTypePolicies: TypePolicies = {
   Query: {
     fields: {
       recipe: readByIdFromCache('Recipe'),
-      recipes: {
-        ...mergeConnectionByNodeId(),
-        keyArgs: ['filters'],
-      },
+      recipes: mergeConnectionByNodeId([]),
       // A ranking for one home: a new answer replaces the last, never merges,
       // and one home's never answers for another's. A screened ranking is its
       // own entry: an unscreened one must never answer for it. No `today`: a new

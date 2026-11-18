@@ -1,7 +1,6 @@
 import type { ApolloCache } from '@apollo/client';
 import {
   createRemoveFromParentConnectionUpdater,
-  isUnfilteredVariant,
   safeEvictMany,
   skipUnmatchedArgVariants,
   type ConnectionData,
@@ -31,9 +30,6 @@ const removeInvite = createRemoveFromParentConnectionUpdater(
   'invitesConnection',
   INVITE,
 );
-
-const skipOrdered = (storeFieldName: string): boolean =>
-  !isUnfilteredVariant(storeFieldName);
 
 /** The ids a home's lists of one kind hold, whichever variant lists them. */
 function idsListed(
@@ -100,20 +96,6 @@ export function homeRowsHeld(cache: ApolloCache, homeId: string): HomeRows {
       skipUnmatchedArgVariants({ homeId }),
     ),
   };
-}
-
-/** Every list of a home's members in another order, read again when next asked. */
-export function dropOrderedMembers(cache: ApolloCache, homeId: string): void {
-  const id = homeRef(cache, homeId);
-  if (!id) return;
-  cache.modify({
-    id,
-    fields: {
-      membersConnection(existing: unknown, { storeFieldName, DELETE }) {
-        return skipOrdered(storeFieldName) ? DELETE : existing;
-      },
-    },
-  });
 }
 
 /** The locations the held pantries list, whichever variant lists them. */

@@ -14,7 +14,6 @@ import { logger } from '#/utils/environment';
 import { useStore } from '#store';
 import {
   dropHomeRows,
-  dropOrderedMembers,
   evictHomeRows,
   homeRowIds,
   homeRowsHeld,
@@ -110,9 +109,6 @@ function applyChanges(
     else if (entityType === 'StorageLocation') removed.locations.push(id);
   }
   dropHomeRows(cache, homeId, removed);
-  if (changed.members.some(id => !held.members.includes(id))) {
-    dropOrderedMembers(cache, homeId);
-  }
   const joinMoved =
     joinBefore !== null &&
     page.changed.some(row => row.__typename === 'Home') &&

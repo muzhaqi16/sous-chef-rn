@@ -33,7 +33,7 @@ export const pantryTypePolicies: TypePolicies = {
           ];
         },
       },
-      storageLocationsConnection: mergeConnectionByNodeId(['orderBy']),
+      storageLocationsConnection: mergeConnectionByNodeId([]),
       // `today` only moves the expiring window; keying on it would empty a warm
       // cache at midnight.
       suggestions: {
