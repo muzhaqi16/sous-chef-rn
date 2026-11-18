@@ -24,7 +24,7 @@ const SCROLLERS = new Set([
   'BottomSheetFlatList',
 ]);
 
-const tagName = (node: ts.JsxElement | ts.JsxSelfClosingElement) =>
+const tagName = (node: ts.JsxElement | ts.JsxOpeningLikeElement) =>
   (ts.isJsxElement(node) ? node.openingElement : node).tagName.getText();
 
 /** Where a bar sits that moves with the content, or null where it holds. */
