@@ -40,7 +40,6 @@ import {
   BatchStatus,
   EntryImageSource,
   ItemCondition,
-  ExpiryKind,
 } from '#/graphql/generated/schemaTypes';
 import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
 import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
@@ -69,14 +68,9 @@ import {
 import { catalogHintOf } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
 import { commonStyles } from '#/styles/commonStyles';
-import { daysUntilExpiry } from '#domain/expiry';
+import { daysUntilExpiry, isExpiryEstimate } from '#domain/expiry';
 import { catalogKey } from '#domain/catalogRecipes';
 import { useToday } from '#hooks/app/useToday';
-
-/** A date the shelf-life rules estimated, rather than one stated. */
-const isEstimate = (kind: ExpiryKind | null | undefined): boolean =>
-  kind === ExpiryKind.PerishableEstimate ||
-  kind === ExpiryKind.LongLifeEstimate;
 
 /**
  * Extracted so `styles.useVariants` is called once per instance.
@@ -462,7 +456,7 @@ export const PantryItemDetail: React.FC<
                 isExpired={!!expiryInfo?.isExpired}
               />
               {/* A shelf-life guess says so, quietly; a stated date needs no label. */}
-              {expiryInfo && isEstimate(item.expiryKind) ? (
+              {expiryInfo && isExpiryEstimate(item.expiryKind) ? (
                 <Text role="caption" tone="tertiary">
                   {t('pantryItemDetail.expiryEstimated')}
                 </Text>

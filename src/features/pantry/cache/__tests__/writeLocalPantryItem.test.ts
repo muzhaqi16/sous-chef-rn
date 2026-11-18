@@ -3,11 +3,18 @@ import { makeCache } from '#/apollo/cache';
 import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
 import { writeLocalPantryItem } from '../writeLocalPantryItem';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
-import { StorageType } from '#/graphql/generated/schemaTypes';
+import { ExpiryKind, StorageType } from '#/graphql/generated/schemaTypes';
 import { LocalRefs_StorageLocationFragmentDoc } from '#features/catalog/cache/localRefs.generated';
 import { UseUpdatePantryItem_PantryItemFragmentDoc } from '#features/pantry/hooks/mutations/useUpdatePantryItem.generated';
 
 const NOW = '2026-10-30T10:00:00.000Z';
+
+const EXPIRY = gql`
+  fragment _WriteLocalExpiryProbe on PantryItem {
+    expiresOn
+    expiryKind
+  }
+`;
 
 /**
  * A local row fills in what the create cannot know and never what the device
@@ -230,6 +237,29 @@ describe('writeLocalPantryItem', () => {
       costPerUnit: null,
       totalCost: null,
     });
+  });
+
+  // IN-06 before the answer: a date typed on a new row is stated, and a row
+  // with none has no date and no kind until the server estimates one.
+  it.each([
+    ['2026-11-20', ExpiryKind.Label],
+    [null, null],
+  ])('reads a typed date %s as kind %s', (expiresOn, expiryKind) => {
+    const cache = makeCache();
+
+    writeLocalPantryItem(
+      cache,
+      'row-date',
+      { pantryId: 'pantry-1', itemName: 'Spinach', expiresOn },
+      NOW,
+    );
+
+    expect(
+      cache.readFragment({
+        id: 'PantryItem:row-date',
+        fragment: EXPIRY,
+      }),
+    ).toEqual({ __typename: 'PantryItem', expiresOn, expiryKind });
   });
 
   it('counts in the stated unit and guesses none', () => {

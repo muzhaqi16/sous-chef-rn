@@ -1,5 +1,6 @@
 import { differenceInCalendarDays } from 'date-fns';
 import type { Translate } from '#/i18n/types';
+import { ExpiryKind } from '#/graphql/generated/schemaTypes';
 import { fromDateKey } from '#/utils/dateUtils';
 
 /**
@@ -24,3 +25,10 @@ export const expiryLabel = (days: number, t: Translate): string => {
   if (days === 1) return t('labels.expiresTomorrow');
   return t('labels.expiresInDays', { count: days });
 };
+
+/** A date the shelf-life rules estimated, rather than one stated (`LABEL`). */
+export const isExpiryEstimate = (
+  kind: ExpiryKind | null | undefined,
+): boolean =>
+  kind === ExpiryKind.PerishableEstimate ||
+  kind === ExpiryKind.LongLifeEstimate;

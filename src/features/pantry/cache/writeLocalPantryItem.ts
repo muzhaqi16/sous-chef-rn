@@ -10,6 +10,7 @@ import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { localAmountLeft } from './stock';
+import { typedExpiryKind } from './restatedStack';
 import { WriteLocalPantryItem_RowFragmentDoc } from './writeLocalPantryItem.generated';
 import {
   NEUTRAL_LOCAL_PANTRY_ITEM,
@@ -131,6 +132,8 @@ export function writeLocalPantryItem(
         : null,
       storageState: row.storageState ?? undefined,
       expiresOn: row.expiresOn ?? null,
+      // A date on a new row was typed, so stated; none waits for the server's estimate.
+      expiryKind: typedExpiryKind(row.expiresOn ?? null),
       minQuantity: row.minQuantity ?? null,
       restockQuantity: row.restockQuantity ?? null,
       condition: row.condition ?? undefined,

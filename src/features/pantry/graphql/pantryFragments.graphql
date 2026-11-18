@@ -12,6 +12,8 @@ fragment PantryItemBatchFragment on PantryItemBatch {
   status
   expiresOn
   expiresAtIsManual
+  # A stated date or a shelf-life estimate; null with no date.
+  expiryKind
   costPerUnit
   totalCost
   # What this batch's cost figures are in; null on a batch carrying no cost.

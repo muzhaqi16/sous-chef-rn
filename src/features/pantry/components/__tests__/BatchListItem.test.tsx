@@ -8,9 +8,11 @@ import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtu
 import { makeCache } from '#/apollo/cache';
 import {
   BatchStatus,
+  ExpiryKind,
   UnitSystem,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n';
 import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { BatchListItem } from '../BatchListItem';
 import { BatchListItem_PantryItemFragmentDoc } from '../BatchListItem.generated';
@@ -33,6 +35,7 @@ const batch = (quantity: number): PantryItemBatchFragment => ({
   status: BatchStatus.Active,
   expiresOn: null,
   expiresAtIsManual: false,
+  expiryKind: null,
   costPerUnit: null,
   totalCost: null,
   notes: null,
@@ -81,6 +84,24 @@ const stackCache = (
 };
 
 describe('BatchListItem', () => {
+  // IN-06: a shelf-life estimate says so; a date stated on a label does not.
+  it.each([
+    [ExpiryKind.PerishableEstimate, true],
+    [ExpiryKind.LongLifeEstimate, true],
+    [ExpiryKind.Label, false],
+  ])('marks a %s date as estimated: %s', (expiryKind, estimated) => {
+    renderWithApollo(
+      <BatchListItem
+        batch={{ ...batch(1), expiresOn: '2099-01-10', expiryKind }}
+      />,
+      { cache: stackCache({}) },
+    );
+
+    expect(
+      screen.queryByText(t('pantryItemDetail.expiryEstimated')) !== null,
+    ).toBe(estimated);
+  });
+
   it('renders a fractional batch quantity as a cooking fraction', () => {
     renderWithApollo(<BatchListItem batch={batch(1.25)} />, {
       cache: stackCache({ unit: 'cup' }),

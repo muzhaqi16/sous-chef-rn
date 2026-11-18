@@ -10,6 +10,7 @@ import {
   StockConfidence,
 } from '#/graphql/generated/schemaTypes';
 import { pantryTrackingContext as context } from '#/test-utils/fixtures/pantryTrackingFixtures';
+import { useStore } from '#store';
 import { useStockCheck } from '../useStockCheck';
 import {
   RecordPantryStockCheckDocument,
@@ -92,4 +93,39 @@ it('sends each answer against the version seen, and hands back a stale row', asy
     ],
   });
   expect(answered).toEqual({ status: 'applied', refused: [milk] });
+});
+
+// 4.4: evidence the device does not hold is never stated as a level or a list.
+it('reads a stack with no confidence answer as unknown, never HIGH', async () => {
+  const rows = recordMock(StockToConfirmDocument, {
+    data: {
+      pantry: {
+        id: 'P1',
+        stockToConfirm: [{ ...stack('eggs', 1), stockConfidence: null }],
+      },
+    },
+  });
+  const { result } = renderHookWithApollo(() => useStockCheck(), {
+    operationMocks: [rows.mock],
+  });
+  await drainTimers();
+
+  expect(result.current.rows).toEqual([
+    expect.objectContaining({ id: 'eggs', level: null, reasons: [] }),
+  ]);
+});
+
+it('is offline, never an empty check, when the device holds no answer', async () => {
+  useStore.setState({ isOnline: false, apiReachable: false });
+  const rows = recordMock(StockToConfirmDocument, {
+    error: new Error('Network request failed'),
+  });
+  const { result } = renderHookWithApollo(() => useStockCheck(), {
+    operationMocks: [rows.mock],
+  });
+  await drainTimers();
+
+  expect(result.current.rows).toEqual([]);
+  expect(result.current.state).toBe('offline');
+  useStore.setState({ isOnline: true, apiReachable: true });
 });

@@ -46,6 +46,13 @@ Checked against `openspec/changes` on 2026-11-16. Each needs one owner before an
 
 Dependent client work builds against dev's schema and stays behind the `pantryTrackingFoundation` capability until production serves C1–C5; no route falls back to another stock-changing mutation on an old server. Tasks 3.1–3.5 are met by the tests above. Task 3.6 closes when the published package version is recorded. A unitless whole count is packages only where an add names no unit (a receipt's "1"); where a list line or stack states a unit, as on a list move or a restock, it means that unit.
 
+## Schema version and rollout
+
+- **Reads need dev's schema.** Documents select C1–C5 fields: `expiryKind` (in `PantryItemReaders` and the batch fragment), `MealPlanItem.cookingLogId`, `markRecipeAsCooked`'s `mealPlanItem` and cook rows, and the stock check's fields. A build from this tree validates only against a server at hash `b30985d8…` or later, so the release check holds a store build until production serves it.
+- **Writes queued by an older build replay unchanged.** Every input only gained optional fields (`totalPaid` optional, `existingPurchase`, `checkedAt` and the per-row version, `mealPlanItemId` with its version). A cook queued before C4 names no meal and completes none. Nothing rewrites an enqueued write.
+- **Entry points stay behind `pantryTrackingFoundation`.** Off, a planned meal completes through `updateMealPlanItem` as before, and Pantry offers no stock check. Roll back by switching it off: queued work settles through its registered local writes either way.
+- **Missing evidence is unknown, never stated.** No expiry kind is no date (a date typed on a row made offline reads `LABEL`). A stack with no confidence answer has no level, and a check the device never read is offline, not empty. An unread price stays null, never zero.
+
 ## Client progress
 
-As of 2026-11-17: tasks 1.1–1.2, 2.1–2.8, 5.1, 6.2 and 6.4 are done; 1.3 continues as each surface lands. Every intake route (barcode, restock, receipt review, list move) states its amount through the intake resolver, and the six-can example holds on each. A receipt line whose price went unread is sent with no total (C1). Device acceptance is iOS only on this machine (Tani, 2026-11-17); the full suite and whole-tree checks run in CI, not here.
+As of 2026-11-17: tasks 1.1–2.8, 4.2–4.4, 5.1–5.5, 6.1–6.6 and 7.1–7.6 are done. Every intake route (barcode, restock, receipt review, list move) states its amount through the intake resolver, and the six-can example holds on each. A receipt line whose price went unread is sent with no total (C1). A recipe is cooked one way from its page or a planned meal, the meal completed in the cook itself (C4), and a cook reports what each stack recorded. Device acceptance is iOS only on this machine (Tani, 2026-11-17); the full suite and whole-tree checks run in CI, not here. Tasks 3.6 and 4.1 wait for the published package.
