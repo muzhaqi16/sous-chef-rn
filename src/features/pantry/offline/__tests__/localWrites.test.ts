@@ -22,6 +22,7 @@ import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { errorService } from '#/services/errorService';
 import {
   BatchStatus,
+  ExpiryKind,
   ItemCondition,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
@@ -864,6 +865,7 @@ describe('dating a stack', () => {
                 status: BatchStatus.Active,
                 expiresOn: '2026-10-01',
                 expiresAtIsManual: false,
+                expiryKind: ExpiryKind.PerishableEstimate,
               },
             },
             {
@@ -932,6 +934,29 @@ describe('dating a stack', () => {
         },
       },
     ],
+  });
+
+  // IN-06: a date the household types is a label's, on the stack and on each
+  // batch it moves, before the answer.
+  it('reads a typed date as a label date at once', () => {
+    const device = withBatches();
+
+    update(device, { expiresOn: '2026-11-25' });
+
+    const [active] =
+      device.cache.readQuery({
+        query: GetPantryItemBatchesDocument,
+        variables: { pantryItemId: 'held' },
+        optimistic: true,
+      })?.pantryItemBatchesConnection.edges ?? [];
+    expect(active?.node).toMatchObject({
+      id: 'active',
+      expiresOn: '2026-11-25',
+      expiryKind: ExpiryKind.Label,
+    });
+    expect(device.cache.extract(true)['PantryItem:held']).toMatchObject({
+      expiryKind: ExpiryKind.Label,
+    });
   });
 
   it('shows the date, and moves every active batch to it, at once', () => {
