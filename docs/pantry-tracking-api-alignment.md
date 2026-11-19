@@ -5,7 +5,9 @@ Checked November 17, 2026 for `strengthen-pantry-tracking-and-consumption`, agai
 ## Evidence boundary
 
 - C1–C5 shipped on the API's dev branch as `align-pantry-tracking-contracts`, and by Tani's call (2026-11-17) are released to dev only. Dev `:4000` serves origin/dev `f98511d7d`, `/health` schema hash `b30985d889a96edcae51a37323f7631e328a59d39bf31ccb03d3f818adb5d693`. Migrations `20261279` (cook link), `20261281` (expiry kind) and `20261283` (receipt currency) are on test and dev only.
-- `@muzhaqi16/api-schema` is not published for that hash: the newest version, `4.10.0-sd2133f2adc55315d`, was built from main before any of C1–C5. The package publishes with the next production build, so the app generates from dev's schema (`src/graphql/generated/schema.graphql`) until then, and its pin stays at `4.9.7-s2e9ce2b66c5adc16`. The release check holds a store build until production serves the contracts.
+- C1–C5 reached API main in #478 (`25c3ce62d`, 4.10.1), and its production build published `@muzhaqi16/api-schema@4.10.1-sadfb7c72fa062417` on 2026-11-18, which holds all five. Production still serves 4.10.0 (`/health` hash `d2133f2adc55315d…`, none of C1–C5) until it is redeployed, which also applies migrations `20261261`–`20261292`. The release check holds a store build until production serves them.
+- Backend acceptance: API CI run 44335719325 (dev `51655d962`, 2026-11-18) passed 3938 integration and 8079 unit tests, among them the C1–C5 suites: `receipt-check-in.test.ts` (C1, C2), `pantry-stock-check.test.ts` (C3), `meal-plan-completion-idempotency.test.ts` and `mark-recipe-cooked-deduction.test.ts` (C4), `intake-expiry-default.test.ts` and `expiryKind.test.ts` (C5).
+- Clients against 4.10.1: every operation of dev and of `stg-v4.10.2` (293 each) validates. The 4.10.0 store builds fail six (`CreateReceiptCheckIn` and `GetItemPurchaseHistory` select `Purchase.user`; the three pantry analytics reads; `MoveShoppingListItem`), all removed fields; they sit below the 4.10.2 client floor. No work in this checkout changed the API repository.
 - Implementing commits and tests were read on origin/dev, read-only; the API's tests were not run from here. Its CI reported unit and smoke green on dev.
 
 ## Contract gates
@@ -66,7 +68,7 @@ Run 2026-11-18 against dev `:4000` (hash `b30985d8…`) as two member accounts o
 
 The run was a one-off script against the dev API, kept outside the repository.
 
-## Device acceptance on iOS (task 8.4, in progress)
+## Device acceptance on iOS (task 8.4)
 
 iOS simulator (iPhone 18 Pro, iOS 27), debug build on dev with `pantryTrackingFoundation=on`, 2026-11-18. Each outcome below was read back from the server.
 
@@ -77,7 +79,7 @@ iOS simulator (iPhone 18 Pro, iOS 27), debug build on dev with `pantryTrackingFo
 - **Localized copy:** in Albanian the compact consume sheet fits with nothing cut ("Konsumo artikullin", "Mbetet: 7 copë", "Përdor të gjitha"). Switching language exposed a bug, fixed in `d74c1ee19`: rows the change feed held kept the old language's unit labels ("10 copë" back in English) until each row changed. A switch now reads every held scope in full; on the device, every row followed both ways without a reload.
 - **Field and keyboard:** the amount field stays above the keyboard. Finding: every form sheet renders its header (Cancel/Confirm) inside its scrolling content, 18 of them. When a focused field scrolls into view, the header goes up under the status bar, so Confirm takes a tap to close the keyboard first. This is a kit change (a fixed header slot in `Sheet`), not one sheet's.
 - **CHECK, five rows:** six stacks 3 days past their date (LOW, `PAST_EXPIRY`). The banner offered five, in the server's order, and the sixth stayed reachable once those were answered. Answers were Threw out, Some left 4, Used up and Still have, with one row left unanswered. Save was enabled and the rows moved at once (0, 4, 0, 10). The server agreed (0, 4, 0, 10), and the unanswered row was untouched. Bug fixed in `fb0cf6af9`: the banner kept "5 items to check" until the next resync. The check's answer now restates the list, and a queued check drops the stacks it emptied; on the device the count went 4 → 3 within 0.2 s of Save. A confirmed stack past its date stays in the check, as design §7 allows. The answer chips scroll sideways in English, and the last chip ends inside the gutter.
-- **Not yet observed:** offline banners. The simulator reaches the API on localhost, so only stopping the API makes it unavailable, and that waits on a go.
+- **Offline, a partial package and five rows again (2026-11-18, iPhone 17, through a local proxy stopped to go offline):** with the API unreachable, a crossed-out cloud appears in the header after its dwell ("Can't reach the server"); a use of 8 fl oz showed at once as 32 fl oz, "8 fl oz waiting to sync", with a badge of 1, and settled at 32 once the API returned. Some left on a carton offered the count and "What they hold, in fl oz"; 1 carton holding 40 fl oz was stored as 40 fl oz, 0.625 held, one container, none unopened, with no use or waste (CHECK-04). Bug fixed in `4dd344c84`: on that opened carton the use sheet's remainder treated fl oz as cartons ("Exceeds available (40 fl oz)" offline, 30 left of 32 online).
 
 ## Schema version and rollout
 
@@ -88,4 +90,4 @@ iOS simulator (iPhone 18 Pro, iOS 27), debug build on dev with `pantryTrackingFo
 
 ## Client progress
 
-As of 2026-11-17: tasks 1.1–2.8, 4.2–4.4, 5.1–5.5, 6.1–6.6 and 7.1–7.6 are done. Every intake route (barcode, restock, receipt review, list move) states its amount through the intake resolver, and the six-can example holds on each. A receipt line whose price went unread is sent with no total (C1). A recipe is cooked one way from its page or a planned meal, the meal completed in the cook itself (C4), and a cook reports what each stack recorded. Device acceptance is iOS only on this machine (Tani, 2026-11-17); the full suite and whole-tree checks run in CI, not here. Tasks 3.6 and 4.1 wait for the published package.
+As of 2026-11-17: tasks 1.1–2.8, 4.2–4.4, 5.1–5.5, 6.1–6.6 and 7.1–7.6 are done. Every intake route (barcode, restock, receipt review, list move) states its amount through the intake resolver, and the six-can example holds on each. A receipt line whose price went unread is sent with no total (C1). A recipe is cooked one way from its page or a planned meal, the meal completed in the cook itself (C4), and a cook reports what each stack recorded. Device acceptance is iOS only on this machine (Tani, 2026-11-17); the full suite and whole-tree checks run in CI, not here. Task 3.6 closed on 2026-11-18 with the published package above; 4.1 moves the pin to it, and 8.6 checks the rollout once production serves 4.10.1.
