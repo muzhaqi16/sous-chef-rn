@@ -52,8 +52,6 @@ import { firstNonBlank } from '#/utils/firstNonBlank';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 import { fromDateKey } from '#/utils/dateUtils';
-import { useReadingSystem } from '#hooks/settings/useReadingSystem';
-import { currentReading, type ReadingSystem } from '#domain/measure';
 
 export interface PantryItemFormData {
   itemName?: string;
@@ -113,37 +111,21 @@ const trackingUnitOf = (
   return { id: unit.id, name: unit.name, symbol: unit.symbol, type: unit.type };
 };
 
-// The size opens as the detail reads it. The API re-expresses the batches in a
-// typed unit of the same kind, and refuses the tracking unit for a size.
+// The size opens as stored, not as a reading rounds it, so a form saved with
+// the size untouched leaves it as it was.
 const packageSizeFields = (
   item: PantryItemForm_PantryItemFragment,
-  system: ReadingSystem,
 ): Pick<
   PantryItemFormData,
   'netWeight' | 'netWeightUnit' | 'netWeightUnitId'
-> => {
-  const reading = currentReading(
-    item.packageSize,
-    { value: item.netWeight, unitId: item.netWeightUnit?.id },
-    system,
-  );
-  if (reading && reading.unitId !== item.unit.id) {
-    return {
-      netWeight: formatNumberForInput(reading.value),
-      netWeightUnit: unitLabel(reading),
-      netWeightUnitId: reading.unitId,
-    };
-  }
-  return {
-    netWeight: formatNumberForInput(item.netWeight),
-    netWeightUnit: unitLabel(item.netWeightUnit),
-    netWeightUnitId: item.netWeightUnit?.id ?? '',
-  };
-};
+> => ({
+  netWeight: formatNumberForInput(item.netWeight),
+  netWeightUnit: unitLabel(item.netWeightUnit),
+  netWeightUnitId: item.netWeightUnit?.id ?? '',
+});
 
 const formValuesFromItem = (
   item: PantryItemForm_PantryItemFragment,
-  system: ReadingSystem,
 ): PantryItemFormData => ({
   itemName: item.itemName,
   quantityInput: formatQuantityForInput(editedAmount(item).quantity) || '1',
@@ -151,7 +133,7 @@ const formValuesFromItem = (
   minQuantity: decimalQuantityInput(item.minQuantity),
   restockQuantity: decimalQuantityInput(item.restockQuantity),
   brand: item.brand?.name ?? '',
-  ...packageSizeFields(item, system),
+  ...packageSizeFields(item),
   storageState: item.storageState,
   condition: item.condition,
   location: item.storageLocation?.name ?? '',
@@ -213,7 +195,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   });
 
   const { resolveUnitId } = useResolveUnit();
-  const readingSystem = useReadingSystem();
 
   const {
     control,
@@ -227,13 +208,13 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     // `values` lands in an effect that runs before this component's own
     // `useWatch` subscribes, so an item cached at mount seeds the defaults too.
     defaultValues: existingPantryItem
-      ? formValuesFromItem(existingPantryItem, readingSystem)
+      ? formValuesFromItem(existingPantryItem)
       : EMPTY_FORM_VALUES,
     // Re-seeded in RHF's effect whenever the cached item changes; a `reset`
     // during render updates every mounted `Controller` mid-render, which React
     // refuses. A field the user has touched keeps what they typed.
     values: existingPantryItem
-      ? formValuesFromItem(existingPantryItem, readingSystem)
+      ? formValuesFromItem(existingPantryItem)
       : undefined,
     resetOptions: { keepDirtyValues: true },
     mode: 'onChange',

@@ -7259,7 +7259,10 @@ type MealTypeNutrition {
 }
 
 """
-An amount as stored, and as it reads in each unit system. The readings are
+An amount as stored, and as it reads in each unit system. A stored amount
+reads in its own unit in both systems: what a person typed or a label
+printed is never converted, so 500 mL reads 500 mL and 5 lb reads 5 lb. Only
+a label that prints both systems gives each its own figure. The readings are
 the same for every viewer: a client shows metric or imperial by its own
 setting, so a change of setting needs no new request.
 """
@@ -7270,14 +7273,14 @@ type Measure {
   """
   declared: DeclaredQuantity
   """
-  The amount in imperial (US customary) units, by the same rule as metric.
+  The amount for an imperial (US customary) reader, by the same rule as metric.
   """
   imperial: MeasureReading!
   """
-  The amount in metric units: the label's own metric figure where declared
-  states one, else climbed from its base to the largest unit that keeps it
-  readable, rounded at that unit's display step. A count, or a unit both
-  systems use (tbsp), reads as stored.
+  The amount for a metric reader: the label's own metric figure where
+  declared states one, else the stored figure in its own unit, rounded at its
+  display step. A figure below that step reads lower on its own system's
+  ladder; zero reads 0 in its own unit.
   """
   metric: MeasureReading!
   """The unit value is stored in."""

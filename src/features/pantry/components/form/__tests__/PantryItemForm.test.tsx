@@ -18,10 +18,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
-import {
-  asAbbreviation,
-  readingAsAbbreviation,
-} from '#/test-utils/fixtures/unitLabels';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { useStore } from '#store';
 import { t } from '#/i18n';
 import { fromDateKey } from '#/utils/dateUtils';
@@ -150,7 +147,6 @@ const flour: Stack = {
   displayUnit: null,
   netWeight: null,
   netWeightUnit: null,
-  packageSize: null,
   storageState: StorageState.Ambient,
 };
 
@@ -473,24 +469,13 @@ describe('the stack the form opens on', () => {
   });
 });
 
-// The size opens as the detail reads it, so what is saved is what was typed.
-describe('the package size, in the user’s units', () => {
-  type Reading = NonNullable<NonNullable<Stack['packageSize']>['metric']>;
-
-  const reading = (value: number, id: string, symbol: string): Reading =>
-    readingAsAbbreviation({
-      __typename: 'MeasureReading',
-      value,
-      unitId: id,
-      symbol,
-      displayAsFraction: false,
-      type: UnitType.Weight,
-    });
-
-  // A 3 lb honey whose size the stack stores as 1360.78 g.
-  const honey = (trackingUnitId = 'unit-jar'): Stack => ({
+// The size opens as stored, never as a reading rounds it, so a form saved with
+// the size untouched leaves it as it was.
+describe('the package size', () => {
+  // A honey whose size the stack stores as 1360.78 g.
+  const honey: Stack = {
     ...flour,
-    unit: { ...KILOGRAM, id: trackingUnitId },
+    unit: { ...KILOGRAM, id: 'unit-jar' },
     netWeight: 1360.78,
     netWeightUnit: asAbbreviation({
       __typename: 'Unit',
@@ -498,40 +483,20 @@ describe('the package size, in the user’s units', () => {
       name: 'gram',
       symbol: 'g',
     }),
-    packageSize: {
-      __typename: 'Measure',
-      value: 1360.78,
-      unitId: 'unit-g',
-      metric: reading(1.36, 'unit-kg', 'kg'),
-      imperial: reading(3, 'unit-lb', 'lb'),
-    },
-  });
+  };
 
-  it.each([
-    { system: UnitSystem.Imperial, value: '3', unit: 'lb' },
-    { system: UnitSystem.Metric, value: '1.36', unit: 'kg' },
-  ])(
-    'opens a $system user on $value $unit',
-    async ({ system, value, unit }) => {
-      await openForm({ stack: honey(), system });
+  it.each([UnitSystem.Imperial, UnitSystem.Metric])(
+    'opens a %s user on the stored 1360.78 g',
+    async system => {
+      await openForm({ stack: honey, system });
       goTo('Product');
 
       expect(field(localizeNumericHint(t('labels.eG145')))).toHaveDisplayValue(
-        value,
+        '1360.78',
       );
-      expect(field(t('labels.ozGMl'))).toHaveDisplayValue(unit);
+      expect(field(t('labels.ozGMl'))).toHaveDisplayValue('g');
     },
   );
-
-  it('opens on the stored figure where the reading is the tracking unit', async () => {
-    await openForm({ stack: honey('unit-lb'), system: UnitSystem.Imperial });
-    goTo('Product');
-
-    expect(field(localizeNumericHint(t('labels.eG145')))).toHaveDisplayValue(
-      '1360.78',
-    );
-    expect(field(t('labels.ozGMl'))).toHaveDisplayValue('g');
-  });
 });
 
 describe('where it is kept', () => {

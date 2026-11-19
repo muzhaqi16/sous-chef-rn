@@ -86,8 +86,8 @@ export function useQuantityEditModal(
   const selectedItemRaw =
     selectedItemId && liveItemComplete ? liveItem : fallbackItem;
 
-  // The sheet opens on the amount as the row reads it (0.91 kg for a 2 lb line
-  // to a metric reader), and saves what is typed in that unit.
+  // The sheet opens on the amount as the row reads it, and saves what is typed
+  // in that unit; an untouched sheet saves nothing.
   const readingSystem = useReadingSystem();
   const shown =
     selectedItemId && liveItemComplete
