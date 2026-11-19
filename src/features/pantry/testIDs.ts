@@ -6,6 +6,8 @@ const ITEM = 'pantry-item';
  */
 export const pantryTestIDs = {
   stockCheckEntry: 'pantry-stock-check-entry',
+  /** A batch row's use, taken from that batch alone. */
+  batchUse: (batchId: string) => `pantry-batch-use-${batchId}`,
   stockCheckSave: 'pantry-stock-check-save',
   stockCheckRow: (pantryItemId: string) => `pantry-stock-check-${pantryItemId}`,
   stockCheckLeft: (pantryItemId: string) =>

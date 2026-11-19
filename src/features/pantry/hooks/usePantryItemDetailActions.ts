@@ -10,6 +10,9 @@ import { createShoppingListRow } from '#features/shoppingList/cache/createShoppi
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPackageSize } from '#features/pantry/hooks/mutations/useCorrectPackageSize';
+import { useRecordPantryUsage } from '#features/pantry/hooks/mutations/useRecordPantryUsage';
+import type { SettleStatus } from '#/apollo/utils/settleMutation';
+import type { UsagePurpose } from '#/graphql/generated/schemaTypes';
 import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePantryItemMutations';
 import {
   formatQuantityForDisplay,
@@ -66,6 +69,16 @@ export interface UsePantryItemDetailActionsResult {
   /** The batch whose package size is being corrected, if any. */
   correctingBatchId: string | null;
   setCorrectingBatchId: (batchId: string | null) => void;
+  /** The batch a use is being taken from, if any. */
+  usingBatchId: string | null;
+  setUsingBatchId: (batchId: string | null) => void;
+  handleConfirmBatchUse: (
+    quantityUsed: number,
+    quantityInput: string,
+    purpose: UsagePurpose,
+    notes: string,
+    usageUnitId?: string,
+  ) => Promise<SettleStatus | undefined>;
   handleDelete: () => void;
   handleAddToShoppingList: () => Promise<void>;
   handleDiscardExpired: () => void;
@@ -100,6 +113,7 @@ export function usePantryItemDetailActions({
   const [correctingBatchId, setCorrectingBatchId] = useState<string | null>(
     null,
   );
+  const [usingBatchId, setUsingBatchId] = useState<string | null>(null);
 
   const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -133,6 +147,7 @@ export function usePantryItemDetailActions({
 
   const { adjustQuantity } = useAdjustPantryItemQuantity();
   const { correctPackageSize } = useCorrectPackageSize();
+  const { recordUsage } = useRecordPantryUsage();
 
   const confirmDelete = async () => {
     if (!resolvedPantryId) {
@@ -267,12 +282,36 @@ export function usePantryItemDetailActions({
     });
   };
 
+  // Taken from the batch picked, which the server never swaps for another.
+  const handleConfirmBatchUse = async (
+    quantityUsed: number,
+    _quantityInput: string,
+    purpose: UsagePurpose,
+    notes: string,
+    usageUnitId?: string,
+  ): Promise<SettleStatus | undefined> => {
+    if (!usingBatchId) return undefined;
+    const status = await recordUsage({
+      pantryItemId: itemId,
+      quantity: quantityUsed,
+      usageUnitId,
+      usage: { purpose, notes: notes || undefined },
+      batchId: usingBatchId,
+      fallback: t('errors.recordUsageFailedRetry'),
+    });
+    if (status !== 'failed') setUsingBatchId(null);
+    return status;
+  };
+
   return {
     addToListStatus,
     adjustModalVisible,
     setAdjustModalVisible,
     correctingBatchId,
     setCorrectingBatchId,
+    usingBatchId,
+    setUsingBatchId,
+    handleConfirmBatchUse,
     handleDelete,
     handleAddToShoppingList,
     handleDiscardExpired,

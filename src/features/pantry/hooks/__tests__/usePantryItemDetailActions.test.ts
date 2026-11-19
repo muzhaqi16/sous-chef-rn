@@ -18,6 +18,7 @@ import {
   BatchStatus,
   ErrorCode,
   UnitType,
+  UsagePurpose,
 } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
@@ -25,6 +26,7 @@ import {
   AdjustPantryItemQuantityDocument,
   ConvertExpiredToWasteDocument,
   CorrectPantryItemPackageSizeDocument,
+  CreatePantryItemUsageDocument,
   DeletePantryItemDocument,
   GetPantryItemBatchesDocument,
 } from '#features/pantry/graphql/pantry.generated';
@@ -606,6 +608,38 @@ describe('a recount', () => {
     expect(adjust.fired[0]).toMatchObject({
       input: { newQuantityUnitId: 'unit-lb' },
     });
+  });
+});
+
+// A batch picked for a use is the one drawn, never another in the usual order.
+describe('a use from one batch', () => {
+  it('takes it from that batch, and closes once taken', async () => {
+    const use = recordMock(CreatePantryItemUsageDocument, {
+      data: { createPantryItemUsage: null },
+    });
+    const { result } = renderActions({}, { answers: [use] });
+    act(() => result.current.setUsingBatchId('batch-2'));
+
+    let status: string | undefined;
+    await act(async () => {
+      status = await result.current.handleConfirmBatchUse(
+        1,
+        '1',
+        UsagePurpose.Cooking,
+        '',
+      );
+    });
+
+    expect(status).not.toBe('failed');
+    expect(use.fired[0]).toMatchObject({
+      input: {
+        pantryItemId: 'item-1',
+        amount: { quantity: 1 },
+        purpose: 'COOKING',
+        targetBatchId: 'batch-2',
+      },
+    });
+    expect(result.current.usingBatchId).toBeNull();
   });
 });
 

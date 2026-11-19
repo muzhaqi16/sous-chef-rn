@@ -790,6 +790,7 @@
     "revokeInvite": "Revoca invito",
     "openBatch": "Apri lotto",
     "wasteBatch": "Registra il lotto come sprecato",
+    "useFromBatch": "Usa da questo lotto",
     "quickAdd": "Aggiungi {{name}} rapidamente",
     "removeNamed": "Rimuovi {{name}}",
     "editNamed": "Modifica {{name}}",
