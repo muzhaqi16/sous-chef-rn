@@ -24,7 +24,10 @@ globalThis.cancelIdleCallback = (handle: number): void => {
 import { makeCache } from '#/apollo/cache';
 import { act } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import type { GetStorageLocationsQuery } from '#features/catalog/graphql/storageLocation.generated';
 import {
@@ -557,6 +560,28 @@ describe('useStorageLocationManagement', () => {
       // Refusing offline would return false and toast "Not available offline".
       expect(outcome).toBe(true);
       expect(mockToastError).not.toHaveBeenCalledWith('Not available offline');
+    });
+
+    // The delete is held unsent: what the list shows is the device's own effect.
+    it('takes a location deleted offline off the list at once, the rest still read', async () => {
+      const held = recordMock(DeleteStorageLocationDocument, { held: true });
+      const { result } = renderHookWithApollo(
+        () => useStorageLocationManagement('home-1'),
+        { operationMocks: [buildGetLocationsMock(), held.mock] },
+      );
+      await drainTimers();
+      offline();
+
+      act(() => {
+        void result.current.deleteLocation('loc-1');
+      });
+      await drainTimers();
+
+      expect(result.current.locations.map(location => location.id)).toEqual([
+        'loc-2',
+      ]);
+      expect(result.current.offline).toBe(false);
+      expect(result.current.errorMessage).toBeNull();
     });
 
     it('setDefaultLocation moves the flag while offline', async () => {

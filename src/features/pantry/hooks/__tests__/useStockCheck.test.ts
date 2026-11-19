@@ -21,10 +21,11 @@ import {
   StockToConfirmDocument,
 } from '../useStockCheck.generated';
 
+let mockPantry = { id: 'P1', name: 'Kitchen', home: 'H1' };
 jest.mock('#features/pantry/hooks/useCurrentPantry', () => ({
   useCurrentPantry: () => ({
-    pantry: { id: 'P1', name: 'Kitchen' },
-    currentHome: { id: 'H1' },
+    pantry: { id: mockPantry.id, name: mockPantry.name },
+    currentHome: { id: mockPantry.home },
   }),
 }));
 jest.mock('#hooks/app/useToday', () => ({ useToday: () => '2026-11-15' }));
@@ -325,6 +326,32 @@ it("reads an earlier day's confidence as unknown until today's answer arrives", 
     }),
   ]);
   useStore.setState({ isOnline: true, apiReachable: true });
+});
+
+// REL-03: another home's check is never this one's, however alike its stacks.
+it("shows no other pantry's check after a switch, while this one's is read", async () => {
+  mockPantry = { id: 'P1', name: 'Kitchen', home: 'H1' };
+  const p1 = recordMock(StockToConfirmDocument, {
+    data: { pantry: { id: 'P1', stockToConfirm: [stack('P1-eggs', 2)] } },
+    match: vars => vars.pantryId === 'P1',
+  });
+  const p2 = recordMock(StockToConfirmDocument, {
+    held: true,
+    match: vars => vars.pantryId === 'P2',
+  });
+  const { result, rerender } = renderHookWithApollo(() => useStockCheck(), {
+    operationMocks: [p1.mock, p2.mock],
+  });
+  await drainTimers();
+  expect(result.current.rows.map(row => row.id)).toEqual(['P1-eggs']);
+
+  mockPantry = { id: 'P2', name: 'Cabin', home: 'H2' };
+  rerender({});
+  await drainTimers();
+
+  expect(p2.fired[0]).toMatchObject({ pantryId: 'P2' });
+  expect(result.current.rows).toEqual([]);
+  mockPantry = { id: 'P1', name: 'Kitchen', home: 'H1' };
 });
 
 it('is offline, never an empty check, when the device holds no answer', async () => {

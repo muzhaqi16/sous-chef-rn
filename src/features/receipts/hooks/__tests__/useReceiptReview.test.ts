@@ -652,7 +652,23 @@ describe('useReceiptReview', () => {
   // IN-04: the milk already moved to the pantry gets its receipt: the line
   // fills that purchase in, records it, and adds no stock or second purchase.
   it('sends a line picked as the receipt for an earlier purchase as that purchase', async () => {
-    const { choose, checkIn, addChosen, cache } = await setup();
+    const { choose, checkIn, addChosen, cache } = await setup({
+      // The milk that purchase stocked, once: one arrival, nothing added since.
+      held: {
+        pantry: {
+          id: 'p1',
+          itemsConnection: connectionOf([
+            {
+              id: 'p1-milk',
+              itemName: 'Whole milk',
+              item: { id: 'cat-milk' },
+              quantity: 1,
+              activeBatchCount: 1,
+            },
+          ]),
+        },
+      },
+    });
     await choose({
       1: {
         ...MILK,
@@ -671,7 +687,14 @@ describe('useReceiptReview', () => {
     });
     expect(attached).not.toHaveProperty('pantryItemId');
     expect(attached).not.toHaveProperty('shoppingListItemId');
-    expect(pantryItems(cache)).toEqual([]);
+    // Still the one stack, holding what it held, from one arrival.
+    expect(pantryItems(cache)).toEqual([
+      expect.objectContaining({ id: 'p1-milk', quantity: 1 }),
+    ]);
+    expect(record(cache, 'PantryItem:p1-milk')).toMatchObject({
+      quantity: 1,
+      activeBatchCount: 1,
+    });
   });
 
   // REL-01: two confirms in flight carry the identities the first minted, so
