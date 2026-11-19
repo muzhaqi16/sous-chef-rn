@@ -594,6 +594,16 @@ describe('useReceiptReview', () => {
     expect(pantryItemNames(cache).sort()).toEqual(['Bananas', 'Whole milk']);
     expect(review().pendingCount).toBe(0);
     expect(draft()?.checkIn?.state).toBe('queued');
+    // Shown apart from lines the server took, until it answers.
+    expect(review().rows.map(row => row.status)).toEqual(['queued', 'queued']);
+    const checkInId = draft()?.checkIn?.ids[0] ?? '';
+    act(() => {
+      useReceiptDraftStore.getState().settleCheckIn(checkInId, [
+        { index: 1, success: true },
+        { index: 3, success: true },
+      ]);
+    });
+    expect(review().rows.map(row => row.status)).toEqual(['added', 'added']);
   });
 
   it.each<[string, Partial<ReceiptLineChoice>, string]>([
@@ -685,6 +695,46 @@ describe('useReceiptReview', () => {
     expect(await addChosen()).toMatchObject({ sent: 0 });
     expect(checkIn.fired).toHaveLength(sends);
   });
+
+  // A line filling an earlier purchase is told what that purchase holds otherwise.
+  it.each([
+    [ErrorCode.VersionConflict, undefined, 'receipts.review.purchaseChanged'],
+    [
+      ErrorCode.ValidationFailed,
+      'amount',
+      'receipts.review.purchaseDiffersAmount',
+    ],
+    [
+      ErrorCode.ValidationFailed,
+      'totalPaid',
+      'receipts.review.purchaseDiffersPaid',
+    ],
+  ] as const)(
+    'says a picked purchase refused with %s on %s why, for the line to be checked again',
+    async (code, field, said) => {
+      const { review, run } = await setup();
+      await run(current => {
+        current.chooseLine(1, {
+          ...MILK,
+          notStocked: true,
+          existingPurchase: { id: 'IN-04-existing-purchase', version: 3 },
+        });
+        useReceiptDraftStore.setState(state => ({
+          draft: state.draft && {
+            ...state.draft,
+            failed: { 1: code },
+            ...(field ? { failedOn: { 1: field } } : {}),
+          },
+        }));
+      });
+
+      expect(review().rows[0]).toMatchObject({
+        status: 'failed',
+        failure: t(said),
+        ...(field ? { failedOn: field } : {}),
+      });
+    },
+  );
 
   it('says a line refused with no code this build knows was not added', async () => {
     const { review, run } = await setup();

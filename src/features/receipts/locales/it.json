@@ -136,6 +136,7 @@
       "sectionRecorded_one": "{{count}} riga già registrata",
       "sectionRecorded_other": "{{count}} righe già registrate",
       "recordedBadge": "Registrata",
+      "waitingBadge": "In attesa di sincronizzazione",
       "findingMatch": "Ricerca di una corrispondenza…",
       "notMatchedYet": "Ancora senza corrispondenza. Tocca per scegliere il prodotto.",
       "sectionMatching_one": "Ricerca del prodotto per {{count}} riga",
@@ -152,7 +153,13 @@
       "newPurchase": "Un nuovo acquisto",
       "earlierPurchase": "{{amount}} il {{date}}",
       "earlierPicked": "L'acquisto precedente",
-      "earlierBody": "Questo scontrino completa prezzo e negozio di quell'acquisto. Nulla viene aggiunto di nuovo alla tua dispensa."
+      "earlierBody": "Questo scontrino completa prezzo e negozio di quell'acquisto. Nulla viene aggiunto di nuovo alla tua dispensa.",
+      "purchaseChanged": "Questo acquisto è cambiato da quando l'hai scelto. Ricontrollalo prima di aggiungerlo.",
+      "purchaseDiffersAmount": "La quantità non è quella registrata dall'acquisto scelto.",
+      "purchaseDiffersPaid": "Il prezzo non è quello registrato dall'acquisto scelto.",
+      "purchaseDiffersDiscount": "Lo sconto non è quello registrato dall'acquisto scelto.",
+      "purchaseDiffersItem": "L'acquisto scelto è di un altro prodotto.",
+      "purchaseDiffersStore": "L'acquisto scelto è di un altro negozio."
     },
     "photoSend": {
       "title": "Inviare la foto per leggerla?",

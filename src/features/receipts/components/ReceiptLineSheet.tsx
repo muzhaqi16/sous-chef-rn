@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm, useWatch } from 'react-hook-form';
@@ -40,6 +40,24 @@ import { useEarlierPurchases } from './useEarlierPurchases';
 // The picker's choice for a line that is a purchase of its own.
 const NEW_PURCHASE = 'new';
 
+/** The form field showing a refusal on the fact the API named; null shows it by the purchase. */
+const refusedField = (
+  on: string | undefined,
+): 'quantityInput' | 'priceInput' | 'itemName' | null => {
+  switch (on) {
+    case 'amount':
+      return 'quantityInput';
+    case 'totalPaid':
+    case 'discount':
+      return 'priceInput';
+    case 'item':
+      return 'itemName';
+    case undefined:
+    default:
+      return null;
+  }
+};
+
 interface ReceiptLineFormProps {
   line: ReceiptReviewLine;
   choice: ReceiptLineChoice | undefined;
@@ -49,6 +67,8 @@ interface ReceiptLineFormProps {
   canLeaveOut: boolean;
   /** Items the API proposes for the line, best first. */
   candidates: readonly ReceiptCandidate[];
+  /** Why the API refused the line last, and the fact it named. */
+  refusal?: { message: string; on?: string };
   /** The shopping list line the product and unit being picked would tick off. */
   listItemNameFor: (key: ListMatchKey) => string | undefined;
   /** A product picked before it is saved, so its list line is asked for. */
@@ -65,6 +85,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   asked,
   canLeaveOut,
   candidates,
+  refusal,
   listItemNameFor,
   onPickItem,
   onClose,
@@ -88,6 +109,15 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
     context: { free: line.price === 0 && (line.discount ?? 0) > 0 },
     defaultValues: receiptLineDefaults(line, choice, unitTypeOf, asked),
   });
+
+  // Shown on the field it names as the sheet opens, until that field changes.
+  const refusedOn = refusedField(refusal?.on);
+  const refusedMessage = refusal?.message;
+  useEffect(() => {
+    if (refusedOn && refusedMessage) {
+      setError(refusedOn, { type: 'server', message: refusedMessage });
+    }
+  }, [refusedOn, refusedMessage, setError]);
 
   // `useWatch`, not `watch`: the compiler cannot memoize the latter's function.
   const itemId = useWatch({ control, name: 'itemId' });
@@ -168,7 +198,20 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
       });
       return;
     }
-    onSave(toLineChoice({ ...values, unitId: resolvedUnitId, sizeUnitId }));
+    // A purchase that changed since it was picked is sent as it reads now,
+    // which is what the picker shows.
+    const current = earlier.find(
+      purchase => purchase.id === values.existingPurchaseId,
+    );
+    onSave(
+      toLineChoice({
+        ...values,
+        unitId: resolvedUnitId,
+        sizeUnitId,
+        existingPurchaseVersion:
+          current?.version ?? values.existingPurchaseVersion,
+      }),
+    );
     onClose();
   }, reportValidationErrors);
 
@@ -278,6 +321,15 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
             {attached ? (
               <Text role="caption" tone="tertiary">
                 {t('receipts.review.earlierBody')}
+              </Text>
+            ) : null}
+            {attached && refusal && !refusedOn ? (
+              <Text
+                role="error"
+                tone="error"
+                testID={receiptsTestIDs.lineRefusal}
+              >
+                {refusal.message}
               </Text>
             ) : null}
           </View>

@@ -23,12 +23,13 @@ mutation CreateReceiptCheckIn(
         index
         clientId
         success
-        # `code` decides what the user is told; `errorId` goes to diagnostics.
-        # `reason` is a server string never shown.
+        # `code` decides what the user is told, `field` which fact it is told
+        # on; `errorId` goes to diagnostics. `reason` is a server string never shown.
         failure {
           code
           disposition
           errorId
+          field
         }
         item {
           id

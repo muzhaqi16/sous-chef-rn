@@ -75,7 +75,8 @@ export type ServerParseOutcome =
 export interface CheckInLineOutcome {
   index: number;
   success: boolean;
-  failure?: { code: string } | null;
+  /** `field` names the fact the API refused the line on, where it names one. */
+  failure?: { code: string; field?: string | null } | null;
 }
 
 const ERROR_CODES: ReadonlySet<string> = new Set(Object.values(ErrorCode));
@@ -152,6 +153,10 @@ export interface ReceiptDraft {
    * build does not know, or none.
    */
   failed?: Partial<Record<number, ErrorCode | null>>;
+  /** The fact each refused line was refused on, by line index, where the API named one. */
+  failedOn?: Partial<Record<number, string>>;
+  /** Lines sent whose answer has not come: added on the device, not yet by the server. */
+  unconfirmed?: number[];
 }
 
 interface ReceiptDraftState {
@@ -240,13 +245,18 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
             choices: { ...choices, [index]: choice },
           })),
         markAdded: indexes =>
-          patchDraft(({ added, failed }) => ({
+          patchDraft(({ added, failed, failedOn, unconfirmed }) => ({
             added: [...new Set([...(added ?? []), ...indexes])],
             failed: withoutIndexes(failed, indexes),
+            failedOn: withoutIndexes(failedOn, indexes),
+            unconfirmed: [...new Set([...(unconfirmed ?? []), ...indexes])],
           })),
         markUnsent: indexes =>
-          patchDraft(({ added }) => ({
+          patchDraft(({ added, unconfirmed }) => ({
             added: (added ?? []).filter(index => !indexes.includes(index)),
+            unconfirmed: (unconfirmed ?? []).filter(
+              index => !indexes.includes(index),
+            ),
           })),
         ensureCheckInIds: (indexes, sends) =>
           patchDraft(({ checkIn }) => ({
@@ -274,14 +284,21 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
               ]),
             ].filter(index => !refused.has(index));
             const failed: Partial<Record<number, ErrorCode | null>> = {};
+            const failedOn: Partial<Record<number, string>> = {};
             for (const { index, success, failure } of results) {
               if (success) continue;
               failed[index] =
                 failure && isErrorCode(failure.code) ? failure.code : null;
+              if (failure?.field) failedOn[index] = failure.field;
             }
             const stillFailed = {
               ...withoutIndexes(draft.failed, added),
               ...failed,
+            };
+            // A line refused again says why this time, not the last.
+            const stillFailedOn = {
+              ...withoutIndexes(draft.failedOn, [...added, ...refused]),
+              ...failedOn,
             };
             if (draft.checkIn.closed && Object.keys(stillFailed).length === 0) {
               return { draft: null };
@@ -291,6 +308,10 @@ export const useReceiptDraftStore = create<ReceiptDraftState>()(
                 ...draft,
                 added,
                 failed: stillFailed,
+                failedOn: stillFailedOn,
+                unconfirmed: (draft.unconfirmed ?? []).filter(
+                  index => !results.some(result => result.index === index),
+                ),
                 checkIn: { ...draft.checkIn, state: 'idle' },
               },
             };

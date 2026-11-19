@@ -271,6 +271,26 @@ describe('receiptDraftStore', () => {
       expect(draft()).toBeNull();
     });
 
+    // The fact a refusal names stays with the line until it lands or is refused again.
+    it('keeps the fact a line was refused on until it lands', () => {
+      const checkInId = sending();
+      const refusedOn = (field: string | null) => ({
+        index: 1,
+        success: false,
+        failure: { code: ErrorCode.ValidationFailed, field },
+      });
+
+      actions().settleCheckIn(checkInId, [refusedOn('totalPaid')]);
+      expect(draft()?.failedOn).toEqual({ 1: 'totalPaid' });
+
+      actions().settleCheckIn(checkInId, [refusedOn(null)]);
+      expect(draft()?.failedOn).toEqual({});
+
+      actions().settleCheckIn(checkInId, [refusedOn('amount')]);
+      actions().settleCheckIn(checkInId, [{ index: 1, success: true }]);
+      expect(draft()?.failedOn).toEqual({});
+    });
+
     it('keeps a closed receipt with a refused line for its retry', () => {
       const checkInId = sending();
       actions().closeReceipt();
