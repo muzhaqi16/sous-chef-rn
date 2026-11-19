@@ -24,6 +24,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { cacheShows } from '#/test-utils/cacheWaits';
+import { settledInAct } from '#/test-utils/settledInAct';
 import {
   listLine,
   purchaseRecordOf,
@@ -308,16 +309,19 @@ const confirmPrice = async (open = true) => {
   await press(t('labels.save'));
 };
 
+// Inside `act`, so what the settled cache renders is on screen when it returns.
 const purchaseSettles = (
   cache: ReturnType<typeof makeCache>,
   id: string,
   isPurchased: boolean,
 ) =>
-  cacheShows(
-    cache,
-    purchaseRecordWatch(id),
-    () => purchaseRecordOf(cache, id),
-    record => record?.isPurchased === isPurchased,
+  settledInAct(() =>
+    cacheShows(
+      cache,
+      purchaseRecordWatch(id),
+      () => purchaseRecordOf(cache, id),
+      record => record?.isPurchased === isPurchased,
+    ),
   );
 
 beforeEach(() => {
