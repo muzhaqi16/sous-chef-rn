@@ -235,8 +235,8 @@
     "searchErrorMessage": "Kërkimi i recetave dështoi. Provo përsëri.",
     "markCookedFailed": "Shënimi i recetës si e gatuar dështoi",
     "cookExternalError": "Recetat e jashtme nuk mund të shënohen si të gatuara. Ruaj recetën fillimisht.",
-    "markedCookedDeducted": "Receta u shënua si e gatuar! Përbërësit u zbritën nga qilari.",
-    "cookReviewNeedsConnection": "Rishikimi i përbërësve kërkon lidhje. Sasitë do të llogariten kur të sinkronizohet.",
+    "markedCookedDeducted_one": "Receta u shënua si e gatuar. U zbrit nga {{count}} artikull i qilarit.",
+    "markedCookedDeducted_other": "Receta u shënua si e gatuar. U zbrit nga {{count}} artikuj të qilarit.",
     "markedCookedSkipped_one": "Receta u shënua si e gatuar. {{count}} përbërës nuk u zbrit.",
     "markedCookedSkipped_other": "Receta u shënua si e gatuar. {{count}} përbërës nuk u zbritën.",
     "markedCookedSkippedUnit_one": "Receta u shënua si e gatuar. {{count}} përbërës nuk u zbrit: njësia e tij nuk shndërrohet në atë të qilarit.",
@@ -280,7 +280,6 @@
     "saveRecipeFailed": "Ruajtja e recetës dështoi. Provo përsëri.",
     "recipeSavedToCollection": "Receta u ruajt në koleksionin tënd!",
     "recipeOrPantryUnavailable": "Receta ose qilari nuk është i disponueshëm",
-    "noIngredientsToMatch": "Asnjë përbërës për t'u përputhur",
     "noIngredientsForDeduction": "Asnjë përbërës i zgjedhur për zbritje",
     "deductedFromPantry_one": "U zbrit {{count}} përbërës nga qilari",
     "deductedFromPantry_other": "U zbritën {{count}} përbërës nga qilari",
@@ -485,6 +484,7 @@
     "deductFromPantryDesc": "Zvogëlo automatikisht sasitë e përbërësve në qilarin tënd",
     "smartDeduction": "Zbritje e zgjuar",
     "smartDeductionDesc": "Shqyrto dhe rregullo sasitë e përbërësve para se të zbriten",
+    "reviewUnavailable": "Përbërësit nuk u ngarkuan për rishikim, ndaj zbritja e zgjuar është çaktivizuar. Shtyp sërish {{action}} për të zbritur atë që përdor receta.",
     "notesPlaceholder": "Si dolën?"
   },
   "saveRecipe": {

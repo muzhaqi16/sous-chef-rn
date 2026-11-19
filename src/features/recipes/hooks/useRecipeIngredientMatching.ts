@@ -378,10 +378,16 @@ export function useRecipeIngredientMatching(
     return cursor ? null : uses;
   };
 
-  const loadMatches = async (servings: number) => {
+  /**
+   * Opens the review over the recipe's draws: `empty` for a recipe with no
+   * ingredient to draw, `unavailable` when the review could not be read.
+   */
+  const loadMatches = async (
+    servings: number,
+  ): Promise<'loaded' | 'empty' | 'unavailable'> => {
     if (!recipeId || !pantryId) {
       toastService.error(t('recipes.recipeOrPantryUnavailable'));
-      return false;
+      return 'unavailable';
     }
 
     let result;
@@ -394,16 +400,12 @@ export function useRecipeIngredientMatching(
         operation: 'Load recipe matches error:',
       });
     }
-    if (!result) return false;
+    if (!result) return 'unavailable';
 
     const matches = result.data?.matchRecipeIngredientsToPantry;
-    // A read that failed (offline) is not an empty answer: the caller cooks
-    // without the review instead.
-    if (!matches) return false;
-    if (matches.length === 0) {
-      toastService.info(t('recipes.noIngredientsToMatch'));
-      return false;
-    }
+    // A read that failed (offline) is not an empty answer.
+    if (!matches) return 'unavailable';
+    if (matches.length === 0) return 'empty';
 
     const editable: EditableMatch[] = matches
       .map((match): EditableMatch | null => {
@@ -462,7 +464,7 @@ export function useRecipeIngredientMatching(
       ),
       servings,
     );
-    return true;
+    return 'loaded';
   };
 
   const updateMatch = (index: number, updates: MatchUpdate) => {

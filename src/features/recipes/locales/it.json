@@ -235,8 +235,8 @@
     "searchErrorMessage": "Impossibile cercare le ricette. Riprova.",
     "markCookedFailed": "Impossibile segnare la ricetta come cucinata",
     "cookExternalError": "Impossibile segnare ricette esterne come cucinate. Salva prima la ricetta.",
-    "markedCookedDeducted": "Ricetta segnata come cucinata! Ingredienti detratti dalla dispensa.",
-    "cookReviewNeedsConnection": "La revisione degli ingredienti richiede una connessione. Le quantità saranno calcolate alla sincronizzazione.",
+    "markedCookedDeducted_one": "Ricetta segnata come cucinata. Detratto da {{count}} articolo della dispensa.",
+    "markedCookedDeducted_other": "Ricetta segnata come cucinata. Detratto da {{count}} articoli della dispensa.",
     "markedCookedSkipped_one": "Ricetta segnata come cucinata. {{count}} ingrediente non è stato scalato.",
     "markedCookedSkipped_other": "Ricetta segnata come cucinata. {{count}} ingredienti non sono stati scalati.",
     "markedCookedSkippedUnit_one": "Ricetta segnata come cucinata. {{count}} ingrediente non è stato scalato: la sua unità non si converte in quella della dispensa.",
@@ -280,7 +280,6 @@
     "saveRecipeFailed": "Impossibile salvare la ricetta. Riprova.",
     "recipeSavedToCollection": "Ricetta salvata nella tua raccolta!",
     "recipeOrPantryUnavailable": "Ricetta o dispensa non disponibile",
-    "noIngredientsToMatch": "Nessun ingrediente da abbinare",
     "noIngredientsForDeduction": "Nessun ingrediente selezionato per la detrazione",
     "deductedFromPantry_one": "Detratto {{count}} ingrediente dalla dispensa",
     "deductedFromPantry_other": "Detratti {{count}} ingredienti dalla dispensa",
@@ -485,6 +484,7 @@
     "deductFromPantryDesc": "Riduci automaticamente le quantità degli ingredienti nella dispensa",
     "smartDeduction": "Sottrazione intelligente",
     "smartDeductionDesc": "Rivedi e regola le quantità degli ingredienti prima della sottrazione",
+    "reviewUnavailable": "Non è stato possibile caricare gli ingredienti da rivedere, quindi la sottrazione intelligente è disattivata. Tocca di nuovo {{action}} per detrarre ciò che usa la ricetta.",
     "notesPlaceholder": "Com'è venuto?"
   },
   "saveRecipe": {

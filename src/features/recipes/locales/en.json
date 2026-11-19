@@ -235,8 +235,8 @@
     "searchErrorMessage": "Failed to search recipes. Please try again.",
     "markCookedFailed": "Failed to mark recipe as cooked",
     "cookExternalError": "Cannot mark external recipes as cooked. Please save the recipe first.",
-    "markedCookedDeducted": "Recipe marked as cooked! Ingredients deducted from pantry.",
-    "cookReviewNeedsConnection": "Reviewing the ingredients needs a connection. The amounts will be worked out when it syncs.",
+    "markedCookedDeducted_one": "Recipe marked as cooked. Deducted from {{count}} pantry item.",
+    "markedCookedDeducted_other": "Recipe marked as cooked. Deducted from {{count}} pantry items.",
     "markedCookedSkipped_one": "Recipe marked as cooked. {{count}} ingredient could not be deducted.",
     "markedCookedSkipped_other": "Recipe marked as cooked. {{count}} ingredients could not be deducted.",
     "markedCookedSkippedUnit_one": "Recipe marked as cooked. {{count}} ingredient could not be deducted: its unit does not convert to the pantry stack.",
@@ -280,7 +280,6 @@
     "saveRecipeFailed": "Failed to save recipe. Please try again.",
     "recipeSavedToCollection": "Recipe saved to your collection!",
     "recipeOrPantryUnavailable": "Recipe or pantry not available",
-    "noIngredientsToMatch": "No ingredients to match",
     "noIngredientsForDeduction": "No ingredients selected for deduction",
     "deductedFromPantry_one": "Deducted {{count}} ingredient from pantry",
     "deductedFromPantry_other": "Deducted {{count}} ingredients from pantry",
@@ -485,6 +484,7 @@
     "deductFromPantryDesc": "Automatically reduce ingredient quantities in your pantry",
     "smartDeduction": "Smart Deduction",
     "smartDeductionDesc": "Review and adjust ingredient quantities before deducting",
+    "reviewUnavailable": "The ingredients couldn't be loaded for review, so Smart Deduction is off. Tap {{action}} again to deduct what the recipe uses.",
     "notesPlaceholder": "How did it turn out?"
   },
   "saveRecipe": {

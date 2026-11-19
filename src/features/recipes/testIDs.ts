@@ -44,6 +44,8 @@ export const recipesTestIDs = {
   cookServings: 'recipe-cook-servings',
   cookConfirm: 'recipe-cook-confirm',
   cookReviewConfirm: 'recipe-cook-review-confirm',
+  /** Why the cook sheet stayed open with Smart Deduction turned off. */
+  cookReviewUnavailable: 'recipe-cook-review-unavailable',
   editButton: 'recipe-edit-button',
   publishButton: 'recipe-publish-button',
   forkButton: 'recipe-fork-button',

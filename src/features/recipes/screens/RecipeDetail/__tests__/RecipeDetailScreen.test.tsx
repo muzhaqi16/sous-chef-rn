@@ -48,6 +48,7 @@ import {
   OpenCatalogRecipeDocument,
   GetRecipeDocument,
   MarkRecipeAsCookedDocument,
+  MatchRecipeIngredientsToPantryDocument,
   GetRecipeReviewsDocument,
   SavedRecipeFoldersDocument,
   UpdateFavoriteRecipeDocument,
@@ -343,9 +344,14 @@ describe('cooking it', () => {
   // The dialog is opened through the cook control before its confirm is pressed.
   it('is marked cooked from its dialog, for who the person cooks for', async () => {
     const cooked = recordMock(MarkRecipeAsCookedDocument, { held: true });
+    // The review it asks for finds nothing to draw, so the cook goes ahead.
+    const review = recordMock(MatchRecipeIngredientsToPantryDocument, {
+      data: { matchRecipeIngredientsToPantry: [] },
+    });
     await openRecipe({
       answers: [
         cooked,
+        review,
         recordMock(GetDietaryProfileDocument, {
           data: {
             me: {
@@ -372,6 +378,7 @@ describe('cooking it', () => {
     await user.press(confirm);
     await log.requested(MarkRecipeAsCookedDocument);
 
+    expect(review.fired[0]).toMatchObject({ servings: 2 });
     expect(cooked.fired[0]).toMatchObject({
       input: { recipeId: 'recipe-1', servings: 2 },
     });

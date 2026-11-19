@@ -1,5 +1,12 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  userEvent,
+} from '@testing-library/react-native';
+import { t } from '#/i18n';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 import { MarkCookedModal } from '../MarkCookedModal';
 
 jest.mock('#components/templates/Sheet', () => {
@@ -176,4 +183,69 @@ describe('MarkCookedModal servings', () => {
       expect(onConfirm).not.toHaveBeenCalled();
     },
   );
+});
+
+// The sheet holds what was entered until the cook is taken.
+describe('MarkCookedModal while the cook settles', () => {
+  const renderWith = (
+    onConfirm: jest.Mock,
+    { hasPantry = true }: { hasPantry?: boolean } = {},
+  ) => {
+    const onClose = jest.fn();
+    render(
+      <MarkCookedModal
+        visible
+        recipeName="Soup"
+        defaultServings={4}
+        hasPantry={hasPantry}
+        onClose={onClose}
+        onConfirm={onConfirm}
+      />,
+    );
+    return onClose;
+  };
+  // The confirm awaits the cook's answer, which the press lets settle.
+  const confirm = () => userEvent.setup().press(screen.getByTestId('confirm'));
+
+  it('closes once the cook is taken', async () => {
+    const onClose = renderWith(jest.fn().mockResolvedValue('done'));
+
+    await confirm();
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('stays open with what was entered when the cook is refused', async () => {
+    const onConfirm = jest.fn().mockResolvedValue('retry');
+    const onClose = renderWith(onConfirm);
+
+    fireEvent.changeText(screen.getByTestId('servings'), '3');
+    await confirm();
+
+    expect(onConfirm).toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByTestId('servings').props.value).toBe('3');
+  });
+
+  // Confirmed again, the cook deducts unreviewed, as the sheet then says.
+  it('turns the review off and says why when it could not load', async () => {
+    const onConfirm = jest.fn().mockResolvedValue('reviewUnavailable');
+    const onClose = renderWith(onConfirm);
+
+    await confirm();
+
+    expect(
+      screen.getByTestId(recipesTestIDs.cookReviewUnavailable),
+    ).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(
+      screen.getByLabelText(t('markCookedModal.smartDeduction')),
+    ).toHaveProp('value', false);
+    onConfirm.mockResolvedValue('done');
+    await confirm();
+    expect(onClose).toHaveBeenCalled();
+    expect(onConfirm).toHaveBeenLastCalledWith(
+      expect.objectContaining({ useGranularDeduction: false }),
+    );
+  });
 });
