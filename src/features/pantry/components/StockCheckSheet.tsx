@@ -9,11 +9,15 @@ import { Button } from '#components/molecules/Button';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { parseFractionalInput } from '#/utils/fractionUtils';
+import { formatRelativeToNow } from '#/utils/formatters/date';
 import {
   StockCheckAnswer,
   StockConfidence,
   StockDoubtReason,
+  WasteReason,
 } from '#/graphql/generated/schemaTypes';
+import { WASTE_REASON_OPTIONS } from '#features/pantry/utils/wasteReasons';
+import { CollapsibleChipPicker } from './CollapsibleChipPicker';
 import {
   useStockCheck,
   type StockCheckChoice,
@@ -91,7 +95,7 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
   onDismiss,
 }) => {
   const { t } = useTranslation();
-  const { rows, state, retry, answer } = useStockCheck(visible);
+  const { rows, asking, state, retry, answer } = useStockCheck(visible);
   // Each answer keeps the version its row showed when it was picked, so a
   // change that lands while the sheet is open is refused, never counted over.
   const [choices, setChoices] = useState<
@@ -99,9 +103,16 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
   >({});
   const [left, setLeft] = useState<Partial<Record<string, string>>>({});
   const [inside, setInside] = useState<Partial<Record<string, string>>>({});
+  const [wasteReasons, setWasteReasons] = useState<
+    Partial<Record<string, WasteReason>>
+  >({});
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
   const [saving, setSaving] = useState(false);
   const [noneAnswered, setNoneAnswered] = useState(false);
+
+  // As the waste sheet does, until the household picks another.
+  const reasonOf = (id: string): WasteReason =>
+    wasteReasons[id] ?? WasteReason.Expired;
 
   const choiceOf = (
     row: StockCheckRow,
@@ -115,7 +126,7 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
       return { answer: StockCheckAnswer.UsedUp };
     }
     if (picked === StockCheckAnswer.ThrewOut) {
-      return { answer: StockCheckAnswer.ThrewOut };
+      return { answer: StockCheckAnswer.ThrewOut, reason: reasonOf(row.id) };
     }
     const quantity = parseFractionalInput(left[row.id] ?? '');
     if (quantity === null || quantity < 0) return 'invalid';
@@ -162,20 +173,20 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
       setChoices({});
       setLeft({});
       setInside({});
+      setWasteReasons({});
       onDismiss();
       return;
     }
-    // A stack that moved since it was seen keeps its row, to be counted again.
+    // A refused row keeps its answer and says why, to be looked at again.
     setErrors(
-      Object.fromEntries(
-        refused.map(id => [id, t('pantryScreen.stockCheckStale')]),
-      ),
+      Object.fromEntries(refused.map(row => [row.pantryItemId, row.message])),
     );
+    const refusedIds = new Set(refused.map(row => row.pantryItemId));
     // Counted again, it goes against the version the row shows by then.
     setChoices(current =>
       Object.fromEntries(
         Object.entries(current)
-          .filter(([id]) => refused.includes(id))
+          .filter(([id]) => refusedIds.has(id))
           .map(([id, choice]) => [id, choice && { answer: choice.answer }]),
       ),
     );
@@ -196,12 +207,21 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
       ) : null}
       {rows.map(row => {
         const picked = choices[row.id]?.answer ?? null;
-        const evidence = [
-          levelLabel(row.level),
-          ...row.reasons.map(reasonLabel),
-        ]
-          .filter((key): key is TranslationKey => key !== null)
-          .map(key => t(key));
+        // While today's answer is on its way, yesterday's evidence is not shown.
+        const evidence = asking
+          ? []
+          : [
+              ...[levelLabel(row.level), ...row.reasons.map(reasonLabel)]
+                .filter((key): key is TranslationKey => key !== null)
+                .map(key => t(key)),
+              ...(row.lastConfirmedAt
+                ? [
+                    t('pantryScreen.stockLastConfirmed', {
+                      when: formatRelativeToNow(new Date(row.lastConfirmedAt)),
+                    }),
+                  ]
+                : []),
+            ];
         return (
           <View
             key={row.id}
@@ -264,7 +284,21 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
                   />
                 ) : null}
               </>
-            ) : errors[row.id] ? (
+            ) : null}
+            {picked === StockCheckAnswer.ThrewOut ? (
+              <CollapsibleChipPicker
+                label={t('recordWaste.wasteReason')}
+                options={WASTE_REASON_OPTIONS.map(({ labelKey, value }) => ({
+                  label: t(labelKey),
+                  value,
+                }))}
+                selectedValue={reasonOf(row.id)}
+                onSelect={reason =>
+                  setWasteReasons(current => ({ ...current, [row.id]: reason }))
+                }
+              />
+            ) : null}
+            {picked !== StockCheckAnswer.SomeLeft && errors[row.id] ? (
               <Text role="error" tone="error">
                 {errors[row.id]}
               </Text>

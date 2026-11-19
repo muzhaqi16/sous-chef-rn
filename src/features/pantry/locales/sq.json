@@ -335,7 +335,8 @@
     "stockLevelHigh": "Ndoshta është ende këtu",
     "stockLevelMedium": "Ia vlen ta kontrollosh",
     "stockLevelLow": "Ndoshta ka mbaruar",
-    "stockLevelUnknown": "Nuk dihet"
+    "stockLevelUnknown": "Nuk dihet",
+    "stockLastConfirmed": "Konfirmimi i fundit: {{when}}"
   },
   "storageState": {
     "AMBIENT": "Ambient",

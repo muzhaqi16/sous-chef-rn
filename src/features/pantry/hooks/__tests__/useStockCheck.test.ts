@@ -2,12 +2,16 @@ import {
   inputOf,
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
+import { t } from '#/i18n';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   ErrorCode,
   StockCheckAnswer,
   StockConfidence,
+  WasteReason,
 } from '#/graphql/generated/schemaTypes';
 import { pantryTrackingContext as context } from '#/test-utils/fixtures/pantryTrackingFixtures';
 import { useStore } from '#store';
@@ -96,7 +100,106 @@ it('sends each answer against the version seen, and hands back a stale row', asy
       { pantryItemId: milk, answer: 'USED_UP', expectedVersion: 7 },
     ],
   });
-  expect(answered).toEqual({ status: 'applied', refused: [milk] });
+  expect(answered).toEqual({
+    status: 'applied',
+    refused: [
+      { pantryItemId: milk, message: t('pantryScreen.stockCheckStale') },
+    ],
+  });
+});
+
+// CHECK-02: what was thrown out is recorded as waste for the reason picked.
+it('sends Threw out with the reason picked', async () => {
+  const eggs = context.items.eggs.stackId;
+  const rows = recordMock(StockToConfirmDocument, {
+    data: { pantry: { id: 'P1', stockToConfirm: [stack(eggs, 4)] } },
+  });
+  const recorded = recordMock(RecordPantryStockCheckDocument, {
+    data: { recordPantryStockCheck: null },
+  });
+  const { result } = renderHookWithApollo(() => useStockCheck(), {
+    operationMocks: [rows.mock, recorded.mock],
+  });
+  await drainTimers();
+  const [eggRow] = result.current.rows;
+
+  await drained(() =>
+    result.current.answer([
+      {
+        row: eggRow!,
+        choice: { answer: StockCheckAnswer.ThrewOut, reason: WasteReason.Mold },
+      },
+    ]),
+  );
+
+  expect(inputOf(recorded.fired[0]!)).toMatchObject({
+    entries: [{ pantryItemId: eggs, answer: 'THREW_OUT', wasteReason: 'MOLD' }],
+  });
+});
+
+// CHECK-04: a carton found holding 40 of its 64 fl oz reads so at once, as
+// 0.625 carton, while the check waits to be sent.
+it('shows a partial package as found while the check is queued', async () => {
+  const milk = context.items.milk.stackId;
+  const floz = { id: 'unit-floz', symbol: 'fl oz' };
+  const cache = makeCache();
+  const rows = recordMock(StockToConfirmDocument, {
+    data: {
+      pantry: {
+        id: 'P1',
+        stockToConfirm: [
+          {
+            ...stack(milk, 3),
+            unit: { id: 'unit-carton', symbol: 'carton' },
+            packageSize: { value: 64, unitId: floz.id },
+            netWeightUnit: floz,
+          },
+        ],
+      },
+    },
+  });
+  const queued = recordMock(RecordPantryStockCheckDocument, {
+    data: { recordPantryStockCheck: null },
+  });
+  const { result } = renderHookWithApollo(() => useStockCheck(), {
+    operationMocks: [rows.mock, queued.mock],
+    cache,
+  });
+  await drainTimers();
+  const [milkRow] = result.current.rows;
+  expect(milkRow?.contents).toEqual({
+    unitId: floz.id,
+    unitSymbol: 'fl oz',
+    perPackage: 64,
+  });
+
+  await drained(() =>
+    result.current.answer([
+      {
+        row: milkRow!,
+        choice: {
+          answer: StockCheckAnswer.SomeLeft,
+          quantity: 1,
+          contents: { amount: 40, unitId: floz.id },
+        },
+      },
+    ]),
+  );
+
+  expect(inputOf(queued.fired[0]!)).toMatchObject({
+    entries: [
+      {
+        quantity: 1,
+        remainingNetWeight: 40,
+        remainingNetWeightUnitId: floz.id,
+      },
+    ],
+  });
+  expect(
+    cache.extract(true)[
+      cache.identify({ __typename: 'PantryItem', id: milk })!
+    ],
+  ).toMatchObject({ quantity: 0.625, remainingNetWeight: 40 });
 });
 
 // A check moves the list it came from: the server's answer restates it, and
@@ -175,6 +278,53 @@ it('reads a stack with no confidence answer as unknown, never HIGH', async () =>
   expect(result.current.rows).toEqual([
     expect.objectContaining({ id: 'eggs', level: null, reasons: [] }),
   ]);
+});
+
+// Confidence is for a day: the device's answer from an earlier one is not today's.
+it("reads an earlier day's confidence as unknown until today's answer arrives", async () => {
+  useStore.setState({ isOnline: false, apiReachable: false });
+  const cache = makeCache();
+  seedQuery(cache, {
+    query: StockToConfirmDocument,
+    variables: { pantryId: 'P1', today: '2026-11-14' },
+    data: {
+      pantry: {
+        id: 'P1',
+        stockToConfirm: [
+          {
+            ...stack('eggs', 1),
+            stockConfidence: {
+              level: StockConfidence.Low,
+              reasons: [],
+              lastConfirmedAt: '2026-11-01T09:00:00.000Z',
+            },
+          },
+        ],
+      },
+    },
+  });
+  // Offline the device answers from what it holds, as the offline link does.
+  const rows = recordMock(StockToConfirmDocument, {
+    data: cache.readQuery({
+      query: StockToConfirmDocument,
+      variables: { pantryId: 'P1', today: '2026-11-15' },
+    }),
+  });
+  const { result } = renderHookWithApollo(() => useStockCheck(), {
+    operationMocks: [rows.mock],
+    cache,
+  });
+  await drainTimers();
+
+  expect(result.current.rows).toEqual([
+    expect.objectContaining({
+      id: 'eggs',
+      level: null,
+      reasons: [],
+      lastConfirmedAt: null,
+    }),
+  ]);
+  useStore.setState({ isOnline: true, apiReachable: true });
 });
 
 it('is offline, never an empty check, when the device holds no answer', async () => {

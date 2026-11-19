@@ -8,7 +8,10 @@ import {
   StockCheckAnswer,
   type StockConfidence,
   type StockDoubtReason,
+  type WasteReason,
 } from '#/graphql/generated/schemaTypes';
+import { errorService } from '#/services/errorService';
+import { isVersionConflictCode } from '#/utils/errors/versionConflict';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import {
   settleMutation,
@@ -19,6 +22,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { useToday } from '#hooks/app/useToday';
 import { useDayConfirmedRead } from '#hooks/apollo/useDayConfirmedRead';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { formatReading, readingOf } from '#domain/measure';
 import { useTranslation } from '#/i18n';
@@ -39,10 +43,19 @@ export interface StockCheckRow {
   amount: string;
   /** The stack's own unit, which "Some left" is counted in. */
   unitSymbol: string;
-  /** What one package holds, where it is known: "Some left" can count it too. */
-  contents: { unitId: string; unitSymbol: string } | null;
+  /**
+   * What one package holds, where it is known: "Some left" can count it too.
+   * `perPackage` is that size in `unitId`, or null where only the server can say.
+   */
+  contents: {
+    unitId: string;
+    unitSymbol: string;
+    perPackage: number | null;
+  } | null;
   level: StockConfidence | null;
   reasons: readonly StockDoubtReason[];
+  /** When the stack's amount was last confirmed, as the server dates it. */
+  lastConfirmedAt: string | null;
 }
 
 /**
@@ -57,23 +70,28 @@ export type StockCheckChoice =
       contents?: { amount: number; unitId: string };
     }
   | { answer: typeof StockCheckAnswer.UsedUp }
-  | { answer: typeof StockCheckAnswer.ThrewOut };
+  | { answer: typeof StockCheckAnswer.ThrewOut; reason: WasteReason };
 
 export interface StockCheckAnswered {
   status: SettleStatus;
-  /** Rows the server refused (a stack that moved since it was seen): to look at again. */
-  refused: string[];
+  /** Rows the server refused, each with why: to look at again. */
+  refused: { pantryItemId: string; message: string }[];
 }
 
 /**
  * What remains once answered: an absolute count, never a delta. Still have
- * confirms and moves nothing.
+ * confirms and moves nothing; a partial package holds what its contents fill.
  */
-const heldAfter = (choice: StockCheckChoice): number | null => {
+const heldAfter = (
+  row: StockCheckRow,
+  choice: StockCheckChoice,
+): number | null => {
   switch (choice.answer) {
-    case StockCheckAnswer.SomeLeft:
-      // Only the server turns contents into what the stack holds.
-      return choice.contents ? null : choice.quantity;
+    case StockCheckAnswer.SomeLeft: {
+      if (!choice.contents) return choice.quantity;
+      const perPackage = row.contents?.perPackage;
+      return perPackage ? choice.contents.amount / perPackage : null;
+    }
     case StockCheckAnswer.UsedUp:
     case StockCheckAnswer.ThrewOut:
       return 0;
@@ -81,6 +99,17 @@ const heldAfter = (choice: StockCheckChoice): number | null => {
     default:
       return null;
   }
+};
+
+/** Why the server refused one row, in the app's words. */
+const refusalOf = (
+  code: string | null | undefined,
+  t: ReturnType<typeof useTranslation>['t'],
+): string => {
+  if (isVersionConflictCode(code)) return t('pantryScreen.stockCheckStale');
+  return code && errorService.hasUserFriendlyMessage(code)
+    ? errorService.messageForCode(code, t)
+    : t('pantryScreen.stockCheckFailed');
 };
 
 /**
@@ -95,8 +124,10 @@ export function useStockCheck(enabled = true) {
   const { pantry } = useCurrentPantry();
   const today = useToday();
   const system = useReadingSystem();
+  const apiUnavailable = useIsApiUnavailable();
   const pantryId = pantry?.id;
-  // Cached without its day: a new day shows the last check until it is confirmed.
+  // Cached without its day: a new day shows the last check until it is
+  // confirmed, and until then how sure the server is reads as unknown.
   const dayRead = useDayConfirmedRead(
     enabled && pantryId ? `${today}:${pantryId}` : null,
   );
@@ -106,8 +137,10 @@ export function useStockCheck(enabled = true) {
       ? { variables: { pantryId, today }, ...dayRead.policy }
       : skipToken,
   );
+  // Offline the device answers the read itself, with whatever day it holds:
+  // only the API's answer is today's.
   dayRead.markAnswered(
-    data && !loading && !error
+    data && !loading && !error && !apiUnavailable
       ? `${variables.today}:${variables.pantryId}`
       : null,
   );
@@ -128,10 +161,19 @@ export function useStockCheck(enabled = true) {
         ? {
             unitId: stack.netWeightUnit.id,
             unitSymbol: stack.netWeightUnit.symbol,
+            perPackage:
+              stack.packageSize.unitId === stack.netWeightUnit.id
+                ? stack.packageSize.value
+                : null,
           }
         : null,
-    level: stack.stockConfidence?.level ?? null,
-    reasons: stack.stockConfidence?.reasons ?? [],
+    ...(dayRead.isConfirmed
+      ? {
+          level: stack.stockConfidence?.level ?? null,
+          reasons: stack.stockConfidence?.reasons ?? [],
+          lastConfirmedAt: stack.stockConfidence?.lastConfirmedAt ?? null,
+        }
+      : { level: null, reasons: [], lastConfirmedAt: null }),
   }));
   const state: DataState = useDataState({
     loading,
@@ -153,7 +195,9 @@ export function useStockCheck(enabled = true) {
       now: checkedAt,
       rows: answers.map(({ row, choice }) => ({
         pantryItemId: row.id,
-        held: heldAfter(choice),
+        held: heldAfter(row, choice),
+        ...(choice.answer === StockCheckAnswer.SomeLeft &&
+          choice.contents && { remainingNetWeight: choice.contents.amount }),
       })),
     };
     const settled = await pendingWritesOf(client.cache).send(
@@ -180,6 +224,9 @@ export function useStockCheck(enabled = true) {
                     : {}),
                 }
               : {}),
+            ...(choice.answer === StockCheckAnswer.ThrewOut
+              ? { wasteReason: choice.reason }
+              : {}),
           })),
         },
       },
@@ -195,12 +242,17 @@ export function useStockCheck(enabled = true) {
       status: settled.status,
       refused: results
         .filter(result => !result.success)
-        .map(result => result.pantryItemId),
+        .map(result => ({
+          pantryItemId: result.pantryItemId,
+          message: refusalOf(result.failure?.code, t),
+        })),
     };
   };
 
   return {
     rows,
+    /** Today's answer is still on its way: what the rows say of doubt is not known yet. */
+    asking: !dayRead.isConfirmed && loading,
     state,
     /** Asks again after a failed read. */
     retry: () => {

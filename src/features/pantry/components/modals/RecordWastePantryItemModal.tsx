@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
@@ -21,6 +21,7 @@ import {
   resolveQuantityNotation,
 } from '#/utils/formatQuantity';
 import type { PantryActionSharedState } from '#features/pantry/types';
+import { WASTE_REASON_OPTIONS } from '#features/pantry/utils/wasteReasons';
 
 interface RecordWastePantryItemModalProps {
   visible: boolean;
@@ -35,24 +36,6 @@ interface RecordWastePantryItemModalProps {
     wasteUnitId?: string,
   ) => void;
 }
-
-const WASTE_REASON_OPTIONS: Array<{
-  labelKey: TranslationKey;
-  value: WasteReason;
-}> = [
-  { labelKey: 'labels.expired', value: WasteReason.Expired },
-  { labelKey: 'recordWaste.reasonSpoiled', value: WasteReason.Spoiled },
-  { labelKey: 'labels.mold', value: WasteReason.Mold },
-  { labelKey: 'labels.pest', value: WasteReason.Pest },
-  { labelKey: 'labels.cookingFail', value: WasteReason.CookingFail },
-  { labelKey: 'recordWaste.reasonSpilled', value: WasteReason.Spilled },
-  { labelKey: 'recordWaste.reasonBurnt', value: WasteReason.Burnt },
-  { labelKey: 'labels.overstock', value: WasteReason.Overstock },
-  { labelKey: 'recordWaste.reasonBadTaste', value: WasteReason.Taste },
-  { labelKey: 'labels.gaveAway', value: WasteReason.GaveAway },
-  { labelKey: 'labels.unknownLoss', value: WasteReason.UnknownLoss },
-  { labelKey: 'itemType.OTHER', value: WasteReason.Other },
-];
 
 export const RecordWastePantryItemModal: React.FC<
   RecordWastePantryItemModalProps
