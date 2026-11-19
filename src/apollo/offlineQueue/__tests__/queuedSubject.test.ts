@@ -23,6 +23,7 @@ import {
 import { AddBrandToListDocument } from '#features/profile/hooks/useBrandLists.generated';
 import { AddTemplateItemDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
+import { RecordPantryStockCheckDocument } from '#features/pantry/hooks/useStockCheck.generated';
 import {
   CreatePantryItemDocument,
   DeletePantryItemDocument,
@@ -50,6 +51,31 @@ describe('queuedSubject', () => {
       sourceIds: ['checkin-1'],
       mintedIds: ['pi-0', 'pi-2'],
     });
+  });
+
+  // So a queued check shows each stack it answers for as waiting to sync.
+  it('reads a stock check as answering for every stack it names, minting none', () => {
+    expect(
+      queuedSubject({
+        mutation: RecordPantryStockCheckDocument,
+        variables: {
+          today: '2026-11-15',
+          input: {
+            pantryId: 'pantry-1',
+            checkedAt: '2026-11-15T12:00:00.000Z',
+            idempotencyKey: 'check-1',
+            entries: [
+              {
+                pantryItemId: 'pi-1',
+                answer: 'STILL_HAVE',
+                expectedVersion: 3,
+              },
+              { pantryItemId: 'pi-2', answer: 'USED_UP', expectedVersion: 5 },
+            ],
+          },
+        },
+      }),
+    ).toMatchObject({ subjectIds: ['pi-1', 'pi-2'], mintedIds: [] });
   });
 
   it('reads a fork as creating the new recipe and deriving from the source', () => {
