@@ -5,10 +5,7 @@ import { useUserId } from '#store/useAppStore';
 import { formatShortDate } from '#/utils/formatters/date';
 import { formatQuantityWithUnit } from '#/utils/formatQuantity';
 import { useReceiptDraft } from '../store/receiptDraftStore';
-import {
-  EarlierPurchasesOfStackDocument,
-  HeldStacksOfItemDocument,
-} from './useEarlierPurchases.generated';
+import { EarlierPurchasesOfItemDocument } from './useEarlierPurchases.generated';
 
 /** A purchase a receipt line can be the receipt for, as the sheet offers it. */
 export interface EarlierPurchase {
@@ -25,65 +22,53 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const WINDOW_DAYS = 14;
 
 /**
- * The user's own purchases of `itemId` that stocked this pantry in the days
- * before the receipt's, newest first. Only the buyer attaches a receipt, so
- * another member's are never offered; none is ever picked for the user.
+ * The user's own purchases of `itemId` in this household in the days before
+ * the receipt's, newest first: any the API lets a receipt fill. Only the buyer
+ * attaches a receipt, so another member's are never offered; none is ever
+ * picked for the user.
  */
 export function useEarlierPurchases(itemId: string | null): EarlierPurchase[] {
-  const { pantry } = useCurrentPantry();
+  const { currentHome } = useCurrentPantry();
   const userId = useUserId();
   const receiptDay = useReceiptDraft()?.purchasedOn;
-  // A lookup for one sheet: its filtered read stays out of the pantry's lists.
-  const stacks = useQuery(
-    HeldStacksOfItemDocument,
-    pantry && itemId
+  const homeId = currentHome?.id;
+  const end = receiptDay ? new Date(`${receiptDay}T23:59:59`).getTime() : null;
+  const start = end === null ? null : end - WINDOW_DAYS * DAY_MS;
+  const variables =
+    homeId && itemId && start !== null && end !== null
       ? {
-          variables: { pantryId: pantry.id, itemId },
-          fetchPolicy: 'no-cache',
-          refetchOn: false,
+          homeId,
+          itemId,
+          fromDate: new Date(start).toISOString(),
+          toDate: new Date(end).toISOString(),
         }
+      : null;
+  // A lookup for one sheet: its filtered read stays out of the home's lists.
+  const purchases = useQuery(
+    EarlierPurchasesOfItemDocument,
+    variables
+      ? { variables, fetchPolicy: 'no-cache', refetchOn: false }
       : skipToken,
   );
   // A failed read offers no earlier purchase, so the line stays a new one.
-  useApolloErrorLogger(HeldStacksOfItemDocument, stacks.error);
-  // `skipToken` keeps the last run's data: an item since changed or cleared,
-  // or one this pantry holds no stack of, never offers another's purchases.
-  const stacksData =
-    pantry &&
-    itemId &&
-    stacks.variables.itemId === itemId &&
-    stacks.variables.pantryId === pantry.id
-      ? stacks.data
+  useApolloErrorLogger(EarlierPurchasesOfItemDocument, purchases.error);
+  // `skipToken` keeps the last run's data: an item or home since changed, or
+  // a line now naming none, never offers another's purchases.
+  const answered =
+    variables &&
+    purchases.variables.itemId === variables.itemId &&
+    purchases.variables.homeId === variables.homeId &&
+    purchases.variables.fromDate === variables.fromDate
+      ? purchases.data
       : undefined;
-  const [stack] = stacksData?.pantry?.itemsConnection.edges ?? [];
-  const batches = useQuery(
-    EarlierPurchasesOfStackDocument,
-    stack
-      ? {
-          variables: { pantryItemId: stack.node.id },
-          fetchPolicy: 'no-cache',
-          refetchOn: false,
-        }
-      : skipToken,
-  );
-  useApolloErrorLogger(EarlierPurchasesOfStackDocument, batches.error);
-  const batchesData =
-    stack && batches.variables.pantryItemId === stack.node.id
-      ? batches.data
-      : undefined;
-  if (!userId || !receiptDay) return [];
-  const end = new Date(`${receiptDay}T23:59:59`).getTime();
-  const start = end - WINDOW_DAYS * DAY_MS;
-  return (batchesData?.pantryItemBatchesConnection.edges ?? [])
-    .flatMap(({ node }) => (node.purchase ? [node.purchase] : []))
+  if (!userId || start === null || end === null) return [];
+  return (answered?.home?.purchasesConnection.edges ?? [])
+    .map(({ node }) => node)
     .filter(purchase => {
       const at = new Date(purchase.purchaseDate).getTime();
       return purchase.purchasedBy?.id === userId && at >= start && at <= end;
     })
     .sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate))
-    .filter(
-      (purchase, at, all) => all.findIndex(p => p.id === purchase.id) === at,
-    )
     .map(purchase => ({
       id: purchase.id,
       version: purchase.version,
