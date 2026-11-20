@@ -4,7 +4,7 @@
  * holds.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   UseUpdatePantryItem_RowFragmentDoc,
@@ -17,7 +17,7 @@ import {
   localBrand,
   localStorageLocation,
 } from '#features/catalog/cache/localRefs';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#/i18n';
 import { buildDirtyUpdateInput } from './utils';
 import type { DirtyFieldFlags, FormDataInput } from './types';
@@ -46,8 +46,9 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
   const { t } = useTranslation();
   const client = useApolloClient();
 
-  const [updateMutation] = useMutation(UpdatePantryItemDocument, {
-    context: { localFirst: true },
+  const update = useLocalWrite(UpdatePantryItemDocument, {
+    fallback: t('errors.updateItemFailed'),
+    onConflictRefresh: refetch,
   });
 
   /**
@@ -146,18 +147,12 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
 
     // A refusal naming `field: "unit"` (a unit change while the item has
     // batches) reads as the localized `errors.field.unit` copy.
-    const settled = await sendFields(client.cache, {
+    const settled = await update.sendFields({
       entity: { __typename: 'PantryItem', id: itemId },
       fields: optimisticUpdate,
       variables: {
         input: { ...updateInput, id: itemId, version: currentItem.version },
         today: todayKey(),
-      },
-      mutate: updateMutation,
-      settle: {
-        document: UpdatePantryItemDocument,
-        fallback: t('errors.updateItemFailed'),
-        onConflictRefresh: refetch,
       },
     });
 

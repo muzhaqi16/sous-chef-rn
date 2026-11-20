@@ -1,15 +1,12 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { inTrackingUnit } from '#features/pantry/cache/stock';
 import type { AddStockInputs } from '#features/pantry/offline/localWrites';
 import { readStackUnit } from '#features/pantry/utils/pantryCacheReaders';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { resolveIntakeDraft } from '#domain/intakeDraft';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import {
-  settleMutation,
-  type SettleOptions,
-} from '#/apollo/utils/settleMutation';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import type { SettleOptions } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
 import { useTranslation } from '#/i18n';
@@ -87,8 +84,8 @@ export function usePantryRestock(pantryId: string | undefined) {
   const client = useApolloClient();
   const intake = usePantryIntake(pantryId);
 
-  const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
-    context: { localFirst: true },
+  const restockPantryItem = useLocalWrite(RestockPantryItemDocument, {
+    fallback: t('errors.restockFailedRetry'),
   });
 
   const restock = async (
@@ -163,17 +160,10 @@ export function usePantryRestock(pantryId: string | undefined) {
       },
     };
 
-    const settled = await pendingWritesOf(client.cache).send(
-      RestockPantryItemDocument,
+    const settled = await restockPantryItem.send(
       restockVariables({ id: pantryItemId, amount, ...details }),
-      write =>
-        settleMutation(() => restockPantryItem(write), {
-          document: RestockPantryItemDocument,
-          fallback: refusal,
-          on,
-          present,
-        }),
       inputs,
+      { settle: { fallback: refusal, on, present } },
     );
     if (settled.status === 'failed') {
       // `amount.packages.size` is the input's one field named `size`.

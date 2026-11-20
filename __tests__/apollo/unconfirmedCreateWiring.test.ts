@@ -71,6 +71,13 @@ const sources = collectSourceFiles(SRC).map(file => ({
   code: stripComments(readFileSync(file, 'utf8')),
 }));
 
+/** A pending write, sent directly or through the helpers that send one. */
+const PENDING_WRITE_SENDS = [
+  'pendingWritesOf(',
+  'sendLocalWrite(',
+  'useLocalWrite(',
+];
+
 /** Writers that publish the client-minted row into a cached connection. */
 const OPTIMISTIC_PUBLISHERS = [
   'addToPantryItemsCache(',
@@ -81,8 +88,11 @@ const OPTIMISTIC_PUBLISHERS = [
   'writeLocalMove(',
   'writeLocalIntake(',
   // A pending write, whose registered local write the test below checks.
-  'pendingWritesOf(',
+  ...PENDING_WRITE_SENDS,
 ];
+
+/** The hooks a create's document is sent through. */
+const SENDS_DOCUMENT = '(useMutation|useLocalWrite)\\(\\s*';
 
 /** The shared writers, and the publisher and reconciler each must call. */
 const SHARED_LOCAL_WRITES = [
@@ -112,14 +122,14 @@ const SHARED_LOCAL_WRITES = [
  * below rather than exempted by name: add an optimistic write there and it
  * joins this list automatically.
  *
- * `useMutation(` and the document name are matched across whitespace because
+ * The hook and the document name are matched across whitespace because
  * prettier splits the call when the options object is long.
  */
 const creators = sources
   .filter(
     ({ code }) =>
       CREATE_DOCUMENTS.some(doc =>
-        new RegExp(`useMutation\\(\\s*${doc}\\b`).test(code),
+        new RegExp(`${SENDS_DOCUMENT}${doc}\\b`).test(code),
       ) && OPTIMISTIC_PUBLISHERS.some(writer => code.includes(writer)),
   )
   .map(({ path }) => path)
@@ -158,7 +168,7 @@ describe('unconfirmed-create wiring (pantry items)', () => {
         readFileSync(join(process.cwd(), file), 'utf8'),
       );
       const adopts = code.includes('adoptServerEntityId(');
-      const withdraws = code.includes('pendingWritesOf(');
+      const withdraws = PENDING_WRITE_SENDS.some(send => code.includes(send));
 
       expect(adopts || withdraws).toBe(true);
     },
@@ -196,10 +206,11 @@ describe('unconfirmed-create wiring (homes and pantries)', () => {
   const homeAndPantryCreators = sources
     .filter(
       ({ code }) =>
-        /useMutation\(\s*(CreateHomeDocument|CreatePantryDocument)\b/.test(
-          code,
-        ) &&
-        (code.includes('writeLocalHome(') || code.includes('pendingWritesOf(')),
+        new RegExp(
+          `${SENDS_DOCUMENT}(CreateHomeDocument|CreatePantryDocument)\\b`,
+        ).test(code) &&
+        (code.includes('writeLocalHome(') ||
+          PENDING_WRITE_SENDS.some(send => code.includes(send))),
     )
     .map(({ path }) => path)
     .sort();

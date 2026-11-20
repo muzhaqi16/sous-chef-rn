@@ -4,10 +4,9 @@
  * replay from double-counting.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { WastePantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
 import { BatchStatus, type WasteReason } from '#/graphql/generated/schemaTypes';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
@@ -20,9 +19,8 @@ export function useWastePantryItemBatch({
   onSuccess,
 }: UseWastePantryItemBatchOptions = {}) {
   const { t } = useTranslation();
-  const client = useApolloClient();
-  const [wasteMutation] = useMutation(WastePantryItemBatchDocument, {
-    context: { localFirst: true },
+  const waste = useLocalWrite(WastePantryItemBatchDocument, {
+    fallback: t('errors.wasteBatchFailed'),
   });
 
   const wasteBatch = async (
@@ -32,7 +30,7 @@ export function useWastePantryItemBatch({
     isRecycled?: boolean,
     notes?: string,
   ): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
+    const settled = await waste.sendFields({
       entity: { __typename: 'PantryItemBatch', id: batchId },
       // Wasting empties the batch, so the server returns it at zero with a
       // `depletedAt`; `status` alone leaves the row showing its old amount.
@@ -51,11 +49,6 @@ export function useWastePantryItemBatch({
           notes,
           idempotencyKey: generateEntityId(),
         },
-      },
-      mutate: wasteMutation,
-      settle: {
-        document: WastePantryItemBatchDocument,
-        fallback: t('errors.wasteBatchFailed'),
       },
     });
     if (settled.status === 'failed') return false;

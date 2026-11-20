@@ -1,11 +1,8 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import type { CreatePantryInputs } from '#features/pantry/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import {
-  settleMutation,
-  type SettledFailure,
-} from '#/apollo/utils/settleMutation';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import type { SettledFailure } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import type { CreatePantryInput } from '#/graphql/generated/schemaTypes';
@@ -51,21 +48,15 @@ export function useCreatePantry() {
     const inputs: CreatePantryInputs = { pantry: input, today };
 
     let result: CreatePantryOutcome['result'] = {};
-    const settled = await pendingWritesOf(client.cache).send(
+    const settled = await sendLocalWrite(
+      client.cache,
       CreatePantryDocument,
       { input, today },
-      write =>
-        settleMutation(
-          async () => {
-            result = await createPantry(write);
-            return result;
-          },
-          {
-            document: CreatePantryDocument,
-            fallback: t('errors.createPantryFailed'),
-            present: 'none',
-          },
-        ),
+      async write => {
+        result = await createPantry(write);
+        return result;
+      },
+      { fallback: t('errors.createPantryFailed'), present: 'none' },
       inputs,
     );
     // Released on every outcome; a queued create is tracked by the offline

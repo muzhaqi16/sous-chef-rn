@@ -1,12 +1,9 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { alertService } from '#/services/alertService';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import {
-  settleMutation,
-  type SettleStatus,
-} from '#/apollo/utils/settleMutation';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import type { SettleStatus } from '#/apollo/utils/settleMutation';
 import { CreatePantryItemUsageDocument } from '#features/pantry/graphql/pantry.generated';
 import { dropRankedUnits } from '#features/pantry/cache/rankedUnits';
 import {
@@ -44,12 +41,12 @@ export interface PantryUsage {
 export function useRecordPantryUsage() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  // Replays as the canonical mutation, deduped by its idempotencyKey.
-  const [createPantryItemUsage] = useMutation(CreatePantryItemUsageDocument, {
-    context: { localFirst: true },
-  });
-
   const refetchRankedUnits = () => dropRankedUnits(client.cache);
+  // Replays as the canonical mutation, deduped by its idempotencyKey.
+  const createUsage = useLocalWrite(CreatePantryItemUsageDocument, {
+    fallback: t('errors.recordUsageFailedRetry'),
+    on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
+  });
 
   const recordUsage = async ({
     pantryItemId,
@@ -85,17 +82,9 @@ export function useRecordPantryUsage() {
       idempotencyKey: generateEntityId(),
     };
     try {
-      const settled = await pendingWritesOf(client.cache).send(
-        CreatePantryItemUsageDocument,
-        { today, input },
-        write =>
-          settleMutation(() => createPantryItemUsage(write), {
-            document: CreatePantryItemUsageDocument,
-            fallback,
-            on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
-          }),
-        inputs,
-      );
+      const settled = await createUsage.send({ today, input }, inputs, {
+        settle: { fallback },
+      });
       return settled.status;
     } catch (error) {
       errorService.reportError(error, { operation: 'Record pantry usage' });

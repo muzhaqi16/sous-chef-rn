@@ -1,9 +1,4 @@
-import {
-  skipToken,
-  useApolloClient,
-  useQuery,
-  useMutation,
-} from '@apollo/client/react';
+import { skipToken, useApolloClient, useQuery } from '@apollo/client/react';
 import {
   GetPantryDocument,
   UpdatePantryDocument,
@@ -16,10 +11,8 @@ import {
   type PantryWriteOutcome,
 } from '#features/pantry/hooks/useCreatePantry';
 import { useToday } from '#hooks/app/useToday';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { readVersion } from '#/apollo/utils/entityWriteChain';
-import { settleMutation } from '#/apollo/utils/settleMutation';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import { todayKey } from '#/utils/dateUtils';
@@ -59,17 +52,21 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
 
   const pantry = pantryData?.pantry;
 
-  const [updatePantry] = useMutation(UpdatePantryDocument, {
-    context: { localFirst: true },
+  const updatePantry = useLocalWrite(UpdatePantryDocument, {
+    fallback: t('errors.saveSettingsFailed'),
+    onConflictRefresh: () => {
+      void refetchPantry();
+    },
   });
 
-  const [markAsDefault] = useMutation(MarkPantryAsDefaultDocument, {
-    // Absolute flag on an existing row, so a replay lands the same state.
-    context: { localFirst: true },
+  // Absolute flag on an existing row, so a replay lands the same state.
+  const markAsDefault = useLocalWrite(MarkPantryAsDefaultDocument, {
+    fallback: t('errors.saveSettingsFailed'),
   });
 
-  const [deletePantryMutation] = useMutation(DeletePantryDocument, {
-    context: { localFirst: true },
+  const removePantry = useLocalWrite(DeletePantryDocument, {
+    fallback: t('errors.deletePantryFailed'),
+    removal: true,
   });
 
   /**
@@ -77,15 +74,10 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
    * In line with the pantry's saves: the server moves its version.
    */
   const setDefault = async (id: string): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
+    const settled = await markAsDefault.sendFields({
       entity: { __typename: 'Pantry', id },
       fields: { isDefault: true },
       variables: { input: { id }, today: todayKey() },
-      mutate: markAsDefault,
-      settle: {
-        document: MarkPantryAsDefaultDocument,
-        fallback: t('errors.saveSettingsFailed'),
-      },
     });
     return settled.status !== 'failed';
   };
@@ -119,18 +111,10 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     }
 
     // A save made elsewhere since is refused, not overwritten.
-    const settled = await sendFields(client.cache, {
+    const settled = await updatePantry.sendFields({
       entity,
       fields: updates,
       variables: { input: { id, ...updates, version }, today: todayKey() },
-      mutate: updatePantry,
-      settle: {
-        document: UpdatePantryDocument,
-        fallback: t('errors.saveSettingsFailed'),
-        onConflictRefresh: () => {
-          void refetchPantry();
-        },
-      },
     });
     return settled.status !== 'failed';
   };
@@ -141,17 +125,7 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
    */
   const deletePantry = async (id: string): Promise<PantryWriteOutcome> => {
     const inputs: RemovePantryInputs = { homeId };
-    const settled = await pendingWritesOf(client.cache).send(
-      DeletePantryDocument,
-      { input: { id } },
-      write =>
-        settleMutation(() => deletePantryMutation(write), {
-          document: DeletePantryDocument,
-          fallback: t('errors.deletePantryFailed'),
-          removal: true,
-        }),
-      inputs,
-    );
+    const settled = await removePantry.send({ input: { id } }, inputs);
     return settled.status === 'failed'
       ? { status: 'rejected', failure: settled.failure }
       : { status: 'ok' };

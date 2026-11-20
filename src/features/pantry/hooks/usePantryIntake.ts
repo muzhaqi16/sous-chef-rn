@@ -4,8 +4,7 @@ import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryIte
 import { localIntakeRow } from '#features/pantry/cache/localIntake';
 import type { CreateItemInputs } from '#features/pantry/offline/localWrites';
 import { readHeldStackUnit } from '#features/pantry/utils/pantryCacheReaders';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
@@ -90,15 +89,12 @@ export function usePantryIntake(pantryId: string | undefined) {
       now: new Date().toISOString(),
     };
     // A refusal naming a field reads as its localized `errors.field.*` copy.
-    const settled = await pendingWritesOf(client.cache).send(
+    const settled = await sendLocalWrite(
+      client.cache,
       CreatePantryItemDocument,
       { input: { ...sent, id, pantryId, today }, today },
-      write =>
-        settleMutation(() => createPantryItem(write), {
-          document: CreatePantryItemDocument,
-          fallback,
-          present,
-        }),
+      createPantryItem,
+      { fallback, present },
       inputs,
     );
     let outcome: AddPantryItemOutcome = { status: 'added' };

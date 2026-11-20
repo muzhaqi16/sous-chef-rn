@@ -4,12 +4,10 @@
  * DuplicatePantryItemError restock/force-add recovery every add path requires.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import type { RemoveItemInputs } from '#features/pantry/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { todayKey } from '#/utils/dateUtils';
-import { settleMutation } from '#/apollo/utils/settleMutation';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { useTranslation } from '#/i18n';
 
@@ -21,10 +19,10 @@ export function usePantryItemMutations({
   pantryId,
 }: UsePantryItemMutationsOptions) {
   const { t } = useTranslation();
-  const client = useApolloClient();
 
-  const [removeItemMutation] = useMutation(DeletePantryItemDocument, {
-    context: { localFirst: true },
+  const deleteItem = useLocalWrite(DeletePantryItemDocument, {
+    fallback: t('errors.deleteItemFailed'),
+    removal: true,
   });
 
   /** @returns whether the item is gone — false when the server refused it. */
@@ -43,15 +41,8 @@ export function usePantryItemMutations({
     );
 
     const inputs: RemoveItemInputs = { pantryId };
-    const settled = await pendingWritesOf(client.cache).send(
-      DeletePantryItemDocument,
+    const settled = await deleteItem.send(
       { input: { id: itemId }, today: todayKey() },
-      write =>
-        settleMutation(() => removeItemMutation(write), {
-          document: DeletePantryItemDocument,
-          fallback: t('errors.deleteItemFailed'),
-          removal: true,
-        }),
       inputs,
     );
     subscriptionService.unregisterPendingDelete(itemId);

@@ -1,9 +1,4 @@
-import {
-  skipToken,
-  useApolloClient,
-  useMutation,
-  useQuery,
-} from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   StockCheckAnswer,
   type StockConfidence,
@@ -12,11 +7,8 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import { isVersionConflictCode } from '#/utils/errors/versionConflict';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import {
-  settleMutation,
-  type SettleStatus,
-} from '#/apollo/utils/settleMutation';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import type { SettleStatus } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
@@ -120,7 +112,6 @@ const refusalOf = (
  */
 export function useStockCheck(enabled = true) {
   const { t } = useTranslation();
-  const client = useApolloClient();
   const { pantry } = useCurrentPantry();
   const today = useToday();
   const system = useReadingSystem();
@@ -144,8 +135,8 @@ export function useStockCheck(enabled = true) {
       ? `${variables.today}:${variables.pantryId}`
       : null,
   );
-  const [record] = useMutation(RecordPantryStockCheckDocument, {
-    context: { localFirst: true },
+  const record = useLocalWrite(RecordPantryStockCheckDocument, {
+    fallback: t('pantryScreen.stockCheckFailed'),
   });
 
   // The subject guard: an answer for another pantry or day is not this one's.
@@ -200,8 +191,7 @@ export function useStockCheck(enabled = true) {
           choice.contents && { remainingNetWeight: choice.contents.amount }),
       })),
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      RecordPantryStockCheckDocument,
+    const settled = await record.send(
       {
         today,
         input: {
@@ -230,11 +220,6 @@ export function useStockCheck(enabled = true) {
           })),
         },
       },
-      write =>
-        settleMutation(() => record(write), {
-          document: RecordPantryStockCheckDocument,
-          fallback: t('pantryScreen.stockCheckFailed'),
-        }),
       inputs,
     );
     const results = appliedPayload(settled.data)?.results ?? [];

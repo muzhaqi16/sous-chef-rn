@@ -4,11 +4,9 @@
  * server's recompute. `idempotencyKey` stops a replay double-counting.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
 import type { DiscardExpiredInputs } from '#features/pantry/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useTranslation } from '#/i18n';
 import { todayKey } from '#/utils/dateUtils';
@@ -21,9 +19,8 @@ export function useConvertExpiredToWaste({
   onSuccess,
 }: UseConvertExpiredToWasteOptions = {}) {
   const { t } = useTranslation();
-  const client = useApolloClient();
-  const [convertMutation] = useMutation(ConvertExpiredToWasteDocument, {
-    context: { localFirst: true },
+  const convert = useLocalWrite(ConvertExpiredToWasteDocument, {
+    fallback: t('errors.discardExpiredFailed'),
   });
 
   const convertExpiredToWaste = async (
@@ -36,17 +33,11 @@ export function useConvertExpiredToWaste({
       whole: !hasBatches,
       now: new Date().toISOString(),
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      ConvertExpiredToWasteDocument,
+    const settled = await convert.send(
       {
         today,
         input: { pantryItemId, idempotencyKey: generateEntityId(), today },
       },
-      write =>
-        settleMutation(() => convertMutation(write), {
-          document: ConvertExpiredToWasteDocument,
-          fallback: t('errors.discardExpiredFailed'),
-        }),
       inputs,
     );
     if (settled.status === 'failed') return false;
