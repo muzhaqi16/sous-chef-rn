@@ -1,4 +1,5 @@
 import { toastService } from '#/services/toastService';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import {
@@ -31,10 +32,12 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { RecipeMissingIngredientsDocument } from '#features/recipes/hooks/useRecipeMissingIngredients.generated';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { AddItemsToShoppingListFromRecipeDocument } from '../useRecipeShoppingList.generated';
 import type { DisplayIngredient, MaterializedRecipe } from '../useRecipeData';
 import { useRecipeShoppingList } from '../useRecipeShoppingList';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
+import { withCurrentUnits } from '#/apollo/offlineQueue/replayPreparation';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 
 const mockToastSuccess = jest.mocked(toastService.success);
 const mockToastError = jest.mocked(toastService.error);
@@ -236,7 +239,7 @@ async function renderShopping(
   return { ...rendered, cache };
 }
 
-type AddData = MockDataFor<typeof AddItemsToShoppingListFromRecipeDocument>;
+type AddData = MockDataFor<typeof AddItemToShoppingListDocument>;
 type AddPayload = Extract<
   NonNullable<AddData['addItemsToShoppingList']>,
   { __typename?: 'AddItemsToShoppingListPayload' | null }
@@ -340,18 +343,18 @@ const REFUSED: AddData = {
 };
 
 const appliedAdd = (...args: Parameters<typeof appliedData>) =>
-  recordMock(AddItemsToShoppingListFromRecipeDocument, {
+  recordMock(AddItemToShoppingListDocument, {
     data: appliedData(...args),
   });
 
 /** No payload and no error: the offline queue took the write. */
 const queuedAdd = () =>
-  recordMock(AddItemsToShoppingListFromRecipeDocument, {
+  recordMock(AddItemToShoppingListDocument, {
     data: { addItemsToShoppingList: null },
   });
 
 const refusedAdd = () =>
-  recordMock(AddItemsToShoppingListFromRecipeDocument, { data: REFUSED });
+  recordMock(AddItemToShoppingListDocument, { data: REFUSED });
 
 // The app's own copy for `field: 'quantity'`; the server's sentence is never shown.
 const QUANTITY_COPY =
@@ -411,7 +414,7 @@ async function pickList(result: Hook, requests = 1) {
     result.current.handleListSelected('sl-1');
   });
   if (requests > 0) {
-    await log.landed(AddItemsToShoppingListFromRecipeDocument, requests);
+    await log.landed(AddItemToShoppingListDocument, requests);
   }
   // The add runs unawaited; it settles a few promise turns after its answer.
   await act(async () => undefined);
@@ -422,6 +425,20 @@ async function addAllTo(result: Hook, requests = 1) {
   openPicker(result);
   await pickList(result, requests);
 }
+
+// A unit retired while the add waited offline is restated by its symbol on
+// replay: the recipe sends the one add-to-list the queue prepares that way.
+it('sends the add that restates a retired unit on replay', async () => {
+  const add = queuedAdd();
+  const { result } = await renderShopping(add.mock);
+
+  await addOne(result, { id: 'ing-7' });
+
+  expect(add.fired).toHaveLength(1);
+  expect(
+    REPLAY_PREPARATIONS[operationNameOf(AddItemToShoppingListDocument)],
+  ).toBe(withCurrentUnits);
+});
 
 describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
   it('sends the ingredient as a batch of one, and writes its row before any answer', async () => {
@@ -524,7 +541,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
     {
       name: 'says so once, in the app’s own words, on a transport error',
       add: () =>
-        recordMock(AddItemsToShoppingListFromRecipeDocument, {
+        recordMock(AddItemToShoppingListDocument, {
           error: new Error('network down'),
         }),
       rows: [],
@@ -779,7 +796,7 @@ describe('useRecipeShoppingList — Add All', () => {
     // Each request is answered for the rows IT carried, so the toast's count
     // is the two answers added together.
     let listed = 0;
-    const add = recordMock(AddItemsToShoppingListFromRecipeDocument, {
+    const add = recordMock(AddItemToShoppingListDocument, {
       dataFor: vars => {
         listed += itemsOf(vars).length;
         return appliedData(acceptEach(vars), listHolding(listed));
@@ -803,7 +820,7 @@ describe('useRecipeShoppingList — Add All', () => {
   it('marks the rows of the request that landed when the next one is refused', async () => {
     // The first 50 rows are accepted; the request carrying the 51st is refused
     // whole.
-    const add = recordMock(AddItemsToShoppingListFromRecipeDocument, {
+    const add = recordMock(AddItemToShoppingListDocument, {
       dataFor: vars =>
         itemsOf(vars).length === 50
           ? appliedData(acceptEach(vars), listHolding(50))
@@ -1065,7 +1082,7 @@ describe('useRecipeShoppingList — handleCreateListAndAddIngredients', () => {
     await act(async () => {
       result.current.handleCreateListAndAddIngredients('Dinner');
     });
-    await log.landed(AddItemsToShoppingListFromRecipeDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await act(async () => undefined);
 
     const selected = useStore.getState().selectedShoppingListId;

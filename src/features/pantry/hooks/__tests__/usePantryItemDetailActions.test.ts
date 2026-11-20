@@ -1,4 +1,5 @@
 import { act } from '@testing-library/react-native';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
 import { gql, type InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
@@ -31,7 +32,6 @@ import {
   GetPantryItemBatchesDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
-import { AddItemToShoppingListFromPantryItemDocument } from '../usePantryItemDetailActions.generated';
 import { usePantryItemDetailActions } from '../usePantryItemDetailActions';
 
 type Params = Parameters<typeof usePantryItemDetailActions>[0];
@@ -109,7 +109,7 @@ const deleted: MockDataFor<typeof DeletePantryItemDocument> = {
   },
 };
 
-const added: MockDataFor<typeof AddItemToShoppingListFromPantryItemDocument> = {
+const added: MockDataFor<typeof AddItemToShoppingListDocument> = {
   addItemsToShoppingList: {
     __typename: 'AddItemsToShoppingListPayload',
     results: [{ index: 0, success: true, failure: null }],
@@ -312,7 +312,7 @@ describe('adding it to the shopping list', () => {
   });
 
   it('adds its catalog item, amount and unit to the chosen list', async () => {
-    const add = recordMock(AddItemToShoppingListFromPantryItemDocument, {
+    const add = recordMock(AddItemToShoppingListDocument, {
       data: added,
     });
     const { result } = renderActions({}, { answers: [add] });
@@ -339,7 +339,7 @@ describe('adding it to the shopping list', () => {
   });
 
   it('names a stack with no catalog item by its name', async () => {
-    const add = recordMock(AddItemToShoppingListFromPantryItemDocument, {
+    const add = recordMock(AddItemToShoppingListDocument, {
       data: added,
     });
     const { result } = renderActions(
@@ -358,7 +358,7 @@ describe('adding it to the shopping list', () => {
     { what: 'an empty stack', quantity: 0 },
     { what: 'a stack with no amount', quantity: null },
   ])('adds one of $what', async ({ quantity }) => {
-    const add = recordMock(AddItemToShoppingListFromPantryItemDocument, {
+    const add = recordMock(AddItemToShoppingListDocument, {
       data: added,
     });
     const { result } = renderActions(
@@ -372,7 +372,7 @@ describe('adding it to the shopping list', () => {
   });
 
   it('sends no unit for a stack with none', async () => {
-    const add = recordMock(AddItemToShoppingListFromPantryItemDocument, {
+    const add = recordMock(AddItemToShoppingListDocument, {
       data: added,
     });
     const { result } = renderActions(
@@ -386,7 +386,7 @@ describe('adding it to the shopping list', () => {
   });
 
   it('adds it once however often it is tapped while adding', async () => {
-    const add = recordMock(AddItemToShoppingListFromPantryItemDocument, {
+    const add = recordMock(AddItemToShoppingListDocument, {
       data: added,
       held: true,
     });
@@ -396,7 +396,7 @@ describe('adding it to the shopping list', () => {
     act(() => {
       first = result.current.handleAddToShoppingList();
     });
-    await log.requested(AddItemToShoppingListFromPantryItemDocument);
+    await log.requested(AddItemToShoppingListDocument);
     await act(() => result.current.handleAddToShoppingList());
     add.release();
     await act(async () => {
@@ -407,7 +407,7 @@ describe('adding it to the shopping list', () => {
   });
 
   it('says so, and marks the add failed, when the list refuses it', async () => {
-    const refused = recordMock(AddItemToShoppingListFromPantryItemDocument, {
+    const refused = recordMock(AddItemToShoppingListDocument, {
       data: {
         addItemsToShoppingList: {
           __typename: 'ForbiddenError',
@@ -425,7 +425,7 @@ describe('adding it to the shopping list', () => {
   });
 
   it('keeps a queued add without an alert', async () => {
-    const queued = recordMock(AddItemToShoppingListFromPantryItemDocument, {
+    const queued = recordMock(AddItemToShoppingListDocument, {
       data: { addItemsToShoppingList: null },
       partial: true,
     });
@@ -438,7 +438,7 @@ describe('adding it to the shopping list', () => {
   });
 
   it("names the new row's unit", async () => {
-    const add = recordMock(AddItemToShoppingListFromPantryItemDocument, {
+    const add = recordMock(AddItemToShoppingListDocument, {
       data: added,
       held: true,
     });
@@ -447,7 +447,7 @@ describe('adding it to the shopping list', () => {
     act(() => {
       void result.current.handleAddToShoppingList();
     });
-    await log.requested(AddItemToShoppingListFromPantryItemDocument);
+    await log.requested(AddItemToShoppingListDocument);
 
     const row = cache.readFragment<{ unitName: string | null }>({
       id: `ShoppingListItem:${String(sentLine(add).id)}`,

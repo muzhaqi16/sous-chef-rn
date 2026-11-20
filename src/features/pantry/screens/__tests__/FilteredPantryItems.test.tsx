@@ -1,6 +1,7 @@
 'use no memo';
 
 import React from 'react';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
 import { fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
@@ -22,7 +23,6 @@ import { alertService } from '#/services/alertService';
 import { kitTestIDs } from '#components/testIDs';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
 import {
   GetShoppingListDetailsDocument,
   GetShoppingListsLiteDocument,
@@ -146,7 +146,7 @@ const homeList = (
 });
 
 const addLands = () =>
-  recordMock(AddItemToShoppingListFromFilteredPantryDocument, {
+  recordMock(AddItemToShoppingListDocument, {
     data: {
       addItemsToShoppingList: {
         __typename: 'AddItemsToShoppingListPayload',
@@ -391,7 +391,7 @@ describe('the cart', () => {
     await openScreen({ answers: [add] });
 
     fireEvent.press(rowCarts()[0]!);
-    await log.landed(AddItemToShoppingListFromFilteredPantryDocument);
+    await log.landed(AddItemToShoppingListDocument);
 
     expect(add.fired).toEqual([
       {
@@ -413,7 +413,7 @@ describe('the cart', () => {
 
     fireEvent.press(rowCarts()[0]!);
     fireEvent.press(screen.getByText('Weekend'));
-    await log.landed(AddItemToShoppingListFromFilteredPantryDocument);
+    await log.landed(AddItemToShoppingListDocument);
 
     expect(add.fired).toEqual([
       {
@@ -425,7 +425,7 @@ describe('the cart', () => {
   it('says so when the list refuses the add', async () => {
     await openScreen({
       answers: [
-        recordMock(AddItemToShoppingListFromFilteredPantryDocument, {
+        recordMock(AddItemToShoppingListDocument, {
           data: {
             addItemsToShoppingList: {
               __typename: 'ForbiddenError',
@@ -438,7 +438,7 @@ describe('the cart', () => {
     });
 
     fireEvent.press(rowCarts()[0]!);
-    await log.landed(AddItemToShoppingListFromFilteredPantryDocument);
+    await log.landed(AddItemToShoppingListDocument);
 
     expect(alertService.alert).toHaveBeenCalledWith(
       t('labels.error'),
@@ -470,7 +470,7 @@ describe('the cart', () => {
 
     fireEvent.press(headerCart());
     fireEvent.press(screen.getByText('Weekend'));
-    await log.landed(AddItemToShoppingListFromFilteredPantryDocument, 3);
+    await log.landed(AddItemToShoppingListDocument, 3);
 
     const added = add.fired.flatMap(vars =>
       isRecord(vars.input) && Array.isArray(vars.input.items)

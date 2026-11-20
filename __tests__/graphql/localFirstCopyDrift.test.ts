@@ -34,9 +34,6 @@ import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
-import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
 
 /** Every field path in a selection set, by field NAME — aliases ignored. */
 function fieldPaths(
@@ -117,38 +114,15 @@ interface Family {
   fragmentSources: DocumentNode[];
 }
 
-const FAMILIES: Family[] = [
-  {
-    entity: 'ShoppingListItem',
-    canonical: {
-      name: 'AddItemToShoppingList',
-      document: AddItemToShoppingListDocument,
-    },
-    copies: [
-      {
-        name: 'BarcodeAddItemToShoppingList',
-        document: BarcodeAddItemToShoppingListDocument,
-      },
-      {
-        name: 'AddItemToShoppingListFromFilteredPantry',
-        document: AddItemToShoppingListFromFilteredPantryDocument,
-      },
-      {
-        name: 'AddItemToShoppingListFromPantryItem',
-        document: AddItemToShoppingListFromPantryItemDocument,
-      },
-    ],
-    fragmentSources: [
-      AddItemToShoppingListDocument,
-      BarcodeAddItemToShoppingListDocument,
-      AddItemToShoppingListFromFilteredPantryDocument,
-      AddItemToShoppingListFromPantryItemDocument,
-    ],
-  },
-];
+// None today: add-to-list is one document behind `useAddShoppingRows`. A copy
+// registered for replay again is listed here, with its canonical original.
+const FAMILIES: Family[] = [];
 
 /** Registered creates with no copy: every feature reaches them through the owner's hook. */
-const WITHOUT_COPIES = [operationNameOf(CreatePantryItemDocument)];
+const WITHOUT_COPIES = [
+  operationNameOf(CreatePantryItemDocument),
+  operationNameOf(AddItemToShoppingListDocument),
+];
 
 const REGISTERED = new Set(Object.keys(REPLAY_PREPARATIONS));
 
@@ -174,23 +148,25 @@ describe('local-first copy drift', () => {
     expect(uncovered).toEqual([]);
   });
 
-  describe.each(FAMILIES)('$entity', family => {
-    const fragments = collectFragments(family.fragmentSources);
-    const canonicalPaths = fieldPaths(
-      payloadSelection(family.canonical.document),
-      fragments,
-    );
-
-    it('finds a real canonical selection, so the checks are not vacuous', () => {
-      expect(canonicalPaths.length).toBeGreaterThan(5);
-    });
-
-    it.each(family.copies)('$name matches the canonical selection', copy => {
-      const copyPaths = new Set(
-        fieldPaths(payloadSelection(copy.document), fragments),
+  // A loop, not `describe.each`, which refuses an empty table.
+  for (const family of FAMILIES)
+    describe(`${family.entity}`, () => {
+      const fragments = collectFragments(family.fragmentSources);
+      const canonicalPaths = fieldPaths(
+        payloadSelection(family.canonical.document),
+        fragments,
       );
-      const missing = canonicalPaths.filter(path => !copyPaths.has(path));
-      expect(missing).toEqual([]);
+
+      it('finds a real canonical selection, so the checks are not vacuous', () => {
+        expect(canonicalPaths.length).toBeGreaterThan(5);
+      });
+
+      it.each(family.copies)('$name matches the canonical selection', copy => {
+        const copyPaths = new Set(
+          fieldPaths(payloadSelection(copy.document), fragments),
+        );
+        const missing = canonicalPaths.filter(path => !copyPaths.has(path));
+        expect(missing).toEqual([]);
+      });
     });
-  });
 });

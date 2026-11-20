@@ -30,7 +30,6 @@ import {
   ForkRecipeDocument,
   MarkRecipeAsCookedDocument,
 } from '#features/recipes/graphql/recipe.generated';
-import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import {
   CreateMealPlanItemDocument,
   UpdateMealPlanItemDocument,
@@ -52,7 +51,6 @@ import {
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
 import {
   CreateHomeDocument,
   UpdateHomeDocument,
@@ -712,7 +710,7 @@ describe('QueueManager', () => {
       ],
       [
         'its ingredients added to a list',
-        AddItemsToShoppingListFromRecipeDocument,
+        AddItemToShoppingListDocument,
         {
           shoppingListId: 'list-1',
           items: [
@@ -1994,9 +1992,7 @@ describe('QueueManager', () => {
       expect(
         extractEntityInfo(
           makeMutation({
-            ...queuedMutationFor(
-              AddItemToShoppingListFromFilteredPantryDocument,
-            ),
+            ...queuedMutationFor(AddItemToShoppingListDocument),
             variables: {
               input: { shoppingListId: 'list-1', items: [{ id: 'item-1' }] },
             },

@@ -1,4 +1,5 @@
 import React from 'react';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   act,
   fireEvent,
@@ -37,7 +38,6 @@ import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import {
   HouseholdUsualUnitPriceDocument,
   StorePriceMemoryDocument,
@@ -106,7 +106,7 @@ const matchedLine = (bought = false, withUnit = true): ListLine => ({
 });
 
 const added = (held = false) =>
-  recordMock(BarcodeAddItemToShoppingListDocument, {
+  recordMock(AddItemToShoppingListDocument, {
     held,
     data: {
       addItemsToShoppingList: {
@@ -117,7 +117,7 @@ const added = (held = false) =>
   });
 
 const addRefused = () =>
-  recordMock(BarcodeAddItemToShoppingListDocument, {
+  recordMock(AddItemToShoppingListDocument, {
     data: {
       addItemsToShoppingList: {
         __typename: 'ValidationError',
@@ -467,7 +467,7 @@ describe('SearchResults from store mode', () => {
     const { cache } = openStore({ answers: [add, tick] });
 
     await press(t('barcode.addToCart'));
-    await log.landed(BarcodeAddItemToShoppingListDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await log.landed(UpdateShoppingListItemDocument);
     const input = inputOf(tick.fired[0] ?? {});
     await purchaseSettles(cache, String(input.id), true);
@@ -487,7 +487,7 @@ describe('SearchResults from store mode', () => {
     openStore({ answers: [add, tick] });
 
     await press(t('barcode.addToCart'));
-    await log.landed(BarcodeAddItemToShoppingListDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await act(async () => undefined);
 
     expect(alertService.alert).toHaveBeenCalledWith(
@@ -507,11 +507,11 @@ describe('SearchResults from store mode', () => {
     expect(priceAction()).not.toBeDisabled();
 
     await press(t('barcode.addToCart'));
-    await log.requested(BarcodeAddItemToShoppingListDocument);
+    await log.requested(AddItemToShoppingListDocument);
     expect(priceAction()).toBeDisabled();
 
     add.release();
-    await log.landed(BarcodeAddItemToShoppingListDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await log.landed(UpdateShoppingListItemDocument);
     expect(tick.fired).toHaveLength(1);
   });
@@ -543,7 +543,7 @@ describe('SearchResults from store mode', () => {
         .placeholder,
     ).toBe(localizeNumericHint(t('purchaseAmountSheet.pricePlaceholder')));
     await confirmPrice(false);
-    await log.landed(BarcodeAddItemToShoppingListDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await log.landed(UpdateShoppingListItemDocument);
 
     expect(inputOf(tick.fired[0] ?? {})).toMatchObject({
@@ -606,7 +606,7 @@ describe('SearchResults from store mode', () => {
       openStore({ answers: [add, tick] });
 
       await confirmPrice();
-      await log.landed(BarcodeAddItemToShoppingListDocument);
+      await log.landed(AddItemToShoppingListDocument);
       await act(async () => undefined);
 
       expect(alertService.alert).toHaveBeenCalledWith(

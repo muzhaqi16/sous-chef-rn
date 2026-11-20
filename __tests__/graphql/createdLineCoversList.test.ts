@@ -17,7 +17,7 @@ import { readFileSync, readdirSync } from 'fs';
 import { resolve } from 'path';
 import { parse, Kind, type SelectionSetNode, type DocumentNode } from 'graphql';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { OPERATION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 
 const ROOT = resolve(__dirname, '..', '..');
@@ -270,7 +270,7 @@ describe('a created shopping-list line covers what the list reads', () => {
     const writers = creatingWriters();
     // A discovery that came up empty would pass the comparison vacuously.
     expect(writers.map(writer => writer.operation)).toContain(
-      operationNameOf(AddItemsToShoppingListFromRecipeDocument),
+      operationNameOf(AddItemToShoppingListDocument),
     );
 
     const created = fieldPaths(

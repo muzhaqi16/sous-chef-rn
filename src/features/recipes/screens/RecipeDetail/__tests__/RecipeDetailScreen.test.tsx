@@ -1,4 +1,5 @@
 import React from 'react';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { RefreshControl } from 'react-native';
 import {
   act,
@@ -62,7 +63,6 @@ import { RecipeSubstitutesDocument } from '#features/recipes/hooks/useRecipeSubs
 import { MySavedRecipesDocument } from '#features/recipes/screens/useSavedRecipes.generated';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { RecipeMissingIngredientsDocument } from '#features/recipes/hooks/useRecipeMissingIngredients.generated';
-import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import { isRecord } from '#/utils/isRecord';
 import { kitTestIDs } from '#components/testIDs';
 import { RecipeDetail } from '../index';
@@ -586,10 +586,10 @@ describe('its ingredients', () => {
       : [];
   };
   const listedAnswer = () =>
-    recordMock(AddItemsToShoppingListFromRecipeDocument, {
+    recordMock(AddItemToShoppingListDocument, {
       dataFor: (
         variables,
-      ): MockDataFor<typeof AddItemsToShoppingListFromRecipeDocument> => ({
+      ): MockDataFor<typeof AddItemToShoppingListDocument> => ({
         addItemsToShoppingList: {
           __typename: 'AddItemsToShoppingListPayload',
           results: lineIdsOf(variables).map(id => ({
@@ -612,7 +612,7 @@ describe('its ingredients', () => {
     await userEvent
       .setup()
       .press(screen.getByTestId(recipesTestIDs.ingredientTile(0)));
-    await log.landed(AddItemsToShoppingListFromRecipeDocument);
+    await log.landed(AddItemToShoppingListDocument);
 
     expect(added.fired).toHaveLength(1);
     expect(
@@ -622,7 +622,7 @@ describe('its ingredients', () => {
   });
 
   it('opens what a flagged one means for the household instead of adding it', async () => {
-    const added = recordMock(AddItemsToShoppingListFromRecipeDocument, {
+    const added = recordMock(AddItemToShoppingListDocument, {
       held: true,
     });
     await openRecipe({
