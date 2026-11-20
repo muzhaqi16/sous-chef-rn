@@ -13,10 +13,15 @@ import {
  * A queued write's `update` never runs: the queue resolves the call with a null
  * payload, and the replay's result reaches only its `commit`. So what an answer
  * leaves to write goes in the operation's `commit`, which runs for both, and a
- * `useMutation` of a queueable operation takes no `update` of its own.
+ * `useMutation` or `useLocalWrite` of a queueable operation takes no `update`
+ * of its own.
  */
 
 const ROOT = path.join(SRC, '..');
+const WRITE_HOOKS: ReadonlySet<string> = new Set([
+  'useMutation',
+  'useLocalWrite',
+]);
 
 interface Hook {
   operation: string;
@@ -47,7 +52,7 @@ function hooksIn(file: string): Hook[] {
     if (
       ts.isCallExpression(node) &&
       ts.isIdentifier(node.expression) &&
-      node.expression.text === 'useMutation'
+      WRITE_HOOKS.has(node.expression.text)
     ) {
       const [document, options] = node.arguments;
       const operation =
