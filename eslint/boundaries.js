@@ -15,9 +15,9 @@
 
 const { CORE_EXTERNALS, LAYERS } = require('../scripts/lib/layers');
 
-// A feature's public surface is `screens/`, `manifest.ts`, `testIDs.ts` and its
-// top-level `hooks/`; the catalog also publishes `ui/`. Everything below is not.
-// Each internal group is its own TYPE rather than one type with a captured
+// The one statement of a feature's surface: the internal groups below are
+// private, `offline/` belongs to the shared queue, and everything else a feature
+// holds is public. Each internal group is its own TYPE rather than one type with a captured
 // directory: an `anyOf` inside a selector's `captured` throws inside the plugin
 // (`template.replaceAll is not a function`), and it swallows that as a warning
 // and ALLOWS the dependency.

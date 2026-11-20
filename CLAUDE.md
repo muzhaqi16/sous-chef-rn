@@ -68,7 +68,8 @@ Map and reasoning: `docs/architecture.md`.
   launch-path code reads `registry.static.ts` (i18n, push routes) and
   `registry.cache.ts` (type policies). Shell wiring goes in `manifest.static.ts`,
   never an import of `registry.ts` — § Three registries.
-- **Feature API boundary** (`boundaries/dependencies`): a feature's `context/`,
+- **Feature API boundary** (`boundaries/dependencies`; `BOUNDARY_ELEMENTS` in
+  `eslint/boundaries.js` is the one statement): a feature's `context/`,
   `utils/`, `components/`, `hooks/mutations/`, `offline/` and `graphql/` are
   internal; everything else — `screens/`, top-level `hooks/`, `ui/`, `testIDs.ts`,
   `*Fragments.generated.ts` types — is importable. `catalog/` owns the grocery `Item`,

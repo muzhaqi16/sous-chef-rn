@@ -245,25 +245,23 @@ adds an import of the screen-bearing registry to a launch-path module.
 
 ### The public API boundary
 
-A feature is a module with a small public surface. Reaching past it is blocked
-by ESLint (`no-restricted-imports` + `boundaries/dependencies`) for **new**
-imports:
+A feature is a module with a public surface. Reaching past it is blocked by
+ESLint (`no-restricted-imports` + `boundaries/dependencies`). The one statement
+of what is internal is `BOUNDARY_ELEMENTS` in `eslint/boundaries.js`:
 
-| Subfolder                         | Public? | Notes                                                                                                                                                                                                                                                                                                               |
-| --------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `screens/`                        | ✅      | Imported by navigation stacks                                                                                                                                                                                                                                                                                       |
-| `manifest.ts`                     | ✅      | Wired into `FEATURE_REGISTRY`                                                                                                                                                                                                                                                                                       |
-| `testIDs.ts`                      | ✅      | The feature's testIDs; imported by the app and by e2e page objects                                                                                                                                                                                                                                                  |
-| `hooks/` (top-level files only)   | ✅      | Cross-feature consumers may import these                                                                                                                                                                                                                                                                            |
-| `<feature>Fragments.generated.ts` | ✅      | Type imports only, when composing your own fragments                                                                                                                                                                                                                                                                |
-| `components/`                     | 🔒      | A component two features want is a KIT component — promote it to `src/components/`                                                                                                                                                                                                                                  |
-| `ui/` (catalog only)              | ✅      | The catalog's public UI. Its pickers are domain UI two features consume, so they can go in neither a domain-free kit nor one consumer                                                                                                                                                                               |
-| `context/`                        | 🔒      | Internal                                                                                                                                                                                                                                                                                                            |
-| `graphql/`                        | 🔒      | Compose your own operations instead                                                                                                                                                                                                                                                                                 |
-| `hooks/mutations/`, deeper hooks  | 🔒      | Internal lifecycle primitives                                                                                                                                                                                                                                                                                       |
-| `utils/`                          | 🔒      | Internal                                                                                                                                                                                                                                                                                                            |
-| `store/` (recipes only)           | ✅      | The recipe result caches. Two other features read them (pantry's per-item suggestions, mealPlan's recipe picker), so like catalog's `ui/` they belong in neither a domain-free kernel nor one consumer. A feature store MUST call `registerSessionScopedStore` — `SESSION_SCOPED_STATE` only reaches the root store |
-| `offline/` (pantry, shoppingList) | 🔒\*    | Public to the OFFLINE QUEUE only. A feature's replay preparers and reconcilers say what its queued mutation means, which nothing but the replayer needs — the kernel imports it, other features may not                                                                                                             |
+- **Internal:** `context/`, `utils/`, `components/`, `hooks/mutations/` and
+  `graphql/`. A component two features want is a kit component; an operation
+  another feature needs is sent through the owner's hook, never copied.
+- **The offline queue's only:** `offline/`. A feature's replay preparers and
+  reconcilers say what its queued mutation means; the kernel imports them, other
+  features may not.
+- **Public:** everything else — `screens/`, top-level `hooks/`, `ui/`,
+  `cache/`, `store/`, `testIDs.ts`, `manifest.ts`, `types.ts`, and the types of
+  `*Fragments.generated.ts`. A feature store MUST call
+  `registerSessionScopedStore`: `SESSION_SCOPED_STATE` only reaches the root
+  store.
+
+This section gives the reasoning; it does not keep a second copy of the list.
 
 Shared UI atoms, molecules, organisms, and templates live in `src/components/`,
 beside `providers/` and `performance/`. That is the whole taxonomy — there is no
