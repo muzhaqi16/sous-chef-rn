@@ -75,3 +75,9 @@ export interface RecipeFormState {
   // false for a new recipe.
   ingredientsUnread: boolean;
 }
+
+/**
+ * What became of a confirmed cook sheet: it closes, it stays with what was
+ * entered, or it stays with the review turned off because it could not load.
+ */
+export type CookConfirmOutcome = 'done' | 'retry' | 'reviewUnavailable';

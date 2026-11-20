@@ -235,8 +235,8 @@
     "searchErrorMessage": "No se pudieron buscar recetas. Inténtalo de nuevo.",
     "markCookedFailed": "No se pudo marcar la receta como cocinada",
     "cookExternalError": "No se pueden marcar recetas externas como cocinadas. Guarda la receta primero.",
-    "markedCookedDeducted": "¡Receta marcada como cocinada! Ingredientes descontados de la despensa.",
-    "cookReviewNeedsConnection": "Revisar los ingredientes necesita conexión. Las cantidades se calcularán al sincronizar.",
+    "markedCookedDeducted_one": "Receta marcada como cocinada. Se descontó de {{count}} artículo de la despensa.",
+    "markedCookedDeducted_other": "Receta marcada como cocinada. Se descontó de {{count}} artículos de la despensa.",
     "markedCookedSkipped_one": "Receta marcada como cocinada. No se pudo descontar {{count}} ingrediente.",
     "markedCookedSkipped_other": "Receta marcada como cocinada. No se pudieron descontar {{count}} ingredientes.",
     "markedCookedSkippedUnit_one": "Receta marcada como cocinada. No se pudo descontar {{count}} ingrediente: su unidad no se convierte a la del inventario.",
@@ -280,7 +280,6 @@
     "saveRecipeFailed": "No se pudo guardar la receta. Inténtalo de nuevo.",
     "recipeSavedToCollection": "¡Receta guardada en tu colección!",
     "recipeOrPantryUnavailable": "Receta o despensa no disponible",
-    "noIngredientsToMatch": "No hay ingredientes para coincidir",
     "noIngredientsForDeduction": "Ningún ingrediente seleccionado para descontar",
     "deductedFromPantry_one": "Se descontó {{count}} ingrediente de la despensa",
     "deductedFromPantry_other": "Se descontaron {{count}} ingredientes de la despensa",
@@ -485,6 +484,7 @@
     "deductFromPantryDesc": "Reduce automáticamente las cantidades de los ingredientes en tu despensa",
     "smartDeduction": "Descuento inteligente",
     "smartDeductionDesc": "Revisa y ajusta las cantidades de los ingredientes antes de descontar",
+    "reviewUnavailable": "No se pudieron cargar los ingredientes para revisarlos, así que el descuento inteligente está desactivado. Toca {{action}} de nuevo para descontar lo que usa la receta.",
     "notesPlaceholder": "¿Cómo ha quedado?"
   },
   "saveRecipe": {

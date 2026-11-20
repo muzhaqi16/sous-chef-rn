@@ -10,18 +10,20 @@ import { recipesTestIDs } from '#features/recipes/testIDs';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Text } from '#components/atoms/Text';
 import { Sheet } from '#components/templates/Sheet';
+import type { CookConfirmOutcome } from '#features/recipes/types';
 
 interface MarkCookedModalProps {
   visible: boolean;
   recipeName: string;
   defaultServings: number;
   onClose: () => void;
+  /** Closes the sheet unless the cook answers that it stays open. */
   onConfirm: (input: {
     servings: number;
     deductFromPantry: boolean;
     useGranularDeduction: boolean;
     notes?: string;
-  }) => void;
+  }) => void | Promise<CookConfirmOutcome>;
   hasPantry?: boolean;
   /** A planned meal records whole servings; a recipe cook scales by any amount. */
   wholeServings?: boolean;
@@ -43,6 +45,8 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   const [deductFromPantry, setDeductFromPantry] = useState(true);
   const [useGranularDeduction, setUseGranularDeduction] = useState(true);
   const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [reviewUnavailable, setReviewUnavailable] = useState(false);
 
   // Reset form when modal opens (render-time state update)
   const [prevVisible, setPrevVisible] = useState(visible);
@@ -56,6 +60,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
       setDeductFromPantry(true);
       setUseGranularDeduction(true);
       setNotes('');
+      setReviewUnavailable(false);
     }
   }
 
@@ -80,16 +85,24 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
       ? t(wholeServings ? 'errors.field.servingsMade' : 'errors.field.servings')
       : undefined;
 
-  const handleConfirm = () => {
-    if (servingsError) return;
-
-    onConfirm({
+  const handleConfirm = async () => {
+    if (servingsError || saving) return;
+    setSaving(true);
+    const outcome = await onConfirm({
       servings: parsedServings ?? defaultServings,
       deductFromPantry,
       useGranularDeduction:
         deductFromPantry && hasPantry && useGranularDeduction,
       notes: notes || undefined,
     });
+    setSaving(false);
+    if (outcome === 'retry') return;
+    if (outcome === 'reviewUnavailable') {
+      // Confirmed again, the cook deducts what the recipe uses, unreviewed.
+      setUseGranularDeduction(false);
+      setReviewUnavailable(true);
+      return;
+    }
     onClose();
   };
 
@@ -105,9 +118,12 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
       header={
         <BottomSheetHeader
           onCancel={onClose}
-          onConfirm={handleConfirm}
+          onConfirm={() => {
+            void handleConfirm();
+          }}
           confirmLabel={t('markCookedModal.markCooked')}
           confirmDisabled={!!servingsError}
+          saving={saving}
           confirmTestID={recipesTestIDs.cookConfirm}
         />
       }
@@ -172,6 +188,17 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
           />
         </View>
       )}
+      {reviewUnavailable && deductFromPantry && !useGranularDeduction ? (
+        <Text
+          role="caption"
+          tone="warning"
+          testID={recipesTestIDs.cookReviewUnavailable}
+        >
+          {t('markCookedModal.reviewUnavailable', {
+            action: t('markCookedModal.markCooked'),
+          })}
+        </Text>
+      ) : null}
 
       {/* Notes (Optional) */}
       <View style={styles.section}>

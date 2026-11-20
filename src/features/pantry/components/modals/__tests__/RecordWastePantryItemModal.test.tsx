@@ -1,6 +1,12 @@
 'use no memo';
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
+import { alertService } from '#/services/alertService';
 import { RecordWastePantryItemModal } from '#features/pantry/components/modals/RecordWastePantryItemModal';
 import type { PantryActionSharedState } from '#features/pantry/types';
 
@@ -44,14 +50,18 @@ jest.mock('#components/molecules/FractionInput', () => ({
   FractionInput: (props: {
     value: string;
     onChangeText: (text: string) => void;
+    error?: string;
   }) => {
-    const { TextInput } = require('react-native');
+    const { Text, TextInput, View } = require('react-native');
     return (
-      <TextInput
-        testID="fraction-input"
-        value={props.value}
-        onChangeText={props.onChangeText}
-      />
+      <View>
+        <TextInput
+          testID="fraction-input"
+          value={props.value}
+          onChangeText={props.onChangeText}
+        />
+        {props.error ? <Text testID="amount-error">{props.error}</Text> : null}
+      </View>
     );
   },
 }));
@@ -81,6 +91,7 @@ jest.mock('#features/pantry/components/modals/PantryActionModal', () => ({
     title,
     renderActionFields,
     pantryItemId,
+    onConfirm,
   }: {
     title: string;
     pantryItemId: string | null;
@@ -88,8 +99,9 @@ jest.mock('#features/pantry/components/modals/PantryActionModal', () => ({
       shared: MockSharedState,
       pantryItem: MockPantryItem,
     ) => React.ReactNode;
+    onConfirm: (shared: MockSharedState) => void;
   }) => {
-    const { View, Text } = require('react-native');
+    const { Pressable, View, Text } = require('react-native');
     const sharedState = {
       trackingQuantity: 10,
       trackingUnit: { symbol: 'oz' },
@@ -126,6 +138,7 @@ jest.mock('#features/pantry/components/modals/PantryActionModal', () => ({
         {fakePantryItem
           ? renderActionFields(sharedState, fakePantryItem)
           : null}
+        <Pressable testID="confirm" onPress={() => onConfirm(sharedState)} />
       </View>
     );
   },
@@ -169,5 +182,32 @@ describe('RecordWastePantryItemModal', () => {
     render(<RecordWastePantryItemModal {...defaultProps} />);
     expect(screen.getByText('Composted')).toBeTruthy();
     expect(screen.getByText('Recycled (packaging)')).toBeTruthy();
+  });
+
+  // An amount the person can fix is shown where they fix it, never as an alert.
+  it('says on the amount field that it is more than is held', () => {
+    const onConfirm = jest.fn();
+    render(
+      <RecordWastePantryItemModal {...defaultProps} onConfirm={onConfirm} />,
+    );
+
+    fireEvent.changeText(screen.getByTestId('fraction-input'), '15');
+    fireEvent.press(screen.getByTestId('confirm'));
+
+    expect(screen.getByTestId('amount-error')).toHaveTextContent(
+      'Cannot waste more than available quantity (10 oz)',
+    );
+    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('clears the amount error once the amount is edited', () => {
+    render(<RecordWastePantryItemModal {...defaultProps} />);
+    fireEvent.changeText(screen.getByTestId('fraction-input'), '15');
+    fireEvent.press(screen.getByTestId('confirm'));
+
+    fireEvent.changeText(screen.getByTestId('fraction-input'), '5');
+
+    expect(screen.queryByTestId('amount-error')).toBeNull();
   });
 });

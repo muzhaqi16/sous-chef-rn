@@ -335,7 +335,8 @@
     "stockLevelHigh": "Likely still here",
     "stockLevelMedium": "Worth a check",
     "stockLevelLow": "Probably gone",
-    "stockLevelUnknown": "Not known"
+    "stockLevelUnknown": "Not known",
+    "stockLastConfirmed": "Last confirmed {{when}}"
   },
   "storageState": {
     "AMBIENT": "Ambient",

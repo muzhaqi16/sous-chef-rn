@@ -1,4 +1,5 @@
 import { act } from '@testing-library/react-native';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
@@ -8,7 +9,6 @@ import {
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import type { ScannedItem } from '#features/barcode/types';
 import { useAddScannedItem } from '../useAddScannedItem';
 import { UseToggleShoppingItem_ItemFragmentDoc } from '#features/shoppingList/hooks/mutations/useToggleShoppingItem.generated';
@@ -62,10 +62,10 @@ const rowKeys = (cache: ReturnType<typeof makeCache>) =>
   );
 
 const addAnswer = (
-  data: MockDataFor<typeof BarcodeAddItemToShoppingListDocument>,
-): MockFor<typeof BarcodeAddItemToShoppingListDocument> => ({
+  data: MockDataFor<typeof AddItemToShoppingListDocument>,
+): MockFor<typeof AddItemToShoppingListDocument> => ({
   request: {
-    query: BarcodeAddItemToShoppingListDocument,
+    query: AddItemToShoppingListDocument,
     variables: () => true,
   },
   result: { data },

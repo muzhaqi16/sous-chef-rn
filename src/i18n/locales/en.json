@@ -790,6 +790,7 @@
     "revokeInvite": "Revoke invitation",
     "openBatch": "Open batch",
     "wasteBatch": "Record batch as wasted",
+    "useFromBatch": "Use from this batch",
     "quickAdd": "Quick add {{name}}",
     "removeNamed": "Remove {{name}}",
     "editNamed": "Edit {{name}}",

@@ -1,5 +1,7 @@
 /**
- * Apollo LRU cache sizes, tuned down from Apollo's desktop defaults for mobile.
+ * Apollo LRU cache sizes: the document caches tuned down from Apollo's
+ * defaults for mobile; the result caches at Apollo's own, since a small account
+ * fills a smaller one (docs/performance-monitoring.md, Recorded measurements).
  * MUST be imported in index.js before any @apollo/client import — Apollo reads
  * this symbol once, at load.
  * @see https://www.apollographql.com/docs/react/caching/memory-management
@@ -9,11 +11,6 @@ import type { CacheSizes } from '@apollo/client/utilities';
 
 // @ts-expect-error -- globalThis symbol indexing (Apollo's documented API)
 globalThis[Symbol.for('apollo.cacheSize')] = {
-  // Core caches - sized for mobile (queries visible on screen at once)
-  'inMemoryCache.executeSelectionSet': 3000, // Default: 10,000 - increased for 126+ entities
-  'inMemoryCache.executeSubSelectedArray': 2000, // Default: 5,000 - increased to reduce cache thrashing
-  'inMemoryCache.maybeBroadcastWatch': 2000, // Default: 5,000 - increased to reduce cache thrashing
-
   // Document caches
   canonicalStringify: 1000, // Default: 1,000
   print: 1000, // Default: 2,000

@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import { useScreenFocusEffect } from '#platform/screen';
+import { useApolloClient, useFragment } from '@apollo/client/react';
 import {
-  useApolloClient,
-  useFragment,
-  useMutation,
-} from '@apollo/client/react';
-import {
-  AddDerivedItemsToShoppingListDocument,
   UseGenerateShoppingList_MealPlanFragmentDoc,
   type UseGenerateShoppingList_MealPlanFragment,
   GenerateShoppingListPlanDocument,
@@ -16,7 +11,7 @@ import {
   type PlannedMeal,
   type PantryStock,
 } from '#features/mealPlan/utils/deriveShoppingListFromMealPlan';
-import { addItemsInSlices } from '#features/shoppingList/cache/createShoppingListRow';
+import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
 import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
 import {
   useCreateShoppingList,
@@ -102,10 +97,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     t('generateShoppingList.generateFailed'),
   );
 
-  const [addItems, { loading: adding }] = useMutation(
-    AddDerivedItemsToShoppingListDocument,
-    { context: { localFirst: true } },
-  );
+  const { addRows, adding } = useAddShoppingRows();
 
   const apiUnavailable = useIsApiUnavailable();
 
@@ -226,16 +218,11 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     if (!target) return null;
     const { listId } = target;
 
-    const addFailure = await addItemsInSlices(
-      client.cache,
+    const addFailure = await addRows(
       listId,
       target.unsent,
       line => rowOf(line, listId, displayNames),
-      addItems,
-      {
-        document: AddDerivedItemsToShoppingListDocument,
-        fallback: t('generateShoppingList.generateFailed'),
-      },
+      t('generateShoppingList.generateFailed'),
     );
 
     if (addFailure) {

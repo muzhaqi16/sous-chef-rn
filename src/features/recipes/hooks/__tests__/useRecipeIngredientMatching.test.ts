@@ -217,10 +217,9 @@ describe('useRecipeIngredientMatching', () => {
       useRecipeIngredientMatching(undefined),
     );
 
-    let success: boolean | undefined;
-    success = await drained(() => result.current.loadMatches(4));
+    const review = await drained(() => result.current.loadMatches(4));
 
-    expect(success).toBe(false);
+    expect(review).toBe('unavailable');
     expect(mockToastError).toHaveBeenCalledWith(
       'Recipe or pantry not available',
     );
@@ -234,31 +233,29 @@ describe('useRecipeIngredientMatching', () => {
       { operationMocks: [m.mock], cache: seedIngredientCache(['ing-1']) },
     );
 
-    let success: boolean | undefined;
-    success = await drained(() => result.current.loadMatches(4));
+    const review = await drained(() => result.current.loadMatches(4));
 
-    expect(success).toBe(true);
+    expect(review).toBe('loaded');
     await drainTimers();
     expect(result.current.editableMatches).toHaveLength(1);
     expect(result.current.editableMatches[0]!.adjustedQuantity).toBe(2);
     expect(result.current.isSheetVisible).toBe(true);
   });
 
-  it('says a recipe has nothing to match only when the server answers so', async () => {
+  it('says a recipe has nothing to draw only when the server answers so', async () => {
     const m = matchesMock([]);
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
       { operationMocks: [m.mock] },
     );
 
-    let success: boolean | undefined;
-    success = await drained(() => result.current.loadMatches(4));
+    const review = await drained(() => result.current.loadMatches(4));
 
-    expect(success).toBe(false);
-    expect(mockToastInfo).toHaveBeenCalledWith('No ingredients to match');
+    expect(review).toBe('empty');
+    expect(result.current.isSheetVisible).toBe(false);
   });
 
-  // Offline the read fails; the cook goes ahead without the review.
+  // Offline the read fails: the cook says so, not the review.
   it('reports nothing of its own when the match read fails', async () => {
     const m = recordMock(MatchRecipeIngredientsToPantryDocument, {
       error: new Error('Network request failed'),
@@ -268,10 +265,9 @@ describe('useRecipeIngredientMatching', () => {
       { operationMocks: [m.mock] },
     );
 
-    let success: boolean | undefined;
-    success = await drained(() => result.current.loadMatches(4));
+    const review = await drained(() => result.current.loadMatches(4));
 
-    expect(success).toBe(false);
+    expect(review).toBe('unavailable');
     expect(mockToastInfo).not.toHaveBeenCalled();
     expect(result.current.isSheetVisible).toBe(false);
   });

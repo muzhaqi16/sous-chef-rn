@@ -142,11 +142,16 @@ export const setStock: LocalWrite<SetStockInputs> = {
 
 /**
  * A stock check's rows, as found: what each stack holds now, absolute, or null
- * where the answer moves nothing (still have) or only the server can say.
+ * where the answer moves nothing (still have) or only the server can say; with
+ * `remainingNetWeight`, what its packages were found to hold, in its own unit.
  */
 export type StockCheckInputs = {
   pantryId: string;
-  rows: readonly { pantryItemId: string; held: number | null }[];
+  rows: readonly {
+    pantryItemId: string;
+    held: number | null;
+    remainingNetWeight?: number;
+  }[];
   now: string;
 };
 
@@ -171,11 +176,15 @@ function leaveStockCheck(
 export const recordStockCheck: LocalWrite<StockCheckInputs> = {
   apply(cache, { inputs: { pantryId, rows, now } }) {
     const emptied = new Set<string>();
-    for (const { pantryItemId, held } of rows) {
+    for (const { pantryItemId, held, remainingNetWeight } of rows) {
       const stack = stackRef(pantryItemId);
       if (held === null || !isHeld(cache, stack)) continue;
       moveContentsTo(cache, pantryItemId, held);
-      writeEntityFields(cache, stack, { quantity: held, updatedAt: now });
+      writeEntityFields(cache, stack, {
+        quantity: held,
+        remainingNetWeight,
+        updatedAt: now,
+      });
       writeHeldStock(cache, pantryItemId, held);
       if (held === 0) emptied.add(pantryItemId);
     }

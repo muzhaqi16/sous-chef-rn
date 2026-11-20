@@ -14,6 +14,7 @@ jest.mock('#features/pantry/hooks/usePantryQuery', () => {
 });
 
 import { memoryScreen } from '#/test-utils/memoryPlatform';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   completeMockedResponse,
   recordMock,
@@ -25,7 +26,6 @@ import {
   type GetMealPlanQuery,
 } from '#features/mealPlan/screens/useMealPlan.generated';
 import type { Unmasked } from '@apollo/client/masking';
-import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GenerateShoppingListPlanDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { toastService } from '#/services/toastService';
@@ -166,7 +166,7 @@ function createMock() {
 }
 
 function addMock() {
-  return recordMock(AddDerivedItemsToShoppingListDocument, {
+  return recordMock(AddItemToShoppingListDocument, {
     data: {
       addItemsToShoppingList: {
         __typename: 'AddItemsToShoppingListPayload',
@@ -650,7 +650,7 @@ describe('generating a shopping list from a cached meal plan', () => {
 
     it('takes back the rows of a refused batch and reports no success', async () => {
       useStore.setState({ apiReachable: false });
-      const refused = recordMock(AddDerivedItemsToShoppingListDocument, {
+      const refused = recordMock(AddItemToShoppingListDocument, {
         data: {
           addItemsToShoppingList: {
             __typename: 'ForbiddenError',

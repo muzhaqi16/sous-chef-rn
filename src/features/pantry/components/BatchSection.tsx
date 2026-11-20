@@ -25,6 +25,7 @@ interface BatchSectionProps {
   /** Every batch, including pages this screen did not fetch. */
   totalCount?: number;
   onViewAll: () => void;
+  onUse?: (batchId: string) => void;
   onCorrectSize?: (batchId: string) => void;
 }
 
@@ -32,6 +33,7 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   batches,
   totalCount,
   onViewAll,
+  onUse,
   onCorrectSize,
 }) => {
   const { t } = useTranslation();
@@ -81,6 +83,7 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
             <BatchListItem
               key={batch.id}
               batch={batch}
+              onUse={onUse}
               onOpen={permissions.canEditItems ? handleOpen : undefined}
               onWaste={permissions.canRemoveItems ? handleWaste : undefined}
               onCorrectSize={onCorrectSize}

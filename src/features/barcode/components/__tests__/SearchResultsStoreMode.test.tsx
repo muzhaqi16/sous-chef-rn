@@ -1,4 +1,5 @@
 import React from 'react';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   act,
   fireEvent,
@@ -24,6 +25,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { cacheShows } from '#/test-utils/cacheWaits';
+import { settledInAct } from '#/test-utils/settledInAct';
 import {
   listLine,
   purchaseRecordOf,
@@ -36,7 +38,6 @@ import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import {
   HouseholdUsualUnitPriceDocument,
   StorePriceMemoryDocument,
@@ -105,7 +106,7 @@ const matchedLine = (bought = false, withUnit = true): ListLine => ({
 });
 
 const added = (held = false) =>
-  recordMock(BarcodeAddItemToShoppingListDocument, {
+  recordMock(AddItemToShoppingListDocument, {
     held,
     data: {
       addItemsToShoppingList: {
@@ -116,7 +117,7 @@ const added = (held = false) =>
   });
 
 const addRefused = () =>
-  recordMock(BarcodeAddItemToShoppingListDocument, {
+  recordMock(AddItemToShoppingListDocument, {
     data: {
       addItemsToShoppingList: {
         __typename: 'ValidationError',
@@ -308,16 +309,19 @@ const confirmPrice = async (open = true) => {
   await press(t('labels.save'));
 };
 
+// Inside `act`, so what the settled cache renders is on screen when it returns.
 const purchaseSettles = (
   cache: ReturnType<typeof makeCache>,
   id: string,
   isPurchased: boolean,
 ) =>
-  cacheShows(
-    cache,
-    purchaseRecordWatch(id),
-    () => purchaseRecordOf(cache, id),
-    record => record?.isPurchased === isPurchased,
+  settledInAct(() =>
+    cacheShows(
+      cache,
+      purchaseRecordWatch(id),
+      () => purchaseRecordOf(cache, id),
+      record => record?.isPurchased === isPurchased,
+    ),
   );
 
 beforeEach(() => {
@@ -463,7 +467,7 @@ describe('SearchResults from store mode', () => {
     const { cache } = openStore({ answers: [add, tick] });
 
     await press(t('barcode.addToCart'));
-    await log.landed(BarcodeAddItemToShoppingListDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await log.landed(UpdateShoppingListItemDocument);
     const input = inputOf(tick.fired[0] ?? {});
     await purchaseSettles(cache, String(input.id), true);
@@ -483,7 +487,7 @@ describe('SearchResults from store mode', () => {
     openStore({ answers: [add, tick] });
 
     await press(t('barcode.addToCart'));
-    await log.landed(BarcodeAddItemToShoppingListDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await act(async () => undefined);
 
     expect(alertService.alert).toHaveBeenCalledWith(
@@ -503,11 +507,11 @@ describe('SearchResults from store mode', () => {
     expect(priceAction()).not.toBeDisabled();
 
     await press(t('barcode.addToCart'));
-    await log.requested(BarcodeAddItemToShoppingListDocument);
+    await log.requested(AddItemToShoppingListDocument);
     expect(priceAction()).toBeDisabled();
 
     add.release();
-    await log.landed(BarcodeAddItemToShoppingListDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await log.landed(UpdateShoppingListItemDocument);
     expect(tick.fired).toHaveLength(1);
   });
@@ -539,7 +543,7 @@ describe('SearchResults from store mode', () => {
         .placeholder,
     ).toBe(localizeNumericHint(t('purchaseAmountSheet.pricePlaceholder')));
     await confirmPrice(false);
-    await log.landed(BarcodeAddItemToShoppingListDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await log.landed(UpdateShoppingListItemDocument);
 
     expect(inputOf(tick.fired[0] ?? {})).toMatchObject({
@@ -602,7 +606,7 @@ describe('SearchResults from store mode', () => {
       openStore({ answers: [add, tick] });
 
       await confirmPrice();
-      await log.landed(BarcodeAddItemToShoppingListDocument);
+      await log.landed(AddItemToShoppingListDocument);
       await act(async () => undefined);
 
       expect(alertService.alert).toHaveBeenCalledWith(

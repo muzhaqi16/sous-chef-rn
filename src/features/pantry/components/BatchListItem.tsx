@@ -27,9 +27,12 @@ import { Badge } from '#components/atoms/Badge';
 import { formatMonthDay } from '#/utils/formatters/date';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { useToday } from '#hooks/app/useToday';
+import { pantryTestIDs } from '../testIDs';
 
 interface BatchListItemProps {
   batch: PantryItemBatchFragment;
+  /** A use taken from this batch alone, not the stack's usual order. */
+  onUse?: (batchId: string) => void;
   onOpen?: (batchId: string) => void;
   onWaste?: (batchId: string) => void;
   /** Offered where a package can hold something: a weighed or counted stack. */
@@ -63,6 +66,7 @@ const formatDate = (dateString: string | null | undefined) => {
 
 const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   batch: batchSource,
+  onUse,
   onOpen,
   onWaste,
   onCorrectSize,
@@ -204,6 +208,17 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
       </View>
       {!!isActive && (
         <View style={styles.actions}>
+          {onUse ? (
+            <AppPressable
+              onPress={() => onUse(batch.id)}
+              accessibilityLabel={t('a11y.useFromBatch')}
+              style={styles.actionButton}
+              hitSlop={hitSlop.md}
+              testID={pantryTestIDs.batchUse(batch.id)}
+            >
+              <Icon name="restaurant-outline" size={18} tone="primary" />
+            </AppPressable>
+          ) : null}
           {!batch.isOpened && !!onOpen && (
             <AppPressable
               onPress={() => onOpen(batch.id)}

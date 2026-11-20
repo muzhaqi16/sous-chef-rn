@@ -1,5 +1,4 @@
 import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   formatQuantityForDisplay,
@@ -13,14 +12,13 @@ import type {
   ShownQuantity,
 } from '#features/pantry/types';
 
-function alertExceeds(
+function reportExceeds(
   actionVerb: 'consume' | 'waste',
   cap: ShownQuantity,
-  report: (title: string, message: string) => void,
+  report: (message: string) => void,
 ): void {
   const notation = resolveQuantityNotation(null, cap.displayAsFraction);
   report(
-    t('labels.error'),
     t(
       actionVerb === 'waste'
         ? 'deduction.exceedsAvailableWaste'
@@ -35,7 +33,7 @@ function alertExceeds(
 
 /**
  * Validates a deduction quantity (consume or waste) against available stock.
- * Shows an alert on validation failure.
+ * A refusal is the amount field's to show, through `onError`.
  *
  * @returns The parsed numeric value, or null if validation failed.
  */
@@ -43,14 +41,11 @@ export function validateDeductionQuantity(
   quantityInput: string,
   shared: PantryActionSharedState,
   actionVerb: 'consume' | 'waste',
-  onError?: (message: string) => void,
+  onError: (message: string) => void,
 ): number | null {
-  const report = (title: string, message: string) =>
-    onError ? onError(message) : alertService.alert(title, message);
   const value = parseFractionalInput(quantityInput);
   if (value === null || isNaN(value) || value <= 0) {
-    report(
-      t('labels.error'),
+    onError(
       actionVerb === 'waste'
         ? t('deduction.invalidWaste')
         : t('errors.invalidQuantity'),
@@ -65,7 +60,7 @@ export function validateDeductionQuantity(
     const cap = shared.trackingQuantity;
     const deduction = snapDeductionToCap(value, cap / factor);
     if (inCountedUnit(deduction, factor) > cap) {
-      alertExceeds(actionVerb, shared.leftAfter(0), report);
+      reportExceeds(actionVerb, shared.leftAfter(0), onError);
       return null;
     }
     return deduction;
@@ -80,20 +75,20 @@ export function validateDeductionQuantity(
       : null);
   if (cap === null) {
     if (!shared.conversionUnavailable) return value;
-    report(t('labels.error'), t('deduction.conversionUnavailable'));
+    onError(t('deduction.conversionUnavailable'));
     return null;
   }
 
   const deduction = snapDeductionToCap(value, cap);
   if (deduction > cap) {
-    alertExceeds(
+    reportExceeds(
       actionVerb,
       {
         quantity: cap,
         unit: shared.activeUnit,
         displayAsFraction: shared.displayAsFractionOf(shared.activeUnitId),
       },
-      report,
+      onError,
     );
     return null;
   }

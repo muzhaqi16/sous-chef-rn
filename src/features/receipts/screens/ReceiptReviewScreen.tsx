@@ -123,6 +123,12 @@ const STATUS_LOOK: Record<ReceiptRowStatus, StatusLook> = {
     tone: 'success',
     badge: { text: 'labels.added', variant: 'success' },
   },
+  queued: {
+    section: 'added',
+    icon: 'cloud-upload-outline',
+    tone: 'iconTertiary',
+    badge: { text: 'receipts.review.waitingBadge', variant: 'neutral' },
+  },
 };
 
 export const ReceiptReviewScreen: React.FC = () => {
@@ -190,7 +196,7 @@ export const ReceiptReviewScreen: React.FC = () => {
   const editing = rows.find(row => row.index === editingIndex);
   const openLine = (id: string) => {
     const row = rows.find(candidate => String(candidate.index) === id);
-    if (!row || row.status === 'added') return;
+    if (!row || row.status === 'added' || row.status === 'queued') return;
     setEditingIndex(row.index);
     setOpening(count => count + 1);
     setSheetVisible(true);
@@ -218,7 +224,8 @@ export const ReceiptReviewScreen: React.FC = () => {
       case 'skipped':
         return t('receipts.review.leftOut');
       case 'add':
-      case 'added': {
+      case 'added':
+      case 'queued': {
         if (!choice) return row.printed;
         // A bare count took its list line's amount: say so, so it can be fixed.
         if (row.fromList) {
@@ -296,7 +303,9 @@ export const ReceiptReviewScreen: React.FC = () => {
       const subtitle = subtitleOf(row);
       // A line to add is badged only when it ticks a list line off.
       const badgeLabel =
-        section === 'recorded' ? 'receipts.review.recordedBadge' : badge?.text;
+        section === 'recorded' && row.status !== 'queued'
+          ? 'receipts.review.recordedBadge'
+          : badge?.text;
       const badgeText =
         badgeLabel && (row.status !== 'add' || row.onList)
           ? t(badgeLabel)
@@ -447,7 +456,7 @@ export const ReceiptReviewScreen: React.FC = () => {
   const canFinish =
     pendingCount === 0 &&
     !stillMatching &&
-    rows.some(row => row.status === 'added');
+    rows.some(row => row.status === 'added' || row.status === 'queued');
 
   const footer =
     rows.length === 0 ? undefined : canFinish ? (
@@ -661,6 +670,11 @@ export const ReceiptReviewScreen: React.FC = () => {
         asked={editing?.asked}
         canLeaveOut={editing?.status !== 'skipped'}
         candidates={editing?.candidates ?? []}
+        refusal={
+          editing?.status === 'failed' && editing.failure
+            ? { message: editing.failure, on: editing.failedOn }
+            : undefined
+        }
         listItemNameFor={key =>
           editing ? listItemNameFor(editing.index, key) : undefined
         }

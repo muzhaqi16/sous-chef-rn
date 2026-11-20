@@ -31,11 +31,6 @@ import {
   MoveShoppingItemToPantryDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
-import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
-import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
-import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import {
   CreateMealPlanItemDocument,
   DeleteMealPlanItemDocument,
@@ -51,19 +46,7 @@ import {
   DeleteNotificationDocument,
   MarkNotificationAsReadDocument,
 } from '#features/notifications/graphql/notificationMutations.generated';
-import type { DocumentNode } from 'graphql';
 import type { ReplayReconcilerTable } from './types';
-
-/** One table entry per copy of the batch add that mints its rows in `input.items`. */
-export const forEachBatchAdd = <T>(value: T): Array<[DocumentNode, T]> =>
-  [
-    AddItemToShoppingListDocument,
-    AddItemsToShoppingListFromRecipeDocument,
-    BarcodeAddItemToShoppingListDocument,
-    AddItemToShoppingListFromFilteredPantryDocument,
-    AddItemToShoppingListFromPantryItemDocument,
-    AddDerivedItemsToShoppingListDocument,
-  ].map((document): [DocumentNode, T] => [document, value]);
 
 export const MERGE_REPORTERS: ReplayReconcilerTable = byOperation([
   [CreateMealPlanItemDocument, reconcileCreateMealPlanItemReplay],
@@ -73,7 +56,7 @@ export const MERGE_REPORTERS: ReplayReconcilerTable = byOperation([
   [CreatePantryItemUsageDocument, reconcilePantryUsageReplay],
   [RestockPantryItemDocument, reconcileRestockReplay],
   [ConvertExpiredToWasteDocument, reconcileConvertExpiredReplay],
-  ...forEachBatchAdd(reconcileShoppingAddReplay),
+  [AddItemToShoppingListDocument, reconcileShoppingAddReplay],
   [CreateShoppingListDocument, reconcileShoppingCreateReplay],
 ]);
 

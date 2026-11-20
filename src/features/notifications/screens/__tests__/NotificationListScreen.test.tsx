@@ -402,28 +402,16 @@ describe('pressing a notification', () => {
     await act(() => log.landed(MarkNotificationAsReadDocument));
   });
 
-  it('opens nothing for a pantry notification', async () => {
-    await openList([
-      feed([
-        lowStock({ status: NotificationStatus.Read }),
-        homeJoined({ status: NotificationStatus.Read }),
-      ]),
-    ]);
-    const opened = calledOnce(
-      mockNav.toNotificationDetail,
-      'opening the detail',
-    );
+  // As tapping its push does: a feature's notification opens that feature.
+  it('opens the pantry for a pantry notification, not its detail', async () => {
+    await openList([feed([lowStock({ status: NotificationStatus.Read })])]);
+    const opened = calledOnce(mockNav.toPantryMain, 'opening the pantry');
 
     fireEvent.press(screen.getByText(t('notifications.copy.title.LOW_STOCK')));
-    fireEvent.press(
-      screen.getByText(t('notifications.copy.title.HOME_JOINED')),
-    );
     await opened;
 
-    expect(mockNav.toNotificationDetail).toHaveBeenCalledTimes(1);
-    expect(mockNav.toNotificationDetail).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'joined' }),
-    );
+    expect(mockNav.toPantryMain).toHaveBeenCalledTimes(1);
+    expect(mockNav.toNotificationDetail).not.toHaveBeenCalled();
   });
 
   it('offers to answer an invitation at once', async () => {

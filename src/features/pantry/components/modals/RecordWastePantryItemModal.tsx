@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
@@ -21,6 +21,7 @@ import {
   resolveQuantityNotation,
 } from '#/utils/formatQuantity';
 import type { PantryActionSharedState } from '#features/pantry/types';
+import { WASTE_REASON_OPTIONS } from '#features/pantry/utils/wasteReasons';
 
 interface RecordWastePantryItemModalProps {
   visible: boolean;
@@ -36,24 +37,6 @@ interface RecordWastePantryItemModalProps {
   ) => void;
 }
 
-const WASTE_REASON_OPTIONS: Array<{
-  labelKey: TranslationKey;
-  value: WasteReason;
-}> = [
-  { labelKey: 'labels.expired', value: WasteReason.Expired },
-  { labelKey: 'recordWaste.reasonSpoiled', value: WasteReason.Spoiled },
-  { labelKey: 'labels.mold', value: WasteReason.Mold },
-  { labelKey: 'labels.pest', value: WasteReason.Pest },
-  { labelKey: 'labels.cookingFail', value: WasteReason.CookingFail },
-  { labelKey: 'recordWaste.reasonSpilled', value: WasteReason.Spilled },
-  { labelKey: 'recordWaste.reasonBurnt', value: WasteReason.Burnt },
-  { labelKey: 'labels.overstock', value: WasteReason.Overstock },
-  { labelKey: 'recordWaste.reasonBadTaste', value: WasteReason.Taste },
-  { labelKey: 'labels.gaveAway', value: WasteReason.GaveAway },
-  { labelKey: 'labels.unknownLoss', value: WasteReason.UnknownLoss },
-  { labelKey: 'itemType.OTHER', value: WasteReason.Other },
-];
-
 export const RecordWastePantryItemModal: React.FC<
   RecordWastePantryItemModalProps
 > = ({ visible, pantryItemId, onClose, onConfirm }) => {
@@ -65,6 +48,7 @@ export const RecordWastePantryItemModal: React.FC<
   );
   const [isComposted, setIsComposted] = useState(false);
   const [isRecycled, setIsRecycled] = useState(false);
+  const [amountError, setAmountError] = useState<string>();
 
   const [prevVisible, setPrevVisible] = useState(visible);
   const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItemId);
@@ -75,6 +59,7 @@ export const RecordWastePantryItemModal: React.FC<
     setWasteReason(WasteReason.Expired);
     setIsComposted(false);
     setIsRecycled(false);
+    setAmountError(undefined);
   }
 
   const amountOf = (shared: PantryActionSharedState) =>
@@ -94,6 +79,7 @@ export const RecordWastePantryItemModal: React.FC<
       wasteAmountInput,
       shared,
       'waste',
+      setAmountError,
     );
     if (wasteValue === null) return;
 
@@ -130,7 +116,11 @@ export const RecordWastePantryItemModal: React.FC<
       renderActionFields={shared => (
         <WasteActionFields
           wasteAmountInput={amountOf(shared)}
-          setWasteAmountInput={setTypedAmount}
+          setWasteAmountInput={text => {
+            setTypedAmount(text);
+            setAmountError(undefined);
+          }}
+          amountError={amountError}
           wasteReason={wasteReason}
           setWasteReason={setWasteReason}
           isComposted={isComposted}
@@ -148,6 +138,8 @@ export const RecordWastePantryItemModal: React.FC<
 const WasteActionFields: React.FC<{
   wasteAmountInput: string;
   setWasteAmountInput: (v: string) => void;
+  /** Why the amount was refused, shown on its field. */
+  amountError?: string;
   wasteReason: WasteReason;
   setWasteReason: (v: WasteReason) => void;
   isComposted: boolean;
@@ -159,6 +151,7 @@ const WasteActionFields: React.FC<{
 }> = ({
   wasteAmountInput,
   setWasteAmountInput,
+  amountError,
   wasteReason,
   setWasteReason,
   isComposted,
@@ -185,6 +178,7 @@ const WasteActionFields: React.FC<{
           value={wasteAmountInput}
           onChangeText={setWasteAmountInput}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
+          error={amountError}
           useBottomSheetInput
         />
         <QuantityInputFeedback

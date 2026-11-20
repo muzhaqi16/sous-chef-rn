@@ -141,6 +141,15 @@ describe('BatchListItem', () => {
     expect(screen.getByText('Package: 22 oz')).toBeTruthy();
   });
 
+  it('offers a use from this batch alone', () => {
+    const onUse = jest.fn();
+    renderWithApollo(<BatchListItem batch={batch(2)} onUse={onUse} />, {
+      cache: stackCache({}),
+    });
+    fireEvent.press(screen.getByLabelText(t('a11y.useFromBatch')));
+    expect(onUse).toHaveBeenCalledWith('b1');
+  });
+
   it('offers a correction on a weighed batch', () => {
     const onCorrectSize = jest.fn();
     renderWithApollo(

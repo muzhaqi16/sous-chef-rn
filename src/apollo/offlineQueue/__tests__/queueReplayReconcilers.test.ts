@@ -9,7 +9,6 @@ import {
   CreateShoppingListDocument,
   MoveShoppingItemToPantryDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => ({ cache: {} }),
@@ -153,10 +152,7 @@ describe('reconcileReplaySuccess — the shopping adds', () => {
     },
   };
 
-  it.each([
-    AddItemToShoppingListDocument,
-    AddItemsToShoppingListFromRecipeDocument,
-  ])(
+  it.each([AddItemToShoppingListDocument])(
     'moves the writes behind a merged line onto the row the server kept (%#)',
     document => {
       const adopt = jest.fn();

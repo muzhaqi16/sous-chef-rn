@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { typedItemRef } from '#/utils/refInput';
-import { AddItemToShoppingListFromPantryItemDocument } from './usePantryItemDetailActions.generated';
-import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
+import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPackageSize } from '#features/pantry/hooks/mutations/useCorrectPackageSize';
+import { useRecordPantryUsage } from '#features/pantry/hooks/mutations/useRecordPantryUsage';
+import type { SettleStatus } from '#/apollo/utils/settleMutation';
+import type { UsagePurpose } from '#/graphql/generated/schemaTypes';
 import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePantryItemMutations';
 import {
   formatQuantityForDisplay,
@@ -66,6 +67,16 @@ export interface UsePantryItemDetailActionsResult {
   /** The batch whose package size is being corrected, if any. */
   correctingBatchId: string | null;
   setCorrectingBatchId: (batchId: string | null) => void;
+  /** The batch a use is being taken from, if any. */
+  usingBatchId: string | null;
+  setUsingBatchId: (batchId: string | null) => void;
+  handleConfirmBatchUse: (
+    quantityUsed: number,
+    quantityInput: string,
+    purpose: UsagePurpose,
+    notes: string,
+    usageUnitId?: string,
+  ) => Promise<SettleStatus | undefined>;
   handleDelete: () => void;
   handleAddToShoppingList: () => Promise<void>;
   handleDiscardExpired: () => void;
@@ -93,13 +104,13 @@ export function usePantryItemDetailActions({
   goBack,
   onAddToShoppingListNeedsList,
 }: UsePantryItemDetailActionsParams): UsePantryItemDetailActionsResult {
-  const client = useApolloClient();
   const [addToListStatus, setAddToListStatus] =
     useState<AddToListStatus>('idle');
   const [adjustModalVisible, setAdjustModalVisible] = useState(false);
   const [correctingBatchId, setCorrectingBatchId] = useState<string | null>(
     null,
   );
+  const [usingBatchId, setUsingBatchId] = useState<string | null>(null);
 
   const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -116,10 +127,7 @@ export function usePantryItemDetailActions({
     pantryId: resolvedPantryId ?? '',
   });
 
-  const [addToShoppingList] = useMutation(
-    AddItemToShoppingListFromPantryItemDocument,
-    { context: { localFirst: true } },
-  );
+  const { addRow } = useAddShoppingRows();
 
   const { convertExpiredToWaste } = useConvertExpiredToWaste({
     onSuccess: ({ hasBatches }) => {
@@ -133,6 +141,7 @@ export function usePantryItemDetailActions({
 
   const { adjustQuantity } = useAdjustPantryItemQuantity();
   const { correctPackageSize } = useCorrectPackageSize();
+  const { recordUsage } = useRecordPantryUsage();
 
   const confirmDelete = async () => {
     if (!resolvedPantryId) {
@@ -183,7 +192,7 @@ export function usePantryItemDetailActions({
     const itemName = item?.itemName ?? '';
     // An out-of-stock item (quantity 0) still adds one to the list.
     const quantity = item?.quantity === 0 ? 1 : item?.quantity ?? 1;
-    const created = await createShoppingListRow(client.cache, {
+    const created = await addRow({
       listId: selectedShoppingListId,
       row: {
         itemName,
@@ -198,8 +207,6 @@ export function usePantryItemDetailActions({
         quantity,
         unit: item?.unit?.id ? { id: item.unit.id } : undefined,
       },
-      send: addToShoppingList,
-      document: AddItemToShoppingListFromPantryItemDocument,
       fallback: t('errors.addItemFailed'),
     });
     if (created.failure) {
@@ -267,12 +274,36 @@ export function usePantryItemDetailActions({
     });
   };
 
+  // Taken from the batch picked, which the server never swaps for another.
+  const handleConfirmBatchUse = async (
+    quantityUsed: number,
+    _quantityInput: string,
+    purpose: UsagePurpose,
+    notes: string,
+    usageUnitId?: string,
+  ): Promise<SettleStatus | undefined> => {
+    if (!usingBatchId) return undefined;
+    const status = await recordUsage({
+      pantryItemId: itemId,
+      quantity: quantityUsed,
+      usageUnitId,
+      usage: { purpose, notes: notes || undefined },
+      batchId: usingBatchId,
+      fallback: t('errors.recordUsageFailedRetry'),
+    });
+    if (status !== 'failed') setUsingBatchId(null);
+    return status;
+  };
+
   return {
     addToListStatus,
     adjustModalVisible,
     setAdjustModalVisible,
     correctingBatchId,
     setCorrectingBatchId,
+    usingBatchId,
+    setUsingBatchId,
+    handleConfirmBatchUse,
     handleDelete,
     handleAddToShoppingList,
     handleDiscardExpired,

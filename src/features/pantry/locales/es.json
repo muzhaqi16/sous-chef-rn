@@ -335,7 +335,8 @@
     "stockLevelHigh": "Seguramente sigue aquí",
     "stockLevelMedium": "Conviene revisarlo",
     "stockLevelLow": "Probablemente se acabó",
-    "stockLevelUnknown": "Sin datos"
+    "stockLevelUnknown": "Sin datos",
+    "stockLastConfirmed": "Última confirmación: {{when}}"
   },
   "storageState": {
     "AMBIENT": "Ambiente",

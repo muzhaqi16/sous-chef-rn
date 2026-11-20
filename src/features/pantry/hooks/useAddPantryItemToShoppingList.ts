@@ -1,6 +1,4 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { AddItemToShoppingListFromFilteredPantryDocument } from './useAddPantryItemToShoppingList.generated';
-import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
+import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
 import { useTranslation } from '#/i18n';
 
 /** Whether the row survived. The caller owns the copy for a failure. */
@@ -12,12 +10,8 @@ export type AddToListOutcome = 'kept' | 'reverted';
  * list and every row to a list picked in the moment.
  */
 export function useAddPantryItemToShoppingList() {
-  const client = useApolloClient();
   const { t } = useTranslation();
-
-  const [addToShoppingList] = useMutation(
-    AddItemToShoppingListFromFilteredPantryDocument,
-  );
+  const { addRow } = useAddShoppingRows();
 
   const addToList = async (
     shoppingListId: string | null | undefined,
@@ -25,12 +19,10 @@ export function useAddPantryItemToShoppingList() {
     display: { itemName: string; unitId?: string },
   ): Promise<AddToListOutcome> => {
     if (!shoppingListId) return 'reverted';
-    const { outcome } = await createShoppingListRow(client.cache, {
+    const { outcome } = await addRow({
       listId: shoppingListId,
       row: { itemName: display.itemName, unitId: display.unitId },
       line: { item: { itemId } },
-      send: addToShoppingList,
-      document: AddItemToShoppingListFromFilteredPantryDocument,
       fallback: t('errors.addItemFailed'),
     });
     return outcome;

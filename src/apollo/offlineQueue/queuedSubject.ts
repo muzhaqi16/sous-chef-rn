@@ -8,6 +8,7 @@ import type {
   ForkRecipeInput,
   MoveShoppingItemToPantryInput,
   OpenPantryItemBatchInput,
+  RecordPantryStockCheckInput,
   RemoveRecipeFromFavoritesInput,
   UpdatePantryItemQuantityInput,
   WastePantryItemBatchInput,
@@ -24,6 +25,7 @@ interface SubjectInputs {
   ForkRecipeInput: ForkRecipeInput;
   MoveShoppingItemToPantryInput: MoveShoppingItemToPantryInput;
   OpenPantryItemBatchInput: OpenPantryItemBatchInput;
+  RecordPantryStockCheckInput: RecordPantryStockCheckInput;
   RemoveRecipeFromFavoritesInput: RemoveRecipeFromFavoritesInput;
   UpdatePantryItemQuantityInput: UpdatePantryItemQuantityInput;
   WastePantryItemBatchInput: WastePantryItemBatchInput;
@@ -44,6 +46,7 @@ const SUBJECT_KEYS: {
   ForkRecipeInput: 'newRecipeId',
   MoveShoppingItemToPantryInput: 'pantryItemId',
   OpenPantryItemBatchInput: 'batchId',
+  RecordPantryStockCheckInput: 'entries',
   RemoveRecipeFromFavoritesInput: 'recipeId',
   UpdatePantryItemQuantityInput: 'pantryItemId',
   WastePantryItemBatchInput: 'batchId',
@@ -69,10 +72,11 @@ const MINTING_SUBJECT_INPUTS: ReadonlySet<keyof SubjectInputs> = new Set([
 /**
  * The field naming each row's entity, for a subject that is a list of rows;
  * `id` otherwise. A check-in line names the stack it adds, which a stock-free
- * line has none of.
+ * line has none of; a stock check's entry names the stack it answers for.
  */
 const ROW_SUBJECT_KEYS: Partial<Record<keyof SubjectInputs, string>> = {
   CreateReceiptCheckInInput: 'pantryItemId',
+  RecordPantryStockCheckInput: 'pantryItemId',
 };
 
 /** `id`-keyed inputs outside the `Create*` names whose `id` the device mints. */

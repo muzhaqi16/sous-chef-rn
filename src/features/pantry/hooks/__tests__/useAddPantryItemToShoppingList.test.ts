@@ -2,9 +2,9 @@ import {
   renderHookWithApollo,
   recordMock,
 } from '#/test-utils/apolloMockProvider';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { useAddPantryItemToShoppingList } from '#features/pantry/hooks/useAddPantryItemToShoppingList';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
 
 /**
  * `item` is an @oneOf `ItemRefInput` the server resolves as a CATALOG item, so
@@ -26,7 +26,7 @@ afterEach(() => {
 
 describe('useAddPantryItemToShoppingList', () => {
   it('sends the id it is given as a catalog item reference', async () => {
-    const add = recordMock(AddItemToShoppingListFromFilteredPantryDocument, {
+    const add = recordMock(AddItemToShoppingListDocument, {
       data: {
         addItemsToShoppingList: {
           __typename: 'AddItemsToShoppingListPayload',

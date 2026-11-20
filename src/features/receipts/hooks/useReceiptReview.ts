@@ -3,6 +3,7 @@ import { useApolloClient, useFragment } from '@apollo/client/react';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { useToday } from '#hooks/app/useToday';
 import { errorService } from '#/services/errorService';
+import { isVersionConflictCode } from '#/utils/errors/versionConflict';
 import { toastService } from '#/services/toastService';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
@@ -71,6 +72,25 @@ import { useReceiptCurrency } from './useReceiptCurrency';
 // The chain and its store number print above the items (`ALDI` / `Store #027`).
 const HEADER_LINES = 6;
 
+/** A fact the purchase a line was picked to fill recorded otherwise. */
+const purchaseDiffers = (field: string | undefined): TranslationKey | null => {
+  switch (field) {
+    case 'amount':
+      return 'receipts.review.purchaseDiffersAmount';
+    case 'totalPaid':
+      return 'receipts.review.purchaseDiffersPaid';
+    case 'discount':
+      return 'receipts.review.purchaseDiffersDiscount';
+    case 'item':
+      return 'receipts.review.purchaseDiffersItem';
+    case 'storeId':
+      return 'receipts.review.purchaseDiffersStore';
+    case undefined:
+    default:
+      return null;
+  }
+};
+
 const NEED_COPY: Record<Exclude<CheckInLineNeed, 'amount'>, TranslationKey> = {
   item: 'errors.itemNameRequired',
   unit: 'receipts.review.needsUnit',
@@ -128,13 +148,14 @@ const askedBy = (
 
 /**
  * What adding does with a line: `add` it, retry it once `failed`; or nothing:
- * `added` already, `pending` the API's match, `unmatched` until the user picks
- * one, or `skipped` by the user.
+ * `added` already, `queued` until the server takes it, `pending` the API's
+ * match, `unmatched` until the user picks one, or `skipped` by the user.
  */
 export type ReceiptRowStatus =
   | 'add'
   | 'failed'
   | 'added'
+  | 'queued'
   | 'pending'
   | 'unmatched'
   | 'skipped';
@@ -148,6 +169,8 @@ export interface ReceiptReviewRow extends ReceiptReviewLine {
   suggestion?: ReceiptCandidate;
   /** Why the last attempt to add it failed. */
   failure?: string;
+  /** The fact the API refused it on, which the line sheet shows the failure on. */
+  failedOn?: string;
   /** Adding it ticks a shopping-list line off rather than adding it again. */
   onList: boolean;
   /** The amount its list line supplied for a bare count, shown so it can be corrected. */
@@ -345,6 +368,7 @@ export function useReceiptReview() {
     (draft ? toDateKey(new Date(draft.scannedAt)) : today);
 
   const added = new Set(draft?.added);
+  const unconfirmed = new Set(draft?.unconfirmed);
   const pending = chosen.flatMap(({ line, choice }) =>
     choice && !added.has(line.index)
       ? [{ index: line.index, printed: line.printed, choice }]
@@ -356,7 +380,12 @@ export function useReceiptReview() {
     { line, choice, skipped }: (typeof chosen)[number],
     failure: string | undefined,
   ): ReceiptRowStatus => {
-    if (added.has(line.index)) return 'added';
+    if (added.has(line.index)) {
+      // Sent while offline: on the device, not yet taken by the server.
+      return unconfirmed.has(line.index) && draft?.checkIn?.state === 'queued'
+        ? 'queued'
+        : 'added';
+    }
     if (choice) return failure ? 'failed' : 'add';
     if (skipped) return 'skipped';
     if (matchState !== 'done') return 'pending';
@@ -380,6 +409,14 @@ export function useReceiptReview() {
     }
     const code = draft?.failed?.[index];
     if (code === undefined) return undefined;
+    // A line filling an earlier purchase is refused on what that purchase holds.
+    if (draft?.choices?.[index]?.existingPurchase) {
+      if (isVersionConflictCode(code)) {
+        return t('receipts.review.purchaseChanged');
+      }
+      const differs = purchaseDiffers(draft.failedOn?.[index]);
+      if (differs) return t(differs);
+    }
     return code
       ? errorService.messageForCode(code, t, t('errors.addItemFailedRetry'))
       : t('errors.addItemFailedRetry');
@@ -388,6 +425,7 @@ export function useReceiptReview() {
   const rows: ReceiptReviewRow[] = chosen.map(entry => {
     const { line, match, choice } = entry;
     const failure = failureOf(line.index);
+    const failedOn = draft?.failedOn?.[line.index];
     const listLine = links.get(line.index);
     const asked = askedBy(listLine);
     // A linked line in a unit reads its amount without the held stack.
@@ -404,6 +442,7 @@ export function useReceiptReview() {
       candidates: match?.candidates ?? [],
       ...(match?.guess && !choice ? { suggestion: match.guess } : {}),
       failure,
+      ...(failure && failedOn ? { failedOn } : {}),
       onList: !!listLine,
       ...(asked && measured
         ? { fromList: { ...asked, quantity: measured.quantity } }

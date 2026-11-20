@@ -1,32 +1,21 @@
-# The stacks of a receipt line's product this pantry holds: where an earlier
-# purchase of it, which the line may be the receipt for, was stocked.
-query HeldStacksOfItem($pantryId: ID!, $itemId: ID!) {
-  pantry(id: $pantryId) {
+# The household's purchases of a receipt line's product in the days before the
+# receipt's: one of them the line may be the receipt for, whichever pantry it
+# stocked, or none.
+query EarlierPurchasesOfItem(
+  $homeId: ID!
+  $itemId: ID!
+  $fromDate: DateTime!
+  $toDate: DateTime!
+) {
+  home(id: $homeId) {
     id
     version
-    itemsConnection(filters: { itemId: $itemId }, first: 5) {
+    purchasesConnection(
+      filters: { itemId: $itemId, fromDate: $fromDate, toDate: $toDate }
+      first: 20
+    ) {
       edges {
         node {
-          id
-          version
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-  }
-}
-
-# The purchases that stocked one of those stacks: who bought each, and when.
-query EarlierPurchasesOfStack($pantryItemId: ID!) {
-  pantryItemBatchesConnection(pantryItemId: $pantryItemId, first: 20) {
-    edges {
-      node {
-        id
-        version
-        purchase {
           id
           version
           purchaseDate
@@ -37,10 +26,10 @@ query EarlierPurchasesOfStack($pantryItemId: ID!) {
           }
         }
       }
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
   }
 }

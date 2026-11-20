@@ -1,11 +1,9 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import type { ScanAmount, ScannedItem } from '#features/barcode/types';
 import {
   AcquisitionMethod,
   type StockAmountInput,
 } from '#/graphql/generated/schemaTypes';
-import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
+import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
 import {
   usePantryIntake,
   type AddPantryItemOutcome,
@@ -73,14 +71,10 @@ export function useAddScannedItem({
   pantryId,
   shoppingListId,
 }: UseAddScannedItemArgs) {
-  const client = useApolloClient();
   const { t } = useTranslation();
   const { addItem } = usePantryIntake(pantryId);
 
-  const [addToShoppingListMutation] = useMutation(
-    BarcodeAddItemToShoppingListDocument,
-    { context: { localFirst: true } },
-  );
+  const { addRow } = useAddShoppingRows();
 
   // A size goes only when the user gave one: one sent is kept as the user's,
   // not the record's. A refusal is the caller's to show, on the field it names.
@@ -117,7 +111,7 @@ export function useAddScannedItem({
     item: ScannedItem,
   ): Promise<ScannedListOutcome> => {
     if (!shoppingListId) return { outcome: 'reverted', rowId: null };
-    const { id, outcome } = await createShoppingListRow(client.cache, {
+    const { id, outcome } = await addRow({
       listId: shoppingListId,
       row: {
         itemName: item.name,
@@ -134,8 +128,6 @@ export function useAddScannedItem({
           ? undefined
           : refByIdOrName(item.brandId, item.brandName),
       },
-      send: addToShoppingListMutation,
-      document: BarcodeAddItemToShoppingListDocument,
       fallback: t('errors.addItemFailed'),
     });
     return outcome === 'kept'

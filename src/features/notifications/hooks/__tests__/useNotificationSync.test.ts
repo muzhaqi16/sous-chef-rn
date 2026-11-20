@@ -9,7 +9,7 @@ import {
   seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { drained } from '#/test-utils/drainTimers';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   MarkNotificationAsReadDocument,
   DeleteNotificationDocument,
@@ -30,6 +30,8 @@ import {
 import { alertService } from '#/services/alertService';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotificationSync } from '../useNotificationSync';
+import { useMarkPushOpenedRead } from '../useMarkPushOpenedRead';
+import { useNotificationStore } from '#features/notifications/store/notificationStore';
 
 jest.mock('#/services/errorService');
 
@@ -448,5 +450,22 @@ describe('useNotificationSync — the cached badge', () => {
     await drained(() => result.current.syncMarkAsRead('n1'));
     expect(readNotificationStatus(cache, 'n1')).toBe(READ);
     expect(readBadge(cache)).toBeUndefined();
+  });
+});
+
+// Opened from its push, a notification is read as one opened from the list.
+describe('useMarkPushOpenedRead', () => {
+  it('marks read the notification a push opened, once', async () => {
+    const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
+    useNotificationStore.getState().noteOpenedFromPush('n1');
+
+    renderHookWithApollo(() => useMarkPushOpenedRead(), {
+      cache,
+      operationMocks: [markReadMock(summary(4))],
+    });
+    await drainTimers();
+
+    expect(readNotificationStatus(cache, 'n1')).toBe(READ);
+    expect(useNotificationStore.getState().openedFromPush).toBeNull();
   });
 });

@@ -790,6 +790,7 @@
     "revokeInvite": "Anulo ftesën",
     "openBatch": "Hap grupin",
     "wasteBatch": "Regjistro grupin si të humbur",
+    "useFromBatch": "Përdor nga ky grup",
     "quickAdd": "Shto shpejt {{name}}",
     "removeNamed": "Hiq {{name}}",
     "editNamed": "Ndrysho {{name}}",

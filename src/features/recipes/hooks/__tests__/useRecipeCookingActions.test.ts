@@ -134,7 +134,7 @@ const cook = (
   args: Partial<Parameters<Cooking['handleMarkAsCooked']>[0]> = {},
 ) =>
   act(async () => {
-    result.current.handleMarkAsCooked({
+    void result.current.handleMarkAsCooked({
       servings: 4,
       deductFromPantry: true,
       useGranularDeduction: false,
@@ -179,7 +179,7 @@ describe('useRecipeCookingActions', () => {
     ]);
     await drainTimers();
     expect(mockToastSuccess).toHaveBeenCalledWith(
-      'Recipe marked as cooked! Ingredients deducted from pantry.',
+      'Recipe marked as cooked. Deducted from 1 pantry item.',
     );
     expect(askForReviewAfterSuccess).toHaveBeenCalledTimes(1);
   });
@@ -358,11 +358,18 @@ describe('useRecipeCookingActions', () => {
     );
   });
 
-  it('toasts the failure message and shows no success toast when the server rejects', async () => {
+  it('toasts the failure message and keeps the sheet open when the server rejects', async () => {
     const { result } = renderCooking([refusedCookMock().mock]);
 
-    await cook(result);
+    const outcome = await drained(() =>
+      result.current.handleMarkAsCooked({
+        servings: 4,
+        deductFromPantry: true,
+        useGranularDeduction: false,
+      }),
+    );
 
+    expect(outcome).toBe('retry');
     // The refusal names `servings`, which has copy of its own.
     await drainTimers();
     expect(mockToastError).toHaveBeenCalledWith(
@@ -428,43 +435,93 @@ describe('useRecipeCookingActions', () => {
     // left to the teardown's flush of pending work.
     await drainTimers();
     expect(mockToastSuccess).toHaveBeenCalledWith(
-      'Recipe marked as cooked! Ingredients deducted from pantry.',
+      'Recipe marked as cooked. Deducted from 1 pantry item.',
     );
   });
 
+  // A cook that asked for the review deducts nothing unreviewed.
   describe('when the ingredient review cannot load', () => {
     const noMatches = () =>
       recordMock(MatchRecipeIngredientsToPantryDocument, {
         error: new Error('Network request failed'),
       });
 
-    it('records the cook offline, and says what it skipped', async () => {
-      mockIsOnline = false;
-      const cooked = cookedMock();
-      const { result } = renderCooking([noMatches().mock, cooked.mock]);
+    it.each([true, false])(
+      'keeps the sheet open with the review off, and records nothing (online: %s)',
+      async online => {
+        mockIsOnline = online;
+        const cooked = cookedMock();
+        const { result } = renderCooking([noMatches().mock, cooked.mock]);
 
-      await cook(result, { servings: 2, useGranularDeduction: true });
-      await drainTimers();
-      mockIsOnline = true;
+        const outcome = await drained(() =>
+          result.current.handleMarkAsCooked({
+            servings: 2,
+            deductFromPantry: true,
+            useGranularDeduction: true,
+          }),
+        );
+        mockIsOnline = true;
 
-      expect(cooked.fired).toHaveLength(1);
-      expect(mockToastInfo).toHaveBeenCalledWith(
-        'Reviewing the ingredients needs a connection. The amounts will be worked out when it syncs.',
-      );
-      expect(mockToastSuccess).not.toHaveBeenCalled();
+        expect(outcome).toBe('reviewUnavailable');
+        expect(cooked.fired).toHaveLength(0);
+        expect(mockToastSuccess).not.toHaveBeenCalled();
+        expect(mockToastInfo).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  it('records a recipe with nothing to draw as cooked, its pantry unchanged', async () => {
+    const cooked = cookedMock();
+    const { result } = renderCooking([
+      recordMock(MatchRecipeIngredientsToPantryDocument, {
+        data: { matchRecipeIngredientsToPantry: [] },
+      }).mock,
+      cooked.mock,
+    ]);
+
+    const outcome = await drained(() =>
+      result.current.handleMarkAsCooked({
+        servings: 2,
+        deductFromPantry: true,
+        useGranularDeduction: true,
+      }),
+    );
+    await drainTimers();
+
+    expect(outcome).toBe('done');
+    expect(inputOf(cooked.fired[0]!)).toMatchObject({
+      deductFromPantry: false,
     });
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Recipe marked as cooked. Your pantry wasn't changed.",
+    );
+  });
 
-    it('says the cook deducted online, as ever', async () => {
-      const cooked = cookedMock();
-      const { result } = renderCooking([noMatches().mock, cooked.mock]);
-
-      await cook(result, { servings: 2, useGranularDeduction: true });
-      await drainTimers();
-
-      expect(cooked.fired).toHaveLength(1);
-      expect(mockToastInfo).not.toHaveBeenCalled();
-      expect(mockToastSuccess).toHaveBeenCalled();
+  // COOK-03: a cook states what it recorded, never what it asked for.
+  it('says a deducting cook that drew on no stack left the pantry unchanged', async () => {
+    const cooked = recordMock(MarkRecipeAsCookedDocument, {
+      data: {
+        markRecipeAsCooked: {
+          __typename: 'MarkRecipeAsCookedPayload',
+          skippedIngredients: [],
+          cookingLog: {
+            pantryItemsUsedConnection: {
+              edges: [],
+              pageInfo: { hasNextPage: false },
+            },
+          },
+          mealPlanItem: null,
+        },
+      },
     });
+    const { result } = renderCooking([cooked.mock]);
+
+    await cook(result);
+    await drainTimers();
+
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Recipe marked as cooked. Your pantry wasn't changed.",
+    );
   });
 
   // The review opens with the servings and notes the cook entered; skipping it

@@ -150,14 +150,24 @@ const TOTAL_NEEDED =
 
 const MILK = { index: 0, printed: 'MILK 2%', price: 2.5 };
 
-const renderSheet = (line: typeof MILK & { discount?: number } = MILK) => {
+const renderSheet = (
+  line: typeof MILK & { discount?: number } = MILK,
+  {
+    choice = lineChoice({ price: line.price }),
+    refusal,
+  }: {
+    choice?: ReturnType<typeof lineChoice>;
+    refusal?: { message: string; on?: string };
+  } = {},
+) => {
   const onSave = jest.fn();
   const onClose = jest.fn();
   render(
     <ReceiptLineSheet
       visible
       line={line}
-      choice={lineChoice({ price: line.price })}
+      choice={choice}
+      refusal={refusal}
       candidates={[]}
       listItemNameFor={() => undefined}
       onPickItem={jest.fn()}
@@ -299,6 +309,52 @@ describe('the receipt for an earlier purchase', () => {
         notStocked: true,
       }),
     );
+  });
+
+  // Refused as stale, the purchase it fills is offered as it reads now.
+  it('sends a purchase that changed since it was picked as it reads now', async () => {
+    mockEarlier = [{ ...EGGS_BOUGHT, version: 4 }];
+    const { onSave } = renderSheet(MILK, {
+      choice: lineChoice({
+        price: MILK.price,
+        notStocked: true,
+        existingPurchase: { id: EGGS_BOUGHT.id, version: 3 },
+      }),
+      refusal: { message: t('receipts.review.purchaseChanged') },
+    });
+
+    expect(screen.getByTestId(receiptsTestIDs.lineRefusal)).toHaveTextContent(
+      t('receipts.review.purchaseChanged'),
+    );
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        existingPurchase: { id: EGGS_BOUGHT.id, version: 4 },
+      }),
+    );
+  });
+
+  // A conflicting fact fails the line on that field, for review.
+  it('shows a refusal on the field it names', async () => {
+    renderSheet(MILK, {
+      choice: lineChoice({
+        price: MILK.price,
+        notStocked: true,
+        existingPurchase: { id: EGGS_BOUGHT.id, version: 3 },
+      }),
+      refusal: {
+        message: t('receipts.review.purchaseDiffersPaid'),
+        on: 'totalPaid',
+      },
+    });
+
+    await drainTimers();
+    expect(screen.getByTestId('field-Total paid-error')).toHaveTextContent(
+      t('receipts.review.purchaseDiffersPaid'),
+    );
+    expect(screen.queryByTestId(receiptsTestIDs.lineRefusal)).toBeNull();
   });
 
   // A similar purchase may be another one: it is offered, never assumed.

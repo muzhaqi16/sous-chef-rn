@@ -59,6 +59,8 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
 import { AdjustQuantityModal } from '#features/pantry/components/modals/AdjustQuantityModal';
 import { CorrectPackageSizeModal } from '#features/pantry/components/modals/CorrectPackageSizeModal';
+import { ConsumePantryItemModal } from '#features/pantry/components/modals/ConsumePantryItemModal';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import {
@@ -175,6 +177,8 @@ export const PantryItemDetail: React.FC<
   const { suggestedRecipes, loadingRecipes, recipesState, retryRecipes } =
     useRecipeSuggestionsForItem(item?.itemName ?? undefined);
 
+  // A use taken from one batch is part of the tracking capability.
+  const batchUse = useFeatureFlag('pantryTrackingFoundation');
   const actions = usePantryItemDetailActions({
     itemId,
     item,
@@ -557,6 +561,11 @@ export const PantryItemDetail: React.FC<
                   itemName: item.itemName,
                 })
               }
+              onUse={
+                batchUse && permissions.canEditItems
+                  ? actions.setUsingBatchId
+                  : undefined
+              }
               onCorrectSize={
                 permissions.canEditItems
                   ? actions.setCorrectingBatchId
@@ -626,6 +635,15 @@ export const PantryItemDetail: React.FC<
           pantryItemId={itemId}
           onClose={() => actions.setAdjustModalVisible(false)}
           onConfirm={actions.handleConfirmAdjust}
+        />
+      )}
+      {!!actions.usingBatchId && (
+        <ConsumePantryItemModal
+          compact
+          visible
+          pantryItemId={itemId}
+          onClose={() => actions.setUsingBatchId(null)}
+          onConfirm={actions.handleConfirmBatchUse}
         />
       )}
       {!!actions.correctingBatchId && (

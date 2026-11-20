@@ -20,7 +20,6 @@ import {
   UpdateHomeDocument,
 } from '#operations/home/home.generated';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
-import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import {
   CreateStorageLocationDocument,
   DeleteStorageLocationDocument,
@@ -82,7 +81,6 @@ import {
   UpdateMealTemplateDocument,
   UpdateTemplateItemDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
-import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import {
   addTemplateItem,
   createPlan,
@@ -93,8 +91,6 @@ import {
   removeTemplate,
   removeTemplateItem,
 } from '#features/mealPlan/offline/localWrites';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
-import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
 import { RecordPantryStockCheckDocument } from '#features/pantry/hooks/useStockCheck.generated';
 import {
   addStock,
@@ -151,7 +147,6 @@ import {
 } from '#features/profile/offline/localWrites';
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import { checkIn } from '#features/receipts/offline/localWrites';
-import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import {
   addFavorite,
   cookRecipe,
@@ -197,11 +192,6 @@ import type { LocalWrite, LocalWriteTable } from './types';
  */
 export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [AddItemToShoppingListDocument, addRows],
-  [AddItemToShoppingListFromFilteredPantryDocument, addRows],
-  [AddItemToShoppingListFromPantryItemDocument, addRows],
-  [BarcodeAddItemToShoppingListDocument, addRows],
-  [AddItemsToShoppingListFromRecipeDocument, addRows],
-  [AddDerivedItemsToShoppingListDocument, addRows],
   [CreateShoppingListDocument, createList],
   [DeleteShoppingListDocument, removeList],
   [UpdateShoppingListItemDocument, updateRow],

@@ -6,14 +6,11 @@ import {
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
-import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
 import {
   AddItemToShoppingListDocument,
   RemoveItemFromShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import {
   asQueued,
   withCurrentUnits,
@@ -32,9 +29,6 @@ export const REPLAY_PREPARATIONS: Readonly<Record<string, ReplayPreparer>> =
     [UpdatePantryItemQuantityDocument, withCurrentUnits],
     [DeletePantryItemDocument, asQueued],
     [AddItemToShoppingListDocument, withCurrentUnits],
-    [BarcodeAddItemToShoppingListDocument, withCurrentUnits],
-    [AddItemToShoppingListFromFilteredPantryDocument, withCurrentUnits],
-    [AddItemToShoppingListFromPantryItemDocument, withCurrentUnits],
     [UpdateShoppingListItemDocument, withCurrentUnits],
     [RemoveItemFromShoppingListDocument, asQueued],
   ]);

@@ -63,48 +63,6 @@ fragment useGenerateShoppingList_mealPlan on MealPlan {
   }
 }
 
-# The derived lines, added in one batch. Mirrors the pantry screen's add so both
-# settle through `addRows`.
-mutation AddDerivedItemsToShoppingList($input: AddItemsToShoppingListInput!) {
-  addItemsToShoppingList(input: $input) {
-    __typename
-    ... on AddItemsToShoppingListPayload {
-      shoppingList {
-        id
-        ...ShoppingListReaders
-      }
-      results {
-        index
-        clientId
-        success
-        failure {
-          code
-          disposition
-          reason
-          errorId
-        }
-        item {
-          id
-          ...ShoppingListItemReaders
-          ...AddedShoppingListItemFields
-        }
-      }
-    }
-    ... on Error {
-      code
-      disposition
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
 # The plan read afresh for ingredient links an import job wrote after the plan
 # was cached.
 query GenerateShoppingListPlan(
