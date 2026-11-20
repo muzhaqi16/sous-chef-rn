@@ -18,8 +18,10 @@ import type {
 } from '#features/catalog/offline/localWrites';
 import type { UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import {
+  sendLocalWrite,
+  useLocalWrite,
+} from '#/apollo/pendingWrites/useLocalWrite';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useTranslation } from '#/i18n';
@@ -136,15 +138,18 @@ export function useStorageLocationManagement(
     { context: { localFirst: true } },
   );
 
-  const [deleteMutation] = useMutation(DeleteStorageLocationDocument, {
-    context: { localFirst: true },
+  // A delete converges: a row already gone is the outcome asked for.
+  const remove = useLocalWrite(DeleteStorageLocationDocument, {
+    fallback: t('errors.codes.genericRetry'),
+    removal: true,
+    present: 'toast',
   });
 
   // SetDefault returns the updated location; Apollo auto-normalizes by id.
-  const [setDefaultMutation] = useMutation(
-    MarkStorageLocationAsDefaultDocument,
-    { context: { localFirst: true } },
-  );
+  const markDefault = useLocalWrite(MarkStorageLocationAsDefaultDocument, {
+    fallback: t('errors.codes.genericRetry'),
+    present: 'toast',
+  });
 
   const updateLocation = async (
     id: string,
@@ -186,21 +191,21 @@ export function useStorageLocationManagement(
     };
     // The lock: an edit that crossed another answers VERSION_CONFLICT.
     const version = locations.find(location => location.id === id)?.version;
-    const settled = await pendingWritesOf(client.cache).send(
+    const settled = await sendLocalWrite(
+      client.cache,
       UpdateStorageLocationDocument,
       { input: { ...input, id, ...(version !== undefined && { version }) } },
-      write =>
-        settleMutation(() => updateMutation(write), {
-          document: UpdateStorageLocationDocument,
-          fallback: t('errors.codes.genericRetry'),
-          present: 'toast',
-          // Else the stale version stays held and every retry conflicts again.
-          onVersionConflict: () => {
-            refetch().catch(() => {
-              // The screen's own refresh asks again.
-            });
-          },
-        }),
+      updateMutation,
+      {
+        fallback: t('errors.codes.genericRetry'),
+        present: 'toast',
+        // Else the stale version stays held and every retry conflicts again.
+        onVersionConflict: () => {
+          refetch().catch(() => {
+            // The screen's own refresh asks again.
+          });
+        },
+      },
       inputs,
     );
     // Covers BOTH outcomes that keep the edit: the server confirmed it, or the
@@ -210,19 +215,7 @@ export function useStorageLocationManagement(
 
   const deleteLocation = async (id: string) => {
     const inputs: RemoveLocationInputs = { pantryId };
-    // A delete converges: a row already gone is the outcome asked for.
-    const settled = await pendingWritesOf(client.cache).send(
-      DeleteStorageLocationDocument,
-      { input: { id } },
-      write =>
-        settleMutation(() => deleteMutation(write), {
-          document: DeleteStorageLocationDocument,
-          fallback: t('errors.codes.genericRetry'),
-          removal: true,
-          present: 'toast',
-        }),
-      inputs,
-    );
+    const settled = await remove.send({ input: { id } }, inputs);
     if (settled.failure) return false;
 
     toastService.success(t('success.storageLocationDeleted'));
@@ -240,17 +233,7 @@ export function useStorageLocationManagement(
       fields: { isDefault: true },
       displacedId: displaced?.id,
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      MarkStorageLocationAsDefaultDocument,
-      { input: { id } },
-      write =>
-        settleMutation(() => setDefaultMutation(write), {
-          document: MarkStorageLocationAsDefaultDocument,
-          fallback: t('errors.codes.genericRetry'),
-          present: 'toast',
-        }),
-      inputs,
-    );
+    const settled = await markDefault.send({ input: { id } }, inputs);
     return !settled.failure;
   };
 

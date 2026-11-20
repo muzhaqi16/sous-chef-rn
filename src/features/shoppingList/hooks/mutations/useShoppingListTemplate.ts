@@ -11,7 +11,7 @@ import { MarkAsTemplateDocument } from '#features/shoppingList/graphql/shoppingL
 import { readCopyableList } from '#features/shoppingList/cache/copySource';
 import { listFromTemplate } from '#features/shoppingList/utils/listFromTemplate';
 import { useCopyShoppingList } from './useCopyShoppingList';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { toastService } from '#/services/toastService';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
@@ -30,16 +30,17 @@ export function useShoppingListTemplate() {
     id: string,
     templateName: string,
   ): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'ShoppingList', id },
-      fields: { isTemplate: true, templateName },
-      variables: { input: { id, templateName } },
-      mutate: markMutation,
-      settle: {
-        document: MarkAsTemplateDocument,
-        fallback: t('shoppingListScreens.failedToSaveTemplate'),
+    const settled = await sendLocalWrite(
+      client.cache,
+      MarkAsTemplateDocument,
+      { input: { id, templateName } },
+      markMutation,
+      { fallback: t('shoppingListScreens.failedToSaveTemplate') },
+      {
+        entity: { __typename: 'ShoppingList', id },
+        fields: { isTemplate: true, templateName },
       },
-    });
+    );
     return settled.status !== 'failed';
   };
 

@@ -4,22 +4,20 @@
  * the pre-change snapshot and alerts.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import {
   UpdateShoppingListReminderDocument,
   DeleteShoppingListReminderDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 
 export function useShoppingListReminder() {
   const { t } = useTranslation();
-  const client = useApolloClient();
-  const [setMutation] = useMutation(UpdateShoppingListReminderDocument, {
-    context: { localFirst: true },
+  const set = useLocalWrite(UpdateShoppingListReminderDocument, {
+    fallback: t('shoppingListScreens.failedToSetReminder'),
   });
-  const [clearMutation] = useMutation(DeleteShoppingListReminderDocument, {
-    context: { localFirst: true },
+  const clear = useLocalWrite(DeleteShoppingListReminderDocument, {
+    fallback: t('shoppingListScreens.failedToClearReminder'),
   });
 
   const setReminder = async (
@@ -27,29 +25,19 @@ export function useShoppingListReminder() {
     reminderDate: string,
     reminderEnabled = true,
   ): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
+    const settled = await set.sendFields({
       entity: { __typename: 'ShoppingList', id },
       fields: { reminderEnabled, reminderDate },
       variables: { input: { id, reminderDate, reminderEnabled } },
-      mutate: setMutation,
-      settle: {
-        document: UpdateShoppingListReminderDocument,
-        fallback: t('shoppingListScreens.failedToSetReminder'),
-      },
     });
     return settled.status !== 'failed';
   };
 
   const clearReminder = async (id: string): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
+    const settled = await clear.sendFields({
       entity: { __typename: 'ShoppingList', id },
       fields: { reminderEnabled: false, reminderDate: null },
       variables: { input: { id } },
-      mutate: clearMutation,
-      settle: {
-        document: DeleteShoppingListReminderDocument,
-        fallback: t('shoppingListScreens.failedToClearReminder'),
-      },
     });
     return settled.status !== 'failed';
   };

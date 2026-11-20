@@ -11,7 +11,7 @@ import {
   MarkShoppingListActiveDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ListStatus } from '#/graphql/generated/schemaTypes';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 
 export function useCompleteShoppingList() {
   const { t } = useTranslation();
@@ -30,44 +30,46 @@ export function useCompleteShoppingList() {
     totalCost?: number,
   ): Promise<boolean> => {
     const now = new Date().toISOString();
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'ShoppingList', id },
-      fields: {
-        status: ListStatus.Completed,
-        isCompleted: true,
-        completedShopDate: now,
-      },
-      variables: {
+    const settled = await sendLocalWrite(
+      client.cache,
+      CompleteShoppingListDocument,
+      {
         input: {
           id,
           completedShopDate: now,
           ...(totalCost !== undefined && { totalCost }),
         },
       },
-      mutate: completeMutation,
-      settle: {
-        document: CompleteShoppingListDocument,
-        fallback: t('shoppingListScreens.failedToComplete'),
+      completeMutation,
+      { fallback: t('shoppingListScreens.failedToComplete') },
+      {
+        entity: { __typename: 'ShoppingList', id },
+        fields: {
+          status: ListStatus.Completed,
+          isCompleted: true,
+          completedShopDate: now,
+        },
       },
-    });
+    );
     return settled.status !== 'failed';
   };
 
   const reactivateList = async (id: string): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'ShoppingList', id },
-      fields: {
-        status: ListStatus.Active,
-        isCompleted: false,
-        completedShopDate: null,
+    const settled = await sendLocalWrite(
+      client.cache,
+      MarkShoppingListActiveDocument,
+      { input: { id } },
+      reactivateMutation,
+      { fallback: t('shoppingListScreens.failedToReactivate') },
+      {
+        entity: { __typename: 'ShoppingList', id },
+        fields: {
+          status: ListStatus.Active,
+          isCompleted: false,
+          completedShopDate: null,
+        },
       },
-      variables: { input: { id } },
-      mutate: reactivateMutation,
-      settle: {
-        document: MarkShoppingListActiveDocument,
-        fallback: t('shoppingListScreens.failedToReactivate'),
-      },
-    });
+    );
     return settled.status !== 'failed';
   };
 

@@ -4,7 +4,7 @@
  * pre-edit snapshot and throws, leaving the one message to the caller's toast.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import {
   GetShoppingListItemsFilteredDocument,
   UpdateShoppingListDocument,
@@ -14,7 +14,7 @@ import {
   UseUpdateShoppingList_ListFragmentDoc,
   type UseUpdateShoppingList_ListFragment,
 } from './useUpdateShoppingList.generated';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import type {
@@ -37,8 +37,9 @@ interface ShoppingListSettingsUpdate {
 
 export function useUpdateShoppingList(fallbackErrorMessage: string) {
   const client = useApolloClient();
-  const [mutate] = useMutation(UpdateShoppingListDocument, {
-    context: { localFirst: true },
+  const update = useLocalWrite(UpdateShoppingListDocument, {
+    fallback: fallbackErrorMessage,
+    present: 'none',
   });
 
   const updateShoppingList = async (
@@ -70,7 +71,7 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
       throw new GraphQLNetworkError(fallbackErrorMessage);
     }
 
-    const settled = await sendFields(client.cache, {
+    const settled = await update.sendFields({
       entity: { __typename: 'ShoppingList', id },
       fields: {
         ...(updates.name !== undefined && { name: updates.name }),
@@ -94,12 +95,6 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
           ...(planning !== undefined && { planning }),
           version: snapshot.version,
         },
-      },
-      mutate,
-      settle: {
-        document: UpdateShoppingListDocument,
-        fallback: fallbackErrorMessage,
-        present: 'none',
       },
     });
     if (settled.failure) throw new GraphQLNetworkError(settled.failure.body);

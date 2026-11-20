@@ -6,13 +6,12 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ADD_ITEMS_BATCH_LIMIT } from '#features/shoppingList/cache/createShoppingListRow';
 import type { LocalShoppingListItem } from '#features/shoppingList/cache/items';
 import type { CreateListInputs } from '#features/shoppingList/offline/localWrites';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import type {
@@ -75,15 +74,12 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
       rows: sent.flatMap(line => lines?.rowOf(line, id) ?? []),
       now: new Date().toISOString(),
     };
-    const settled = await pendingWritesOf(client.cache).send(
+    const settled = await sendLocalWrite(
+      client.cache,
       CreateShoppingListDocument,
       { input: { ...input, id, ...(sent.length > 0 && { items: sent }) } },
-      write =>
-        settleMutation(() => mutate(write), {
-          document: CreateShoppingListDocument,
-          fallback: fallbackErrorMessage,
-          present: 'none',
-        }),
+      mutate,
+      { fallback: fallbackErrorMessage, present: 'none' },
       inputs,
     );
 

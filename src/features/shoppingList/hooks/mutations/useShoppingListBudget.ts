@@ -5,22 +5,22 @@
  * settings by useUpdateShoppingList.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   UseShoppingListBudget_ListFragmentDoc,
   type UseShoppingListBudget_ListFragment,
 } from './useShoppingListBudget.generated';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { toastService } from '#/services/toastService';
 import type { UpdateShoppingListInput } from '#/graphql/generated/schemaTypes';
 
 export function useShoppingListBudget() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [mutate] = useMutation(UpdateShoppingListDocument, {
-    context: { localFirst: true },
+  const update = useLocalWrite(UpdateShoppingListDocument, {
+    fallback: t('shoppingListScreens.failedToSetPriceTracking'),
   });
 
   const runUpdate = async (
@@ -43,16 +43,14 @@ export function useShoppingListBudget() {
       return false;
     }
 
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'ShoppingList', id },
-      fields: patch,
-      variables: { input: { id, ...input, version: current.version } },
-      mutate,
-      settle: {
-        document: UpdateShoppingListDocument,
-        fallback: failureMessage,
+    const settled = await update.sendFields(
+      {
+        entity: { __typename: 'ShoppingList', id },
+        fields: patch,
+        variables: { input: { id, ...input, version: current.version } },
       },
-    });
+      { settle: { fallback: failureMessage } },
+    );
     return settled.status !== 'failed';
   };
 

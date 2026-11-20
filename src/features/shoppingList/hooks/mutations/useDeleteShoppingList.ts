@@ -3,19 +3,19 @@
  * survives an offline queue — a list already gone counts as deleted.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#/i18n';
 import { useStore } from '#store';
 
 export function useDeleteShoppingList() {
   const { t } = useTranslation();
-  const client = useApolloClient();
 
-  const [mutate] = useMutation(DeleteShoppingListDocument, {
-    context: { localFirst: true },
+  // Toasted rather than alerted: the list simply reappears where it was.
+  const remove = useLocalWrite(DeleteShoppingListDocument, {
+    fallback: t('errors.deleteShoppingListFailed'),
+    removal: true,
+    present: 'toast',
   });
 
   /** `true` once the list is gone or its delete is queued; `false` when refused. */
@@ -23,18 +23,7 @@ export function useDeleteShoppingList() {
     // The removal shows at once and the List moves off the list with it; a
     // refusal brings the list back, so the person goes back to it too.
     const wasShown = useStore.getState().selectedShoppingListId === id;
-    // Toasted rather than alerted: the list simply reappears where it was.
-    const settled = await pendingWritesOf(client.cache).send(
-      DeleteShoppingListDocument,
-      { input: { id } },
-      write =>
-        settleMutation(() => mutate(write), {
-          document: DeleteShoppingListDocument,
-          fallback: t('errors.deleteShoppingListFailed'),
-          removal: true,
-          present: 'toast',
-        }),
-    );
+    const settled = await remove.send({ input: { id } });
     if (settled.status !== 'failed') return true;
     if (wasShown) useStore.getState().setSelectedShoppingListId(id);
     return false;

@@ -7,6 +7,7 @@ import {
 } from '#operations/item/item.generated';
 import type { SuggestionSurface } from '#/graphql/generated/schemaTypes';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { settleMutation, type Settled } from '#/apollo/utils/settleMutation';
 import { toastService } from '#/services/toastService';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -39,8 +40,9 @@ export function useSuggestionDismissal(
 ) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [dismiss] = useMutation(MarkSuggestionDismissedDocument, {
-    context: { localFirst: true },
+  const dismiss = useLocalWrite(MarkSuggestionDismissedDocument, {
+    fallback: t('addItemSheet.dismissFailed'),
+    present: 'toast',
   });
   const [undismiss] = useMutation(MarkSuggestionActiveDocument, {
     context: { localFirst: true },
@@ -79,15 +81,8 @@ export function useSuggestionDismissal(
     const inputs: DismissSuggestionInputs = { parent };
     // One key per tap, kept by the queued write and its replays: a re-send
     // under a spent key writes nothing, so it never undoes a later Undo.
-    const dismissed = pendingWritesOf(client.cache).send(
-      MarkSuggestionDismissedDocument,
+    const dismissed = dismiss.send(
       { input: { itemId, surface, idempotencyKey: generateEntityId() } },
-      write =>
-        settleMutation(() => dismiss(write), {
-          document: MarkSuggestionDismissedDocument,
-          fallback: t('addItemSheet.dismissFailed'),
-          present: 'toast',
-        }),
       inputs,
     );
     toastService.success(t('addItemSheet.dismissed', { name }), {

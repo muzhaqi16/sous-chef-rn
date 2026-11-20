@@ -1,9 +1,8 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreateStorageLocationDocument } from '#features/catalog/graphql/storageLocation.generated';
 import type { CreateLocationInputs } from '#features/catalog/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import type { CreateStorageLocationInput } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
@@ -39,14 +38,12 @@ export function useCreateStorageLocation(
       homeId,
       pantryId,
     };
-    const settled = await pendingWritesOf(client.cache).send(
+    const settled = await sendLocalWrite(
+      client.cache,
       CreateStorageLocationDocument,
       { input: { ...input, homeId, id } },
-      write =>
-        settleMutation(() => createMutation(write), {
-          document: CreateStorageLocationDocument,
-          fallback: t('errors.createStorageLocationFailed'),
-        }),
+      createMutation,
+      { fallback: t('errors.createStorageLocationFailed') },
       inputs,
     );
     return settled.status !== 'failed';

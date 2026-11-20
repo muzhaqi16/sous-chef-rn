@@ -1,4 +1,3 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type {
   MeasurementProfileInput,
@@ -12,8 +11,7 @@ import { Telemetry } from '#/services/telemetry';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { localMoveRow } from '#features/shoppingList/cache/localMove';
 import type { MoveToPantryInputs } from '#features/shoppingList/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
@@ -46,13 +44,10 @@ export function useMoveToPantry({
   currentListId,
   onSuccess,
 }: UseMoveToPantryOptions) {
-  const [moveShoppingItemToPantry] = useMutation(
-    MoveShoppingItemToPantryDocument,
-    { context: { localFirst: true } },
-  );
-
-  const client = useApolloClient();
   const { t } = useTranslation();
+  const move = useLocalWrite(MoveShoppingItemToPantryDocument, {
+    fallback: t('errors.moveToPantryFailedRetry'),
+  });
 
   /**
    * Move a shopping list item to the pantry (local-first) under a pantry row id
@@ -76,8 +71,7 @@ export function useMoveToPantry({
     // `$today` (`prepareReplay`); `input.today` keeps this day, so a default
     // expiry counts from the day of the move, not the day it syncs.
     const today = todayKey();
-    const settled = await pendingWritesOf(client.cache).send(
-      MoveShoppingItemToPantryDocument,
+    const settled = await move.send(
       {
         today,
         input: {
@@ -97,11 +91,6 @@ export function useMoveToPantry({
           priceSource: input.priceSource,
         },
       },
-      write =>
-        settleMutation(() => moveShoppingItemToPantry(write), {
-          document: MoveShoppingItemToPantryDocument,
-          fallback: t('errors.moveToPantryFailedRetry'),
-        }),
       inputs,
     );
     // Released on every outcome; a queued move is tracked by the offline

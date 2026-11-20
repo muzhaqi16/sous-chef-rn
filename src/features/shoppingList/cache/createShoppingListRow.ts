@@ -11,14 +11,9 @@ import type {
   AddItemsToShoppingListInput,
   BatchAddShoppingListItemInput,
 } from '#/graphql/generated/schemaTypes';
-import {
-  pendingWritesOf,
-  type LocalWriteSend,
-} from '#/apollo/pendingWrites/pendingWrites';
-import {
-  settleMutation,
-  type SettledFailure,
-} from '#/apollo/utils/settleMutation';
+import type { LocalWriteSend } from '#/apollo/pendingWrites/pendingWrites';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import type { SettledFailure } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { isRecord } from '#/utils/isRecord';
@@ -126,11 +121,12 @@ export async function addItemsInSlices<TItem extends { id?: string | null }>(
       rows: slice.flatMap(line => rowOf(line) ?? []),
       now: new Date().toISOString(),
     };
-    const settled = await pendingWritesOf(cache).send(
+    const settled = await sendLocalWrite(
+      cache,
       settle.document,
       { input: { shoppingListId: listId, items: slice } },
-      write =>
-        settleMutation(() => send(write), { ...settle, present: 'none' }),
+      send,
+      { fallback: settle.fallback, present: 'none' },
       inputs,
     );
     firstFailure ??= settled.failure ?? null;
@@ -158,15 +154,12 @@ export async function createShoppingListRow<TData>(
     now: new Date().toISOString(),
   };
 
-  const settled = await pendingWritesOf(cache).send(
+  const settled = await sendLocalWrite(
+    cache,
     document,
     { input: { shoppingListId: listId, items: [{ ...line, id }] } },
-    write =>
-      settleMutation(() => send(write), {
-        document,
-        fallback,
-        present: 'none',
-      }),
+    send,
+    { fallback, present: 'none' },
     inputs,
   );
   if (settled.failure) {

@@ -15,7 +15,7 @@ import type {
   ShoppingListItem,
   UpdateShoppingListItemInput,
 } from '#/graphql/generated/schemaTypes';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { localBrand, localUnit } from '#features/catalog/cache/localRefs';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { parseStoredQuantityText } from '#/utils/formatQuantity';
@@ -25,7 +25,6 @@ import {
   type ShoppingRowFields,
   type ShoppingRowLine,
 } from '#features/shoppingList/cache/createShoppingListRow';
-import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useDataState } from '#hooks/data/useDataState';
 import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
 import { alertService } from '#/services/alertService';
@@ -176,8 +175,10 @@ export function useShoppingListItemWrites(
 
   const [addItemMutation] = useMutation(AddItemToShoppingListDocument);
 
-  const [updateItemMutation] = useMutation(UpdateShoppingListItemDocument, {
-    context: { localFirst: true },
+  const update = useLocalWrite(UpdateShoppingListItemDocument, {
+    fallback: t('shoppingListScreens.serverNotUpdated', {
+      action: t('shoppingListScreens.updated'),
+    }),
   });
 
   const createItem = async (row: ShoppingRowFields, line: ShoppingRowLine) => {
@@ -212,19 +213,9 @@ export function useShoppingListItemWrites(
     };
     // A refusal naming a field gets that field's copy: this mutation carries
     // brand, net weight, unit and storage in one call.
-    const settled = await pendingWritesOf(client.cache).send(
-      UpdateShoppingListItemDocument,
-      { input },
-      write =>
-        settleMutation(() => updateItemMutation(write), {
-          document: UpdateShoppingListItemDocument,
-          fallback: t('shoppingListScreens.serverNotUpdated', {
-            action: t('shoppingListScreens.updated'),
-          }),
-          onConflictRefresh,
-        }),
-      inputs,
-    );
+    const settled = await update.send({ input }, inputs, {
+      settle: { onConflictRefresh },
+    });
     return settled.status !== 'failed';
   };
 
