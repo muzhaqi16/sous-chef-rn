@@ -44,7 +44,8 @@ export function authoredMutations(): Map<string, OperationDefinitionNode> {
 }
 
 /**
- * The operation names reachable from a file that opts into `localFirst`.
+ * The operation names reachable from a file that opts into `localFirst`, by
+ * the marker or by sending through `useLocalWrite`, which sets it.
  * Over-collects (a file's queries come along too) and is then narrowed to the
  * authored mutations — a false positive here would only make a gate stricter.
  */
@@ -55,7 +56,7 @@ export function localFirstOperationNames(): Set<string> {
     name => name.endsWith('.ts') || name.endsWith('.tsx'),
   )) {
     const source = fs.readFileSync(file, 'utf8');
-    if (!/localFirst:\s*true/.test(source)) continue;
+    if (!/localFirst:\s*true|\buseLocalWrite\(/.test(source)) continue;
     for (const match of source.matchAll(/\b([A-Z][A-Za-z0-9_]*)Document\b/g)) {
       names.add(match[1]!);
     }
