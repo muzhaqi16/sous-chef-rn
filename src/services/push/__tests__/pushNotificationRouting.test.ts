@@ -1,5 +1,6 @@
 import { routeNotificationTap } from '../pushNotificationRouting';
 import NavigationService from '#/services/NavigationService';
+import { useNotificationStore } from '#features/notifications/store/notificationStore';
 
 jest.mock('#/services/NavigationService', () => ({
   __esModule: true,
@@ -9,7 +10,31 @@ jest.mock('#/services/NavigationService', () => ({
 const mockNavigate = NavigationService.navigate as jest.Mock;
 
 describe('routeNotificationTap', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useNotificationStore.getState().noteOpenedFromPush(null);
+  });
+
+  it('opens the detail of a notification no feature claims, when the push names it', () => {
+    routeNotificationTap({ category: 'HOME', notificationId: 'n1' });
+
+    expect(mockNavigate).toHaveBeenCalledWith('NotificationDetail', {
+      id: 'n1',
+    });
+  });
+
+  // Marked read once the signed-in app is there, as a tap in the list is.
+  it('leaves the notification a push names to be marked read', () => {
+    routeNotificationTap({ category: 'PANTRY', notificationId: 'n2' });
+
+    expect(useNotificationStore.getState().openedFromPush).toBe('n2');
+  });
+
+  it('marks nothing for a summary push, which names no one notification', () => {
+    routeNotificationTap({ notificationId: 'summary-1' });
+
+    expect(useNotificationStore.getState().openedFromPush).toBeNull();
+  });
 
   it('routes a SHOPPING notification to the shopping list', () => {
     routeNotificationTap({ category: 'SHOPPING' });

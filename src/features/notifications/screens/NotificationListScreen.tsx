@@ -14,7 +14,8 @@ import { UrgentNotificationsBanner } from '#features/notifications/components/Ur
 import { useNotifications } from '#features/notifications/hooks/useNotifications';
 import { useNotificationHistory } from '#features/notifications/hooks/useNotificationHistory';
 import type { DisplayNotification as NotificationType } from '#features/notifications/utils/toDisplayNotification';
-import { NotificationCategory } from '#/graphql/generated/schemaTypes';
+import type { NotificationCategory } from '#/graphql/generated/schemaTypes';
+import { notificationDestination } from '#services/push/notificationDestination';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
@@ -45,7 +46,14 @@ const NotificationFeed: React.FC<{
 }> = ({ onAction }) => {
   const { t } = useTranslation();
   const listInset = useScreenListInset();
-  const { toNotificationDetail, toNotificationSettings } = useAppNavigation();
+  const {
+    toNotificationDetail,
+    toNotificationSettings,
+    toPantryMain,
+    toShoppingListMain,
+    toRecipeMain,
+    toMealPlanMain,
+  } = useAppNavigation();
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);
 
@@ -80,6 +88,27 @@ const NotificationFeed: React.FC<{
     isEmpty: notifications.length === 0,
   });
 
+  /** A feature's own tab; false for one this screen cannot open. */
+  const openTab = (tab: string): boolean => {
+    switch (tab) {
+      case 'Pantry':
+        toPantryMain();
+        return true;
+      case 'ShoppingList':
+        toShoppingListMain();
+        return true;
+      case 'Recipe':
+        toRecipeMain();
+        return true;
+      case 'MealPlan':
+        toMealPlanMain();
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  // Where it leads is `notificationDestination`'s, which a tapped push asks too.
   const handleNotificationPress = (notification: NotificationType) => {
     // Never awaited: the read shows at once, and a tap must not wait on the
     // server. A read row is left alone by the hook.
@@ -87,15 +116,14 @@ const NotificationFeed: React.FC<{
 
     if (notification.requiresAction && notification.actionType) {
       onAction(notification);
-    } else if (
-      notification.category !== NotificationCategory.Pantry &&
-      notification.category !== NotificationCategory.Shopping
-    ) {
-      // Pantry/Shopping notifications have no dedicated destination to jump
-      // to — tapping just marks them read. Other categories open the detail
-      // screen, which has real content to show.
-      toNotificationDetail({ id: notification.id, notification });
+      return;
     }
+    const destination = notificationDestination(
+      notification.category,
+      notification.id,
+    );
+    if (destination.kind === 'feature' && openTab(destination.tab)) return;
+    toNotificationDetail({ id: notification.id, notification });
   };
 
   // Headers inlined into one array; FlashList tells the two apart by item type.

@@ -7,6 +7,7 @@ import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSu
 import { useChangeFeed } from '#/hooks/subscriptions/useChangeFeed';
 import { useUserSubscriptions } from '#/hooks/subscriptions/useUserSubscriptions';
 import { useDeviceTimezoneSync } from '#features/notifications/hooks/useDeviceTimezoneSync';
+import { useMarkPushOpenedRead } from '#features/notifications/hooks/useMarkPushOpenedRead';
 import { useAccountCurrencySync } from '#features/profile/hooks/useAccountCurrencySync';
 
 interface AuthenticatedSubscriptionsProps {
@@ -37,6 +38,8 @@ export const AuthenticatedSubscriptions: React.FC<
   // on another device reaches this one only through the resync's re-read.
   useDeviceTimezoneSync();
   useAccountCurrencySync();
+  // A push can be opened before this mounts; it is marked read once it does.
+  useMarkPushOpenedRead();
 
   // This component doesn't render anything - it just runs subscription hooks
   return null;
