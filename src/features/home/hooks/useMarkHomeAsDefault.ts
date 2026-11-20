@@ -3,18 +3,14 @@
  * account default is local-first and writes `Home.isDefault`. Replay is safe:
  * marking the same home twice is idempotent.
  */
-import { useMutation, useApolloClient } from '@apollo/client/react';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
-import {
-  settleMutation,
-  type SettledFailure,
-} from '#/apollo/utils/settleMutation';
+import type { SettledFailure } from '#/apollo/utils/settleMutation';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import type { MarkDefaultHomeInputs } from '#features/home/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { useDefaultHomeSyncStore } from '#features/home/store/useDefaultHomeSyncStore';
 import { todayKey } from '#/utils/dateUtils';
 
@@ -28,13 +24,13 @@ interface MarkHomeAsDefaultResult {
 
 export const useMarkHomeAsDefault = () => {
   const { t } = useTranslation();
-  const client = useApolloClient();
   const markPending = useDefaultHomeSyncStore(state => state.markPending);
   const markConfirmed = useDefaultHomeSyncStore(state => state.markConfirmed);
   const clearPending = useDefaultHomeSyncStore(state => state.clearPending);
 
-  const [mutate] = useMutation(MarkHomeAsDefaultDocument, {
-    context: { localFirst: true },
+  const markDefault = useLocalWrite(MarkHomeAsDefaultDocument, {
+    fallback: t('errors.setDefaultHomeFailed'),
+    present: 'none',
   });
 
   const markAsDefault = async (
@@ -45,15 +41,8 @@ export const useMarkHomeAsDefault = () => {
     markPending(homeId);
 
     const inputs: MarkDefaultHomeInputs = { homeId };
-    const settled = await pendingWritesOf(client.cache).send(
-      MarkHomeAsDefaultDocument,
+    const settled = await markDefault.send(
       { input: { homeId }, today: todayKey() },
-      write =>
-        settleMutation(() => mutate(write), {
-          document: MarkHomeAsDefaultDocument,
-          fallback: t('errors.setDefaultHomeFailed'),
-          present: 'none',
-        }),
       inputs,
     );
 

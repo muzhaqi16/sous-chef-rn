@@ -1,4 +1,4 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import {
   UpdateMealPlanItemDocument,
   DeleteMealPlanItemDocument,
@@ -12,9 +12,7 @@ import type { CreateMealPlanItemInput } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { MEAL_PLAN_ITEMS_FIELD } from '#features/mealPlan/cache/mealPlanItem';
 import type { RemovePlanItemInputs } from '#features/mealPlan/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useTranslation } from '#/i18n';
@@ -25,12 +23,19 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
   const { t } = useTranslation();
   const { sendItem, creating } = useCreateMealPlanItem();
 
-  const [updateItemMutation] = useMutation(UpdateMealPlanItemDocument, {
-    context: { localFirst: true },
+  const updateItem = useLocalWrite(UpdateMealPlanItemDocument, {
+    fallback: t('toasts.mealUpdateFailed'),
+    // A stale version means another member changed the meal: show theirs.
+    onVersionConflict: () => {
+      void client.refetchQueries({ include: ['GetMealPlan'] });
+    },
+    present: 'toast',
   });
 
-  const [deleteItemMutation] = useMutation(DeleteMealPlanItemDocument, {
-    context: { localFirst: true },
+  const removeItem = useLocalWrite(DeleteMealPlanItemDocument, {
+    fallback: t('mealTemplateBuilder.failedToRemoveItem'),
+    removal: true,
+    present: 'toast',
   });
 
   /** `true` once the meal landed or is queued; `false` when it was refused. */
@@ -89,10 +94,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         options?.notes != null && { notes: options.notes }),
     };
 
-    const refetchPlan = () => {
-      void client.refetchQueries({ include: ['GetMealPlan'] });
-    };
-    const settled = await sendFields(client.cache, {
+    const settled = await updateItem.sendFields({
       entity: { __typename: 'MealPlanItem', id: item.id },
       fields: {
         isCompleted: markingComplete,
@@ -101,14 +103,6 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         notes: options?.notes,
       },
       variables: { input: completionInput },
-      mutate: updateItemMutation,
-      settle: {
-        document: UpdateMealPlanItemDocument,
-        fallback: t('toasts.mealUpdateFailed'),
-        // A stale version means another member changed the meal: show theirs.
-        onVersionConflict: refetchPlan,
-        present: 'toast',
-      },
     });
 
     if (settled.failure) return false;
@@ -141,18 +135,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     }
 
     const inputs: RemovePlanItemInputs = { mealPlanId };
-    const settled = await pendingWritesOf(client.cache).send(
-      DeleteMealPlanItemDocument,
-      { input: { id } },
-      write =>
-        settleMutation(() => deleteItemMutation(write), {
-          document: DeleteMealPlanItemDocument,
-          fallback: t('mealTemplateBuilder.failedToRemoveItem'),
-          removal: true,
-          present: 'toast',
-        }),
-      inputs,
-    );
+    const settled = await removeItem.send({ input: { id } }, inputs);
 
     // Released on every outcome — settling never throws, so this runs whether
     // the delete committed, was refused, or was queued.

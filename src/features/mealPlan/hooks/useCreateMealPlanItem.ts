@@ -1,8 +1,7 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import type { CreatePlanItemInputs } from '#features/mealPlan/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import type { CreateMealPlanItemInput } from '#/graphql/generated/schemaTypes';
 import { useTranslation } from '#/i18n';
 
@@ -23,15 +22,12 @@ export function useCreateMealPlanItem() {
     present: 'toast' | 'none',
   ) => {
     const inputs: CreatePlanItemInputs = { item };
-    return pendingWritesOf(client.cache).send(
+    return sendLocalWrite(
+      client.cache,
       CreateMealPlanItemDocument,
       { input: item },
-      write =>
-        settleMutation(() => createItem(write), {
-          document: CreateMealPlanItemDocument,
-          fallback: t('mealTemplateBuilder.failedToAddItem'),
-          present,
-        }),
+      createItem,
+      { fallback: t('mealTemplateBuilder.failedToAddItem'), present },
       inputs,
     );
   };

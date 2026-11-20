@@ -6,12 +6,7 @@ import {
 } from '#/hooks/apollo/standDownOptions';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import { useDataState } from '#hooks/data/useDataState';
-import {
-  skipToken,
-  useApolloClient,
-  useMutation,
-  useQuery,
-} from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   GetDietaryProfileDocument,
   UpdateDietaryProfileDocument,
@@ -26,9 +21,7 @@ import type {
   RestrictionKindInput,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import type {
   AddRestrictionInputs,
   RemoveRestrictionInputs,
@@ -112,21 +105,24 @@ export const useDietaryProfile = ({
   // A profile row is created by the first write, never by a read.
   const pendingCreation = useRef<Promise<boolean> | null>(null);
 
-  const client = useApolloClient();
-
   // ===== MUTATION 1: Update Dietary Profile =====
-  const [updateProfile] = useMutation(UpdateDietaryProfileDocument, {
-    context: { localFirst: true },
+  const updateProfile = useLocalWrite(UpdateDietaryProfileDocument, {
+    fallback: t('errors.codes.genericRetry'),
   });
 
   // ===== MUTATION 2: Add Dietary Restriction =====
-  const [addRestriction] = useMutation(AddDietaryRestrictionDocument, {
-    context: { localFirst: true },
+  const addRestriction = useLocalWrite(AddDietaryRestrictionDocument, {
+    fallback: t('errors.codes.genericRetry'),
+    // Both callers alert on the false return; a second alert stacks, and
+    // a bulk add stacks one per restriction.
+    present: 'none',
   });
 
   // ===== MUTATION 3: Remove Dietary Restriction =====
-  const [removeRestriction] = useMutation(RemoveDietaryRestrictionDocument, {
-    context: { localFirst: true },
+  const removeRestriction = useLocalWrite(RemoveDietaryRestrictionDocument, {
+    fallback: t('dietary.removeRestrictionFailed'),
+    removal: true,
+    present: 'none',
   });
 
   const getDietaryProfile = (): DietaryProfileData | null => {
@@ -167,17 +163,12 @@ export const useDietaryProfile = ({
     // Null clears a field, as the API reads it; a field left out is kept.
     const cleanedUpdates: Record<string, unknown> = { ...updates };
 
-    const settled = await sendFields(client.cache, {
+    const settled = await updateProfile.sendFields({
       entity: profile
         ? { __typename: 'DietaryProfile', id: profile.id }
         : undefined,
       fields: cleanedUpdates,
       variables: { input: cleanedUpdates },
-      mutate: updateProfile,
-      settle: {
-        document: UpdateDietaryProfileDocument,
-        fallback: t('errors.codes.genericRetry'),
-      },
     });
     return settled.status !== 'failed';
   };
@@ -207,17 +198,8 @@ export const useDietaryProfile = ({
       row: { id, kind: restriction, severity, notes },
       now: new Date().toISOString(),
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      AddDietaryRestrictionDocument,
+    const settled = await addRestriction.send(
       { input: { id, kind: restriction, severity, notes } },
-      write =>
-        settleMutation(() => addRestriction(write), {
-          document: AddDietaryRestrictionDocument,
-          fallback: t('errors.codes.genericRetry'),
-          // Both callers alert on the false return; a second alert stacks, and
-          // a bulk add stacks one per restriction.
-          present: 'none',
-        }),
       inputs,
     );
     return settled.status !== 'failed';
@@ -225,18 +207,7 @@ export const useDietaryProfile = ({
 
   const removeDietaryRestriction = async (id: string) => {
     const inputs: RemoveRestrictionInputs = { profileId: profile?.id };
-    const settled = await pendingWritesOf(client.cache).send(
-      RemoveDietaryRestrictionDocument,
-      { input: { id } },
-      write =>
-        settleMutation(() => removeRestriction(write), {
-          document: RemoveDietaryRestrictionDocument,
-          fallback: t('dietary.removeRestrictionFailed'),
-          removal: true,
-          present: 'none',
-        }),
-      inputs,
-    );
+    const settled = await removeRestriction.send({ input: { id } }, inputs);
     return settled.status !== 'failed';
   };
 

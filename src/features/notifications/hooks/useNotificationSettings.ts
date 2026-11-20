@@ -16,7 +16,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import type { ApolloCache } from '@apollo/client';
 import type { LocalWriteSend } from '#/apollo/pendingWrites/pendingWrites';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import type { FieldsEntityRef } from '#/apollo/utils/localFirstFields';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { computeIsQuietTime } from '#features/notifications/utils/quietHours';
@@ -160,18 +160,18 @@ export async function applySettingsUpdate({
     write: LocalWriteSend<{ input: UpdateNotificationPreferencesInput }>,
   ) => Promise<{ data?: unknown; error?: unknown }>;
 }): Promise<boolean> {
-  const settled = await sendFields(cache, {
-    entity,
-    fields: { ...updates },
-    variables: { input: toNestedInput(updates) },
+  const settled = await sendLocalWrite(
+    cache,
+    UpdateNotificationPreferencesDocument,
+    { input: toNestedInput(updates) },
     mutate,
-    settle: {
-      document: UpdateNotificationPreferencesDocument,
+    {
       fallback: t('notifications.updateFailed'),
       // The screen alerts off the returned boolean; the timezone sync logs.
       present: 'none',
     },
-  });
+    { entity, fields: { ...updates } },
+  );
   return settled.status !== 'failed';
 }
 

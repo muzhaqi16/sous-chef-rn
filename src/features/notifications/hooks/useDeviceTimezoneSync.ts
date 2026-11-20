@@ -15,7 +15,7 @@ import {
   UpdateUserPreferencesDocument,
 } from '#operations/auth/user.generated';
 import { useUser } from '#store/useAppStore';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { getDeviceTimezone } from '#features/notifications/utils/quietHours';
 import { logger } from '#/utils/environment';
 import { t } from '#/i18n';
@@ -131,17 +131,17 @@ export const useDeviceTimezoneSync = (): void => {
       settingsTimezone,
       'Settings timezone sync refused',
       () =>
-        sendFields(client.cache, {
-          entity: { __typename: 'UserSettings', id: settingsId },
-          fields: { timezone: deviceTimezone },
-          variables: { input: { regional: { timezone: deviceTimezone } } },
-          mutate: updateSettings,
-          settle: {
-            document: UpdateUserPreferencesDocument,
-            fallback: t('settings.updateFailed'),
-            present: 'none',
+        sendLocalWrite(
+          client.cache,
+          UpdateUserPreferencesDocument,
+          { input: { regional: { timezone: deviceTimezone } } },
+          updateSettings,
+          { fallback: t('settings.updateFailed'), present: 'none' },
+          {
+            entity: { __typename: 'UserSettings', id: settingsId },
+            fields: { timezone: deviceTimezone },
           },
-        }).then(settled => settled.status !== 'failed'),
+        ).then(settled => settled.status !== 'failed'),
     );
   }, [client, deviceTimezone, settingsId, settingsTimezone, updateSettings]);
 };

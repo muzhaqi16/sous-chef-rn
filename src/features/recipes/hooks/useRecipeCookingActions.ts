@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   plannedMealInput,
@@ -11,8 +10,7 @@ import {
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import type { CookRecipeInputs } from '#features/recipes/offline/localWrites';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
 import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
@@ -70,15 +68,16 @@ export function useRecipeCookingActions({
   // A confirm or a skip of the review records it.
   const [reviewedCook, setReviewedCook] = useState<CookEntry | null>(null);
 
-  const client = useApolloClient();
   const ingredientMatching = useRecipeIngredientMatching(recipeId, {
     plannedMeal,
     onMealChanged,
   });
   const pantryId = useSelectedPantryId();
 
-  const [markRecipeAsCookedMutation] = useMutation(MarkRecipeAsCookedDocument, {
-    context: { localFirst: true },
+  const markCooked = useLocalWrite(MarkRecipeAsCookedDocument, {
+    fallback: t('recipes.markCookedFailed'),
+    present: 'toast',
+    ...plannedMealSettle(t, { plannedMeal, onMealChanged }),
   });
 
   /**
@@ -94,8 +93,7 @@ export function useRecipeCookingActions({
       now: new Date().toISOString(),
       ...(plannedMeal && { meal: { id: plannedMeal.id, cookingLogId: id } }),
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      MarkRecipeAsCookedDocument,
+    const settled = await markCooked.send(
       {
         input: {
           ...vars,
@@ -104,13 +102,6 @@ export function useRecipeCookingActions({
           id,
         },
       },
-      write =>
-        settleMutation(() => markRecipeAsCookedMutation(write), {
-          document: MarkRecipeAsCookedDocument,
-          fallback: t('recipes.markCookedFailed'),
-          present: 'toast',
-          ...plannedMealSettle(t, { plannedMeal, onMealChanged }),
-        }),
       inputs,
     );
 

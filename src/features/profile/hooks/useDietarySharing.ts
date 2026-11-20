@@ -1,7 +1,7 @@
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import { useQuery } from '@apollo/client/react';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useTranslation } from '#/i18n';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import {
@@ -23,11 +23,19 @@ export interface DietarySharingHome {
  */
 export function useDietarySharing() {
   const { t } = useTranslation();
-  const client = useApolloClient();
   const { data, error, refetch } = useQuery(DietarySharingHomesDocument);
   useApolloErrorLogger(DietarySharingHomesDocument, error);
-  const [mutate] = useMutation(UpdateDietarySharingDocument, {
-    context: { localFirst: true },
+  const updateSharing = useLocalWrite(UpdateDietarySharingDocument, {
+    fallback: t('dietary.sharingFailed'),
+    present: 'toast',
+    // A later toggle the server took may stand: show what it holds.
+    onFailed: () => {
+      void refetch().catch(error =>
+        errorService.reportError(error, {
+          operation: 'DietarySharing.refetch',
+        }),
+      );
+    },
   });
 
   const memberships = (data?.homes.edges ?? []).flatMap(({ node }) =>
@@ -40,24 +48,10 @@ export function useDietarySharing() {
     // One key per toggle: a queued toggle resent on reconnect writes nothing
     // twice, and a late "off" never undoes a later "on".
     const idempotencyKey = generateEntityId();
-    await sendFields(client.cache, {
+    await updateSharing.sendFields({
       entity: { __typename: 'Membership', id: entry.membership.id },
       fields: { sharesDietaryNeeds: shared },
       variables: { input: { homeId, shared, idempotencyKey } },
-      mutate,
-      settle: {
-        document: UpdateDietarySharingDocument,
-        fallback: t('dietary.sharingFailed'),
-        present: 'toast',
-        // A later toggle the server took may stand: show what it holds.
-        onFailed: () => {
-          void refetch().catch(error =>
-            errorService.reportError(error, {
-              operation: 'DietarySharing.refetch',
-            }),
-          );
-        },
-      },
     });
   };
 

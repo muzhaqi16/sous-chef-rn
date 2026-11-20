@@ -10,13 +10,12 @@ import type {
   CreateMealPlanInput,
   UpdateMealPlanInput,
 } from '#/graphql/generated/schemaTypes';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
-import { readVersion } from '#/apollo/utils/entityWriteChain';
 import {
-  settleMutation,
-  type SettledFailure,
-} from '#/apollo/utils/settleMutation';
+  sendLocalWrite,
+  useLocalWrite,
+} from '#/apollo/pendingWrites/useLocalWrite';
+import { readVersion } from '#/apollo/utils/entityWriteChain';
+import type { SettledFailure } from '#/apollo/utils/settleMutation';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
@@ -57,8 +56,15 @@ export function useMealPlanActions() {
     { context: { localFirst: true } },
   );
 
-  const [updateMealPlanMutation] = useMutation(UpdateMealPlanDocument, {
-    context: { localFirst: true },
+  // A save made elsewhere since is refused, not overwritten.
+  const updatePlan = useLocalWrite(UpdateMealPlanDocument, {
+    fallback: t('errors.saveFailed'),
+    // A stale version means another member saved the plan since: show theirs.
+    onVersionConflict: () => {
+      void client.refetchQueries({
+        include: ['GetMealPlan', GetMealPlansDocument],
+      });
+    },
   });
 
   const [deleteMealPlanMutation, { loading: deleting }] = useMutation(
@@ -82,15 +88,12 @@ export function useMealPlanActions() {
       now: new Date().toISOString(),
     };
 
-    const settled = await pendingWritesOf(client.cache).send(
+    const settled = await sendLocalWrite(
+      client.cache,
       CreateMealPlanDocument,
       { input: plan },
-      write =>
-        settleMutation(() => createMealPlanMutation(write), {
-          document: CreateMealPlanDocument,
-          fallback: t('mealPlan.failedToCreate'),
-          present,
-        }),
+      createMealPlanMutation,
+      { fallback: t('mealPlan.failedToCreate'), present },
       inputs,
     );
 
@@ -115,37 +118,21 @@ export function useMealPlanActions() {
       return false;
     }
 
-    // A stale version means another member saved the plan since: show theirs.
-    const showServerPlan = () => {
-      void client.refetchQueries({
-        include: ['GetMealPlan', GetMealPlansDocument],
-      });
-    };
-    // A save made elsewhere since is refused, not overwritten.
-    const settled = await sendFields(client.cache, {
+    const settled = await updatePlan.sendFields({
       entity,
       fields: shownPlanFields(input),
       variables: { input: { ...input, id, version } },
-      mutate: updateMealPlanMutation,
-      settle: {
-        document: UpdateMealPlanDocument,
-        fallback: t('errors.saveFailed'),
-        onVersionConflict: showServerPlan,
-      },
     });
     return settled.status !== 'failed';
   };
 
   const deleteMealPlan = async (id: string) => {
-    const settled = await pendingWritesOf(client.cache).send(
+    const settled = await sendLocalWrite(
+      client.cache,
       DeleteMealPlanDocument,
       { input: { id } },
-      write =>
-        settleMutation(() => deleteMealPlanMutation(write), {
-          document: DeleteMealPlanDocument,
-          fallback: t('mealPlanMain.deleteMealPlanFailed'),
-          removal: true,
-        }),
+      deleteMealPlanMutation,
+      { fallback: t('mealPlanMain.deleteMealPlanFailed'), removal: true },
     );
     return settled.status !== 'failed';
   };

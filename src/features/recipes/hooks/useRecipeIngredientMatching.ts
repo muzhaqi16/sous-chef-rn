@@ -33,8 +33,7 @@ import {
 } from './useRecipeSubstitutes.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { inTrackingUnit } from '#features/pantry/cache/stock';
 import type {
   CookDrawInputs,
@@ -330,17 +329,17 @@ export function useRecipeIngredientMatching(
     variables: MarkRecipeAsCookedMutationVariables,
     inputs: CookRecipeInputs,
   ) =>
-    pendingWritesOf(client.cache).send(
+    sendLocalWrite(
+      client.cache,
       MarkRecipeAsCookedDocument,
       variables,
-      write =>
-        settleMutation(() => confirmMutation(write), {
-          document: MarkRecipeAsCookedDocument,
-          fallback: t('recipes.markCookedFailed'),
-          // The review sheet reports the cook as a toast and stays open to retry.
-          present: 'toast',
-          ...plannedMealSettle(t, { plannedMeal, onMealChanged }),
-        }),
+      confirmMutation,
+      {
+        fallback: t('recipes.markCookedFailed'),
+        // The review sheet reports the cook as a toast and stays open to retry.
+        present: 'toast',
+        ...plannedMealSettle(t, { plannedMeal, onMealChanged }),
+      },
       inputs,
     );
 

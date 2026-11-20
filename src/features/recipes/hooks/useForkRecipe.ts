@@ -14,8 +14,7 @@ import {
 import type { CreateRecipeInputs } from '#features/recipes/offline/localWrites';
 import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
 import { forkRecipe as buildFork } from '#features/recipes/utils/forkRecipe';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
@@ -75,14 +74,12 @@ export function useForkRecipe() {
       ingredientIds: copy.ingredients.map(() => generateEntityId()),
     };
 
-    const settled = await pendingWritesOf(client.cache).send(
+    const settled = await sendLocalWrite(
+      client.cache,
       ForkRecipeDocument,
       { input: { id: recipeId, newRecipeId: id } },
-      write =>
-        settleMutation(() => forkMutation(write), {
-          document: ForkRecipeDocument,
-          fallback: t('recipes.forkFailed'),
-        }),
+      forkMutation,
+      { fallback: t('recipes.forkFailed') },
       inputs,
     );
 

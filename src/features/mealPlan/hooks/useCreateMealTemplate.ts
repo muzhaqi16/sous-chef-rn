@@ -1,8 +1,7 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreateMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import type { CreateTemplateInputs } from '#features/mealPlan/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import type { CreateMealTemplateInput } from '#/graphql/generated/schemaTypes';
 import { useTranslation } from '#/i18n';
 import { useUser } from '#store/useAppStore';
@@ -30,14 +29,12 @@ export function useCreateMealTemplate() {
       ownerId: user?.id,
       now: new Date().toISOString(),
     };
-    const settled = await pendingWritesOf(client.cache).send(
+    const settled = await sendLocalWrite(
+      client.cache,
       CreateMealTemplateDocument,
       { input: template },
-      write =>
-        settleMutation(() => createMutation(write), {
-          document: CreateMealTemplateDocument,
-          fallback: t('mealTemplateBuilder.failedToCreate'),
-        }),
+      createMutation,
+      { fallback: t('mealTemplateBuilder.failedToCreate') },
       inputs,
     );
     return settled.status === 'failed' ? null : template.id;

@@ -1,6 +1,6 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { UpdateHomeDocument } from '#operations/home/home.generated';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#/i18n';
 
 /** What a settings screen can change about a home through `updateHome`. */
 export type HomeFieldUpdates = {
@@ -14,10 +14,10 @@ export type HomeFieldUpdates = {
  * operation that file names.
  */
 export function useUpdateHomeFields(homeId: string) {
-  const client = useApolloClient();
+  const { t } = useTranslation();
   // The mutation returns updated scalar fields; Apollo merges by __typename + id.
-  const [updateHomeMutation] = useMutation(UpdateHomeDocument, {
-    context: { localFirst: true },
+  const updateHome = useLocalWrite(UpdateHomeDocument, {
+    fallback: t('errors.updateHomeFailed'),
   });
 
   /**
@@ -30,13 +30,16 @@ export function useUpdateHomeFields(homeId: string) {
     home: { version: number },
     fallback: string,
   ): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'Home', id: homeId },
-      fields: updates,
-      variables: { input: { id: homeId, ...updates, version: home.version } },
-      mutate: updateHomeMutation,
-      settle: { document: UpdateHomeDocument, fallback },
-    });
+    const settled = await updateHome.sendFields(
+      {
+        entity: { __typename: 'Home', id: homeId },
+        fields: updates,
+        variables: {
+          input: { id: homeId, ...updates, version: home.version },
+        },
+      },
+      { settle: { fallback } },
+    );
     return settled.status !== 'failed';
   };
 

@@ -1,4 +1,4 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import { DeleteMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { planFromTemplate } from '#features/mealPlan/utils/planFromTemplate';
 import { templateFromPlan } from '#features/mealPlan/utils/templateFromPlan';
@@ -16,11 +16,8 @@ import {
 } from '#features/mealPlan/cache/derivationSources';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import {
-  settleMutation,
-  type SettledFailure,
-} from '#/apollo/utils/settleMutation';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import type { SettledFailure } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
 
 /** What a plan made from a template states; its meals come from the cache. */
@@ -51,8 +48,9 @@ export function useMealTemplateActions() {
     useCreateMealTemplate();
   const { sendItem, creating: addingMeals } = useCreateMealPlanItem();
 
-  const [deleteTemplateMutation] = useMutation(DeleteMealTemplateDocument, {
-    context: { localFirst: true },
+  const removeTemplate = useLocalWrite(DeleteMealTemplateDocument, {
+    fallback: t('mealTemplateActions.deleteFailed'),
+    removal: true,
   });
 
   const reportSkipped = (count: number) => {
@@ -125,16 +123,7 @@ export function useMealTemplateActions() {
   };
 
   const deleteTemplate = async (id: string) => {
-    const settled = await pendingWritesOf(client.cache).send(
-      DeleteMealTemplateDocument,
-      { input: { id } },
-      write =>
-        settleMutation(() => deleteTemplateMutation(write), {
-          document: DeleteMealTemplateDocument,
-          fallback: t('mealTemplateActions.deleteFailed'),
-          removal: true,
-        }),
-    );
+    const settled = await removeTemplate.send({ input: { id } });
     if (settled.status === 'failed') return false;
 
     toastService.success(t('mealTemplateActions.templateDeleted'));

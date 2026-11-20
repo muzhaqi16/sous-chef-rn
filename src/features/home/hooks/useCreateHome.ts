@@ -2,11 +2,8 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreateHomeDocument } from '#operations/home/home.generated';
 import { holdsHomesList } from '#features/home/hooks/homeCacheUpdaters';
 import type { CreateHomeInputs } from '#features/home/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import {
-  settleMutation,
-  type SettledFailure,
-} from '#/apollo/utils/settleMutation';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import type { SettledFailure } from '#/apollo/utils/settleMutation';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
@@ -57,15 +54,12 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
         : undefined,
       now: new Date().toISOString(),
     };
-    const settled = await pendingWritesOf(client.cache).send(
+    const settled = await sendLocalWrite(
+      client.cache,
       CreateHomeDocument,
       { input },
-      write =>
-        settleMutation(() => createHomeMutation(write), {
-          document: CreateHomeDocument,
-          fallback,
-          present: 'none',
-        }),
+      createHomeMutation,
+      { fallback, present: 'none' },
       inputs,
     );
     // Released on every outcome; a queued create is tracked by the offline

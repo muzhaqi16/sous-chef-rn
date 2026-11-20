@@ -20,12 +20,13 @@ import type {
 } from '#/graphql/generated/schemaTypes';
 import type { CreateRecipeInputs } from '#features/recipes/offline/localWrites';
 import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import {
+  sendLocalWrite,
+  type WriteSettle,
+} from '#/apollo/pendingWrites/useLocalWrite';
 import {
   settleMutation,
   type SettledFailure,
-  type SettleOptions,
 } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
@@ -131,16 +132,16 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
       ingredientIds: input.ingredients.map(() => generateEntityId()),
     };
 
-    const settled = await pendingWritesOf(client.cache).send(
+    const settled = await sendLocalWrite(
+      client.cache,
       CreateRecipeDocument,
       { input: recipe },
-      write =>
-        settleMutation(() => createRecipeMutation(write), {
-          document: CreateRecipeDocument,
-          fallback: t('recipes.createRecipeFailed'),
-          // The form shows the failure, on its field where it names one.
-          present: 'none',
-        }),
+      createRecipeMutation,
+      {
+        fallback: t('recipes.createRecipeFailed'),
+        // The form shows the failure, on its field where it names one.
+        present: 'none',
+      },
       inputs,
     );
     if (!settled.failure) noteTipFact('recipeAdded');
@@ -166,8 +167,7 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
         }),
       });
     }
-    const settle: SettleOptions = {
-      document: UpdateRecipeDocument,
+    const settle: WriteSettle = {
       fallback: t('recipes.updateRecipeFailed'),
       present: 'none',
     };
@@ -175,19 +175,20 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
       version === null
         ? await settleMutation(
             () => Promise.reject(new UnreadVersionError('Recipe')),
-            settle,
+            { ...settle, document: UpdateRecipeDocument },
           )
-        : await sendFields(client.cache, {
-            entity: { __typename: 'Recipe', id },
-            // The device shows the edit once the server has it.
-            fields: {},
-            variables: {
+        : await sendLocalWrite(
+            client.cache,
+            UpdateRecipeDocument,
+            {
               input: { ...fields, id, version },
               ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
             },
-            mutate: updateRecipeMutation,
+            updateRecipeMutation,
             settle,
-          });
+            // The device shows the edit once the server has it.
+            { entity: { __typename: 'Recipe', id }, fields: {} },
+          );
     return outcomeOf(settled.failure);
   };
 

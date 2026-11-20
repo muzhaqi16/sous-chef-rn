@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { UpdateFavoriteRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import type { SavedFieldsInputs } from '#features/recipes/offline/localWrites';
 import { useUnfavoriteRecipe } from '#features/recipes/hooks/useUnfavoriteRecipe';
@@ -48,10 +47,10 @@ export function useRecipeSavedMetadata({
   const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [updatingFolderTags, setUpdatingFolderTags] = useState(false);
 
-  const [updateFavoriteRecipeMutation] = useMutation(
-    UpdateFavoriteRecipeDocument,
-    { context: { localFirst: true } },
-  );
+  const updateFavoriteRecipe = useLocalWrite(UpdateFavoriteRecipeDocument, {
+    fallback: t('recipes.updateRecipeFailed'),
+    present: 'toast',
+  });
 
   /**
    * One local-first write for all four metadata edits: they differ only in
@@ -69,15 +68,8 @@ export function useRecipeSavedMetadata({
       fields: updates,
     };
 
-    const settled = await pendingWritesOf(client.cache).send(
-      UpdateFavoriteRecipeDocument,
+    const settled = await updateFavoriteRecipe.send(
       { input: { recipeId, ...input } },
-      write =>
-        settleMutation(() => updateFavoriteRecipeMutation(write), {
-          document: UpdateFavoriteRecipeDocument,
-          fallback: t('recipes.updateRecipeFailed'),
-          present: 'toast',
-        }),
       inputs,
     );
     return settled.status !== 'failed';

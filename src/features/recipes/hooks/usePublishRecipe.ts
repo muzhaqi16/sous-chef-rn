@@ -9,7 +9,7 @@ import { useTranslation } from '#/i18n';
 import { UpdateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { readVersion } from '#/apollo/utils/entityWriteChain';
 import { alertService } from '#/services/alertService';
 
@@ -33,22 +33,23 @@ export function usePublishRecipe() {
     }
 
     const status = submitted ? RecipeStatus.Published : RecipeStatus.Draft;
-    const settled = await sendFields(client.cache, {
-      entity,
-      fields: {
-        status: submitted ? RecipeStatus.PendingReview : RecipeStatus.Draft,
-        isPublished: false,
-      },
-      variables: {
+    const settled = await sendLocalWrite(
+      client.cache,
+      UpdateRecipeDocument,
+      {
         input: { id: recipeId, status, version },
         ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
       },
       mutate,
-      settle: {
-        document: UpdateRecipeDocument,
-        fallback: t('labels.failedToUpdateRecipe'),
+      { fallback: t('labels.failedToUpdateRecipe') },
+      {
+        entity,
+        fields: {
+          status: submitted ? RecipeStatus.PendingReview : RecipeStatus.Draft,
+          isPublished: false,
+        },
       },
-    });
+    );
     return settled.status !== 'failed';
   };
 

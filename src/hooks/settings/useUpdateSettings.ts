@@ -1,4 +1,4 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import {
   GetUserSettingsDocument,
   UpdateUserPreferencesDocument,
@@ -9,7 +9,7 @@ import {
   settingsInput,
   type SettingValues,
 } from '#/domain/serverSettings';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { snapshotFields } from '#/apollo/utils/localFirstFields';
 import { useTranslation } from '#/i18n';
 
@@ -21,8 +21,8 @@ import { useTranslation } from '#/i18n';
 export function useUpdateSettings() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [mutate] = useMutation(UpdateUserPreferencesDocument, {
-    context: { localFirst: true },
+  const updatePreferences = useLocalWrite(UpdateUserPreferencesDocument, {
+    fallback: t('settings.updateFailed'),
   });
 
   const updateSettings = async (
@@ -40,18 +40,16 @@ export function useUpdateSettings() {
     );
     useStore.getState().mirrorSettings(mirroredFrom(updates));
 
-    const settled = await sendFields(client.cache, {
-      entity: settings
-        ? { __typename: 'UserSettings', id: settings.id }
-        : undefined,
-      fields: updates,
-      variables: { input: settingsInput(updates) },
-      mutate,
-      settle: {
-        document: UpdateUserPreferencesDocument,
-        fallback: failureMessage,
+    const settled = await updatePreferences.sendFields(
+      {
+        entity: settings
+          ? { __typename: 'UserSettings', id: settings.id }
+          : undefined,
+        fields: updates,
+        variables: { input: settingsInput(updates) },
       },
-    });
+      { settle: { fallback: failureMessage } },
+    );
     const landed = settled.status !== 'failed';
     if (!landed) useStore.getState().mirrorSettings(mirroredFrom(previous));
     return landed;

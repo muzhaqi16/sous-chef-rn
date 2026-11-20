@@ -1,9 +1,7 @@
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useQuery } from '@apollo/client/react';
 import { useDataState } from '#hooks/data/useDataState';
 import { useTranslation } from '#/i18n';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
   heldBrandVersion,
@@ -72,34 +70,28 @@ export function useBrandLists({
     hasResult: data !== undefined,
     isEmpty: data?.brandLists.length === 0,
   });
-  const [createMutation] = useMutation(CreateBrandListDocument, {
-    context: { localFirst: true },
+  const createWrite = useLocalWrite(CreateBrandListDocument, {
+    fallback: t('brandLists.errors.createFailed'),
   });
-  const [updateMutation] = useMutation(UpdateBrandListDocument, {
-    context: { localFirst: true },
+  const updateWrite = useLocalWrite(UpdateBrandListDocument, {
+    fallback: t('brandLists.errors.updateFailed'),
   });
-  const [deleteMutation] = useMutation(DeleteBrandListDocument, {
-    context: { localFirst: true },
+  const deleteWrite = useLocalWrite(DeleteBrandListDocument, {
+    fallback: t('brandLists.errors.deleteFailed'),
   });
-  const [addMutation] = useMutation(AddBrandToListDocument, {
-    context: { localFirst: true },
+  const addWrite = useLocalWrite(AddBrandToListDocument, {
+    fallback: t('brandLists.errors.addFailed'),
   });
-  const [removeMutation] = useMutation(RemoveBrandFromListDocument, {
-    context: { localFirst: true },
+  const removeWrite = useLocalWrite(RemoveBrandFromListDocument, {
+    fallback: t('brandLists.errors.removeFailed'),
   });
 
   /** Makes a list, switched on; resolves its id, or null when refused. */
   const createList = async (name: string): Promise<string | null> => {
     const id = generateEntityId();
     const inputs: CreateBrandListInputs = { name };
-    const settled = await pendingWritesOf(client.cache).send(
-      CreateBrandListDocument,
+    const settled = await createWrite.send(
       { input: { id, name, enabled: true } },
-      write =>
-        settleMutation(() => createMutation(write), {
-          document: CreateBrandListDocument,
-          fallback: t('brandLists.errors.createFailed'),
-        }),
       inputs,
     );
     return settled.status === 'failed' ? null : id;
@@ -115,29 +107,16 @@ export function useBrandLists({
     fields: { name?: string; enabled?: boolean },
   ): Promise<boolean> => {
     if (!readBrandList(client.cache, id)) return false;
-    const settled = await sendFields(client.cache, {
+    const settled = await updateWrite.sendFields({
       entity: { __typename: 'BrandList', id },
       fields,
       variables: { input: { id, ...fields } },
-      mutate: updateMutation,
-      settle: {
-        document: UpdateBrandListDocument,
-        fallback: t('brandLists.errors.updateFailed'),
-      },
     });
     return settled.status !== 'failed';
   };
 
   const deleteList = async (id: string): Promise<boolean> => {
-    const settled = await pendingWritesOf(client.cache).send(
-      DeleteBrandListDocument,
-      { input: { id } },
-      write =>
-        settleMutation(() => deleteMutation(write), {
-          document: DeleteBrandListDocument,
-          fallback: t('brandLists.errors.deleteFailed'),
-        }),
-    );
+    const settled = await deleteWrite.send({ input: { id } });
     return settled.status !== 'failed';
   };
 
@@ -170,14 +149,8 @@ export function useBrandLists({
         },
       },
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      AddBrandToListDocument,
+    const settled = await addWrite.send(
       { input: { id, brandListId: listId, brandId: brand.id, reason } },
-      write =>
-        settleMutation(() => addMutation(write), {
-          document: AddBrandToListDocument,
-          fallback: t('brandLists.errors.addFailed'),
-        }),
       inputs,
     );
     return settled.status !== 'failed';
@@ -189,16 +162,7 @@ export function useBrandLists({
   ): Promise<boolean> => {
     if (!readBrandList(client.cache, listId)) return false;
     const inputs: RemoveBrandInputs = { listId };
-    const settled = await pendingWritesOf(client.cache).send(
-      RemoveBrandFromListDocument,
-      { input: { id: entryId } },
-      write =>
-        settleMutation(() => removeMutation(write), {
-          document: RemoveBrandFromListDocument,
-          fallback: t('brandLists.errors.removeFailed'),
-        }),
-      inputs,
-    );
+    const settled = await removeWrite.send({ input: { id: entryId } }, inputs);
     return settled.status !== 'failed';
   };
 

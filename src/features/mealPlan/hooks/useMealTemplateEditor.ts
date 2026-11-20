@@ -11,9 +11,10 @@ import {
   UpdateTemplateItemDocument,
   RemoveTemplateItemDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import {
+  sendLocalWrite,
+  useLocalWrite,
+} from '#/apollo/pendingWrites/useLocalWrite';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { readRecipeRef } from '#features/mealPlan/cache/mealTemplateItem';
 import { useCreateMealTemplate } from '#features/mealPlan/hooks/useCreateMealTemplate';
@@ -37,14 +38,15 @@ export function useMealTemplateEditor() {
     UpdateMealTemplateDocument,
     { context: { localFirst: true } },
   );
-  const [addItemMutation] = useMutation(AddTemplateItemDocument, {
-    context: { localFirst: true },
+  const addTemplateItem = useLocalWrite(AddTemplateItemDocument, {
+    fallback: t('mealTemplateBuilder.failedToAddItem'),
   });
-  const [updateItemMutation] = useMutation(UpdateTemplateItemDocument, {
-    context: { localFirst: true },
+  const updateTemplateItem = useLocalWrite(UpdateTemplateItemDocument, {
+    fallback: t('mealTemplateBuilder.failedToSaveItem'),
   });
-  const [removeItemMutation] = useMutation(RemoveTemplateItemDocument, {
-    context: { localFirst: true },
+  const removeTemplateItem = useLocalWrite(RemoveTemplateItemDocument, {
+    fallback: t('mealTemplateBuilder.failedToRemoveItem'),
+    removal: true,
   });
 
   // Returns the created template's id (for navigation) or null on failure.
@@ -55,23 +57,24 @@ export function useMealTemplateEditor() {
     id: string,
     input: Omit<UpdateMealTemplateInput, 'id'>,
   ): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'MealTemplate', id },
-      fields: {
-        name: input.name ?? undefined,
-        description: input.description,
-        category: input.category,
-        defaultServings: input.defaultServings,
-        tags: input.tags,
-        updatedAt: new Date().toISOString(),
+    const settled = await sendLocalWrite(
+      client.cache,
+      UpdateMealTemplateDocument,
+      { input: { ...input, id } },
+      updateMutation,
+      { fallback: t('mealTemplateBuilder.failedToSave') },
+      {
+        entity: { __typename: 'MealTemplate', id },
+        fields: {
+          name: input.name ?? undefined,
+          description: input.description,
+          category: input.category,
+          defaultServings: input.defaultServings,
+          tags: input.tags,
+          updatedAt: new Date().toISOString(),
+        },
       },
-      variables: { input: { ...input, id } },
-      mutate: updateMutation,
-      settle: {
-        document: UpdateMealTemplateDocument,
-        fallback: t('mealTemplateBuilder.failedToSave'),
-      },
-    });
+    );
     return settled.status !== 'failed';
   };
 
@@ -80,16 +83,7 @@ export function useMealTemplateEditor() {
   const addItem = async (input: AddTemplateItemInput): Promise<boolean> => {
     const item = { ...input, id: generateEntityId() };
     const inputs: AddTemplateItemInputs = { item };
-    const settled = await pendingWritesOf(client.cache).send(
-      AddTemplateItemDocument,
-      { input: item },
-      write =>
-        settleMutation(() => addItemMutation(write), {
-          document: AddTemplateItemDocument,
-          fallback: t('mealTemplateBuilder.failedToAddItem'),
-        }),
-      inputs,
-    );
+    const settled = await addTemplateItem.send({ input: item }, inputs);
     return settled.status !== 'failed';
   };
 
@@ -110,15 +104,10 @@ export function useMealTemplateEditor() {
         : {}),
     };
 
-    const settled = await sendFields(client.cache, {
+    const settled = await updateTemplateItem.sendFields({
       entity: { __typename: 'MealTemplateItem', id },
       fields,
       variables: { input },
-      mutate: updateItemMutation,
-      settle: {
-        document: UpdateTemplateItemDocument,
-        fallback: t('mealTemplateBuilder.failedToSaveItem'),
-      },
     });
     return settled.status !== 'failed';
   };
@@ -129,15 +118,8 @@ export function useMealTemplateEditor() {
     templateId: string,
   ): Promise<boolean> => {
     const inputs: RemoveTemplateItemInputs = { templateId };
-    const settled = await pendingWritesOf(client.cache).send(
-      RemoveTemplateItemDocument,
+    const settled = await removeTemplateItem.send(
       { input: { id: itemId } },
-      write =>
-        settleMutation(() => removeItemMutation(write), {
-          document: RemoveTemplateItemDocument,
-          fallback: t('mealTemplateBuilder.failedToRemoveItem'),
-          removal: true,
-        }),
       inputs,
     );
     return settled.status !== 'failed';

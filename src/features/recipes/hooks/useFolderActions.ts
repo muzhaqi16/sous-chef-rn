@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { DeleteRecipeFolderDocument } from '#features/recipes/graphql/recipe.generated';
 import type { MoveFolderInputs } from '#features/recipes/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { toastService } from '#/services/toastService';
-import { settleMutation } from '#/apollo/utils/settleMutation';
 
 /**
  * Rename and delete both go through `deleteRecipeFolder`: without `moveTo` its
@@ -13,28 +11,22 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
  */
 export function useFolderActions() {
   const { t } = useTranslation();
-  const client = useApolloClient();
   const [loading, setLoading] = useState(false);
 
-  const [deleteRecipeFolderMutation] = useMutation(DeleteRecipeFolderDocument, {
-    context: { localFirst: true },
+  const moveFolder = useLocalWrite(DeleteRecipeFolderDocument, {
+    fallback: t('recipes.deleteFolderFailed'),
+    present: 'toast',
   });
 
   const sendMove = (inputs: MoveFolderInputs, fallback: string) =>
-    pendingWritesOf(client.cache).send(
-      DeleteRecipeFolderDocument,
+    moveFolder.send(
       {
         input: inputs.moveTo
           ? { folder: inputs.folder, moveTo: inputs.moveTo }
           : { folder: inputs.folder },
       },
-      write =>
-        settleMutation(() => deleteRecipeFolderMutation(write), {
-          document: DeleteRecipeFolderDocument,
-          fallback,
-          present: 'toast',
-        }),
       inputs,
+      { settle: { fallback } },
     );
 
   /**
