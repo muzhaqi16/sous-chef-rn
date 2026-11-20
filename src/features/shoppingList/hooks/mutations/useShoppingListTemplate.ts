@@ -5,23 +5,22 @@
  * to fan out.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { MarkAsTemplateDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { readCopyableList } from '#features/shoppingList/cache/copySource';
 import { listFromTemplate } from '#features/shoppingList/utils/listFromTemplate';
 import { useCopyShoppingList } from './useCopyShoppingList';
-import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { toastService } from '#/services/toastService';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
 export function useShoppingListTemplate() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [markMutation, { loading: marking }] = useMutation(
-    MarkAsTemplateDocument,
-    { context: { localFirst: true } },
-  );
+  const mark = useLocalWrite(MarkAsTemplateDocument, {
+    fallback: t('shoppingListScreens.failedToSaveTemplate'),
+  });
   const { copyList, copying: creating } = useCopyShoppingList(
     t('shoppingListScreens.failedToCreateFromTemplate'),
   );
@@ -30,12 +29,8 @@ export function useShoppingListTemplate() {
     id: string,
     templateName: string,
   ): Promise<boolean> => {
-    const settled = await sendLocalWrite(
-      client.cache,
-      MarkAsTemplateDocument,
+    const settled = await mark.send(
       { input: { id, templateName } },
-      markMutation,
-      { fallback: t('shoppingListScreens.failedToSaveTemplate') },
       {
         entity: { __typename: 'ShoppingList', id },
         fields: { isTemplate: true, templateName },
@@ -77,5 +72,10 @@ export function useShoppingListTemplate() {
     return listId;
   };
 
-  return { markAsTemplate, createFromTemplate, marking, creating };
+  return {
+    markAsTemplate,
+    createFromTemplate,
+    marking: mark.sending,
+    creating,
+  };
 }

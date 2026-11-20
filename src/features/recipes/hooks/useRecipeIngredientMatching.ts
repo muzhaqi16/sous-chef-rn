@@ -1,15 +1,10 @@
 import { useRef, useState } from 'react';
 import { useTranslation, type TranslateFn } from '#/i18n';
-import {
-  useApolloClient,
-  useLazyQuery,
-  useMutation,
-} from '@apollo/client/react';
+import { useApolloClient, useLazyQuery } from '@apollo/client/react';
 import {
   MatchRecipeIngredientsToPantryDocument,
   MarkRecipeAsCookedDocument,
   RecipeCookUsesDocument,
-  type MarkRecipeAsCookedMutationVariables,
   type MatchRecipeIngredientsToPantryQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import {
@@ -33,7 +28,7 @@ import {
 } from './useRecipeSubstitutes.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { inTrackingUnit } from '#features/pantry/cache/stock';
 import type {
   CookDrawInputs,
@@ -317,31 +312,15 @@ export function useRecipeIngredientMatching(
   };
 
   // The reviewed cook is the quick cook's own write with `exactStacks`: one
-  // transaction, so it deducts every stack stated or none.
-  const [confirmMutation, { loading: confirmLoading }] = useMutation(
-    MarkRecipeAsCookedDocument,
-    { context: { localFirst: true } },
-  );
+  // transaction, so it deducts every stack stated or none. Held as a pending
+  // layer that draws what it states.
+  const reviewedCook = useLocalWrite(MarkRecipeAsCookedDocument, {
+    fallback: t('recipes.markCookedFailed'),
+    // The review sheet reports the cook as a toast and stays open to retry.
+    present: 'toast',
+    ...plannedMealSettle(t, { plannedMeal, onMealChanged }),
+  });
   const cooking = useRef(false);
-
-  /** A reviewed cook, held as a pending layer that draws what it states. */
-  const sendCook = (
-    variables: MarkRecipeAsCookedMutationVariables,
-    inputs: CookRecipeInputs,
-  ) =>
-    sendLocalWrite(
-      client.cache,
-      MarkRecipeAsCookedDocument,
-      variables,
-      confirmMutation,
-      {
-        fallback: t('recipes.markCookedFailed'),
-        // The review sheet reports the cook as a toast and stays open to retry.
-        present: 'toast',
-        ...plannedMealSettle(t, { plannedMeal, onMealChanged }),
-      },
-      inputs,
-    );
 
   /**
    * The rows a cook recorded past its answer's page, read while it is still the
@@ -600,9 +579,9 @@ export function useRecipeIngredientMatching(
       ...(plannedMeal && { meal: { id: plannedMeal.id, cookingLogId } }),
     };
     // A send that throws releases the guard too, or every later confirm is lost.
-    let settled: Awaited<ReturnType<typeof sendCook>>;
+    let settled: Awaited<ReturnType<typeof reviewedCook.send>>;
     try {
-      settled = await sendCook(variables, inputs);
+      settled = await reviewedCook.send(variables, inputs);
     } catch (error) {
       cooking.current = false;
       errorService.reportError(error, { operation: 'Record reviewed cook' });
@@ -702,7 +681,7 @@ export function useRecipeIngredientMatching(
     updateMatch,
     matchSummary,
     confirmConsumption,
-    confirmLoading,
+    confirmLoading: reviewedCook.sending,
     isSheetVisible,
     closeSheet,
     hasPantry: !!pantryId,

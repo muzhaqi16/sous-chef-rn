@@ -4,7 +4,7 @@
  * sources), so the device shows a copy until then.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {
@@ -14,7 +14,7 @@ import {
 import type { CreateRecipeInputs } from '#features/recipes/offline/localWrites';
 import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
 import { forkRecipe as buildFork } from '#features/recipes/utils/forkRecipe';
-import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
@@ -24,8 +24,8 @@ export function useForkRecipe() {
   const { t } = useTranslation();
   const client = useApolloClient();
   const user = useUser();
-  const [forkMutation, { loading: forking }] = useMutation(ForkRecipeDocument, {
-    context: { localFirst: true },
+  const fork = useLocalWrite(ForkRecipeDocument, {
+    fallback: t('recipes.forkFailed'),
   });
 
   // Returns the forked recipe's id (for navigation) or null on failure.
@@ -74,12 +74,8 @@ export function useForkRecipe() {
       ingredientIds: copy.ingredients.map(() => generateEntityId()),
     };
 
-    const settled = await sendLocalWrite(
-      client.cache,
-      ForkRecipeDocument,
+    const settled = await fork.send(
       { input: { id: recipeId, newRecipeId: id } },
-      forkMutation,
-      { fallback: t('recipes.forkFailed') },
       inputs,
     );
 
@@ -87,5 +83,5 @@ export function useForkRecipe() {
     return settled.status === 'failed' ? null : id;
   };
 
-  return { forkRecipe, forking };
+  return { forkRecipe, forking: fork.sending };
 }

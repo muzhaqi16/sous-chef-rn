@@ -4,35 +4,29 @@
  * idempotently. A failure reverts the write; a queued one keeps it.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import {
   CompleteShoppingListDocument,
   MarkShoppingListActiveDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ListStatus } from '#/graphql/generated/schemaTypes';
-import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 
 export function useCompleteShoppingList() {
   const { t } = useTranslation();
-  const client = useApolloClient();
-  const [completeMutation, { loading: completing }] = useMutation(
-    CompleteShoppingListDocument,
-    { context: { localFirst: true } },
-  );
-  const [reactivateMutation, { loading: reactivating }] = useMutation(
-    MarkShoppingListActiveDocument,
-    { context: { localFirst: true } },
-  );
+  const complete = useLocalWrite(CompleteShoppingListDocument, {
+    fallback: t('shoppingListScreens.failedToComplete'),
+  });
+  const reactivate = useLocalWrite(MarkShoppingListActiveDocument, {
+    fallback: t('shoppingListScreens.failedToReactivate'),
+  });
 
   const completeList = async (
     id: string,
     totalCost?: number,
   ): Promise<boolean> => {
     const now = new Date().toISOString();
-    const settled = await sendLocalWrite(
-      client.cache,
-      CompleteShoppingListDocument,
+    const settled = await complete.send(
       {
         input: {
           id,
@@ -40,8 +34,6 @@ export function useCompleteShoppingList() {
           ...(totalCost !== undefined && { totalCost }),
         },
       },
-      completeMutation,
-      { fallback: t('shoppingListScreens.failedToComplete') },
       {
         entity: { __typename: 'ShoppingList', id },
         fields: {
@@ -55,12 +47,8 @@ export function useCompleteShoppingList() {
   };
 
   const reactivateList = async (id: string): Promise<boolean> => {
-    const settled = await sendLocalWrite(
-      client.cache,
-      MarkShoppingListActiveDocument,
+    const settled = await reactivate.send(
       { input: { id } },
-      reactivateMutation,
-      { fallback: t('shoppingListScreens.failedToReactivate') },
       {
         entity: { __typename: 'ShoppingList', id },
         fields: {
@@ -73,5 +61,10 @@ export function useCompleteShoppingList() {
     return settled.status !== 'failed';
   };
 
-  return { completeList, reactivateList, completing, reactivating };
+  return {
+    completeList,
+    reactivateList,
+    completing: complete.sending,
+    reactivating: reactivate.sending,
+  };
 }

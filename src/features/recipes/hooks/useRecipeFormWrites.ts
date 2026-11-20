@@ -1,10 +1,5 @@
 import { noteTipFact } from '#hooks/settings/useFeatureHint';
-import {
-  skipToken,
-  useApolloClient,
-  useMutation,
-  useQuery,
-} from '@apollo/client/react';
+import { skipToken, useApolloClient, useQuery } from '@apollo/client/react';
 import {
   GetRecipeDocument,
   CreateRecipeDocument,
@@ -21,7 +16,7 @@ import type {
 import type { CreateRecipeInputs } from '#features/recipes/offline/localWrites';
 import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
 import {
-  sendLocalWrite,
+  useLocalWrite,
   type WriteSettle,
 } from '#/apollo/pendingWrites/useLocalWrite';
 import {
@@ -110,14 +105,16 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
         })
       : null;
 
-  const [createRecipeMutation, { loading: creating }] = useMutation(
-    CreateRecipeDocument,
-    { context: { localFirst: true } },
-  );
-  const [updateRecipeMutation, { loading: updating }] = useMutation(
-    UpdateRecipeDocument,
-    { context: { localFirst: true } },
-  );
+  const create = useLocalWrite(CreateRecipeDocument, {
+    fallback: t('recipes.createRecipeFailed'),
+    // The form shows the failure, on its field where it names one.
+    present: 'none',
+  });
+  const updateSettle: WriteSettle = {
+    fallback: t('recipes.updateRecipeFailed'),
+    present: 'none',
+  };
+  const update = useLocalWrite(UpdateRecipeDocument, updateSettle);
 
   /** The minted cuid is the row's real PK, so a queued create replays onto it. */
   const createRecipe = async (
@@ -132,18 +129,7 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
       ingredientIds: input.ingredients.map(() => generateEntityId()),
     };
 
-    const settled = await sendLocalWrite(
-      client.cache,
-      CreateRecipeDocument,
-      { input: recipe },
-      createRecipeMutation,
-      {
-        fallback: t('recipes.createRecipeFailed'),
-        // The form shows the failure, on its field where it names one.
-        present: 'none',
-      },
-      inputs,
-    );
+    const settled = await create.send({ input: recipe }, inputs);
     if (!settled.failure) noteTipFact('recipeAdded');
     return outcomeOf(settled.failure);
   };
@@ -167,25 +153,17 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
         }),
       });
     }
-    const settle: WriteSettle = {
-      fallback: t('recipes.updateRecipeFailed'),
-      present: 'none',
-    };
     const settled =
       version === null
         ? await settleMutation(
             () => Promise.reject(new UnreadVersionError('Recipe')),
-            { ...settle, document: UpdateRecipeDocument },
+            { ...updateSettle, document: UpdateRecipeDocument },
           )
-        : await sendLocalWrite(
-            client.cache,
-            UpdateRecipeDocument,
+        : await update.send(
             {
               input: { ...fields, id, version },
               ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
             },
-            updateRecipeMutation,
-            settle,
             // The device shows the edit once the server has it.
             { entity: { __typename: 'Recipe', id }, fields: {} },
           );
@@ -212,6 +190,6 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
     reloadRecipe,
     createRecipe,
     updateRecipe,
-    saving: creating || updating,
+    saving: create.sending || update.sending,
   };
 }

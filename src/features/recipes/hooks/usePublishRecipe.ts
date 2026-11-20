@@ -4,20 +4,20 @@
  * approves, which the device shows until the server answers.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { UpdateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
-import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { readVersion } from '#/apollo/utils/entityWriteChain';
 import { alertService } from '#/services/alertService';
 
 export function usePublishRecipe() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [mutate, { loading: publishing }] = useMutation(UpdateRecipeDocument, {
-    context: { localFirst: true },
+  const publish = useLocalWrite(UpdateRecipeDocument, {
+    fallback: t('labels.failedToUpdateRecipe'),
   });
 
   /** `true` submits the recipe for review; `false` returns it to a draft. */
@@ -33,15 +33,11 @@ export function usePublishRecipe() {
     }
 
     const status = submitted ? RecipeStatus.Published : RecipeStatus.Draft;
-    const settled = await sendLocalWrite(
-      client.cache,
-      UpdateRecipeDocument,
+    const settled = await publish.send(
       {
         input: { id: recipeId, status, version },
         ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
       },
-      mutate,
-      { fallback: t('labels.failedToUpdateRecipe') },
       {
         entity,
         fields: {
@@ -53,5 +49,5 @@ export function usePublishRecipe() {
     return settled.status !== 'failed';
   };
 
-  return { setSubmitted, publishing };
+  return { setSubmitted, publishing: publish.sending };
 }

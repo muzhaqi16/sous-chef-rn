@@ -3,7 +3,7 @@
  * mint an id the server accepts, so a queued replay converges on the same row.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import {
   UpdateMealTemplateDocument,
@@ -11,10 +11,7 @@ import {
   UpdateTemplateItemDocument,
   RemoveTemplateItemDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
-import {
-  sendLocalWrite,
-  useLocalWrite,
-} from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { readRecipeRef } from '#features/mealPlan/cache/mealTemplateItem';
 import { useCreateMealTemplate } from '#features/mealPlan/hooks/useCreateMealTemplate';
@@ -34,10 +31,9 @@ export function useMealTemplateEditor() {
   const client = useApolloClient();
   const { createTemplate: create, creating } = useCreateMealTemplate();
 
-  const [updateMutation, { loading: updating }] = useMutation(
-    UpdateMealTemplateDocument,
-    { context: { localFirst: true } },
-  );
+  const updateMealTemplate = useLocalWrite(UpdateMealTemplateDocument, {
+    fallback: t('mealTemplateBuilder.failedToSave'),
+  });
   const addTemplateItem = useLocalWrite(AddTemplateItemDocument, {
     fallback: t('mealTemplateBuilder.failedToAddItem'),
   });
@@ -57,12 +53,8 @@ export function useMealTemplateEditor() {
     id: string,
     input: Omit<UpdateMealTemplateInput, 'id'>,
   ): Promise<boolean> => {
-    const settled = await sendLocalWrite(
-      client.cache,
-      UpdateMealTemplateDocument,
+    const settled = await updateMealTemplate.send(
       { input: { ...input, id } },
-      updateMutation,
-      { fallback: t('mealTemplateBuilder.failedToSave') },
       {
         entity: { __typename: 'MealTemplate', id },
         fields: {
@@ -137,6 +129,6 @@ export function useMealTemplateEditor() {
     removeItem,
     readRecipeName,
     creating,
-    updating,
+    updating: updateMealTemplate.sending,
   };
 }

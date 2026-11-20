@@ -5,8 +5,7 @@
  * The first 50 lines it is made with ride the create and show with it.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ADD_ITEMS_BATCH_LIMIT } from '#features/shoppingList/cache/createShoppingListRow';
 import type { LocalShoppingListItem } from '#features/shoppingList/cache/items';
@@ -39,11 +38,11 @@ export type CreateShoppingListOutcome<TItem = never> =
   | { status: 'failed'; body: string };
 
 export function useCreateShoppingList(fallbackErrorMessage: string) {
-  const client = useApolloClient();
   const user = useUser();
 
-  const [mutate, { loading }] = useMutation(CreateShoppingListDocument, {
-    context: { localFirst: true },
+  const create = useLocalWrite(CreateShoppingListDocument, {
+    fallback: fallbackErrorMessage,
+    present: 'none',
   });
 
   const createShoppingList = async <
@@ -74,12 +73,8 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
       rows: sent.flatMap(line => lines?.rowOf(line, id) ?? []),
       now: new Date().toISOString(),
     };
-    const settled = await sendLocalWrite(
-      client.cache,
-      CreateShoppingListDocument,
+    const settled = await create.send(
       { input: { ...input, id, ...(sent.length > 0 && { items: sent }) } },
-      mutate,
-      { fallback: fallbackErrorMessage, present: 'none' },
       inputs,
     );
 
@@ -103,5 +98,5 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
     return { status: 'failed', body: fallbackErrorMessage };
   };
 
-  return { createShoppingList, loading };
+  return { createShoppingList, loading: create.sending };
 }

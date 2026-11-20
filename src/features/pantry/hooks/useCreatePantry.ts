@@ -1,7 +1,6 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import type { CreatePantryInputs } from '#features/pantry/offline/localWrites';
-import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import type { SettledFailure } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
@@ -31,9 +30,9 @@ export interface CreatePantryOutcome extends PantryWriteOutcome {
  */
 export function useCreatePantry() {
   const { t } = useTranslation();
-  const client = useApolloClient();
-  const [createPantry, { loading }] = useMutation(CreatePantryDocument, {
-    context: { localFirst: true },
+  const createPantry = useLocalWrite(CreatePantryDocument, {
+    fallback: t('errors.createPantryFailed'),
+    present: 'none',
   });
 
   const create = async (
@@ -48,17 +47,13 @@ export function useCreatePantry() {
     const inputs: CreatePantryInputs = { pantry: input, today };
 
     let result: CreatePantryOutcome['result'] = {};
-    const settled = await sendLocalWrite(
-      client.cache,
-      CreatePantryDocument,
-      { input, today },
-      async write => {
-        result = await createPantry(write);
-        return result;
+    const settled = await createPantry.send({ input, today }, inputs, {
+      run: async (mutate, write) => {
+        const answer = await mutate(write);
+        result = answer;
+        return answer;
       },
-      { fallback: t('errors.createPantryFailed'), present: 'none' },
-      inputs,
-    );
+    });
     // Released on every outcome; a queued create is tracked by the offline
     // queue's pending set from here on.
     unconfirmedCreates.confirm(id);
@@ -68,7 +63,7 @@ export function useCreatePantry() {
     return { status: 'ok', result, id };
   };
 
-  return { createPantry: create, creating: loading };
+  return { createPantry: create, creating: createPantry.sending };
 }
 
 /** The mutate function `useCreatePantry` returns, for callers that pass it on. */

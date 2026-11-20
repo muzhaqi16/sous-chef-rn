@@ -1,10 +1,5 @@
 import { toastService } from '#/services/toastService';
-import {
-  skipToken,
-  useApolloClient,
-  useMutation,
-  useQuery,
-} from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   GetStorageLocationsDocument,
   UpdateStorageLocationDocument,
@@ -18,10 +13,7 @@ import type {
 } from '#features/catalog/offline/localWrites';
 import type { UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
-import {
-  sendLocalWrite,
-  useLocalWrite,
-} from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useTranslation } from '#/i18n';
@@ -126,17 +118,21 @@ export function useStorageLocationManagement(
     pantryId,
   );
 
-  const client = useApolloClient();
-
   // Every write here replays safely: update and set-default write absolute
   // fields on an existing `id`, and a delete converges server-side (`converged:
   // true` once gone, `NotFoundError` only for a row that never existed).
 
   // Each write below settles its own failure and toasts it — no `onError`.
-  const [updateMutation, { loading: updating }] = useMutation(
-    UpdateStorageLocationDocument,
-    { context: { localFirst: true } },
-  );
+  const update = useLocalWrite(UpdateStorageLocationDocument, {
+    fallback: t('errors.codes.genericRetry'),
+    present: 'toast',
+    // Else the stale version stays held and every retry conflicts again.
+    onVersionConflict: () => {
+      refetch().catch(() => {
+        // The screen's own refresh asks again.
+      });
+    },
+  });
 
   // A delete converges: a row already gone is the outcome asked for.
   const remove = useLocalWrite(DeleteStorageLocationDocument, {
@@ -191,21 +187,8 @@ export function useStorageLocationManagement(
     };
     // The lock: an edit that crossed another answers VERSION_CONFLICT.
     const version = locations.find(location => location.id === id)?.version;
-    const settled = await sendLocalWrite(
-      client.cache,
-      UpdateStorageLocationDocument,
+    const settled = await update.send(
       { input: { ...input, id, ...(version !== undefined && { version }) } },
-      updateMutation,
-      {
-        fallback: t('errors.codes.genericRetry'),
-        present: 'toast',
-        // Else the stale version stays held and every retry conflicts again.
-        onVersionConflict: () => {
-          refetch().catch(() => {
-            // The screen's own refresh asks again.
-          });
-        },
-      },
       inputs,
     );
     // Covers BOTH outcomes that keep the edit: the server confirmed it, or the
@@ -252,7 +235,7 @@ export function useStorageLocationManagement(
     initialLoading: !data && loading,
     offline: networkBlocked && !data,
     creating,
-    updating,
+    updating: update.sending,
     errorMessage:
       error && !networkBlocked
         ? errorCopy(error, t, t('errors.codes.genericRetry'))

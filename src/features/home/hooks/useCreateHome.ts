@@ -1,8 +1,8 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import { CreateHomeDocument } from '#operations/home/home.generated';
 import { holdsHomesList } from '#features/home/hooks/homeCacheUpdaters';
 import type { CreateHomeInputs } from '#features/home/offline/localWrites';
-import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import type { SettledFailure } from '#/apollo/utils/settleMutation';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -26,10 +26,10 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
   const { t } = useTranslation();
   const client = useApolloClient();
   const user = useUser();
-  const [createHomeMutation, { loading: creating }] = useMutation(
-    CreateHomeDocument,
-    { context: { localFirst: true } },
-  );
+  const create = useLocalWrite(CreateHomeDocument, {
+    fallback: t('errors.createHomeFailed'),
+    present: 'none',
+  });
 
   /** `fallback` is the copy for a failure its code does not describe. */
   const createHome = async (
@@ -54,14 +54,9 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
         : undefined,
       now: new Date().toISOString(),
     };
-    const settled = await sendLocalWrite(
-      client.cache,
-      CreateHomeDocument,
-      { input },
-      createHomeMutation,
-      { fallback, present: 'none' },
-      inputs,
-    );
+    const settled = await create.send({ input }, inputs, {
+      settle: { fallback },
+    });
     // Released on every outcome; a queued create is tracked by the offline
     // queue's pending set from here on.
     unconfirmedCreates.confirm(id);
@@ -72,7 +67,7 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
     return { status: 'ok', id };
   };
 
-  return { createHome, creating };
+  return { createHome, creating: create.sending };
 }
 
 /** The create this hook returns, for callers that pass it on. */

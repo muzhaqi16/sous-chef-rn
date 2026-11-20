@@ -1,7 +1,6 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreateMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import type { CreateTemplateInputs } from '#features/mealPlan/offline/localWrites';
-import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import type { CreateMealTemplateInput } from '#/graphql/generated/schemaTypes';
 import { useTranslation } from '#/i18n';
 import { useUser } from '#store/useAppStore';
@@ -12,13 +11,11 @@ import { generateEntityId } from '#/utils/generateEntityId';
  * on it. Answers that id once the template landed or is queued, else null.
  */
 export function useCreateMealTemplate() {
-  const client = useApolloClient();
   const { t } = useTranslation();
   const user = useUser();
-  const [createMutation, { loading: creating }] = useMutation(
-    CreateMealTemplateDocument,
-    { context: { localFirst: true } },
-  );
+  const create = useLocalWrite(CreateMealTemplateDocument, {
+    fallback: t('mealTemplateBuilder.failedToCreate'),
+  });
 
   const createTemplate = async (
     input: CreateMealTemplateInput,
@@ -29,16 +26,9 @@ export function useCreateMealTemplate() {
       ownerId: user?.id,
       now: new Date().toISOString(),
     };
-    const settled = await sendLocalWrite(
-      client.cache,
-      CreateMealTemplateDocument,
-      { input: template },
-      createMutation,
-      { fallback: t('mealTemplateBuilder.failedToCreate') },
-      inputs,
-    );
+    const settled = await create.send({ input: template }, inputs);
     return settled.status === 'failed' ? null : template.id;
   };
 
-  return { createTemplate, creating };
+  return { createTemplate, creating: create.sending };
 }

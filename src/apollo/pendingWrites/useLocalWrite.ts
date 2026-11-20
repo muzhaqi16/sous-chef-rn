@@ -72,7 +72,9 @@ export function useLocalWrite<TData, TVariables extends OperationVariables>(
   settle: WriteSettle,
 ) {
   const client = useApolloClient();
-  const [mutate] = useMutation(document, { context: { localFirst: true } });
+  const [mutate, { loading: sending }] = useMutation(document, {
+    context: { localFirst: true },
+  });
 
   const send = (
     variables: TVariables,
@@ -98,5 +100,10 @@ export function useLocalWrite<TData, TVariables extends OperationVariables>(
     options?: LocalWriteOptions<TData, TVariables>,
   ): Promise<Settled<TData>> => send(variables, { entity, fields }, options);
 
-  return { send, sendFields };
+  return {
+    send,
+    sendFields,
+    /** A send is on its way to the server: a queued one is not. */
+    sending,
+  };
 }

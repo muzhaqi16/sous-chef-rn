@@ -1,10 +1,10 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 import { localIntakeRow } from '#features/pantry/cache/localIntake';
 import type { CreateItemInputs } from '#features/pantry/offline/localWrites';
 import { readHeldStackUnit } from '#features/pantry/utils/pantryCacheReaders';
-import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
@@ -54,10 +54,10 @@ export function usePantryIntake(pantryId: string | undefined) {
   const { t } = useTranslation();
   const client = useApolloClient();
 
-  const [createPantryItem, { loading: adding }] = useMutation(
-    CreatePantryItemDocument,
-    { context: { localFirst: true } },
-  );
+  const create = useLocalWrite(CreatePantryItemDocument, {
+    fallback: t('errors.addItemFailedRetry'),
+    present: 'none',
+  });
 
   /** Show the row, send the create, and report what became of it. */
   const addItem = async (
@@ -89,13 +89,10 @@ export function usePantryIntake(pantryId: string | undefined) {
       now: new Date().toISOString(),
     };
     // A refusal naming a field reads as its localized `errors.field.*` copy.
-    const settled = await sendLocalWrite(
-      client.cache,
-      CreatePantryItemDocument,
+    const settled = await create.send(
       { input: { ...sent, id, pantryId, today }, today },
-      createPantryItem,
-      { fallback, present },
       inputs,
+      { settle: { fallback, present } },
     );
     let outcome: AddPantryItemOutcome = { status: 'added' };
     if (settled.status === 'failed') {
@@ -117,5 +114,5 @@ export function usePantryIntake(pantryId: string | undefined) {
   const heldUnitOf = (itemId: string) =>
     readHeldStackUnit(client.cache, pantryId, itemId);
 
-  return { addItem, adding, heldUnitOf };
+  return { addItem, adding: create.sending, heldUnitOf };
 }

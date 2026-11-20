@@ -1,4 +1,4 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import {
   CreateMealPlanDocument,
   UpdateMealPlanDocument,
@@ -10,10 +10,7 @@ import type {
   CreateMealPlanInput,
   UpdateMealPlanInput,
 } from '#/graphql/generated/schemaTypes';
-import {
-  sendLocalWrite,
-  useLocalWrite,
-} from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { readVersion } from '#/apollo/utils/entityWriteChain';
 import type { SettledFailure } from '#/apollo/utils/settleMutation';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
@@ -51,10 +48,9 @@ export function useMealPlanActions() {
   const user = useUser();
   const { t } = useTranslation();
 
-  const [createMealPlanMutation, { loading: creating }] = useMutation(
-    CreateMealPlanDocument,
-    { context: { localFirst: true } },
-  );
+  const createPlan = useLocalWrite(CreateMealPlanDocument, {
+    fallback: t('mealPlan.failedToCreate'),
+  });
 
   // A save made elsewhere since is refused, not overwritten.
   const updatePlan = useLocalWrite(UpdateMealPlanDocument, {
@@ -67,10 +63,10 @@ export function useMealPlanActions() {
     },
   });
 
-  const [deleteMealPlanMutation, { loading: deleting }] = useMutation(
-    DeleteMealPlanDocument,
-    { context: { localFirst: true } },
-  );
+  const deletePlan = useLocalWrite(DeleteMealPlanDocument, {
+    fallback: t('mealPlanMain.deleteMealPlanFailed'),
+    removal: true,
+  });
 
   const createMealPlan = async (
     input: CreateMealPlanInput,
@@ -88,14 +84,9 @@ export function useMealPlanActions() {
       now: new Date().toISOString(),
     };
 
-    const settled = await sendLocalWrite(
-      client.cache,
-      CreateMealPlanDocument,
-      { input: plan },
-      createMealPlanMutation,
-      { fallback: t('mealPlan.failedToCreate'), present },
-      inputs,
-    );
+    const settled = await createPlan.send({ input: plan }, inputs, {
+      settle: { ...(present && { present }) },
+    });
 
     // Released on every outcome: acknowledged and rejected both leave nothing
     // for a detail read to miss, and a queued create has already been handed
@@ -127,13 +118,7 @@ export function useMealPlanActions() {
   };
 
   const deleteMealPlan = async (id: string) => {
-    const settled = await sendLocalWrite(
-      client.cache,
-      DeleteMealPlanDocument,
-      { input: { id } },
-      deleteMealPlanMutation,
-      { fallback: t('mealPlanMain.deleteMealPlanFailed'), removal: true },
-    );
+    const settled = await deletePlan.send({ input: { id } });
     return settled.status !== 'failed';
   };
 
@@ -141,7 +126,7 @@ export function useMealPlanActions() {
     createMealPlan,
     updateMealPlan,
     deleteMealPlan,
-    creating,
-    deleting,
+    creating: createPlan.sending,
+    deleting: deletePlan.sending,
   };
 }

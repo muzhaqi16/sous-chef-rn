@@ -130,4 +130,15 @@ describe('useLocalWrite', () => {
 
     expect(settled.failure?.body).toBe('Could not save this one');
   });
+
+  it('says a send is on its way until the server answers', async () => {
+    const answer = recordMock(UpdateShoppingListDocument, { held: true });
+    const { result } = render(answer);
+    expect(result.current.sending).toBe(false);
+
+    void result.current.sendFields({ ...fields, variables });
+    await drained(() => Promise.resolve());
+
+    expect(result.current.sending).toBe(true);
+  });
 });

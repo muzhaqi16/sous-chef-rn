@@ -1,7 +1,6 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import type { CreatePlanItemInputs } from '#features/mealPlan/offline/localWrites';
-import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import type { CreateMealPlanItemInput } from '#/graphql/generated/schemaTypes';
 import { useTranslation } from '#/i18n';
 
@@ -10,27 +9,18 @@ import { useTranslation } from '#/i18n';
  * it. A meal added alone shows its refusal; a batch reports one for all.
  */
 export function useCreateMealPlanItem() {
-  const client = useApolloClient();
   const { t } = useTranslation();
-  const [createItem, { loading: creating }] = useMutation(
-    CreateMealPlanItemDocument,
-    { context: { localFirst: true } },
-  );
+  const create = useLocalWrite(CreateMealPlanItemDocument, {
+    fallback: t('mealTemplateBuilder.failedToAddItem'),
+  });
 
   const sendItem = (
     item: CreateMealPlanItemInput,
     present: 'toast' | 'none',
   ) => {
     const inputs: CreatePlanItemInputs = { item };
-    return sendLocalWrite(
-      client.cache,
-      CreateMealPlanItemDocument,
-      { input: item },
-      createItem,
-      { fallback: t('mealTemplateBuilder.failedToAddItem'), present },
-      inputs,
-    );
+    return create.send({ input: item }, inputs, { settle: { present } });
   };
 
-  return { sendItem, creating };
+  return { sendItem, creating: create.sending };
 }
