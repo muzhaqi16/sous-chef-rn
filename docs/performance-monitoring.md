@@ -616,6 +616,27 @@ before they send — so the cost is one background task per write, under a frame
 `graphql_request_duration_ms` or payload volume ever says otherwise, the lever is
 the catalog `item` subtree, not the totals.
 
+### Apollo result-cache fill (2026-11-20)
+
+`src/apollo/config.ts` capped Apollo's three result caches at 3000 / 2000 /
+2000 entries, below Apollo 4.2's defaults of 50000 / 10000 / 5000 (its comments
+called them increases). `client.getMemoryInternals()`, read on the iPhone 17
+simulator (debug build) after visiting every tab on the e2e account: 1,243
+normalized objects, among them 105 pantry stacks, 82 recipes and 13 list lines.
+
+| Cache                                   | Cap  | After two tabs | After every tab |
+| --------------------------------------- | ---- | -------------- | --------------- |
+| `inMemoryCache.executeSelectionSet`     | 3000 | 2221           | 3000            |
+| `inMemoryCache.executeSubSelectedArray` | 2000 | 185            | 323             |
+| `inMemoryCache.maybeBroadcastWatch`     | 2000 | 56             | 91              |
+
+The reading counts entries, not time, so the simulator does not skew it. A
+full selection-set cache evicts results that live watchers then recompute
+from scratch on the next write. **Decision:** the three result caches run on
+Apollo's defaults. The document caches (`print`, `canonicalStringify`,
+`documentTransform.cache` and the rest) held 6 to 44 entries and keep their
+reduced sizes.
+
 ## References
 
 - [React Performance Profiling](https://react.dev/reference/react/Profiler)
