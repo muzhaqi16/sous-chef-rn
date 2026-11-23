@@ -238,12 +238,17 @@ describe('the profile screen', () => {
     expect(mockNav[opened]).toHaveBeenCalledTimes(1);
   });
 
-  it('saves a language picked', async () => {
-    await openProfile();
+  it('switches to a language picked at once, and saves it', async () => {
+    const saved = recordMock(UpdateUserPreferencesDocument, { held: true });
+    await openProfile({ answers: [saved] });
 
     await call('language', 'onSave', 'es');
+    await log.requested(UpdateUserPreferencesDocument);
 
     expect(row('language').value).toBe('es');
+    expect(inputOf(saved.fired[0] ?? {})).toMatchObject({
+      regional: { language: 'es' },
+    });
   });
 
   it('saves a currency picked', async () => {

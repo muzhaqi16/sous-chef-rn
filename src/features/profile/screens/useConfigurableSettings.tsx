@@ -162,7 +162,7 @@ export const useConfigurableSettings = () => {
             value: language ?? getResolvedLanguage(),
             options: [...SUPPORTED_LANGUAGES],
             onSave: (v: string) => {
-              selectLanguage(v);
+              void selectLanguage(v);
             },
           };
         }

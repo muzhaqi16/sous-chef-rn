@@ -13,6 +13,8 @@ const SETTING_GROUPS = {
   compactMode: 'ui',
   showTutorials: 'ui',
   preferredUnitSystem: 'regional',
+  language: 'regional',
+  timezone: 'regional',
   storeMode: 'shopping',
   budgetAndPrices: 'shopping',
 } satisfies Partial<Record<keyof UserSettings, keyof UpdateSettingsInput>>;
@@ -70,6 +72,22 @@ const copyStated = <K extends keyof MirroredSettings>(
 ) => {
   if (from[key] !== undefined) into[key] = from[key];
 };
+
+/**
+ * What a refused change puts back in the mirror: the values it replaced, for
+ * the settings that still show it. A later change of one stands.
+ */
+export function refusedMirror(
+  replaced: Partial<MirroredSettings>,
+  sent: Partial<MirroredSettings>,
+  shown: Partial<MirroredSettings>,
+): Partial<MirroredSettings> {
+  const back: Partial<MirroredSettings> = {};
+  for (const key of MIRRORED_SETTING_KEYS) {
+    if (shown[key] === sent[key]) copyStated(back, replaced, key);
+  }
+  return back;
+}
 
 /** The mirrored settings a source states, leaving out any it doesn't. */
 export function mirroredFrom(

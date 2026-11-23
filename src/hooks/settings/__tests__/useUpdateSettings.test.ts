@@ -20,8 +20,10 @@ const queued = () =>
     data: { updateSettings: null },
   });
 
-const refused = () =>
+/** `once` answers the first send only, as a refusal of that write alone. */
+const refused = ({ once = false } = {}) =>
   recordMock(UpdateUserPreferencesDocument, {
+    ...(once && { held: true, maxUsageCount: 1 }),
     data: {
       updateSettings: {
         __typename: 'ValidationError',
@@ -31,12 +33,12 @@ const refused = () =>
     },
   });
 
-const render = (write: ReturnType<typeof recordMock>) => {
+const render = (...writes: ReturnType<typeof recordMock>[]) => {
   const cache = makeCache();
   writeUnitSystemSettings(cache, UnitSystem.System, UnitSystem.Metric);
   const { result } = renderHookWithApollo(() => useUpdateSettings(), {
     cache,
-    operationMocks: [write.mock],
+    operationMocks: writes.map(write => write.mock),
   });
   const cached = () =>
     cache.readQuery({ query: GetUserSettingsDocument, optimistic: true })?.me
@@ -76,5 +78,23 @@ describe('useUpdateSettings', () => {
     expect(landed).toBe(false);
     expect(useStore.getState().budgetAndPrices).toBeNull();
     expect(cached()?.budgetAndPrices).toBeNull();
+  });
+
+  it('leaves a later change standing when an earlier one is refused', async () => {
+    const first = refused({ once: true });
+    const { update, cached } = render(first, queued());
+
+    // The later write goes out once the earlier one is answered.
+    await act(async () => {
+      const both = Promise.all([
+        update({ budgetAndPrices: true }),
+        update({ budgetAndPrices: false }),
+      ]);
+      first.release();
+      await both;
+    });
+
+    expect(useStore.getState().budgetAndPrices).toBe(false);
+    expect(cached()?.budgetAndPrices).toBe(false);
   });
 });

@@ -1,6 +1,7 @@
 import {
   MIRRORED_SETTINGS,
   mirroredFrom,
+  refusedMirror,
   settingsInput,
 } from '#/domain/serverSettings';
 import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
@@ -20,6 +21,12 @@ describe('settingsInput', () => {
       regional: { preferredUnitSystem: UnitSystem.Metric },
       shopping: { storeMode: false, budgetAndPrices: true },
     });
+  });
+
+  it('sends the language and the zone as regional settings', () => {
+    expect(settingsInput({ language: 'fr', timezone: 'Europe/Paris' })).toEqual(
+      { regional: { language: 'fr', timezone: 'Europe/Paris' } },
+    );
   });
 
   it('sends no group a change leaves alone', () => {
@@ -51,5 +58,17 @@ describe('the mirrored settings', () => {
       showTutorials: false,
     });
     expect(mirroredFrom(null)).toEqual({});
+  });
+});
+
+describe('a refused change', () => {
+  it('puts back what it replaced, where no later change replaced it', () => {
+    expect(
+      refusedMirror(
+        { storeMode: true, budgetAndPrices: null },
+        { storeMode: false, budgetAndPrices: true },
+        { storeMode: false, budgetAndPrices: false },
+      ),
+    ).toEqual({ storeMode: true });
   });
 });
