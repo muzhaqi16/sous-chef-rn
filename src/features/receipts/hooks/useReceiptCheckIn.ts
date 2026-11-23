@@ -1,4 +1,4 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import {
   AcquisitionMethod,
   ErrorCode,
@@ -10,8 +10,7 @@ import type { NewUsualStore } from '#features/catalog/cache/usualStores';
 import { localIntakeRow } from '#features/pantry/cache/localIntake';
 import { localMoveRow } from '#features/shoppingList/cache/localMove';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation, type Settled } from '#/apollo/utils/settleMutation';
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { todayKey } from '#/utils/dateUtils';
@@ -27,10 +26,7 @@ import {
   settleReceiptCheckIn,
   type CheckInLineResult,
 } from '../offline/receiptCheckIn';
-import {
-  CreateReceiptCheckInDocument,
-  type CreateReceiptCheckInMutation,
-} from './useReceiptCheckIn.generated';
+import { CreateReceiptCheckInDocument } from './useReceiptCheckIn.generated';
 import { cappedNames } from '#/utils/cappedNames';
 
 /** The API's cap on one check-in: a longer receipt goes as several. */
@@ -185,8 +181,9 @@ export function useReceiptCheckIn(listId: string | undefined) {
   const client = useApolloClient();
   const { setCheckInState, remintCheckInId, markAdded, markUnsent } =
     useReceiptDraftActions();
-  const [createCheckIn] = useMutation(CreateReceiptCheckInDocument, {
-    context: { localFirst: true },
+  const createCheckIn = useLocalWrite(CreateReceiptCheckInDocument, {
+    fallback: t('errors.addItemFailedRetry'),
+    present: 'none',
   });
 
   // Names the refused lines and, when one code accounts for all of them, its
@@ -264,36 +261,18 @@ export function useReceiptCheckIn(listId: string | undefined) {
       now: new Date().toISOString(),
     };
     markLines(lines);
-    const settled = pendingWritesOf(client.cache).send<
-      CreateReceiptCheckInMutation,
-      { input: typeof input; today: string }
-    >(
-      CreateReceiptCheckInDocument,
-      { input, today },
-      async (write): Promise<Settled<CreateReceiptCheckInMutation>> => {
+    const settled = createCheckIn.send({ input, today }, inputs, {
+      ready: async (write, amend) => {
         const placed = await turn;
-        if (!placed) return { status: 'failed', data: undefined };
+        if (!placed) return null;
         const { newStore, ...store } = placed;
-        if (newStore) {
-          pendingWritesOf(client.cache).amend(write.context.pendingWriteId, {
-            newStore,
-          });
-        }
-        return settleMutation(
-          () =>
-            createCheckIn({
-              ...write,
-              variables: { ...write.variables, input: { ...input, ...store } },
-            }),
-          {
-            document: CreateReceiptCheckInDocument,
-            fallback: t('errors.addItemFailedRetry'),
-            present: 'none',
-          },
-        );
+        if (newStore) amend({ newStore });
+        return {
+          ...write,
+          variables: { ...write.variables, input: { ...input, ...store } },
+        };
       },
-      inputs,
-    );
+    });
     return { input, settled };
   };
 

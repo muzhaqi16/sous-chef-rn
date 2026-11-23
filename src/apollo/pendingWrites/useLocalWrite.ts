@@ -34,7 +34,22 @@ export interface LocalWriteOptions<
     mutate: Mutate<TData, TVariables>,
     write: LocalWriteSend<TVariables>,
   ) => Promise<MutationResult<TData>>;
+  /**
+   * Holds the send behind an earlier step, with its change already shown. It
+   * returns the write to send, or null when that step left nothing to send:
+   * the write then settles failed, unsent and untold. `amend` adds to the
+   * inputs its local write reads.
+   */
+  ready?: (
+    write: LocalWriteSend<TVariables>,
+    amend: (inputs: LocalInputs) => void,
+  ) => Promise<LocalWriteSend<TVariables> | null>;
 }
+
+type SendSteps<TData, TVariables extends OperationVariables> = Pick<
+  LocalWriteOptions<TData, TVariables>,
+  'run' | 'ready'
+>;
 
 /**
  * Sends one local-first write: held as a pending layer from before the send
@@ -47,16 +62,24 @@ export function sendLocalWrite<TData, TVariables extends OperationVariables>(
   mutate: Mutate<TData, TVariables>,
   settle: WriteSettle,
   inputs?: LocalInputs,
-  run?: LocalWriteOptions<TData, TVariables>['run'],
+  { run, ready }: SendSteps<TData, TVariables> = {},
 ): Promise<Settled<TData>> {
-  return pendingWritesOf(cache).send(
+  const writes = pendingWritesOf(cache);
+  return writes.send(
     document,
     variables,
-    write =>
-      settleMutation(() => (run ? run(mutate, write) : mutate(write)), {
+    async (write): Promise<Settled<TData>> => {
+      const sent = ready
+        ? await ready(write, more =>
+            writes.amend(write.context.pendingWriteId, more),
+          )
+        : write;
+      if (!sent) return { status: 'failed', data: undefined };
+      return settleMutation(() => (run ? run(mutate, sent) : mutate(sent)), {
         ...settle,
         document,
-      }),
+      });
+    },
     inputs,
   );
 }
@@ -88,7 +111,7 @@ export function useLocalWrite<TData, TVariables extends OperationVariables>(
       mutate,
       { ...settle, ...options.settle },
       inputs,
-      options.run,
+      options,
     );
 
   const sendFields = (

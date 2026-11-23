@@ -1,9 +1,10 @@
+import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
-import { drained } from '#/test-utils/drainTimers';
+import { operationLog } from '#/test-utils/operationLog';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useLocalWrite } from '../useLocalWrite';
@@ -19,6 +20,8 @@ const fields = {
   fields: { name: 'Party' },
 };
 
+let log = operationLog();
+
 const render = (answer: ReturnType<typeof recordMock>) => {
   const cache = seedCache([LIST]);
   const hook = renderHookWithApollo(
@@ -27,7 +30,7 @@ const render = (answer: ReturnType<typeof recordMock>) => {
         fallback: 'Could not rename the list',
         present: 'none',
       }),
-    { cache, operationMocks: [answer.mock] },
+    { cache, links: [log.link], operationMocks: [answer.mock] },
   );
   return { ...hook, cache };
 };
@@ -36,8 +39,18 @@ const nameOf = (cache: ReturnType<typeof seedCache>) =>
   (cache.extract(true)['ShoppingList:list-1'] as { name?: string } | undefined)
     ?.name;
 
-beforeEach(() => jest.useFakeTimers());
-afterEach(() => jest.useRealTimers());
+/** Sends, and hands back how the write settled once it has. */
+async function settledBy<T>(send: () => Promise<T>): Promise<T | undefined> {
+  let settled: T | undefined;
+  await act(async () => {
+    settled = await send();
+  });
+  return settled;
+}
+
+beforeEach(() => {
+  log = operationLog();
+});
 
 describe('useLocalWrite', () => {
   it('settles applied with the answer, sending the variables it was given', async () => {
@@ -55,11 +68,11 @@ describe('useLocalWrite', () => {
     });
     const { result } = render(answer);
 
-    const settled = await drained(() =>
+    const settled = await settledBy(() =>
       result.current.sendFields({ ...fields, variables }),
     );
 
-    expect(settled.status).toBe('applied');
+    expect(settled?.status).toBe('applied');
     expect(answer.fired).toEqual([variables]);
   });
 
@@ -69,12 +82,12 @@ describe('useLocalWrite', () => {
     });
     const { result } = render(answer);
 
-    const settled = await drained(() =>
+    const settled = await settledBy(() =>
       result.current.sendFields({ ...fields, variables }),
     );
 
-    expect(settled.status).toBe('queued');
-    expect(settled.failure).toBeUndefined();
+    expect(settled?.status).toBe('queued');
+    expect(settled?.failure).toBeUndefined();
   });
 
   it('settles failed on a refusal, told in the copy the hook names', async () => {
@@ -89,12 +102,12 @@ describe('useLocalWrite', () => {
     });
     const { result, cache } = render(answer);
 
-    const settled = await drained(() =>
+    const settled = await settledBy(() =>
       result.current.sendFields({ ...fields, variables }),
     );
 
-    expect(settled.status).toBe('failed');
-    expect(settled.failure?.body).toBe('Could not rename the list');
+    expect(settled?.status).toBe('failed');
+    expect(settled?.failure?.body).toBe('Could not rename the list');
     // A refusal drops the pending layer: the row reads as the server holds it.
     expect(nameOf(cache)).toBe('Weekly');
   });
@@ -103,8 +116,9 @@ describe('useLocalWrite', () => {
     const answer = recordMock(UpdateShoppingListDocument, { held: true });
     const { result, cache } = render(answer);
 
-    void result.current.sendFields({ ...fields, variables });
-    await drained(() => Promise.resolve());
+    await act(async () => {
+      void result.current.sendFields({ ...fields, variables });
+    });
 
     expect(nameOf(cache)).toBe('Party');
   });
@@ -121,14 +135,14 @@ describe('useLocalWrite', () => {
     });
     const { result } = render(answer);
 
-    const settled = await drained(() =>
+    const settled = await settledBy(() =>
       result.current.sendFields(
         { ...fields, variables },
         { settle: { fallback: 'Could not save this one' } },
       ),
     );
 
-    expect(settled.failure?.body).toBe('Could not save this one');
+    expect(settled?.failure?.body).toBe('Could not save this one');
   });
 
   it('says a send is on its way until the server answers', async () => {
@@ -136,9 +150,42 @@ describe('useLocalWrite', () => {
     const { result } = render(answer);
     expect(result.current.sending).toBe(false);
 
-    void result.current.sendFields({ ...fields, variables });
-    await drained(() => Promise.resolve());
+    await act(async () => {
+      void result.current.sendFields({ ...fields, variables });
+      await log.requested(UpdateShoppingListDocument);
+    });
 
     expect(result.current.sending).toBe(true);
+  });
+
+  it('sends what its ready step hands it, once that step is done', async () => {
+    const answer = recordMock(UpdateShoppingListDocument, {
+      data: { updateShoppingList: null },
+    });
+    const { result } = render(answer);
+    const renamed = { input: { ...variables.input, name: 'Picnic' } };
+
+    await settledBy(() =>
+      result.current.send(variables, fields, {
+        ready: async write => ({ ...write, variables: renamed }),
+      }),
+    );
+
+    expect(answer.fired).toEqual([renamed]);
+  });
+
+  it('settles failed, unsent and untold, when its ready step leaves nothing to send', async () => {
+    const answer = recordMock(UpdateShoppingListDocument, {
+      data: { updateShoppingList: null },
+    });
+    const { result, cache } = render(answer);
+
+    const settled = await settledBy(() =>
+      result.current.send(variables, fields, { ready: async () => null }),
+    );
+
+    expect(settled).toEqual({ status: 'failed', data: undefined });
+    expect(answer.fired).toEqual([]);
+    expect(nameOf(cache)).toBe('Weekly');
   });
 });
