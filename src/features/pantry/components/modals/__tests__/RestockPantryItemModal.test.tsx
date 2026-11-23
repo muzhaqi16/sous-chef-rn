@@ -201,6 +201,12 @@ describe('restocking', () => {
     typeCost(TOTAL_PAID(), '3.49');
     typeInto(t('labels.notes'), t('restockItem.notesPlaceholder'), 'on sale');
     fireEvent.press(screen.getByText(t('instructions.expiryOptional')));
+    // Next month's 20th is ahead of any today; this month's may have passed.
+    fireEvent.press(
+      screen.getByTestId(/header\.rightArrow$/, {
+        includeHiddenElements: true,
+      }),
+    );
     const [day20] = screen.getAllByText('20');
     if (!day20) throw new Error('the calendar shows no 20th');
     fireEvent.press(day20);
