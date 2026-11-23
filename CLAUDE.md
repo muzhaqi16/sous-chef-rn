@@ -391,6 +391,9 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 
 - **Drive a sheet with `visible` + `onDismiss`**; never inline `BottomSheet`,
   which conflicts with the global backdrop.
+- **A sheet opens fresh**: its form state lives in its content, which gorhom
+  unmounts on dismiss, so no `prevVisible` reset; what a sheet deliberately
+  keeps lives in its parent. Verified: `#gorhom-unmounts-a-modals-content-once-it-is-dismissed`.
 - **Every text input inside a sheet resolves to gorhom's `BottomSheetTextInput`**
   via `useIsBottomSheetInput()` — it throws outside a sheet. Verified: `#gorhom-keyboard-handling-requires-bottomsheettextinput`.
 - **A content-sized sheet (`enableDynamicSizing`) takes NO keyboard-aware

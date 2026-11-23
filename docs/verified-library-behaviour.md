@@ -28,6 +28,26 @@ Re-check:
 cat node_modules/@gorhom/bottom-sheet/src/components/bottomSheetView/styles.ts
 ```
 
+### gorhom unmounts a modal's content once it is dismissed
+
+**Claim:** a `BottomSheetModal` renders nothing until it is presented and
+unmounts its content when a dismissal completes, so state held inside a
+`Sheet`'s content starts fresh on each opening. State the component rendering
+the `Sheet` holds lives on.
+
+**Verified against `@gorhom/bottom-sheet@5.2.14`.** `BottomSheetModal` returns
+`mount ? (...) : null`; its `unmount()` resets that state, and a close runs it
+because `enableDismissOnClose` defaults to `true` (`useStandardBottomSheet` sets
+no other). The Jest mock models it (`__tests__/setup/mocks/gorhom-bottom-sheet.js`);
+`src/components/templates/__tests__/Sheet.test.tsx` holds the rule.
+
+Re-check:
+
+```
+grep -n "return mount\|function unmount\|setState(INITIAL_STATE)" node_modules/@gorhom/bottom-sheet/src/components/bottomSheetModal/BottomSheetModal.tsx
+grep -n "DEFAULT_ENABLE_DISMISS_ON_CLOSE =" node_modules/@gorhom/bottom-sheet/src/components/bottomSheetModal/constants.ts
+```
+
 ### gorhom sheet content hides its children from VoiceOver
 
 **Claim:** with gorhom's defaults, a sheet's content is one accessibility
