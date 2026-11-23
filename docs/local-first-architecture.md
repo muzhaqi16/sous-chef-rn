@@ -170,6 +170,13 @@ reason for having none (those show on the answer).
 | `commit`    | On the root, after the server confirms                   | Writes what the answer does not state, such as a new row's edge                     |
 | `refused`   | When the server refuses a queued write for good          | Undoes what the write left outside the cache, which dropping its layer cannot reach |
 | `orderedBy` | At send, and stored with a queued write                  | Names what the write stays in order behind, when its input names no row             |
+| `subject`   | Read by the queue at send, withdrawal and eviction       | Names the row, where it is not the input's `id`, and whether it is minted or deleted |
+
+An operation's registry entry is its descriptor. One that shares another's behaviour spreads it and
+adds only what differs: `{ ...entityFields, subject: { key: 'batchId' } }`. Unstated, a subject is the
+input's `id`, minted by a `Create*Input` and deleted by a `Delete*Input` (`queuedSubject.ts`).
+Replay behaviour keeps its own registries, keyed by the same operation (`preparationRegistry.ts`,
+`replayRegistry.ts`): it loads unit lookups and reconcilers, and `LOCAL_WRITES` is on the launch path.
 
 `recoverable: false` marks a write whose `refused` hands it back to a retry of its own, as a receipt
 check-in does, so it stays out of the list of changes not saved. `conflict` declares the row a stale
@@ -766,7 +773,7 @@ Who reads what:
   is the one registration, made from `useCoreStartup` (`src/bootstrap/`). `handleQueueFailure` refuses the
   write (`pendingWrites.refuse`: its `refused`, then its layer goes), toasts the user in the app's own
   copy and **removes the entry from the queue**. A write with no layer evicts the entity it created or
-  changed instead — its subject, read from the operation's input type (`queuedSubject.ts`), never a
+  changed instead — its subject, as its descriptor states it or its input's name implies (`queuedSubject.ts`), never a
   parent or source it merely names. Once the drain pass settles it re-reads the active queries, so a
   refused update's row shows the server's value.
 - **Reconnect ordering.** The resync that follows a reconnect waits for the queue to drain
