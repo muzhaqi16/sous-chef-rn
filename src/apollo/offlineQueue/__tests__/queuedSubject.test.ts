@@ -1,6 +1,8 @@
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { queuedSubject, subjectTypeOf } from '../queuedSubject';
+import {
+  deletesItsSubject,
+  queuedSubject,
+  subjectTypeOf,
+} from '../queuedSubject';
 import type {
   PantryItem,
   ShoppingListItem,
@@ -8,14 +10,16 @@ import type {
 import {
   AddRecipeToFavoritesDocument,
   ForkRecipeDocument,
+  RemoveRecipeFromFavoritesDocument,
   UpdateFavoriteRecipeDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import {
   AddItemToShoppingListDocument,
   CompleteShoppingListDocument,
+  MoveShoppingItemToPantryDocument,
+  RemoveItemFromShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   AddDietaryRestrictionDocument,
   UpdateDietaryProfileDocument,
@@ -25,8 +29,13 @@ import { AddTemplateItemDocument } from '#features/mealPlan/graphql/mealTemplate
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import { RecordPantryStockCheckDocument } from '#features/pantry/hooks/useStockCheck.generated';
 import {
+  ConvertExpiredToWasteDocument,
   CreatePantryItemDocument,
+  CreatePantryItemUsageDocument,
   DeletePantryItemDocument,
+  OpenPantryItemBatchDocument,
+  UpdatePantryItemQuantityDocument,
+  WastePantryItemBatchDocument,
 } from '#features/pantry/graphql/pantry.generated';
 
 describe('queuedSubject', () => {
@@ -114,6 +123,48 @@ describe('queuedSubject', () => {
       ['row-a', 'row-b'],
     ],
     [
+      'a use names the stack it draws on, minting none',
+      CreatePantryItemUsageDocument,
+      { pantryItemId: 'pi-2', amount: { quantity: 1 } },
+      ['pi-2'],
+      [],
+    ],
+    [
+      'an expired-stock discard names the stack',
+      ConvertExpiredToWasteDocument,
+      { pantryItemId: 'pi-3' },
+      ['pi-3'],
+      [],
+    ],
+    [
+      'opening a package names the batch',
+      OpenPantryItemBatchDocument,
+      { batchId: 'batch-1' },
+      ['batch-1'],
+      [],
+    ],
+    [
+      'wasting a package names the batch',
+      WastePantryItemBatchDocument,
+      { batchId: 'batch-2' },
+      ['batch-2'],
+      [],
+    ],
+    [
+      'a move to the pantry names the stack it mints',
+      MoveShoppingItemToPantryDocument,
+      { shoppingListItemId: 'row-1', pantryItemId: 'pi-new' },
+      ['pi-new'],
+      ['pi-new'],
+    ],
+    [
+      'unsaving a recipe names the recipe',
+      RemoveRecipeFromFavoritesDocument,
+      { recipeId: 'recipe-1' },
+      ['recipe-1'],
+      [],
+    ],
+    [
       'an entity input names itself by id',
       DeletePantryItemDocument,
       { id: 'pi-9' },
@@ -148,23 +199,6 @@ describe('queuedSubject', () => {
 
   // The field names are typed against codegen; the input-type names are keys
   // the typechecker cannot see. A misspelt one never matches and falls to `id`.
-  it('names only input types the schema declares', () => {
-    const read = (path: string) =>
-      readFileSync(join(process.cwd(), path), 'utf8');
-    const schema = read('src/graphql/generated/schema.graphql');
-    const table = /const SUBJECT_KEYS[^=]*=\s*\{([^}]*)\}/.exec(
-      read('src/apollo/offlineQueue/queuedSubject.ts'),
-    )?.[1];
-    const names = [...(table ?? '').matchAll(/^\s*(\w+):/gm)].flatMap(m =>
-      m[1] ? [m[1]] : [],
-    );
-    expect(names.length).toBeGreaterThan(5);
-    const undeclared = names.filter(
-      name => !new RegExp(`^input ${name} \\{`, 'm').test(schema),
-    );
-    expect(undeclared).toEqual([]);
-  });
-
   it('gives an input with no subject field no subject', () => {
     expect(
       queuedSubject({
@@ -242,5 +276,19 @@ describe('subjectTypeOf', () => {
     ['an input named by no entity verb', CompleteShoppingListDocument],
   ])('names no type for %s', (_label, mutation) => {
     expect(subjectTypeOf({ mutation })).toBeNull();
+  });
+});
+
+describe('deletesItsSubject', () => {
+  it.each([
+    ['a Delete input', DeletePantryItemDocument, true],
+    [
+      'a line removal its descriptor calls a deletion',
+      RemoveItemFromShoppingListDocument,
+      true,
+    ],
+    ['an update', UpdateShoppingListItemDocument, false],
+  ])('reads %s', (_label, mutation, expected) => {
+    expect(deletesItsSubject({ mutation })).toBe(expected);
   });
 });

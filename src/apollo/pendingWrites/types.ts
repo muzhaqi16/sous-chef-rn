@@ -18,7 +18,24 @@ export interface PendingWrite<TInputs extends LocalInputs = LocalInputs> {
  * the same variables, inputs and cache: it re-runs whenever the server's data
  * under it changes, and after a restart.
  */
+/**
+ * The row a write's input names, where it is not `input.id` as a
+ * `Create|Update|Delete<Type>Input` names it.
+ */
+export interface WriteSubject {
+  /** The input field naming it; a list names one row per entry. */
+  key?: string;
+  /** The field naming each listed entry's row; `id` unless stated. */
+  rowKey?: string;
+  /** The device mints it, as it does a `Create*Input.id`. */
+  mints?: true;
+  /** The write deletes it, as a `Delete*Input` does. */
+  deletes?: true;
+}
+
 export interface LocalWrite<TInputs extends LocalInputs = LocalInputs> {
+  /** What the queue reads as the write's row, where the input's name does not say. */
+  subject?: WriteSubject;
   /**
    * What the write stays in order behind, on its way and in the queue, when it
    * changes something its input names no row for, such as a list answered

@@ -1,56 +1,9 @@
-import type { DocumentNode } from 'graphql';
+import { getOperationAST, type DocumentNode } from 'graphql';
 import { inputTypeNameOf } from '#/apollo/utils/documentOperation';
-import type {
-  AddItemsToShoppingListInput,
-  ConvertExpiredToWasteInput,
-  CreatePantryItemUsageInput,
-  CreateReceiptCheckInInput,
-  ForkRecipeInput,
-  MoveShoppingItemToPantryInput,
-  OpenPantryItemBatchInput,
-  RecordPantryStockCheckInput,
-  RemoveRecipeFromFavoritesInput,
-  UpdatePantryItemQuantityInput,
-  WastePantryItemBatchInput,
-} from '#/graphql/generated/schemaTypes';
+import { LOCAL_WRITES } from '#/apollo/pendingWrites/localWriteRegistry';
+import type { WriteSubject } from '#/apollo/pendingWrites/types';
 import type { QueuedMutation, RowAdoption } from './types';
 import { isRecord } from '#/utils/isRecord';
-
-/** The input types whose subject is a field other than `id`. */
-interface SubjectInputs {
-  AddItemsToShoppingListInput: AddItemsToShoppingListInput;
-  ConvertExpiredToWasteInput: ConvertExpiredToWasteInput;
-  CreatePantryItemUsageInput: CreatePantryItemUsageInput;
-  CreateReceiptCheckInInput: CreateReceiptCheckInInput;
-  ForkRecipeInput: ForkRecipeInput;
-  MoveShoppingItemToPantryInput: MoveShoppingItemToPantryInput;
-  OpenPantryItemBatchInput: OpenPantryItemBatchInput;
-  RecordPantryStockCheckInput: RecordPantryStockCheckInput;
-  RemoveRecipeFromFavoritesInput: RemoveRecipeFromFavoritesInput;
-  UpdatePantryItemQuantityInput: UpdatePantryItemQuantityInput;
-  WastePantryItemBatchInput: WastePantryItemBatchInput;
-}
-
-/**
- * The field naming a write's subject, per input type; unlisted is `id`.
- * `ForkRecipeInput.id` is the SOURCE recipe. `UpdateFavoriteRecipeInput` stays
- * unlisted: it edits a SavedRecipe the input never names.
- */
-const SUBJECT_KEYS: {
-  readonly [K in keyof SubjectInputs]: keyof SubjectInputs[K] & string;
-} = {
-  AddItemsToShoppingListInput: 'items',
-  ConvertExpiredToWasteInput: 'pantryItemId',
-  CreatePantryItemUsageInput: 'pantryItemId',
-  CreateReceiptCheckInInput: 'lines',
-  ForkRecipeInput: 'newRecipeId',
-  MoveShoppingItemToPantryInput: 'pantryItemId',
-  OpenPantryItemBatchInput: 'batchId',
-  RecordPantryStockCheckInput: 'entries',
-  RemoveRecipeFromFavoritesInput: 'recipeId',
-  UpdatePantryItemQuantityInput: 'pantryItemId',
-  WastePantryItemBatchInput: 'batchId',
-};
 
 export interface QueuedSubject {
   /** What the write creates or changes: its withdrawal target and pending ids. */
@@ -61,66 +14,27 @@ export interface QueuedSubject {
   mintedIds: string[];
 }
 
-/** Inputs keyed by something other than `id` whose subject is minted by the device. */
-const MINTING_SUBJECT_INPUTS: ReadonlySet<keyof SubjectInputs> = new Set([
-  'AddItemsToShoppingListInput',
-  'CreateReceiptCheckInInput',
-  'ForkRecipeInput',
-  'MoveShoppingItemToPantryInput',
-]);
-
 /**
- * The field naming each row's entity, for a subject that is a list of rows;
- * `id` otherwise. A check-in line names the stack it adds, which a stock-free
- * line has none of; a stock check's entry names the stack it answers for.
+ * What a write's descriptor states of its subject. Unstated, the input's name
+ * says: its `id`, minted by a `Create*Input`, deleted by a `Delete*Input`.
  */
-const ROW_SUBJECT_KEYS: Partial<Record<keyof SubjectInputs, string>> = {
-  CreateReceiptCheckInInput: 'pantryItemId',
-  RecordPantryStockCheckInput: 'pantryItemId',
+const subjectOf = (mutation: DocumentNode): WriteSubject => {
+  // Never throws, as `operationNameOf` does: an unnamed document has none.
+  const name = getOperationAST(mutation)?.name?.value;
+  return (name === undefined ? undefined : LOCAL_WRITES[name]?.subject) ?? {};
 };
-
-/** `id`-keyed inputs outside the `Create*` names whose `id` the device mints. */
-const MINTING_ID_INPUTS: ReadonlySet<string> = new Set([
-  'AddBrandToListInput',
-  'AddRecipeToFavoritesInput',
-  'AddRestrictionInput',
-  'AddTemplateItemInput',
-]);
-
-/**
- * `Create*Input.id` is the device's cuid; an update's `id` and a usage's
- * `pantryItemId` name a row the server already owns.
- */
-const mintsItsSubject = (typeName: string | null, key: string): boolean =>
-  typeName !== null &&
-  (isSubjectInput(typeName)
-    ? MINTING_SUBJECT_INPUTS.has(typeName)
-    : key === 'id' &&
-      (typeName.startsWith('Create') || MINTING_ID_INPUTS.has(typeName)));
-
-const isSubjectInput = (name: string): name is keyof SubjectInputs =>
-  name in SUBJECT_KEYS;
 
 const isId = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
-
-/** `RemoveItemFromShoppingListInput.id` is the row it deletes, as a `Delete*Input.id` is. */
-const DELETING_INPUTS: ReadonlySet<string> = new Set([
-  'RemoveItemFromShoppingListInput',
-]);
 
 /** Whether a queued write deletes the entity its subject names. */
 export const deletesItsSubject = ({
   mutation,
 }: {
   mutation: DocumentNode;
-}): boolean => {
-  const typeName = inputTypeNameOf(mutation);
-  return (
-    typeName !== null &&
-    (typeName.startsWith('Delete') || DELETING_INPUTS.has(typeName))
-  );
-};
+}): boolean =>
+  subjectOf(mutation).deletes === true ||
+  (inputTypeNameOf(mutation)?.startsWith('Delete') ?? false);
 
 /** The API's name for a write of one entity: `Create|Update|Delete<Type>Input`. */
 const ENTITY_WRITE_INPUT = /^(?:Create|Update|Delete)([A-Z][A-Za-z]*)Input$/;
@@ -136,13 +50,14 @@ export function subjectTypeOf({
   mutation: DocumentNode;
 }): string | null {
   const typeName = inputTypeNameOf(mutation);
-  if (!typeName || isSubjectInput(typeName)) return null;
+  if (!typeName || subjectOf(mutation).key !== undefined) return null;
   return ENTITY_WRITE_INPUT.exec(typeName)?.[1] ?? null;
 }
 
 /**
- * Reads a queued write's subject from the input type its document declares.
- * `variables` is optional because an entry is read back from persisted JSON.
+ * Reads a queued write's subject: the row its descriptor names, else its
+ * `input.id`. `variables` is optional because an entry is read back from
+ * persisted JSON.
  */
 export function queuedSubject({
   mutation,
@@ -156,10 +71,9 @@ export function queuedSubject({
     return { subjectIds: [], sourceIds: [], mintedIds: [] };
   }
 
-  const typeName = inputTypeNameOf(mutation);
-  const subjectInput = typeName && isSubjectInput(typeName) ? typeName : null;
-  const key = subjectInput ? SUBJECT_KEYS[subjectInput] : 'id';
-  const rowKey = (subjectInput && ROW_SUBJECT_KEYS[subjectInput]) ?? 'id';
+  const subject = subjectOf(mutation);
+  const key = subject.key ?? 'id';
+  const rowKey = subject.rowKey ?? 'id';
   const value = fields[key];
 
   const subjectIds = Array.isArray(value)
@@ -168,9 +82,12 @@ export function queuedSubject({
         .filter(isId)
     : [value].filter(isId);
   const sourceIds = key !== 'id' && isId(fields.id) ? [fields.id] : [];
-  const mintedIds = mintsItsSubject(typeName ?? null, key) ? subjectIds : [];
+  const mints =
+    subject.mints === true ||
+    (key === 'id' &&
+      (inputTypeNameOf(mutation)?.startsWith('Create') ?? false));
 
-  return { subjectIds, sourceIds, mintedIds };
+  return { subjectIds, sourceIds, mintedIds: mints ? subjectIds : [] };
 }
 
 /** What a later write waits on while this one is undelivered: its rows and its order. */
