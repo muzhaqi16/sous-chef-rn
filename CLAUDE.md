@@ -172,8 +172,9 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   the key; connections stay with their edge writers.
 - **A response that states a count settles it**: no handler adjusts on top
   (`carriesListTotals`, `carriesPantryCount`).
-- **A local-first write is one `LocalWrite`** in `LOCAL_WRITES`, held as an optimistic
-  layer by `pendingWritesOf(cache).send` (`localWriteCoverage.test.ts`): the root holds
+- **A local-first write is one `LocalWrite`** in `LOCAL_WRITES`, sent through
+  `useLocalWrite(Document, settle)` (its core `sendLocalWrite` outside a hook) and held
+  as an optimistic layer (`localWriteCoverage.test.ts`): the root holds
   only what the server said, and a refusal just drops the layer. `apply` re-runs, so it
   is deterministic (`sous-chef/local-write-is-deterministic`). **`commit` writes what
   the answer does NOT state**, so read the mutation's selection first; no gate catches
@@ -201,8 +202,8 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
 - **Settle a write with `settleMutation`** (`applied | queued | failed`; queued
   is never a failure) and narrow with `appliedPayload(data)`
   (`writesSettleThroughOneMechanism.test.ts`).
-- **`localFirst` goes on the `useMutation` options**: a per-call context object
-  replaces the hook's, so extra keys use the callback form
+- **`localFirst` goes on the `useMutation` options**, which `useLocalWrite` sets; a
+  per-call context object replaces the hook's, so extra keys use the callback form
   (`sous-chef/queueable-write-is-local-first`).
 - **Pick a mutation pattern from `docs/apollo-client-patterns.md` § Choosing a pattern** (no `update` callback by
   default, `refetchQueries` last); build optimistic responses from

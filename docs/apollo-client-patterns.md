@@ -108,7 +108,7 @@ Pick by what the mutation changes; the numbered patterns below carry the code.
 | No `update` callback (preferred default)    | Mutation returns the entity; Apollo normalizes by `__typename + id` | `useAdjustPantryItemQuantity`                                              |
 | `cache.modify` on parent aggregates         | Parent stat fields not in the response                              | `useRecipeReviews` (`Pantry.stats` uses its `mergeObjects` policy instead) |
 | A pending write                             | A field edit that shows at once and survives being queued           | `useToggleShoppingItem`, `usePublishRecipe` (Pattern 5)                    |
-| `sendFields`                                | A plain edit of one row's fields                                    | `useAppSettings`, `useNotificationSettings`                                |
+| `useLocalWrite(...).sendFields`             | A plain edit of one row's fields                                    | `useUpdateSettings`, `useUpdateHomeFields`                                 |
 | `cache.modify` on connection edges + counts | Entity moves between filtered connections                           | `moveShoppingListItemTo*` helpers                                          |
 | `writeFragment`                             | Subscription push written through                                   | `usePantrySubscriptions`, `useShoppingListSubscriptions`                   |
 | `refetchQueries` (last resort)              | Query shape underivable from the response                           | `useHomeSubscriptions`, `usePantryItemDetailActions`                       |
@@ -232,8 +232,8 @@ const [deleteItemMutation] = useDeleteItemMutation({
 ```typescript
 // `useAdjustPantryItemQuantity`: no `update`. The payload spreads the item's
 // readers, and Apollo merges it into the cache by `__typename` + `id`.
-const [adjustMutation] = useMutation(AdjustPantryItemQuantityDocument, {
-  context: { localFirst: true },
+const adjust = useLocalWrite(AdjustPantryItemQuantityDocument, {
+  fallback: t('errors.adjustQuantityFailed'),
 });
 ```
 
@@ -314,7 +314,7 @@ update: (cache, { data }, { variables }) => {
 
 **Use When**: Editing fields of an entity the cache already holds — a toggle, a setting, a rename — where the change shows at once and survives being queued.
 
-**Shape**: register the operation in `LOCAL_WRITES`, then send it through `pendingWritesOf(cache).send`. The change is an optimistic layer over the server's data until the server answers; a refusal drops the layer, so there is nothing to revert (`docs/local-first-architecture.md` § 2).
+**Shape**: register the operation in `LOCAL_WRITES`, then send it through `useLocalWrite(Document, settle).send` (`src/apollo/pendingWrites/useLocalWrite.ts`), which owns the mutation, its local-first marker, the pending layer and the settle step; `sending` says a send is on its way. A send held behind an earlier step passes `ready`, which hands back the write to send or null when there is nothing to send (the receipt check-in waits on its store, the suggestion undo on its dismissal). Code that is not a hook, or that is handed its caller's mutate, uses its core, `sendLocalWrite`. The change is an optimistic layer over the server's data until the server answers; a refusal drops the layer, so there is nothing to revert (`docs/local-first-architecture.md` § 2).
 
 - **The layer is the write's own, not an `optimisticResponse`.** Apollo removes an `optimisticResponse` layer on the offline queue's null result, which would take the change away while it is still queued.
 - **`apply` re-runs.** It runs on every rebuild and after a restart, so it reads only the write's variables, its inputs and the cache (`sous-chef/local-write-is-deterministic`). A clock or a minted id goes in `inputs`.
@@ -323,20 +323,21 @@ update: (cache, { data }, { variables }) => {
 - **`queued` is not a failure.** `settleMutation` answers `applied | queued | failed`. Queued keeps the layer, and failed drops it.
 - **The settle shows the failure.** It alerts by default; `present: 'toast'` shows the same copy as an error toast, and `present: 'none'` hands it to the caller as `failure`, for a caller that combines several writes into one message.
 
-**Example - a plain field edit** (`useUpdateHomeFields`, `useAppSettings`, `useNotificationSettings`). `sendFields` sends a write registered as `entityFields`, and returns the outcome for the caller to report:
+**Example - a plain field edit** (`useUpdateHomeFields`, `useUpdateSettings`). `sendFields` sends a write registered as `entityFields`, and returns the outcome for the caller to report; a per-call settle option rides on the send:
 
 ```typescript
-const [updateHomeMutation] = useMutation(UpdateHomeDocument, {
-  context: { localFirst: true },
+const updateHome = useLocalWrite(UpdateHomeDocument, {
+  fallback: t('errors.updateHomeFailed'),
 });
 
-const settled = await sendFields(client.cache, {
-  entity: { __typename: 'Home', id: homeId },
-  fields: updates,
-  variables: { input: { id: homeId, ...updates, version: home.version } },
-  mutate: updateHomeMutation,
-  settle: { document: UpdateHomeDocument, fallback },
-});
+const settled = await updateHome.sendFields(
+  {
+    entity: { __typename: 'Home', id: homeId },
+    fields: updates,
+    variables: { input: { id: homeId, ...updates, version: home.version } },
+  },
+  { settle: { fallback } },
+);
 ```
 
 **Example - a field with a merge-policy invariant** (`useToggleShoppingItem`). A tick is an `updateShoppingListItem` carrying only the flag. Its `LocalWrite` (`updateRow`) writes `purchaseInfo` through its one writer and moves the row between the filtered `itemsConnection` variants, and the call states what `apply` cannot re-derive:
@@ -352,8 +353,11 @@ export const updateRow: LocalWrite<UpdateRowInputs> = {
   },
 };
 
-const settled = await pendingWritesOf(client.cache).send(
-  UpdateShoppingListItemDocument,
+const updateItem = useLocalWrite(UpdateShoppingListItemDocument, {
+  fallback: t('errors.updateItemFailed'),
+});
+
+const settled = await updateItem.send(
   {
     input: {
       id: itemId,
@@ -361,11 +365,6 @@ const settled = await pendingWritesOf(client.cache).send(
       purchaseTracking: { isPurchased: newStatus },
     },
   },
-  write =>
-    settleMutation(() => updatePurchaseMutation(write), {
-      document: UpdateShoppingListItemDocument,
-      fallback: t('errors.updateItemFailed'),
-    }),
   {
     purchase: {
       listId,
@@ -434,8 +433,8 @@ rebuilt from the queue after an app restart.
 
 A create's `apply` writes its whole entity under a client-minted id, and its
 `commit` lists the answered row (`docs/local-first-architecture.md` § 2).
-`useAddToPantry.addItem` is the worked example: `generateEntityId`, then
-`pendingWrites.send`, whose `createItem` write calls `writeLocalPantryItem` +
+`usePantryIntake.addItem` is the worked example: `generateEntityId`, then
+`useLocalWrite(CreatePantryItemDocument).send`, whose `createItem` write calls `writeLocalPantryItem` +
 `addPantryItemLocally`. `writeLocalPantryItem` states only what the create knows;
 `writeLocalEntity` fills the rest of the row fragment (the entity's readers plus
 its empty connections) from the cache where held, else from the SDL-derived
@@ -797,11 +796,11 @@ import { useFragmentList } from '#/hooks/apollo/useFragmentList';
 // A query that must not run yet
 import { skipToken } from '@apollo/client/react';
 
-// A pending write and its client-minted id
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+// A local-first write and its client-minted id
+import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { generateEntityId } from '#/utils/generateEntityId';
 
-// A write's outcome
+// An online-only write's outcome (a local-first send settles itself)
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 
@@ -857,21 +856,15 @@ import { CacheStrategy } from '#/services/subscriptions/types';
 ### Example 1: Simple List Item Addition
 
 ```typescript
-const [addItemMutation] = useMutation(AddItemDocument, {
-  // Every call queues when the API is unreachable.
-  context: { localFirst: true },
+// Every send queues when the API is unreachable.
+const addItem = useLocalWrite(AddItemDocument, {
+  fallback: t('errors.addItemFailed'),
 });
 
 const id = generateEntityId();
 // The layer shows the row now and is rebuilt from the queue after a restart.
-const settled = await pendingWritesOf(client.cache).send(
-  AddItemDocument,
+const settled = await addItem.send(
   { input: { ...input, id } },
-  write =>
-    settleMutation(() => addItemMutation(write), {
-      document: AddItemDocument,
-      fallback: t('errors.addItemFailed'),
-    }),
   { row: buildLocalItem(id, input) },
 );
 ```
@@ -1119,7 +1112,7 @@ make the row readable again.
 **Field patches** (`src/apollo/utils/localFirstFields.ts`): `snapshotFields`
 captures what a write is about to change, and `writeEntityFields` writes it
 through a fragment (so an unheld field is added, not silently skipped).
-`sendFields` (`src/apollo/pendingWrites/`) sends a field edit as a pending write.
+`useLocalWrite(...).sendFields` (`src/apollo/pendingWrites/`) sends a field edit as a pending write.
 
 **Example Usage:**
 
@@ -1514,7 +1507,7 @@ See `src/features/shoppingList/cache/connections.ts` for the full implementation
 
 ## Reference implementations
 
-- **Mutation patterns**: `useAddToPantry.ts` (local-first create through `pendingWrites.send`), `createShoppingListRow` in `src/features/shoppingList/cache/createShoppingListRow.ts` (the shopping-row create lifecycle every add site shares), `useToggleShoppingItem.ts` (a pending write with its own `LocalWrite`), `sendFields` (plain field edits).
+- **Mutation patterns**: `useLocalWrite` (`src/apollo/pendingWrites/useLocalWrite.ts`, every local-first send), `usePantryIntake.ts` (a local-first create), `createShoppingListRow` in `src/features/shoppingList/cache/createShoppingListRow.ts` (the shopping-row create lifecycle every add site shares), `useToggleShoppingItem.ts` (a pending write with its own `LocalWrite`), `useLocalWrite(...).sendFields` (plain field edits).
 - **Replay reconciliation**: `REPLAY_RECONCILERS` in `src/apollo/offlineQueue/replayRegistry.ts`; `__tests__/apollo/queueableWritesTakeNoUpdate.test.ts` fails when a queueable mutation takes an `update` of its own, as what an answer leaves goes in `commit`.
 - **Resync**: `src/apollo/refetchEvents.ts`.
 - **Fragment reads**: `useFragmentList` (`src/hooks/apollo/useFragmentList.ts`); `useRecipeData` for a single masked entity.
