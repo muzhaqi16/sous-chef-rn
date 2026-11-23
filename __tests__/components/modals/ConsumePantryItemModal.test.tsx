@@ -1,58 +1,49 @@
-'use no memo';
-
 import React from 'react';
-import { render } from '@testing-library/react-native';
 import { ConsumePantryItemModal } from '#features/pantry/components/modals/ConsumePantryItemModal';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  ACTION_ITEM_ID,
+  actionItemCache,
+} from '#/test-utils/fixtures/pantryActionFixtures';
+import { ConsumptionUnitsForPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 
-jest.mock('#features/pantry/components/modals/PantryActionModal', () => ({
-  PantryActionModal: (
-    props: React.ComponentProps<
-      typeof import('#features/pantry/components/modals/PantryActionModal').PantryActionModal
-    >,
-  ) => {
-    const { Text, View } = require('react-native');
-    return (
-      <View>
-        <Text>{props.title}</Text>
-        <Text>{props.confirmLabel}</Text>
-      </View>
-    );
-  },
-}));
-jest.mock('../../../src/components/molecules/FractionInput', () => ({
-  FractionInput: () => null,
-}));
-jest.mock('../../../src/components/atoms/FormInput', () => ({
-  FormInput: () => null,
-}));
+type Props = React.ComponentProps<typeof ConsumePantryItemModal>;
 
 describe('ConsumePantryItemModal', () => {
-  const defaultProps = {
+  const defaultProps: Props = {
     visible: true,
-    pantryItemId: 'pi1',
+    pantryItemId: ACTION_ITEM_ID,
     onClose: jest.fn(),
     onConfirm: jest.fn(),
   };
 
+  const renderModal = (props: Partial<Props> = {}) =>
+    renderWithApollo(<ConsumePantryItemModal {...defaultProps} {...props} />, {
+      cache: actionItemCache(),
+      operationMocks: [
+        recordMock(ConsumptionUnitsForPantryItemDocument, {
+          data: { consumptionUnitsForPantryItem: [] },
+        }).mock,
+      ],
+    });
+
   it('renders without crashing', () => {
-    const { toJSON } = render(<ConsumePantryItemModal {...defaultProps} />);
+    const { toJSON } = renderModal();
     expect(toJSON()).toBeTruthy();
   });
 
   it('shows Consume Item title', () => {
-    const { getByText } = render(<ConsumePantryItemModal {...defaultProps} />);
+    const { getByText } = renderModal();
     expect(getByText('Consume Item')).toBeTruthy();
   });
 
-  it('shows Confirm button label', () => {
-    const { getByText } = render(<ConsumePantryItemModal {...defaultProps} />);
-    expect(getByText('Confirm')).toBeTruthy();
+  it('labels its confirm Confirm', () => {
+    const { getByLabelText } = renderModal();
+    expect(getByLabelText('Confirm')).toBeTruthy();
   });
 
-  it('renders with null pantryItemId', () => {
-    const { toJSON } = render(
-      <ConsumePantryItemModal {...defaultProps} pantryItemId={null} />,
-    );
-    expect(toJSON()).toBeTruthy();
+  it('renders nothing with null pantryItemId', () => {
+    const { queryByText } = renderModal({ pantryItemId: null });
+    expect(queryByText('Consume Item')).toBeNull();
   });
 });

@@ -1,6 +1,12 @@
 import React from 'react';
 
-import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import {
+  act,
+  fireEvent,
+  screen,
+  userEvent,
+  within,
+} from '@testing-library/react-native';
 import { RestockPantryItemModal } from '#features/pantry/components/modals/RestockPantryItemModal';
 import {
   type MockDataFor,
@@ -160,8 +166,16 @@ const typeQuantity = (text: string) =>
 const typeCost = (label: string, text: string) =>
   typeInto(label, localizeNumericHint('0.00'), text);
 
+// The form checks as it confirms, and re-checks a field edited after a
+// confirm, both asynchronously: each awaits the user's event.
 const confirm = () =>
-  fireEvent.press(screen.getByLabelText(t('labels.restock')));
+  userEvent.setup().press(screen.getByLabelText(t('labels.restock')));
+const retypeInto = async (label: string, placeholder: string, text: string) => {
+  const user = userEvent.setup();
+  const input = within(field(label)).getByPlaceholderText(placeholder);
+  await user.clear(input);
+  await user.type(input, text);
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -179,7 +193,7 @@ describe('restocking', () => {
   it('restocks one of the stack’s own unit, and closes', async () => {
     await openRestock();
 
-    confirm();
+    await confirm();
 
     expect(onConfirm).toHaveBeenCalledWith(
       1,
@@ -210,7 +224,7 @@ describe('restocking', () => {
     const [day20] = screen.getAllByText('20');
     if (!day20) throw new Error('the calendar shows no 20th');
     fireEvent.press(day20);
-    confirm();
+    await confirm();
 
     const [quantity, , notes, , costPerUnit, totalCost, expiresAt] =
       onConfirm.mock.calls[0] ?? [];
@@ -241,6 +255,23 @@ describe('restocking', () => {
     expect(screen.queryByDisplayValue('3.75')).toBeNull();
   });
 
+  it('opens again with no error left from the last opening', async () => {
+    const view = await openRestock();
+    typeCost(TOTAL_PAID(), '-3');
+    await confirm();
+    expect(
+      within(field(TOTAL_PAID())).getByText(t('errors.invalidAmountPaid')),
+    ).toBeTruthy();
+
+    view.rerender(sheet({ visible: false }));
+    view.rerender(sheet());
+
+    expect(
+      within(field(TOTAL_PAID())).queryByText(t('errors.invalidAmountPaid')),
+    ).toBeNull();
+    expect(screen.queryByDisplayValue('-3')).toBeNull();
+  });
+
   describe('opened with a reason the amount is asked', () => {
     const REASON = "We don't know how much one package of this holds.";
 
@@ -269,7 +300,7 @@ describe('an entry that cannot be restocked', () => {
       await openRestock();
 
       typeCost(label(), typed);
-      confirm();
+      await confirm();
 
       expect(within(field(label())).getByText(INVALID_PAID())).toBeTruthy();
       expect(onConfirm).not.toHaveBeenCalled();
@@ -280,7 +311,7 @@ describe('an entry that cannot be restocked', () => {
     await openRestock();
 
     typeQuantity('0');
-    confirm();
+    await confirm();
 
     expect(
       within(field(QUANTITY())).getByText(t('errors.invalidQuantity')),
@@ -294,8 +325,9 @@ describe('an entry that cannot be restocked', () => {
 
     typeCost(TOTAL_PAID(), '-3');
     expect(within(field(TOTAL_PAID())).queryByText(INVALID_PAID())).toBeNull();
-    confirm();
-    typeCost(TOTAL_PAID(), '3.49');
+    await confirm();
+    expect(within(field(TOTAL_PAID())).getByText(INVALID_PAID())).toBeTruthy();
+    await retypeInto(TOTAL_PAID(), localizeNumericHint('0.00'), '3.49');
 
     expect(within(field(TOTAL_PAID())).queryByText(INVALID_PAID())).toBeNull();
   });
@@ -309,7 +341,7 @@ describe('with budget & prices off', () => {
 
     expect(screen.queryByLabelText(COST_PER_UNIT())).toBeNull();
     expect(screen.queryByLabelText(TOTAL_PAID())).toBeNull();
-    confirm();
+    await confirm();
 
     const [, , , , costPerUnit, totalCost] = onConfirm.mock.calls[0] ?? [];
     expect({ costPerUnit, totalCost }).toEqual({
@@ -365,7 +397,7 @@ describe('a package of a different size', () => {
     await openCase();
 
     askSize();
-    confirm();
+    await confirm();
 
     expect(onConfirm.mock.calls[0]?.[7]).toBeNull();
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -377,7 +409,7 @@ describe('a package of a different size', () => {
     typeSize('3');
     await pickSizeUnit('pou', 'pound');
 
-    await act(async () => confirm());
+    await confirm();
 
     expect(onConfirm.mock.calls[0]?.[7]).toStrictEqual({
       packageSize: { netWeight: 3, netWeightUnitId: 'lb' },
@@ -404,7 +436,7 @@ describe('a package of a different size', () => {
     typeSize('12');
     await pickSizeUnit('can', 'can');
 
-    await act(async () => confirm());
+    await confirm();
 
     expect(onConfirm.mock.calls[0]?.[7]).toStrictEqual({
       packageSize: null,
@@ -419,13 +451,13 @@ describe('a package of a different size', () => {
     typeSize('3');
     await pickSizeUnit('pou', 'pound');
 
-    await act(async () => confirm());
+    await confirm();
 
     expect(
       within(field(EACH_HOLDS())).getByText('Use a weight here.'),
     ).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
-    typeSize('4');
+    await retypeInto(EACH_HOLDS(), localizeNumericHint(t('labels.eG145')), '4');
     expect(
       within(field(EACH_HOLDS())).queryByText('Use a weight here.'),
     ).toBeNull();
@@ -443,8 +475,8 @@ describe('a package of a different size', () => {
     typeSize('3');
     await pickSizeUnit('pou', 'pound');
 
-    confirm();
-    confirm();
+    await confirm();
+    await confirm();
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
     await act(async () => answer(null));
@@ -457,7 +489,7 @@ describe('a package of a different size', () => {
     await pickSizeUnit('pou', 'pound');
 
     typeQuantity('1.5');
-    confirm();
+    await confirm();
 
     expect(onConfirm).not.toHaveBeenCalled();
     expect(
@@ -470,7 +502,7 @@ describe('a package of a different size', () => {
     askSize();
     typeSize('3');
 
-    confirm();
+    await confirm();
 
     expect(onConfirm).not.toHaveBeenCalled();
     expect(screen.getByText(t('packageSize.unitRequired'))).toBeTruthy();

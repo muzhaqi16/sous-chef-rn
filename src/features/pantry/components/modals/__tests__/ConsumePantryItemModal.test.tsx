@@ -1,7 +1,14 @@
 import React from 'react';
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import {
+  act,
+  fireEvent,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
 import { ConsumePantryItemModal } from '../ConsumePantryItemModal';
 import { renderWithApollo, recordMock } from '#/test-utils/apolloMockProvider';
+import { alertService } from '#/services/alertService';
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import {
   ACTION_ITEM_ID,
   actionItemCache,
@@ -44,7 +51,10 @@ it('waits for settlement and retains entered quantity after a refusal', async ()
   );
   const quantity = screen.getByDisplayValue('1');
   fireEvent.changeText(quantity, '2');
-  fireEvent.press(screen.getByRole('button', { name: t('labels.confirm') }));
+  // The form checks the amount before it confirms, asynchronously.
+  await userEvent
+    .setup()
+    .press(screen.getByRole('button', { name: t('labels.confirm') }));
   expect(onConfirm).toHaveBeenCalledTimes(1);
   expect(onClose).not.toHaveBeenCalled();
   expect(
@@ -196,5 +206,78 @@ describe('a known use, confirmed with nothing typed', () => {
       '',
       unit.id,
     );
+  });
+});
+
+describe('an amount it cannot use', () => {
+  const POUNDS = rankedUnit(
+    { id: 'u1', name: 'Pounds', symbol: 'lbs', type: UnitType.Weight },
+    0,
+  );
+  const MORE_THAN_HELD = () =>
+    t('deduction.exceedsAvailableConsume', { amount: '5', unit: 'lbs' });
+
+  const onConfirm = jest.fn(() => Promise.resolve('applied'));
+  const sheet = (visible = true) => (
+    <ConsumePantryItemModal
+      visible={visible}
+      pantryItemId={ACTION_ITEM_ID}
+      onClose={jest.fn()}
+      onConfirm={onConfirm}
+    />
+  );
+  const open = async () => {
+    const log = operationLog();
+    const view = renderWithApollo(sheet(), {
+      cache: actionItemCache(),
+      links: [log.link],
+      operationMocks: [
+        recordMock(ConsumptionUnitsForPantryItemDocument, {
+          data: { consumptionUnitsForPantryItem: [POUNDS] },
+        }).mock,
+      ],
+    });
+    await log.landed(ConsumptionUnitsForPantryItemDocument);
+    return view;
+  };
+  const typeAmount = (text: string) =>
+    fireEvent.changeText(
+      screen.getByTestId(pantryTestIDs.consumeQuantity),
+      text,
+    );
+  // The form checks the amount as it confirms, asynchronously.
+  const confirm = () =>
+    userEvent
+      .setup()
+      .press(screen.getByRole('button', { name: t('labels.confirm') }));
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('says on the amount field that it is more than is held, not in an alert', async () => {
+    await open();
+
+    typeAmount('9');
+    await confirm();
+
+    expect(screen.getByText(MORE_THAN_HELD())).toBeOnTheScreen();
+    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('opens again on its own amount, with no error left from the last', async () => {
+    const view = await open();
+    typeAmount('9');
+    await confirm();
+    expect(screen.getByText(MORE_THAN_HELD())).toBeOnTheScreen();
+
+    view.rerender(sheet(false));
+    view.rerender(sheet());
+
+    expect(
+      screen.getByTestId(pantryTestIDs.consumeQuantity),
+    ).toHaveDisplayValue('1');
+    expect(screen.queryByText(MORE_THAN_HELD())).toBeNull();
   });
 });
