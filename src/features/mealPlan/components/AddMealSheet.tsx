@@ -437,8 +437,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   mealTypeScroll: {
-    flexGrow: 0,
-    flexShrink: 0,
     marginBottom: theme.spacing.md,
   },
   mealTypeContent: {

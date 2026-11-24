@@ -74,7 +74,7 @@ export function ChipScrollRow<T>({
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={[styles.chipRow, contentContainerStyle]}
-      style={edgeFadeColor ? undefined : style}
+      style={edgeFadeColor ? undefined : [styles.row, style]}
       onLayout={onLayout}
       onContentSizeChange={onContentSizeChange}
       onScroll={onScroll}
@@ -89,7 +89,7 @@ export function ChipScrollRow<T>({
   if (!edgeFadeColor) return scroller;
 
   return (
-    <View style={style}>
+    <View style={[styles.row, style]}>
       {scroller}
       {!!edges.left && <EdgeFade side="left" colorKey={edgeFadeColor} />}
       {!!edges.right && <EdgeFade side="right" colorKey={edgeFadeColor} />}
@@ -98,6 +98,11 @@ export function ChipScrollRow<T>({
 }
 
 const styles = StyleSheet.create(theme => ({
+  // As tall as its chips in a column: a horizontal ScrollView grows by default.
+  row: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
   chipRow: {
     gap: theme.spacing.sm,
   },
