@@ -39,7 +39,6 @@ const PENDING_ADOPTION = [
   'src/features/recipes/components/FolderPicker.tsx',
   'src/features/barcode/screens/SearchResultsScreen.tsx',
   'src/features/catalog/ui/AddItemSheet/AddItemSheet.tsx',
-  'src/features/mealPlan/components/AddMealSheet.tsx',
 ];
 
 const SRC = join(process.cwd(), 'src');

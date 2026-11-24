@@ -1,7 +1,11 @@
 import React from 'react';
 import type { ScrollViewProps, StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
-import { BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet';
+import {
+  BottomSheetScrollView,
+  BottomSheetView,
+  type BottomSheetModalProps,
+} from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Title } from '#components/atoms/Title';
 import { BarActions, type BarAction } from '#components/molecules/BarActions';
@@ -18,6 +22,20 @@ import {
 } from './SheetHeaderSlot';
 
 export type SheetMode = 'view' | 'form' | 'action' | 'list';
+
+/**
+ * gorhom options a sheet sets beyond the standard ones: `push` to stack over a
+ * host sheet, a pan-down held while a form holds input, an Android keyboard
+ * that resizes. A key left out keeps the standard value.
+ */
+export type SheetModalOptions = Pick<
+  BottomSheetModalProps,
+  | 'stackBehavior'
+  | 'enablePanDownToClose'
+  | 'android_keyboardInputMode'
+  | 'keyboardBlurBehavior'
+  | 'enableContentPanningGesture'
+>;
 
 export interface SheetProps extends UseStandardBottomSheetOptions {
   children: React.ReactNode;
@@ -55,6 +73,7 @@ export interface SheetProps extends UseStandardBottomSheetOptions {
   title?: string;
   /** Actions beside the title, icon or text. */
   actions?: BarAction[];
+  modalOptions?: SheetModalOptions;
 }
 
 /**
@@ -72,6 +91,7 @@ export const Sheet: React.FC<SheetProps> = ({
   headerFromContent = false,
   title,
   actions,
+  modalOptions,
   ...sheetOptions
 }) => {
   const {
@@ -170,7 +190,7 @@ export const Sheet: React.FC<SheetProps> = ({
   })();
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
+    <BottomSheetModal ref={ref} {...modalProps} {...modalOptions}>
       {headerFromContent ? (
         <SheetHeaderStoreProvider value={headerStore}>
           {content}
