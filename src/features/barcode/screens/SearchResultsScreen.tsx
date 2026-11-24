@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 
 import { LoadingBranded } from '#components/molecules/Loading';
 import { ErrorState } from '#components/molecules/ErrorState';
@@ -79,12 +77,6 @@ export const SearchResultsScreen: React.FC<
 
   const { scannerSheetVisible, hideBottomSheet, showBottomSheet } =
     useBottomSheetState();
-
-  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
-    visible: scannerSheetVisible,
-    onDismiss: hideBottomSheet,
-    snapPoints: ['50%', '65%', '85%'],
-  });
 
   const showPrices = useBudgetAndPricesEnabled();
   const { item, loading, error, addingItem, handleAddItem, handleRetry } =
@@ -212,51 +204,42 @@ export const SearchResultsScreen: React.FC<
     >
       {renderContent()}
 
-      <BottomSheetModal
-        ref={bottomSheetRef}
-        {...modalProps}
-        stackBehavior="push"
-        backgroundStyle={styles.bottomSheetBackground}
-        handleIndicatorStyle={styles.bottomSheetHandle}
+      <Sheet
+        mode="form"
+        visible={scannerSheetVisible}
+        onDismiss={hideBottomSheet}
+        snapPoints={['50%', '65%', '85%']}
+        // Over the scanner's own screen, which a `switch` would minimize.
+        modalOptions={{ stackBehavior: 'push' }}
+        style={styles.bottomSheetContent}
       >
-        <BottomSheetFormScrollView
-          style={styles.bottomSheetContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          {sheetMode === 'edit' && item ? (
-            <SuggestEditForm
-              key={`edit-${item.id}`}
-              itemId={item.id}
-              barcode={barcode}
-              format={format}
-              scan={scannedPackOf(item)}
-              onClose={hideBottomSheet}
-            />
-          ) : (
-            <AddItemForm
-              key={sheetMode}
-              barcode={barcode}
-              format={format}
-              mode={sheetMode}
-              initialData={formInitialData}
-              onSubmit={handleAddItem}
-              onClose={hideBottomSheet}
-              loading={addingItem}
-            />
-          )}
-        </BottomSheetFormScrollView>
-      </BottomSheetModal>
+        {sheetMode === 'edit' && item ? (
+          <SuggestEditForm
+            key={`edit-${item.id}`}
+            itemId={item.id}
+            barcode={barcode}
+            format={format}
+            scan={scannedPackOf(item)}
+            onClose={hideBottomSheet}
+          />
+        ) : (
+          <AddItemForm
+            key={sheetMode}
+            barcode={barcode}
+            format={format}
+            mode={sheetMode}
+            initialData={formInitialData}
+            onSubmit={handleAddItem}
+            onClose={hideBottomSheet}
+            loading={addingItem}
+          />
+        )}
+      </Sheet>
     </Screen>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  bottomSheetBackground: {
-    backgroundColor: theme.colors.surface,
-  },
-  bottomSheetHandle: {
-    backgroundColor: theme.colors.border,
-  },
   bottomSheetContent: {
     flex: 1,
     paddingHorizontal: theme.spacing.lg,
