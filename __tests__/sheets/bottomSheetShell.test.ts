@@ -40,7 +40,6 @@ const PENDING_ADOPTION = [
   'src/features/barcode/screens/SearchResultsScreen.tsx',
   'src/features/catalog/ui/AddItemSheet/AddItemSheet.tsx',
   'src/features/mealPlan/components/AddMealSheet.tsx',
-  'src/features/shoppingList/components/QuantityEditSheet/QuantityEditSheet.tsx',
 ];
 
 const SRC = join(process.cwd(), 'src');

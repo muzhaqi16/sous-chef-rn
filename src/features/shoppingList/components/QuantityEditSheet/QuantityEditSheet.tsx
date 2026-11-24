@@ -1,10 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { BottomSheetView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -95,10 +94,7 @@ const seedUnit = (
 type QuantityEditContentProps = Omit<
   QuantityEditSheetProps,
   'visible' | 'item'
-> & {
-  item: QuantityEditSheetItem;
-  contentContainerStyle: StyleProp<ViewStyle>;
-};
+> & { item: QuantityEditSheetItem };
 
 /** One opening, seeded from the line as it opened. */
 const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
@@ -106,7 +102,6 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
   onClose,
   onSave,
   loading = false,
-  contentContainerStyle,
 }) => {
   const { t } = useTranslation();
 
@@ -200,9 +195,7 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
 
   return (
     <>
-      {/* `BottomSheetView` reports its own height as the sheet's content
-          height, so everything the sheet shows must sit inside this one. */}
-      <BottomSheetView style={[variantStyles.content, contentContainerStyle]}>
+      <SheetHeaderSlot>
         <SheetHeader
           title={t('quantityEditSheet.title')}
           onClose={onClose}
@@ -213,127 +206,124 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
             testID: shoppingListTestIDs.quantityEditSaveButton,
           }}
         />
-        {/* The header spans the full width and only the fields are inset, so
+      </SheetHeaderSlot>
+      {/* The header spans the full width and only the fields are inset, so
           the padding lives here rather than on the measured view. */}
-        <View style={variantStyles.sections}>
-          <View style={variantStyles.section}>
-            <Text
-              role="label"
-              tone="secondary"
-              style={variantStyles.sectionLabel}
+      <View style={variantStyles.sections}>
+        <View style={variantStyles.section}>
+          <Text
+            role="label"
+            tone="secondary"
+            style={variantStyles.sectionLabel}
+          >
+            {t('labels.quantity')}
+          </Text>
+          <View style={variantStyles.counterContainer}>
+            <AppPressable
+              testID={shoppingListTestIDs.quantityEditDecrement}
+              accessibilityLabel={t('editableCounter.decrease')}
+              style={variantStyles.counterButton}
+              onPress={handleDecrement}
+              disabled={decrementDisabled}
             >
-              {t('labels.quantity')}
-            </Text>
-            <View style={variantStyles.counterContainer}>
-              <AppPressable
-                testID={shoppingListTestIDs.quantityEditDecrement}
-                accessibilityLabel={t('editableCounter.decrease')}
-                style={variantStyles.counterButton}
-                onPress={handleDecrement}
-                disabled={decrementDisabled}
-              >
-                <Icon
-                  name="remove-outline"
-                  size={24}
-                  tone={decrementDisabled ? 'textTertiary' : 'textPrimary'}
+              <Icon
+                name="remove-outline"
+                size={24}
+                tone={decrementDisabled ? 'textTertiary' : 'textPrimary'}
+              />
+            </AppPressable>
+
+            <AppPressable
+              testID={shoppingListTestIDs.quantityEditValue}
+              style={variantStyles.quantityDisplay}
+              onPress={handleQuantityPress}
+            >
+              {isEditing ? (
+                <ThemedBottomSheetTextInput
+                  ref={inputRef}
+                  style={variantStyles.quantityInput}
+                  value={quantityInput}
+                  onChangeText={handleInputChange}
+                  onBlur={handleInputBlur}
+                  // A digits-only pad has no `/` or space, so `1 1/3` could
+                  // not be typed. Same keyboard as `FractionInput`.
+                  keyboardType="numbers-and-punctuation"
+                  selectTextOnFocus
+                  maxLength={10}
+                  testID={shoppingListTestIDs.quantityEditInput}
                 />
-              </AppPressable>
+              ) : (
+                <Text role="display">{quantityInput || '0'}</Text>
+              )}
+            </AppPressable>
 
-              <AppPressable
-                testID={shoppingListTestIDs.quantityEditValue}
-                style={variantStyles.quantityDisplay}
-                onPress={handleQuantityPress}
-              >
-                {isEditing ? (
-                  <ThemedBottomSheetTextInput
-                    ref={inputRef}
-                    style={variantStyles.quantityInput}
-                    value={quantityInput}
-                    onChangeText={handleInputChange}
-                    onBlur={handleInputBlur}
-                    // A digits-only pad has no `/` or space, so `1 1/3` could
-                    // not be typed. Same keyboard as `FractionInput`.
-                    keyboardType="numbers-and-punctuation"
-                    selectTextOnFocus
-                    maxLength={10}
-                    testID={shoppingListTestIDs.quantityEditInput}
-                  />
-                ) : (
-                  <Text role="display">{quantityInput || '0'}</Text>
-                )}
-              </AppPressable>
-
-              <AppPressable
-                testID={shoppingListTestIDs.quantityEditIncrement}
-                accessibilityLabel={t('editableCounter.increase')}
-                style={variantStyles.incrementButton}
-                onPress={handleIncrement}
-                disabled={stepDisabled}
-              >
-                <Icon name="add" size={24} tone="onPrimary" />
-              </AppPressable>
-            </View>
-            {/* An empty field is "nothing typed yet", not a malformed quantity —
-              the save button is disabled either way. */}
-            {quantityInput.trim() !== '' && !quantityIsValid && (
-              <Text
-                role="error"
-                tone="error"
-                align="center"
-                style={variantStyles.quantityHint}
-                testID={shoppingListTestIDs.quantityEditFormatHint}
-              >
-                {localizeNumericHint(t('fractionInput.formatsHint'))}
-              </Text>
-            )}
-          </View>
-
-          <View style={variantStyles.section}>
-            <SectionHeader
-              variant="overline"
-              style={variantStyles.sectionLabel}
+            <AppPressable
+              testID={shoppingListTestIDs.quantityEditIncrement}
+              accessibilityLabel={t('editableCounter.increase')}
+              style={variantStyles.incrementButton}
+              onPress={handleIncrement}
+              disabled={stepDisabled}
             >
-              {t('labels.unit')}
-            </SectionHeader>
-
-            {itemUnits.length > 0 && (
-              <View style={variantStyles.chipsContainer}>
-                {itemUnits.map(chip => (
-                  <Chip
-                    key={chip.id}
-                    label={unitLabel(chip.unit)}
-                    selected={unitName === unitLabel(chip.unit)}
-                    onPress={() => handleUnitChipPress(chip)}
-                  />
-                ))}
-              </View>
-            )}
-
-            <UnitAutocompleteField
-              variant="inline"
-              // The sheet is sized to its content, so the absolutely-positioned
-              // suggestion list would otherwise open past its bottom edge.
-              reserveDropdownSpace
-              value={unitName ?? ''}
-              onChangeText={text => {
-                setUnitName(text || null);
-                setUnitId(null);
-              }}
-              onUnitSelected={(selectedUnitId, selectedUnitName) => {
-                if (selectedUnitName !== null) {
-                  setUnitName(selectedUnitName);
-                }
-                setUnitId(selectedUnitId);
-              }}
-              placeholder={
-                itemUnits.length > 0
-                  ? t('quantityEditSheet.orTypeToSearch')
-                  : t('labels.typeToSearchUnits')
-              }
-            />
+              <Icon name="add" size={24} tone="onPrimary" />
+            </AppPressable>
           </View>
+          {/* An empty field is "nothing typed yet", not a malformed quantity —
+              the save button is disabled either way. */}
+          {quantityInput.trim() !== '' && !quantityIsValid && (
+            <Text
+              role="error"
+              tone="error"
+              align="center"
+              style={variantStyles.quantityHint}
+              testID={shoppingListTestIDs.quantityEditFormatHint}
+            >
+              {localizeNumericHint(t('fractionInput.formatsHint'))}
+            </Text>
+          )}
         </View>
-      </BottomSheetView>
+
+        <View style={variantStyles.section}>
+          <SectionHeader variant="overline" style={variantStyles.sectionLabel}>
+            {t('labels.unit')}
+          </SectionHeader>
+
+          {itemUnits.length > 0 && (
+            <View style={variantStyles.chipsContainer}>
+              {itemUnits.map(chip => (
+                <Chip
+                  key={chip.id}
+                  label={unitLabel(chip.unit)}
+                  selected={unitName === unitLabel(chip.unit)}
+                  onPress={() => handleUnitChipPress(chip)}
+                />
+              ))}
+            </View>
+          )}
+
+          <UnitAutocompleteField
+            variant="inline"
+            // The sheet is sized to its content, so the absolutely-positioned
+            // suggestion list would otherwise open past its bottom edge.
+            reserveDropdownSpace
+            value={unitName ?? ''}
+            onChangeText={text => {
+              setUnitName(text || null);
+              setUnitId(null);
+            }}
+            onUnitSelected={(selectedUnitId, selectedUnitName) => {
+              if (selectedUnitName !== null) {
+                setUnitName(selectedUnitName);
+              }
+              setUnitId(selectedUnitId);
+            }}
+            placeholder={
+              itemUnits.length > 0
+                ? t('quantityEditSheet.orTypeToSearch')
+                : t('labels.typeToSearchUnits')
+            }
+          />
+        </View>
+      </View>
     </>
   );
 };
@@ -343,31 +333,34 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   item,
   ...content
 }) => {
-  // No snap points: the sheet measures its own content, so the keyboard lift
-  // seats it on the keyboard instead of stretching a fixed height up the screen.
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible: visible && item !== null,
-    onDismiss: content.onClose,
-    snapPoints: [],
-    enableDynamicSizing: true,
-  });
-  const opening = useOpening(visible && item !== null, item);
+  const open = visible && item !== null;
+  const opening = useOpening(open, item);
   // The line now, or while closing the one it opened on. A new line seeds a
   // fresh form; a change to the same line, as a save lands, leaves what is
   // typed.
   const shown = item ?? opening?.payload;
 
+  // No snap points: the sheet measures its own content, so the keyboard lift
+  // seats it on the keyboard instead of stretching a fixed height up the
+  // screen. `view`: a content-sized sheet takes no keyboard-aware scrollable.
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
+    <Sheet
+      mode="view"
+      headerFromContent
+      visible={open}
+      onDismiss={content.onClose}
+      snapPoints={[]}
+      enableDynamicSizing
+      contentContainerStyle={styles.content}
+    >
       {opening && shown ? (
         <QuantityEditContent
           key={`${opening.id}:${shown.id}`}
           item={shown}
-          contentContainerStyle={contentContainerStyle}
           {...content}
         />
       ) : null}
-    </BottomSheetModal>
+    </Sheet>
   );
 };
 
