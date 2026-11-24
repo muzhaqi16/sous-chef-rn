@@ -37,7 +37,6 @@ const PENDING_ADOPTION = [
   'src/features/catalog/components/BottomSheetAutocompleteInput.tsx',
   'src/features/recipes/components/FolderPicker/ManageFolderSheet.tsx',
   'src/features/recipes/components/FolderPicker.tsx',
-  'src/components/organisms/MultiSelectChipSheet/MultiSelectChipSheet.tsx',
   'src/features/barcode/screens/SearchResultsScreen.tsx',
   'src/features/catalog/ui/AddItemSheet/AddItemSheet.tsx',
   'src/features/mealPlan/components/AddMealSheet.tsx',

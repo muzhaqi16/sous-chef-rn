@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { useTranslation } from '#/i18n';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { Icon } from '#components/atoms/Icon';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 import { useLocalSearch } from '#hooks/search/useLocalSearch';
 import { EmptyState } from '#components/molecules/EmptyState';
@@ -35,22 +34,18 @@ export interface MultiSelectChipSheetProps<T extends string = string> {
   singleSelect?: boolean;
 }
 
-type MultiSelectChipContentProps<T extends string> = Omit<
+type MultiSelectChipContentProps<T extends string> = Pick<
   MultiSelectChipSheetProps<T>,
-  'visible'
-> & { contentContainerStyle: StyleProp<ViewStyle> };
+  'items' | 'selectedItems' | 'onSelect' | 'loading' | 'singleSelect'
+>;
 
 /** One opening: the search starts empty. */
 function MultiSelectChipContent<T extends string>({
-  title,
   items,
   selectedItems,
   onSelect,
-  onClose,
-  onDone,
   loading = false,
   singleSelect = false,
-  contentContainerStyle,
 }: MultiSelectChipContentProps<T>) {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
@@ -76,118 +71,107 @@ function MultiSelectChipContent<T extends string>({
   const showSearch = items.length > 8;
 
   return (
-    <>
-      {/*
-        A plain View, NOT `BottomSheetView`: gorhom's own container style is
-        absolutely positioned with no bottom and no height, and it composes
-        AFTER the caller's — so this `flex: 1` loses and the
-        `BottomSheetScrollView` below is never height-bounded.
-      */}
-      <View style={[styles.bottomSheetContent, contentContainerStyle]}>
-        <SheetHeader
-          contentPadding="md"
-          title={title}
-          onClose={onClose}
-          confirm={{
-            onPress: onDone,
-            accessibilityLabel: t('labels.done'),
-            disabled: loading,
-          }}
-        />
-
-        {/* Search Input */}
-        {!!showSearch && (
-          <View style={styles.searchContainer}>
-            <Icon name="search" size={18} tone="textSecondary" />
-            <ThemedBottomSheetTextInput
-              style={styles.searchInput}
-              placeholder={t('multiSelectChipSheet.searchPlaceholder')}
-              defaultValue={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-            />
-          </View>
-        )}
-
-        {/* Selection Counter / Clear All */}
-        <View style={styles.selectionRow}>
-          <Text role="caption" tone="secondary">
-            {selectedItems.length === 0
-              ? t('multiSelect.noneSelected')
-              : t('multiSelect.selectedCount', {
-                  count: selectedItems.length,
-                })}
-          </Text>
-          {selectedItems.length > 0 && (
-            <Pressable
-              onPress={handleClearAll}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <Text role="label" tone="accent">
-                {t('labels.clearAll')}
-              </Text>
-            </Pressable>
-          )}
+    <View style={styles.bottomSheetContent}>
+      {/* Search Input */}
+      {!!showSearch && (
+        <View style={styles.searchContainer}>
+          <Icon name="search" size={18} tone="textSecondary" />
+          <ThemedBottomSheetTextInput
+            style={styles.searchInput}
+            placeholder={t('multiSelectChipSheet.searchPlaceholder')}
+            defaultValue={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+          />
         </View>
+      )}
 
-        {/* Chip Grid */}
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text tone="secondary">{t('loading.loading')}</Text>
-          </View>
-        ) : filteredItems.length > 0 ? (
-          <BottomSheetScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
+      {/* Selection Counter / Clear All */}
+      <View style={styles.selectionRow}>
+        <Text role="caption" tone="secondary">
+          {selectedItems.length === 0
+            ? t('multiSelect.noneSelected')
+            : t('multiSelect.selectedCount', {
+                count: selectedItems.length,
+              })}
+        </Text>
+        {selectedItems.length > 0 && (
+          <Pressable
+            onPress={handleClearAll}
+            style={({ pressed }) => pressed && styles.pressed}
           >
-            <View style={styles.chipContainer}>
-              {filteredItems.map(item => (
-                <AnimatedChip
-                  key={item.id}
-                  label={item.label}
-                  selected={selectedItems.includes(item.id)}
-                  onPress={() => handleToggleItem(item.id)}
-                />
-              ))}
-            </View>
-          </BottomSheetScrollView>
-        ) : items.length > 0 && searchQuery ? (
-          <EmptyState
-            size="compact"
-            title={t('multiSelectChipSheet.noMatches', { query: searchQuery })}
-          />
-        ) : (
-          <EmptyState
-            size="compact"
-            title={t('multiSelectChipSheet.noItems')}
-          />
+            <Text role="label" tone="accent">
+              {t('labels.clearAll')}
+            </Text>
+          </Pressable>
         )}
       </View>
-    </>
+
+      {/* Chip Grid */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <Text tone="secondary">{t('loading.loading')}</Text>
+        </View>
+      ) : filteredItems.length > 0 ? (
+        <BottomSheetScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={styles.chipContainer}>
+            {filteredItems.map(item => (
+              <AnimatedChip
+                key={item.id}
+                label={item.label}
+                selected={selectedItems.includes(item.id)}
+                onPress={() => handleToggleItem(item.id)}
+              />
+            ))}
+          </View>
+        </BottomSheetScrollView>
+      ) : items.length > 0 && searchQuery ? (
+        <EmptyState
+          size="compact"
+          title={t('multiSelectChipSheet.noMatches', { query: searchQuery })}
+        />
+      ) : (
+        <EmptyState size="compact" title={t('multiSelectChipSheet.noItems')} />
+      )}
+    </View>
   );
 }
 
 export function MultiSelectChipSheet<T extends string = string>({
   visible,
+  title,
+  onClose,
+  onDone,
   ...content
 }: MultiSelectChipSheetProps<T>) {
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: content.onClose,
-    snapPoints: ['60%', '80%'],
-  });
+  const { t } = useTranslation();
   const opening = useOpening(visible);
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      {opening ? (
-        <MultiSelectChipContent
-          key={opening.id}
-          contentContainerStyle={contentContainerStyle}
-          {...content}
+    <Sheet
+      mode="list"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['60%', '80%']}
+      header={
+        <SheetHeader
+          title={title}
+          onClose={onClose}
+          confirm={{
+            onPress: onDone,
+            accessibilityLabel: t('labels.done'),
+            disabled: content.loading,
+          }}
         />
+      }
+    >
+      {opening ? (
+        <MultiSelectChipContent key={opening.id} {...content} />
       ) : null}
-    </BottomSheetModal>
+    </Sheet>
   );
 }
 
