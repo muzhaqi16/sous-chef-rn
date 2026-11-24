@@ -161,7 +161,7 @@ export const AddStorageLocationSheet: React.FC<
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
   },
   inputContainer: {
     marginBottom: theme.spacing.md,

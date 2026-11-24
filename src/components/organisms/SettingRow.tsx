@@ -324,7 +324,7 @@ const styles = StyleSheet.create(theme => ({
     flexShrink: 1,
   },
   sheetContent: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
   },
   sheetTitle: {
     paddingVertical: theme.spacing.sm,

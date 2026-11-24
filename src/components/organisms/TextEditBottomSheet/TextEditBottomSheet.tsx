@@ -151,7 +151,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
   },
   header: {
     flexDirection: 'row',

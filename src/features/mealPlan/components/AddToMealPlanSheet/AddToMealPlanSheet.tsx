@@ -257,7 +257,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
   },
   warningText: {
     marginBottom: theme.spacing.md,

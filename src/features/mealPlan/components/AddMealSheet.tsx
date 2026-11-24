@@ -440,14 +440,14 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   mealTypeContent: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
   },
   searchBarWrapper: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
   },
   listContent: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.xl,
   },
   customMealRow: {

@@ -242,6 +242,6 @@ export const SearchResultsScreen: React.FC<
 const styles = StyleSheet.create(theme => ({
   bottomSheetContent: {
     flex: 1,
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
   },
 }));
