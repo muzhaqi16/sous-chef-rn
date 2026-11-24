@@ -1,121 +1,37 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
-import { catalogTestIDs } from '#features/catalog/testIDs';
 import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
-import { DetailSection } from '#components/molecules/DetailSection';
-import { HorizontalRail } from '#components/molecules/HorizontalRail';
-import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
-import { CachedImage } from '#components/atoms/CachedImage';
-import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
-import { DataStateView } from '#components/organisms/DataStateView';
 import { PantryItemHeldDetail } from '#features/pantry/components/PantryItemHeldDetail';
 import { useDataState } from '#hooks/data/useDataState';
-import { useTranslation, type TranslateFn } from '#/i18n';
+import { useTranslation } from '#/i18n';
 import { usePantryItemDetailData } from './usePantryItemDetailData';
+import { pantryItemHeaderActions } from './pantryItemHeaderActions';
 import {
-  useSelectedHomeId,
   useSelectedShoppingListId,
   useSelectedPantryId,
 } from '#store/useAppStore';
-import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { resolveImageUrl } from '#utils/imageUtils';
-import {
-  formatAmountLeft,
-  formatPackageBreakdownFull,
-  formatStorageState,
-  getExpiryInfo,
-  getDaysInPantry,
-  formatDaysInPantry,
-} from '#features/pantry/hooks/usePantryItemTransformation';
-import { formatNetWeightDisplay } from '#utils/formatQuantity';
-import { currentReading, formatReading } from '#domain/measure';
+import { formatAmountLeft } from '#features/pantry/hooks/usePantryItemTransformation';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
-import {
-  BatchStatus,
-  EntryImageSource,
-  ItemCondition,
-} from '#/graphql/generated/schemaTypes';
-import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
-import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
-import { hasNutritionData, toShownNutrition } from '#domain/nutrition';
-import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { GalleryHero } from '#features/catalog/ui/GalleryHero';
-import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
-import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { useReportPhotoHeaderAction } from '#features/catalog/ui/useReportPhotoHeaderAction';
 import { entryGallery } from '#features/catalog/ui/entryGallery';
-import { EntryPhotoSheet } from '#features/catalog/ui/EntryPhotoSheet';
-import { useEntryPhoto } from '#features/catalog/hooks/useEntryPhoto';
-import { RelinkItemSheet } from '#features/pantry/components/RelinkItemSheet';
-import { Icon } from '#components/atoms/Icon';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { BatchSection } from '#features/pantry/components/BatchSection';
-import { AdjustQuantityModal } from '#features/pantry/components/modals/AdjustQuantityModal';
-import { CorrectPackageSizeModal } from '#features/pantry/components/modals/CorrectPackageSizeModal';
-import { ConsumePantryItemModal } from '#features/pantry/components/modals/ConsumePantryItemModal';
-import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
-import {
-  useRecipeSuggestionsForItem,
-  type ItemRecipeSuggestion,
-} from '#features/pantry/hooks/useRecipeSuggestionsForItem';
-import { catalogHintOf } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
-import { daysUntilExpiry, isExpiryEstimate } from '#domain/expiry';
-import { catalogKey } from '#domain/catalogRecipes';
 import { useToday } from '#hooks/app/useToday';
-
-/**
- * The summary's expiry, on one line like its neighbours: the header names the
- * state, so the value is only when. A shelf-life guess is marked "≈", quietly.
- */
-function expiryColumnOf(
-  expiresOn: string | null | undefined,
-  today: string,
-  estimated: boolean,
-  t: TranslateFn,
-): { header: string; value: string } {
-  if (!expiresOn) {
-    return {
-      header: t('pantryItemDetail.expiring'),
-      value: t('pantryItemDetail.noExpiry'),
-    };
-  }
-  const days = daysUntilExpiry(expiresOn, today);
-  const when =
-    days < 0
-      ? t('pantryItemDetail.expiryDaysAgo', { count: -days })
-      : days === 0
-      ? t('labels.today')
-      : days === 1
-      ? t('labels.tomorrow')
-      : t('labels.durationDays', { count: days });
-  return {
-    header: t(days < 0 ? 'labels.expired' : 'pantryItemDetail.expiring'),
-    value: estimated ? t('pantryItemDetail.expiryApprox', { when }) : when,
-  };
-}
-
-const ExpiryColumnText: React.FC<{
-  text: string;
-  isUrgent: boolean;
-  isExpired: boolean;
-}> = ({ text, isUrgent, isExpired }) => (
-  <Text
-    role="label"
-    tone={isExpired ? 'danger' : isUrgent ? 'warning' : 'primary'}
-    align="center"
-  >
-    {text}
-  </Text>
-);
+import { useActiveSheet } from '#hooks/ui/useActiveSheet';
+import { PantryItemQuantitySection } from '#features/pantry/components/PantryItemQuantitySection';
+import { PantryItemInfoSections } from '#features/pantry/components/PantryItemInfoSections';
+import { PantryItemRecipesSection } from '#features/pantry/components/PantryItemRecipesSection';
+import {
+  PantryItemDetailSheets,
+  type PantryItemSheet,
+} from '#features/pantry/components/PantryItemDetailSheets';
 
 export const PantryItemDetail: React.FC<
   StaticScreenProps<{
@@ -129,28 +45,19 @@ export const PantryItemDetail: React.FC<
     goBack,
     toShoppingListMain,
     toPantryItem,
-    toRecipeDetail,
-    toNutritionScreen,
-    toPantryBatchHistory,
-    toPantryUsageHistory,
     replaceWithPantryItemDetail,
   } = useAppNavigation();
   const selectedShoppingListId = useSelectedShoppingListId();
   const selectedPantryId = useSelectedPantryId();
-  const selectedHomeId = useSelectedHomeId();
   const today = useToday();
   const readingSystem = useReadingSystem();
   const [refreshing, setRefreshing] = useState(false);
-  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
-  const [photoSheetVisible, setPhotoSheetVisible] = useState(false);
-  const [relinkVisible, setRelinkVisible] = useState(false);
+  const sheets = useActiveSheet<PantryItemSheet>();
 
+  const data = usePantryItemDetailData(itemId);
   const {
     item,
     listedRow,
-    batches,
-    batchPricing,
-    batchTotalCount,
     deletedOnServer,
     hiddenFromViewer,
     mergedIntoId,
@@ -158,7 +65,7 @@ export const PantryItemDetail: React.FC<
     itemError,
     isUnconfirmed,
     refreshAll,
-  } = usePantryItemDetailData(itemId);
+  } = data;
 
   // Merged away: the survivor takes this screen's place, so Back still leads
   // where it did.
@@ -172,11 +79,6 @@ export const PantryItemDetail: React.FC<
 
   const permissions = usePantryPermissions();
 
-  const { suggestedRecipes, loadingRecipes, recipesState, retryRecipes } =
-    useRecipeSuggestionsForItem(item?.itemName ?? undefined);
-
-  // A use taken from one batch is part of the tracking capability.
-  const batchUse = useFeatureFlag('pantryTrackingFoundation');
   const actions = usePantryItemDetailActions({
     itemId,
     item,
@@ -197,28 +99,11 @@ export const PantryItemDetail: React.FC<
       ),
   });
 
-  const entryPhoto = useEntryPhoto(selectedHomeId, item?.itemId);
-
   const handleEdit = () => {
     toPantryItem({ itemId });
   };
 
-  const handleRecipePress = (recipe: ItemRecipeSuggestion) => {
-    toRecipeDetail({ catalog: catalogHintOf(recipe) });
-  };
-
   const imageUrl = resolveImageUrl(item, 'large');
-  const expiryInfo = getExpiryInfo(item?.expiresOn, today, t);
-  const expiryColumn = expiryColumnOf(
-    item?.expiresOn,
-    today,
-    isExpiryEstimate(item?.expiryKind),
-    t,
-  );
-  const daysInPantry = getDaysInPantry(item?.createdAt);
-  const storageStateDisplay = formatStorageState(item?.storageState, t);
-  const brandName = item?.brand?.name ?? null;
-  const categoryName = item?.item.categories[0]?.category.name ?? null;
   const gallery = entryGallery(item?.image, item?.item.photos);
   const reportPhoto = useReportPhotoHeaderAction(
     item?.item,
@@ -227,34 +112,8 @@ export const PantryItemDetail: React.FC<
     pantryTestIDs.itemReportPhotoButton,
   );
   const itemPhotos = gallery.photos;
-  // The viewer offers "Use this photo" on every photo but the one in use.
-  const pickableIndex = itemPhotos.findIndex(
-    photo => photo.id !== item?.image?.catalogImageId,
-  );
-  const nutrition = toShownNutrition(item?.item.shownNutrition);
-  const nutritionFacts = nutrition?.facts ?? null;
-  // A concept's typical values, titled as such and making no health claim.
-  const typicalOf = nutrition?.typicalOf ?? null;
   const showImages =
     itemPhotos.length > 0 || !!imageUrl || !!gallery.leadImageUrl;
-  const showNutrition = hasNutritionData(nutritionFacts);
-  // Each weight reads in the user's unit system while its Measure still
-  // describes the stored figure; after a local edit, as stored until the
-  // server answers with new readings.
-  const packageBreakdownText = formatPackageBreakdownFull(
-    item?.packageBreakdown,
-    t,
-    readingSystem,
-  );
-  const netWeightUnitId = item?.netWeightUnit?.id;
-  const packageSizeReading = currentReading(
-    item?.packageSize,
-    { value: item?.netWeight, unitId: netWeightUnitId },
-    readingSystem,
-  );
-  const netWeightText = packageSizeReading
-    ? formatReading(packageSizeReading)
-    : formatNetWeightDisplay(item?.netWeight, item?.netWeightUnit);
 
   // Classified so an offline cache miss reports itself instead of spinning
   // forever on a bare loader.
@@ -340,109 +199,24 @@ export const PantryItemDetail: React.FC<
 
   const quantityText = formatAmountLeft(item, readingSystem);
 
-  // The EXPIRED flag can land a day late east of UTC, so the date decides too:
-  // the batches' dates, since the server discards only expired batches.
-  const hasExpiredBatches =
-    (item.quantity > 0 &&
-      (item.condition === ItemCondition.Expired ||
-        (!!item.earliestBatchExpiresOn &&
-          daysUntilExpiry(item.earliestBatchExpiresOn, today) < 0))) ||
-    batches.some(
-      batch =>
-        batch.status === BatchStatus.Active &&
-        !!batch.expiresOn &&
-        daysUntilExpiry(batch.expiresOn, today) < 0,
-    );
-
-  const activeBatches = batches.filter(
-    batch => batch.status === BatchStatus.Active,
-  );
-  const [soleBatch] = activeBatches;
-  const soleWeighedBatchId =
-    activeBatches.length === 1 && soleBatch?.netWeight != null
-      ? soleBatch.id
-      : null;
-
-  const discardActions: HeaderAction[] =
-    hasExpiredBatches && permissions.canRemoveItems
-      ? [
-          {
-            icon: 'close-circle-outline',
-            accessibilityLabel: t('labels.discard'),
-            onPress: actions.handleDiscardExpired,
-            variant: 'error',
-            testID: pantryTestIDs.itemDiscardButton,
-          },
-        ]
-      : [];
-
-  const headerActions: HeaderAction[] = [
-    ...(permissions.canAddItems
-      ? [
-          {
-            icon:
-              actions.addToListStatus === 'success' ? 'cart' : 'cart-outline',
-            accessibilityLabel: t('labels.addToShoppingList'),
-            onPress: () => {
-              void actions.handleAddToShoppingList();
-            },
-            variant:
-              actions.addToListStatus === 'success' ? 'success' : 'primary',
-            loading: actions.addToListStatus === 'loading',
-            testID: pantryTestIDs.itemAddToListButton,
-          } satisfies HeaderAction,
-        ]
-      : []),
-    ...(permissions.canEditItems
-      ? ([
-          {
-            icon: 'swap-vertical-outline',
-            accessibilityLabel: t('adjustQuantity.title'),
-            onPress: () => actions.setAdjustModalVisible(true),
-            testID: pantryTestIDs.itemAdjustButton,
-          },
-          {
-            icon: 'create-outline',
-            accessibilityLabel: t('labels.edit'),
-            onPress: handleEdit,
-            testID: pantryTestIDs.itemEditButton,
-          },
-          {
-            icon: 'camera-outline',
-            accessibilityLabel: t('a11y.changePhoto'),
-            onPress: () => setPhotoSheetVisible(true),
-            testID: catalogTestIDs.entryPhotoChangeButton,
-          },
-          {
-            icon: 'swap-horizontal-outline',
-            accessibilityLabel: t('relinkItem.action'),
-            onPress: () => setRelinkVisible(true),
-            testID: pantryTestIDs.itemRelinkButton,
-          },
-        ] satisfies HeaderAction[])
-      : []),
-    ...discardActions,
-    ...(permissions.canRemoveItems
-      ? ([
-          {
-            icon: 'trash-outline',
-            accessibilityLabel: t('labels.delete'),
-            onPress: actions.handleDelete,
-            variant: 'error',
-            testID: pantryTestIDs.itemDeleteButton,
-          },
-        ] satisfies HeaderAction[])
-      : []),
-
-    ...reportPhoto.actions,
-  ];
-
   return (
     <>
       <CollapsingHeroDetail
         testID={pantryTestIDs.itemDetail}
         onBack={goBack}
-        actions={headerActions}
+        actions={[
+          ...pantryItemHeaderActions({
+            item,
+            batches: data.batches,
+            today,
+            permissions,
+            actions,
+            onEdit: handleEdit,
+            openSheet: sheets.open,
+            t,
+          }),
+          ...reportPhoto.actions,
+        ]}
         title={item.itemName}
         refreshing={refreshing}
         onRefresh={handleRefresh}
@@ -455,321 +229,34 @@ export const PantryItemDetail: React.FC<
                   fallbackImageUrl={imageUrl}
                   leadImageUrl={gallery.leadImageUrl}
                   height={heroHeight}
-                  onPhotoPress={setViewerIndex}
+                  onPhotoPress={index => sheets.open({ type: 'viewer', index })}
                   onPageChange={reportPhoto.onPageChange}
                 />
               )
             : undefined
         }
       >
-        <DetailTitleRow
-          title={item.itemName}
-          numberOfLines={2}
-          trailing={
-            <Text
-              role="heading"
-              style={styles.quantityBadge}
-              testID={pantryTestIDs.detailAmount}
-            >
-              {quantityText}
-            </Text>
-          }
+        <PantryItemQuantitySection item={item} quantityText={quantityText} />
+        <PantryItemInfoSections
+          itemId={itemId}
+          item={item}
+          quantityText={quantityText}
+          data={data}
+          actions={actions}
+          canEdit={permissions.canEditItems}
         />
-
-        {(!!categoryName || !!storageStateDisplay) && (
-          <View style={styles.categoryBadge}>
-            <Icon name="restaurant-outline" size="xs" tone="primary" />
-            <Text role="label" style={styles.categoryText}>
-              {categoryName ?? t('labels.item')}
-              {storageStateDisplay
-                ? t('pantryItemDetail.inLocation', {
-                    location: storageStateDisplay,
-                  })
-                : ''}
-            </Text>
-          </View>
-        )}
-
-        <DetailSection>
-          <View style={styles.infoColumns}>
-            <View style={styles.infoColumn}>
-              <Text role="caption" style={styles.infoColumnLabel}>
-                {t('pantryItemDetail.inThePantry')}
-              </Text>
-              <Text role="label" style={styles.infoColumnValue}>
-                {formatDaysInPantry(daysInPantry, t)}
-              </Text>
-            </View>
-            <View style={styles.infoColumn}>
-              <Text role="caption" style={styles.infoColumnLabel}>
-                {expiryColumn.header}
-              </Text>
-              <ExpiryColumnText
-                text={expiryColumn.value}
-                isUrgent={!!expiryInfo?.isUrgent}
-                isExpired={!!expiryInfo?.isExpired}
-              />
-            </View>
-            <View style={styles.infoColumn}>
-              <Text role="caption" style={styles.infoColumnLabel}>
-                {t('pantryItemDetail.amount')}
-              </Text>
-              <Text role="label" style={styles.infoColumnValue}>
-                {quantityText}
-              </Text>
-            </View>
-          </View>
-        </DetailSection>
-
-        {!!showNutrition && (
-          <DetailSection
-            title={
-              typicalOf
-                ? t('labels.typicalFor', { concept: typicalOf })
-                : t('pantryItemDetail.nutrition')
-            }
-          >
-            <NutritionSummary
-              nutritionFacts={nutritionFacts}
-              showHighlights={!typicalOf}
-              onPress={() =>
-                toNutritionScreen({
-                  itemId: item.id,
-                  itemName: item.itemName,
-                  nutritionFacts,
-                  typicalOf,
-                })
-              }
-            />
-          </DetailSection>
-        )}
-
-        <DetailSection dividedRows>
-          <PantryDetailInfo
-            itemRef={item}
-            brandName={brandName}
-            quantityText={quantityText}
-            netWeightText={netWeightText}
-            packageBreakdownText={packageBreakdownText}
-            shelfLifeDays={item.item.shelfLifeDays}
-            shelfLifeOpenedDays={item.item.shelfLifeOpenedDays}
-            onCorrectPackageSize={
-              soleWeighedBatchId && permissions.canEditItems
-                ? () => actions.setCorrectingBatchId(soleWeighedBatchId)
-                : undefined
-            }
-            pricing={batchPricing}
-          />
-        </DetailSection>
-
-        {batches.length > 1 && (
-          <DetailSection flush>
-            <BatchSection
-              batches={batches}
-              totalCount={batchTotalCount}
-              onViewAll={() =>
-                toPantryBatchHistory({
-                  pantryItemId: itemId,
-                  itemName: item.itemName,
-                })
-              }
-              onUse={
-                batchUse && permissions.canEditItems
-                  ? actions.setUsingBatchId
-                  : undefined
-              }
-              onCorrectSize={
-                permissions.canEditItems
-                  ? actions.setCorrectingBatchId
-                  : undefined
-              }
-            />
-          </DetailSection>
-        )}
-
-        {item.usageRecordsConnection.edges.length > 0 && (
-          <PantryUsageHistory
-            usageRecords={item.usageRecordsConnection.edges}
-            totalCount={item.usageRecordsConnection.totalCount ?? undefined}
-            onViewAll={() =>
-              toPantryUsageHistory({
-                pantryItemId: itemId,
-                itemName: item.itemName,
-              })
-            }
-          />
-        )}
-
-        <DetailSection title={t('labels.recipesToTry')}>
-          {loadingRecipes ? (
-            <ThemedActivityIndicator
-              size="small"
-              style={styles.recipesLoading}
-            />
-          ) : suggestedRecipes.length > 0 ? (
-            <HorizontalRail surface="surface">
-              {suggestedRecipes.map(recipe => (
-                <AppPressable
-                  key={catalogKey(recipe)}
-                  style={styles.recipeCard}
-                  onPress={() => handleRecipePress(recipe)}
-                >
-                  <CachedImage
-                    uri={recipe.imageUrl}
-                    style={styles.recipeImage}
-                    sharedTransitionTag={`recipe-image-${recipe.providerRecipeId}`}
-                  />
-                  <Text
-                    role="label"
-                    style={styles.recipeTitle}
-                    numberOfLines={2}
-                  >
-                    {recipe.name}
-                  </Text>
-                </AppPressable>
-              ))}
-            </HorizontalRail>
-          ) : recipesState === 'error' || recipesState === 'offline' ? (
-            <DataStateView state={recipesState} onRetry={retryRecipes} />
-          ) : (
-            <Text role="caption" style={styles.noRecipes}>
-              {t('pantryItemDetail.noRecipeSuggestions')}
-            </Text>
-          )}
-        </DetailSection>
+        <PantryItemRecipesSection itemName={item.itemName} />
       </CollapsingHeroDetail>
 
-      {!!actions.adjustModalVisible && (
-        <AdjustQuantityModal
-          visible={actions.adjustModalVisible}
-          pantryItemId={itemId}
-          onClose={() => actions.setAdjustModalVisible(false)}
-          onConfirm={actions.handleConfirmAdjust}
-        />
-      )}
-      {!!actions.usingBatchId && (
-        <ConsumePantryItemModal
-          compact
-          visible
-          pantryItemId={itemId}
-          onClose={() => actions.setUsingBatchId(null)}
-          onConfirm={actions.handleConfirmBatchUse}
-        />
-      )}
-      {!!actions.correctingBatchId && (
-        <CorrectPackageSizeModal
-          visible
-          pantryItemId={itemId}
-          batchId={actions.correctingBatchId}
-          onClose={() => actions.setCorrectingBatchId(null)}
-          onConfirm={actions.handleCorrectPackageSize}
-        />
-      )}
-      {itemPhotos.length > 0 && (
-        <ItemPhotoViewer
-          visible={viewerIndex !== null}
-          photos={itemPhotos}
-          initialIndex={viewerIndex ?? 0}
-          onClose={() => setViewerIndex(null)}
-          item={item.item}
-          entryPhoto={
-            permissions.canEditItems
-              ? {
-                  currentPhotoId: item.image?.catalogImageId ?? null,
-                  onUse: photoId => {
-                    void entryPhoto.pickItemPhoto(photoId).then(landed => {
-                      if (landed) setViewerIndex(null);
-                    });
-                  },
-                }
-              : null
-          }
-        />
-      )}
-      {!!permissions.canEditItems && (
-        <RelinkItemSheet
-          visible={relinkVisible}
-          onDismiss={() => setRelinkVisible(false)}
-          stack={{
-            id: item.id,
-            version: item.version,
-            itemId: item.itemId,
-            itemName: item.itemName,
-          }}
-          onConflictRefresh={handleRefresh}
-        />
-      )}
-      {!!permissions.canEditItems && (
-        <EntryPhotoSheet
-          visible={photoSheetVisible}
-          onDismiss={() => setPhotoSheetVisible(false)}
-          entryPhoto={entryPhoto}
-          hasHouseholdPhoto={item.image?.source === EntryImageSource.Household}
-          onPickItemPhoto={
-            pickableIndex >= 0
-              ? () => {
-                  setPhotoSheetVisible(false);
-                  setViewerIndex(pickableIndex);
-                }
-              : undefined
-          }
-        />
-      )}
+      <PantryItemDetailSheets
+        itemId={itemId}
+        item={item}
+        photos={itemPhotos}
+        actions={actions}
+        sheets={sheets}
+        canEdit={permissions.canEditItems}
+        onConflictRefresh={handleRefresh}
+      />
     </>
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  quantityBadge: {
-    color: theme.colors.textSecondary,
-  },
-  categoryBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    gap: theme.spacing.xs,
-  },
-  categoryText: {
-    color: theme.colors.primaryText,
-  },
-  infoColumns: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  infoColumn: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  infoColumnLabel: {
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  infoColumnValue: {
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
-  },
-  recipesLoading: {
-    marginTop: theme.spacing.sm,
-  },
-  recipeCard: {
-    width: 140,
-  },
-  recipeImage: {
-    width: 140,
-    height: 100,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.surface,
-  },
-  recipeTitle: {
-    color: theme.colors.textPrimary,
-    marginTop: theme.spacing.xs,
-  },
-  noRecipes: {
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing.md,
-    fontStyle: 'italic',
-  },
-}));

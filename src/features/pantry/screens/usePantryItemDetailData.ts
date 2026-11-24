@@ -118,3 +118,6 @@ export function usePantryItemDetailData(itemId: string) {
     refreshAll,
   };
 }
+
+export type PantryItemDetailData = ReturnType<typeof usePantryItemDetailData>;
+export type PantryItemDetailItem = NonNullable<PantryItemDetailData['item']>;
