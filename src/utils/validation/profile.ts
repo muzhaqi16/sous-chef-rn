@@ -91,28 +91,25 @@ const profileVisibilityRule = string().oneOf(
 
 // ----------------------------------------------------------------------------
 
-// Individual field schemas for profile editing
-export const profileFieldSchemas = {
-  firstName: object({ firstName: nameRule }),
-  lastName: object({ lastName: nameRule }),
-  displayName: object({ displayName: displayNameRule }),
-  bio: object({ bio: bioRule }),
-  phone: object({ phone: phoneRule }),
-  website: object({ website: urlRule }),
-  dateOfBirth: object({ dateOfBirth: dateOfBirthRule }),
-  avatar: object({ avatar: urlRule }),
-  coverImage: object({ coverImage: urlRule }),
-  gender: object({ gender: genderRule }),
-  profileVisibility: object({ profileVisibility: profileVisibilityRule }),
+// The rule each editable profile field is checked against.
+const profileFieldRules = {
+  firstName: nameRule,
+  lastName: nameRule,
+  displayName: displayNameRule,
+  bio: bioRule,
+  phone: phoneRule,
+  website: urlRule,
+  dateOfBirth: dateOfBirthRule,
+  avatar: urlRule,
+  coverImage: urlRule,
+  gender: genderRule,
+  profileVisibility: profileVisibilityRule,
 };
 
-// Function to get validation schema for a specific field (matches your pattern)
-export const getValidationSchemaForField = (fieldKey: string) => {
-  if (isOwnKey(profileFieldSchemas, fieldKey)) {
-    return profileFieldSchemas[fieldKey];
-  }
-
-  return object({
-    [fieldKey]: string(),
+/** The one-field form a profile field is edited in; an unknown field is a plain string. */
+export const getValidationSchemaForField = (fieldKey: string) =>
+  object({
+    [fieldKey]: isOwnKey(profileFieldRules, fieldKey)
+      ? profileFieldRules[fieldKey]
+      : string(),
   });
-};

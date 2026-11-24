@@ -239,7 +239,6 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         placeholder={item.placeholder}
         initialValue={typeof item.value === 'string' ? item.value : ''}
         fieldKey={item.key}
-        // @ts-expect-error - yup schema type compatibility
         validationSchema={getValidationSchemaForField(item.key)}
         onSave={handleTextSave}
         onClose={handleTextEditClose}

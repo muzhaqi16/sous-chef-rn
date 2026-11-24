@@ -1,6 +1,6 @@
 import type { Schema } from 'yup';
 import { ValidationError } from 'yup';
-import { profileFieldSchemas, getValidationSchemaForField } from '../profile';
+import { getValidationSchemaForField } from '../profile';
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
 
 const validate = async (schema: Schema, data: Record<string, unknown>) => {
@@ -14,7 +14,7 @@ const validate = async (schema: Schema, data: Record<string, unknown>) => {
 
 describe('profile validation', () => {
   describe('displayName', () => {
-    const schema = profileFieldSchemas.displayName;
+    const schema = getValidationSchemaForField('displayName');
 
     it('accepts valid display names', async () => {
       expect(await validate(schema, { displayName: 'john_doe' })).toBeNull();
@@ -44,7 +44,7 @@ describe('profile validation', () => {
   });
 
   describe('bio', () => {
-    const schema = profileFieldSchemas.bio;
+    const schema = getValidationSchemaForField('bio');
 
     it('accepts valid bio', async () => {
       expect(await validate(schema, { bio: 'I love cooking!' })).toBeNull();
@@ -57,7 +57,7 @@ describe('profile validation', () => {
   });
 
   describe('phone', () => {
-    const schema = profileFieldSchemas.phone;
+    const schema = getValidationSchemaForField('phone');
 
     it('accepts valid phone numbers', async () => {
       expect(await validate(schema, { phone: '+1 (555) 123-4567' })).toBeNull();
@@ -91,7 +91,7 @@ describe('profile validation', () => {
   });
 
   describe('dateOfBirth', () => {
-    const schema = profileFieldSchemas.dateOfBirth;
+    const schema = getValidationSchemaForField('dateOfBirth');
 
     it('accepts valid date', async () => {
       expect(await validate(schema, { dateOfBirth: '1990-06-15' })).toBeNull();
@@ -129,7 +129,7 @@ describe('profile validation', () => {
   });
 
   describe('gender', () => {
-    const schema = profileFieldSchemas.gender;
+    const schema = getValidationSchemaForField('gender');
 
     it.each(['male', 'female', 'non-binary', 'other', 'prefer-not-to-say'])(
       'accepts "%s"',
@@ -145,7 +145,7 @@ describe('profile validation', () => {
   });
 
   describe('profileVisibility', () => {
-    const schema = profileFieldSchemas.profileVisibility;
+    const schema = getValidationSchemaForField('profileVisibility');
 
     it.each(Object.values(ProfileVisibility))(
       'accepts "%s"',

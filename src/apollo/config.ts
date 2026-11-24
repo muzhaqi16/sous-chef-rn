@@ -9,17 +9,18 @@
 
 import type { CacheSizes } from '@apollo/client/utilities';
 
-// @ts-expect-error -- globalThis symbol indexing (Apollo's documented API)
-globalThis[Symbol.for('apollo.cacheSize')] = {
-  // Document caches
-  canonicalStringify: 1000, // Default: 1,000
-  print: 1000, // Default: 2,000
-  'documentTransform.cache': 500, // Default: 2,000
+Object.assign(globalThis, {
+  [Symbol.for('apollo.cacheSize')]: {
+    // Document caches
+    canonicalStringify: 1000, // Default: 1,000
+    print: 1000, // Default: 2,000
+    'documentTransform.cache': 500, // Default: 2,000
 
-  // Fragment registry
-  'fragmentRegistry.lookup': 200, // Fragment lookups
-  'fragmentRegistry.findFragmentSpreads': 100,
+    // Fragment registry
+    'fragmentRegistry.lookup': 200, // Fragment lookups
+    'fragmentRegistry.findFragmentSpreads': 100,
 
-  // Query deduplication
-  'queryManager.getDocumentInfo': 500,
-} satisfies Partial<CacheSizes>;
+    // Query deduplication
+    'queryManager.getDocumentInfo': 500,
+  } satisfies Partial<CacheSizes>,
+});

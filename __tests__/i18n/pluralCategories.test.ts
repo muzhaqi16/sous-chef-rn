@@ -196,8 +196,7 @@ describe('i18n config on an engine without Intl.PluralRules', () => {
   });
 
   it('loads without throwing, and translates', () => {
-    // @ts-expect-error — deleting a standard global is the point of the test.
-    delete Intl.PluralRules;
+    Reflect.deleteProperty(Intl, 'PluralRules');
     expect(Intl.PluralRules).toBeUndefined();
 
     jest.resetModules();
