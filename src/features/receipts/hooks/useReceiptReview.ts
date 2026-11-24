@@ -715,3 +715,5 @@ export function useReceiptReview() {
     },
   };
 }
+
+export type ReceiptReview = ReturnType<typeof useReceiptReview>;
