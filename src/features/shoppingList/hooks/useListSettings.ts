@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
@@ -35,25 +35,12 @@ import { formatMonthDayYear } from '#/utils/formatters/date';
 import { dayAsInstant } from '#/utils/dateUtils';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 
-function syncListFormState(
-  shoppingList:
-    | {
-        name: string;
-        isDefault: boolean;
-      }
-    | null
-    | undefined,
-  listId: string | undefined,
-  setName: (v: string) => void,
-  setIsDefault: (v: boolean) => void,
-) {
-  if (shoppingList && listId) {
-    setName(shoppingList.name);
-    setIsDefault(shoppingList.isDefault);
-  } else if (listId) {
-    setName('');
-    setIsDefault(false);
-  }
+/** What the settings form saves; a new list also takes its home and template. */
+export interface ListSettingsValues {
+  name: string;
+  isDefault: boolean;
+  homeId: string | null;
+  templateId: string | null;
 }
 
 /**
@@ -67,16 +54,9 @@ export const useListSettings = (listId: string | undefined) => {
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
-  const [name, setName] = useState('');
-  const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
   const [showHomePicker, setShowHomePicker] = useState(false);
   const [showPatternPicker, setShowPatternPicker] = useState(false);
-  // Create mode only: the saved template the new list is copied from.
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
-    null,
-  );
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
 
   const {
@@ -96,8 +76,6 @@ export const useListSettings = (listId: string | undefined) => {
   // Only the create screen offers "start from template"; an existing list's
   // settings shouldn't pay for the request.
   const { templates } = useShoppingListTemplates({ skip: !!listId });
-  const selectedTemplate =
-    templates.find(tpl => tpl.id === selectedTemplateId) ?? null;
   const user = useUser();
   // Lazy: eager home data writes to the Zustand store and re-renders
   // ShoppingListMain.
@@ -224,10 +202,6 @@ export const useListSettings = (listId: string | undefined) => {
     }
   };
 
-  useEffect(() => {
-    syncListFormState(shoppingList, listId, setName, setIsDefault);
-  }, [shoppingList, listId]);
-
   // The list is gone for this person: deleted or left here, or every access
   // path lost elsewhere. A delete or leave also loses access once it lands, so
   // the screen is left once, whichever notices first.
@@ -253,27 +227,17 @@ export const useListSettings = (listId: string | undefined) => {
     if (hasLostListAccess) leaveGoneList();
   });
 
-  // What Save would write differs from the list; a new list has nothing to compare.
-  const hasChanges = listId
-    ? name.trim() !== shoppingList?.name || isDefault !== shoppingList.isDefault
-    : undefined;
-
-  const handleSave = () => {
-    if (!name.trim()) {
-      toastService.error(t('errors.listNameEmpty'));
-      return;
-    }
-
-    void executeWithLoadingState(
+  const save = ({ name, isDefault, homeId, templateId }: ListSettingsValues) =>
+    executeWithLoadingState(
       async () => {
-        if (!listId && selectedTemplateId) {
+        if (!listId && templateId) {
           // The copy is assembled on the device, so it is queued like any
           // other create and carries the home the user picked. The default
           // flag still rides on its own mutation afterwards.
           const newListId = await createFromTemplate(
-            selectedTemplateId,
-            name.trim(),
-            selectedHomeId ?? undefined,
+            templateId,
+            name,
+            homeId ?? undefined,
           );
           if (!newListId) return;
           if (isDefault) {
@@ -283,11 +247,11 @@ export const useListSettings = (listId: string | undefined) => {
           goBack();
         } else if (!listId) {
           const newList = await createShoppingList({
-            name: name.trim(),
+            name,
             description: t('shoppingListScreens.createdFromSettings'),
             isDefault,
             tags: ['user-created'],
-            homeId: selectedHomeId ?? undefined,
+            homeId: homeId ?? undefined,
           });
           if (newList.status === 'failed') {
             toastService.error(newList.body);
@@ -305,7 +269,7 @@ export const useListSettings = (listId: string | undefined) => {
             await setAsDefault(listId);
           }
           await updateShoppingList(listId, {
-            name: name.trim(),
+            name,
             ...(defaultTurnedOff && { isDefault: false }),
           });
         }
@@ -319,7 +283,6 @@ export const useListSettings = (listId: string | undefined) => {
         );
       },
     );
-  };
 
   const deleteList = async (id: string) => {
     // Suppresses subscription races; the service auto-cleans after 10s.
@@ -413,7 +376,8 @@ export const useListSettings = (listId: string | undefined) => {
 
   // Templates — save this list as a reusable template (keeps its items), or
   // spin up a new list from it.
-  const handleSaveAsTemplate = () => {
+  // Both take the name as typed, saved or not.
+  const handleSaveAsTemplate = (name: string) => {
     if (listId) {
       void markAsTemplate(
         listId,
@@ -422,7 +386,7 @@ export const useListSettings = (listId: string | undefined) => {
     }
   };
 
-  const handleCreateFromTemplate = () => {
+  const handleCreateFromTemplate = (name: string) => {
     if (!listId) return;
     void executeWithLoadingState(
       async () => {
@@ -470,17 +434,6 @@ export const useListSettings = (listId: string | undefined) => {
     );
   };
 
-  // Picking a template fills the name field with the template's name so the
-  // new list is named something recognizable, unless the user typed their own.
-  const handleSelectTemplate = (value: string) => {
-    setShowTemplatePicker(false);
-    const next = templates.find(tpl => tpl.id === value) ?? null;
-    setSelectedTemplateId(next?.id ?? null);
-    if (!name.trim() || name === selectedTemplate?.displayName) {
-      setName(next?.displayName ?? '');
-    }
-  };
-
   const handleOpenHomePicker = () => {
     if (!homesLoaded) {
       fetchHomeData();
@@ -492,7 +445,7 @@ export const useListSettings = (listId: string | undefined) => {
     alertService.alert(
       t('shoppingListScreens.leaveListTitle'),
       t('shoppingListScreens.leaveListMessage', {
-        name: name || t('shoppingListScreens.thisList'),
+        name: shoppingList?.name ?? t('shoppingListScreens.thisList'),
       }),
       destructiveConfirm(t('labels.leaveList'), () => {
         if (!currentUserCollaborator?.id) {
@@ -528,20 +481,16 @@ export const useListSettings = (listId: string | undefined) => {
     handleGenerateNext,
     handleLeaveList,
     handleOpenHomePicker,
-    handleSave,
     handleSaveAsTemplate,
     handleSelectPattern,
-    handleSelectTemplate,
     handleSetReminderDate,
     handleStopRecurring,
     handleToggleComplete,
-    hasChanges,
     homes,
     homesState,
     retryHomes: fetchHomeData,
     isArchived,
     isCompleted,
-    isDefault,
     isHomeMember,
     isOwner,
     ownership,
@@ -556,7 +505,6 @@ export const useListSettings = (listId: string | undefined) => {
     linkedHomeId,
     listId,
     marking,
-    name,
     nextRecurringDate,
     ownerInfo,
     patternLabel,
@@ -565,13 +513,8 @@ export const useListSettings = (listId: string | undefined) => {
     reminderDate,
     reminderEnabled,
     roleDisplay,
+    save,
     saving,
-    selectedHomeId,
-    selectedTemplate,
-    selectedTemplateId,
-    setIsDefault,
-    setName,
-    setSelectedHomeId,
     setShowHomePicker,
     setShowPatternPicker,
     setShowTemplatePicker,

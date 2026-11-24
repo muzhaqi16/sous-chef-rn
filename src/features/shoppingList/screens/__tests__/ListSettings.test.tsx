@@ -22,6 +22,7 @@ import { useStore } from '#store';
 import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
+import { settledInAct } from '#/test-utils/settledInAct';
 import { Text as AppText } from '#components/atoms/Text';
 import {
   CollaboratorRole,
@@ -307,14 +308,15 @@ describe('an owner’s list', () => {
     });
   });
 
-  it('refuses an empty name, writing nothing', async () => {
+  it('refuses an empty name on the field, writing nothing', async () => {
     const update = recordMock(UpdateShoppingListDocument, { held: true });
     await openSettings(settingsList(), [update]);
 
     fireEvent.changeText(screen.getByDisplayValue('Weekly Groceries'), '  ');
-    fireEvent.press(save());
+    await settledInAct(() => fireEvent.press(save()));
 
-    expect(toastService.error).toHaveBeenCalledWith(t('errors.listNameEmpty'));
+    expect(screen.getByText(t('errors.listNameEmpty'))).toBeTruthy();
+    expect(toastService.error).not.toHaveBeenCalled();
     expect(update.fired).toEqual([]);
   });
 
@@ -356,7 +358,8 @@ describe('an owner’s list', () => {
     ]);
 
     fireEvent.changeText(screen.getByDisplayValue('Weekly Groceries'), 'Shop');
-    fireEvent.press(save());
+    // The form validates before the save starts; the press settles both.
+    await settledInAct(() => fireEvent.press(save()));
     await log.requested(UpdateShoppingListDocument);
 
     expect(

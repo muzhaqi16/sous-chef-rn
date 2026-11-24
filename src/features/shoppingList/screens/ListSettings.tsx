@@ -1,4 +1,6 @@
 import React from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
@@ -23,6 +25,9 @@ import { RecurringSection } from '#features/shoppingList/components/listSettings
 import { ReminderSection } from '#features/shoppingList/components/listSettings/ReminderSection';
 import { TemplateSection } from '#features/shoppingList/components/listSettings/TemplateSection';
 import { SubScreen } from '#components/templates/SubScreen';
+import { reportValidationErrors } from '#/utils/validation/common';
+import type { ListSettingsValues } from '#features/shoppingList/hooks/useListSettings';
+import { EMPTY_LIST_SETTINGS, listSettingsSchema } from './listSettingsForm';
 
 export const ListSettings: React.FC<
   StaticScreenProps<
@@ -51,20 +56,16 @@ export const ListSettings: React.FC<
     handleGenerateNext,
     handleLeaveList,
     handleOpenHomePicker,
-    handleSave,
     handleSaveAsTemplate,
     handleSelectPattern,
-    handleSelectTemplate,
     handleSetReminderDate,
     handleStopRecurring,
     handleToggleComplete,
-    hasChanges,
     homes,
     homesState,
     retryHomes,
     isArchived,
     isCompleted,
-    isDefault,
     isHomeMember,
     canEdit,
     isOwner,
@@ -75,7 +76,6 @@ export const ListSettings: React.FC<
     linkedHomeId,
     listId,
     marking,
-    name,
     nextRecurringDate,
     ownerInfo,
     ownership,
@@ -87,13 +87,8 @@ export const ListSettings: React.FC<
     reminderEnabled,
     retryOwnership,
     roleDisplay,
+    save,
     saving,
-    selectedHomeId,
-    selectedTemplate,
-    selectedTemplateId,
-    setIsDefault,
-    setName,
-    setSelectedHomeId,
     setShowHomePicker,
     setShowPatternPicker,
     setShowTemplatePicker,
@@ -105,6 +100,50 @@ export const ListSettings: React.FC<
     templateName,
     templates,
   } = useListSettings(route.params?.listId);
+
+  const readValues: ListSettingsValues | undefined =
+    listId && shoppingList
+      ? {
+          name: shoppingList.name,
+          isDefault: shoppingList.isDefault,
+          homeId: null,
+          templateId: null,
+        }
+      : undefined;
+  const { control, handleSubmit, setValue, getValues } =
+    useForm<ListSettingsValues>({
+      resolver: yupResolver(listSettingsSchema),
+      // `values` lands in an effect after the first render, so a list cached
+      // at mount seeds the defaults too.
+      defaultValues: readValues ?? EMPTY_LIST_SETTINGS,
+      // The list as read, whenever it changes; a field the user has touched
+      // keeps what they typed.
+      values: readValues,
+      resetOptions: { keepDirtyValues: true },
+      mode: 'onTouched',
+    });
+  const [name, isDefault, homeId, templateId] = useWatch({
+    control,
+    name: ['name', 'isDefault', 'homeId', 'templateId'],
+  });
+  const selectedTemplate = templates.find(tpl => tpl.id === templateId) ?? null;
+
+  // What Save would write differs from the list; a new list has nothing to compare.
+  const hasChanges = listId
+    ? name.trim() !== shoppingList?.name || isDefault !== shoppingList.isDefault
+    : undefined;
+
+  // Picking a template names the new list after it, unless the user typed
+  // their own name.
+  const handleSelectTemplate = (value: string) => {
+    setShowTemplatePicker(false);
+    const next = templates.find(tpl => tpl.id === value) ?? null;
+    setValue('templateId', next?.id ?? null);
+    const typed = getValues('name');
+    if (!typed.trim() || typed === selectedTemplate?.displayName) {
+      setValue('name', next?.displayName ?? '');
+    }
+  };
 
   // Ownership decides the whole screen — its title, its Save action and six
   // sections — so an unresolved answer waits rather than rendering the viewer's
@@ -138,7 +177,9 @@ export const ListSettings: React.FC<
                   : !listId
                   ? t('labels.create')
                   : t('labels.save'),
-                onPress: handleSave,
+                onPress: () => {
+                  void handleSubmit(save, reportValidationErrors)();
+                },
                 variant: 'primary',
                 hasChanges,
                 disabled: saving,
@@ -187,12 +228,21 @@ export const ListSettings: React.FC<
             {t('labels.general')}
           </Text>
 
-          <BaseInput
-            label={t('shoppingListScreens.listName')}
-            value={name}
-            onChangeText={setName}
-            placeholder={t('shoppingListScreens.listNamePlaceholder')}
-            maxLength={LIST_NAME_MAX_LENGTH}
+          <Controller
+            control={control}
+            name="name"
+            render={({ field, fieldState }) => (
+              <BaseInput
+                ref={field.ref}
+                label={t('shoppingListScreens.listName')}
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                errorMessage={fieldState.error?.message}
+                placeholder={t('shoppingListScreens.listNamePlaceholder')}
+                maxLength={LIST_NAME_MAX_LENGTH}
+              />
+            )}
           />
 
           {/* Home selector - only show for new lists. */}
@@ -209,7 +259,7 @@ export const ListSettings: React.FC<
                 onPress={handleOpenHomePicker}
               >
                 <Text role="body">
-                  {homes.find(h => h.id === selectedHomeId)?.name ??
+                  {homes.find(h => h.id === homeId)?.name ??
                     t('shoppingListScreens.personalNoHome')}
                 </Text>
                 <Icon name="chevron-down" size={20} tone="textSecondary" />
@@ -234,7 +284,7 @@ export const ListSettings: React.FC<
               <BaseSwitch
                 accessibilityLabel={t('shoppingListScreens.defaultList')}
                 value={isDefault}
-                onValueChange={setIsDefault}
+                onValueChange={next => setValue('isDefault', next)}
               />
             </View>
           )}
@@ -305,8 +355,10 @@ export const ListSettings: React.FC<
       <TemplateSection
         basedOnTemplate={basedOnTemplate}
         creating={creating}
-        handleCreateFromTemplate={handleCreateFromTemplate}
-        handleSaveAsTemplate={handleSaveAsTemplate}
+        handleCreateFromTemplate={() =>
+          handleCreateFromTemplate(getValues('name'))
+        }
+        handleSaveAsTemplate={() => handleSaveAsTemplate(getValues('name'))}
         canEdit={canEdit}
         isTemplate={isTemplate}
         listId={listId}
@@ -470,9 +522,9 @@ export const ListSettings: React.FC<
             <DataStateView state={homesState} onRetry={retryHomes} />
           ) : undefined
         }
-        selected={selectedHomeId ?? ''}
+        selected={homeId ?? ''}
         onSelect={value => {
-          setSelectedHomeId(value || null);
+          setValue('homeId', value || null);
           setShowHomePicker(false);
         }}
         onCancel={() => setShowHomePicker(false)}
@@ -488,7 +540,7 @@ export const ListSettings: React.FC<
             value: tpl.id,
           })),
         ]}
-        selected={selectedTemplateId ?? ''}
+        selected={templateId ?? ''}
         onSelect={handleSelectTemplate}
         onCancel={() => setShowTemplatePicker(false)}
       />
