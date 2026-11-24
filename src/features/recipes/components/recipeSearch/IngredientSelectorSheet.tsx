@@ -4,11 +4,10 @@ import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Title } from '#components/atoms/Title';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
 import { IngredientSelectionProvider } from '#features/recipes/context/IngredientSelectionContext';
@@ -42,10 +41,8 @@ export const IngredientSelectorSheet: React.FC<
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
   const ingredientSearchBarRef = useRef<SearchBarRef>(null);
 
-  // Forward `onChange` through the hook so it composes with the backdrop
-  // claim handler. Setting `onChange` directly on `<BottomSheetModal>`
-  // below would overwrite the composition and silently break the dim
-  // layer.
+  // `onChange` goes through the sheet's options, which compose it with the
+  // backdrop claim; set on the modal directly it would break the dim layer.
   const handleSheetChange = (index: number) => {
     onSheetChange(index >= 0);
     if (index >= 0) {
@@ -54,22 +51,23 @@ export const IngredientSelectorSheet: React.FC<
     }
   };
 
-  const { ref: sheetRef, modalProps } = useStandardBottomSheet({
-    visible,
-    onDismiss: () => {
-      onSheetChange(false);
-    },
-    snapPoints: ['50%', '75%', '90%'],
-    onChange: index => handleSheetChange(index),
-  });
+  const close = () => {
+    onSheetChange(false);
+  };
 
   const handleSearchAndClose = async () => {
-    sheetRef.current?.close();
+    close();
     await screen.handleIngredientSearch();
   };
 
   return (
-    <BottomSheetModal ref={sheetRef} {...modalProps} index={0}>
+    <Sheet
+      mode="list"
+      visible={visible}
+      onDismiss={close}
+      snapPoints={['50%', '75%', '90%']}
+      onChange={handleSheetChange}
+    >
       {/* Non-scrollable header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
@@ -122,7 +120,7 @@ export const IngredientSelectorSheet: React.FC<
           </View>
         )}
       </View>
-      {/* Scrollable list — direct child of BottomSheetModal */}
+      {/* The list fills what the header leaves. */}
       <IngredientSelectionProvider
         selectedIngredients={screen.selectedIngredients}
         toggleIngredient={screen.toggleIngredient}
@@ -167,7 +165,7 @@ export const IngredientSelectorSheet: React.FC<
           }
         />
       </IngredientSelectionProvider>
-    </BottomSheetModal>
+    </Sheet>
   );
 };
 

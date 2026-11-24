@@ -42,7 +42,6 @@ const PENDING_ADOPTION = [
   'src/features/catalog/ui/AddItemSheet/AddItemSheet.tsx',
   'src/features/mealPlan/components/AddMealSheet.tsx',
   'src/features/recipes/components/modals/IngredientMatchingSheet.tsx',
-  'src/features/recipes/components/recipeSearch/IngredientSelectorSheet.tsx',
   'src/features/shoppingList/components/CollaboratorPermissionsBottomSheet.tsx',
   'src/features/shoppingList/components/QuantityEditSheet/QuantityEditSheet.tsx',
 ];
