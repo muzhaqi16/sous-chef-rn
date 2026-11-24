@@ -50,14 +50,15 @@ describe('FormSelect', () => {
     expect(screen.getByText('Please select')).toBeTruthy();
   });
 
-  it('opens modal and shows options when pressed', async () => {
+  it('opens the picker and sets the option picked', async () => {
     const user = userEvent.setup();
     render(<FormSelect {...defaultProps} />);
     await user.press(screen.getByText('Select an option'));
-    // Modal should now show the label as title and the options
+
     expect(screen.getByText('Option A')).toBeTruthy();
-    expect(screen.getByText('Option B')).toBeTruthy();
     expect(screen.getByText('Option C')).toBeTruthy();
-    expect(screen.getByText('Close')).toBeTruthy();
+    await user.press(screen.getByText('Option B'));
+
+    expect(defaultProps.onValueChange).toHaveBeenCalledWith('b');
   });
 });

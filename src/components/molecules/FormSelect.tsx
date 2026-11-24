@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import type { ViewStyle } from 'react-native';
-import { View, ScrollView } from 'react-native';
-import { Modal } from '#components/atoms/themedComponents';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
+import { ModalPicker } from '#components/molecules/ModalPicker';
+import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 
 interface SelectOption {
   label: string;
@@ -37,32 +37,11 @@ export const FormSelect: React.FC<FormSelectProps> = ({
 }) => {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t('formSelect.placeholder');
-  const [modalVisible, setModalVisible] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState(false);
+  // Inside a sheet, the picker stacks over it; switching would minimize it.
+  const inSheet = useIsBottomSheetInput();
 
   const selectedOption = options.find(option => option.value === value);
-
-  const handleSelect = (optionValue: string) => {
-    onValueChange(optionValue);
-    setModalVisible(false);
-  };
-
-  const renderOption = (item: SelectOption) => {
-    const isSelected = item.value === value;
-    return (
-      <AppPressable
-        key={item.value}
-        style={[styles.option, isSelected && styles.selectedOption]}
-        onPress={() => handleSelect(item.value)}
-      >
-        <Text
-          role="bodyStrong"
-          style={[styles.optionText, isSelected && styles.selectedOptionText]}
-        >
-          {item.label}
-        </Text>
-      </AppPressable>
-    );
-  };
 
   return (
     <FormFieldWrapper
@@ -73,7 +52,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
     >
       <AppPressable
         style={[styles.selectButton, error && styles.selectButtonError]}
-        onPress={() => setModalVisible(true)}
+        onPress={() => setPickerVisible(true)}
       >
         <Text
           role="body"
@@ -86,41 +65,18 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         </Text>
         <Icon name="chevron-down" size="md" tone="textSecondary" />
       </AppPressable>
-      {modalVisible ? (
-        <Modal
-          visible
-          transparent
-          animationType="fade"
-          onRequestClose={() => setModalVisible(false)}
-          statusBarTranslucent
-          navigationBarTranslucent
-        >
-          <View style={styles.modal}>
-            <View style={styles.modalContent}>
-              <Text role="bodyStrong" style={styles.modalTitle}>
-                {label}
-              </Text>
-              {/* A scroller, not a recycling list: the card sizes to its
-                  content, so it offers no height for a `flex: 1` list to
-                  claim. The option sets here are bounded reference sets. */}
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
-                {options.map(renderOption)}
-              </ScrollView>
-              <AppPressable
-                style={styles.closeButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text role="bodyStrong" style={styles.closeButtonText}>
-                  {t('labels.close')}
-                </Text>
-              </AppPressable>
-            </View>
-          </View>
-        </Modal>
-      ) : null}
+      <ModalPicker
+        label={label}
+        visible={pickerVisible}
+        options={options}
+        selected={value ?? null}
+        onSelect={optionValue => {
+          onValueChange(optionValue);
+          setPickerVisible(false);
+        }}
+        onCancel={() => setPickerVisible(false)}
+        stackBehavior={inSheet ? 'push' : undefined}
+      />
     </FormFieldWrapper>
   );
 };
@@ -146,51 +102,5 @@ const styles = StyleSheet.create(theme => ({
   },
   selectTextPlaceholder: {
     color: theme.colors.textSecondary,
-  },
-  modal: {
-    flex: 1,
-    backgroundColor: theme.colors.overlays.medium,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
-    padding: theme.spacing.mdPlus,
-    maxHeight: '80%',
-    width: '90%',
-  },
-  modalTitle: {
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.md,
-    textAlign: 'center',
-  },
-  option: {
-    paddingVertical: theme.spacing.base,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
-  selectedOption: {
-    backgroundColor: theme.colors.primaryLight,
-  },
-  optionText: {
-    color: theme.colors.textPrimary,
-  },
-  selectedOptionText: {
-    color: theme.colors.primaryText,
-  },
-  closeButton: {
-    marginTop: theme.spacing.md,
-    paddingVertical: theme.spacing.base,
-    paddingHorizontal: theme.spacing.lg,
-    backgroundColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    alignSelf: 'center',
-  },
-  closeButtonText: {
-    color: theme.colors.textPrimary,
   },
 }));
