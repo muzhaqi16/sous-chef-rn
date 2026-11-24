@@ -148,27 +148,6 @@ describe('errorService', () => {
   });
 
   // -----------------------------------------------------------------------
-  // shouldRetry
-  // -----------------------------------------------------------------------
-  describe('shouldRetry', () => {
-    it.each([
-      'SERVICE_UNAVAILABLE',
-      'SERVICE_TIMEOUT',
-      'SERVICE_OVERLOADED',
-      'RATE_LIMIT_EXCEEDED',
-      'AUTH_TOKEN_EXPIRED',
-    ])('returns true for %s', code => {
-      expect(errorService.shouldRetry(code)).toBe(true);
-    });
-
-    it('returns false for non-retryable error codes', () => {
-      expect(errorService.shouldRetry('AUTH_TOKEN_INVALID')).toBe(false);
-      expect(errorService.shouldRetry('VALIDATION_FAILED')).toBe(false);
-      expect(errorService.shouldRetry('UNKNOWN_ERROR')).toBe(false);
-    });
-  });
-
-  // -----------------------------------------------------------------------
   // isAuthError
   // -----------------------------------------------------------------------
   describe('isAuthError', () => {
@@ -557,7 +536,6 @@ describe('errorService', () => {
       expect(result.error?.message).toBe(
         'Something went wrong. Please try again.',
       );
-      expect(result.error?.shouldRetry).toBe(false);
       expect(result.error?.isAuthError).toBe(false);
     });
   });
@@ -581,7 +559,6 @@ describe('errorService', () => {
       expect(result.code).toBe('UNKNOWN_ERROR');
       expect(result.message).toBe('An unexpected error occurred');
       expect(result.category).toBe('Unknown');
-      expect(result.shouldRetry).toBe(false);
       expect(result.isAuthError).toBe(false);
     });
   });

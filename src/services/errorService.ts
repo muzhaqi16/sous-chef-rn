@@ -37,7 +37,6 @@ export interface ErrorResult<T = unknown> {
     code: string;
     message: string;
     category: string;
-    shouldRetry: boolean;
     isAuthError: boolean;
     validationErrors?: Record<string, string>;
   };
@@ -48,7 +47,6 @@ export interface ApolloErrorResult {
   code: string;
   message: string;
   category: string;
-  shouldRetry: boolean;
   isAuthError: boolean;
   validationErrors?: Record<string, string>;
 }
@@ -125,7 +123,6 @@ export class ErrorService {
 
     // Resource Errors
     RESOURCE_NOT_FOUND: 'resourceNotFound',
-    RESOURCE_ALREADY_EXISTS: 'resourceAlreadyExists',
     RESOURCE_CONFLICT: 'resourceConflict',
     RESOURCE_GONE: 'resourceGone',
     RESOURCE_LOCKED: 'resourceLocked',
@@ -145,17 +142,12 @@ export class ErrorService {
 
     // Service Errors
     SERVICE_UNAVAILABLE: 'serviceUnavailable',
-    SERVICE_TIMEOUT: 'serviceTimeout',
     SERVICE_MAINTENANCE: 'serviceMaintenance',
-    SERVICE_OVERLOADED: 'serviceOverloaded',
 
     // Network/Offline Errors
     NETWORK_ERROR: 'offline',
     CIRCUIT_OPEN: 'offline',
     CIRCUIT_HALF_OPEN: 'reconnecting',
-
-    // Email Errors
-    EMAIL_ALREADY_EXISTS: 'emailAlreadyExists',
 
     // Query Complexity Errors
     PAGINATION_LIMIT_EXCEEDED: 'genericRetry',
@@ -172,7 +164,6 @@ export class ErrorService {
     UNSTATED_AMOUNT: 'unstatedAmount',
     FEATURE_DISABLED: 'featureDisabled',
     PREMIUM_REQUIRED: 'premiumRequired',
-    EMAIL_ALREADY_VERIFIED: 'emailAlreadyVerified',
     UNAUTHENTICATED: 'signInRequired',
     BAD_REQUEST: 'validationFailed',
     CLIENT_UPGRADE_REQUIRED: 'clientUpgradeRequired',
@@ -214,22 +205,11 @@ export class ErrorService {
     HOME_MEMBER_LIMIT_REACHED: 'homeMemberLimitReached',
   };
 
-  // SERVICE_TIMEOUT and SERVICE_OVERLOADED are absent from the published
-  // TopLevelErrorCode enum until something emits them, so they stay literals.
   // Codes arrive as plain strings, so these are typed `string`.
   private static readonly UNAUTHENTICATED: string =
     TopLevelErrorCode.Unauthenticated;
   private static readonly VALIDATION_FAILED: string =
     ErrorCode.ValidationFailed;
-
-  private static readonly RETRYABLE_ERRORS: string[] = [
-    TopLevelErrorCode.ServiceUnavailable,
-    'SERVICE_TIMEOUT',
-    'SERVICE_OVERLOADED',
-    TopLevelErrorCode.RateLimitExceeded,
-    TopLevelErrorCode.AuthTokenExpired,
-    TopLevelErrorCode.AuthRefreshTokenSuperseded,
-  ];
 
   // The server's own availability rule (`isServiceFault`): every code it can
   // send is a refusal the user acts on, logged at warn and kept out of
@@ -308,10 +288,6 @@ export class ErrorService {
       }
     }
     return 'Unknown';
-  }
-
-  shouldRetry(errorCode: string): boolean {
-    return ErrorService.RETRYABLE_ERRORS.includes(errorCode);
   }
 
   isAuthError(errorCode: string): boolean {
@@ -505,7 +481,6 @@ export class ErrorService {
           code: errorCode,
           message: userFriendlyMessage,
           category,
-          shouldRetry: this.shouldRetry(errorCode),
           isAuthError: this.isAuthError(errorCode),
           validationErrors,
         },
@@ -517,7 +492,6 @@ export class ErrorService {
           code: 'ERROR_HANDLER_FAILED',
           message: t('errors.codes.genericRetry'),
           category: 'Unknown',
-          shouldRetry: false,
           isAuthError: false,
         },
       };
@@ -535,7 +509,6 @@ export class ErrorService {
         code: 'UNKNOWN_ERROR',
         message: t('errors.codes.unexpected'),
         category: 'Unknown',
-        shouldRetry: false,
         isAuthError: false,
       }
     );

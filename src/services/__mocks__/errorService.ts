@@ -61,7 +61,6 @@ export const errorService: ErrorServiceModule['errorService'] = Object.assign(
     // on a mapped code's sentence overrides both.
     hasUserFriendlyMessage: jest.fn(() => false),
     getErrorCategory: jest.fn(() => 'General'),
-    shouldRetry: jest.fn(() => false),
     isAuthError: jest.fn(() => false),
     isExpectedUserError: jest.fn(() => false),
     // Unclassified, as the real parse reports an error it cannot read.
@@ -72,7 +71,6 @@ export const errorService: ErrorServiceModule['errorService'] = Object.assign(
           code: 'UNKNOWN_ERROR',
           message: GENERIC,
           category: 'General',
-          shouldRetry: false,
           isAuthError: false,
         },
       }),

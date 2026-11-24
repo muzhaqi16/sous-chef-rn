@@ -16,9 +16,9 @@ import { errorService } from '#/services/errorService';
  *
  * The check runs in ONE direction on purpose. The table is deliberately wider
  * than the SDL: `NETWORK_ERROR`, `CIRCUIT_OPEN`, the `BUSINESS_*` and
- * `RATE_LIMIT_*` families and the client's own `SERVICE_TIMEOUT` are raised on
- * this side and have no SDL to be declared in. An extra entry costs nothing; a
- * missing one is a sentence the user cannot read.
+ * `RATE_LIMIT_*` families are raised on this side and have no SDL to be
+ * declared in. An extra entry costs nothing; a missing one is a sentence the
+ * user cannot read.
  */
 
 const SCHEMA_CODES = [
