@@ -28,6 +28,8 @@ const AUTHORS: Record<string, string> = {
     'list owns its content inset',
   'src/features/catalog/ui/StoreList.tsx':
     'list owns its content inset, its fixed header included',
+  'src/features/notifications/screens/NotificationListScreen.tsx':
+    'list owns its content inset',
 
   // The scaffolds that apply `gutter="page"` for every screen not built on a list.
   'src/components/templates/Screen.tsx': 'the gutter prop itself',
