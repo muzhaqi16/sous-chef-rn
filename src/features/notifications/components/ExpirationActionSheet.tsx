@@ -9,10 +9,8 @@ import type { Translate } from '#/i18n/types';
 import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { Icon, type IconName } from '#components/atoms/Icon';
@@ -118,12 +116,6 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
 }) => {
   const { t } = useTranslation();
   const today = useToday();
-  // State-driven presentation via visible prop (no manual ref access during render)
-  const { ref, modalProps, insets } = useStandardBottomSheet({
-    visible,
-    onDismiss,
-    snapPoints: ['50%'],
-  });
 
   const itemName =
     firstNonBlank(notification?.pantryItemName) ??
@@ -133,50 +125,39 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
     : '';
 
   return (
-    <BottomSheetModal
-      ref={ref}
-      {...modalProps}
-      index={0}
-      handleIndicatorStyle={styles.handleIndicator}
+    <Sheet
+      mode="action"
+      visible={visible}
+      onDismiss={onDismiss}
+      snapPoints={['50%']}
+      style={styles.scrollView}
+      contentContainerStyle={styles.contentContainer}
     >
-      <BottomSheetScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.contentContainer,
-          { paddingBottom: insets.bottom },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <Title style={styles.title}>
-          {t('expirationAction.title', { itemName })}
-        </Title>
-        <Text role="caption" tone="secondary" style={styles.subtitle}>
-          {subtitle}
-        </Text>
-        <View style={styles.optionsList}>
-          {EXPIRATION_ACTIONS.map((option, index) => (
-            <OptionRow
-              key={option.action}
-              option={option}
-              isLast={index === EXPIRATION_ACTIONS.length - 1}
-              onPress={() => {
-                if (notification) {
-                  onActionSelected(notification, option.action);
-                }
-              }}
-            />
-          ))}
-        </View>
-      </BottomSheetScrollView>
-    </BottomSheetModal>
+      <Title style={styles.title}>
+        {t('expirationAction.title', { itemName })}
+      </Title>
+      <Text role="caption" tone="secondary" style={styles.subtitle}>
+        {subtitle}
+      </Text>
+      <View style={styles.optionsList}>
+        {EXPIRATION_ACTIONS.map((option, index) => (
+          <OptionRow
+            key={option.action}
+            option={option}
+            isLast={index === EXPIRATION_ACTIONS.length - 1}
+            onPress={() => {
+              if (notification) {
+                onActionSelected(notification, option.action);
+              }
+            }}
+          />
+        ))}
+      </View>
+    </Sheet>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  // Matches what `useStandardBottomSheet` gives every other sheet.
-  handleIndicator: {
-    backgroundColor: theme.colors.textSecondary,
-  },
   scrollView: {
     flex: 1,
   },
