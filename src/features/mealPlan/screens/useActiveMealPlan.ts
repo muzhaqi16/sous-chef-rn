@@ -79,3 +79,5 @@ export function useActiveMealPlan({
     ...plan,
   };
 }
+
+export type ActiveMealPlan = ReturnType<typeof useActiveMealPlan>;
