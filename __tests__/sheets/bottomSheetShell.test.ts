@@ -40,7 +40,6 @@ const PENDING_ADOPTION = [
   'src/features/barcode/screens/SearchResultsScreen.tsx',
   'src/features/catalog/ui/AddItemSheet/AddItemSheet.tsx',
   'src/features/mealPlan/components/AddMealSheet.tsx',
-  'src/features/shoppingList/components/CollaboratorPermissionsBottomSheet.tsx',
   'src/features/shoppingList/components/QuantityEditSheet/QuantityEditSheet.tsx',
 ];
 
@@ -82,10 +81,10 @@ const renderers = collect(SRC)
 
 describe('bottom sheet shell', () => {
   it('finds the renderers at all, so the checks below are not vacuous', () => {
-    // The floor falls as sheets adopt the shell — that is the point. It exists
-    // so a scan broken into finding NOTHING cannot pass; the companion test
-    // below, which requires every SHELL file to be found, is the sharper guard.
-    expect(renderers.length).toBeGreaterThanOrEqual(10);
+    // A floor that falls with the worklist: the shell itself always renders a
+    // modal, so a scan broken into finding NOTHING cannot pass. The companion
+    // test below, which requires every SHELL file to be found, is sharper.
+    expect(renderers.length).toBeGreaterThanOrEqual(SHELL.length);
   });
 
   it('every renderer is the shell or is on the adoption list', () => {

@@ -5,8 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { localizedErrorMessage } from '#/services/errorService';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { Icon } from '#components/atoms/Icon';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
@@ -18,7 +17,6 @@ import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { ROLE_PERMISSIONS } from '#features/shoppingList/components/collaboratorRoles';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
 import { Text } from '#components/atoms/Text';
 
@@ -97,16 +95,6 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   );
   const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const {
-    ref: bottomSheetRef,
-    modalProps,
-    contentContainerStyle,
-  } = useStandardBottomSheet({
-    visible: isVisible,
-    onDismiss: () => setIsVisible(false),
-    snapPoints: ['75%', '90%'],
-  });
 
   const { updateRole, updatePermissions } =
     useCollaboratorPermissions(shoppingListId);
@@ -191,124 +179,125 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   if (!collaborator) return null;
 
   return (
-    <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
-      <SheetHeader
-        title={t('collaborators.editPermissions')}
-        onClose={() => setIsVisible(false)}
-        confirm={{
-          onPress: handleSubmit,
-          accessibilityLabel: t('labels.update'),
-          disabled: !selectedRole,
-          loading: isSubmitting,
-        }}
-      />
-      <BottomSheetScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.headerBlock}>
-          <Text role="bodyStrong">
-            {getCollaboratorDisplayName(collaborator, t)}
-          </Text>
-          {!!collaborator.email &&
-            collaborator.email !==
-              getCollaboratorDisplayName(collaborator, t) && (
-              <Text role="caption" tone="secondary" style={styles.emailCaption}>
-                {collaborator.email}
-              </Text>
-            )}
-        </View>
-
-        <View style={styles.rolesContainer}>
-          {availableRoles.map(role => {
-            const roleInfo = ROLE_PERMISSIONS[role];
-            const isSelected = selectedRole === role;
-
-            return (
-              <RoleCard
-                key={role}
-                isSelected={isSelected}
-                isSubmitting={isSubmitting}
-                onSelect={() => setSelectedRole(role)}
-              >
-                <View style={styles.roleHeader}>
-                  <View style={styles.roleTitle}>
-                    <Icon
-                      name={roleInfo.icon}
-                      size={24}
-                      tone={isSelected ? 'primary' : 'textSecondary'}
-                    />
-                    <View>
-                      <Text role="bodyStrong">{t(roleInfo.labelKey)}</Text>
-                      <Text
-                        role="caption"
-                        tone="secondary"
-                        style={styles.roleDescription}
-                      >
-                        {t(roleInfo.descriptionKey)}
-                      </Text>
-                    </View>
-                  </View>
-                  <RadioMarker isSelected={isSelected} />
-                </View>
-
-                {/* Show permissions preview for selected role */}
-                {!!isSelected && (
-                  <View style={styles.permissionsContainer}>
-                    <Text role="label" style={styles.permissionsTitle}>
-                      {t('collaboratorRoles.permissionsTitle')}
-                    </Text>
-                    <View style={styles.permissionsList}>
-                      {roleInfo.permissions.map((permission, index) => (
-                        <View key={index} style={styles.permissionItem}>
-                          <Icon
-                            name={permission.granted ? 'checkmark' : 'close'}
-                            size={14}
-                            tone={
-                              permission.granted ? 'success' : 'textSecondary'
-                            }
-                          />
-                          <Text
-                            role="caption"
-                            style={
-                              !permission.granted && styles.permissionDenied
-                            }
-                          >
-                            {t(permission.labelKey)}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-              </RoleCard>
-            );
-          })}
-        </View>
-
-        {/* Granular per-permission overrides on top of the selected role. */}
-        {!!permissions && (
-          <View style={styles.customPermissions}>
-            <Text role="label" style={styles.customPermissionsTitle}>
-              {t('shoppingListScreens.customPermissions')}
+    <Sheet
+      mode="action"
+      visible={isVisible}
+      onDismiss={() => setIsVisible(false)}
+      snapPoints={['75%', '90%']}
+      style={styles.scrollView}
+      contentContainerStyle={styles.scrollContent}
+      header={
+        <SheetHeader
+          title={t('collaborators.editPermissions')}
+          onClose={() => setIsVisible(false)}
+          confirm={{
+            onPress: handleSubmit,
+            accessibilityLabel: t('labels.update'),
+            disabled: !selectedRole,
+            loading: isSubmitting,
+          }}
+        />
+      }
+    >
+      <View style={styles.headerBlock}>
+        <Text role="bodyStrong">
+          {getCollaboratorDisplayName(collaborator, t)}
+        </Text>
+        {!!collaborator.email &&
+          collaborator.email !==
+            getCollaboratorDisplayName(collaborator, t) && (
+            <Text role="caption" tone="secondary" style={styles.emailCaption}>
+              {collaborator.email}
             </Text>
-            {PERMISSION_ROWS.map(({ key, labelKey }) => (
-              <View key={key} style={styles.permissionToggleRow}>
-                <Text role="caption" style={styles.permissionToggleLabel}>
-                  {t(labelKey)}
-                </Text>
-                <BaseSwitch
-                  accessibilityLabel={t(labelKey)}
-                  value={permissions[key]}
-                  onValueChange={value => handleTogglePermission(key, value)}
-                />
+          )}
+      </View>
+
+      <View style={styles.rolesContainer}>
+        {availableRoles.map(role => {
+          const roleInfo = ROLE_PERMISSIONS[role];
+          const isSelected = selectedRole === role;
+
+          return (
+            <RoleCard
+              key={role}
+              isSelected={isSelected}
+              isSubmitting={isSubmitting}
+              onSelect={() => setSelectedRole(role)}
+            >
+              <View style={styles.roleHeader}>
+                <View style={styles.roleTitle}>
+                  <Icon
+                    name={roleInfo.icon}
+                    size={24}
+                    tone={isSelected ? 'primary' : 'textSecondary'}
+                  />
+                  <View>
+                    <Text role="bodyStrong">{t(roleInfo.labelKey)}</Text>
+                    <Text
+                      role="caption"
+                      tone="secondary"
+                      style={styles.roleDescription}
+                    >
+                      {t(roleInfo.descriptionKey)}
+                    </Text>
+                  </View>
+                </View>
+                <RadioMarker isSelected={isSelected} />
               </View>
-            ))}
-          </View>
-        )}
-      </BottomSheetScrollView>
-    </BottomSheetModal>
+
+              {/* Show permissions preview for selected role */}
+              {!!isSelected && (
+                <View style={styles.permissionsContainer}>
+                  <Text role="label" style={styles.permissionsTitle}>
+                    {t('collaboratorRoles.permissionsTitle')}
+                  </Text>
+                  <View style={styles.permissionsList}>
+                    {roleInfo.permissions.map((permission, index) => (
+                      <View key={index} style={styles.permissionItem}>
+                        <Icon
+                          name={permission.granted ? 'checkmark' : 'close'}
+                          size={14}
+                          tone={
+                            permission.granted ? 'success' : 'textSecondary'
+                          }
+                        />
+                        <Text
+                          role="caption"
+                          style={!permission.granted && styles.permissionDenied}
+                        >
+                          {t(permission.labelKey)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </RoleCard>
+          );
+        })}
+      </View>
+
+      {/* Granular per-permission overrides on top of the selected role. */}
+      {!!permissions && (
+        <View style={styles.customPermissions}>
+          <Text role="label" style={styles.customPermissionsTitle}>
+            {t('shoppingListScreens.customPermissions')}
+          </Text>
+          {PERMISSION_ROWS.map(({ key, labelKey }) => (
+            <View key={key} style={styles.permissionToggleRow}>
+              <Text role="caption" style={styles.permissionToggleLabel}>
+                {t(labelKey)}
+              </Text>
+              <BaseSwitch
+                accessibilityLabel={t(labelKey)}
+                value={permissions[key]}
+                onValueChange={value => handleTogglePermission(key, value)}
+              />
+            </View>
+          ))}
+        </View>
+      )}
+    </Sheet>
   );
 });
 
