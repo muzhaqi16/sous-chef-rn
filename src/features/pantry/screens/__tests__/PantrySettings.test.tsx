@@ -13,6 +13,7 @@ import {
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
+import { settledInAct } from '#/test-utils/settledInAct';
 import { makeCache } from '#/apollo/cache';
 import { isRecord } from '#/utils/isRecord';
 import { useStore } from '#store';
@@ -250,15 +251,13 @@ describe('editing a pantry', () => {
     });
   });
 
-  it('refuses an empty name', async () => {
+  it('refuses an empty name on the field', async () => {
     await renderEditing({ ...kitchen, name: '' });
 
-    fireEvent.press(screen.getByText('Save'));
+    await settledInAct(() => fireEvent.press(screen.getByText('Save')));
 
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Pantry name cannot be empty',
-    );
+    expect(screen.getByText('Pantry name cannot be empty')).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   it('puts the Default switch back when the server refuses it', async () => {
@@ -394,7 +393,7 @@ describe('creating a pantry', () => {
     expect(mockNav.goBack).toHaveBeenCalled();
   });
 
-  it('refuses with no home selected', () => {
+  it('refuses with no home selected', async () => {
     useStore.setState({ selectedHomeId: null });
     renderCreating();
 
@@ -402,7 +401,7 @@ describe('creating a pantry', () => {
       screen.getByPlaceholderText('Enter pantry name (e.g., Kitchen Pantry)'),
       'Garage',
     );
-    fireEvent.press(screen.getByText('Create'));
+    await settledInAct(() => fireEvent.press(screen.getByText('Create')));
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
@@ -24,31 +26,13 @@ import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermission
 import { Text } from '#components/atoms/Text';
 import { SubScreen } from '#components/templates/SubScreen';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
-
-function syncPantryFormState(
-  pantry:
-    | {
-        name?: string | null;
-        description?: string | null;
-        isDefault?: boolean | null;
-      }
-    | null
-    | undefined,
-  pantryId: string | undefined,
-  setName: (v: string) => void,
-  setDescription: (v: string) => void,
-  setIsDefault: (v: boolean) => void,
-) {
-  if (pantry && pantryId) {
-    setName(pantry.name ?? '');
-    setDescription(pantry.description ?? '');
-    setIsDefault(pantry.isDefault ?? false);
-  } else if (!pantryId) {
-    setName('');
-    setDescription('');
-    setIsDefault(false);
-  }
-}
+import { reportValidationErrors } from '#/utils/validation/common';
+import {
+  EMPTY_PANTRY_SETTINGS,
+  MAX_PANTRY_DESCRIPTION_LENGTH,
+  pantrySettingsSchema,
+  type PantrySettingsFormValues,
+} from './pantrySettingsForm';
 
 export const PantrySettings: React.FC<
   StaticScreenProps<
@@ -66,9 +50,6 @@ export const PantrySettings: React.FC<
   const setSelectedPantryId = useSetSelectedPantryId();
   const permissions = usePantryPermissions();
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const {
@@ -82,8 +63,6 @@ export const PantrySettings: React.FC<
     deletePantry,
   } = usePantrySettings({ pantryId, homeId: selectedHomeId });
 
-  // Kept apart from the form sync below: `t` is a dependency here, and a language
-  // change must not re-run the sync over whatever the user has typed.
   useEffect(() => {
     if (!pantryError || !pantryId) return;
     errorService.reportError(pantryError, {
@@ -95,22 +74,37 @@ export const PantrySettings: React.FC<
     );
   }, [pantryError, pantryId, t]);
 
-  useEffect(() => {
-    if (pantryError && pantryId) return;
-    syncPantryFormState(
-      pantry,
-      pantryId,
-      setName,
-      setDescription,
-      setIsDefault,
-    );
-  }, [pantry, pantryId, pantryError]);
+  const readValues: PantrySettingsFormValues | undefined =
+    pantry && !pantryError
+      ? {
+          name: pantry.name,
+          description: pantry.description ?? '',
+          isDefault: pantry.isDefault,
+        }
+      : undefined;
+  const { control, handleSubmit, setValue } = useForm<PantrySettingsFormValues>(
+    {
+      resolver: yupResolver(pantrySettingsSchema),
+      // `values` lands in an effect after the first render, so a pantry cached
+      // at mount seeds the defaults too.
+      defaultValues: readValues ?? EMPTY_PANTRY_SETTINGS,
+      // The pantry as read, whenever it changes; a field the user has touched
+      // keeps what they typed.
+      values: readValues,
+      resetOptions: { keepDirtyValues: true },
+      mode: 'onTouched',
+    },
+  );
+  const [name, description] = useWatch({
+    control,
+    name: ['name', 'description'],
+  });
 
   const handleToggleDefault = async (newValue: boolean) => {
-    setIsDefault(newValue);
+    setValue('isDefault', newValue, { shouldDirty: true });
     if (!pantryId) return;
     // Put the switch back when the flag did not stick.
-    if (!(await setDefault(pantryId))) setIsDefault(!newValue);
+    if (!(await setDefault(pantryId))) setValue('isDefault', !newValue);
   };
 
   // Save writes the name and description; the default flag saves on its own.
@@ -119,12 +113,7 @@ export const PantrySettings: React.FC<
       description.trim() !== (pantry.description ?? '')
     : undefined;
 
-  const handleSave = () => {
-    if (!name.trim()) {
-      alertService.alert(t('labels.error'), t('pantrySettings.nameEmptyError'));
-      return;
-    }
-
+  const onValid = (values: PantrySettingsFormValues) => {
     if (!selectedHomeId) {
       alertService.alert(t('labels.error'), t('errors.noHomeSelected'));
       return;
@@ -135,10 +124,10 @@ export const PantrySettings: React.FC<
         if (!pantryId) {
           const outcome = await createPantry({
             homeId: selectedHomeId,
-            name: name.trim(),
+            name: values.name,
             description:
-              description.trim() || t('pantrySettings.userCreatedDescription'),
-            isDefault,
+              values.description || t('pantrySettings.userCreatedDescription'),
+            isDefault: values.isDefault,
             tags: ['user-created'],
           });
           if (outcome.status === 'rejected') return;
@@ -148,8 +137,8 @@ export const PantrySettings: React.FC<
           goBack();
         } else {
           await savePantryFields(pantryId, {
-            name: name.trim(),
-            description: description.trim(),
+            name: values.name,
+            description: values.description,
           });
         }
       },
@@ -215,7 +204,9 @@ export const PantrySettings: React.FC<
                   : !pantryId
                   ? t('labels.create')
                   : t('labels.save'),
-                onPress: handleSave,
+                onPress: () => {
+                  void handleSubmit(onValid, reportValidationErrors)();
+                },
                 variant: 'primary',
                 hasChanges,
                 disabled: saving,
@@ -230,20 +221,38 @@ export const PantrySettings: React.FC<
           {t('labels.general')}
         </Text>
 
-        <BaseInput
-          label={t('labels.pantryName')}
-          value={name}
-          onChangeText={setName}
-          placeholder={t('pantrySettings.namePlaceholder')}
+        <Controller
+          control={control}
+          name="name"
+          render={({ field, fieldState }) => (
+            <BaseInput
+              ref={field.ref}
+              label={t('labels.pantryName')}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              errorMessage={fieldState.error?.message}
+              placeholder={t('pantrySettings.namePlaceholder')}
+            />
+          )}
         />
 
-        <BaseInput
-          label={t('storageLocationForm.descriptionLabel')}
-          value={description}
-          onChangeText={setDescription}
-          placeholder={t('pantrySettings.descriptionPlaceholder')}
-          multiline
-          numberOfLines={3}
+        <Controller
+          control={control}
+          name="description"
+          render={({ field }) => (
+            <BaseInput
+              ref={field.ref}
+              label={t('storageLocationForm.descriptionLabel')}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              placeholder={t('pantrySettings.descriptionPlaceholder')}
+              maxLength={MAX_PANTRY_DESCRIPTION_LENGTH}
+              multiline
+              numberOfLines={3}
+            />
+          )}
         />
 
         <View style={commonStyles.settingsRow}>
@@ -253,10 +262,16 @@ export const PantrySettings: React.FC<
               {t('pantrySettings.defaultPantryDesc')}
             </Text>
           </View>
-          <BaseSwitch
-            accessibilityLabel={t('pantrySettings.defaultPantry')}
-            value={isDefault}
-            onValueChange={handleToggleDefault}
+          <Controller
+            control={control}
+            name="isDefault"
+            render={({ field }) => (
+              <BaseSwitch
+                accessibilityLabel={t('pantrySettings.defaultPantry')}
+                value={field.value}
+                onValueChange={handleToggleDefault}
+              />
+            )}
           />
         </View>
       </View>
