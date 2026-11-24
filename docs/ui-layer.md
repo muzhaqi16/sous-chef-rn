@@ -676,11 +676,11 @@ they read it.
   `*Form.ts`); `shoppingItemFormConfig.ts` is shared by the AddEditItem screen
   and the AddToShoppingList sheet.
 - **A form over data it reads** seeds `defaultValues` from the cached copy and
-  passes the same object as `values` with `resetOptions: { keepDirtyValues:
-  true }`, so a later read restates every field the user has not touched
-  (`PantryItemForm`, `PantrySettings`). A rule that judges a field against what
-  it was seeded with reads that from the resolver's `context` (the edit form's
-  amount).
+  passes the same object as `values`, with
+  `resetOptions: { keepDirtyValues: true }`, so a later read restates every
+  field the user has not touched (`PantryItemForm`, `PantrySettings`). A rule
+  that judges a field against what it was seeded with reads that from the
+  resolver's `context` (the edit form's amount).
 - **A message that belongs to no field** (nothing answered) is a `root.*` error;
   a server refusal of one row is set on that row's field.
 - **Schema messages resolve lazily** (`const msg = key => () => t(key)`, pattern
