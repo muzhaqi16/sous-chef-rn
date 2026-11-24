@@ -322,6 +322,7 @@
     "deleteFolder": "Fshi dosjen",
     "deleteHint": "Recetat do të zhvendosen te \"Pa dosje\"",
     "renamePlaceholder": "Shkruaj emrin e ri të dosjes...",
+    "nameRequired": "Shkruaj një emër për dosjen.",
     "noMatches": "Asnjë dosje nuk përputhet me \"{{query}}\"",
     "deleteConfirmBody": "Recetat në këtë dosje do të zhvendosen te \"{{folder}}\"."
   },

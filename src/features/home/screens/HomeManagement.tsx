@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
-import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   LinearTransition,
@@ -15,11 +14,10 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useHomeManagement } from '#features/home/hooks/useHomeManagement';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useInviteUserModal } from '#features/home/screens/useInviteUserModal';
-import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
-import { Button } from '#components/molecules/Button';
 import { toastService } from '#/services/toastService';
 import { HomeStats } from '#features/home/components/HomeStats';
 import { CreateHomeForm } from '#features/home/components/CreateHomeForm';
+import { JoinHomeForm } from '#features/home/components/JoinHomeForm';
 import { HomeCard } from '#features/home/components/HomeCard';
 import {
   getInvitableRoles,
@@ -46,7 +44,6 @@ export const HomeManagement: React.FC = () => {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [mode, setMode] = useState<'create' | 'join'>('create');
-  const [joinCode, setJoinCode] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [highlightedHomeId, setHighlightedHomeId] = useState<string | null>(
     null,
@@ -135,25 +132,14 @@ export const HomeManagement: React.FC = () => {
 
   const handleCancelCreate = () => {
     setShowCreateForm(false);
-    setJoinCode('');
     setMode('create');
   };
 
-  const handleJoinHome = async () => {
-    if (!joinCode.trim()) return;
+  const handleJoinHome = async (code: string) => {
     if (!requireVerifiedEmail()) return;
 
-    const result = await joinHomeByCode(joinCode);
-    if (result) {
-      setJoinCode('');
-      setShowCreateForm(false);
-    }
-  };
-
-  const handlePreviewHome = async () => {
-    if (joinCode.trim().length > 3) {
-      await previewHomeByCode(joinCode);
-    }
+    const result = await joinHomeByCode(code);
+    if (result) setShowCreateForm(false);
   };
 
   const handleSetDefault = async (homeId: string) => {
@@ -292,54 +278,16 @@ export const HomeManagement: React.FC = () => {
                 isCreating={creating}
               />
             ) : (
-              /* Join Home Form - uses same components as CreateHomeForm */
-              <View style={styles.joinForm}>
-                <BaseInput
-                  value={joinCode}
-                  onChangeText={setJoinCode}
-                  onBlur={handlePreviewHome}
-                  placeholder={t('labels.enterJoinCode')}
-                  autoCapitalize="characters"
-                />
-                {/* Preview - only shows when code is validated */}
-                {!!loadingPreview && (
-                  <PrimaryActivityIndicator
-                    size="small"
-                    style={styles.previewLoader}
-                  />
-                )}
-                {!!previewHome && (
-                  <View style={styles.previewCard}>
-                    <Text role="heading" style={styles.previewTitle}>
-                      {previewHome.name}
-                    </Text>
-                    <Text role="caption" style={styles.previewSubtitle}>
-                      {t('labels.memberCount', {
-                        count: previewHome.memberCount ?? 0,
-                      })}
-                    </Text>
-                  </View>
-                )}
-                {/* Actions - same as CreateHomeForm */}
-                <View style={styles.formActions}>
-                  <Button
-                    variant="secondary"
-                    onPress={handleCancelCreate}
-                    fullWidth
-                  >
-                    {t('labels.cancel')}
-                  </Button>
-                  <Button
-                    loading={joiningByCode}
-                    disabled={!joinCode.trim()}
-                    onPress={handleJoinHome}
-                    variant="primary"
-                    style={styles.actionButton}
-                  >
-                    {t('homeManagement.join')}
-                  </Button>
-                </View>
-              </View>
+              <JoinHomeForm
+                onSubmit={handleJoinHome}
+                onPreview={code => {
+                  void previewHomeByCode(code);
+                }}
+                onCancel={handleCancelCreate}
+                isJoining={joiningByCode}
+                loadingPreview={loadingPreview}
+                preview={previewHome}
+              />
             )}
           </Animated.View>
         )}
@@ -426,32 +374,5 @@ const styles = StyleSheet.create(theme => ({
   },
   modeButtonTextActive: {
     color: theme.colors.onPrimary,
-  },
-  joinForm: {
-    backgroundColor: theme.colors.surface,
-  },
-  formActions: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.md,
-    gap: theme.spacing.md,
-  },
-  actionButton: {
-    flex: 1,
-  },
-  previewLoader: {
-    marginVertical: theme.spacing.sm,
-  },
-  previewCard: {
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    gap: theme.spacing.xs,
-  },
-  previewTitle: {
-    color: theme.colors.textPrimary,
-  },
-  previewSubtitle: {
-    color: theme.colors.textSecondary,
   },
 }));

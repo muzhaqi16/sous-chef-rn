@@ -28,6 +28,7 @@ import { resolveFolderLongPress } from '#features/recipes/utils/folderProtection
 import { identity, useLocalSearch } from '#hooks/search/useLocalSearch';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { Divider } from '#components/atoms/Divider';
+import { NewFolderForm } from '#features/recipes/components/FolderPicker/NewFolderForm';
 
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
@@ -129,7 +130,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   });
 
   const [showNewFolder, setShowNewFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   const [managingFolder, setManagingFolder] = useState<string | null>(null);
@@ -143,20 +143,12 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   const handleSelectFolder = (folder: string | null) => {
     setSearchQuery('');
     setShowNewFolder(false);
-    setNewFolderName('');
     onSelect(folder);
-  };
-
-  const handleCreateFolder = () => {
-    if (newFolderName.trim()) {
-      handleSelectFolder(newFolderName.trim());
-    }
   };
 
   const handleCancel = () => {
     setSearchQuery('');
     setShowNewFolder(false);
-    setNewFolderName('');
     setManageVisible(false);
     setManagingFolder(null);
     setRenameValue('');
@@ -307,35 +299,10 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 
           {!!allowCreate &&
             (showNewFolder ? (
-              <View style={styles.newFolderContainer}>
-                <ThemedBottomSheetTextInput
-                  style={styles.newFolderInput}
-                  placeholder={t('labels.enterFolderName')}
-                  defaultValue={newFolderName}
-                  onChangeText={setNewFolderName}
-                  autoFocus
-                  autoCapitalize="words"
-                  onSubmitEditing={handleCreateFolder}
-                />
-                <AppPressable
-                  style={[
-                    styles.createButton,
-                    !newFolderName.trim() && styles.createButtonDisabled,
-                  ]}
-                  onPress={handleCreateFolder}
-                  disabled={!newFolderName.trim()}
-                >
-                  <Text
-                    role="bodyStrong"
-                    style={[
-                      styles.createButtonText,
-                      !newFolderName.trim() && styles.createButtonTextDisabled,
-                    ]}
-                  >
-                    {t('labels.create')}
-                  </Text>
-                </AppPressable>
-              </View>
+              <NewFolderForm
+                onCreate={handleSelectFolder}
+                style={styles.newFolder}
+              />
             ) : (
               <AppPressable
                 style={styles.newFolderButton}
@@ -472,39 +439,8 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.sm,
   },
-  newFolderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
+  newFolder: {
     marginBottom: theme.spacing.md,
-  },
-  newFolderInput: {
-    flex: 1,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.base,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.background,
-  },
-  createButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.base,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
-  createButtonDisabled: {
-    backgroundColor: theme.colors.border,
-  },
-  createButtonText: {
-    color: theme.colors.onPrimary,
-  },
-  createButtonTextDisabled: {
-    color: theme.colors.textSecondary,
   },
   folderList: {
     maxHeight: 250,

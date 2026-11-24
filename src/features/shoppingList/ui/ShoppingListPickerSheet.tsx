@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import { Controller, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { object, string, type ObjectSchema } from 'yup';
 import { useTranslation } from '#/i18n';
 import {
   OnPrimaryActivityIndicator,
@@ -14,6 +17,7 @@ import { DataStateView } from '#components/organisms/DataStateView';
 import type { DataState } from '#hooks/data/useDataState';
 import type { SelectorConfig } from '#components/organisms/AnimatedItemSelector/types';
 import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
+import { lazyMessage, reportValidationErrors } from '#/utils/validation/common';
 
 interface ShoppingList {
   id: string;
@@ -21,6 +25,83 @@ interface ShoppingList {
   totalItems?: number | null;
   isDefault?: boolean | null;
 }
+
+interface NewListFormValues {
+  name: string;
+}
+
+const newListSchema: ObjectSchema<NewListFormValues> = object({
+  name: string().trim().required(lazyMessage('errors.listNameEmpty')),
+});
+
+interface NewListFormProps {
+  defaultName: string;
+  creating: boolean;
+  onCreate: (name: string) => void;
+}
+
+/** A new list's name, mounted fresh each time naming opens. */
+const NewListForm: React.FC<NewListFormProps> = ({
+  defaultName,
+  creating,
+  onCreate,
+}) => {
+  const { t } = useTranslation();
+  const { control, handleSubmit } = useForm<NewListFormValues>({
+    resolver: yupResolver(newListSchema),
+    defaultValues: { name: defaultName },
+  });
+  const create = handleSubmit(({ name }) => {
+    onCreate(name);
+  }, reportValidationErrors);
+
+  return (
+    <Controller
+      control={control}
+      name="name"
+      render={({ field, fieldState }) => (
+        <View style={styles.createList}>
+          <View style={styles.createListRow}>
+            <ThemedBottomSheetTextInput
+              style={styles.createListInput}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              placeholder={t('shoppingListPicker.newListNamePlaceholder')}
+              autoCapitalize="words"
+              maxLength={LIST_NAME_MAX_LENGTH}
+            />
+            <Pressable
+              style={({ pressed }) => [
+                styles.createListButton,
+                pressed && styles.pressed,
+              ]}
+              onPress={() => {
+                void create();
+              }}
+              disabled={creating}
+              accessibilityRole="button"
+              accessibilityLabel={t(
+                'shoppingListPicker.createAndAddIngredients',
+              )}
+            >
+              {creating ? (
+                <OnPrimaryActivityIndicator />
+              ) : (
+                <Icon name="checkmark" size={20} tone="onPrimary" />
+              )}
+            </Pressable>
+          </View>
+          {fieldState.error ? (
+            <Text role="error" tone="error" style={styles.createListError}>
+              {fieldState.error.message}
+            </Text>
+          ) : null}
+        </View>
+      )}
+    />
+  );
+};
 
 interface ShoppingListPickerSheetProps {
   visible: boolean;
@@ -52,7 +133,6 @@ export const ShoppingListPickerSheet: React.FC<
   onDismiss,
 }) => {
   const { t } = useTranslation();
-  const [newListName, setNewListName] = useState(defaultNewListName);
   const [naming, setNaming] = useState(false);
 
   const renderCustomItem = (
@@ -106,33 +186,11 @@ export const ShoppingListPickerSheet: React.FC<
       },
     ],
     listHeader: naming ? (
-      <View style={styles.createListRow}>
-        <ThemedBottomSheetTextInput
-          style={styles.createListInput}
-          value={newListName}
-          onChangeText={setNewListName}
-          placeholder={t('shoppingListPicker.newListNamePlaceholder')}
-          autoCapitalize="words"
-          maxLength={LIST_NAME_MAX_LENGTH}
-        />
-        <Pressable
-          style={({ pressed }) => [
-            styles.createListButton,
-            pressed && styles.pressed,
-            !newListName.trim() && styles.createListButtonDisabled,
-          ]}
-          onPress={() => onCreateListAndAdd(newListName)}
-          disabled={!newListName.trim() || creatingList}
-          accessibilityRole="button"
-          accessibilityLabel={t('shoppingListPicker.createAndAddIngredients')}
-        >
-          {creatingList ? (
-            <OnPrimaryActivityIndicator />
-          ) : (
-            <Icon name="checkmark" size={20} tone="onPrimary" />
-          )}
-        </Pressable>
-      </View>
+      <NewListForm
+        defaultName={defaultNewListName}
+        creating={creatingList}
+        onCreate={onCreateListAndAdd}
+      />
     ) : undefined,
   };
 
@@ -142,7 +200,6 @@ export const ShoppingListPickerSheet: React.FC<
       config={config}
       onClose={() => {
         setNaming(false);
-        setNewListName(defaultNewListName);
         onDismiss();
       }}
     />
@@ -178,12 +235,14 @@ const styles = StyleSheet.create(theme => ({
   defaultBadgeText: {
     color: theme.colors.onPrimaryLight,
   },
+  createList: {
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+  },
   createListRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.md,
   },
   createListInput: {
     flex: 1,
@@ -197,8 +256,8 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     backgroundColor: theme.colors.primary,
   },
-  createListButtonDisabled: {
-    opacity: theme.opacity.disabled,
+  createListError: {
+    marginTop: theme.spacing.xs,
   },
   pressed: {
     opacity: theme.opacity.pressed,

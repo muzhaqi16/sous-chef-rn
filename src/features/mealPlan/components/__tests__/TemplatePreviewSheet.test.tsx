@@ -1,6 +1,12 @@
 'use no memo';
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
+import { t } from '#/i18n';
 import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import {
   MembershipRole,
@@ -15,35 +21,6 @@ import { format } from 'date-fns';
 jest.mock('#hooks/ui/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: () => ({ damping: 80, stiffness: 500 }),
 }));
-
-jest.mock('#components/atoms/FormInput', () => {
-  const RN = require('react-native');
-  const R = require('react');
-  return {
-    FormInput: ({
-      label,
-      value,
-      onChangeText,
-      placeholder,
-    }: {
-      label?: string;
-      value?: string;
-      onChangeText?: (text: string) => void;
-      placeholder?: string;
-    }) =>
-      R.createElement(
-        RN.View,
-        null,
-        R.createElement(RN.Text, null, label),
-        R.createElement(RN.TextInput, {
-          value,
-          onChangeText,
-          placeholder,
-          testID: `form-input-${label?.replace(/\s+/g, '-').toLowerCase()}`,
-        }),
-      ),
-  };
-});
 
 jest.mock('#components/molecules/DatePickerField', () => {
   const RN = require('react-native');
@@ -214,7 +191,7 @@ describe('TemplatePreviewSheet', () => {
     const {
       useMealTemplate: mockedTemplateRead,
     } = require('#features/mealPlan/hooks/useMealTemplate');
-    mockedTemplateRead.mockReturnValueOnce({
+    mockedTemplateRead.mockReturnValue({
       groupedByDay: [],
       loading: true,
       hasResult: false,
@@ -229,7 +206,7 @@ describe('TemplatePreviewSheet', () => {
     const {
       useMealTemplate: mockedTemplateRead,
     } = require('#features/mealPlan/hooks/useMealTemplate');
-    mockedTemplateRead.mockReturnValueOnce({
+    mockedTemplateRead.mockReturnValue({
       groupedByDay: [
         {
           dayOffset: 0,
@@ -300,6 +277,58 @@ describe('TemplatePreviewSheet', () => {
     expect(sent.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
+  it('names the plan and sets its servings as entered', async () => {
+    const user = userEvent.setup();
+    render(<TemplatePreviewSheet {...defaultProps} />);
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Weekly Healthy'),
+      '  Spring Plan  ',
+    );
+    fireEvent.changeText(screen.getByTestId('servings-input'), '6');
+    await user.press(screen.getByText('Create Meal Plan'));
+    expect(defaultProps.onConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Spring Plan', servings: 6 }),
+    );
+  });
+
+  it('opens fresh: the plan settings and the copy form go with the closing', async () => {
+    const user = userEvent.setup();
+    const sheet = (visible: boolean) => (
+      <TemplatePreviewSheet
+        {...defaultProps}
+        visible={visible}
+        onDuplicate={jest.fn()}
+      />
+    );
+    const view = render(sheet(true));
+    fireEvent.changeText(screen.getByPlaceholderText('Weekly Healthy'), 'X');
+    await user.press(
+      screen.getByTestId(mealPlanTestIDs.templatePreviewDuplicateButton),
+    );
+    await user.clear(
+      screen.getByTestId(mealPlanTestIDs.templateDuplicateNameInput),
+    );
+    await user.press(
+      screen.getByTestId(mealPlanTestIDs.templateDuplicateConfirmButton),
+    );
+    expect(
+      screen.getByText(t('mealTemplateBuilder.nameRequiredMessage')),
+    ).toBeOnTheScreen();
+
+    view.rerender(sheet(false));
+    view.rerender(sheet(true));
+
+    expect(screen.getByPlaceholderText('Weekly Healthy')).toHaveDisplayValue(
+      '',
+    );
+    expect(
+      screen.queryByTestId(mealPlanTestIDs.templateDuplicateNameInput),
+    ).toBeNull();
+    expect(
+      screen.queryByText(t('mealTemplateBuilder.nameRequiredMessage')),
+    ).toBeNull();
+  });
+
   describe('management actions', () => {
     it('offers none when no handler is passed', () => {
       render(<TemplatePreviewSheet {...defaultProps} />);
@@ -356,7 +385,9 @@ describe('TemplatePreviewSheet', () => {
         screen.getByTestId(mealPlanTestIDs.templatePreviewDuplicateButton),
       );
 
-      const nameInput = screen.getByTestId('form-input-new-template-name');
+      const nameInput = screen.getByTestId(
+        mealPlanTestIDs.templateDuplicateNameInput,
+      );
       expect(nameInput.props.value).toBe('Weekly Healthy (Copy)');
 
       await user.clear(nameInput);
@@ -367,7 +398,7 @@ describe('TemplatePreviewSheet', () => {
       expect(onDuplicate).toHaveBeenCalledWith('tmpl-1', 'Spring Week');
     });
 
-    it('refuses a blank copy name', async () => {
+    it('refuses a blank copy name, saying so on the field', async () => {
       const user = userEvent.setup();
       const onDuplicate = jest.fn();
       render(
@@ -376,11 +407,36 @@ describe('TemplatePreviewSheet', () => {
       await user.press(
         screen.getByTestId(mealPlanTestIDs.templatePreviewDuplicateButton),
       );
-      await user.clear(screen.getByTestId('form-input-new-template-name'));
+      await user.clear(
+        screen.getByTestId(mealPlanTestIDs.templateDuplicateNameInput),
+      );
       await user.press(
         screen.getByTestId(mealPlanTestIDs.templateDuplicateConfirmButton),
       );
       expect(onDuplicate).not.toHaveBeenCalled();
+      expect(
+        screen.getByText(t('mealTemplateBuilder.nameRequiredMessage')),
+      ).toBeOnTheScreen();
+      expect(
+        screen.getByTestId(mealPlanTestIDs.templateDuplicateConfirmButton),
+      ).toBeEnabled();
+    });
+
+    it('holds the copy while one is in flight', async () => {
+      const user = userEvent.setup();
+      render(
+        <TemplatePreviewSheet
+          {...defaultProps}
+          onDuplicate={jest.fn()}
+          duplicating
+        />,
+      );
+      await user.press(
+        screen.getByTestId(mealPlanTestIDs.templatePreviewDuplicateButton),
+      );
+      expect(
+        screen.getByTestId(mealPlanTestIDs.templateDuplicateConfirmButton),
+      ).toBeDisabled();
     });
   });
 });

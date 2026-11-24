@@ -322,6 +322,7 @@
     "deleteFolder": "Elimina cartella",
     "deleteHint": "Le ricette verranno spostate in Senza cartella",
     "renamePlaceholder": "Inserisci il nuovo nome della cartella...",
+    "nameRequired": "Inserisci un nome per la cartella.",
     "noMatches": "Nessuna cartella corrisponde a \"{{query}}\"",
     "deleteConfirmBody": "Le ricette in questa cartella verranno spostate in \"{{folder}}\"."
   },

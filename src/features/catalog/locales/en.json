@@ -322,6 +322,7 @@
     "deleteFolder": "Delete Folder",
     "deleteHint": "Recipes will be moved to No Folder",
     "renamePlaceholder": "Enter new folder name...",
+    "nameRequired": "Enter a folder name.",
     "noMatches": "No folders match \"{{query}}\"",
     "deleteConfirmBody": "Recipes in this folder will be moved to \"{{folder}}\"."
   },

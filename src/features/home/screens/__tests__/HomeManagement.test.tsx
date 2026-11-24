@@ -452,6 +452,21 @@ describe('joining by code', () => {
     askedToVerify();
     expect(join.fired).toEqual([]);
   });
+
+  it('asks for a code on the field when Join is pressed without one', async () => {
+    const join = recordMock(JoinHomeByCodeDocument, { held: true });
+    await openHomes({ answers: [join] });
+    const user = userEvent.setup();
+
+    fireEvent.changeText(await joinMode(user), '   ');
+    await user.press(screen.getByText(t('homeManagement.join')));
+
+    expect(
+      screen.getByText(t('labels.pleaseEnterAJoinCode')),
+    ).toBeOnTheScreen();
+    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(join.fired).toEqual([]);
+  });
 });
 
 describe('making a home the default', () => {

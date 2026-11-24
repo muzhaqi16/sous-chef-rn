@@ -120,11 +120,6 @@ export function useHomeInvitations({
   };
 
   const joinHomeByCode = async (joinCode: string) => {
-    if (!joinCode.trim()) {
-      alertService.alert(t('labels.error'), t('labels.pleaseEnterAJoinCode'));
-      return false;
-    }
-
     const settled = await settleMutation(
       () =>
         joinHomeByCodeMutation({

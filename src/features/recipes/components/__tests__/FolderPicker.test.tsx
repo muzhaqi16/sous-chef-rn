@@ -6,6 +6,7 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
+import { t } from '#/i18n';
 import { FolderPicker } from '#features/recipes/components/FolderPicker';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
@@ -261,23 +262,22 @@ describe('FolderPicker', () => {
 
   // --- Additional branch coverage tests ---
 
-  it('calls handleCreateFolder via submit editing on new folder input', async () => {
+  it('creates the folder when the name is submitted from the keyboard', async () => {
     const user = userEvent.setup();
     render(<FolderPicker {...defaultProps} />);
     await user.press(screen.getByText('Create New Folder'));
     const input = screen.getByPlaceholderText('Enter folder name...');
-    fireEvent.changeText(input, 'My New Folder');
-    fireEvent(input, 'submitEditing');
+    await user.type(input, 'My New Folder', { submitEditing: true });
     expect(defaultProps.onSelect).toHaveBeenCalledWith('My New Folder');
   });
 
-  it('does not create folder when name is empty', async () => {
+  it('does not create folder when name is empty, and says so on the field', async () => {
     const user = userEvent.setup();
     render(<FolderPicker {...defaultProps} />);
     await user.press(screen.getByText('Create New Folder'));
-    // Create button should exist but pressing with empty name should not call onSelect
     await user.press(screen.getByText('Create'));
     expect(defaultProps.onSelect).not.toHaveBeenCalled();
+    expect(screen.getByText(t('folderPicker.nameRequired'))).toBeOnTheScreen();
   });
 
   it('does not create folder when name is only whitespace', async () => {
@@ -288,6 +288,24 @@ describe('FolderPicker', () => {
     fireEvent.changeText(input, '   ');
     await user.press(screen.getByText('Create'));
     expect(defaultProps.onSelect).not.toHaveBeenCalled();
+    expect(screen.getByText(t('folderPicker.nameRequired'))).toBeOnTheScreen();
+  });
+
+  it('opens the create row empty each time', async () => {
+    const user = userEvent.setup();
+    render(<FolderPicker {...defaultProps} />);
+    await user.press(screen.getByText('Create New Folder'));
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Enter folder name...'),
+      'Draft',
+    );
+    await user.press(screen.getByText('No Folder'));
+
+    await user.press(screen.getByText('Create New Folder'));
+
+    expect(
+      screen.getByPlaceholderText('Enter folder name...').props.defaultValue,
+    ).toBe('');
   });
 
   it('creates folder with trimmed name via Create button', async () => {

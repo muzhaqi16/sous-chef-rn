@@ -104,6 +104,22 @@ describe('JoinByShareCodeScreen', () => {
     expect(mockToShoppingListMain).not.toHaveBeenCalled();
   });
 
+  it('asks for a code on the field when Join is pressed without one', async () => {
+    const { mock, fired } = recordMock(JoinShoppingListByShareCodeDocument, {
+      held: true,
+    });
+    renderWithApollo(
+      <JoinByShareCodeScreen route={{ ...route, params: {} }} />,
+      { operationMocks: [mock] },
+    );
+
+    await pressJoin();
+
+    expect(screen.getByText('Please enter a share code')).toBeOnTheScreen();
+    expect(toastService.error).not.toHaveBeenCalled();
+    expect(fired).toEqual([]);
+  });
+
   it('opens the joined list', async () => {
     const { mock } = recordMock(JoinShoppingListByShareCodeDocument, {
       data: {

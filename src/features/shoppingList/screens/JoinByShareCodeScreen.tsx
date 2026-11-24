@@ -2,10 +2,8 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 
 import type { StaticScreenProps } from '@react-navigation/native';
-import { Button } from '#components/molecules/Button';
 import { Icon } from '#components/atoms/Icon';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { useJoinShoppingListByShareCode } from '#features/shoppingList/hooks/useJoinShoppingListByShareCode';
@@ -17,6 +15,7 @@ import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 import { SubScreen } from '#components/templates/SubScreen';
+import { CodeEntryForm } from '#components/organisms/CodeEntryForm';
 
 export const JoinByShareCodeScreen: React.FC<
   StaticScreenProps<{ shareCode?: string } | undefined>
@@ -29,24 +28,17 @@ export const JoinByShareCodeScreen: React.FC<
   // out (replayed after login by useDeepLinkRouter).
   const isLoggedOut = useJoinLinkAuthGate('join_list', initialCode);
 
-  const [code, setCode] = useState(initialCode);
   const [joining, setJoining] = useState(false);
 
   const { requireVerifiedEmail } = useVerifiedEmailGate();
   const { joinByShareCode } = useJoinShoppingListByShareCode();
 
-  const handleJoin = () => {
+  const handleJoin = (code: string) => {
     if (!requireVerifiedEmail()) return;
-
-    const trimmed = code.trim();
-    if (!trimmed) {
-      toastService.error(t('shoppingListScreens.joinEmptyCodeError'));
-      return;
-    }
 
     void executeWithLoadingState(async () => {
       const joined = await joinByShareCode(
-        trimmed,
+        code,
         t('shoppingListScreens.joinFailed'),
       );
       if (!joined.shoppingList) {
@@ -94,23 +86,13 @@ export const JoinByShareCodeScreen: React.FC<
           {t('shoppingListScreens.joinEnterCodeDescription')}
         </Text>
 
-        <BaseInput
-          containerStyle={styles.inputContainer}
-          style={styles.inputText}
-          value={code}
-          onChangeText={setCode}
+        <CodeEntryForm
+          defaultCode={initialCode}
           placeholder={t('shoppingListScreens.joinCodePlaceholder')}
-          autoCapitalize="none"
-          autoCorrect={false}
-          editable={!joining}
-        />
-
-        <Button
-          title={t('shoppingListScreens.joinButton')}
-          onPress={handleJoin}
-          loading={joining}
-          disabled={!code.trim()}
-          style={styles.joinButton}
+          submitLabel={t('shoppingListScreens.joinButton')}
+          requiredMessage="shoppingListScreens.joinEmptyCodeError"
+          onSubmit={handleJoin}
+          submitting={joining}
         />
       </View>
     </SubScreen>
@@ -137,17 +119,5 @@ const styles = StyleSheet.create(theme => ({
   },
   description: {
     marginBottom: theme.spacing.xl,
-  },
-  inputContainer: {
-    width: '100%',
-    marginBottom: theme.spacing.lg,
-  },
-  inputText: {
-    textAlign: 'center',
-    letterSpacing: 2,
-    ...theme.type.heading,
-  },
-  joinButton: {
-    width: '100%',
   },
 }));

@@ -3,7 +3,7 @@
 import React from 'react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, userEvent } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   type MockDataFor,
@@ -20,6 +20,7 @@ import { toDateKey, todayKey } from '#/utils/dateUtils';
 import { EXPIRING_SOON_DAYS } from '#domain/expiry';
 import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { kitTestIDs } from '#components/testIDs';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
@@ -486,6 +487,48 @@ describe('the cart', () => {
     await openScreen({ mode: 'lowStock' });
 
     fireEvent.press(headerCart());
+    fireEvent.press(screen.getByText(t('shoppingListPicker.newList')));
+
+    expect(
+      screen.getByPlaceholderText(
+        t('shoppingListPicker.newListNamePlaceholder'),
+      ),
+    ).toHaveDisplayValue(t('filteredPantry.lowStockTitle'));
+  });
+
+  it('asks for a new list name on the field when there is none', async () => {
+    await openScreen({ mode: 'lowStock' });
+
+    fireEvent.press(headerCart());
+    fireEvent.press(screen.getByText(t('shoppingListPicker.newList')));
+    fireEvent.changeText(
+      screen.getByPlaceholderText(
+        t('shoppingListPicker.newListNamePlaceholder'),
+      ),
+      '   ',
+    );
+    await userEvent.setup().press(
+      screen.getByRole('button', {
+        name: t('shoppingListPicker.createAndAddIngredients'),
+      }),
+    );
+
+    expect(screen.getByText(t('errors.listNameEmpty'))).toBeOnTheScreen();
+    expect(jest.mocked(toastService.error)).not.toHaveBeenCalled();
+  });
+
+  it('names a new list afresh each time naming opens', async () => {
+    await openScreen({ mode: 'lowStock' });
+
+    fireEvent.press(headerCart());
+    fireEvent.press(screen.getByText(t('shoppingListPicker.newList')));
+    fireEvent.changeText(
+      screen.getByPlaceholderText(
+        t('shoppingListPicker.newListNamePlaceholder'),
+      ),
+      'Draft',
+    );
+    fireEvent.press(screen.getByText(t('labels.cancel')));
     fireEvent.press(screen.getByText(t('shoppingListPicker.newList')));
 
     expect(

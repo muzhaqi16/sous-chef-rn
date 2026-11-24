@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { Controller, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { mixed, object, string, type ObjectSchema } from 'yup';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import {
   ChipScrollRow,
   type ChipOption,
@@ -12,6 +14,10 @@ import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Text } from '#components/atoms/Text';
 import { TemplateCategory } from '#/graphql/generated/schemaTypes';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
+import { lazyMessage, reportValidationErrors } from '#/utils/validation/common';
 
 const CATEGORY_OPTION_KEYS: {
   key: TemplateCategory;
@@ -33,6 +39,25 @@ const CATEGORY_OPTION_KEYS: {
   { key: TemplateCategory.Custom, labelKey: 'saveAsTemplate.categoryCustom' },
 ];
 
+interface SaveAsTemplateFormValues {
+  name: string;
+  description: string;
+  category: TemplateCategory;
+  /** Comma-separated, as typed. */
+  tags: string;
+}
+
+const saveAsTemplateSchema: ObjectSchema<SaveAsTemplateFormValues> = object({
+  name: string()
+    .trim()
+    .required(lazyMessage('mealTemplateBuilder.nameRequiredMessage')),
+  description: string().trim().defined(),
+  category: mixed<TemplateCategory>()
+    .oneOf(Object.values(TemplateCategory))
+    .defined(),
+  tags: string().defined(),
+});
+
 interface SaveAsTemplateSheetProps {
   visible: boolean;
   mealPlanId: string | null;
@@ -47,83 +72,65 @@ interface SaveAsTemplateSheetProps {
     tags?: string[];
   }) => void;
   saving: boolean;
-  /** Server unreachable (offline / API down) — disables confirm (no replay path). */
-  disabled?: boolean;
 }
 
-export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
-  visible,
+type SaveAsTemplateFormProps = Omit<
+  SaveAsTemplateSheetProps,
+  'visible' | 'mealPlanId'
+> & { mealPlanId: string };
+
+const SaveAsTemplateForm: React.FC<SaveAsTemplateFormProps> = ({
   mealPlanId,
   mealPlanName,
   homeName,
   onClose,
   onSave,
   saving,
-  disabled = false,
 }) => {
   const { t } = useTranslation();
   const categoryOptions: ChipOption<TemplateCategory>[] =
     CATEGORY_OPTION_KEYS.map(o => ({ key: o.key, label: t(o.labelKey) }));
+  const { control, handleSubmit } = useForm<SaveAsTemplateFormValues>({
+    resolver: yupResolver(saveAsTemplateSchema),
+    defaultValues: {
+      name: mealPlanName
+        ? t('saveAsTemplate.templateNameSuffix', { name: mealPlanName })
+        : '',
+      description: '',
+      category: TemplateCategory.Weekly,
+      tags: '',
+    },
+  });
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<TemplateCategory>(
-    TemplateCategory.Weekly,
-  );
-  const [tagsInput, setTagsInput] = useState('');
-
-  // Reset state when sheet opens (render-time conditional state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevMealPlanName, setPrevMealPlanName] = useState(mealPlanName);
-  if (visible !== prevVisible || mealPlanName !== prevMealPlanName) {
-    setPrevVisible(visible);
-    setPrevMealPlanName(mealPlanName);
-    if (visible) {
-      setName(
-        mealPlanName
-          ? t('saveAsTemplate.templateNameSuffix', { name: mealPlanName })
-          : '',
-      );
-      setDescription('');
-      setCategory(TemplateCategory.Weekly);
-      setTagsInput('');
-    }
-  }
-
-  const handleSave = () => {
-    if (!mealPlanId || !name.trim()) return;
-    const tags = tagsInput
+  const save = handleSubmit(({ name, description, category, tags }) => {
+    const tagList = tags
       .split(',')
       .map(tag => tag.trim())
       .filter(Boolean);
     onSave({
       mealPlanId,
-      name: name.trim(),
-      description: description.trim() || undefined,
+      name,
+      description: description || undefined,
       category,
-      tags: tags.length > 0 ? tags : undefined,
+      tags: tagList.length > 0 ? tagList : undefined,
     });
-  };
+  }, reportValidationErrors);
 
   return (
-    <Sheet
-      mode="form"
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={['70%']}
-      contentContainerStyle={styles.contentContainer}
-      style={styles.scrollView}
-      header={
-        <BottomSheetHeader
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
           title={t('labels.saveAsTemplate')}
-          onCancel={onClose}
-          onConfirm={handleSave}
-          confirmLabel={saving ? t('labels.saving') : t('labels.save')}
-          confirmDisabled={saving || disabled || !name.trim()}
-          confirmColor="primary"
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void save();
+            },
+            loading: saving,
+          }}
         />
-      }
-    >
+      </SheetHeaderSlot>
+
       {!!homeName && (
         <View style={styles.infoNote}>
           <Text role="caption" tone="accent">
@@ -132,19 +139,34 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
         </View>
       )}
 
-      <FormInput
-        label={t('labels.templateName')}
-        value={name}
-        onChangeText={setName}
-        placeholder={t('saveAsTemplate.templateNamePlaceholder')}
-        required
+      <Controller
+        control={control}
+        name="name"
+        render={({ field, fieldState }) => (
+          <FormInput
+            label={t('labels.templateName')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('saveAsTemplate.templateNamePlaceholder')}
+            error={fieldState.error?.message}
+            required
+          />
+        )}
       />
 
-      <FormTextArea
-        label={t('labels.description')}
-        value={description}
-        onChangeText={setDescription}
-        placeholder={t('saveAsTemplate.descriptionPlaceholder')}
+      <Controller
+        control={control}
+        name="description"
+        render={({ field }) => (
+          <FormTextArea
+            label={t('labels.description')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('saveAsTemplate.descriptionPlaceholder')}
+          />
+        )}
       />
 
       {/* Category selector */}
@@ -152,20 +174,61 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
         <Text role="label" tone="secondary">
           {t('labels.category')}
         </Text>
-        <ChipScrollRow
-          options={categoryOptions}
-          selected={category}
-          onSelect={setCategory}
-          edgeFadeColor="surface"
+        <Controller
+          control={control}
+          name="category"
+          render={({ field }) => (
+            <ChipScrollRow
+              options={categoryOptions}
+              selected={field.value}
+              onSelect={field.onChange}
+              edgeFadeColor="surface"
+            />
+          )}
         />
       </View>
 
-      <FormInput
-        label={t('saveAsTemplate.tagsLabel')}
-        value={tagsInput}
-        onChangeText={setTagsInput}
-        placeholder={t('saveAsTemplate.tagsPlaceholder')}
+      <Controller
+        control={control}
+        name="tags"
+        render={({ field }) => (
+          <FormInput
+            label={t('saveAsTemplate.tagsLabel')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('saveAsTemplate.tagsPlaceholder')}
+          />
+        )}
       />
+    </>
+  );
+};
+
+export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
+  visible,
+  mealPlanId,
+  ...form
+}) => {
+  const opening = useOpening(visible && mealPlanId !== null, mealPlanId);
+
+  return (
+    <Sheet
+      mode="form"
+      headerFromContent
+      visible={visible}
+      onDismiss={form.onClose}
+      snapPoints={['70%']}
+      contentContainerStyle={styles.contentContainer}
+      style={styles.scrollView}
+    >
+      {opening?.payload ? (
+        <SaveAsTemplateForm
+          key={opening.id}
+          mealPlanId={opening.payload}
+          {...form}
+        />
+      ) : null}
     </Sheet>
   );
 };

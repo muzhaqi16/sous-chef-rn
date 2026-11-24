@@ -8,7 +8,8 @@ import {
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO, startOfDay } from 'date-fns';
 import { Sheet } from '#components/templates/Sheet';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import {
   MEAL_TYPE_LABEL_KEYS,
@@ -16,6 +17,7 @@ import {
 } from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { useAddRecipeToMealPlan } from '#features/mealPlan/hooks/useAddRecipeToMealPlan';
 import { useMealPlanCalendar } from '#features/mealPlan/hooks/useMealPlanCalendar';
+import { useMealPlans } from '#features/mealPlan/hooks/useMealPlans';
 import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
 import { Text } from '#components/atoms/Text';
 import {
@@ -23,6 +25,7 @@ import {
   formatMonthDay,
 } from '#/utils/formatters/date';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { useOpening } from '#hooks/ui/useOpening';
 
 interface AddToMealPlanSheetProps {
   visible: boolean;
@@ -33,8 +36,10 @@ interface AddToMealPlanSheetProps {
 
 const SNAP_POINTS = ['65%'];
 
-export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
-  visible,
+type AddToMealPlanFormProps = Omit<AddToMealPlanSheetProps, 'visible'>;
+
+/** One opening: the plan, day and meal the recipe goes on. */
+const AddToMealPlanForm: React.FC<AddToMealPlanFormProps> = ({
   onClose,
   recipeId,
   initialMealType,
@@ -44,19 +49,6 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
   const [selectedMealType, setSelectedMealType] = useState<MealType>(
     initialMealType ?? MealType.Dinner,
   );
-
-  // Reset state when sheet opens (render-time conditional state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevInitialMealType, setPrevInitialMealType] =
-    useState(initialMealType);
-  if (visible !== prevVisible || initialMealType !== prevInitialMealType) {
-    setPrevVisible(visible);
-    setPrevInitialMealType(initialMealType);
-    if (visible) {
-      setSelectedPlanId(null);
-      setSelectedMealType(initialMealType ?? MealType.Dinner);
-    }
-  }
 
   const {
     addRecipeToMealPlan,
@@ -91,23 +83,23 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
   };
 
   return (
-    <Sheet
-      mode="form"
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={SNAP_POINTS}
-      contentContainerStyle={styles.content}
-      header={
-        <BottomSheetHeader
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
           title={t('addToMealPlan.title')}
-          onCancel={onClose}
-          onConfirm={handleConfirm}
-          confirmLabel={t('labels.add')}
-          confirmDisabled={adding || !hasPlan}
-          confirmColor="primary"
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void handleConfirm();
+            },
+            accessibilityLabel: t('labels.add'),
+            loading: adding,
+            // The warning below says why.
+            disabled: !hasPlan,
+          }}
         />
-      }
-    >
+      </SheetHeaderSlot>
+
       {!hasPlan && (
         <Text
           role="caption"
@@ -236,6 +228,29 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
           </Pressable>
         ))}
       </View>
+    </>
+  );
+};
+
+export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
+  visible,
+  ...form
+}) => {
+  // The plans are read while the sheet is closed too, so an opening finds them
+  // held instead of saying there is no plan until they arrive.
+  useMealPlans({ fetchPolicy: 'cache-first' });
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      mode="form"
+      headerFromContent
+      visible={visible}
+      onDismiss={form.onClose}
+      snapPoints={SNAP_POINTS}
+      contentContainerStyle={styles.content}
+    >
+      {opening ? <AddToMealPlanForm key={opening.id} {...form} /> : null}
     </Sheet>
   );
 };

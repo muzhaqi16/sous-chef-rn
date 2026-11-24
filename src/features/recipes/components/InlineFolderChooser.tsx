@@ -4,9 +4,9 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { NewFolderForm } from '#features/recipes/components/FolderPicker/NewFolderForm';
 
 interface InlineFolderChooserProps {
   folders: string[];
@@ -20,7 +20,8 @@ interface InlineFolderChooserProps {
  * The folder section of a recipe sheet: pick one, or make one. Deliberately NOT
  * `molecules/FolderPicker`, which is a modal of its own — using it here would
  * stack a second sheet over the host. The create affordance keeps its own
- * open/draft state; the caller hears about a folder only once it has a name.
+ * open state and its form the draft; the caller hears about a folder only once
+ * it has a name.
  */
 export const InlineFolderChooser: React.FC<InlineFolderChooserProps> = ({
   folders,
@@ -30,20 +31,15 @@ export const InlineFolderChooser: React.FC<InlineFolderChooserProps> = ({
 }) => {
   const { t } = useTranslation();
   const [showNewFolder, setShowNewFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
 
   const handleSelect = (folder: string | null) => {
     setShowNewFolder(false);
-    setNewFolderName('');
     onSelect(folder);
   };
 
-  const handleCreate = () => {
-    const trimmed = newFolderName.trim();
-    if (!trimmed) return;
+  const handleCreate = (name: string) => {
     setShowNewFolder(false);
-    setNewFolderName('');
-    onCreateFolder(trimmed);
+    onCreateFolder(name);
   };
 
   return (
@@ -89,35 +85,7 @@ export const InlineFolderChooser: React.FC<InlineFolderChooserProps> = ({
       </View>
 
       {showNewFolder ? (
-        <View style={styles.newFolderContainer}>
-          <ThemedBottomSheetTextInput
-            style={styles.newFolderInput}
-            placeholder={t('labels.enterFolderName')}
-            defaultValue={newFolderName}
-            onChangeText={setNewFolderName}
-            autoFocus
-            autoCapitalize="words"
-            onSubmitEditing={handleCreate}
-          />
-          <AppPressable
-            style={[
-              styles.createButton,
-              !newFolderName.trim() && styles.createButtonDisabled,
-            ]}
-            onPress={handleCreate}
-            disabled={!newFolderName.trim()}
-          >
-            <Text
-              role="bodyStrong"
-              style={[
-                styles.createButtonText,
-                !newFolderName.trim() && styles.createButtonTextDisabled,
-              ]}
-            >
-              {t('labels.create')}
-            </Text>
-          </AppPressable>
-        </View>
+        <NewFolderForm onCreate={handleCreate} style={styles.newFolder} />
       ) : (
         <AppPressable
           style={styles.newFolderButton}
@@ -166,38 +134,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
     marginTop: theme.spacing.sm,
   },
-  newFolderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
+  newFolder: {
     marginTop: theme.spacing.sm,
-  },
-  newFolderInput: {
-    flex: 1,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surface,
-  },
-  createButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
-  createButtonDisabled: {
-    backgroundColor: theme.colors.border,
-  },
-  createButtonText: {
-    color: theme.colors.onPrimary,
-  },
-  createButtonTextDisabled: {
-    color: theme.colors.textSecondary,
   },
 }));

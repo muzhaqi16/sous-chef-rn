@@ -330,23 +330,6 @@ describe('useHomeInvitations', () => {
   });
 
   describe('joinHomeByCode', () => {
-    it('shows alert for empty join code', async () => {
-      const { result } = renderHookWithApollo(() =>
-        useHomeInvitations(createOptions()),
-      );
-
-      let success: JoinResult | undefined;
-      await act(async () => {
-        success = await result.current.joinHomeByCode('   ');
-      });
-
-      expect(success).toBe(false);
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Please enter a join code',
-      );
-    });
-
     it('calls mutation with trimmed code and returns membership', async () => {
       const { result } = renderHookWithApollo(
         () => useHomeInvitations(createOptions()),
