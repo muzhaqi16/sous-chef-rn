@@ -68,6 +68,12 @@ jest.mock('@gorhom/bottom-sheet', () => {
         R.createElement(RN.ScrollView, props);
       return ScrollableMock;
     }),
+    // The sheet shell's form scroll view builds one as its module loads.
+    SCROLLABLE_TYPE: { VIEW: 1, FLATLIST: 2, SCROLLVIEW: 3 },
+    createBottomSheetScrollableComponent: (
+      _type: number,
+      Scrollable: React.ComponentType,
+    ) => Scrollable,
   };
 });
 

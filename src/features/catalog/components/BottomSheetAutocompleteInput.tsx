@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
@@ -16,7 +16,6 @@ import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { Icon } from '#components/atoms/Icon';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
 import { catalogTestIDs } from '#features/catalog/testIDs';
@@ -126,11 +125,6 @@ export function BottomSheetAutocompleteInput<T>({
     onModalClose?.();
   };
 
-  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
-    visible: showAutocomplete,
-    onDismiss: handleDismiss,
-    snapPoints: [snapPoint],
-  });
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   const isOffline = useIsApiUnavailable();
@@ -283,21 +277,21 @@ export function BottomSheetAutocompleteInput<T>({
         autoCapitalize={autoCapitalize}
       />
 
-      <BottomSheetModal
-        ref={bottomSheetRef}
-        {...modalProps}
+      <Sheet
+        mode="list"
+        visible={showAutocomplete}
+        onDismiss={handleDismiss}
+        snapPoints={[snapPoint]}
         // 'push' stacks over a host sheet; the default 'switch' minimizes the
         // host, so the whole flow appears to dismiss.
-        stackBehavior="push"
-        keyboardBlurBehavior="none"
-        enableContentPanningGesture={false}
+        modalOptions={{
+          stackBehavior: 'push',
+          keyboardBlurBehavior: 'none',
+          enableContentPanningGesture: false,
+        }}
+        header={<SheetHeader title={title} onClose={handleClose} borderless />}
       >
-        {/* A plain View, NOT gorhom's `BottomSheetView`: that is absolutely
-            positioned with no bottom, so `flex: 1` cannot bound the FlashList
-            and it also re-registers the sheet's scrollable as a plain view
-            after the list registers itself. It is for static content. */}
         <View style={styles.sheetBody}>
-          <SheetHeader title={title} onClose={handleClose} borderless />
           <View style={styles.headerSection}>
             <ThemedBottomSheetTextInput
               style={styles.bottomSheetInput}
@@ -346,7 +340,7 @@ export function BottomSheetAutocompleteInput<T>({
             }
           />
         </View>
-      </BottomSheetModal>
+      </Sheet>
     </FormFieldWrapper>
   );
 }

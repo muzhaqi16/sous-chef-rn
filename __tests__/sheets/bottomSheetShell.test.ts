@@ -34,7 +34,6 @@ const SHELL = [
  * the list may only SHRINK, and a sheet that leaves it must not come back.
  */
 const PENDING_ADOPTION = [
-  'src/features/catalog/components/BottomSheetAutocompleteInput.tsx',
   'src/features/recipes/components/FolderPicker/ManageFolderSheet.tsx',
   'src/features/recipes/components/FolderPicker.tsx',
   'src/features/catalog/ui/AddItemSheet/AddItemSheet.tsx',
