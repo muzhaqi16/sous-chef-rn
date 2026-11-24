@@ -415,14 +415,12 @@ export const ShoppingListItemDetail: React.FC<
         )}
 
         {!!purchaseHistory && (
-          <DetailSection>
-            <ClickableInfoPanel
-              title={t('labels.purchaseHistory')}
-              items={purchaseHistoryItems}
-              onPress={handleViewHistory}
-              emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
-            />
-          </DetailSection>
+          <ClickableInfoPanel
+            title={t('labels.purchaseHistory')}
+            items={purchaseHistoryItems}
+            onPress={handleViewHistory}
+            emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
+          />
         )}
 
         {!!detail && (

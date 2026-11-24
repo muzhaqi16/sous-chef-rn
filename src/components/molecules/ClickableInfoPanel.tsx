@@ -1,13 +1,13 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import type { ViewStyle } from 'react-native';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
+import { Pressable } from '#components/atoms/themedComponents';
 import { EmptyState } from '#components/molecules/EmptyState';
-import { Card } from '#components/atoms/Card';
+import { DetailSection } from '#components/molecules/DetailSection';
 
 export interface InfoRowData {
   label: string;
@@ -19,78 +19,61 @@ interface ClickableInfoPanelProps {
   items: InfoRowData[];
   onPress: () => void;
   emptyMessage?: string;
-  style?: ViewStyle;
 }
+
+/** A detail section summing up a history; its rows open the whole of it. */
 
 export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
   title,
   items,
   onPress,
   emptyMessage,
-  style,
 }) => {
   const { t } = useTranslation();
   const hasItems = items.length > 0;
 
   return (
-    <View style={[styles.container, style]}>
-      <Text role="bodyStrong" style={styles.title}>
-        {title}
-      </Text>
-      <Card padding="none" style={styles.panel} onPress={onPress}>
-        {hasItems ? (
-          <>
-            {items.map((item, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.infoRow,
-                  index === items.length - 1 && styles.lastInfoRow,
-                ]}
+    <DetailSection title={title}>
+      {hasItems ? (
+        <Pressable onPress={onPress}>
+          {items.map((item, index) => (
+            <View
+              key={index}
+              style={[
+                styles.infoRow,
+                index === items.length - 1 && styles.lastInfoRow,
+              ]}
+            >
+              <Text
+                tone="secondary"
+                style={[commonStyles.caption, styles.infoLabel]}
               >
-                <Text
-                  tone="secondary"
-                  style={[commonStyles.caption, styles.infoLabel]}
-                >
-                  {item.label}
-                </Text>
-                <View style={styles.infoValueContainer}>
-                  <Text role="label">{item.value}</Text>
-                </View>
-              </View>
-            ))}
-
-            <View style={styles.actionRow}>
-              <Text role="label" tone="accent">
-                {t('labels.viewDetails')}
+                {item.label}
               </Text>
-              <Icon name="chevron-forward" size="sm" />
+              <View style={styles.infoValueContainer}>
+                <Text role="label">{item.value}</Text>
+              </View>
             </View>
-          </>
-        ) : (
-          <EmptyState
-            size="compact"
-            title={emptyMessage ?? t('labels.noDataAvailable')}
-          />
-        )}
-      </Card>
-    </View>
+          ))}
+
+          <View style={styles.actionRow}>
+            <Text role="label" tone="accent">
+              {t('labels.viewDetails')}
+            </Text>
+            <Icon name="chevron-forward" size="sm" />
+          </View>
+        </Pressable>
+      ) : (
+        <EmptyState
+          size="compact"
+          title={emptyMessage ?? t('labels.noDataAvailable')}
+        />
+      )}
+    </DetailSection>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    marginBottom: theme.spacing.md,
-  },
-  title: {
-    marginBottom: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.xs,
-  },
-  panel: {
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    padding: theme.spacing.md,
-  },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',

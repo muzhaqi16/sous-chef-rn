@@ -156,7 +156,7 @@ describe('ShoppingListItemDetail', () => {
       }),
     );
 
-    fireEvent.press(screen.getByText(t('labels.purchaseHistory')));
+    fireEvent.press(screen.getByText(t('labels.viewDetails')));
 
     expect(mockNav.toPurchaseHistory).toHaveBeenCalledWith({
       itemId: 'si1',
