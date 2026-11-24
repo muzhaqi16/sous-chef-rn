@@ -65,28 +65,6 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
   };
 });
 
-jest.mock('#features/shoppingList/components/Chip', () => {
-  const RN = require('react-native');
-  const R = require('react');
-  return {
-    __esModule: true,
-    default: ({
-      label,
-      selected,
-      onPress,
-    }: {
-      label: string;
-      selected?: boolean;
-      onPress: () => void;
-    }) =>
-      R.createElement(
-        RN.Pressable,
-        { onPress, testID: `chip-${label}`, accessibilityState: { selected } },
-        R.createElement(RN.Text, null, label),
-      ),
-  };
-});
-
 jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
@@ -176,7 +154,7 @@ describe('QuantityEditSheet, render contract', () => {
   it('does not render chips when item has no units', () => {
     const noUnitsItem = { ...mockItem, itemUnits: [] };
     render(<QuantityEditSheet {...defaultProps} item={noUnitsItem} />);
-    expect(screen.queryByTestId('chip-lbs')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'lbs' })).toBeNull();
   });
 
   it('shows nothing before it opens', () => {

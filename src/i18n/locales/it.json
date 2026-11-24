@@ -747,8 +747,6 @@
     "valueSuffix": "Valore di {{label}}",
     "quantityValue": "Valore quantità",
     "swipeForActions": "Scorri a sinistra o a destra per altre azioni",
-    "chipSelected": "Filtro {{label}} selezionato, tocca per deselezionare",
-    "chipUnselected": "Filtro {{label}} non selezionato, tocca per selezionare",
     "currentQuantity": "La quantità attuale è {{value}}",
     "navigateTo": "Vai a {{title}}",
     "profilePreview": "Anteprima del profilo",

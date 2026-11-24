@@ -4,6 +4,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
+import { Chip } from '#components/molecules/Chip';
 import { useTranslation } from '#/i18n';
 
 export interface RestrictionSectionItem {
@@ -47,20 +48,13 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
       {existingItems.length > 0 ? (
         <View style={styles.chipContainer}>
           {existingItems.map(item => (
-            <View key={item.id} style={styles.chipWrapper}>
-              <View style={styles.displayChip}>
-                <Text role="bodyStrong" style={styles.displayChipText}>
-                  {item.label}
-                </Text>
-              </View>
-              <AppPressable
-                style={styles.removeButton}
-                onPress={() => onRemove(item)}
-                accessibilityLabel={t('a11y.removeNamed', { name: item.label })}
-              >
-                <Icon name="close-circle-outline" size={18} tone="error" />
-              </AppPressable>
-            </View>
+            <Chip
+              key={item.id}
+              label={item.label}
+              removable
+              onPress={() => onRemove(item)}
+              accessibilityLabel={t('a11y.removeNamed', { name: item.label })}
+            />
           ))}
         </View>
       ) : (
@@ -94,31 +88,5 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.xs,
-  },
-  chipWrapper: {
-    position: 'relative',
-    margin: theme.spacing.xs,
-  },
-  displayChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii['2xl'],
-    borderCurve: 'continuous',
-    borderWidth: theme.borderWidth.thin,
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.chipSelectedBackground,
-  },
-  displayChipText: {
-    color: theme.colors.chipSelectedText,
-  },
-  removeButton: {
-    position: 'absolute',
-    top: -theme.spacing.xs,
-    right: -theme.spacing.xs,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.full,
   },
 }));

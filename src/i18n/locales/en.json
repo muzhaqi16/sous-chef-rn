@@ -747,8 +747,6 @@
     "valueSuffix": "{{label}} value",
     "quantityValue": "Quantity value",
     "swipeForActions": "Swipe left or right for more actions",
-    "chipSelected": "{{label}} filter selected, tap to deselect",
-    "chipUnselected": "{{label}} filter not selected, tap to select",
     "currentQuantity": "Current quantity is {{value}}",
     "navigateTo": "Navigate to {{title}}",
     "profilePreview": "Profile preview",

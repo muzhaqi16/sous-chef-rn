@@ -747,8 +747,6 @@
     "valueSuffix": "Vlera e {{label}}",
     "quantityValue": "Vlera e sasisë",
     "swipeForActions": "Rrëshqit majtas ose djathtas për më shumë veprime",
-    "chipSelected": "Filtri {{label}} i zgjedhur, trokit për ta hequr",
-    "chipUnselected": "Filtri {{label}} i pazgjedhur, trokit për ta zgjedhur",
     "currentQuantity": "Sasia aktuale është {{value}}",
     "navigateTo": "Shko te {{title}}",
     "profilePreview": "Pamje paraprake e profilit",

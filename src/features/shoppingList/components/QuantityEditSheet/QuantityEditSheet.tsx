@@ -11,7 +11,7 @@ import {
   type ThemedBottomSheetTextInputRef,
 } from '#components/atoms/themedComponents';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
-import Chip from '#features/shoppingList/components/Chip';
+import { Chip } from '#components/molecules/Chip';
 import { Icon } from '#components/atoms/Icon';
 import {
   formatQuantityForInput,

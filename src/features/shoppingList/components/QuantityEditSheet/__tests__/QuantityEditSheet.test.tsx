@@ -100,26 +100,6 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
   },
 }));
 
-jest.mock('#features/shoppingList/components/Chip', () => {
-  const { Text, Pressable } = require('react-native');
-  return ({
-    label,
-    selected,
-    onPress,
-  }: {
-    label: string;
-    selected?: boolean;
-    onPress: () => void;
-  }) => (
-    <Pressable testID={`chip-${label}`} onPress={onPress}>
-      <Text>
-        {label}
-        {selected ? ' (selected)' : ''}
-      </Text>
-    </Pressable>
-  );
-});
-
 jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
   BottomSheetFormScrollView: ({ children }: ChildrenProps) => {
     const { View } = require('react-native');
@@ -220,8 +200,8 @@ describe('QuantityEditSheet', () => {
       ],
     });
     render(<QuantityEditSheet {...defaultProps} item={item} />);
-    expect(screen.getByTestId('chip-tbsp')).toBeTruthy();
-    expect(screen.getByTestId('chip-cups')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'tbsp' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'cups' })).toBeTruthy();
   });
 
   it('renders chips sorted by preferred first, then default', () => {
@@ -251,7 +231,7 @@ describe('QuantityEditSheet', () => {
     renderWithInit({ ...defaultProps, item });
     // preferred (tbsp) should render first, then default (cups), then alphabetical (ml)
     // cups is selected because unitName='cups' matches chip symbol
-    expect(screen.getByText('cups (selected)')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'cups' })).toBeSelected();
   });
 
   it('handles chip press to change unit', async () => {
@@ -268,9 +248,9 @@ describe('QuantityEditSheet', () => {
       ],
     });
     render(<QuantityEditSheet {...defaultProps} item={item} />);
-    await user.press(screen.getByTestId('chip-tbsp'));
+    await user.press(screen.getByRole('button', { name: 'tbsp' }));
     // After pressing, tbsp should become selected
-    expect(screen.getByText('tbsp (selected)')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'tbsp' })).toBeSelected();
   });
 
   it('shows nothing without a line', () => {
@@ -297,7 +277,7 @@ describe('QuantityEditSheet', () => {
       ],
     });
     renderWithInit({ ...defaultProps, item });
-    expect(screen.getByText('cups (selected)')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'cups' })).toBeSelected();
   });
 
   it('matches unitName by name field when symbol does not match', () => {
@@ -308,7 +288,7 @@ describe('QuantityEditSheet', () => {
       ],
     });
     renderWithInit({ ...defaultProps, item });
-    expect(screen.getByText('cups (selected)')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'cups' })).toBeSelected();
   });
 
   it('uses lowercase stored value when no matching chip', () => {
@@ -353,7 +333,7 @@ describe('QuantityEditSheet', () => {
 
   it('does not render chips when itemUnits is empty', () => {
     render(<QuantityEditSheet {...defaultProps} />);
-    expect(screen.queryByTestId('chip-cups')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'cups' })).toBeNull();
   });
 
   describe('a quantity the user did not touch', () => {
