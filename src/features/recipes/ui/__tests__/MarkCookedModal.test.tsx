@@ -1,12 +1,8 @@
 import React from 'react';
-import {
-  render,
-  screen,
-  fireEvent,
-  userEvent,
-} from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import { t } from '#/i18n';
 import { recipesTestIDs } from '#features/recipes/testIDs';
+import { settledInAct } from '#/test-utils/settledInAct';
 import { MarkCookedModal } from '../MarkCookedModal';
 
 jest.mock('#components/molecules/FractionInput', () => {
@@ -33,6 +29,12 @@ jest.mock('#components/molecules/FractionInput', () => {
   };
 });
 
+// The form validates, then awaits the cook's answer; the press settles both.
+const confirm = () =>
+  settledInAct(() =>
+    fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm)),
+  );
+
 const renderModal = (
   onConfirm = jest.fn(),
   { wholeServings = false }: { wholeServings?: boolean } = {},
@@ -56,22 +58,22 @@ describe('MarkCookedModal servings', () => {
   // the pantry is deducted for a serving count nobody entered.
   it.each(['1 1/', '1/2/3', 'a pinch', '3/0'])(
     'reports %s on the field instead of cooking the default',
-    unreadable => {
+    async unreadable => {
       const onConfirm = renderModal();
 
       fireEvent.changeText(screen.getByTestId('servings'), unreadable);
+      await confirm();
 
       expect(screen.getByTestId('servings-error')).toBeTruthy();
-      fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
       expect(onConfirm).not.toHaveBeenCalled();
     },
   );
 
-  it('cooks the recipe default when the field is left empty', () => {
+  it('cooks the recipe default when the field is left empty', async () => {
     const onConfirm = renderModal();
 
     fireEvent.changeText(screen.getByTestId('servings'), '');
-    fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
+    await confirm();
 
     expect(onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({ servings: 4 }),
@@ -80,22 +82,22 @@ describe('MarkCookedModal servings', () => {
 
   // A sloppy separator run is READ, not refused: the locale-aware normalizer
   // settles it, so this is not the unreadable case.
-  it('reads a doubled decimal separator rather than refusing it', () => {
+  it('reads a doubled decimal separator rather than refusing it', async () => {
     const onConfirm = renderModal();
 
     fireEvent.changeText(screen.getByTestId('servings'), '2..0');
-    fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
+    await confirm();
 
     expect(onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({ servings: 2 }),
     );
   });
 
-  it('cooks the entered amount when it can be read', () => {
+  it('cooks the entered amount when it can be read', async () => {
     const onConfirm = renderModal();
 
     fireEvent.changeText(screen.getByTestId('servings'), '3');
-    fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
+    await confirm();
 
     expect(onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({ servings: 3 }),
@@ -106,38 +108,39 @@ describe('MarkCookedModal servings', () => {
   it.each([
     ['1.5', 1.5],
     ['1 1/2', 1.5],
-  ])('cooks %s servings of a recipe', (fractional, servings) => {
+  ])('cooks %s servings of a recipe', async (fractional, servings) => {
     const onConfirm = renderModal();
 
     fireEvent.changeText(screen.getByTestId('servings'), fractional);
-    fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
+    await confirm();
 
     expect(onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({ servings }),
     );
   });
 
-  it('refuses zero servings on the field', () => {
+  it('refuses zero servings on the field', async () => {
     const onConfirm = renderModal();
 
     fireEvent.changeText(screen.getByTestId('servings'), '0');
+    await confirm();
 
     expect(screen.getByTestId('servings-error')).toBeTruthy();
-    fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
   // A planned meal's servings are an Int: a fraction refuses the whole request.
+  // Confirm stays pressable; the field says why it did not go.
   it.each(['1.5', '1 1/2'])(
-    'refuses %s servings of a planned meal on the field and disables confirm',
-    fractional => {
+    'refuses %s servings of a planned meal on the field',
+    async fractional => {
       const onConfirm = renderModal(jest.fn(), { wholeServings: true });
 
       fireEvent.changeText(screen.getByTestId('servings'), fractional);
+      expect(screen.getByTestId(recipesTestIDs.cookConfirm)).toBeEnabled();
+      await confirm();
 
       expect(screen.getByTestId('servings-error')).toBeTruthy();
-      expect(screen.getByTestId(recipesTestIDs.cookConfirm)).toBeDisabled();
-      fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
       expect(onConfirm).not.toHaveBeenCalled();
     },
   );
@@ -162,10 +165,6 @@ describe('MarkCookedModal while the cook settles', () => {
     );
     return onClose;
   };
-  // The confirm awaits the cook's answer, which the press lets settle.
-  const confirm = () =>
-    userEvent.setup().press(screen.getByTestId(recipesTestIDs.cookConfirm));
-
   it('closes once the cook is taken', async () => {
     const onClose = renderWith(jest.fn().mockResolvedValue('done'));
 

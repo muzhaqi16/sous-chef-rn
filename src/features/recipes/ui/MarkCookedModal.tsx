@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -7,12 +9,18 @@ import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { reportValidationErrors } from '#/utils/validation/common';
 import { Text } from '#components/atoms/Text';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
 import type { CookConfirmOutcome } from '#features/recipes/types';
+import {
+  cookedServings,
+  plannedMealCookedSchema,
+  recipeCookedSchema,
+  type MarkCookedFormValues,
+} from './markCookedForm';
 
 interface MarkCookedModalProps {
   visible: boolean;
@@ -44,49 +52,41 @@ const MarkCookedForm: React.FC<MarkCookedFormProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const [servingsInput, setServingsInput] = useState(String(defaultServings));
-  const [deductFromPantry, setDeductFromPantry] = useState(true);
-  const [useGranularDeduction, setUseGranularDeduction] = useState(true);
-  const [notes, setNotes] = useState('');
-  const [saving, setSaving] = useState(false);
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    formState: { isSubmitting },
+  } = useForm<MarkCookedFormValues>({
+    resolver: yupResolver(
+      wholeServings ? plannedMealCookedSchema : recipeCookedSchema,
+    ),
+    defaultValues: {
+      servings: String(defaultServings),
+      deductFromPantry: true,
+      useGranularDeduction: true,
+      notes: '',
+    },
+    mode: 'onTouched',
+  });
+  const [deductFromPantry, useGranularDeduction] = useWatch({
+    control,
+    name: ['deductFromPantry', 'useGranularDeduction'],
+  });
   const [reviewUnavailable, setReviewUnavailable] = useState(false);
 
-  // Empty means "as many as the recipe makes". A TYPED value that is not a
-  // positive number is refused on `servingsMade`, so it is reported, not
-  // swapped for the default. `null` = use the default, `undefined` = unusable.
-  const typedServings = servingsInput.trim();
-  const parsedServings = typedServings
-    ? parseFractionalInput(typedServings)
-    : null;
-  // The parser reports "cannot read this" with the same `null` the empty field
-  // uses, so the two are separated here: substituting the default for text
-  // nobody could read cooks — and deducts — a number never entered.
-  const servingsUnreadable = !!typedServings && parsedServings == null;
-  // A planned meal's servings are an Int, so there a fraction refuses the
-  // whole request.
-  const servingsError =
-    servingsUnreadable ||
-    (parsedServings != null &&
-      (parsedServings <= 0 ||
-        (wholeServings && !Number.isInteger(parsedServings))))
-      ? t(wholeServings ? 'errors.field.servingsMade' : 'errors.field.servings')
-      : undefined;
-
-  const handleConfirm = async () => {
-    if (servingsError || saving) return;
-    setSaving(true);
+  const onValid = async (values: MarkCookedFormValues) => {
     const outcome = await onConfirm({
-      servings: parsedServings ?? defaultServings,
-      deductFromPantry,
+      servings: cookedServings(values, defaultServings),
+      deductFromPantry: values.deductFromPantry,
       useGranularDeduction:
-        deductFromPantry && hasPantry && useGranularDeduction,
-      notes: notes || undefined,
+        values.deductFromPantry && hasPantry && values.useGranularDeduction,
+      notes: values.notes || undefined,
     });
-    setSaving(false);
     if (outcome === 'retry') return;
     if (outcome === 'reviewUnavailable') {
       // Confirmed again, the cook deducts what the recipe uses, unreviewed.
-      setUseGranularDeduction(false);
+      setValue('useGranularDeduction', false);
       setReviewUnavailable(true);
       return;
     }
@@ -101,12 +101,10 @@ const MarkCookedForm: React.FC<MarkCookedFormProps> = ({
           onClose={onClose}
           confirm={{
             onPress: () => {
-              void handleConfirm();
+              void handleSubmit(onValid, reportValidationErrors)();
             },
             accessibilityLabel: t('markCookedModal.markCooked'),
-            // The servings field says why.
-            disabled: !!servingsError,
-            loading: saving,
+            loading: isSubmitting,
             testID: recipesTestIDs.cookConfirm,
           }}
         />
@@ -121,15 +119,21 @@ const MarkCookedForm: React.FC<MarkCookedFormProps> = ({
 
       {/* Servings Input */}
       <View style={styles.section}>
-        <FractionInput
-          label={t('markCookedModal.servingsMade')}
-          value={servingsInput}
-          onChangeText={setServingsInput}
-          placeholder={t('markCookedModal.servingsPlaceholderPrefix', {
-            count: defaultServings || 1,
-          })}
-          error={servingsError}
-          testID={recipesTestIDs.cookServings}
+        <Controller
+          control={control}
+          name="servings"
+          render={({ field, fieldState }) => (
+            <FractionInput
+              label={t('markCookedModal.servingsMade')}
+              value={field.value}
+              onChangeText={field.onChange}
+              placeholder={t('markCookedModal.servingsPlaceholderPrefix', {
+                count: defaultServings || 1,
+              })}
+              error={fieldState.error?.message}
+              testID={recipesTestIDs.cookServings}
+            />
+          )}
         />
       </View>
 
@@ -145,10 +149,16 @@ const MarkCookedForm: React.FC<MarkCookedFormProps> = ({
             {t('markCookedModal.deductFromPantryDesc')}
           </Text>
         </View>
-        <BaseSwitch
-          accessibilityLabel={t('markCookedModal.deductFromPantry')}
-          value={deductFromPantry}
-          onValueChange={setDeductFromPantry}
+        <Controller
+          control={control}
+          name="deductFromPantry"
+          render={({ field }) => (
+            <BaseSwitch
+              accessibilityLabel={t('markCookedModal.deductFromPantry')}
+              value={field.value}
+              onValueChange={field.onChange}
+            />
+          )}
         />
       </View>
 
@@ -165,10 +175,16 @@ const MarkCookedForm: React.FC<MarkCookedFormProps> = ({
               {t('markCookedModal.smartDeductionDesc')}
             </Text>
           </View>
-          <BaseSwitch
-            accessibilityLabel={t('markCookedModal.smartDeduction')}
-            value={useGranularDeduction}
-            onValueChange={setUseGranularDeduction}
+          <Controller
+            control={control}
+            name="useGranularDeduction"
+            render={({ field }) => (
+              <BaseSwitch
+                accessibilityLabel={t('markCookedModal.smartDeduction')}
+                value={field.value}
+                onValueChange={field.onChange}
+              />
+            )}
           />
         </View>
       )}
@@ -186,13 +202,21 @@ const MarkCookedForm: React.FC<MarkCookedFormProps> = ({
 
       {/* Notes (Optional) */}
       <View style={styles.section}>
-        <FormInput
-          label={t('labels.notesOptional')}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder={t('markCookedModal.notesPlaceholder')}
-          multiline
-          numberOfLines={2}
+        <Controller
+          control={control}
+          name="notes"
+          render={({ field }) => (
+            <FormInput
+              ref={field.ref}
+              label={t('labels.notesOptional')}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              placeholder={t('markCookedModal.notesPlaceholder')}
+              multiline
+              numberOfLines={2}
+            />
+          )}
         />
       </View>
     </>
