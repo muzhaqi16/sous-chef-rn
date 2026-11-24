@@ -4,7 +4,6 @@ import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { VerifyEmailDocument } from '#operations/auth/auth.generated';
-import { SignedInEmailVerificationDocument } from '#features/auth/hooks/useVerifyEmail.generated';
 import { UserRole, AppTheme, ErrorCode } from '#/graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
 import { EmailVerificationDeepLinkScreen } from '../EmailVerificationDeepLinkScreen';
@@ -228,49 +227,6 @@ describe('EmailVerificationDeepLinkScreen', () => {
   it('does not mark the signed-in account verified for another account’s link', async () => {
     renderWithApollo(<EmailVerificationDeepLinkScreen />, {
       operationMocks: [buildVerifyMock([], 'account-b')],
-    });
-
-    await drainTimers();
-    expect(screen.getByText('Email Verified!')).toBeTruthy();
-    expect(mockUpdateUser).not.toHaveBeenCalled();
-  });
-
-  // A link opened twice — mail app, then browser — is a verified account, not a
-  // failure worth showing the user. The refusal names no account.
-  const alreadyVerifiedMock: MockFor<typeof VerifyEmailDocument> = {
-    request: { query: VerifyEmailDocument, variables: () => true },
-    result: {
-      data: {
-        verifyEmail: {
-          __typename: 'ConflictError',
-          code: ErrorCode.EmailAlreadyVerified,
-          message: 'Email already verified',
-        },
-      },
-    },
-  };
-  const signedInVerificationMock = (
-    emailVerified: boolean,
-  ): MockFor<typeof SignedInEmailVerificationDocument> => ({
-    request: { query: SignedInEmailVerificationDocument },
-    result: {
-      data: { me: { __typename: 'User', id: '1', emailVerified } },
-    },
-  });
-
-  it('marks the signed-in account verified once the server confirms an already-verified link', async () => {
-    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
-      operationMocks: [alreadyVerifiedMock, signedInVerificationMock(true)],
-    });
-
-    await drainTimers();
-    expect(screen.getByText('Email Verified!')).toBeTruthy();
-    expect(mockUpdateUser).toHaveBeenCalledWith({ emailVerified: true });
-  });
-
-  it('leaves the signed-in account unverified when the already-verified link was another account’s', async () => {
-    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
-      operationMocks: [alreadyVerifiedMock, signedInVerificationMock(false)],
     });
 
     await drainTimers();

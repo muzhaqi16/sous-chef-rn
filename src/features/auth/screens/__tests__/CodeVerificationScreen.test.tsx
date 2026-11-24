@@ -74,18 +74,6 @@ const refusedCode = () =>
     },
   });
 
-const alreadyVerified = () =>
-  recordMock(VerifyEmailDocument, {
-    data: {
-      verifyEmail: {
-        __typename: 'ConflictError',
-        code: ErrorCode.EmailAlreadyVerified,
-        disposition: ErrorDisposition.Fail,
-        message: 'Already verified',
-      },
-    },
-  });
-
 const resent = () =>
   recordMock(ResendVerificationEmailDocument, {
     data: {
@@ -198,15 +186,6 @@ describe('the sign-in gate', () => {
     expect(view.toJSON()).toBeNull();
   });
 
-  it('counts an address already verified as verified', async () => {
-    await openCodeEntry('gate', { answers: [alreadyVerified()] });
-
-    typeCode();
-    await log.landed(VerifyEmailDocument);
-
-    expect(useStore.getState().user?.emailVerified).toBe(true);
-  });
-
   it('says a refused code under the field, and clears it for the next', async () => {
     await openCodeEntry('gate', { answers: [refusedCode()] });
 
@@ -258,29 +237,6 @@ describe('the sign-in gate', () => {
     expect(resend.fired).toEqual([{ input: { email: COOK.email } }]);
     expect(link).toBeDisabled();
     expect(link).toHaveTextContent(/\(\d+s\)/);
-    expect(toastService.error).not.toHaveBeenCalled();
-  });
-
-  it('lets the user through when a resend finds the address already verified', async () => {
-    await openCodeEntry('gate', {
-      answers: [
-        recordMock(ResendVerificationEmailDocument, {
-          data: {
-            resendVerificationEmail: {
-              __typename: 'ConflictError',
-              code: ErrorCode.EmailAlreadyVerified,
-              disposition: ErrorDisposition.Fail,
-              message: 'Already verified',
-            },
-          },
-        }),
-      ],
-    });
-
-    fireEvent.press(screen.getByTestId(authTestIDs.codeVerificationResendLink));
-    await log.landed(ResendVerificationEmailDocument);
-
-    expect(useStore.getState().user?.emailVerified).toBe(true);
     expect(toastService.error).not.toHaveBeenCalled();
   });
 

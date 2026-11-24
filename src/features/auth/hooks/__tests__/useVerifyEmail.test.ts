@@ -7,7 +7,6 @@ import {
   VerifyEmailDocument,
   ResendVerificationEmailDocument,
 } from '#operations/auth/auth.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useVerifyEmail } from '../useVerifyEmail';
 
 const verifyMock = () =>
@@ -87,26 +86,5 @@ describe('useVerifyEmail', () => {
     );
 
     expect(outcome).toEqual({ status: 'verified', userId: 'account-b' });
-  });
-
-  it('names no account when the address was already verified', async () => {
-    const verify = recordMock(VerifyEmailDocument, {
-      data: {
-        verifyEmail: {
-          __typename: 'ConflictError',
-          code: ErrorCode.EmailAlreadyVerified,
-          message: 'Email already verified',
-        },
-      },
-    });
-    const { result } = renderHookWithApollo(() => useVerifyEmail(), {
-      operationMocks: [verify.mock, resendMock().mock],
-    });
-
-    const outcome = await drained(() =>
-      result.current.verifyEmail('link-token'),
-    );
-
-    expect(outcome).toEqual({ status: 'verified', userId: null });
   });
 });

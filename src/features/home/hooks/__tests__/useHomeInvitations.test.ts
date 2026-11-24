@@ -248,7 +248,7 @@ describe('useHomeInvitations', () => {
           data: {
             inviteToHome: {
               __typename: 'ConflictError',
-              code: ErrorCode.ResourceAlreadyExists,
+              code: ErrorCode.Conflict,
               message: 'User already invited',
             },
           },

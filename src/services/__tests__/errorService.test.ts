@@ -39,8 +39,8 @@ import {
   CombinedProtocolErrors,
 } from '@apollo/client/errors';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { RegisterDocument } from '#operations/auth/auth.generated';
 import { CreateItemDocument } from '#operations/item/item.generated';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { UpdateItemDocument } from '#features/catalog/hooks/useSuggestItemEdit.generated';
 
 const mockCombinedGraphQLErrorsIs =
@@ -517,8 +517,8 @@ describe('errorService', () => {
       const error = {
         errors: [
           {
-            message: 'User already exists with this email',
-            extensions: { code: 'EMAIL_ALREADY_EXISTS' },
+            message: 'This pantry already holds that item',
+            extensions: { code: 'PANTRY_ITEM_ALREADY_EXISTS' },
           },
         ],
       };
@@ -526,21 +526,21 @@ describe('errorService', () => {
       (isVersionConflictError as jest.Mock).mockReturnValue(false);
       mockCombinedGraphQLErrorsIs.mockReturnValue(true);
 
-      const register = operationNameOf(RegisterDocument);
-      errorService.parseApolloError(error, { operation: register });
+      const create = operationNameOf(CreatePantryItemDocument);
+      errorService.parseApolloError(error, { operation: create });
 
       expect(Telemetry.warn).toHaveBeenCalledWith(
-        `Validation: EMAIL_ALREADY_EXISTS in ${register}`,
+        `Validation: PANTRY_ITEM_ALREADY_EXISTS in ${create}`,
         expect.objectContaining({
-          component: 'Email',
-          code: 'EMAIL_ALREADY_EXISTS',
-          operation: register,
+          component: 'Pantry',
+          code: 'PANTRY_ITEM_ALREADY_EXISTS',
+          operation: create,
         }),
       );
       expect(Telemetry.trackError).not.toHaveBeenCalled();
       expect(logger.warn).toHaveBeenCalledWith(
-        `Validation error in ${register}:`,
-        expect.objectContaining({ code: 'EMAIL_ALREADY_EXISTS' }),
+        `Validation error in ${create}:`,
+        expect.objectContaining({ code: 'PANTRY_ITEM_ALREADY_EXISTS' }),
       );
       expect(logger.error).not.toHaveBeenCalled();
     });

@@ -235,9 +235,7 @@ export class ErrorService {
   // code. Both code channels appear; the SHOPPING_*/HOME_* literals are in
   // neither enum.
   private static readonly EXPECTED_USER_ERRORS = new Set<string>([
-    ErrorCode.EmailAlreadyExists,
     ErrorCode.VersionConflict,
-    ErrorCode.ResourceAlreadyExists,
     ErrorCode.PantryItemAlreadyExists,
     TopLevelErrorCode.ResourceConflict,
     TopLevelErrorCode.ResourceVersionConflict,

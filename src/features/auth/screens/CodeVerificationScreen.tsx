@@ -68,16 +68,9 @@ function presentVerifyOutcome(
   toastService.error(outcome.body);
 }
 
-function presentResendOutcome(
-  outcome: ResendVerificationOutcome,
-  onVerified: () => void,
-): void {
+function presentResendOutcome(outcome: ResendVerificationOutcome): void {
   if (outcome.status === 'sent') {
     logger.debug('Verification email resent');
-    return;
-  }
-  if (outcome.status === 'alreadyVerified') {
-    onVerified();
     return;
   }
   // The cooldown is already running, so the failure has to be said.
@@ -236,10 +229,7 @@ export function CodeVerificationScreen({
     // tap lands on a disabled link, and a throw cannot leave the window open.
     registerAttempt();
 
-    presentResendOutcome(
-      await resendVerificationEmail(targetEmail),
-      onVerified,
-    );
+    presentResendOutcome(await resendVerificationEmail(targetEmail));
   };
 
   // Straight after registering there is nothing behind this screen, so the
