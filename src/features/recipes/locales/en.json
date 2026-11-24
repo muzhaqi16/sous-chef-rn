@@ -266,6 +266,7 @@
     "stepRequired": "At least one instruction step is required",
     "ingredientNameRequired": "All ingredients must have a name",
     "stepInstructionsRequired": "All steps must have instructions",
+    "instructionRequired": "Write what this step does.",
     "noIngredientsSelectedTitle": "No Ingredients Selected",
     "selectAtLeastOneIngredient": "Please select at least one ingredient.",
     "ingredientLimitReached": "One search takes up to {{count}} ingredients.",

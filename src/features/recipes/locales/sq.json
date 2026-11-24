@@ -266,6 +266,7 @@
     "stepRequired": "Të paktën një hap udhëzimi është i detyrueshëm",
     "ingredientNameRequired": "Të gjithë përbërësit duhet të kenë një emër",
     "stepInstructionsRequired": "Të gjithë hapat duhet të kenë udhëzime",
+    "instructionRequired": "Shkruaj udhëzimin e këtij hapi.",
     "noIngredientsSelectedTitle": "Asnjë përbërës i zgjedhur",
     "selectAtLeastOneIngredient": "Zgjidh të paktën një përbërës.",
     "ingredientLimitReached": "Një kërkim merr deri në {{count}} përbërës.",

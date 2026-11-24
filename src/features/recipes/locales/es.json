@@ -266,6 +266,7 @@
     "stepRequired": "Se requiere al menos un paso de instrucción",
     "ingredientNameRequired": "Todos los ingredientes deben tener un nombre",
     "stepInstructionsRequired": "Todos los pasos deben tener instrucciones",
+    "instructionRequired": "Escribe la instrucción de este paso.",
     "noIngredientsSelectedTitle": "Ningún ingrediente seleccionado",
     "selectAtLeastOneIngredient": "Selecciona al menos un ingrediente.",
     "ingredientLimitReached": "Una búsqueda admite hasta {{count}} ingredientes.",

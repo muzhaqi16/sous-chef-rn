@@ -45,8 +45,6 @@ const PENDING_ADOPTION = [
   'src/features/mealPlan/components/TemplatePreviewSheet.tsx',
   'src/features/notifications/components/ExpirationActionSheet.tsx',
   'src/features/recipes/components/modals/IngredientMatchingSheet.tsx',
-  'src/features/recipes/components/recipeForm/RecipeIngredientEditor.tsx',
-  'src/features/recipes/components/recipeForm/RecipeStepEditor.tsx',
   'src/features/recipes/components/recipeSearch/IngredientSelectorSheet.tsx',
   'src/features/shoppingList/components/CollaboratorPermissionsBottomSheet.tsx',
   'src/features/shoppingList/components/QuantityEditSheet/QuantityEditSheet.tsx',

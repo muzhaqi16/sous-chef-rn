@@ -1,60 +1,86 @@
-'use no memo';
 import React from 'react';
-import { act, render, screen } from '@testing-library/react-native';
-import { RecipeStepEditor } from '../RecipeStepEditor';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
+import { t } from '#/i18n';
+import type { StepFormState } from '#features/recipes/types';
+import {
+  RecipeStepEditor,
+  type RecipeStepEditorRef,
+} from '../RecipeStepEditor';
 
-jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
-  BottomSheetFormScrollView: ({ children }: { children?: React.ReactNode }) =>
-    children,
-}));
-jest.mock('#components/atoms/FormTextArea', () => ({
-  FormTextArea: (props: {
-    value?: string;
-    onChangeText?: (text: string) => void;
-    placeholder?: string;
-  }) => {
-    const { View, TextInput } = require('react-native');
-    return (
-      <View>
-        <TextInput
-          testID="instruction-input"
-          value={props.value}
-          onChangeText={props.onChangeText}
-          placeholder={props.placeholder}
-        />
-      </View>
-    );
-  },
-}));
-jest.mock('#components/organisms/Header', () => ({
-  Header: ({ title }: { title?: string }) => {
-    const { Text } = require('react-native');
-    return <Text>{title}</Text>;
-  },
-}));
 jest.mock('#/utils/generateId', () => ({ generateId: () => 'test-id' }));
 
+const onSave = jest.fn();
+
+const renderEditor = (step?: StepFormState) => {
+  const ref = React.createRef<RecipeStepEditorRef>();
+  render(<RecipeStepEditor ref={ref} onSave={onSave} />);
+  act(() => ref.current?.open(step));
+  return ref;
+};
+
+const instruction = () =>
+  screen.getByPlaceholderText(t('recipes.stepInstructionPlaceholder'));
+const save = () =>
+  userEvent.setup().press(screen.getByLabelText(t('labels.save')));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
 describe('RecipeStepEditor', () => {
-  const onSave = jest.fn();
+  it('adds a step as typed, trimmed', async () => {
+    renderEditor();
+    expect(screen.getByText(t('recipes.addStep'))).toBeTruthy();
+    fireEvent.changeText(instruction(), '  Whisk the eggs  ');
+    await save();
+    expect(onSave).toHaveBeenCalledWith({
+      id: 'temp-step-test-id',
+      instruction: 'Whisk the eggs',
+      sortOrder: 0,
+    });
+  });
 
-  const renderEditor = () => {
-    const ref = React.createRef<React.ComponentRef<typeof RecipeStepEditor>>();
-    render(<RecipeStepEditor ref={ref} onSave={onSave} />);
+  it('asks for the instruction on the field when saved without one', async () => {
+    renderEditor();
+    await save();
+    expect(
+      screen.getByText(t('recipes.instructionRequired')),
+    ).toBeOnTheScreen();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('edits a step under its own id', async () => {
+    renderEditor({ id: 'step-3', instruction: 'Boil water', sortOrder: 2 });
+    expect(screen.getByText(t('recipes.editStep'))).toBeTruthy();
+    expect(instruction()).toHaveDisplayValue('Boil water');
+    fireEvent.changeText(instruction(), 'Boil salted water');
+    await save();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'step-3',
+        instruction: 'Boil salted water',
+      }),
+    );
+  });
+
+  it('opens fresh: what was typed and its error go with the closing', async () => {
+    const ref = renderEditor();
+    fireEvent.changeText(instruction(), '  ');
+    await save();
+    expect(
+      screen.getByText(t('recipes.instructionRequired')),
+    ).toBeOnTheScreen();
+
+    act(() => ref.current?.close());
     act(() => ref.current?.open());
-  };
 
-  it('renders without crashing', () => {
-    renderEditor();
-    expect(screen.toJSON()).toBeTruthy();
-  });
-
-  it('shows Add Step title by default', () => {
-    renderEditor();
-    expect(screen.getByText('Add Step')).toBeTruthy();
-  });
-
-  it('renders the instruction text area', () => {
-    renderEditor();
-    expect(screen.getByTestId('instruction-input')).toBeTruthy();
+    expect(instruction()).toHaveDisplayValue('');
+    expect(screen.queryByText(t('recipes.instructionRequired'))).toBeNull();
   });
 });
