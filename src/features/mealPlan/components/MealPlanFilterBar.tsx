@@ -2,27 +2,10 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { Pressable } from '#components/atoms/themedComponents';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
-import { Text } from '#components/atoms/Text';
+import { Chip } from '#components/molecules/Chip';
 import { MealPlanType } from '#/graphql/generated/schemaTypes';
 import type { MealPlanFilterState } from '#features/mealPlan/utils/mealPlanFilters';
-
-/** A pill toggle used for the active-only + plan-type filters. */
-const FilterChip: React.FC<{
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}> = ({ label, active, onPress }) => {
-  const variantStyles = styles.useVariants({ active });
-  return (
-    <Pressable style={variantStyles.chip} onPress={onPress}>
-      <Text role="label" tone={active ? 'onPrimary' : 'secondary'}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-};
 
 interface MealPlanFilterBarProps {
   filters: MealPlanFilterState;
@@ -50,21 +33,21 @@ export const MealPlanFilterBar: React.FC<MealPlanFilterBarProps> = ({
         style={styles.search}
       />
       <View style={styles.chipRow}>
-        <FilterChip
+        <Chip
           label={t('mealPlanSelector.filterActive')}
-          active={filters.activeOnly}
+          selected={filters.activeOnly}
           onPress={() =>
             onChange({ ...filters, activeOnly: !filters.activeOnly })
           }
         />
-        <FilterChip
+        <Chip
           label={t('mealPlan.weekly')}
-          active={filters.planType === MealPlanType.Weekly}
+          selected={filters.planType === MealPlanType.Weekly}
           onPress={() => togglePlanType(MealPlanType.Weekly)}
         />
-        <FilterChip
+        <Chip
           label={t('mealPlan.monthly')}
-          active={filters.planType === MealPlanType.Monthly}
+          selected={filters.planType === MealPlanType.Monthly}
           onPress={() => togglePlanType(MealPlanType.Monthly)}
         />
       </View>
@@ -92,21 +75,5 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.sm,
-  },
-  chip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.full,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    variants: {
-      active: {
-        true: {
-          backgroundColor: theme.colors.primary,
-          borderColor: theme.colors.primary,
-        },
-      },
-    },
   },
 }));

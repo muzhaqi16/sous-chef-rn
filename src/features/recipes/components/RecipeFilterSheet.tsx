@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
+import { Chip } from '#components/molecules/Chip';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Sheet } from '#components/templates/Sheet';
@@ -138,23 +139,12 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 {LIFESTYLE_DIET_OPTIONS.map(diet => {
                   const isSelected = draftFilters.diet.includes(diet.value);
                   return (
-                    <AppPressable
+                    <Chip
                       key={diet.value}
-                      style={[
-                        styles.filterChip,
-                        isSelected && styles.filterChipActive,
-                      ]}
+                      label={t(diet.labelKey)}
+                      selected={isSelected}
                       onPress={() => toggleDiet(diet.value)}
-                    >
-                      <Text
-                        role="label"
-                        style={
-                          isSelected ? styles.filterChipTextActive : undefined
-                        }
-                      >
-                        {t(diet.labelKey)}
-                      </Text>
-                    </AppPressable>
+                    />
                   );
                 })}
               </View>
@@ -170,23 +160,12 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 {CONSTRAINT_DIET_OPTIONS.map(diet => {
                   const isSelected = draftFilters.diet.includes(diet.value);
                   return (
-                    <AppPressable
+                    <Chip
                       key={diet.value}
-                      style={[
-                        styles.filterChip,
-                        isSelected && styles.filterChipActive,
-                      ]}
+                      label={t(diet.labelKey)}
+                      selected={isSelected}
                       onPress={() => toggleDiet(diet.value)}
-                    >
-                      <Text
-                        role="label"
-                        style={
-                          isSelected ? styles.filterChipTextActive : undefined
-                        }
-                      >
-                        {t(diet.labelKey)}
-                      </Text>
-                    </AppPressable>
+                    />
                   );
                 })}
               </View>
@@ -254,12 +233,10 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 {MEAL_TYPES.map(type => {
                   const isSelected = draftFilters.mealType === type.value;
                   return (
-                    <AppPressable
+                    <Chip
                       key={type.value}
-                      style={[
-                        styles.filterChip,
-                        isSelected && styles.filterChipActive,
-                      ]}
+                      label={t(type.labelKey)}
+                      selected={isSelected}
                       onPress={() =>
                         setDraftFilters(prev => ({
                           ...prev,
@@ -267,16 +244,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                             prev.mealType === type.value ? null : type.value,
                         }))
                       }
-                    >
-                      <Text
-                        role="label"
-                        style={
-                          isSelected ? styles.filterChipTextActive : undefined
-                        }
-                      >
-                        {t(type.labelKey)}
-                      </Text>
-                    </AppPressable>
+                    />
                   );
                 })}
               </View>
@@ -298,12 +266,10 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 {COOK_TIMES.map(minutes => {
                   const isSelected = draftFilters.maxReadyTime === minutes;
                   return (
-                    <AppPressable
+                    <Chip
                       key={minutes}
-                      style={[
-                        styles.filterChip,
-                        isSelected && styles.filterChipActive,
-                      ]}
+                      label={t('recipeFilters.cookTimeOption', { minutes })}
+                      selected={isSelected}
                       onPress={() =>
                         setDraftFilters(prev => ({
                           ...prev,
@@ -311,16 +277,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                             prev.maxReadyTime === minutes ? null : minutes,
                         }))
                       }
-                    >
-                      <Text
-                        role="label"
-                        style={
-                          isSelected ? styles.filterChipTextActive : undefined
-                        }
-                      >
-                        {t('recipeFilters.cookTimeOption', { minutes })}
-                      </Text>
-                    </AppPressable>
+                    />
                   );
                 })}
               </View>
@@ -350,19 +307,6 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
     justifyContent: 'flex-start',
   },
-  filterChip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.full,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-  },
-  filterChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  filterChipTextActive: { color: theme.colors.onPrimary },
   checkboxGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
