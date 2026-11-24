@@ -1,4 +1,5 @@
 import React from 'react';
+import type { ApolloClient } from '@apollo/client';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   act,
@@ -24,7 +25,7 @@ import {
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { cacheShows } from '#/test-utils/cacheWaits';
+import { cacheShows, screenShows } from '#/test-utils/cacheWaits';
 import { settledInAct } from '#/test-utils/settledInAct';
 import {
   listLine,
@@ -46,7 +47,11 @@ import {
   StoreShelfPricesDocument,
   type UseStoreShelfPrices_ItemFragment,
 } from '#features/catalog/hooks/useStoreShelfPrices.generated';
-import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  GetShoppingListItemsFilteredDocument,
+  UpdateShoppingListItemDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import { UseListAsksPrice_ListFragmentDoc } from '#features/shoppingList/hooks/useListAsksPrice.generated';
 import { UseListCurrency_ListFragmentDoc } from '#features/shoppingList/hooks/useListCurrency.generated';
 import { localizeNumericHint } from '#/utils/formatters/number';
@@ -323,6 +328,32 @@ const purchaseSettles = (
       record => record?.isPurchased === isPurchased,
     ),
   );
+
+/**
+ * Resolves once the list's in-cart lines, which the screen reads, hold `id` or
+ * not; they settle after the line's own record when a tick is refused.
+ */
+const cartSettles = (client: ApolloClient, id: string, inCart: boolean) => {
+  const inCartLines = {
+    query: GetShoppingListItemsFilteredDocument,
+    variables: {
+      id: 'list-1',
+      first: PAGINATION.ITEMS_PAGE_SIZE,
+      isPurchased: true,
+    },
+  };
+  return settledInAct(() =>
+    screenShows(
+      client,
+      inCartLines,
+      () =>
+        client
+          .readQuery(inCartLines)
+          ?.shoppingList?.itemsConnection.edges.map(edge => edge.node.id) ?? [],
+      ids => ids.includes(id) === inCart,
+    ),
+  );
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -636,11 +667,15 @@ describe('SearchResults from store mode', () => {
 
   it('stays put when the tick is refused', async () => {
     const tick = tickRefused();
-    const { cache } = openStore({ lines: [matchedLine()], answers: [tick] });
+    const { cache, client } = openStore({
+      lines: [matchedLine()],
+      answers: [tick],
+    });
 
     await press(t('barcode.addToCart'));
     await log.landed(UpdateShoppingListItemDocument);
     await purchaseSettles(cache, 'line-pb', false);
+    await cartSettles(client, 'line-pb', false);
 
     expect(tick.fired).toHaveLength(1);
     expect(onScanAnother).not.toHaveBeenCalled();
