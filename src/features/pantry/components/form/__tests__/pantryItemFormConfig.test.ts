@@ -13,4 +13,24 @@ describe('editItemSchema quantityInput', () => {
       editItemSchema.validateAt('quantityInput', { quantityInput: value }),
     ).resolves.toBe(value);
   });
+
+  it('refuses an amount changed to nothing left', async () => {
+    await expect(
+      editItemSchema.validateAt(
+        'quantityInput',
+        { quantityInput: '0' },
+        { context: { quantitySeed: '2' } },
+      ),
+    ).rejects.toThrow(t('errors.invalidQuantity'));
+  });
+
+  it('lets an empty stack keep its 0, so its other fields stay editable', async () => {
+    await expect(
+      editItemSchema.validateAt(
+        'quantityInput',
+        { quantityInput: '0' },
+        { context: { quantitySeed: '0' } },
+      ),
+    ).resolves.toBe('0');
+  });
 });

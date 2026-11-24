@@ -10,6 +10,11 @@ import type { PantryItemFormData } from './PantryItemForm';
 
 type FieldName = keyof PantryItemFormData;
 
+/** The resolver's context: the amount the form was seeded with. */
+export interface EditItemContext {
+  quantitySeed?: string;
+}
+
 // yup types a test's sibling values as `any`; these are the ones the rules read.
 type NetWeightSiblings = Partial<
   Pick<PantryItemFormData, 'netWeight' | 'netWeightUnitId'>
@@ -33,7 +38,15 @@ export const editItemSchema = object({
       'parseable',
       lazyMessage('errors.invalidQuantity'),
       value => !value || parseFractionalInput(value) !== null,
-    ),
+    )
+    // Only an amount being sent is judged: an empty stack seeded "0" stays
+    // editable, but an amount changed to nothing left is refused.
+    .test('positive', lazyMessage('errors.invalidQuantity'), (value, test) => {
+      const seed: unknown = test.options.context?.quantitySeed;
+      if (!value || value === seed) return true;
+      const parsed = parseFractionalInput(value);
+      return parsed === null || parsed > 0;
+    }),
   unit: string(), // Tracking unit
   minQuantity: string(),
   restockQuantity: string(),

@@ -271,24 +271,6 @@ describe('refusing to save', () => {
     expect(form.updatePantryItemFields).not.toHaveBeenCalled();
   });
 
-  it.each(['', '0'])(
-    'refuses an amount changed to "%s", saving nothing',
-    async quantityInput => {
-      const form = renderSave({
-        dirtyFields: { quantityInput: true, notes: true },
-      });
-
-      await form.save({ quantityInput, notes: 'Top shelf' });
-
-      expect(alertService.alert).toHaveBeenCalledWith(
-        t('labels.error'),
-        t('errors.invalidQuantity'),
-      );
-      expect(form.updateQuantity).not.toHaveBeenCalled();
-      expect(form.updatePantryItemFields).not.toHaveBeenCalled();
-    },
-  );
-
   it('judges only an amount that changed: an empty stack takes a notes edit', async () => {
     const form = renderSave({
       existingPantryItem: stackHolding({ quantity: 0 }),

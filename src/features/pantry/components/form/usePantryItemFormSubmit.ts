@@ -169,12 +169,6 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
         ([field, dirty]) => field !== 'quantityInput' && dirty,
       );
 
-      // Only a quantity being sent is judged: an empty stack stays editable.
-      if (quantityChanged && (!typedQuantity || typedQuantity <= 0)) {
-        alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
-        return;
-      }
-
       if (unitChanged) {
         // The net weight is one package when a measure becomes a count.
         const changed = await runUnitChange(

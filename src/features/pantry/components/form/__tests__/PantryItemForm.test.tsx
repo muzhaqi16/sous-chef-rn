@@ -605,6 +605,35 @@ describe('the quantity', () => {
     expect(saved(cache)?.quantity).toBe(2);
   });
 
+  // The seeded amount reaches the schema through the resolver's context.
+  it('refuses an amount changed to nothing left, on the field', async () => {
+    const update = recordMock(UpdatePantryItemQuantityDocument, {
+      held: true,
+    });
+    await openForm({ answers: [update] });
+    goTo('Inventory');
+    const quantity = screen.getByTestId(pantryTestIDs.editItemQuantityInput);
+    const user = userEvent.setup();
+
+    await user.clear(quantity);
+    await user.type(quantity, '0');
+
+    expect(screen.getByText(t('errors.invalidQuantity'))).toBeTruthy();
+    fireEvent.press(saveButton());
+    expect(update.fired).toEqual([]);
+  });
+
+  it('lets an empty stack save its other fields, keeping its 0', async () => {
+    const update = heldUpdate();
+    await openForm({ stack: { ...flour, quantity: 0 }, answers: [update] });
+    pickFreezer();
+
+    fireEvent.press(saveButton());
+    await log.requested(UpdatePantryItemDocument);
+
+    expect(screen.queryByText(t('errors.invalidQuantity'))).toBeNull();
+  });
+
   // The device does not hold a stick, so only the pick says which unit it is.
   it('previews a change to the unit picked from the search', async () => {
     const preview = recordMock(PreviewPantryItemUnitChangeDocument, {

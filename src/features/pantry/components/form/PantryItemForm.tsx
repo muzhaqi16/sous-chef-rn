@@ -39,7 +39,11 @@ import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
 import { editedAmount } from './editedAmount';
 import { usePantryUnitChange } from '#features/pantry/hooks/usePantryUnitChange';
 import { reportValidationErrors } from '#utils/validation/common';
-import { TAB_FIELDS, editItemSchema } from './pantryItemFormConfig';
+import {
+  TAB_FIELDS,
+  editItemSchema,
+  type EditItemContext,
+} from './pantryItemFormConfig';
 import {
   PAGES,
   PAGE_LABEL_KEYS,
@@ -196,6 +200,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   const { resolveUnitId } = useResolveUnit();
 
+  const seeded = existingPantryItem
+    ? formValuesFromItem(existingPantryItem)
+    : undefined;
   const {
     control,
     handleSubmit,
@@ -203,20 +210,21 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     setValue,
     setError,
     trigger,
-  } = useForm<PantryItemFormData>({
-    resolver: yupResolver(editItemSchema) as Resolver<PantryItemFormData>,
+  } = useForm<PantryItemFormData, EditItemContext>({
+    resolver: yupResolver(editItemSchema) as Resolver<
+      PantryItemFormData,
+      EditItemContext
+    >,
     // `values` lands in an effect that runs before this component's own
     // `useWatch` subscribes, so an item cached at mount seeds the defaults too.
-    defaultValues: existingPantryItem
-      ? formValuesFromItem(existingPantryItem)
-      : EMPTY_FORM_VALUES,
+    defaultValues: seeded ?? EMPTY_FORM_VALUES,
     // Re-seeded in RHF's effect whenever the cached item changes; a `reset`
     // during render updates every mounted `Controller` mid-render, which React
     // refuses. A field the user has touched keeps what they typed.
-    values: existingPantryItem
-      ? formValuesFromItem(existingPantryItem)
-      : undefined,
+    values: seeded,
     resetOptions: { keepDirtyValues: true },
+    // Read at each validation: the schema judges only an amount that changed.
+    context: { quantitySeed: seeded?.quantityInput },
     mode: 'onChange',
   });
 
