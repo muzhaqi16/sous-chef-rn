@@ -21,7 +21,7 @@ import {
 } from '#/apollo/utils/settleMutation';
 import { chainVersionedWrite } from '#/apollo/utils/entityWriteChain';
 import { appliedPayload, isAlreadyGone } from '#/utils/errors/mutationPayload';
-import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
+import { useCrudOperations } from '#features/home/hooks/useCrudOperations';
 import { forgetHome } from '#/domain/forgetHome';
 import { useMarkHomeAsDefault } from './useMarkHomeAsDefault';
 

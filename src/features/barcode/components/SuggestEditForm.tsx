@@ -12,7 +12,7 @@ import {
   buildInitialDataFromSnapshot,
   withScannedPack,
   type ScannedPack,
-} from '#utils/items/suggestItemChanges';
+} from '#domain/items/suggestItemChanges';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
 import { presentFailure } from '#/utils/errors/presentFailure';
 

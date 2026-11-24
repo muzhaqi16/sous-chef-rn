@@ -7,7 +7,10 @@ import { Chip } from '#components/molecules/Chip';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import type { Cuisine } from '#/graphql/generated/schemaTypes';
-import { POPULAR_CUISINES, getAllCuisineOptions } from '#domain/cuisines';
+import {
+  POPULAR_CUISINES,
+  getAllCuisineOptions,
+} from '#features/recipes/utils/cuisines';
 
 interface CuisineChipsProps {
   selected: readonly Cuisine[];

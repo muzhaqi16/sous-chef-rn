@@ -17,7 +17,7 @@ import {
   formatQuantityForDisplay,
   formatQuantityWithUnit,
 } from '#/utils/formatQuantity';
-import { shownStock } from '#domain/stockDisplay';
+import { shownStock } from '#features/pantry/utils/stockDisplay';
 import { currentReading, formatReading } from '#domain/measure';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';

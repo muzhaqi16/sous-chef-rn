@@ -27,7 +27,7 @@ import {
   uploadPendingImages,
   cleanupPendingImageStorage,
   type AddItemFormData,
-} from '#/utils/items/createItemMapping';
+} from '#domain/items/createItemMapping';
 import { errorService } from '#/services/errorService';
 import { alertService } from '#/services/alertService';
 import type { AddItemFieldRefusal } from '#features/catalog/types';

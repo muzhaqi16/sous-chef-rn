@@ -8,7 +8,7 @@ import {
   type DisplayUnitShape,
   heldAfterDraw,
   packagesStarted,
-} from '#domain/stockDisplay';
+} from '#features/pantry/utils/stockDisplay';
 
 const PIECE = { id: 'pc', symbol: 'pc' };
 const DOZEN: DisplayUnitShape = {

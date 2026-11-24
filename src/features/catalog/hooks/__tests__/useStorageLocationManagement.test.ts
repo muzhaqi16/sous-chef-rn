@@ -49,29 +49,6 @@ jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
   ),
 }));
 
-type MockAddOperationConfig<TInput, TResult> = {
-  mutation: (options: {
-    variables: { input: Record<string, unknown> };
-  }) => Promise<{ data?: TResult }>;
-  transformInput: (input: TInput) => Record<string, unknown>;
-  onSuccess: (data?: TResult) => unknown;
-};
-
-jest.mock('#/hooks/utils/useCrudOperations', () => ({
-  useCrudOperations: jest.fn(() => ({
-    createAddOperation: jest.fn(
-      <TInput, TResult>(config: MockAddOperationConfig<TInput, TResult>) => {
-        return async (input: TInput) => {
-          const result = await config.mutation({
-            variables: { input: config.transformInput(input) },
-          });
-          return config.onSuccess(result.data);
-        };
-      },
-    ),
-  })),
-}));
-
 // Spread the real module. Stubbing every factory to `jest.fn()` meant the
 // optimistic remove and its revert — the whole local-first half of this hook —
 // executed nothing, so the suite was green on writes that never happened. The

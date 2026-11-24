@@ -12,14 +12,6 @@ jest.mock('#utils/imageValidation', () => ({
   ImageValidationError: class extends Error {},
 }));
 
-jest.mock('#hooks/permissions/usePermission', () => ({
-  usePermission: jest.fn(() => ({
-    request: jest.fn(() => Promise.resolve('granted')),
-    isBlocked: false,
-    openSettings: jest.fn(),
-  })),
-}));
-
 jest.mock('#features/catalog/components/ImagePickerSheet', () => ({
   ImagePickerSheet: () => null,
 }));

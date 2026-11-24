@@ -296,7 +296,7 @@ fully-offline create. Two shared writers keep this DRY:
   neutral value. An incomplete row makes a list cell report `complete: false` and blank it.
 
 **A pantry use moves the amount a person reads.** `amountLeft` is the server's, and `amountLeftOf`
-(`src/domain/stockDisplay.ts`) is the client's copy of its rule for the moments before an answer, so
+(`src/features/pantry/utils/stockDisplay.ts`) is the client's copy of its rule for the moments before an answer, so
 `writeHeldStock` writes it beside `displayAmount` and a screen never computes one. A use goes in by
 same-unit subtraction: the tracking unit, a dozen of it, the portion unit, or the net-weight unit on a
 stack with no portions. A use in any other unit keeps the row where it is until the server answers, the

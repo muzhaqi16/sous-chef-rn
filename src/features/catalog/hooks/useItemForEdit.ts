@@ -7,7 +7,7 @@ import {
 import {
   itemToEditableSnapshot,
   type EditableItemSnapshot,
-} from '#utils/items/suggestItemChanges';
+} from '#domain/items/suggestItemChanges';
 
 export interface UseItemForEditResult {
   /** null until the cache holds every field the diff needs. */

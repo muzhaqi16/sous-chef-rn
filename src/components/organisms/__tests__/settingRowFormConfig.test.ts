@@ -1,6 +1,6 @@
 import type { Schema } from 'yup';
 import { ValidationError } from 'yup';
-import { getValidationSchemaForField } from '../profile';
+import { getValidationSchemaForField } from '../settingRowFormConfig';
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
 
 const validate = async (schema: Schema, data: Record<string, unknown>) => {

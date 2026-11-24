@@ -13,7 +13,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { useBarcodeOutput } from './useBarcodeOutput';
-import { usePermission } from '#hooks/permissions/usePermission';
+import { usePermission } from '#features/barcode/screens/usePermission';
 import { ThemedBarcodeMask } from '../components/ThemedBarcodeMask';
 import { Button } from '#components/molecules/Button';
 import { IconButton } from '#components/atoms/IconButton';

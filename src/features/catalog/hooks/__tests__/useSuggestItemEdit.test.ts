@@ -16,7 +16,7 @@ import {
   ItemType,
   StorageState,
 } from '#/graphql/generated/schemaTypes';
-import type { EditableItemSnapshot } from '#utils/items/suggestItemChanges';
+import type { EditableItemSnapshot } from '#domain/items/suggestItemChanges';
 import type { AddItemSubmitPayload } from '#features/catalog/types';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';

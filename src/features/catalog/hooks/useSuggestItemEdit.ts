@@ -16,7 +16,7 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   buildSuggestibleItemChanges,
   type EditableItemSnapshot,
-} from '#utils/items/suggestItemChanges';
+} from '#domain/items/suggestItemChanges';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
 import type { AddItemSubmitPayload } from '#features/catalog/types';
 import { errorService } from '#/services/errorService';

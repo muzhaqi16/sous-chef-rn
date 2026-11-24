@@ -1132,7 +1132,7 @@ update: (cache, { data }) => {
 };
 ```
 
-### CRUD Operations (`src/hooks/utils/useCrudOperations.ts`)
+### CRUD Operations (`src/features/home/hooks/useCrudOperations.ts`)
 
 `useCrudOperations()` builds one wrapper: a remove that confirms first when
 given a `confirmMessage`, then settles the write.

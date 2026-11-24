@@ -30,7 +30,7 @@ import {
 } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#features/pantry/hooks/useConversionPreview';
 import { actionConversionOptions } from '#features/pantry/hooks/useQuantityFeedback';
-import { inCountedUnit } from '#domain/stockDisplay';
+import { inCountedUnit } from '#features/pantry/utils/stockDisplay';
 import {
   restockContentsOf,
   statedContents,

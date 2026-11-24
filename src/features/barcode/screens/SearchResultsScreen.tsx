@@ -11,13 +11,13 @@ import { SearchResults } from '../components/SearchResults';
 import AddItemForm, {
   type AddItemFormMode,
 } from '#features/catalog/ui/AddItemForm/AddItemForm';
-import type { AddItemFormInitialData } from '#/utils/items/createItemMapping';
+import type { AddItemFormInitialData } from '#domain/items/createItemMapping';
 import { SuggestEditForm } from '../components/SuggestEditForm';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useBottomSheetState } from '#features/barcode/store/barcodeScannerStore';
 import { useSearchResults } from '../hooks/useSearchResults';
 import type { BarcodeSource, ScannedItem } from '#features/barcode/types';
-import type { ScannedPack } from '#utils/items/suggestItemChanges';
+import type { ScannedPack } from '#domain/items/suggestItemChanges';
 import { Screen } from '#components/templates/Screen';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';

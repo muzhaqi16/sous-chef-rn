@@ -1,5 +1,9 @@
 import { object, string } from 'yup';
-import { lazyMessage, nameRule, normalizeSmartPunctuation } from './common';
+import {
+  lazyMessage,
+  nameRule,
+  normalizeSmartPunctuation,
+} from '#/utils/validation/common';
 import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
 import type { KeyUnder } from '#/i18n';
 import { isOwnKey } from '#utils/isOwnKey';

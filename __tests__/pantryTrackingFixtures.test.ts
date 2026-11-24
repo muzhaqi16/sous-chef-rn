@@ -1,4 +1,7 @@
-import { amountLeftOf, fullPackagesAfter } from '#domain/stockDisplay';
+import {
+  amountLeftOf,
+  fullPackagesAfter,
+} from '#features/pantry/utils/stockDisplay';
 import {
   pantryTrackingContext as context,
   pantryTrackingExamples as examples,

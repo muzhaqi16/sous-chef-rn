@@ -32,7 +32,7 @@ import {
   type NetWeightEntry,
 } from '#features/catalog/ui/NetWeightEntryList/NetWeightEntryList';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
-import type { AddItemFormInitialData } from '#/utils/items/createItemMapping';
+import type { AddItemFormInitialData } from '#domain/items/createItemMapping';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { Text } from '#components/atoms/Text';

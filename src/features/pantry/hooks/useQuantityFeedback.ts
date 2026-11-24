@@ -3,7 +3,7 @@ import {
   type UseConversionPreviewOptions,
 } from './useConversionPreview';
 import { snapDeductionToCap } from '#features/pantry/utils/validateDeductionQuantity';
-import { inCountedUnit } from '#domain/stockDisplay';
+import { inCountedUnit } from '#features/pantry/utils/stockDisplay';
 import type {
   PantryActionSharedState,
   ShownQuantity,
