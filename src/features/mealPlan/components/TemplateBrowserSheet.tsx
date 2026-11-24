@@ -1,10 +1,8 @@
 import React from 'react';
+import { SearchBar } from '#components/molecules/SearchBar';
 import { View } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import {
-  PrimaryActivityIndicator,
-  ThemedBottomSheetTextInput,
-} from '#components/atoms/themedComponents';
+import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { FlashList } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { Sheet } from '#components/templates/Sheet';
@@ -125,15 +123,12 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
     >
       <View style={styles.container}>
         {/* Search bar */}
-        <View style={styles.searchContainer}>
-          <Icon name="search" size="xsPlus" tone="textTertiary" />
-          <ThemedBottomSheetTextInput
-            style={styles.searchInput}
-            placeholder={t('templateBrowser.searchPlaceholder')}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+        <SearchBar
+          placeholder={t('templateBrowser.searchPlaceholder')}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          containerStyle={styles.search}
+        />
 
         {/* Category chips */}
         <ChipScrollRow
@@ -192,26 +187,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.surface,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-  },
-  searchInput: {
-    flex: 1,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-    padding: 0,
-  },
   chipScroll: {
     maxHeight: 44,
     marginBottom: theme.spacing.sm,
@@ -232,5 +207,9 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     gap: theme.spacing.sm,
+  },
+  search: {
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
 }));

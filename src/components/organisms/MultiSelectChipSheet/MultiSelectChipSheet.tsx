@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SearchBar } from '#components/molecules/SearchBar';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
@@ -6,9 +7,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Chip } from '#components/molecules/Chip';
-import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { useLocalSearch } from '#hooks/search/useLocalSearch';
 import { EmptyState } from '#components/molecules/EmptyState';
@@ -74,16 +73,13 @@ function MultiSelectChipContent<T extends string>({
     <View style={styles.bottomSheetContent}>
       {/* Search Input */}
       {!!showSearch && (
-        <View style={styles.searchContainer}>
-          <Icon name="search" size="xsPlus" tone="textSecondary" />
-          <ThemedBottomSheetTextInput
-            style={styles.searchInput}
-            placeholder={t('multiSelectChipSheet.searchPlaceholder')}
-            defaultValue={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-          />
-        </View>
+        <SearchBar
+          placeholder={t('multiSelectChipSheet.searchPlaceholder')}
+          defaultValue={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+          containerStyle={styles.search}
+        />
       )}
 
       {/* Selection Counter / Clear All */}
@@ -180,22 +176,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     paddingHorizontal: theme.spacing.md,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.base,
-    marginBottom: theme.spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: theme.spacing.base,
-    paddingHorizontal: theme.spacing.sm,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-  },
   selectionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -218,5 +198,8 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: theme.opacity.pressed,
+  },
+  search: {
+    marginBottom: theme.spacing.md,
   },
 }));

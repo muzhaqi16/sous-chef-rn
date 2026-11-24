@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SearchBar } from '#components/molecules/SearchBar';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -6,7 +7,6 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { identity, useLocalSearch } from '#hooks/search/useLocalSearch';
@@ -86,16 +86,13 @@ const TagPickerContent: React.FC<TagPickerContentProps> = ({
 
       {/* Search Input */}
       {tags.length > 5 && (
-        <View style={styles.searchContainer}>
-          <Icon name="search" size="xsPlus" tone="textSecondary" />
-          <ThemedBottomSheetTextInput
-            style={styles.searchInput}
-            placeholder={t('tagPicker.searchPlaceholder')}
-            defaultValue={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCapitalize="none"
-          />
-        </View>
+        <SearchBar
+          placeholder={t('tagPicker.searchPlaceholder')}
+          defaultValue={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+          containerStyle={styles.search}
+        />
       )}
 
       {/* Clear All / Selected Count */}
@@ -187,22 +184,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     marginBottom: theme.spacing.md,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.base,
-    marginBottom: theme.spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: theme.spacing.base,
-    paddingHorizontal: theme.spacing.sm,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-  },
   selectionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -246,5 +227,8 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: theme.opacity.pressed,
+  },
+  search: {
+    marginBottom: theme.spacing.md,
   },
 }));

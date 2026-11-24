@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SearchBar } from '#components/molecules/SearchBar';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -8,10 +9,7 @@ import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  ThemedActivityIndicator,
-  ThemedBottomSheetTextInput,
-} from '#components/atoms/themedComponents';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
 import { toastService } from '#/services/toastService';
 import { Text } from '#components/atoms/Text';
@@ -217,16 +215,13 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
       >
         <View style={styles.bottomSheetContent}>
           {folders.length > 5 && (
-            <View style={styles.searchContainer}>
-              <Icon name="search" size="xsPlus" tone="textSecondary" />
-              <ThemedBottomSheetTextInput
-                style={styles.searchInput}
-                placeholder={t('folderPicker.searchPlaceholder')}
-                defaultValue={searchQuery}
-                onChangeText={setSearchQuery}
-                autoCapitalize="none"
-              />
-            </View>
+            <SearchBar
+              placeholder={t('folderPicker.searchPlaceholder')}
+              defaultValue={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              containerStyle={styles.search}
+            />
           )}
 
           <AppPressable
@@ -341,22 +336,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.base,
-    marginBottom: theme.spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: theme.spacing.base,
-    paddingHorizontal: theme.spacing.sm,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-  },
   folderItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -414,5 +393,8 @@ const styles = StyleSheet.create(theme => ({
   bottomSheetContent: {
     flex: 1,
     padding: theme.spacing.mdPlus,
+  },
+  search: {
+    marginBottom: theme.spacing.md,
   },
 }));
