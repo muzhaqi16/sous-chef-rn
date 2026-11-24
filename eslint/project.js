@@ -194,12 +194,6 @@ const overrides = [
     rules: { 'sous-chef/flashlist-declares-scroll-component': 'off' },
   },
   {
-    // The list carries an explicit `maxHeight`, so it is bounded without the
-    // container — the variant CLAUDE.md records as getting away with it.
-    files: ['src/features/recipes/components/FolderPicker.tsx'],
-    rules: { 'sous-chef/no-scrollable-in-bottom-sheet-view': 'off' },
-  },
-  {
     // iOS's photo picker is drawn by another process, which no Detox matcher
     // reaches (the system matcher reads SpringBoard only): its first cell is
     // tapped by point. Only this helper; specs call it.
@@ -820,14 +814,12 @@ const overrides = [
   },
   {
     // The sheet machinery IS the guarded path the `present()` / `dismiss()` ban
-    // points callers at. FolderPicker hands off between two STACKED sheets in
-    // an order a `visible` boolean cannot express.
+    // points callers at.
     files: [
       'src/hooks/ui/useStandardBottomSheet.tsx',
       'src/hooks/ui/useBottomSheetBackHandler.ts',
       'src/hooks/ui/useBottomSheetBackdropClaim.ts',
       'src/components/templates/ActionTray/ActionTray.tsx',
-      'src/features/recipes/components/FolderPicker.tsx',
     ],
     rules: {
       'no-restricted-syntax': restrictedSyntax({ allow: ['imperativeSheet'] }),
@@ -886,7 +878,7 @@ const overrides = [
       '@typescript-eslint/restrict-template-expressions': 'error',
       '@typescript-eslint/ban-ts-comment': [
         'error',
-        { 'ts-expect-error': 'allow-with-description' },
+        { 'ts-expect-error': true },
       ],
       '@typescript-eslint/no-floating-promises': 'error',
       // A JSX handler returning a promise is how React Native components are
@@ -991,7 +983,7 @@ const overrides = [
       '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/ban-ts-comment': [
         'error',
-        { 'ts-expect-error': 'allow-with-description' },
+        { 'ts-expect-error': true },
       ],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': [

@@ -1,17 +1,11 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
-import {
-  BottomSheetView,
-  useBottomSheetScrollableCreator,
-} from '@gorhom/bottom-sheet';
-import {
-  BottomSheetModal,
-  type BottomSheetModalRef,
-} from '#hooks/ui/useStandardBottomSheet';
+import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
+import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -20,7 +14,6 @@ import {
 } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
 import { toastService } from '#/services/toastService';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 import { FolderListItem } from '#features/recipes/components/FolderPicker/FolderListItem';
 import { ManageFolderSheet } from '#features/recipes/components/FolderPicker/ManageFolderSheet';
@@ -92,42 +85,13 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   folderActionLoading = false,
 }) => {
   const { t } = useTranslation();
-  const nextSheetActionRef = useRef<'manage' | null>(null);
 
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
-  // The manage sub-sheet borrows the picker's modalProps (one
-  // useStandardBottomSheet instance), so it stays on the manual ref + effect
-  // pattern. `manageHasPresentedRef` guards the initial dismiss: gorhom 5.2.14
-  // wedges a modal closed forever if dismiss() lands before it ever presented.
+  // One sheet at a time: a long-pressed folder hides the picker, the manage
+  // sheet opens once the picker has closed, and the picker returns once the
+  // manage sheet has closed.
   const [manageVisible, setManageVisible] = useState(false);
-  const manageSheetRef = useRef<BottomSheetModalRef>(null);
-  const manageHasPresentedRef = useRef(false);
-  useEffect(() => {
-    if (manageVisible) {
-      manageHasPresentedRef.current = true;
-      manageSheetRef.current?.present();
-    } else if (manageHasPresentedRef.current) {
-      manageSheetRef.current?.dismiss();
-    }
-  }, [manageVisible]);
-
-  const {
-    ref: folderPickerRef,
-    modalProps,
-    contentContainerStyle,
-  } = useStandardBottomSheet({
-    visible,
-    onDismiss: () => {
-      if (nextSheetActionRef.current === 'manage') {
-        nextSheetActionRef.current = null;
-        setManageVisible(true);
-        return;
-      }
-      onCancel();
-    },
-    snapPoints: ['55%', '70%'],
-  });
 
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -149,12 +113,22 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   const handleCancel = () => {
     setSearchQuery('');
     setShowNewFolder(false);
+    onCancel();
+  };
+
+  const handlePickerDismiss = () => {
+    if (managingFolder !== null) {
+      setManageVisible(true);
+      return;
+    }
+    onCancel();
+  };
+
+  const handleManageDismiss = () => {
     setManageVisible(false);
     setManagingFolder(null);
     setRenameValue('');
     setShowDeleteConfirm(false);
-    // Deferred so the dismiss lands outside any synchronous render/state chain.
-    queueMicrotask(() => folderPickerRef.current?.dismiss());
   };
 
   // The decision lives in `resolveFolderLongPress` so it can be tested — this
@@ -175,8 +149,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     setManagingFolder(folder);
     setRenameValue(folder);
     setShowDeleteConfirm(false);
-    nextSheetActionRef.current = 'manage';
-    queueMicrotask(() => folderPickerRef.current?.dismiss());
   };
 
   const handleRenameConfirm = async () => {
@@ -185,8 +157,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     const newName = renameValue.trim();
     if (newName === managingFolder) {
       setManageVisible(false);
-      setManagingFolder(null);
-      setRenameValue('');
       return;
     }
 
@@ -204,8 +174,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         onSelectedFolderMoved(newName);
       }
       setManageVisible(false);
-      setManagingFolder(null);
-      setRenameValue('');
     }
   };
 
@@ -218,17 +186,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         onSelectedFolderMoved(null);
       }
       setManageVisible(false);
-      setManagingFolder(null);
-      setRenameValue('');
-      setShowDeleteConfirm(false);
     }
-  };
-
-  const handleManageFolderClose = () => {
-    setManageVisible(false);
-    setManagingFolder(null);
-    setRenameValue('');
-    setShowDeleteConfirm(false);
   };
 
   const renderFolderItem = ({ item }: { item: string }) => (
@@ -241,23 +199,23 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     />
   );
 
+  const pickerVisible = visible && managingFolder === null;
+
   return (
     <>
-      <BottomSheetModal ref={folderPickerRef} {...modalProps}>
-        <BottomSheetView
-          style={[styles.bottomSheetContent, contentContainerStyle]}
-        >
-          <View style={styles.header}>
-            <Text role="heading">{t('folderPicker.selectFolder')}</Text>
-            <Pressable
-              onPress={handleCancel}
-              accessibilityLabel={t('labels.close')}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <Icon name="close" size={24} tone="textPrimary" />
-            </Pressable>
-          </View>
-
+      <Sheet
+        mode="list"
+        visible={pickerVisible}
+        onDismiss={handlePickerDismiss}
+        snapPoints={['55%', '70%']}
+        header={
+          <SheetHeader
+            title={t('folderPicker.selectFolder')}
+            onClose={handleCancel}
+          />
+        }
+      >
+        <View style={styles.bottomSheetContent}>
           {folders.length > 5 && (
             <View style={styles.searchContainer}>
               <Icon name="search" size={18} tone="textSecondary" />
@@ -361,20 +319,11 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               <ThemedActivityIndicator size="large" />
             </View>
           )}
-        </BottomSheetView>
-      </BottomSheetModal>
+        </View>
+      </Sheet>
       <ManageFolderSheet
-        sheetRef={manageSheetRef}
-        modalProps={modalProps}
-        contentContainerStyle={contentContainerStyle}
-        onDismiss={() => {
-          setManagingFolder(null);
-          setRenameValue('');
-          setShowDeleteConfirm(false);
-          setManageVisible(false);
-          // Deferred until the manage sheet's dismiss event has flushed.
-          queueMicrotask(() => folderPickerRef.current?.present());
-        }}
+        visible={manageVisible}
+        onDismiss={handleManageDismiss}
         managingFolder={managingFolder}
         renameValue={renameValue}
         onRenameValueChange={setRenameValue}
@@ -382,7 +331,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         onShowDeleteConfirm={setShowDeleteConfirm}
         onRenameConfirm={handleRenameConfirm}
         onDeleteConfirm={handleDeleteConfirm}
-        onClose={handleManageFolderClose}
+        onClose={() => setManageVisible(false)}
         folderActionLoading={folderActionLoading}
         canRename={Boolean(onRenameFolder)}
         canDelete={Boolean(onDeleteFolder)}
@@ -392,12 +341,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -469,9 +412,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
   },
   bottomSheetContent: {
+    flex: 1,
     padding: theme.spacing.mdPlus,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

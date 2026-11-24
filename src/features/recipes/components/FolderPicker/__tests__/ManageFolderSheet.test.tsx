@@ -1,6 +1,5 @@
 import React from 'react';
-import { act, render, screen } from '@testing-library/react-native';
-import type { BottomSheetModalRef } from '#/hooks/ui/useStandardBottomSheet';
+import { render, screen } from '@testing-library/react-native';
 import { ManageFolderSheet } from '../ManageFolderSheet';
 
 jest.mock('#components/atoms/Icon', () => ({ Icon: () => null }));
@@ -8,12 +7,9 @@ jest.mock('#components/atoms/Icon', () => ({ Icon: () => null }));
 const renderSheet = (
   overrides: Partial<React.ComponentProps<typeof ManageFolderSheet>> = {},
 ) => {
-  const sheetRef = React.createRef<BottomSheetModalRef>();
-  const view = render(
+  return render(
     <ManageFolderSheet
-      sheetRef={sheetRef}
-      modalProps={{}}
-      contentContainerStyle={{ paddingBottom: 0 }}
+      visible
       onDismiss={jest.fn()}
       managingFolder="Dinner"
       renameValue="Dinner"
@@ -29,8 +25,6 @@ const renderSheet = (
       {...overrides}
     />,
   );
-  act(() => sheetRef.current?.present());
-  return view;
 };
 
 describe('ManageFolderSheet delete confirmation', () => {

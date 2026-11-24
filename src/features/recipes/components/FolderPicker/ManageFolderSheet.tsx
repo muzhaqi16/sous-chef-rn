@@ -1,16 +1,9 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
-import {
-  BottomSheetView,
-  type BottomSheetModalProps,
-} from '@gorhom/bottom-sheet';
-import {
-  BottomSheetModal,
-  type BottomSheetModalRef,
-} from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   OnPrimaryActivityIndicator,
@@ -19,13 +12,10 @@ import {
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 export interface ManageFolderSheetProps {
-  sheetRef: React.RefObject<BottomSheetModalRef | null>;
-  modalProps: Partial<BottomSheetModalProps>;
-  contentContainerStyle: { paddingBottom: number };
-  /** Re-open the folder picker once this sheet finishes dismissing. */
+  visible: boolean;
+  /** Runs once this sheet has finished closing, however it closed. */
   onDismiss: () => void;
   /** Folder currently being managed (drives the displayed name). */
   managingFolder: string | null;
@@ -50,9 +40,7 @@ export interface ManageFolderSheetProps {
  * intent via callbacks.
  */
 export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
-  sheetRef,
-  modalProps,
-  contentContainerStyle,
+  visible,
   onDismiss,
   managingFolder,
   renameValue,
@@ -71,164 +59,142 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
     !renameValue.trim() || renameValue.trim() === managingFolder;
 
   return (
-    <BottomSheetModal
-      ref={sheetRef}
-      {...modalProps}
-      snapPoints={['45%']}
+    <Sheet
+      mode="form"
+      visible={visible}
       onDismiss={onDismiss}
+      snapPoints={['45%']}
+      contentContainerStyle={styles.bottomSheetContent}
+      header={
+        <SheetHeader title={t('folderPicker.manageTitle')} onClose={onClose} />
+      }
     >
-      <BottomSheetView
-        style={[styles.bottomSheetContent, contentContainerStyle]}
-      >
-        {/* Header */}
-        <View style={styles.manageFolderHeader}>
-          <Text role="heading">{t('folderPicker.manageTitle')}</Text>
-          <Pressable
-            onPress={onClose}
-            accessibilityLabel={t('labels.close')}
-            hitSlop={hitSlop.lg}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Icon name="close" size={24} tone="textPrimary" />
-          </Pressable>
-        </View>
+      {/* Current folder name */}
+      <View style={styles.currentFolderContainer}>
+        <Icon name="folder-outline" size={20} tone="primary" />
+        <Text role="bodyStrong" tone="accent">
+          {managingFolder}
+        </Text>
+      </View>
 
-        {/* Current folder name */}
-        <View style={styles.currentFolderContainer}>
-          <Icon name="folder-outline" size={20} tone="primary" />
-          <Text role="bodyStrong" tone="accent">
-            {managingFolder}
+      {/* Delete Confirmation View */}
+      {showDeleteConfirm ? (
+        <View style={styles.deleteConfirmContainer}>
+          <Icon name="warning-outline" size={32} tone="error" />
+          <Text role="heading" style={styles.deleteConfirmTitle}>
+            {managingFolder
+              ? t('labels.deleteNamed', { name: managingFolder })
+              : t('folderPicker.deleteFolder')}
           </Text>
-        </View>
-
-        {/* Delete Confirmation View */}
-        {showDeleteConfirm ? (
-          <View style={styles.deleteConfirmContainer}>
-            <Icon name="warning-outline" size={32} tone="error" />
-            <Text role="heading" style={styles.deleteConfirmTitle}>
-              {managingFolder
-                ? t('labels.deleteNamed', { name: managingFolder })
-                : t('folderPicker.deleteFolder')}
-            </Text>
-            <Text
-              role="body"
-              tone="secondary"
-              align="center"
-              style={styles.deleteConfirmText}
+          <Text
+            role="body"
+            tone="secondary"
+            align="center"
+            style={styles.deleteConfirmText}
+          >
+            {t('folderPicker.deleteConfirmBody', {
+              folder: t('labels.noFolder'),
+            })}
+          </Text>
+          <View style={styles.deleteConfirmButtons}>
+            <AppPressable
+              style={styles.deleteConfirmCancelButton}
+              onPress={() => onShowDeleteConfirm(false)}
+              disabled={folderActionLoading}
             >
-              {t('folderPicker.deleteConfirmBody', {
-                folder: t('labels.noFolder'),
-              })}
-            </Text>
-            <View style={styles.deleteConfirmButtons}>
-              <AppPressable
-                style={styles.deleteConfirmCancelButton}
-                onPress={() => onShowDeleteConfirm(false)}
-                disabled={folderActionLoading}
-              >
-                <Text role="bodyStrong">{t('labels.cancel')}</Text>
-              </AppPressable>
-              <AppPressable
-                style={styles.deleteConfirmDeleteButton}
-                onPress={onDeleteConfirm}
-                disabled={folderActionLoading}
-              >
-                {folderActionLoading ? (
-                  <OnPrimaryActivityIndicator size="small" />
-                ) : (
-                  <Text
-                    role="bodyStrong"
-                    style={styles.deleteConfirmDeleteText}
-                  >
-                    {t('labels.delete')}
-                  </Text>
-                )}
-              </AppPressable>
-            </View>
-          </View>
-        ) : (
-          <>
-            {/* Rename Section */}
-            {!!canRename && (
-              <View style={styles.renameSection}>
-                <SectionHeader variant="overline" style={styles.sectionLabel}>
-                  {t('labels.rename')}
-                </SectionHeader>
-                <View style={styles.renameInputRow}>
-                  <ThemedBottomSheetTextInput
-                    style={styles.renameInput}
-                    defaultValue={renameValue}
-                    onChangeText={onRenameValueChange}
-                    placeholder={t('folderPicker.renamePlaceholder')}
-                    autoCapitalize="words"
-                    onSubmitEditing={onRenameConfirm}
-                    editable={!folderActionLoading}
-                  />
-                  <AppPressable
-                    style={[
-                      styles.renameButton,
-                      renameDisabled && styles.renameButtonDisabled,
-                    ]}
-                    onPress={onRenameConfirm}
-                    disabled={renameDisabled || folderActionLoading}
-                  >
-                    {folderActionLoading ? (
-                      <OnPrimaryActivityIndicator size="small" />
-                    ) : (
-                      <Text
-                        role="bodyStrong"
-                        style={[
-                          styles.renameButtonText,
-                          renameDisabled && styles.renameButtonTextDisabled,
-                        ]}
-                      >
-                        {t('labels.rename')}
-                      </Text>
-                    )}
-                  </AppPressable>
-                </View>
-              </View>
-            )}
-
-            {/* Delete Section */}
-            {!!canDelete && (
-              <View style={styles.deleteSection}>
-                <AppPressable
-                  style={styles.deleteButton}
-                  onPress={() => onShowDeleteConfirm(true)}
-                  disabled={folderActionLoading}
-                >
-                  <Icon name="trash-outline" size={18} tone="error" />
-                  <Text role="bodyStrong" tone="danger">
-                    {t('folderPicker.deleteFolder')}
-                  </Text>
-                </AppPressable>
-                <Text
-                  role="caption"
-                  tone="secondary"
-                  align="center"
-                  style={styles.deleteDescription}
-                >
-                  {t('folderPicker.deleteHint')}
+              <Text role="bodyStrong">{t('labels.cancel')}</Text>
+            </AppPressable>
+            <AppPressable
+              style={styles.deleteConfirmDeleteButton}
+              onPress={onDeleteConfirm}
+              disabled={folderActionLoading}
+            >
+              {folderActionLoading ? (
+                <OnPrimaryActivityIndicator size="small" />
+              ) : (
+                <Text role="bodyStrong" style={styles.deleteConfirmDeleteText}>
+                  {t('labels.delete')}
                 </Text>
+              )}
+            </AppPressable>
+          </View>
+        </View>
+      ) : (
+        <>
+          {/* Rename Section */}
+          {!!canRename && (
+            <View style={styles.renameSection}>
+              <SectionHeader variant="overline" style={styles.sectionLabel}>
+                {t('labels.rename')}
+              </SectionHeader>
+              <View style={styles.renameInputRow}>
+                <ThemedBottomSheetTextInput
+                  style={styles.renameInput}
+                  defaultValue={renameValue}
+                  onChangeText={onRenameValueChange}
+                  placeholder={t('folderPicker.renamePlaceholder')}
+                  autoCapitalize="words"
+                  onSubmitEditing={onRenameConfirm}
+                  editable={!folderActionLoading}
+                />
+                <AppPressable
+                  style={[
+                    styles.renameButton,
+                    renameDisabled && styles.renameButtonDisabled,
+                  ]}
+                  onPress={onRenameConfirm}
+                  disabled={renameDisabled || folderActionLoading}
+                >
+                  {folderActionLoading ? (
+                    <OnPrimaryActivityIndicator size="small" />
+                  ) : (
+                    <Text
+                      role="bodyStrong"
+                      style={[
+                        styles.renameButtonText,
+                        renameDisabled && styles.renameButtonTextDisabled,
+                      ]}
+                    >
+                      {t('labels.rename')}
+                    </Text>
+                  )}
+                </AppPressable>
               </View>
-            )}
-          </>
-        )}
-      </BottomSheetView>
-    </BottomSheetModal>
+            </View>
+          )}
+
+          {/* Delete Section */}
+          {!!canDelete && (
+            <View style={styles.deleteSection}>
+              <AppPressable
+                style={styles.deleteButton}
+                onPress={() => onShowDeleteConfirm(true)}
+                disabled={folderActionLoading}
+              >
+                <Icon name="trash-outline" size={18} tone="error" />
+                <Text role="bodyStrong" tone="danger">
+                  {t('folderPicker.deleteFolder')}
+                </Text>
+              </AppPressable>
+              <Text
+                role="caption"
+                tone="secondary"
+                align="center"
+                style={styles.deleteDescription}
+              >
+                {t('folderPicker.deleteHint')}
+              </Text>
+            </View>
+          )}
+        </>
+      )}
+    </Sheet>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   bottomSheetContent: {
     padding: theme.spacing.mdPlus,
-  },
-  manageFolderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
   },
   currentFolderContainer: {
     flexDirection: 'row',
@@ -332,8 +298,5 @@ const styles = StyleSheet.create(theme => ({
   },
   deleteConfirmDeleteText: {
     color: theme.colors.onError,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));
