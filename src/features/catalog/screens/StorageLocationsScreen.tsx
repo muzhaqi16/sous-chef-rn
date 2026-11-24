@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
@@ -14,13 +15,10 @@ import {
 import type { StorageLocationFormValues } from '#features/catalog/ui/StorageLocationForm';
 import type { GetStorageLocationsQuery } from '#features/catalog/graphql/storageLocation.generated';
 import { useSelectedPantryId } from '#store/useAppStore';
-import { commonStyles } from '#/styles/commonStyles';
 import { StyleSheet } from 'react-native-unistyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { ModeTabs } from '#components/molecules/ModeTabs';
-import { EmptyState } from '#components/molecules/EmptyState';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 const VIEW_MODES: ('flat' | 'tree')[] = ['flat', 'tree'];
@@ -60,15 +58,13 @@ export const StorageLocationsScreen: React.FC<
   const {
     locations,
     tree,
-    initialLoading,
     creating,
     updating,
     updateLocation,
     deleteLocation,
     setDefaultLocation,
     createLocation,
-    errorMessage,
-    offline,
+    state: locationsState,
     refetch,
   } = useStorageLocationManagement(homeId, selectedPantryId ?? undefined);
 
@@ -193,51 +189,15 @@ export const StorageLocationsScreen: React.FC<
     void executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
-  if (initialLoading) {
-    return (
-      <DetailTemplate
-        title={t('labels.storageLocations')}
-        onBack={goBack}
-        headerActions={[]}
-        sections={[
-          {
-            content: (
-              <View style={commonStyles.loadingContainer}>
-                <SousChefLoader
-                  size="small"
-                  showBrand={false}
-                  message={t('storageLocations.loading')}
-                />
-              </View>
-            ),
-          },
-        ]}
-      />
-    );
-  }
-
-  const isEmpty = locations.length === 0;
+  const isEmpty = locationsState !== 'ready';
   const sections = [
     {
       transparent: true,
       fill: isEmpty,
       content: (
         <>
-          {/* Error Message */}
-          {!!errorMessage && (
-            <EmptyState
-              icon="alert-circle-outline"
-              title={t('errors.boundary.title')}
-              description={errorMessage}
-              action={{
-                label: t('labels.retry'),
-                onPress: handleRefresh,
-              }}
-            />
-          )}
-
           {/* View Mode Toggle */}
-          {locations.length > 0 && (
+          {locationsState === 'ready' && (
             <ModeTabs
               options={VIEW_MODES}
               value={viewMode}
@@ -250,30 +210,20 @@ export const StorageLocationsScreen: React.FC<
             />
           )}
 
-          {locations.length === 0 && offline ? (
-            // Not "there are none" — we never reached the server and have
-            // nothing cached. Offering "Add location" here would invite a
-            // duplicate of something that may already exist.
-            <EmptyState
-              icon="cloud-offline-outline"
-              title={t('storageLocations.offlineTitle')}
-              description={t('storageLocations.offlineDescription')}
-              action={{
-                label: t('labels.refresh'),
-                onPress: handleRefresh,
-                variant: 'outline',
-              }}
-            />
-          ) : locations.length === 0 ? (
-            <EmptyState
-              icon="server-outline"
-              title={t('storageLocations.noLocations')}
-              description={t('storageLocations.noLocationsDesc')}
-              action={{
-                label: t('labels.addLocation'),
-                onPress: () => {
-                  setEditingLocation(null);
-                  setSheetVisible(true);
+          {locationsState !== 'ready' ? (
+            <DataStateView
+              state={locationsState}
+              onRetry={handleRefresh}
+              empty={{
+                icon: 'server-outline',
+                title: t('storageLocations.noLocations'),
+                description: t('storageLocations.noLocationsDesc'),
+                action: {
+                  label: t('labels.addLocation'),
+                  onPress: () => {
+                    setEditingLocation(null);
+                    setSheetVisible(true);
+                  },
                 },
               }}
             />

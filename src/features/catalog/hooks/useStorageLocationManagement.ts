@@ -1,4 +1,5 @@
 import { toastService } from '#/services/toastService';
+import { useDataState } from '#hooks/data/useDataState';
 import { skipToken, useQuery } from '@apollo/client/react';
 import {
   GetStorageLocationsDocument,
@@ -15,9 +16,7 @@ import type { UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useTranslation } from '#/i18n';
-import { errorCopy } from '#/services/errorService';
 
 /** Flat storage-location node as returned by `GetStorageLocations`. */
 type FlatStorageLocation =
@@ -105,11 +104,6 @@ export function useStorageLocationManagement(
   // `skipToken` keeps the last run's variables AND data, so a result for a
   // previous home is dropped.
   const data = variables.homeId === homeId ? result : undefined;
-
-  // Offline, no data means "never tried", and offlineReadLink's synthetic
-  // cache-miss error is not one to show; else the ordinary empty state invites
-  // creating a location that may already exist on the server.
-  const networkBlocked = useIsApiUnavailable();
 
   // Reuse the lightweight create hook — it handles both ROOT_QUERY and
   // Pantry.storageLocationsConnection cache updates so PantryMain tabs sync instantly.
@@ -227,19 +221,23 @@ export function useStorageLocationManagement(
   // updaters keep fresh; no mutation touches `storageLocationTree`. Keyed on
   // ids, so same-name locations under different parents stay distinct.
   const tree = buildTreeFromFlatList(locations);
+  // A failed or offline read is never "no locations": the screen would offer
+  // to add one the household may already have.
+  const state = useDataState({
+    loading,
+    error,
+    hasResult: !!data,
+    isEmpty: locations.length === 0,
+    skipped: !homeId,
+  });
 
   return {
     // Data
     locations,
     tree,
-    initialLoading: !data && loading,
-    offline: networkBlocked && !data,
+    state,
     creating,
     updating: update.sending,
-    errorMessage:
-      error && !networkBlocked
-        ? errorCopy(error, t, t('errors.codes.genericRetry'))
-        : null,
 
     // Actions
     createLocation,

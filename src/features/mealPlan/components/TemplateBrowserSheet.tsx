@@ -2,13 +2,11 @@ import React from 'react';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { View } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
-import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { FlashList } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { TemplateCard } from './TemplateCard';
@@ -26,7 +24,6 @@ import {
 } from '#features/mealPlan/hooks/useMealTemplates';
 import { TemplateCategory } from '#/graphql/generated/schemaTypes';
 import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import { Text } from '#components/atoms/Text';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 
@@ -141,21 +138,15 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
         />
 
         {/* Template list */}
-        {dataState === 'loading' ? (
-          <View style={styles.centeredSpinner}>
-            <PrimaryActivityIndicator size="large" />
-          </View>
-        ) : dataState === 'error' || dataState === 'offline' ? (
-          // `error` and `offline` both need a retry affordance — reading only
-          // `offline` renders a genuine failure as "No templates found".
-          <DataStateView state={dataState} onRetry={refetch} />
-        ) : dataState === 'empty' ? (
-          <View style={styles.emptyInset}>
-            <Icon name="document-text-outline" size="xl" tone="textTertiary" />
-            <Text role="body" tone="secondary" align="center">
-              {t('templateBrowser.noTemplates')}
-            </Text>
-          </View>
+        {dataState !== 'ready' ? (
+          <DataStateView
+            state={dataState}
+            onRetry={refetch}
+            empty={{
+              icon: 'document-text-outline',
+              title: t('templateBrowser.noTemplates'),
+            }}
+          />
         ) : (
           <TemplateBrowserProvider onSelectTemplate={onSelectTemplate}>
             <FlashList
@@ -196,17 +187,6 @@ const styles = StyleSheet.create(theme => ({
   },
   list: {
     flex: 1,
-  },
-  centeredSpinner: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyInset: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
   },
   search: {
     marginHorizontal: theme.spacing.md,

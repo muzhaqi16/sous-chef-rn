@@ -64,8 +64,7 @@ import { ShoppingListPickerSheet } from '#features/shoppingList/ui/ShoppingListP
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useUser } from '#store/useAppStore';
-import { EmptyState } from '#components/molecules/EmptyState';
-import { DataStateView } from '#components/organisms/DataStateView';
+import type { DataState } from '#hooks/data/useDataState';
 import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { SectionHeaderRow } from '#components/molecules/SectionHeaderRow';
@@ -461,12 +460,13 @@ const RecipeDetailScreen: React.FC = () => {
   // must not replace it with "not found" — which is what an offline open of a
   // cached recipe read as.
   if (!displayData) {
-    const errorMessage =
-      error ??
-      (recipeId && !backendRecipe
-        ? t('recipes.recipeNotFoundDb')
-        : t('recipes.recipeNotFound'));
-
+    // A failed read is the shared failure view; a recipe the server does not
+    // have is an answer, said in its own words.
+    const failed: DataState = loadFailure.offline
+      ? 'offline'
+      : error
+      ? 'error'
+      : 'empty';
     // Inside the template, so the back chip stays and a pull retries.
     return (
       <CollapsingHeroDetail
@@ -474,19 +474,21 @@ const RecipeDetailScreen: React.FC = () => {
         onBack={goBack}
         refreshing={refreshing}
         onRefresh={handleRefresh}
+        state={{
+          value: failed,
+          onRetry: handleRefresh,
+          empty: {
+            icon: 'alert-circle-outline',
+            title:
+              recipeId && !backendRecipe
+                ? t('recipes.recipeNotFoundDb')
+                : t('recipes.recipeNotFound'),
+            description: t('errors.codes.genericRetry'),
+            action: { label: t('labels.tryAgain'), onPress: handleRefresh },
+          },
+        }}
       >
-        <View style={styles.centerContainer}>
-          {loadFailure.offline ? (
-            <DataStateView state="offline" onRetry={handleRefresh} />
-          ) : (
-            <EmptyState
-              icon="alert-circle-outline"
-              title={errorMessage}
-              description={t('errors.codes.genericRetry')}
-              action={{ label: t('labels.tryAgain'), onPress: handleRefresh }}
-            />
-          )}
-        </View>
+        {null}
       </CollapsingHeroDetail>
     );
   }
@@ -871,13 +873,6 @@ export const RecipeDetail: React.FC<
 );
 
 const styles = StyleSheet.create(theme => ({
-  centerContainer: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing.xl,
-  },
   recipeContent: {
     paddingTop: theme.spacing.md,
   },

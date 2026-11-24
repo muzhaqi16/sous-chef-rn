@@ -385,6 +385,24 @@ describe('the states it can be in', () => {
     expect(screen.queryByTestId(kitTestIDs.stateError)).toBeNull();
   });
 
+  // Spec app/state-views, "A detail screen whose read fails".
+  it('shows the shared failure view, with a retry, when its read fails', async () => {
+    const failed: MockFor<typeof GetPantryItemDocument> = {
+      request: { query: GetPantryItemDocument, variables: () => true },
+      result: {
+        errors: [
+          new GraphQLError('Boom', {
+            extensions: { code: ErrorCode.InternalServerError },
+          }),
+        ],
+      },
+    };
+    await openDetail({ answers: [{ mock: failed }] });
+
+    expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    expect(screen.getByText(t('labels.tryAgain'))).toBeTruthy();
+  });
+
   // Its read is held back until the create lands: the server has no row yet.
   it('waits on a stack still being created, then opens it', async () => {
     unconfirmedCreates.mark('pi1');

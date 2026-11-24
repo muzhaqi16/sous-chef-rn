@@ -1,6 +1,5 @@
 {
   "storageLocations": {
-    "loading": "Loading storage locations...",
     "listView": "List View",
     "treeView": "Tree View",
     "noLocations": "No Storage Locations",
@@ -12,9 +11,7 @@
     "subLocationSingular": "{{count}} sub-location",
     "subLocationPlural": "{{count}} sub-locations",
     "gotIt": "Got It",
-    "deleteTitle": "Delete Storage Location",
-    "offlineTitle": "Not loaded yet",
-    "offlineDescription": "Your storage locations haven't been loaded on this device. Reconnect to see them."
+    "deleteTitle": "Delete Storage Location"
   },
   "storageLocationForm": {
     "name": "Name",

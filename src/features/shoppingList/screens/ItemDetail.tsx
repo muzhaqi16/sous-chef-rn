@@ -28,7 +28,6 @@ import {
 import { StoreShelfPriceList } from '#features/catalog/ui/StoreShelfPriceList';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
-import { DataStateView } from '#components/organisms/DataStateView';
 import { PartialDataNote } from '#components/molecules/PartialDataNote';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
@@ -161,16 +160,20 @@ export const ShoppingListItemDetail: React.FC<
         testID={shoppingListTestIDs.itemDetail}
         onBack={() => goBack()}
         title={t('shoppingListScreens.itemDetailsTitle')}
+        state={
+          notFound
+            ? {
+                value: 'empty',
+                onRetry: retry,
+                empty: {
+                  icon: 'help-circle-outline',
+                  title: t('errors.itemNotFound'),
+                },
+              }
+            : { value: state, onRetry: retry }
+        }
       >
-        <View style={styles.centerMessage}>
-          {notFound ? (
-            <Text role="body" tone="secondary" align="center">
-              {t('errors.itemNotFound')}
-            </Text>
-          ) : (
-            <DataStateView state={state} onRetry={retry} />
-          )}
-        </View>
+        {null}
       </CollapsingHeroDetail>
     );
   }
@@ -482,12 +485,6 @@ const styles = StyleSheet.create(theme => ({
   // the title sits flush against the "Information" section.
   titleRow: {
     marginBottom: theme.spacing.md,
-  },
-  centerMessage: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
   },
   statusBadge: {
     flexDirection: 'row',

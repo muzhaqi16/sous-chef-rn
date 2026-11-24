@@ -12,7 +12,6 @@ import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { PantryItemHeldDetail } from '#features/pantry/components/PantryItemHeldDetail';
-import { EmptyState } from '#components/molecules/EmptyState';
 import { useDataState } from '#hooks/data/useDataState';
 import { useTranslation, type TranslateFn } from '#/i18n';
 import { usePantryItemDetailData } from './usePantryItemDetailData';
@@ -69,7 +68,6 @@ import {
 } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import { catalogHintOf } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
-import { commonStyles } from '#/styles/commonStyles';
 import { daysUntilExpiry, isExpiryEstimate } from '#domain/expiry';
 import { catalogKey } from '#domain/catalogRecipes';
 import { useToday } from '#hooks/app/useToday';
@@ -274,16 +272,22 @@ export const PantryItemDetail: React.FC<
   // failed load: it gets its own words and a way back, never "try again".
   if (deletedOnServer) {
     return (
-      <CollapsingHeroDetail onBack={goBack} testID={pantryTestIDs.itemDetail}>
-        <View style={commonStyles.loadingContainer}>
-          <EmptyState
-            icon="trash-outline"
-            title={t('pantryItemDetail.removedTitle')}
-            description={t('pantryItemDetail.removedBody')}
-            action={{ label: t('labels.goBack'), onPress: goBack }}
-            testID={pantryTestIDs.itemRemoved}
-          />
-        </View>
+      <CollapsingHeroDetail
+        onBack={goBack}
+        testID={pantryTestIDs.itemDetail}
+        state={{
+          value: 'empty',
+          onRetry: handleRefresh,
+          empty: {
+            icon: 'trash-outline',
+            title: t('pantryItemDetail.removedTitle'),
+            description: t('pantryItemDetail.removedBody'),
+            action: { label: t('labels.goBack'), onPress: goBack },
+            testID: pantryTestIDs.itemRemoved,
+          },
+        }}
+      >
+        {null}
       </CollapsingHeroDetail>
     );
   }
@@ -291,16 +295,22 @@ export const PantryItemDetail: React.FC<
   // A refusal, not a failed load: retrying cannot show it.
   if (hiddenFromViewer) {
     return (
-      <CollapsingHeroDetail onBack={goBack} testID={pantryTestIDs.itemDetail}>
-        <View style={commonStyles.loadingContainer}>
-          <EmptyState
-            icon="eye-off-outline"
-            title={t('pantryItemDetail.hiddenTitle')}
-            description={t('pantryItemDetail.hiddenBody')}
-            action={{ label: t('labels.goBack'), onPress: goBack }}
-            testID={pantryTestIDs.itemHidden}
-          />
-        </View>
+      <CollapsingHeroDetail
+        onBack={goBack}
+        testID={pantryTestIDs.itemDetail}
+        state={{
+          value: 'empty',
+          onRetry: handleRefresh,
+          empty: {
+            icon: 'eye-off-outline',
+            title: t('pantryItemDetail.hiddenTitle'),
+            description: t('pantryItemDetail.hiddenBody'),
+            action: { label: t('labels.goBack'), onPress: goBack },
+            testID: pantryTestIDs.itemHidden,
+          },
+        }}
+      >
+        {null}
       </CollapsingHeroDetail>
     );
   }
@@ -318,10 +328,12 @@ export const PantryItemDetail: React.FC<
 
   if (!item) {
     return (
-      <CollapsingHeroDetail onBack={goBack} testID={pantryTestIDs.itemDetail}>
-        <View style={commonStyles.loadingContainer}>
-          <DataStateView state={itemState} onRetry={handleRefresh} />
-        </View>
+      <CollapsingHeroDetail
+        onBack={goBack}
+        testID={pantryTestIDs.itemDetail}
+        state={{ value: itemState, onRetry: handleRefresh }}
+      >
+        {null}
       </CollapsingHeroDetail>
     );
   }

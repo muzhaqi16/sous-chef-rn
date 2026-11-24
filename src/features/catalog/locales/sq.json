@@ -1,6 +1,5 @@
 {
   "storageLocations": {
-    "loading": "Po ngarkohen vendet e ruajtjes...",
     "listView": "Pamja listë",
     "treeView": "Pamja pemë",
     "noLocations": "Pa vende të ruajtjes",
@@ -12,9 +11,7 @@
     "subLocationSingular": "{{count}} nën-vend",
     "subLocationPlural": "{{count}} nën-vende",
     "gotIt": "Kuptova",
-    "deleteTitle": "Fshi vendin e ruajtjes",
-    "offlineTitle": "Ende pa ngarkuar",
-    "offlineDescription": "Vendndodhjet e ruajtjes nuk janë ngarkuar në këtë pajisje. Rilidhu për t'i parë."
+    "deleteTitle": "Fshi vendin e ruajtjes"
   },
   "storageLocationForm": {
     "name": "Emri",

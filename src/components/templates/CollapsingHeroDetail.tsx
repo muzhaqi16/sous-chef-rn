@@ -23,6 +23,9 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
+import { DataStateView } from '#components/organisms/DataStateView';
+import type { EmptyStateProps } from '#components/molecules/EmptyState';
+import type { DataState } from '#hooks/data/useDataState';
 import {
   HeaderActionIcon,
   type HeaderAction,
@@ -100,6 +103,11 @@ interface CollapsingHeroDetailProps {
   refreshing?: boolean;
   onRefresh?: () => void;
   contentStyle?: StyleProp<ViewStyle>;
+  /**
+   * Loading, error, offline and empty, drawn in the content card as `Screen`
+   * draws them; the back chip stays, and the hero waits for the data.
+   */
+  state?: { value: DataState; onRetry: () => void; empty?: EmptyStateProps };
   children: React.ReactNode;
   testID?: string;
 }
@@ -116,13 +124,15 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
   refreshing,
   onRefresh,
   contentStyle,
+  state,
   children,
   testID,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { barActions, menuRef, overflow } = useHeaderOverflow(actions);
-  const hasHero = !!renderHero;
+  const showsState = !!state && state.value !== 'ready';
+  const hasHero = !!renderHero && !showsState;
   const heroHeight = HERO_IMAGE_HEIGHT + insets.top;
 
   const scrollY = useSharedValue(0);
@@ -225,7 +235,17 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
             contentStyle,
           ]}
         >
-          {children}
+          {state && showsState ? (
+            <View style={commonStyles.loadingContainer}>
+              <DataStateView
+                state={state.value}
+                onRetry={state.onRetry}
+                empty={state.empty}
+              />
+            </View>
+          ) : (
+            children
+          )}
         </View>
         <ThemeEpochSentinel />
       </Animated.ScrollView>

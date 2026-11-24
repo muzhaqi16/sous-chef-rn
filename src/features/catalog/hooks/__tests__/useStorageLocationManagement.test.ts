@@ -295,7 +295,7 @@ describe('useStorageLocationManagement', () => {
     );
 
     await drainTimers();
-    expect(result.current.errorMessage).not.toBeNull();
+    expect(result.current.state).toBe('error');
   });
 
   it('returns loading state', async () => {
@@ -304,10 +304,10 @@ describe('useStorageLocationManagement', () => {
       { operationMocks: [buildGetLocationsMock()] },
     );
 
-    expect(result.current.initialLoading).toBe(true);
+    expect(result.current.state).toBe('loading');
     await drainTimers();
     expect(result.current.locations).toHaveLength(2);
-    expect(result.current.initialLoading).toBe(false);
+    expect(result.current.state).toBe('ready');
   });
 
   it('skips query when homeId is undefined', () => {
@@ -316,7 +316,7 @@ describe('useStorageLocationManagement', () => {
       useStorageLocationManagement(undefined),
     );
 
-    expect(result.current.initialLoading).toBe(false);
+    expect(result.current.state).toBe('empty');
     expect(result.current.locations).toEqual([]);
   });
 
@@ -580,8 +580,7 @@ describe('useStorageLocationManagement', () => {
       expect(result.current.locations.map(location => location.id)).toEqual([
         'loc-2',
       ]);
-      expect(result.current.offline).toBe(false);
-      expect(result.current.errorMessage).toBeNull();
+      expect(result.current.state).toBe('ready');
     });
 
     it('setDefaultLocation moves the flag while offline', async () => {

@@ -1,4 +1,5 @@
 import React from 'react';
+import { kitTestIDs } from '#components/testIDs';
 import { act, screen, userEvent, within } from '@testing-library/react-native';
 import {
   inputOf,
@@ -184,14 +185,14 @@ describe('the storage locations', () => {
   it('say they are loading while nothing is held', async () => {
     await openLocations({ readHeld: true });
 
-    expect(screen.getByLabelText(t('storageLocations.loading'))).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.stateLoading)).toBeTruthy();
   });
 
   it('say why they could not be read, and are read again', async () => {
     await openLocations({ readFails: true });
 
-    expect(screen.getByText(t('errors.boundary.title'))).toBeTruthy();
-    await userEvent.setup().press(screen.getByText(t('labels.retry')));
+    expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
     await log.landed(GetStorageLocationsDocument, 2);
 
     expect(cardNames()).toContain('Kitchen');
@@ -201,7 +202,7 @@ describe('the storage locations', () => {
     useStore.setState({ isOnline: false, apiReachable: false });
     await openLocations({ readFails: true });
 
-    expect(screen.getByText(t('storageLocations.offlineTitle'))).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.stateOffline)).toBeTruthy();
     expect(
       screen.queryByText(t('storageLocations.noLocations')),
     ).not.toBeOnTheScreen();
