@@ -206,6 +206,7 @@ const NotificationFeed: React.FC<{
         onEndReached={loadMore}
         onEndReachedThreshold={0.4}
         contentContainerStyle={[
+          styles.gutter,
           !hasNotifications && styles.emptyInset,
           listInset,
         ]}
@@ -214,8 +215,12 @@ const NotificationFeed: React.FC<{
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
+  // Each row is its own card on the page.
+  gutter: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
   emptyInset: {
     flex: 1,
   },
-});
+}));

@@ -1,16 +1,15 @@
 import React from 'react';
 import { IconButton } from '#components/atoms/IconButton';
-import { View } from 'react-native';
 import { useToday } from '#hooks/app/useToday';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#components/atoms/Icon';
-import { StyleSheet } from 'react-native-unistyles';
 import type { DisplayNotification as NotificationType } from '#features/notifications/utils/toDisplayNotification';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
 import { getNotificationIcon } from './notificationIcon';
 import { safeParseDate } from '#utils/dateUtils';
 
-import { AppPressable } from '#components/atoms/AppPressable';
+import { RowCard } from '#components/atoms/RowCard';
+import { ListItem } from '#components/molecules/ListItem';
 import { Text } from '#components/atoms/Text';
 import { formatRelativeToNow } from '#/utils/formatters/date';
 
@@ -44,94 +43,47 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
   const copy = getNotificationCopy(notification, t, today);
 
   return (
-    <AppPressable
-      style={[styles.container, !notification.isRead && styles.unreadContainer]}
-      onPress={handlePress}
-    >
-      <View
-        style={[
-          styles.iconContainer,
-          !notification.isRead && styles.unreadIconContainer,
-        ]}
-      >
-        <Icon
-          name={getNotificationIcon(notification.type)}
-          size="md"
-          tone={!notification.isRead ? 'primary' : 'textSecondary'}
-        />
-      </View>
-      <View style={styles.contentContainer}>
-        <Text
-          role={notification.isRead ? 'bodyStrong' : 'bodyStrong'}
-          style={styles.title}
-        >
-          {copy.title}
-        </Text>
-        {!!copy.message && (
-          <Text
-            role="caption"
-            tone="secondary"
-            style={styles.message}
-            numberOfLines={2}
-          >
-            {copy.message}
-          </Text>
-        )}
-        <Text role="caption" tone="tertiary">
-          {formattedTimestamp}
-        </Text>
-      </View>
-      {!!onDismiss && (
-        <IconButton
-          name="close"
-          size="sm"
-          tone="textTertiary"
-          onPress={handleDismiss}
-          accessibilityLabel={t('notifications.dismissA11y')}
-          style={styles.dismissButton}
-        />
-      )}
-    </AppPressable>
+    <RowCard>
+      <ListItem
+        leftElement={
+          <Icon
+            name={getNotificationIcon(notification.type)}
+            size="md"
+            tone={notification.isRead ? 'textSecondary' : 'primary'}
+          />
+        }
+        title={copy.title}
+        subtitle={
+          <>
+            {!!copy.message && (
+              <Text role="caption" tone="secondary" numberOfLines={2}>
+                {copy.message}
+              </Text>
+            )}
+            <Text role="caption" tone="tertiary">
+              {formattedTimestamp}
+            </Text>
+          </>
+        }
+        onPress={handlePress}
+        tinted={!notification.isRead}
+        accessibilityLabel={[copy.title, copy.message, formattedTimestamp]
+          .filter(Boolean)
+          .join(', ')}
+        rightElement={
+          onDismiss ? (
+            <IconButton
+              name="close"
+              size="sm"
+              tone="textTertiary"
+              onPress={handleDismiss}
+              accessibilityLabel={t('notifications.dismissA11y')}
+            />
+          ) : undefined
+        }
+      />
+    </RowCard>
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  container: {
-    flexDirection: 'row',
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: theme.borderWidth.hairline,
-    borderBottomColor: theme.colors.border,
-  },
-  unreadContainer: {
-    backgroundColor: theme.colors.primaryLight,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing.md,
-  },
-  unreadIconContainer: {
-    backgroundColor: theme.colors.primary,
-    opacity: 0.2,
-  },
-  contentContainer: {
-    flex: 1,
-  },
-  title: {
-    marginBottom: theme.spacing.xs,
-  },
-  message: {
-    marginBottom: theme.spacing.xs,
-  },
-  dismissButton: {
-    padding: theme.spacing.xs,
-    justifyContent: 'center',
-  },
-}));
 
 export const NotificationItem = NotificationItemComponent;

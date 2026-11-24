@@ -32,6 +32,8 @@ interface ListItemProps {
   disabled?: boolean;
   /** A row picked in a list of choices: tinted, and reported as selected. */
   selected?: boolean;
+  /** Drawn on the brand tint with nothing spoken for it, as an unread row is. */
+  tinted?: boolean;
   leftIcon?: React.ComponentProps<typeof Icon>['name'];
   badge?: BadgeContent;
   rightElement?: React.ReactNode;
@@ -54,6 +56,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   onLongPress,
   disabled = false,
   selected,
+  tinted = false,
   leftIcon,
   badge,
   rightElement,
@@ -121,7 +124,10 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
     return (
       <View
-        style={[commonStyles.rowSurface, selected && styles.selectedSurface]}
+        style={[
+          commonStyles.rowSurface,
+          (selected === true || tinted) && styles.tintedSurface,
+        ]}
       >
         <AppPressable
           style={commonStyles.rowContent}
@@ -206,7 +212,7 @@ const ListItemSubtitle: React.FC<{
 export const ListItem = ListItemComponent;
 
 const styles = StyleSheet.create(theme => ({
-  selectedSurface: {
+  tintedSurface: {
     backgroundColor: theme.colors.primaryLight,
   },
   checkboxContainer: {
