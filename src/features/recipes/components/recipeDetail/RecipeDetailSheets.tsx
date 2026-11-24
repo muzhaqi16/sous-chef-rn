@@ -84,7 +84,7 @@ export const RecipeDetailSheets: React.FC<RecipeDetailSheetsProps> = ({
 
       <SaveRecipeSheet
         visible={active?.type === 'save'}
-        onClose={close}
+        onClose={() => close('save')}
         folders={folders}
         availableTags={availableTags}
         onSave={async options => {
@@ -93,7 +93,7 @@ export const RecipeDetailSheets: React.FC<RecipeDetailSheetsProps> = ({
             options.tags,
             options.notes,
           );
-          close();
+          close('save');
         }}
         saving={detail.saving}
         recipeName={title}
@@ -103,7 +103,7 @@ export const RecipeDetailSheets: React.FC<RecipeDetailSheetsProps> = ({
 
       <ManageRecipeSheet
         visible={active?.type === 'manage'}
-        onClose={close}
+        onClose={() => close('manage')}
         folders={folders}
         availableTags={availableTags}
         currentFolder={detail.savedFolder}
@@ -122,7 +122,7 @@ export const RecipeDetailSheets: React.FC<RecipeDetailSheetsProps> = ({
       <ReportContentSheet
         visible={active?.type === 'report'}
         target={active?.type === 'report' ? active.target : null}
-        onDismiss={close}
+        onDismiss={() => close('report')}
       />
 
       <IngredientAlertsSheet
@@ -135,7 +135,7 @@ export const RecipeDetailSheets: React.FC<RecipeDetailSheetsProps> = ({
         onAdd={() => {
           if (flagged) void detail.handleAddSingleIngredient(flagged);
         }}
-        onDismiss={close}
+        onDismiss={() => close('ingredient')}
       />
     </>
   );
