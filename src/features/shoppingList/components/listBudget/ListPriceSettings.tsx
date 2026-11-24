@@ -18,7 +18,7 @@ import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import {
   listPriceSettingsSchema,
   type ListPriceSettingsValues,
-} from './listPriceSettingsForm';
+} from './listPriceSettingsFormConfig';
 
 type Store = { id: string; name: string };
 

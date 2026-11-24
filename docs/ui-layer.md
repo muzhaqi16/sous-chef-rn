@@ -372,11 +372,13 @@ they read it.
   dark overlay — and it stays light in both appearances. There is no
   `colors.white`.
 - **The brand has three roles.**
+
   - **`primary`** is the fill, and `onPrimary` is what sits on it.
   - **`primaryText`** is the brand as text or an icon: the `accent` tone, `Icon`'s `primary` tone, and a link.
   - **`primaryLight`** is the tint, and `onPrimaryLight` is its content.
 
   A brand-coloured foreground reads `primaryText`, never `primary`, and a tint reads `primaryLight`, never `primary + 'NN'`. The roles let a picked brand and High Contrast lift a foreground to AA without changing the fill.
+
 - **The default brand orange sits below AA by decision.** Its text on the page reads 2.35:1 and white on it 2.58:1. Each such pairing is listed where a contrast test reads it: `toneContrast.test.ts` `BELOW_AA_BY_DECISION`, `onColor.test.ts`, and `onFillTextUsesItsToken.test.ts`. High Contrast maps the default brand to `brand[700]` (`applyAppearance.ts`), and `applyAppearance.test.ts` holds every brand pairing at AA there.
 - **`sous-chef/on-fill-text-uses-its-token`** catches the two per-file shapes: a
   raw white literal, and an `on*` token over a fill it does not name.
@@ -672,9 +674,9 @@ they read it.
     holds the fields.
   - Save is disabled only while saving, never for invalid input: pressed, it
     says on the field what is wrong.
-- **The schema sits in a file beside its form** (`*FormConfig.ts` or
-  `*Form.ts`); `shoppingItemFormConfig.ts` is shared by the AddEditItem screen
-  and the AddToShoppingList sheet.
+- **The schema sits in a `*FormConfig.ts` beside its form**;
+  `shoppingItemFormConfig.ts` is shared by the AddEditItem screen and the
+  AddToShoppingList sheet.
 - **A form over data it reads** seeds `defaultValues` from the cached copy and
   passes the same object as `values`, with
   `resetOptions: { keepDirtyValues: true }`, so a later read restates every

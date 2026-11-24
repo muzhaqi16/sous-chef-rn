@@ -27,7 +27,10 @@ import { TemplateSection } from '#features/shoppingList/components/listSettings/
 import { SubScreen } from '#components/templates/SubScreen';
 import { reportValidationErrors } from '#/utils/validation/common';
 import type { ListSettingsValues } from '#features/shoppingList/hooks/useListSettings';
-import { EMPTY_LIST_SETTINGS, listSettingsSchema } from './listSettingsForm';
+import {
+  EMPTY_LIST_SETTINGS,
+  listSettingsSchema,
+} from './listSettingsFormConfig';
 
 export const ListSettings: React.FC<
   StaticScreenProps<

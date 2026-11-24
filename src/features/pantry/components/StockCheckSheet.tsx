@@ -27,7 +27,7 @@ import {
   stockCheckChoice,
   stockCheckSchema,
   type StockCheckFormValues,
-} from './stockCheckForm';
+} from './stockCheckFormConfig';
 
 const ANSWERS: readonly StockCheckAnswer[] = [
   StockCheckAnswer.StillHave,

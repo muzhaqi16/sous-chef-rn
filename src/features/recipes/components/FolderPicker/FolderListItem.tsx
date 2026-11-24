@@ -9,7 +9,6 @@ export interface FolderListItemProps {
   onPress: (folder: string) => void;
   /** When provided, enables the long-press manage menu. */
   onLongPress?: (folder: string) => void;
-  disabled?: boolean;
 }
 
 /**
@@ -22,7 +21,6 @@ export const FolderListItem: React.FC<FolderListItemProps> = ({
   isSelected,
   onPress,
   onLongPress,
-  disabled = false,
 }) => {
   return (
     <RowCard>
@@ -32,7 +30,6 @@ export const FolderListItem: React.FC<FolderListItemProps> = ({
         titleNumberOfLines={1}
         onPress={() => onPress(folder)}
         onLongPress={onLongPress ? () => onLongPress(folder) : undefined}
-        disabled={disabled}
         selected={isSelected}
         rightElement={
           isSelected ? <Icon name="checkmark" size="sm" tone="primary" /> : null

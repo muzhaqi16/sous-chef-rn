@@ -20,7 +20,7 @@ import {
   plannedMealCookedSchema,
   recipeCookedSchema,
   type MarkCookedFormValues,
-} from './markCookedForm';
+} from './markCookedFormConfig';
 
 interface MarkCookedModalProps {
   visible: boolean;

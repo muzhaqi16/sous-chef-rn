@@ -32,7 +32,7 @@ import {
   MAX_PANTRY_DESCRIPTION_LENGTH,
   pantrySettingsSchema,
   type PantrySettingsFormValues,
-} from './pantrySettingsForm';
+} from './pantrySettingsFormConfig';
 
 export const PantrySettings: React.FC<
   StaticScreenProps<

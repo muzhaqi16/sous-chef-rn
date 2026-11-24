@@ -193,7 +193,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
       isSelected={item === selectedFolder}
       onPress={handleSelectFolder}
       onLongPress={hasFolderActions ? handleFolderLongPress : undefined}
-      disabled={folderActionLoading}
     />
   );
 
