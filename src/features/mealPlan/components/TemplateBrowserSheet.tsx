@@ -157,6 +157,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
               getItemType={getTemplateItemType}
               {...FLASHLIST_DEFAULTS.bottomSheet}
               style={styles.list}
+              contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               onEndReached={hasMore ? loadMore : undefined}
               ListFooterComponent={
@@ -187,6 +188,10 @@ const styles = StyleSheet.create(theme => ({
   },
   list: {
     flex: 1,
+  },
+  // Each template is its own card in the sheet.
+  listContent: {
+    paddingHorizontal: theme.spacing.md,
   },
   search: {
     marginHorizontal: theme.spacing.md,
