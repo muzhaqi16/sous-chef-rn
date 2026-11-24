@@ -1,6 +1,10 @@
 import { LaunchArguments } from 'react-native-launch-arguments';
-import type { WebSocketTransport } from '#/apollo/links/wsLink';
+import {
+  reconnectWebSocket,
+  type WebSocketTransport,
+} from '#/apollo/links/wsLink';
 import { env } from '#/config/env';
+import { getResolvedLanguage, onLanguageChanged } from '#/i18n';
 
 // RN's WebSocket takes a third `options` argument that graphql-ws, which
 // constructs the socket as `new Impl(url, protocols)`, never passes.
@@ -28,8 +32,21 @@ const detoxKeepAliveMs = (): number | undefined => {
   }
 };
 
+// The API localizes an event's names by the upgrade request's language, as
+// HTTP does by each request's; a socket keeps it, so a switch re-dials.
+let dialledIn: string | undefined;
+let listening = false;
+const redialOnLanguageSwitch = () => {
+  if (listening) return;
+  listening = true;
+  onLanguageChanged(() => {
+    if (getResolvedLanguage() !== dialledIn) reconnectWebSocket();
+  });
+};
+
 /**
- * React Native's socket, sending the client key on the upgrade REQUEST.
+ * React Native's socket, sending the client key and the app's language on the
+ * upgrade REQUEST.
  * `connectionParams` reaches the server only once the socket is open, so a
  * dial an intermediary re-issues without its upgrade headers arrives anonymous
  * and is refused as a scanner.
@@ -41,7 +58,11 @@ export function createNativeWebSocketTransport(): WebSocketTransport {
   return {
     webSocketImpl: class extends NativeWebSocket {
       constructor(url: string, protocols?: string | string[]) {
-        super(url, protocols, { headers: upgradeHeaders });
+        dialledIn = getResolvedLanguage();
+        redialOnLanguageSwitch();
+        super(url, protocols, {
+          headers: { ...upgradeHeaders, 'accept-language': dialledIn },
+        });
       }
     },
     keepAliveMs: detoxKeepAliveMs(),
