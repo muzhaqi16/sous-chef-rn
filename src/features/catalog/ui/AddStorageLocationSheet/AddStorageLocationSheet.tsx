@@ -1,17 +1,21 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
+import { useController, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { object, string, type ObjectSchema } from 'yup';
+import { useTranslation } from '#/i18n';
 import {
-  ThemedActivityIndicator,
   ThemedBottomSheetTextInput,
   type ThemedBottomSheetTextInputRef,
 } from '#components/atoms/themedComponents';
 import { StorageType } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
-import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
+import { lazyMessage, reportValidationErrors } from '#/utils/validation/common';
 
 /** Module-level async wrapper to keep try-catch out of the component body (React Compiler). */
 async function executeCreateLocation(
@@ -36,122 +40,71 @@ interface AddStorageLocationSheetProps {
   creating?: boolean;
 }
 
-/** Name-only quick create from PantryMain; the location gets the default type. */
-export const AddStorageLocationSheet: React.FC<
-  AddStorageLocationSheetProps
-> = ({ visible, onClose, onCreateLocation, creating = false }) => {
+interface StorageLocationFormValues {
+  name: string;
+}
+
+const storageLocationSchema: ObjectSchema<StorageLocationFormValues> = object({
+  name: string()
+    .trim()
+    .required(lazyMessage('addStorageLocation.nameRequired'))
+    .min(2, lazyMessage('commonValidation.nameMin')),
+});
+
+type AddStorageLocationFormProps = Omit<
+  AddStorageLocationSheetProps,
+  'visible'
+>;
+
+const AddStorageLocationForm: React.FC<AddStorageLocationFormProps> = ({
+  onClose,
+  onCreateLocation,
+  creating = false,
+}) => {
   const { t } = useTranslation();
   const inputRef = useRef<ThemedBottomSheetTextInputRef>(null);
+  const { control, handleSubmit, setError } =
+    useForm<StorageLocationFormValues>({
+      resolver: yupResolver(storageLocationSchema),
+      defaultValues: { name: '' },
+    });
+  const { field, fieldState } = useController({ control, name: 'name' });
 
-  const [name, setName] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
-  // Reset state when sheet closes (render-time conditional state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  if (visible !== prevVisible) {
-    setPrevVisible(visible);
-    if (!visible) {
-      setName('');
-      setError(null);
-    }
-  }
-
-  // Focus input after sheet open animation completes
+  // Focus once the sheet's open animation has run.
   useEffect(() => {
-    if (visible) {
-      requestIdleCallback(() => inputRef.current?.focus());
-    }
-  }, [visible]);
+    requestIdleCallback(() => inputRef.current?.focus());
+  }, []);
 
-  const handleCreate = async () => {
-    const trimmedName = name.trim();
-
-    if (!trimmedName) {
-      setError(t('addStorageLocation.nameRequired'));
-      return;
-    }
-
-    if (trimmedName.length < 2) {
-      setError(t('commonValidation.nameMin'));
-      return;
-    }
-
+  const create = handleSubmit(async ({ name }) => {
     const result = await executeCreateLocation(onCreateLocation, {
-      name: trimmedName,
+      name,
       type: StorageType.Custom,
     });
     if (result.failed) {
-      setError(t('addStorageLocation.createFailed'));
+      setError('name', { message: t('addStorageLocation.createFailed') });
     } else {
       onClose();
     }
-  };
+  }, reportValidationErrors);
 
-  const handleCancel = () => {
-    setName('');
-    setError(null);
-    onClose();
-  };
-
-  const handleNameChange = (text: string) => {
-    setName(text);
-    if (error) setError(null);
-  };
-
-  const isCreateDisabled = creating || name.trim().length < 2;
-
-  const variantStyles = styles.useVariants({ error: !!error });
+  const variantStyles = styles.useVariants({ error: !!fieldState.error });
 
   return (
-    <Sheet
-      mode="view"
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={['35%']}
-      contentContainerStyle={variantStyles.content}
-    >
-      {/* Header with Cancel/Create */}
-      <View style={variantStyles.header}>
-        <AppPressable
-          onPress={handleCancel}
-          style={variantStyles.headerButton}
-          accessibilityRole="button"
-          accessibilityLabel={t('labels.cancel')}
-        >
-          <Text role="body" tone="secondary">
-            {t('labels.cancel')}
-          </Text>
-        </AppPressable>
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={t('labels.addLocation')}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void create();
+            },
+            accessibilityLabel: t('labels.create'),
+            loading: creating,
+          }}
+        />
+      </SheetHeaderSlot>
 
-        <Text role="heading" align="center" style={variantStyles.title}>
-          {t('labels.addLocation')}
-        </Text>
-
-        <AppPressable
-          onPress={handleCreate}
-          style={variantStyles.headerButton}
-          accessibilityRole="button"
-          accessibilityLabel={t('labels.create')}
-          disabled={isCreateDisabled}
-        >
-          {creating ? (
-            <ThemedActivityIndicator size="small" />
-          ) : (
-            <Text
-              role="bodyStrong"
-              align="right"
-              tone={isCreateDisabled ? 'tertiary' : 'accent'}
-            >
-              {t('labels.create')}
-            </Text>
-          )}
-        </AppPressable>
-      </View>
-
-      {/* Divider */}
-      <Divider style={variantStyles.dividerGap} />
-
-      {/* Input Field */}
       <View style={variantStyles.inputContainer}>
         <Text role="label" tone="secondary" style={variantStyles.label}>
           {t('addStorageLocation.locationName')}
@@ -160,25 +113,48 @@ export const AddStorageLocationSheet: React.FC<
         <ThemedBottomSheetTextInput
           ref={inputRef}
           style={variantStyles.input}
-          defaultValue={name}
-          onChangeText={handleNameChange}
+          defaultValue={field.value}
+          onChangeText={field.onChange}
+          onBlur={field.onBlur}
           placeholder={t('addStorageLocation.namePlaceholder')}
           autoCapitalize="words"
           autoCorrect={false}
           maxLength={50}
           returnKeyType="done"
-          onSubmitEditing={handleCreate}
+          onSubmitEditing={() => {
+            void create();
+          }}
         />
-        {!!error && (
+        {fieldState.error ? (
           <Text role="error" tone="error" style={variantStyles.errorText}>
-            {error}
+            {fieldState.error.message}
           </Text>
-        )}
+        ) : null}
 
         <Text role="caption" tone="tertiary" style={variantStyles.hint}>
           {t('addStorageLocation.hintText')}
         </Text>
       </View>
+    </>
+  );
+};
+
+/** Name-only quick create from PantryMain; the location gets the default type. */
+export const AddStorageLocationSheet: React.FC<
+  AddStorageLocationSheetProps
+> = ({ visible, ...form }) => {
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      mode="form"
+      headerFromContent
+      visible={visible}
+      onDismiss={form.onClose}
+      snapPoints={['35%']}
+      contentContainerStyle={styles.content}
+    >
+      {opening ? <AddStorageLocationForm key={opening.id} {...form} /> : null}
     </Sheet>
   );
 };
@@ -186,23 +162,6 @@ export const AddStorageLocationSheet: React.FC<
 const styles = StyleSheet.create(theme => ({
   content: {
     paddingHorizontal: theme.spacing.lg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
-  },
-  headerButton: {
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.xs,
-    minWidth: 60,
-  },
-  title: {
-    flex: 1,
-  },
-  dividerGap: {
-    marginBottom: theme.spacing.lg,
   },
   inputContainer: {
     marginBottom: theme.spacing.md,

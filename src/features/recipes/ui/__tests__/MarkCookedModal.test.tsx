@@ -9,24 +9,6 @@ import { t } from '#/i18n';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { MarkCookedModal } from '../MarkCookedModal';
 
-jest.mock('#components/templates/Sheet', () => {
-  const { View } = require('react-native');
-  return {
-    Sheet: ({
-      children,
-      header,
-    }: {
-      children?: React.ReactNode;
-      header?: React.ReactNode;
-    }) => (
-      <View>
-        {header}
-        {children}
-      </View>
-    ),
-  };
-});
-
 jest.mock('#components/molecules/BottomSheetHeader', () => {
   const { Pressable, Text } = require('react-native');
   return {

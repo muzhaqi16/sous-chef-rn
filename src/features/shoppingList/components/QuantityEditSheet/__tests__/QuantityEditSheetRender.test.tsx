@@ -141,11 +141,9 @@ describe('QuantityEditSheet, render contract', () => {
     expect(screen.getByText('Unit')).toBeTruthy();
   });
 
-  it('displays default quantity value when first rendered', () => {
+  it('opens on the line\u2019s quantity', () => {
     render(<QuantityEditSheet {...defaultProps} />);
-    // Initial render shows '0' since render-time state update
-    // only fires when visible/itemId change from their tracked values
-    expect(screen.getByText('0')).toBeTruthy();
+    expect(screen.getByText('2')).toBeTruthy();
   });
 
   it('renders unit chips for item units', () => {
@@ -154,9 +152,9 @@ describe('QuantityEditSheet, render contract', () => {
     expect(screen.getByText('oz')).toBeTruthy();
   });
 
-  it('renders nothing meaningful when item is null', () => {
+  it('shows nothing without a line', () => {
     render(<QuantityEditSheet {...defaultProps} item={null} />);
-    expect(screen.getByText('Edit Quantity')).toBeTruthy();
+    expect(screen.queryByText('Edit Quantity')).toBeNull();
   });
 
   it('initializes quantity when visibility changes', () => {
@@ -181,10 +179,8 @@ describe('QuantityEditSheet, render contract', () => {
     expect(screen.queryByTestId('chip-lbs')).toBeNull();
   });
 
-  it('handles visible=false', () => {
-    const { toJSON } = render(
-      <QuantityEditSheet {...defaultProps} visible={false} />,
-    );
-    expect(toJSON()).toBeTruthy();
+  it('shows nothing before it opens', () => {
+    render(<QuantityEditSheet {...defaultProps} visible={false} />);
+    expect(screen.queryByText('Edit Quantity')).toBeNull();
   });
 });

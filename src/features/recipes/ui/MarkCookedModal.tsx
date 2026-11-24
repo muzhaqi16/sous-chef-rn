@@ -10,6 +10,8 @@ import { recipesTestIDs } from '#features/recipes/testIDs';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Text } from '#components/atoms/Text';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
 import type { CookConfirmOutcome } from '#features/recipes/types';
 
 interface MarkCookedModalProps {
@@ -29,8 +31,10 @@ interface MarkCookedModalProps {
   wholeServings?: boolean;
 }
 
-export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
-  visible,
+type MarkCookedFormProps = Omit<MarkCookedModalProps, 'visible'>;
+
+/** One opening, on the recipe's servings with the pantry deducted. */
+const MarkCookedForm: React.FC<MarkCookedFormProps> = ({
   recipeName,
   defaultServings,
   onClose,
@@ -40,29 +44,12 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  // Form state
-  const [servingsInput, setServingsInput] = useState('');
+  const [servingsInput, setServingsInput] = useState(String(defaultServings));
   const [deductFromPantry, setDeductFromPantry] = useState(true);
   const [useGranularDeduction, setUseGranularDeduction] = useState(true);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [reviewUnavailable, setReviewUnavailable] = useState(false);
-
-  // Reset form when modal opens (render-time state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevDefaultServings, setPrevDefaultServings] =
-    useState(defaultServings);
-  if (visible !== prevVisible || defaultServings !== prevDefaultServings) {
-    setPrevVisible(visible);
-    setPrevDefaultServings(defaultServings);
-    if (visible) {
-      setServingsInput(String(defaultServings));
-      setDeductFromPantry(true);
-      setUseGranularDeduction(true);
-      setNotes('');
-      setReviewUnavailable(false);
-    }
-  }
 
   // Empty means "as many as the recipe makes". A TYPED value that is not a
   // positive number is refused on `servingsMade`, so it is reported, not
@@ -107,15 +94,9 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
   };
 
   return (
-    <Sheet
-      mode="form"
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={['55%']}
-      contentContainerStyle={styles.contentContainer}
-      style={styles.scrollView}
-      // No title: the "Mark Cooked" action and the recipe name convey intent.
-      header={
+    <>
+      <SheetHeaderSlot>
+        {/* No title: the "Mark Cooked" action and the recipe name convey intent. */}
         <BottomSheetHeader
           onCancel={onClose}
           onConfirm={() => {
@@ -126,8 +107,8 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
           saving={saving}
           confirmTestID={recipesTestIDs.cookConfirm}
         />
-      }
-    >
+      </SheetHeaderSlot>
+
       {/* Recipe Info */}
       <View style={styles.recipeInfo}>
         <Text role="bodyStrong" numberOfLines={2}>
@@ -211,6 +192,27 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
           numberOfLines={2}
         />
       </View>
+    </>
+  );
+};
+
+export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
+  visible,
+  ...form
+}) => {
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      mode="form"
+      headerFromContent
+      visible={visible}
+      onDismiss={form.onClose}
+      snapPoints={['55%']}
+      contentContainerStyle={styles.contentContainer}
+      style={styles.scrollView}
+    >
+      {opening ? <MarkCookedForm key={opening.id} {...form} /> : null}
     </Sheet>
   );
 };

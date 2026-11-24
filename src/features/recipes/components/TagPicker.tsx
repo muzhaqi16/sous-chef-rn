@@ -12,6 +12,7 @@ import { Text } from '#components/atoms/Text';
 import { identity, useLocalSearch } from '#hooks/search/useLocalSearch';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
+import { useOpening } from '#hooks/ui/useOpening';
 
 const TagListSeparator = () => <View style={styles.tagSeparator} />;
 // Every row is the same component, so one recycling pool is correct.
@@ -26,26 +27,18 @@ export interface TagPickerProps {
   loading?: boolean;
 }
 
-export const TagPicker: React.FC<TagPickerProps> = ({
-  visible,
+type TagPickerContentProps = Omit<TagPickerProps, 'visible' | 'onCancel'>;
+
+/** One opening: the search starts empty. */
+const TagPickerContent: React.FC<TagPickerContentProps> = ({
   tags,
   selectedTags,
   onSelect,
-  onCancel,
   loading = false,
 }) => {
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Reset search query when sheet opens (render-time state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  if (visible !== prevVisible) {
-    setPrevVisible(visible);
-    if (visible) {
-      setSearchQuery('');
-    }
-  }
 
   const filteredTags = useLocalSearch(tags, searchQuery, [identity]);
 
@@ -86,13 +79,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   };
 
   return (
-    <Sheet
-      mode="view"
-      visible={visible}
-      onDismiss={onCancel}
-      snapPoints={['55%', '70%']}
-      contentContainerStyle={styles.bottomSheetContent}
-    >
+    <>
       <View style={styles.header}>
         <Text role="heading">{t('tagPicker.filterByTags')}</Text>
       </View>
@@ -168,6 +155,26 @@ export const TagPicker: React.FC<TagPickerProps> = ({
           </Text>
         </View>
       )}
+    </>
+  );
+};
+
+export const TagPicker: React.FC<TagPickerProps> = ({
+  visible,
+  onCancel,
+  ...content
+}) => {
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      mode="view"
+      visible={visible}
+      onDismiss={onCancel}
+      snapPoints={['55%', '70%']}
+      contentContainerStyle={styles.bottomSheetContent}
+    >
+      {opening ? <TagPickerContent key={opening.id} {...content} /> : null}
     </Sheet>
   );
 };

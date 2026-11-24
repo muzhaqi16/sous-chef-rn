@@ -14,6 +14,7 @@ import { InlineFolderChooser } from '#features/recipes/components/InlineFolderCh
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Sheet } from '#components/templates/Sheet';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { useOpening } from '#hooks/ui/useOpening';
 
 export interface ManageRecipeSheetProps {
   visible: boolean;
@@ -33,8 +34,14 @@ export interface ManageRecipeSheetProps {
   recipeName?: string;
 }
 
-export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
-  visible,
+type ManageRecipeContentProps = Omit<ManageRecipeSheetProps, 'visible'>;
+
+/**
+ * One opening. Each change saves as it is made through a local-first write,
+ * so the folder, tags and rating read from the props, which hold it at once
+ * and roll back on a refusal; only the notes being typed are held here.
+ */
+const ManageRecipeContent: React.FC<ManageRecipeContentProps> = ({
   onClose,
   folders,
   availableTags,
@@ -52,58 +59,15 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  // Local state for editing
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(
-    currentFolder ?? null,
-  );
-  const [tags, setTags] = useState<string[]>(currentTags);
   const [notes, setNotes] = useState(currentNotes ?? '');
-  const [rating, setRating] = useState<number | null>(currentRating ?? null);
+  // Folders made here, listed before the write that creates them lands.
   const [localFolders, setLocalFolders] = useState<string[]>([]);
-
-  // Sync local state when props change (render-time conditional state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevCurrentFolder, setPrevCurrentFolder] = useState(currentFolder);
-  const [prevCurrentTags, setPrevCurrentTags] = useState(currentTags);
-  const [prevCurrentNotes, setPrevCurrentNotes] = useState(currentNotes);
-  const [prevCurrentRating, setPrevCurrentRating] = useState(currentRating);
-  if (
-    visible !== prevVisible ||
-    currentFolder !== prevCurrentFolder ||
-    currentTags !== prevCurrentTags ||
-    currentNotes !== prevCurrentNotes ||
-    currentRating !== prevCurrentRating
-  ) {
-    setPrevVisible(visible);
-    setPrevCurrentFolder(currentFolder);
-    setPrevCurrentTags(currentTags);
-    setPrevCurrentNotes(currentNotes);
-    setPrevCurrentRating(currentRating);
-    if (visible) {
-      setSelectedFolder(currentFolder ?? null);
-      setTags(currentTags);
-      setNotes(currentNotes ?? '');
-      setRating(currentRating ?? null);
-      setLocalFolders([]);
-    }
-  }
-
-  const handleSelectFolder = async (folder: string | null) => {
-    setSelectedFolder(folder);
-    await onUpdateFolder(folder);
-  };
+  const selectedFolder = currentFolder ?? null;
+  const rating = currentRating ?? null;
 
   const handleCreateFolder = async (name: string) => {
-    // Held locally so the new folder shows up in the list right away; the
-    // mutation below is what makes it real.
     setLocalFolders(prev => (prev.includes(name) ? prev : [...prev, name]));
-    setSelectedFolder(name);
     await onUpdateFolder(name);
-  };
-
-  const handleTagsChange = async (newTags: string[]) => {
-    setTags(newTags);
-    await onUpdateTags(newTags);
   };
 
   const handleNotesBlur = async () => {
@@ -113,10 +77,8 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   };
 
   const handleRatingPress = async (star: number) => {
-    // Toggle off if pressing same rating, otherwise set new rating
-    const newRating = rating === star ? null : star;
-    setRating(newRating);
-    await onUpdateRating(newRating);
+    // Pressing the rating already set clears it.
+    await onUpdateRating(rating === star ? null : star);
   };
 
   const handleRemove = async () => {
@@ -132,14 +94,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   ];
 
   return (
-    <Sheet
-      mode="form"
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={['85%', '95%']}
-      contentContainerStyle={styles.contentContainer}
-      style={styles.scrollView}
-    >
+    <>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -224,8 +179,12 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       <InlineFolderChooser
         folders={displayFolders}
         selectedFolder={selectedFolder}
-        onSelect={handleSelectFolder}
-        onCreateFolder={handleCreateFolder}
+        onSelect={folder => {
+          void onUpdateFolder(folder);
+        }}
+        onCreateFolder={folder => {
+          void handleCreateFolder(folder);
+        }}
       />
 
       {/* Tags */}
@@ -233,8 +192,10 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         {t('labels.tags')}
       </SectionHeader>
       <TagInput
-        tags={tags}
-        onTagsChange={handleTagsChange}
+        tags={currentTags}
+        onTagsChange={newTags => {
+          void onUpdateTags(newTags);
+        }}
         suggestions={availableTags}
         placeholder={t('manageRecipe.tagsPlaceholder')}
         maxTags={5}
@@ -256,6 +217,26 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         textAlignVertical="top"
         editable={!updating}
       />
+    </>
+  );
+};
+
+export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
+  visible,
+  ...content
+}) => {
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      mode="form"
+      visible={visible}
+      onDismiss={content.onClose}
+      snapPoints={['85%', '95%']}
+      contentContainerStyle={styles.contentContainer}
+      style={styles.scrollView}
+    >
+      {opening ? <ManageRecipeContent key={opening.id} {...content} /> : null}
     </Sheet>
   );
 };

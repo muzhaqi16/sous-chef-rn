@@ -229,6 +229,7 @@
     "reviewPlaceholder": "Condividi i tuoi pensieri su questa ricetta...",
     "updateReview": "Aggiorna recensione",
     "submitReview": "Invia recensione",
+    "ratingRequired": "Scegli una valutazione.",
     "catalogUnavailable": "Al momento non è stato possibile caricare alcune ricette. Trascina verso il basso per riprovare.",
     "rateLimitTitle": "Limite di frequenza",
     "rateLimitMessage": "Troppe richieste. Riprova tra un momento.",

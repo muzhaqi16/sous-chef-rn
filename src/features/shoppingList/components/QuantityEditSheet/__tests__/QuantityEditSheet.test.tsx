@@ -273,10 +273,9 @@ describe('QuantityEditSheet', () => {
     expect(screen.getByText('tbsp (selected)')).toBeTruthy();
   });
 
-  it('renders null when item is null', () => {
+  it('shows nothing without a line', () => {
     render(<QuantityEditSheet {...defaultProps} item={null} />);
-    // BottomSheetModal still renders (mocked as View) but header shows
-    expect(screen.getByText('Edit Quantity')).toBeTruthy();
+    expect(screen.queryByText('Edit Quantity')).toBeNull();
   });
 
   it('shows 0 when quantityInput is empty', () => {

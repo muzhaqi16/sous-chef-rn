@@ -229,6 +229,7 @@
     "reviewPlaceholder": "Ndaj mendimet e tua për këtë recetë...",
     "updateReview": "Përditëso vlerësimin",
     "submitReview": "Dërgo vlerësimin",
+    "ratingRequired": "Zgjidh një vlerësim.",
     "catalogUnavailable": "Disa receta nuk u ngarkuan dot tani. Tërhiqe poshtë për ta provuar sërish.",
     "rateLimitTitle": "Kufiri i shpejtësisë",
     "rateLimitMessage": "Shumë kërkesa. Provo përsëri pas pak.",

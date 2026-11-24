@@ -1,16 +1,16 @@
 import React, { useState, useRef } from 'react';
-import { View } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { useTranslation } from '#/i18n';
-// The TextInput TYPE comes from RNGH: gorhom's BottomSheetTextInput is typed
-// against it, since the sheet coordinates gestures through RNGH.
-import type { TextInput } from 'react-native-gesture-handler';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { StyleSheet } from 'react-native-unistyles';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
+import {
+  ThemedBottomSheetTextInput,
+  type ThemedBottomSheetTextInputRef,
+} from '#components/atoms/themedComponents';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import Chip from '#features/shoppingList/components/Chip';
 import { Icon } from '#components/atoms/Icon';
@@ -24,6 +24,7 @@ import { parseFractionalInput } from '#/utils/fractionUtils';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { useOpening } from '#hooks/ui/useOpening';
 
 interface ItemUnit {
   id: string;
@@ -71,69 +72,60 @@ const seedText = (item: QuantityEditSheetItem): string => {
   return formatQuantityForInput(typedValue ?? item.quantity);
 };
 
-export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
-  visible,
+/**
+ * The unit the line opens on. Matched case-insensitively against the chips,
+ * so "Tbsps" shows as "tbsp".
+ */
+const seedUnit = (
+  item: QuantityEditSheetItem,
+): { name: string | null; id: string | null } => {
+  const storedUnit = item.unitName;
+  const matchingUnit = storedUnit
+    ? item.itemUnits?.find(u => namesUnit(u, storedUnit))
+    : undefined;
+  if (matchingUnit) {
+    return { name: unitLabel(matchingUnit.unit), id: matchingUnit.id };
+  }
+  return {
+    name: storedUnit ? storedUnit.toLowerCase() : null,
+    id: item.unitId ?? null,
+  };
+};
+
+type QuantityEditContentProps = Omit<
+  QuantityEditSheetProps,
+  'visible' | 'item'
+> & {
+  item: QuantityEditSheetItem;
+  contentContainerStyle: StyleProp<ViewStyle>;
+};
+
+/** One opening, seeded from the line as it opened. */
+const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
   item,
   onClose,
   onSave,
   loading = false,
+  contentContainerStyle,
 }) => {
   const { t } = useTranslation();
-  // No snap points: the sheet measures its own content, so the keyboard lift
-  // seats it on the keyboard instead of stretching a fixed height up the screen.
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible: visible && !!item,
-    onDismiss: onClose,
-    snapPoints: [],
-    enableDynamicSizing: true,
-  });
 
-  const [quantityInput, setQuantityInput] = useState('');
-  const [unitName, setUnitName] = useState<string | null>(null);
-  const [unitId, setUnitId] = useState<string | null>(null);
+  const [quantityInput, setQuantityInput] = useState(() => seedText(item));
+  const [unitName, setUnitName] = useState(() => seedUnit(item).name);
+  const [unitId, setUnitId] = useState(() => seedUnit(item).id);
 
   // Focus state only. The text lives in `quantityInput`, the one value save
   // reads, so typing and saving without leaving the field loses nothing.
   const [isEditing, setIsEditing] = useState(false);
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<ThemedBottomSheetTextInputRef>(null);
 
   // Sorted preferred first, then default, then alphabetically.
   const itemUnits =
-    item?.itemUnits?.slice().sort((a, b) => {
+    item.itemUnits?.slice().sort((a, b) => {
       if (a.isPreferred !== b.isPreferred) return a.isPreferred ? -1 : 1;
       if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
       return unitLabel(a.unit).localeCompare(unitLabel(b.unit));
     }) ?? [];
-
-  // Seed on open / item-id change only (render-time state update); seeding on
-  // item-property changes flashes the old values back during a save.
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevItemId, setPrevItemId] = useState(item?.id);
-  if (visible !== prevVisible || item?.id !== prevItemId) {
-    setPrevVisible(visible);
-    setPrevItemId(item?.id);
-    if (visible && item) {
-      setQuantityInput(seedText(item));
-
-      // Case-insensitive match against the chips, so "Tbsps" displays as "tbsp".
-      const storedUnit = item.unitName;
-      if (storedUnit && item.itemUnits && item.itemUnits.length > 0) {
-        const matchingUnit = item.itemUnits.find(u => namesUnit(u, storedUnit));
-        if (matchingUnit) {
-          setUnitName(unitLabel(matchingUnit.unit));
-          setUnitId(matchingUnit.id);
-        } else {
-          setUnitName(storedUnit.toLowerCase());
-          setUnitId(item.unitId ?? null);
-        }
-      } else {
-        setUnitName(storedUnit ? storedUnit.toLowerCase() : null);
-        setUnitId(item.unitId ?? null);
-      }
-    } else {
-      setIsEditing(false);
-    }
-  }
 
   // Stepping keeps the notation the quantity is already written in, so a
   // half-typed `1 1/4` does not come back from the + button as `2.25`.
@@ -193,10 +185,8 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     onSave(quantityInput, unitId);
   };
 
-  const originalQuantityInput = item ? seedText(item) : '';
   const hasChanges =
-    item &&
-    (quantityInput !== originalQuantityInput || unitName !== item.unitName);
+    quantityInput !== seedText(item) || unitName !== item.unitName;
 
   // The server parses this string itself and rejects anything it can't read,
   // which offline would surface only once the queue replayed. Catch it here.
@@ -209,7 +199,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   const variantStyles = styles.useVariants({ editing: isEditing });
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
+    <>
       {/* `BottomSheetView` reports its own height as the sheet's content
           height, so everything the sheet shows must sit inside this one. */}
       <BottomSheetView style={[variantStyles.content, contentContainerStyle]}>
@@ -344,6 +334,39 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           </View>
         </View>
       </BottomSheetView>
+    </>
+  );
+};
+
+export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
+  visible,
+  item,
+  ...content
+}) => {
+  // No snap points: the sheet measures its own content, so the keyboard lift
+  // seats it on the keyboard instead of stretching a fixed height up the screen.
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible: visible && item !== null,
+    onDismiss: content.onClose,
+    snapPoints: [],
+    enableDynamicSizing: true,
+  });
+  const opening = useOpening(visible && item !== null, item);
+  // The line now, or while closing the one it opened on. A new line seeds a
+  // fresh form; a change to the same line, as a save lands, leaves what is
+  // typed.
+  const shown = item ?? opening?.payload;
+
+  return (
+    <BottomSheetModal ref={ref} {...modalProps}>
+      {opening && shown ? (
+        <QuantityEditContent
+          key={`${opening.id}:${shown.id}`}
+          item={shown}
+          contentContainerStyle={contentContainerStyle}
+          {...content}
+        />
+      ) : null}
     </BottomSheetModal>
   );
 };

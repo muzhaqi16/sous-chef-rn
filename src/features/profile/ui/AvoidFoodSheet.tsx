@@ -10,6 +10,7 @@ import { Sheet } from '#components/templates/Sheet';
 import { profileTestIDs } from '#features/profile/testIDs';
 import { commonStyles } from '#/styles/commonStyles';
 import { AvoidFoodSearch } from '#features/profile/ui/AvoidFoodSearch';
+import { useOpening } from '#hooks/ui/useOpening';
 
 /** Mildest first: avoiding a food is the common case, so it leads. */
 const SEVERITIES: RestrictionSeverity[] = [
@@ -30,13 +31,13 @@ interface AvoidFoodSheetProps {
   ) => Promise<boolean>;
 }
 
-/**
- * Picks a catalog food to avoid, with the search in a sheet so its results
- * stay above the keyboard. The server stores the pick as its root, so avoiding
- * bacon avoids every kind of bacon. The profile and onboarding share it.
- */
-export const AvoidFoodSheet: React.FC<AvoidFoodSheetProps> = ({
-  visible,
+type AvoidFoodContentProps = Omit<AvoidFoodSheetProps, 'visible'> & {
+  active: boolean;
+};
+
+/** One opening: the severity starts at the mildest. */
+const AvoidFoodContent: React.FC<AvoidFoodContentProps> = ({
+  active,
   onDismiss,
   avoided,
   onPick,
@@ -44,13 +45,6 @@ export const AvoidFoodSheet: React.FC<AvoidFoodSheetProps> = ({
   const { t } = useTranslation();
   const [severity, setSeverity] = useState(RestrictionSeverity.Preference);
   const [saving, setSaving] = useState(false);
-
-  // Adjusting state during render: a fresh open starts at the mildest.
-  const [prevVisible, setPrevVisible] = useState(visible);
-  if (visible !== prevVisible) {
-    setPrevVisible(visible);
-    if (visible) setSeverity(RestrictionSeverity.Preference);
-  }
 
   const handlePick = async (food: { id: string; name: string }) => {
     if (saving) return;
@@ -61,38 +55,57 @@ export const AvoidFoodSheet: React.FC<AvoidFoodSheetProps> = ({
   };
 
   return (
+    <View testID={profileTestIDs.avoidSheet}>
+      <Text role="body" tone="secondary" style={styles.spaced}>
+        {t('dietaryProfile.avoidHint')}
+      </Text>
+      <View style={styles.spaced}>
+        <SegmentedControl
+          options={SEVERITIES}
+          value={severity}
+          onChange={setSeverity}
+          formatLabel={option => {
+            const key = SEVERITY_LABEL_KEYS[option];
+            return key ? t(key) : t('labels.unknown');
+          }}
+          testID={profileTestIDs.avoidSeverity}
+        />
+      </View>
+      <AvoidFoodSearch
+        active={active}
+        avoided={avoided}
+        onPick={food => {
+          void handlePick(food);
+        }}
+      />
+    </View>
+  );
+};
+
+/**
+ * Picks a catalog food to avoid, with the search in a sheet so its results
+ * stay above the keyboard. The server stores the pick as its root, so avoiding
+ * bacon avoids every kind of bacon. The profile and onboarding share it.
+ */
+export const AvoidFoodSheet: React.FC<AvoidFoodSheetProps> = ({
+  visible,
+  ...content
+}) => {
+  const { t } = useTranslation();
+  const opening = useOpening(visible);
+
+  return (
     <Sheet
       mode="form"
       visible={visible}
-      onDismiss={onDismiss}
+      onDismiss={content.onDismiss}
       snapPoints={['85%']}
       title={t('dietaryProfile.avoidSheetTitle')}
       contentContainerStyle={commonStyles.bottomSheetContent}
     >
-      <View testID={profileTestIDs.avoidSheet}>
-        <Text role="body" tone="secondary" style={styles.spaced}>
-          {t('dietaryProfile.avoidHint')}
-        </Text>
-        <View style={styles.spaced}>
-          <SegmentedControl
-            options={SEVERITIES}
-            value={severity}
-            onChange={setSeverity}
-            formatLabel={option => {
-              const key = SEVERITY_LABEL_KEYS[option];
-              return key ? t(key) : t('labels.unknown');
-            }}
-            testID={profileTestIDs.avoidSeverity}
-          />
-        </View>
-        <AvoidFoodSearch
-          active={visible}
-          avoided={avoided}
-          onPick={food => {
-            void handlePick(food);
-          }}
-        />
-      </View>
+      {opening ? (
+        <AvoidFoodContent key={opening.id} active={visible} {...content} />
+      ) : null}
     </Sheet>
   );
 };

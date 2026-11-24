@@ -8,6 +8,8 @@ import { InlineFolderChooser } from '#features/recipes/components/InlineFolderCh
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
 
 export interface SaveRecipeSheetProps {
   visible: boolean;
@@ -23,8 +25,10 @@ export interface SaveRecipeSheetProps {
   recipeName?: string;
 }
 
-export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
-  visible,
+type SaveRecipeFormProps = Omit<SaveRecipeSheetProps, 'visible'>;
+
+/** One opening: Favorites picked, no tags, no notes. */
+const SaveRecipeForm: React.FC<SaveRecipeFormProps> = ({
   onClose,
   folders,
   availableTags,
@@ -34,25 +38,13 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  // Form state
   const [selectedFolder, setSelectedFolder] = useState<string | null>(
     'Favorites',
   );
   const [tags, setTags] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
-  const [localFolders, setLocalFolders] = useState<string[]>([]); // Track newly created folders
-
-  // Reset form when sheet opens (render-time state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  if (visible !== prevVisible) {
-    setPrevVisible(visible);
-    if (visible) {
-      setSelectedFolder('Favorites');
-      setTags([]);
-      setNotes('');
-      setLocalFolders([]);
-    }
-  }
+  // Folders made here, shown before the save creates them.
+  const [localFolders, setLocalFolders] = useState<string[]>([]);
 
   const handleSave = async () => {
     if (saving) return;
@@ -80,14 +72,8 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   })();
 
   return (
-    <Sheet
-      mode="action"
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={['75%', '95%']}
-      contentContainerStyle={styles.contentContainer}
-      style={styles.scrollView}
-      header={
+    <>
+      <SheetHeaderSlot>
         <SheetHeader
           title={t('saveRecipe.title')}
           onClose={onClose}
@@ -98,8 +84,8 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
             loading: saving,
           }}
         />
-      }
-    >
+      </SheetHeaderSlot>
+
       {!!recipeName && (
         <Text
           role="caption"
@@ -144,6 +130,27 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
         numberOfLines={3}
         textAlignVertical="top"
       />
+    </>
+  );
+};
+
+export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
+  visible,
+  ...form
+}) => {
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      mode="action"
+      headerFromContent
+      visible={visible}
+      onDismiss={form.onClose}
+      snapPoints={['75%', '95%']}
+      contentContainerStyle={styles.contentContainer}
+      style={styles.scrollView}
+    >
+      {opening ? <SaveRecipeForm key={opening.id} {...form} /> : null}
     </Sheet>
   );
 };

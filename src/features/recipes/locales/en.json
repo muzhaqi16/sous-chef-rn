@@ -229,6 +229,7 @@
     "reviewPlaceholder": "Share your thoughts about this recipe...",
     "updateReview": "Update Review",
     "submitReview": "Submit Review",
+    "ratingRequired": "Choose a rating.",
     "catalogUnavailable": "Some recipes couldn't be loaded right now. Pull down to try again.",
     "rateLimitTitle": "Rate Limit",
     "rateLimitMessage": "Too many requests. Please try again in a moment.",

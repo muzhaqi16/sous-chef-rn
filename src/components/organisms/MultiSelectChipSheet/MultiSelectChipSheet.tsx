@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { View } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
@@ -13,6 +13,7 @@ import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 import { useLocalSearch } from '#hooks/search/useLocalSearch';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { useOpening } from '#hooks/ui/useOpening';
 
 export interface MultiSelectChipSheetItem<T extends string = string> {
   id: T;
@@ -34,8 +35,13 @@ export interface MultiSelectChipSheetProps<T extends string = string> {
   singleSelect?: boolean;
 }
 
-export function MultiSelectChipSheet<T extends string = string>({
-  visible,
+type MultiSelectChipContentProps<T extends string> = Omit<
+  MultiSelectChipSheetProps<T>,
+  'visible'
+> & { contentContainerStyle: StyleProp<ViewStyle> };
+
+/** One opening: the search starts empty. */
+function MultiSelectChipContent<T extends string>({
   title,
   items,
   selectedItems,
@@ -44,23 +50,10 @@ export function MultiSelectChipSheet<T extends string = string>({
   onDone,
   loading = false,
   singleSelect = false,
-}: MultiSelectChipSheetProps<T>) {
+  contentContainerStyle,
+}: MultiSelectChipContentProps<T>) {
   const { t } = useTranslation();
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['60%', '80%'],
-  });
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Reset search query when sheet opens (render-time state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  if (visible !== prevVisible) {
-    setPrevVisible(visible);
-    if (visible) {
-      setSearchQuery('');
-    }
-  }
 
   const filteredItems = useLocalSearch(items, searchQuery, ['label']);
 
@@ -83,7 +76,7 @@ export function MultiSelectChipSheet<T extends string = string>({
   const showSearch = items.length > 8;
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
+    <>
       {/*
         A plain View, NOT `BottomSheetView`: gorhom's own container style is
         absolutely positioned with no bottom and no height, and it composes
@@ -169,6 +162,30 @@ export function MultiSelectChipSheet<T extends string = string>({
           />
         )}
       </View>
+    </>
+  );
+}
+
+export function MultiSelectChipSheet<T extends string = string>({
+  visible,
+  ...content
+}: MultiSelectChipSheetProps<T>) {
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
+    visible,
+    onDismiss: content.onClose,
+    snapPoints: ['60%', '80%'],
+  });
+  const opening = useOpening(visible);
+
+  return (
+    <BottomSheetModal ref={ref} {...modalProps}>
+      {opening ? (
+        <MultiSelectChipContent
+          key={opening.id}
+          contentContainerStyle={contentContainerStyle}
+          {...content}
+        />
+      ) : null}
     </BottomSheetModal>
   );
 }
