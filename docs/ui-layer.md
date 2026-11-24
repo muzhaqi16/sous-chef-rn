@@ -93,16 +93,32 @@ optional:
   `Screen` with a hand-built `back`. A form sheet's header is `SheetHeader`
   (close, centred title, primary confirm); only templates render `Header`.
   `__tests__/ui/screenUsesTheScaffold.test.ts` holds all of this.
-- **`Sheet`** (`src/components/templates/Sheet.tsx`) takes
+- **`Sheet`** (`src/components/templates/Sheet.tsx`) is every bottom sheet:
+  only it and `ActionTray` render a `BottomSheetModal`
+  (`__tests__/sheets/bottomSheetShell.test.ts`). It takes
   `view | form | action | list`. `form` supplies both the keyboard offset and
   the input context, so inputs inside resolve to gorhom's `BottomSheetTextInput`.
-  `list` hands its child to the modal directly. `view` renders
-  `BottomSheetView`, which is absolutely positioned with no height, so a
-  `flex: 1` list inside it sizes to its own content and never scrolls — a sheet
-  holding a scrollable that fills its parent therefore uses `list`
+  `list` puts its child in a plain `flex: 1` view the modal bounds, and clears
+  the home indicator there unless `bottomInset="content"` says the content pads
+  its own scroll. `view` renders `BottomSheetView`, which is absolutely
+  positioned with no height, so a `flex: 1` list inside it sizes to its own
+  content and never scrolls — a sheet holding a scrollable that fills its
+  parent therefore uses `list`
   ([gorhom BottomSheetView cannot bound a scrollable](verified-library-behaviour.md#gorhom-bottomsheetview-cannot-bound-a-scrollable)).
-  `__tests__/sheets/bottomSheetShell.test.ts` holds the shell and
   `__tests__/ui/viewSheetScrollableIsBounded.test.ts` holds the `list` rule.
+  - **One header.** A sheet's bar is `SheetHeader`, passed as `header`, or
+    rendered by the content through `SheetHeaderSlot` (`headerFromContent`)
+    when the form's state owns its handlers. Either way it sits above the
+    scroll, so a field scrolled above the keyboard never carries it off.
+  - **Fresh on every opening.** gorhom unmounts a dismissed sheet's content
+    ([gorhom unmounts a modal's content once it is dismissed](verified-library-behaviour.md#gorhom-unmounts-a-modals-content-once-it-is-dismissed)),
+    so state held in that content starts clean with no reset. A sheet whose
+    state sat beside its `Sheet` moves it into a content component keyed by
+    `useOpening(visible)`; what a sheet keeps on purpose lives in its parent.
+  - **A sheet the shell does not fit grows the shell an option**, never a
+    hand-rendered modal: `modalOptions` passes a typed pick of gorhom's props
+    (`stackBehavior: 'push'` over a host sheet, a held `enablePanDownToClose`,
+    an Android keyboard that resizes); a key left out keeps the standard value.
 - **`Dialog`** (`src/components/templates/Dialog.tsx`) is a centred card over a
   scrim, for a short decision or a small form. The scrim and card fade together;
   a `slide` would carry the scrim up with the card. The Modal is
@@ -520,11 +536,9 @@ they read it.
 - **Never wrap a scrollable in `BottomSheetView`.** This covers `FlashList` via
   `useBottomSheetScrollableCreator`, `BottomSheetScrollView` and
   `BottomSheetFlatList`. `BottomSheetView` is absolutely positioned with no
-  bottom or height, so the list is never height-bounded and cannot scroll. Put
-  the list in a plain `View style={{ flex: 1 }}`, as `IngredientSelectorSheet`
-  and `AddMealSheet` do; a `maxHeight` list merely gets away with it.
-  `BottomSheetAutocompleteInput.test.tsx`
-  (`src/features/catalog/components/__tests__/`) guards it.
+  bottom or height, so the list is never height-bounded and cannot scroll.
+  `Sheet`'s `list` mode is the plain `flex: 1` view it needs;
+  `sous-chef/no-scrollable-in-bottom-sheet-view` guards it.
 
 ## Lists (FlashList v2)
 
@@ -654,10 +668,21 @@ they read it.
   - Fields render through `Controller`, and Save goes through
     `handleSubmit(onValid, reportValidationErrors)`.
   - The submit hook does not validate: reaching it means the form is already
-    valid.
-- **The schemas** are `shoppingItemFormConfig.ts` (shared by the AddEditItem
-  screen and the AddToShoppingList sheet), `addPantryItemFormConfig.ts` and
-  `pantryItemFormConfig.ts` (the edit form).
+    valid. It takes the values it saves (`useListSettings`' `save`), never
+    holds the fields.
+  - Save is disabled only while saving, never for invalid input: pressed, it
+    says on the field what is wrong.
+- **The schema sits in a file beside its form** (`*FormConfig.ts` or
+  `*Form.ts`); `shoppingItemFormConfig.ts` is shared by the AddEditItem screen
+  and the AddToShoppingList sheet.
+- **A form over data it reads** seeds `defaultValues` from the cached copy and
+  passes the same object as `values` with `resetOptions: { keepDirtyValues:
+  true }`, so a later read restates every field the user has not touched
+  (`PantryItemForm`, `PantrySettings`). A rule that judges a field against what
+  it was seeded with reads that from the resolver's `context` (the edit form's
+  amount).
+- **A message that belongs to no field** (nothing answered) is a `root.*` error;
+  a server refusal of one row is set on that row's field.
 - **Schema messages resolve lazily** (`const msg = key => () => t(key)`, pattern
   in `src/utils/validation/common.ts`). A schema is built once at module scope,
   so an eagerly-resolved message freezes whichever language was active at
