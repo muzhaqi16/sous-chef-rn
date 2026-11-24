@@ -1,6 +1,6 @@
 import { boolean, object, string, type ObjectSchema } from 'yup';
 import { lazyMessage } from '#/utils/validation/common';
-import type { ListSettingsValues } from '#features/shoppingList/hooks/useListSettings';
+import type { ListSettingsValues } from '#features/shoppingList/hooks/listSettings/useListDetailsSection';
 
 // The name's length is capped on the input (LIST_NAME_MAX_LENGTH).
 export const listSettingsSchema: ObjectSchema<ListSettingsValues> = object({
