@@ -37,6 +37,7 @@
     "sendFailed": "Impossibile inviare l'invito. Riprova.",
     "inviteeRemoved": "Questa persona è stata rimossa dalla casa. Solo il proprietario o un amministratore può invitarla di nuovo.",
     "inviteeSuspended": "L'iscrizione di questa persona a questa casa è sospesa.",
+    "inviteeAlreadyIn": "Questa persona è già in questa casa o ha rifiutato un invito nell'ultimo giorno.",
     "emailLabel": "Indirizzo email",
     "emailPlaceholder": "Inserisci indirizzo email"
   },

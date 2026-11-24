@@ -247,9 +247,9 @@ describe('useHomeInvitations', () => {
         result: {
           data: {
             inviteToHome: {
-              __typename: 'ConflictError',
-              code: ErrorCode.Conflict,
-              message: 'User already invited',
+              __typename: 'ForbiddenError',
+              code: ErrorCode.Forbidden,
+              message: 'Not allowed to invite',
             },
           },
         },
@@ -271,6 +271,47 @@ describe('useHomeInvitations', () => {
       // Copy for the modal, which keeps itself open; never the server's prose,
       // and no native alert over the modal.
       expect(refusal).toBe('Failed to send invitation');
+      expect(alertService.alert).not.toHaveBeenCalled();
+    });
+
+    it('says an address already in the home, or declined lately, in the app\u2019s own words', async () => {
+      const rejectionMock: MockFor<typeof InviteToHomeDocument> = {
+        request: {
+          query: InviteToHomeDocument,
+          variables: {
+            input: {
+              homeId: 'home-1',
+              email: 'dupe@test.com',
+              role: MembershipRole.Member,
+            },
+          },
+        },
+        result: {
+          data: {
+            inviteToHome: {
+              __typename: 'ConflictError',
+              code: ErrorCode.Conflict,
+              message: 'User already invited',
+            },
+          },
+        },
+      };
+
+      const { result } = renderHookWithApollo(
+        () => useHomeInvitations(createOptions()),
+        { operationMocks: [rejectionMock] },
+      );
+
+      let refusal: string | null | undefined;
+      await act(async () => {
+        refusal = await result.current.inviteUserToHome(
+          'home-1',
+          'dupe@test.com',
+        );
+      });
+
+      // The server's two CONFLICT messages share one sentence of the app's.
+      expect(refusal).toBe(t('inviteUser.inviteeAlreadyIn'));
       expect(alertService.alert).not.toHaveBeenCalled();
     });
 

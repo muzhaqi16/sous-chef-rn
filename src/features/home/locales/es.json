@@ -37,6 +37,7 @@
     "sendFailed": "No se pudo enviar la invitación. Inténtalo de nuevo.",
     "inviteeRemoved": "Esta persona fue quitada del hogar. Solo su propietario o un administrador puede invitarla de nuevo.",
     "inviteeSuspended": "La membresía de esta persona en este hogar está suspendida.",
+    "inviteeAlreadyIn": "Esta persona ya está en este hogar o rechazó una invitación en el último día.",
     "emailLabel": "Correo electrónico",
     "emailPlaceholder": "Introduce un correo electrónico"
   },

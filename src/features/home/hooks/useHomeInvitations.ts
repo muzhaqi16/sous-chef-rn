@@ -112,6 +112,12 @@ export function useHomeInvitations({
             title: t('labels.error'),
             body: t('inviteUser.inviteeSuspended'),
           },
+          // Already a member, or declined within the last day; an invite still
+          // pending is re-sent, not refused.
+          [ErrorCode.Conflict]: {
+            title: t('labels.error'),
+            body: t('inviteUser.inviteeAlreadyIn'),
+          },
         },
         present: 'none',
       },

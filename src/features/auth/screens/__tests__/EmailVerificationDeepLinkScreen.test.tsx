@@ -4,6 +4,7 @@ import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { VerifyEmailDocument } from '#operations/auth/auth.generated';
+import { SignedInEmailVerificationDocument } from '#features/auth/hooks/useVerifyEmail.generated';
 import { UserRole, AppTheme, ErrorCode } from '#/graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
 import { EmailVerificationDeepLinkScreen } from '../EmailVerificationDeepLinkScreen';
@@ -231,6 +232,50 @@ describe('EmailVerificationDeepLinkScreen', () => {
 
     await drainTimers();
     expect(screen.getByText('Email Verified!')).toBeTruthy();
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+  });
+
+  // A spent link (opened twice: mail app, then browser) is refused like a
+  // wrong one; the signed-in account's own verification tells them apart.
+  const spentLinkMock: MockFor<typeof VerifyEmailDocument> = {
+    request: { query: VerifyEmailDocument, variables: () => true },
+    result: {
+      data: {
+        verifyEmail: {
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          message: 'Verification code is invalid or expired',
+          field: 'code',
+        },
+      },
+    },
+  };
+  const signedInVerificationMock = (
+    emailVerified: boolean,
+  ): MockFor<typeof SignedInEmailVerificationDocument> => ({
+    request: { query: SignedInEmailVerificationDocument },
+    result: {
+      data: { me: { __typename: 'User', id: '1', emailVerified } },
+    },
+  });
+
+  it('counts a spent link as verified once the signed-in account reads verified', async () => {
+    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
+      operationMocks: [spentLinkMock, signedInVerificationMock(true)],
+    });
+
+    await drainTimers();
+    expect(screen.getByText('Email Verified!')).toBeTruthy();
+    expect(mockUpdateUser).toHaveBeenCalledWith({ emailVerified: true });
+  });
+
+  it('says a refused link failed while the signed-in account is unverified', async () => {
+    renderWithApollo(<EmailVerificationDeepLinkScreen />, {
+      operationMocks: [spentLinkMock, signedInVerificationMock(false)],
+    });
+
+    await drainTimers();
+    expect(screen.getByText('Verification Failed')).toBeTruthy();
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 

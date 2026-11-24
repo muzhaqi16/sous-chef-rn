@@ -37,6 +37,7 @@
     "sendFailed": "Failed to send invite. Please try again.",
     "inviteeRemoved": "This person was removed from the home. Only its owner or an admin can invite them back.",
     "inviteeSuspended": "This person's membership of this home is suspended.",
+    "inviteeAlreadyIn": "This person is already in this home, or turned down an invitation in the last day.",
     "emailLabel": "Email Address",
     "emailPlaceholder": "Enter email address"
   },

@@ -1,4 +1,4 @@
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   VerifyEmailDocument,
   ResendVerificationEmailDocument,
@@ -7,6 +7,8 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
+import { useUserId } from '#store/useAppStore';
+import { SignedInEmailVerificationDocument } from '#features/auth/hooks/useVerifyEmail.generated';
 
 /**
  * `refused`: the server ruled against this code or link, so the reader can act
@@ -24,9 +26,9 @@ export type ResendVerificationOutcome =
   | { status: 'failed'; body: string };
 
 /**
- * Spend a verification code, and ask for a fresh one. The server answers an
- * address already verified with success on both, naming the account on a
- * verify.
+ * Spend a verification code, and ask for a fresh one. A spent code or link is
+ * refused like a wrong one, so a refusal while signed in re-reads whether the
+ * account is verified; resend always answers success.
  */
 export function useVerifyEmail() {
   const { t } = useTranslation();
@@ -34,6 +36,21 @@ export function useVerifyEmail() {
   const [resendVerificationEmail] = useMutation(
     ResendVerificationEmailDocument,
   );
+  const client = useApolloClient();
+  const signedInUserId = useUserId();
+
+  // The signed-in account, when the server holds it verified now.
+  const verifiedSignedInUserId = async (): Promise<string | null> => {
+    if (!signedInUserId) return null;
+    const read = await client
+      .query({
+        query: SignedInEmailVerificationDocument,
+        fetchPolicy: 'network-only',
+      })
+      .catch(() => null);
+    const me = read?.data?.me;
+    return me?.id === signedInUserId && me.emailVerified ? me.id : null;
+  };
 
   return {
     // `email` is REQUIRED alongside a 6-digit code — the code is matched only
@@ -71,9 +88,12 @@ export function useVerifyEmail() {
       }
       const body = settled.failure?.body ?? fallback;
       // A refusal member in `data` is the server's ruling on this code.
-      return settled.data?.verifyEmail
-        ? { status: 'refused', body }
-        : { status: 'failed', body };
+      if (!settled.data?.verifyEmail) return { status: 'failed', body };
+      if (settled.failure?.code === ErrorCode.ValidationFailed) {
+        const userId = await verifiedSignedInUserId();
+        if (userId) return { status: 'verified', userId };
+      }
+      return { status: 'refused', body };
     },
     resendVerificationEmail: async (
       email: string,

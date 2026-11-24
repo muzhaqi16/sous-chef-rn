@@ -37,6 +37,7 @@
     "sendFailed": "Dërgimi i ftesës dështoi. Provo sërish.",
     "inviteeRemoved": "Ky person është hequr nga shtëpia. Vetëm pronari ose një administrator mund ta ftojë përsëri.",
     "inviteeSuspended": "Anëtarësia e këtij personi në këtë shtëpi është pezulluar.",
+    "inviteeAlreadyIn": "Ky person është tashmë në këtë shtëpi ose refuzoi një ftesë gjatë ditës së fundit.",
     "emailLabel": "Adresa e email-it",
     "emailPlaceholder": "Fut adresën e email-it"
   },

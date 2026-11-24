@@ -231,18 +231,21 @@ export class ErrorService {
     TopLevelErrorCode.AuthRefreshTokenSuperseded,
   ];
 
-  // Logged at warn and kept out of app_errors_total, as is any VALIDATION_*
-  // code. Both code channels appear; the SHOPPING_*/HOME_* literals are in
-  // neither enum.
-  private static readonly EXPECTED_USER_ERRORS = new Set<string>([
-    ErrorCode.VersionConflict,
-    ErrorCode.PantryItemAlreadyExists,
-    TopLevelErrorCode.ResourceConflict,
-    TopLevelErrorCode.ResourceVersionConflict,
-    'SHOPPING_ITEM_ALREADY_EXISTS',
-    'HOME_MEMBER_ALREADY_EXISTS',
-    'HOME_INVITE_INVALID',
-    'HOME_INVITE_EXPIRED',
+  // The server's own availability rule (`isServiceFault`): every code it can
+  // send is a refusal the user acts on, logged at warn and kept out of
+  // app_errors_total, except these faults. A code it never sends (the
+  // client's NETWORK_ERROR, UNKNOWN_ERROR) is no user's error either.
+  private static readonly SERVICE_FAULTS = new Set<string>([
+    ErrorCode.InternalServerError,
+    TopLevelErrorCode.InternalServerError,
+    TopLevelErrorCode.ServiceUnavailable,
+    TopLevelErrorCode.SubscriptionError,
+    TopLevelErrorCode.SubscriptionFilterError,
+  ]);
+
+  private static readonly SERVER_CODES = new Set<string>([
+    ...Object.values(ErrorCode),
+    ...Object.values(TopLevelErrorCode),
   ]);
 
   private static readonly ERROR_CATEGORIES: Record<string, string> = {
@@ -320,8 +323,8 @@ export class ErrorService {
 
   isExpectedUserError(errorCode: string): boolean {
     return (
-      errorCode.startsWith('VALIDATION_') ||
-      ErrorService.EXPECTED_USER_ERRORS.has(errorCode)
+      ErrorService.SERVER_CODES.has(errorCode) &&
+      !ErrorService.SERVICE_FAULTS.has(errorCode)
     );
   }
 

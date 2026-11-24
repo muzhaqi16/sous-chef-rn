@@ -34,6 +34,7 @@ fragment UserReaders on User {
   }
   displayName
   email
+  emailVerified
   notificationPreferences {
     id
     collaborationInvites
