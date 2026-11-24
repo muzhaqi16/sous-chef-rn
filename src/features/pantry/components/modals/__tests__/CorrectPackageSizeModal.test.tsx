@@ -104,7 +104,7 @@ const open = (onConfirm: jest.Mock, portionUnitId: string | null = null) => {
 };
 
 const confirm = async () => {
-  fireEvent.press(screen.getByText('Correct'));
+  fireEvent.press(screen.getByLabelText('Correct'));
   await drainTimers();
 };
 

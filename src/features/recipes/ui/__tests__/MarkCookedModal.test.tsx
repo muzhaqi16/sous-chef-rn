@@ -9,28 +9,6 @@ import { t } from '#/i18n';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { MarkCookedModal } from '../MarkCookedModal';
 
-jest.mock('#components/molecules/BottomSheetHeader', () => {
-  const { Pressable, Text } = require('react-native');
-  return {
-    BottomSheetHeader: ({
-      onConfirm,
-      confirmDisabled,
-    }: {
-      onConfirm?: () => void;
-      confirmDisabled?: boolean;
-    }) => (
-      <Pressable
-        testID="confirm"
-        disabled={confirmDisabled}
-        accessibilityState={{ disabled: !!confirmDisabled }}
-        onPress={confirmDisabled ? undefined : onConfirm}
-      >
-        <Text>confirm</Text>
-      </Pressable>
-    ),
-  };
-});
-
 jest.mock('#components/molecules/FractionInput', () => {
   const { TextInput, Text, View } = require('react-native');
   return {
@@ -84,7 +62,7 @@ describe('MarkCookedModal servings', () => {
       fireEvent.changeText(screen.getByTestId('servings'), unreadable);
 
       expect(screen.getByTestId('servings-error')).toBeTruthy();
-      fireEvent.press(screen.getByTestId('confirm'));
+      fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
       expect(onConfirm).not.toHaveBeenCalled();
     },
   );
@@ -93,7 +71,7 @@ describe('MarkCookedModal servings', () => {
     const onConfirm = renderModal();
 
     fireEvent.changeText(screen.getByTestId('servings'), '');
-    fireEvent.press(screen.getByTestId('confirm'));
+    fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
 
     expect(onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({ servings: 4 }),
@@ -106,7 +84,7 @@ describe('MarkCookedModal servings', () => {
     const onConfirm = renderModal();
 
     fireEvent.changeText(screen.getByTestId('servings'), '2..0');
-    fireEvent.press(screen.getByTestId('confirm'));
+    fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
 
     expect(onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({ servings: 2 }),
@@ -117,7 +95,7 @@ describe('MarkCookedModal servings', () => {
     const onConfirm = renderModal();
 
     fireEvent.changeText(screen.getByTestId('servings'), '3');
-    fireEvent.press(screen.getByTestId('confirm'));
+    fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
 
     expect(onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({ servings: 3 }),
@@ -132,7 +110,7 @@ describe('MarkCookedModal servings', () => {
     const onConfirm = renderModal();
 
     fireEvent.changeText(screen.getByTestId('servings'), fractional);
-    fireEvent.press(screen.getByTestId('confirm'));
+    fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
 
     expect(onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({ servings }),
@@ -145,7 +123,7 @@ describe('MarkCookedModal servings', () => {
     fireEvent.changeText(screen.getByTestId('servings'), '0');
 
     expect(screen.getByTestId('servings-error')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('confirm'));
+    fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
@@ -158,10 +136,8 @@ describe('MarkCookedModal servings', () => {
       fireEvent.changeText(screen.getByTestId('servings'), fractional);
 
       expect(screen.getByTestId('servings-error')).toBeTruthy();
-      expect(screen.getByTestId('confirm').props.accessibilityState).toEqual({
-        disabled: true,
-      });
-      fireEvent.press(screen.getByTestId('confirm'));
+      expect(screen.getByTestId(recipesTestIDs.cookConfirm)).toBeDisabled();
+      fireEvent.press(screen.getByTestId(recipesTestIDs.cookConfirm));
       expect(onConfirm).not.toHaveBeenCalled();
     },
   );
@@ -187,7 +163,8 @@ describe('MarkCookedModal while the cook settles', () => {
     return onClose;
   };
   // The confirm awaits the cook's answer, which the press lets settle.
-  const confirm = () => userEvent.setup().press(screen.getByTestId('confirm'));
+  const confirm = () =>
+    userEvent.setup().press(screen.getByTestId(recipesTestIDs.cookConfirm));
 
   it('closes once the cook is taken', async () => {
     const onClose = renderWith(jest.fn().mockResolvedValue('done'));

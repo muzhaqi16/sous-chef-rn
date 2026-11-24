@@ -19,38 +19,6 @@ jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-jest.mock('#components/molecules/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({
-    title,
-    onCancel,
-    onConfirm,
-    confirmLabel,
-  }: {
-    title: string;
-    onCancel: () => void;
-    onConfirm: () => void;
-    confirmLabel: string;
-  }) => {
-    const RN = require('react-native');
-    const R = require('react');
-    return R.createElement(
-      RN.View,
-      { testID: 'header' },
-      R.createElement(RN.Text, null, title),
-      R.createElement(
-        RN.Pressable,
-        { onPress: onCancel, testID: 'cancel-btn' },
-        R.createElement(RN.Text, null, 'Cancel'),
-      ),
-      R.createElement(
-        RN.Pressable,
-        { onPress: onConfirm, testID: 'done-btn' },
-        R.createElement(RN.Text, null, confirmLabel),
-      ),
-    );
-  },
-}));
-
 jest.mock('#components/molecules/AnimatedChip', () => ({
   AnimatedChip: ({
     label,

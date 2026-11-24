@@ -461,8 +461,6 @@
   },
   "ingredientMatching": {
     "reviewIngredients": "Shqyrto përbërësit",
-    "deducting": "Po zbritet...",
-    "confirmAndDeduct": "Konfirmo & zbrit",
     "confirmAndDeductCount": "Konfirmo & zbrit ({{count}})",
     "recordWithoutDeducting": "Regjistro pa zbritur",
     "includedCount": "{{n}}/{{m}} të përfshira",

@@ -1,4 +1,5 @@
 import React from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
@@ -8,7 +9,6 @@ import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { Button } from '#components/molecules/Button';
 import { Badge } from '#components/atoms/Badge';
@@ -103,18 +103,11 @@ export const IngredientMatchingSheet: React.FC<
         `flex: 1` below loses and the FlashList is never height-bounded. It also
         registers SCROLLABLE_TYPE.VIEW after the list, losing arbitration. */}
       <View style={[styles.container, contentContainerStyle]}>
-        <BottomSheetHeader
+        {/* The choice is the pair at the foot: skip the review, or deduct. */}
+        <SheetHeader
           contentPadding="md"
           title={t('ingredientMatching.reviewIngredients')}
-          onCancel={onClose}
-          onConfirm={recordsOnly ? onRecordOnly : onConfirm}
-          confirmLabel={
-            recordsOnly
-              ? t('ingredientMatching.recordWithoutDeducting')
-              : t('ingredientMatching.confirmAndDeduct')
-          }
-          saving={confirmLoading}
-          savingLabel={t('ingredientMatching.deducting')}
+          onClose={onClose}
         />
 
         {/* Summary bar */}

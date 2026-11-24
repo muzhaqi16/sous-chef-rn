@@ -18,10 +18,15 @@ interface SheetHeaderProps {
   /** Horizontal padding on the parent sheet body, cancelled for the header. */
   contentPadding?: 'md' | 'lg';
   title: string;
+  /** Leaves the sheet, or with `leading: 'back'` the step it shows. */
   onClose: () => void;
+  /** `back` for a step inside one sheet, such as a form opened from a list. */
+  leading?: 'close' | 'back';
   /** The sheet's confirm action; omit it for a sheet that only closes. */
   confirm?: SheetConfirm;
   borderless?: boolean;
+  leadingTestID?: string;
+  titleTestID?: string;
 }
 
 /**
@@ -33,8 +38,11 @@ export const SheetHeader: React.FC<SheetHeaderProps> = ({
   contentPadding,
   title,
   onClose,
+  leading = 'close',
   confirm,
   borderless,
+  leadingTestID,
+  titleTestID,
 }) => {
   const { t } = useTranslation();
   return (
@@ -47,8 +55,11 @@ export const SheetHeader: React.FC<SheetHeaderProps> = ({
       <Header
         title={title}
         centerTitle
-        onClose={onClose}
+        onClose={leading === 'close' ? onClose : undefined}
+        onBack={leading === 'back' ? onClose : undefined}
         borderless={borderless}
+        leadingTestID={leadingTestID}
+        titleTestID={titleTestID}
         rightActions={
           confirm
             ? [
@@ -71,7 +82,7 @@ export const SheetHeader: React.FC<SheetHeaderProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  // The body starts clear of the divider in every sheet, as BottomSheetHeader's does.
+  // The body starts clear of the divider in every sheet.
   belowDivider: {
     marginBottom: theme.spacing.md,
   },

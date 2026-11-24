@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -7,7 +8,6 @@ import { alertService } from '#/services/alertService';
 import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/atoms/FormInput';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { Text } from '#components/atoms/Text';
 import {
   macroTargetsSchema,
@@ -97,12 +97,15 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
       style={styles.scrollView}
       contentContainerStyle={styles.contentContainer}
       header={
-        <BottomSheetHeader
+        <SheetHeader
           title={t('macroTargets.title')}
-          onCancel={onClose}
-          onConfirm={handleSave}
-          confirmLabel={t('labels.save')}
-          confirmDisabled={saving}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void handleSave();
+            },
+            loading: saving,
+          }}
         />
       }
     >

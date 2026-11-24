@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { Controller } from 'react-hook-form';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -6,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { FormInput } from '#components/atoms/FormInput';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { CategoryAutocompleteField } from '#features/catalog/ui/autocomplete/CategoryAutocompleteField';
 import { BrandAutocompleteField } from '#features/catalog/ui/autocomplete/BrandAutocompleteField';
@@ -152,16 +152,19 @@ export const ShoppingListDetailsStep: React.FC<
 
   return (
     <View style={styles.container} testID={shoppingListTestIDs.addSheetDetails}>
-      <BottomSheetHeader
+      <SheetHeader
         title={t('labels.addItem')}
-        cancelLabel={t('labels.cancel')}
-        confirmLabel={t('labels.add')}
-        onCancel={handleCancel}
-        onConfirm={handleSave}
-        saving={saving}
-        cancelTestID={shoppingListTestIDs.addSheetCancelButton}
-        confirmTestID={shoppingListTestIDs.addSheetSubmitButton}
+        onClose={handleCancel}
+        leadingTestID={shoppingListTestIDs.addSheetCancelButton}
         titleTestID={shoppingListTestIDs.addSheetTitle}
+        confirm={{
+          onPress: () => {
+            void handleSave();
+          },
+          accessibilityLabel: t('labels.add'),
+          loading: saving,
+          testID: shoppingListTestIDs.addSheetSubmitButton,
+        }}
       />
 
       <BottomSheetFormScrollView

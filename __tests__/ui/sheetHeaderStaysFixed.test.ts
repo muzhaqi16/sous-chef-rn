@@ -10,7 +10,7 @@ import ts from 'typescript';
  * the scrollable in a sheet that lays itself out.
  */
 
-const BARS = new Set(['BottomSheetHeader', 'SheetHeader']);
+const BARS = new Set(['SheetHeader']);
 
 /** What scrolls its children; a bar inside one scrolls with them. */
 const SCROLLERS = new Set([
@@ -46,18 +46,14 @@ function scrollingPlace(bar: ts.Node): string | null {
 }
 
 const files = glob('src/**/*.tsx', {
-  ignore: [
-    '**/__tests__/**',
-    'src/components/molecules/BottomSheetHeader.tsx',
-    'src/components/templates/SheetHeader.tsx',
-  ],
+  ignore: ['**/__tests__/**', 'src/components/templates/SheetHeader.tsx'],
 });
 
 it('holds every sheet bar above the content that scrolls', () => {
   const misplaced: string[] = [];
   for (const file of files) {
     const text = readFileSync(file, 'utf8');
-    if (!/<(BottomSheetHeader|SheetHeader)\b/.test(text)) continue;
+    if (!/<SheetHeader\b/.test(text)) continue;
     const source = ts.createSourceFile(
       file,
       text,

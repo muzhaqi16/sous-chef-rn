@@ -33,6 +33,10 @@ interface HeaderProps {
   rightActions?: BarAction[];
   /** Hide bottom border */
   borderless?: boolean;
+  /** In place of the kit's id on the close or back control. */
+  leadingTestID?: string;
+  /** On a title that is not pressable. */
+  titleTestID?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -44,6 +48,8 @@ export const Header: React.FC<HeaderProps> = ({
   onBack,
   onClose,
   borderless = false,
+  leadingTestID,
+  titleTestID,
 }) => {
   const { t } = useTranslation();
   const variantStyles = styles.useVariants({ borderless });
@@ -56,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
           icon: 'close',
           accessibilityLabel: t('labels.close'),
           onPress: onClose,
-          testID: kitTestIDs.headerCloseButton,
+          testID: leadingTestID ?? kitTestIDs.headerCloseButton,
         },
       ]
     : onBack
@@ -65,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
           icon: 'arrow-back',
           accessibilityLabel: t('labels.goBack'),
           onPress: onBack,
-          testID: kitTestIDs.headerBackButton,
+          testID: leadingTestID ?? kitTestIDs.headerBackButton,
         },
       ]
     : [];
@@ -123,6 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
           align={centerTitle ? 'center' : undefined}
           style={variantStyles.title(leftImbalance, rightImbalance)}
           numberOfLines={1}
+          testID={titleTestID}
         >
           {title}
         </Text>

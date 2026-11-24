@@ -19,7 +19,7 @@ import { MainDetailsPage } from './MainDetailsPage';
 import { DetailsPage } from './DetailsPage';
 import { StoragePage } from './StoragePage';
 import { StockSettingsPage } from './StockSettingsPage';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { takesContents } from '#domain/stockAmount';
 import type { UnitType } from '#/graphql/generated/schemaTypes';
@@ -203,29 +203,30 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
   return (
     <View style={styles.container} testID={pantryTestIDs.addDetailsModal}>
-      <BottomSheetHeader
+      <SheetHeader
         title={t('addToPantry.addItemDetails')}
-        cancelLabel={t('labels.cancel')}
-        confirmLabel={loading ? t('labels.adding') : t('labels.add')}
-        onCancel={handleCancel}
-        // `handleSubmit` validates first: an invalid form shows its message on
-        // the field and jumps to that field's page. Only a valid form reaches
-        // `handleConfirm`.
-        onConfirm={() => {
-          void handleSubmit(handleConfirm, formErrors => {
-            reportValidationErrors(formErrors);
-            const [firstField] = Object.keys(formErrors);
-            if (firstField === undefined || !isOwnKey(FIELD_PAGE, firstField))
-              return;
-            const page = FIELD_PAGE[firstField];
-            // react-hook-form then focuses the first field in error it holds.
-            if (page !== undefined) handlePageChange(page);
-          })();
-        }}
-        saving={loading}
-        cancelTestID={pantryTestIDs.addDetailsCancelButton}
-        confirmTestID={pantryTestIDs.addDetailsSubmitButton}
+        onClose={handleCancel}
+        leadingTestID={pantryTestIDs.addDetailsCancelButton}
         titleTestID={pantryTestIDs.addDetailsTitle}
+        confirm={{
+          // `handleSubmit` validates first: an invalid form shows its message
+          // on the field and jumps to that field's page. Only a valid form
+          // reaches `handleConfirm`.
+          onPress: () => {
+            void handleSubmit(handleConfirm, formErrors => {
+              reportValidationErrors(formErrors);
+              const [firstField] = Object.keys(formErrors);
+              if (firstField === undefined || !isOwnKey(FIELD_PAGE, firstField))
+                return;
+              const page = FIELD_PAGE[firstField];
+              // react-hook-form then focuses the first field in error it holds.
+              if (page !== undefined) handlePageChange(page);
+            })();
+          },
+          accessibilityLabel: t('labels.add'),
+          loading,
+          testID: pantryTestIDs.addDetailsSubmitButton,
+        }}
       />
 
       {/* Page Indicators */}

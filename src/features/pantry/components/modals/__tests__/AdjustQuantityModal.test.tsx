@@ -241,7 +241,7 @@ describe('adjusting', () => {
   it('closes on Cancel, adjusting nothing', () => {
     renderSheet();
 
-    fireEvent.press(screen.getByLabelText(t('labels.cancel')));
+    fireEvent.press(screen.getByLabelText(t('labels.close')));
 
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onConfirm).not.toHaveBeenCalled();

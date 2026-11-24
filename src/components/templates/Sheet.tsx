@@ -41,9 +41,9 @@ export interface SheetProps extends UseStandardBottomSheetOptions {
    *  density-scaled `theme.spacing.md` inside the scroll view. */
   bottomOffset?: number;
   /**
-   * The sheet's bar, `SheetHeader` or `BottomSheetHeader`, held above the
-   * content: a field scrolled into view above the keyboard never carries it off.
-   * It sits outside `contentContainerStyle`, so it takes no `contentPadding`.
+   * The sheet's bar, `SheetHeader`, held above the content: a field scrolled
+   * into view above the keyboard never carries it off. It sits outside
+   * `contentContainerStyle`, so it takes no `contentPadding`.
    */
   header?: React.ReactNode;
   /**

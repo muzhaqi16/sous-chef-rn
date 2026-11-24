@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { useTranslation } from '#/i18n';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -6,7 +7,6 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { Icon } from '#components/atoms/Icon';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
@@ -84,14 +84,15 @@ function MultiSelectChipContent<T extends string>({
         `BottomSheetScrollView` below is never height-bounded.
       */}
       <View style={[styles.bottomSheetContent, contentContainerStyle]}>
-        <BottomSheetHeader
+        <SheetHeader
           contentPadding="md"
           title={title}
-          onCancel={onClose}
-          onConfirm={onDone}
-          cancelLabel={t('labels.cancel')}
-          confirmLabel={t('labels.done')}
-          confirmDisabled={loading}
+          onClose={onClose}
+          confirm={{
+            onPress: onDone,
+            accessibilityLabel: t('labels.done'),
+            disabled: loading,
+          }}
         />
 
         {/* Search Input */}

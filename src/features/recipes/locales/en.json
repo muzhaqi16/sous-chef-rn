@@ -461,8 +461,6 @@
   },
   "ingredientMatching": {
     "reviewIngredients": "Review Ingredients",
-    "deducting": "Deducting...",
-    "confirmAndDeduct": "Confirm & Deduct",
     "confirmAndDeductCount": "Confirm & Deduct ({{count}})",
     "recordWithoutDeducting": "Record cook without deducting",
     "includedCount": "{{n}}/{{m}} included",

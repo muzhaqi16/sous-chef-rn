@@ -56,33 +56,6 @@ jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#components/molecules/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({
-    title,
-    onCancel,
-    onConfirm,
-    confirmLabel,
-  }: {
-    title: string;
-    onCancel: () => void;
-    onConfirm: () => void;
-    confirmLabel: string;
-  }) => {
-    const { View, Text, Pressable } = require('react-native');
-    return (
-      <View testID="bottom-sheet-header">
-        <Text>{title}</Text>
-        <Pressable onPress={onCancel} testID="cancel-button">
-          <Text>Cancel</Text>
-        </Pressable>
-        <Pressable onPress={onConfirm} testID="confirm-button">
-          <Text>{confirmLabel}</Text>
-        </Pressable>
-      </View>
-    );
-  },
-}));
-
 jest.mock('../NutritionSummaryCard', () => ({
   NutritionSummaryCard: () => {
     const { View, Text } = require('react-native');

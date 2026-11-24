@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -60,16 +60,20 @@ export const ReportItemForm: React.FC<ReportItemFormProps> = ({
 
   return (
     <View style={styles.container}>
-      <BottomSheetHeader
+      <SheetHeader
         title={t('reportItem.title')}
-        cancelLabel={t('labels.back')}
-        cancelTestID={catalogTestIDs.reportItemCancelButton}
-        confirmLabel={t('reportItem.submit')}
-        onCancel={onClose}
-        onConfirm={handleSubmit}
-        saving={loading}
-        confirmDisabled={!target || reasonTooShort}
-        confirmTestID={catalogTestIDs.reportItemSubmitButton}
+        leading="back"
+        leadingTestID={catalogTestIDs.reportItemCancelButton}
+        onClose={onClose}
+        confirm={{
+          onPress: () => {
+            void handleSubmit();
+          },
+          accessibilityLabel: t('reportItem.submit'),
+          loading,
+          disabled: !target || reasonTooShort,
+          testID: catalogTestIDs.reportItemSubmitButton,
+        }}
       />
       <BottomSheetFormScrollView
         contentContainerStyle={styles.content}

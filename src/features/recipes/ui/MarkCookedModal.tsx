@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Text } from '#components/atoms/Text';
@@ -96,16 +96,19 @@ const MarkCookedForm: React.FC<MarkCookedFormProps> = ({
   return (
     <>
       <SheetHeaderSlot>
-        {/* No title: the "Mark Cooked" action and the recipe name convey intent. */}
-        <BottomSheetHeader
-          onCancel={onClose}
-          onConfirm={() => {
-            void handleConfirm();
+        <SheetHeader
+          title={t('markCookedModal.markCooked')}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void handleConfirm();
+            },
+            accessibilityLabel: t('markCookedModal.markCooked'),
+            // The servings field says why.
+            disabled: !!servingsError,
+            loading: saving,
+            testID: recipesTestIDs.cookConfirm,
           }}
-          confirmLabel={t('markCookedModal.markCooked')}
-          confirmDisabled={!!servingsError}
-          saving={saving}
-          confirmTestID={recipesTestIDs.cookConfirm}
         />
       </SheetHeaderSlot>
 

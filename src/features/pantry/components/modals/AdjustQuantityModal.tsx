@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -7,7 +8,6 @@ import { useFragment } from '@apollo/client/react';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
 import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 import { AdjustQuantityModal_PantryItemFragmentDoc } from './AdjustQuantityModal.generated';
@@ -174,11 +174,15 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
       snapPoints={['65%', '85%']}
       contentContainerStyle={commonStyles.bottomSheetContent}
       header={
-        <BottomSheetHeader
+        <SheetHeader
           title={t('adjustQuantity.title')}
-          onCancel={onClose}
-          onConfirm={handleConfirm}
-          confirmLabel={t('adjustQuantity.adjust')}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void handleConfirm();
+            },
+            accessibilityLabel: t('adjustQuantity.adjust'),
+          }}
         />
       }
     >

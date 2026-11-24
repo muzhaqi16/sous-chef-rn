@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -6,7 +7,6 @@ import { useTranslation } from '#/i18n';
 import { useFragment } from '@apollo/client/react';
 import { FormInput } from '#components/atoms/FormInput';
 import { PackageContentsFields } from '#features/pantry/ui/PackageContentsFields';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 import { UnitType } from '#/graphql/generated/schemaTypes';
@@ -164,12 +164,14 @@ export const CorrectPackageSizeModal: React.FC<
       snapPoints={['65%', '85%']}
       contentContainerStyle={commonStyles.bottomSheetContent}
       header={
-        <BottomSheetHeader
+        <SheetHeader
           title={t('correctWeight.title')}
-          onCancel={onClose}
-          onConfirm={handleConfirm}
-          confirmLabel={t('correctWeight.correct')}
-          saving={isSaving}
+          onClose={onClose}
+          confirm={{
+            onPress: handleConfirm,
+            accessibilityLabel: t('correctWeight.correct'),
+            loading: isSaving,
+          }}
         />
       }
     >

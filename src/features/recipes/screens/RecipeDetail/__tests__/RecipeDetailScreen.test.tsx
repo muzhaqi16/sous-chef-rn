@@ -373,9 +373,7 @@ describe('cooking it', () => {
     await user.press(screen.getByText(t('recipes.markCooked')));
     // The cook sheet is presented with its form.
     expect(screen.UNSAFE_getByType(MarkCookedModal).props.visible).toBe(true);
-    const confirm = screen.getAllByText(t('markCookedModal.markCooked')).at(-1);
-    if (!confirm) throw new Error('no confirm in the cook dialog');
-    await user.press(confirm);
+    await user.press(screen.getByTestId(recipesTestIDs.cookConfirm));
     await log.requested(MarkRecipeAsCookedDocument);
 
     expect(review.fired[0]).toMatchObject({ servings: 2 });

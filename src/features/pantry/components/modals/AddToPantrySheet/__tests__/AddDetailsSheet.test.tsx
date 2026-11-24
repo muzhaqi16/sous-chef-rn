@@ -194,7 +194,9 @@ describe('adding', () => {
     await submit();
     await log.requested(CreatePantryItemDocument);
 
-    expect(screen.getByText(t('labels.adding'))).toBeTruthy();
+    expect(
+      screen.getByTestId(pantryTestIDs.addDetailsSubmitButton),
+    ).toBeDisabled();
     expect(create.fired[0]).toMatchObject({
       input: { item: { inline: { name: 'Olive Oil' } } },
     });

@@ -461,8 +461,6 @@
   },
   "ingredientMatching": {
     "reviewIngredients": "Revisar ingredientes",
-    "deducting": "Descontando...",
-    "confirmAndDeduct": "Confirmar y descontar",
     "confirmAndDeductCount": "Confirmar y descontar ({{count}})",
     "recordWithoutDeducting": "Registrar sin descontar",
     "includedCount": "{{n}}/{{m}} incluidos",

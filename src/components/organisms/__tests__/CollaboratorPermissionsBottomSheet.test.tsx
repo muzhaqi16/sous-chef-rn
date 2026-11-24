@@ -17,42 +17,6 @@ jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#components/molecules/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({
-    title,
-    cancelLabel,
-    confirmLabel,
-    onCancel,
-    onConfirm,
-    confirmDisabled,
-  }: {
-    title: string;
-    cancelLabel?: string;
-    confirmLabel?: string;
-    onCancel: () => void;
-    onConfirm: () => void;
-    confirmDisabled?: boolean;
-  }) => {
-    const RN = require('react-native');
-    const R = require('react');
-    return R.createElement(
-      RN.View,
-      null,
-      R.createElement(
-        RN.Pressable,
-        { onPress: onCancel },
-        R.createElement(RN.Text, null, cancelLabel ?? 'Cancel'),
-      ),
-      R.createElement(RN.Text, null, title),
-      R.createElement(
-        RN.Pressable,
-        { onPress: onConfirm, disabled: confirmDisabled },
-        R.createElement(RN.Text, null, confirmLabel ?? 'Save'),
-      ),
-    );
-  },
-}));
-
 const makeCollaborator = (): ShoppingListCollaboratorFragment => ({
   __typename: 'ShoppingListCollaborator',
   id: 'c-1',
@@ -129,7 +93,7 @@ describe('CollaboratorPermissionsBottomSheet', () => {
     expect(screen.getByText('Editor')).toBeTruthy();
   });
 
-  it('renders Update and Cancel in the header', () => {
+  it('offers Update and close in the header', () => {
     const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
     renderWithApollo(
       <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
@@ -137,8 +101,8 @@ describe('CollaboratorPermissionsBottomSheet', () => {
     act(() => {
       ref.current?.open(makeCollaborator());
     });
-    expect(screen.getByText('Update')).toBeTruthy();
-    expect(screen.getByText('Cancel')).toBeTruthy();
+    expect(screen.getByLabelText('Update')).toBeTruthy();
+    expect(screen.getByLabelText('Close')).toBeTruthy();
   });
 
   it('renders the granular permission toggles after opening', () => {

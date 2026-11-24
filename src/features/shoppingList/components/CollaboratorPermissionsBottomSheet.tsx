@@ -1,4 +1,5 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -7,7 +8,6 @@ import { localizedErrorMessage } from '#/services/errorService';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { Icon } from '#components/atoms/Icon';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import {
@@ -192,12 +192,15 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
   return (
     <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
-      <BottomSheetHeader
+      <SheetHeader
         title={t('collaborators.editPermissions')}
-        onCancel={() => setIsVisible(false)}
-        onConfirm={handleSubmit}
-        confirmLabel={t('labels.update')}
-        confirmDisabled={isSubmitting || !selectedRole}
+        onClose={() => setIsVisible(false)}
+        confirm={{
+          onPress: handleSubmit,
+          accessibilityLabel: t('labels.update'),
+          disabled: !selectedRole,
+          loading: isSubmitting,
+        }}
       />
       <BottomSheetScrollView
         style={styles.scrollView}

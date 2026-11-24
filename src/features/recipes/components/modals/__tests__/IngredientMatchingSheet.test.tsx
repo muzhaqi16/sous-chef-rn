@@ -30,38 +30,6 @@ jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-jest.mock('#components/molecules/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({
-    title,
-    onCancel,
-    onConfirm,
-    confirmLabel,
-  }: {
-    title: string;
-    onCancel: () => void;
-    onConfirm: () => void;
-    confirmLabel?: string;
-  }) => {
-    const RN = require('react-native');
-    const R = require('react');
-    return R.createElement(
-      RN.View,
-      { testID: 'header' },
-      R.createElement(RN.Text, null, title),
-      R.createElement(
-        RN.Pressable,
-        { onPress: onCancel, testID: 'cancel-btn' },
-        R.createElement(RN.Text, null, 'Cancel'),
-      ),
-      R.createElement(
-        RN.Pressable,
-        { onPress: onConfirm, testID: 'confirm-btn' },
-        R.createElement(RN.Text, null, confirmLabel),
-      ),
-    );
-  },
-}));
-
 jest.mock('#features/recipes/components/IngredientMatchRow', () => ({
   IngredientMatchRow: ({
     editableMatch,
@@ -207,8 +175,7 @@ describe('IngredientMatchingSheet', () => {
     );
 
     expect(screen.queryByText(/Confirm & Deduct/)).toBeNull();
-    const [, bottom] = screen.getAllByText('Record cook without deducting');
-    await user.press(bottom!);
+    await user.press(screen.getByText('Record cook without deducting'));
 
     expect(defaultProps.onRecordOnly).toHaveBeenCalled();
     expect(defaultProps.onConfirm).not.toHaveBeenCalled();

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
@@ -6,7 +7,6 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
 import { Icon } from '#components/atoms/Icon';
 import { useFragment } from '@apollo/client/react';
@@ -186,11 +186,9 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
       contentContainerStyle={styles.contentContainer}
       style={styles.scrollView}
       header={
-        <BottomSheetHeader
+        <SheetHeader
           title={t('mealPlanSettings.planSettings')}
-          onCancel={onClose}
-          onConfirm={onClose}
-          confirmLabel={t('labels.done')}
+          onClose={onClose}
         />
       }
     >

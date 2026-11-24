@@ -198,7 +198,7 @@ describe('the owner', () => {
     const editor = screen.getAllByText(t('collaboratorRoles.editor')).at(-1);
     if (!editor) throw new Error('no Editor card');
     fireEvent.press(editor);
-    fireEvent.press(screen.getByText(t('labels.update')));
+    fireEvent.press(screen.getByLabelText(t('labels.update')));
     await log.landed(UpdateCollaboratorRoleDocument);
 
     expect(change.fired[0]).toMatchObject({
