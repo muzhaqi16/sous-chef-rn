@@ -176,8 +176,6 @@ export function useRecipeDetail() {
     ...cookingActions,
 
     // Folder/tag editing
-    showFolderPicker: savedMetadata.showFolderPicker,
-    setShowFolderPicker: savedMetadata.setShowFolderPicker,
     updatingFolderTags: savedMetadata.updatingFolderTags,
     handleUpdateFolder: savedMetadata.handleUpdateFolder,
     handleUpdateTags: savedMetadata.handleUpdateTags,
@@ -194,3 +192,5 @@ export function useRecipeDetail() {
     handleUnfavoriteRecipe: savedMetadata.handleUnfavoriteRecipe,
   };
 }
+
+export type RecipeDetailState = ReturnType<typeof useRecipeDetail>;

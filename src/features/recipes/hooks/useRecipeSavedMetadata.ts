@@ -44,7 +44,6 @@ export function useRecipeSavedMetadata({
   const { t } = useTranslation();
   const client = useApolloClient();
   const { unfavoriteRecipe } = useUnfavoriteRecipe();
-  const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [updatingFolderTags, setUpdatingFolderTags] = useState(false);
 
   const updateFavoriteRecipe = useLocalWrite(UpdateFavoriteRecipeDocument, {
@@ -78,7 +77,6 @@ export function useRecipeSavedMetadata({
   const handleUpdateFolder = (folder: string | null): Promise<void> => {
     if (!recipeId) return Promise.resolve();
 
-    setShowFolderPicker(false);
     return executeWithLoadingState(async () => {
       // `folder` as given, NOT `folder ?? undefined`: serializing drops an
       // undefined value, and an absent key means "leave unchanged", so a
@@ -156,8 +154,6 @@ export function useRecipeSavedMetadata({
   };
 
   return {
-    showFolderPicker,
-    setShowFolderPicker,
     updatingFolderTags,
     handleUpdateFolder,
     handleUpdateTags,

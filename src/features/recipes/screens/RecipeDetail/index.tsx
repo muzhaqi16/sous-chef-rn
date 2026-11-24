@@ -1,177 +1,54 @@
 import { noteTipFact } from '#hooks/settings/useFeatureHint';
-import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { View } from 'react-native';
-import { useTranslation, type TranslateFn, type TranslationKey } from '#/i18n';
-import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
-import {
-  ModerationContentType,
-  RecipeStatus,
-} from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { openWebUrl } from '#native/externalUrl';
-import {
-  Pressable,
-  SuccessActivityIndicator,
-} from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon, type IconName } from '#components/atoms/Icon';
-
-import { FolderPicker } from '#features/recipes/components/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#components/providers/ScreenErrorBoundary';
-import { RecipeCookFlow } from '#features/recipes/ui/RecipeCookFlow';
-import { SaveRecipeSheet } from '#features/recipes/components/modals/SaveRecipeSheet/SaveRecipeSheet';
-import { ManageRecipeSheet } from '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet';
 import { useAddToMealPlanSheet } from '#features/mealPlan/ui/useAddToMealPlanSheet';
-import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
-import { useRecipeTags } from '#features/recipes/screens/useRecipeTags';
 import { useRecipeReviews } from '#features/recipes/hooks/useRecipeReviews';
 import { ReviewSection } from '#features/recipes/components/ReviewSection';
-
 import { useRecipeDetail } from './useRecipeDetail';
+import { useRecipeDetailSheets } from './useRecipeDetailSheets';
+import { useRecipeHeaderActions } from './useRecipeHeaderActions';
 import type {
   CatalogRecipeHint,
   RecipeRowHint,
 } from '#features/recipes/hooks/useOpenCatalogRecipe';
-import type { RecipeDetails } from '#features/recipes/hooks/useRecipeData';
-import { AlertBanner } from '#components/molecules/AlertBanner';
 import { DataAttributionNotices } from '#features/recipes/components/DataAttributionNotices';
 import { RecipeDetailSkeleton } from '#features/recipes/components/skeletons/RecipeDetailSkeleton';
-import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
-import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
 import { RecipeEnrichment } from '#features/recipes/components/recipeDetail/RecipeEnrichment';
-import { IngredientTile } from '#features/recipes/components/recipeDetail/IngredientTile';
-import { IngredientAlertsSheet } from '#features/recipes/components/recipeDetail/IngredientAlertsSheet';
-import { HorizontalRail } from '#components/molecules/HorizontalRail';
-import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
-import { useRecipeSubstitutes } from '#features/recipes/hooks/useRecipeSubstitutes';
+import { RecipeDetailsNotice } from '#features/recipes/components/recipeDetail/RecipeDetailsNotice';
+import { RecipeDetailSheets } from '#features/recipes/components/recipeDetail/RecipeDetailSheets';
+import { RecipeIngredientsSection } from '#features/recipes/components/recipeDetail/RecipeIngredientsSection';
+import { RecipeMetaRow } from '#features/recipes/components/recipeDetail/RecipeMetaRow';
 import { DietaryCheckNote } from '#features/recipes/components/recipeDetail/DietaryCheckNote';
 import { RecipeCredit } from '#features/recipes/components/recipeDetail/RecipeCredit';
 import { useRecipeDietaryAlerts } from '#features/recipes/hooks/useRecipeDietaryAlerts';
-import { useCooksFor } from '#features/profile/hooks/useCooksFor';
-import { startingServings } from '#domain/servings';
 import { CaptureReviewBanner } from '#features/recipes/components/capture/CaptureReviewBanner';
 import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
 import { RecipeHeroImage } from '#features/recipes/components/recipeDetail/RecipeHeroImage';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
-import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { SavedRecipeMetadataPanel } from '#features/recipes/components/recipeDetail/SavedRecipeMetadataPanel';
 import { RecipeInstructions } from '#features/recipes/components/recipeDetail/RecipeInstructions';
-import { ShoppingListPickerSheet } from '#features/shoppingList/ui/ShoppingListPickerSheet';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useUser } from '#store/useAppStore';
 import type { DataState } from '#hooks/data/useDataState';
 import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { SectionHeaderRow } from '#components/molecules/SectionHeaderRow';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import {
-  ReportContentSheet,
-  type ReportTarget,
-} from '#features/profile/ui/ReportContentSheet';
-import { formatMonthDayYear } from '#/utils/formatters/date';
-
-/** The cooking history in one line, or the offer to mark a first cook. */
-function cookedSummary(
-  count: number,
-  lastCookedAt: string | null,
-  t: TranslateFn,
-): string {
-  if (count === 0) return t('recipes.markCooked');
-  if (!lastCookedAt) return t('recipes.cookedCount', { count });
-  return t('recipes.cookedSummary', {
-    count,
-    date: formatMonthDayYear(new Date(lastCookedAt)),
-  });
-}
-
-function MetaItem({ icon, children }: { icon: IconName; children: string }) {
-  return (
-    <View style={styles.metaItem}>
-      <Icon name={icon} size="2xsPlus" tone="textSecondary" />
-      <Text role="caption" tone="secondary">
-        {children}
-      </Text>
-    </View>
-  );
-}
-
-/** Submit a draft, withdraw one in review, unpublish a published one. */
-const PUBLISH_ACTION_ICON: Readonly<Record<RecipeStatus, IconName>> = {
-  [RecipeStatus.Draft]: 'cloud-upload-outline',
-  [RecipeStatus.PendingReview]: 'hourglass-outline',
-  [RecipeStatus.Published]: 'cloud-done-outline',
-};
-const PUBLISH_ACTION_LABEL: Readonly<Record<RecipeStatus, TranslationKey>> = {
-  [RecipeStatus.Draft]: 'recipes.publishA11y',
-  [RecipeStatus.PendingReview]: 'recipes.withdrawA11y',
-  [RecipeStatus.Published]: 'recipes.unpublishA11y',
-};
-
-/** What a catalog recipe still lacks, above the parts it would fill. */
-const DETAILS_NOTICE: Readonly<
-  Record<
-    Exclude<RecipeDetails, 'complete' | 'opening'>,
-    { title: TranslationKey; subtitle: TranslationKey; icon: IconName }
-  >
-> = {
-  pending: {
-    title: 'recipes.catalogPendingTitle',
-    subtitle: 'recipes.catalogPendingSubtitle',
-    icon: 'hourglass-outline',
-  },
-  unavailable: {
-    title: 'recipes.catalogUnavailableTitle',
-    subtitle: 'recipes.catalogUnavailableSubtitle',
-    icon: 'cloud-offline-outline',
-  },
-  held: {
-    title: 'dataState.partialTitle',
-    subtitle: 'dataState.partialBody',
-    icon: 'cloud-offline-outline',
-  },
-};
-
-const DetailsNotice: React.FC<{ details: RecipeDetails; saved: boolean }> = ({
-  details,
-  saved,
-}) => {
-  const { t } = useTranslation();
-  if (details === 'complete') return null;
-  if (details === 'opening') return <RecipeDetailSkeleton />;
-  const notice = DETAILS_NOTICE[details];
-  // A saved recipe's fetch is already queued, so it is not asked to save.
-  const subtitle: TranslationKey =
-    details === 'pending' && saved
-      ? 'recipes.catalogPendingSavedSubtitle'
-      : notice.subtitle;
-  return (
-    <View style={styles.detailsNotice}>
-      <AlertBanner
-        title={t(notice.title)}
-        subtitle={t(subtitle)}
-        icon={notice.icon}
-        iconLibrary="Ionicons"
-        variant={details === 'pending' ? 'info' : 'warning'}
-      />
-    </View>
-  );
-};
 
 const RecipeDetailScreen: React.FC = () => {
   const { t } = useTranslation();
-  const showPrices = useBudgetAndPricesEnabled();
   useScreenTransition('RecipeDetail');
 
-  const { toRecipeEdit, toRecipeDetail } = useAppNavigation();
+  const { toRecipeEdit } = useAppNavigation();
   const captureSources = useCaptureSources();
-  const user = useUser();
-  const { forkRecipe, forking } = useForkRecipe();
-  const { setSubmitted, publishing } = usePublishRecipe();
+  const detail = useRecipeDetail();
   const {
     goBack,
     recipeId,
@@ -182,102 +59,14 @@ const RecipeDetailScreen: React.FC = () => {
     handleRefresh,
     displayData,
     backendRecipe,
-    saving,
     isSaved,
-    handleSaveRecipe,
-    shoppingLists,
-    shoppingListsState,
-    retryShoppingLists,
-    addingToList,
-    listedIngredients,
-    handleAddSingleIngredient,
-    handleAddAll,
-    missingIngredients,
-    handleAddMissing,
-    handleListSelected,
-    creatingList,
-    handleCreateListAndAddIngredients,
-    listPickerVisible,
-    handleSheetDismiss,
-    cookedModalVisible,
-    setCookedModalVisible,
-    markingAsCooked,
-    handleMarkAsCooked,
-    handleSkipReview,
-    handleConfirmReview,
-    handleRecordWithoutDeducting,
-    ingredientMatching,
-    showFolderPicker,
-    setShowFolderPicker,
-    updatingFolderTags,
-    handleUpdateFolder,
-    handleUpdateTags,
-    handleUpdateNotes,
-    handleUpdateRating,
-    savedFolder,
-    savedTags,
-    savedNotes,
-    savedRating,
-    cookedCount,
-    lastCookedAt,
-    handleUnfavoriteRecipe,
-  } = useRecipeDetail();
+  } = detail;
   const loadFailure = useOfflineAwareError(error ?? undefined, !!displayData);
 
-  // Scroll component for FlashList instances rendered inside bottom sheets.
-
-  // Get available folders and tags for picker and autocomplete
-  const { folders, unavailable: foldersUnavailable } = useRecipeFolders();
-  const { tags: availableTags } = useRecipeTags();
-
-  // Recipe reviews
   const { state: reviewState, actions: reviewActions } = useRecipeReviews({
     recipeId: recipeId ?? '',
     backendRecipe: backendRecipe ?? null,
   });
-
-  // Derive icon visibility state
-  const isInFavorites = isSaved && savedFolder === 'Favorites';
-  const isInOtherFolder =
-    isSaved && !!savedFolder && savedFolder !== 'Favorites';
-  const showHeartIcon = !isSaved || isInFavorites || !savedFolder;
-  const showFolderIcon = !isSaved || isInOtherFolder || !savedFolder;
-
-  // A catalog recipe has no author, so nobody owns it and it offers a fork,
-  // once fetched: a fork of a stub copies only its name and image.
-  const isOwner = !!user && backendRecipe?.createdBy?.id === user.id;
-  const canFork =
-    !!backendRecipe && !isOwner && displayData?.details === 'complete';
-  // Another user's recipe only: a catalog recipe has no author to report.
-  const author = backendRecipe?.createdBy;
-  const reportTarget: ReportTarget | null =
-    user && backendRecipe && author && author.id !== user.id
-      ? {
-          reportedUserId: author.id,
-          contentType: ModerationContentType.Recipe,
-          contentId: backendRecipe.id,
-        }
-      : null;
-
-  const handleEditRecipe = () => {
-    if (recipeId) {
-      toRecipeEdit({ recipeId });
-    }
-  };
-
-  // Fork a recipe into an editable copy, then open the new copy.
-  const handleForkRecipe = async () => {
-    if (!recipeId) return;
-    const newId = await forkRecipe(recipeId);
-    if (newId) toRecipeDetail({ recipeId: newId });
-  };
-
-  // A draft is submitted for review; one in review or published goes back to
-  // a draft.
-  const status = displayData?.status;
-  const handleTogglePublish = () => {
-    if (recipeId) void setSubmitted(recipeId, status === RecipeStatus.Draft);
-  };
 
   // The source URL comes from the recipe provider or another member, so it is
   // opened only as a web address — any other scheme reaches a different app.
@@ -288,157 +77,19 @@ const RecipeDetailScreen: React.FC = () => {
     }
   };
 
-  // State for save/manage recipe sheets
-  const [showSaveSheet, setShowSaveSheet] = useState(false);
-  const [showManageSheet, setShowManageSheet] = useState(false);
-  const [showReportSheet, setShowReportSheet] = useState(false);
   // Opening a recipe is half of a new account's activation.
   useEffect(() => {
     if (recipeId) noteTipFact('recipeOpened');
   }, [recipeId]);
 
+  const sheets = useRecipeDetailSheets();
   const addToMealPlan = useAddToMealPlanSheet({ recipeId: recipeId ?? '' });
   const household = useRecipeDietaryAlerts(recipeId);
-  const cooksFor = useCooksFor();
-  // Swaps are offered where the household flags an ingredient.
-  const substitutes = useRecipeSubstitutes(recipeId, household.flagged);
-  // The flagged ingredient whose sheet is open.
-  const [openIngredient, setOpenIngredient] =
-    useState<DisplayIngredient | null>(null);
-
-  // Handle heart icon press - quick save to Favorites or manage if already in Favorites
-  const handleHeartPress = () => {
-    if (saving || updatingFolderTags) return;
-
-    if (isInFavorites) {
-      // Saved in Favorites - open manage sheet
-      setShowManageSheet(true);
-    } else {
-      // Not saved - quick save to "Favorites" folder
-      handleSaveRecipe('Favorites');
-    }
-  };
-
-  // Handle folder icon press - show advanced options
-  const handleFolderPress = () => {
-    if (saving || updatingFolderTags) return;
-
-    if (isSaved) {
-      // Already saved - show manage sheet
-      setShowManageSheet(true);
-    } else {
-      // Not saved - show save sheet with folder/tag options
-      setShowSaveSheet(true);
-    }
-  };
-
-  // Handle save from SaveRecipeSheet
-  const handleConfirmSave = async (options: {
-    folder?: string;
-    tags?: string[];
-    notes?: string;
-  }) => {
-    handleSaveRecipe(options.folder ?? null, options.tags, options.notes);
-    setShowSaveSheet(false);
-  };
-
-  // Handle close save sheet
-  const handleCloseSaveSheet = () => {
-    setShowSaveSheet(false);
-  };
-
-  // Handle close manage sheet
-  const handleCloseManageSheet = () => {
-    setShowManageSheet(false);
-  };
-
-  // Favourite and meal plan lead: they stay in the bar when the rest go behind
-  // its "more".
-  const headerActions: HeaderAction[] = [
-    ...(showHeartIcon
-      ? [
-          {
-            icon: isInFavorites ? 'heart' : 'heart-outline',
-            accessibilityLabel: isInFavorites
-              ? t('recipes.unfavoriteA11y')
-              : t('recipes.favoriteA11y'),
-            onPress: handleHeartPress,
-            tone: 'favorite',
-            loading: saving || updatingFolderTags,
-            testID: recipesTestIDs.heartButton,
-          } satisfies HeaderAction,
-        ]
-      : []),
-    ...(recipeId
-      ? [
-          {
-            icon: 'calendar-outline',
-            onPress: addToMealPlan.open,
-            variant: 'primary',
-            accessibilityLabel: t('recipes.addToMealPlanA11y'),
-            testID: recipesTestIDs.mealPlanButton,
-          } satisfies HeaderAction,
-        ]
-      : []),
-    ...(isOwner
-      ? [
-          {
-            icon: 'create-outline',
-            accessibilityLabel: t('labels.edit'),
-            onPress: handleEditRecipe,
-            variant: 'primary',
-            testID: recipesTestIDs.editButton,
-          } satisfies HeaderAction,
-          {
-            icon: PUBLISH_ACTION_ICON[status ?? RecipeStatus.Draft],
-            onPress: handleTogglePublish,
-            variant: 'primary',
-            loading: publishing,
-            accessibilityLabel: t(
-              PUBLISH_ACTION_LABEL[status ?? RecipeStatus.Draft],
-            ),
-            testID: recipesTestIDs.publishButton,
-          } satisfies HeaderAction,
-        ]
-      : []),
-    ...(canFork
-      ? [
-          {
-            icon: 'git-branch-outline',
-            onPress: () => {
-              void handleForkRecipe();
-            },
-            variant: 'primary',
-            loading: forking,
-            accessibilityLabel: t('recipes.forkA11y'),
-            testID: recipesTestIDs.forkButton,
-          } satisfies HeaderAction,
-        ]
-      : []),
-    ...(showFolderIcon
-      ? [
-          {
-            icon: isInOtherFolder ? 'folder' : 'folder-outline',
-            accessibilityLabel: t('folderPicker.selectFolder'),
-            onPress: handleFolderPress,
-            variant: 'primary',
-            disabled: saving || updatingFolderTags,
-            testID: recipesTestIDs.folderButton,
-          } satisfies HeaderAction,
-        ]
-      : []),
-    ...(reportTarget
-      ? [
-          {
-            icon: 'flag-outline',
-            accessibilityLabel: t('reports.reportRecipe'),
-            onPress: () => setShowReportSheet(true),
-            variant: 'secondary',
-            testID: recipesTestIDs.reportButton,
-          } satisfies HeaderAction,
-        ]
-      : []),
-  ];
+  const headerActions = useRecipeHeaderActions(
+    detail,
+    sheets.open,
+    addToMealPlan.open,
+  );
 
   // The full-screen loader only on a cold load: on a refetch `loading` is true
   // while `displayData` is already drawn from cache.
@@ -523,62 +174,7 @@ const RecipeDetailScreen: React.FC = () => {
           style={styles.titleSpacing}
         />
 
-        {/* Recipe Metadata */}
-        <View style={styles.metadata}>
-          {displayData.servings != null && (
-            <MetaItem icon="restaurant-outline">
-              {t('labels.servingsCount', { count: displayData.servings })}
-            </MetaItem>
-          )}
-          {!!displayData.readyInMinutes && (
-            <MetaItem icon="time-outline">
-              {t('labels.min', { count: displayData.readyInMinutes })}
-            </MetaItem>
-          )}
-          {displayData.healthScore != null &&
-            !isNaN(displayData.healthScore) && (
-              <MetaItem icon="leaf-outline">
-                {t('recipes.percentHealthy', {
-                  percent: Math.round(displayData.healthScore),
-                })}
-              </MetaItem>
-            )}
-          {/* Any recipe can be cooked; only a saved one keeps a count. */}
-          {!!recipeId && (
-            <Pressable
-              style={({ pressed }) => [
-                styles.metaItem,
-                pressed && { opacity: 0.7 },
-              ]}
-              onPress={() => setCookedModalVisible(true)}
-              disabled={markingAsCooked}
-              accessibilityRole="button"
-              testID={recipesTestIDs.markCookedButton}
-            >
-              {markingAsCooked ? (
-                <SuccessActivityIndicator size="small" />
-              ) : (
-                <>
-                  <Icon
-                    name={
-                      cookedCount > 0
-                        ? 'checkmark-circle'
-                        : 'checkmark-circle-outline'
-                    }
-                    size="2xsPlus"
-                    tone={cookedCount > 0 ? 'success' : 'textSecondary'}
-                  />
-                  <Text
-                    role="caption"
-                    tone={cookedCount > 0 ? 'success' : 'secondary'}
-                  >
-                    {cookedSummary(cookedCount, lastCookedAt, t)}
-                  </Text>
-                </>
-              )}
-            </Pressable>
-          )}
-        </View>
+        <RecipeMetaRow recipe={displayData} detail={detail} />
 
         <RecipeEnrichment
           caloriesPerServing={displayData.caloriesPerServing}
@@ -595,16 +191,16 @@ const RecipeDetailScreen: React.FC = () => {
 
         {!!isSaved && (
           <SavedRecipeMetadataPanel
-            savedFolder={savedFolder}
-            savedTags={savedTags}
-            savedNotes={savedNotes}
-            savedRating={savedRating}
-            updatingFolderTags={updatingFolderTags}
-            onUpdateRating={handleUpdateRating}
+            savedFolder={detail.savedFolder}
+            savedTags={detail.savedTags}
+            savedNotes={detail.savedNotes}
+            savedRating={detail.savedRating}
+            updatingFolderTags={detail.updatingFolderTags}
+            onUpdateRating={detail.handleUpdateRating}
           />
         )}
 
-        <DetailsNotice details={displayData.details} saved={isSaved} />
+        <RecipeDetailsNotice details={displayData.details} saved={isSaved} />
 
         {/* Dietary tags, from the provider's own data */}
         {[
@@ -667,85 +263,19 @@ const RecipeDetailScreen: React.FC = () => {
           <CaptureReviewBanner
             recipeId={recipeId}
             ingredients={displayData.ingredients}
-            onReview={handleEditRecipe}
+            onReview={() => toRecipeEdit({ recipeId })}
           />
         ) : null}
 
-        {/* Ingredients */}
         {displayData.ingredients.length > 0 && (
-          <View style={styles.ingredientsSection}>
-            <SectionHeaderRow
-              title={t('itemPhotos.perspective.ingredient_list')}
-              action={
-                // Nothing left to buy: what the pantry lacks is on the list.
-                missingIngredients?.size === 0
-                  ? undefined
-                  : // The pantry holds some of it: add only the rest.
-                  missingIngredients &&
-                    missingIngredients.size < displayData.ingredients.length
-                  ? {
-                      label: addingToList
-                        ? t('labels.adding')
-                        : t('recipes.addMissing', {
-                            count: missingIngredients.size,
-                          }),
-                      onPress: handleAddMissing,
-                      disabled: addingToList,
-                    }
-                  : {
-                      label: addingToList
-                        ? t('labels.adding')
-                        : t('recipes.addAll'),
-                      onPress: handleAddAll,
-                      disabled: addingToList,
-                    }
-              }
-              style={styles.ingredientsSectionHeader}
-            />
-            <HorizontalRail surface="background" bleed="page">
-              {displayData.ingredients.map((ingredient, index) => {
-                const alerts = household.alertsFor(ingredient.id);
-                return (
-                  <IngredientTile
-                    key={`${ingredient.id}-${index}`}
-                    ingredient={ingredient}
-                    isAdded={listedIngredients.has(ingredient.id)}
-                    isMissing={!!missingIngredients?.has(ingredient.id)}
-                    alerts={alerts}
-                    showPrice={showPrices}
-                    onPress={() =>
-                      alerts.length > 0
-                        ? setOpenIngredient(ingredient)
-                        : handleAddSingleIngredient(ingredient)
-                    }
-                    testID={recipesTestIDs.ingredientTile(index)}
-                  />
-                );
-              })}
-            </HorizontalRail>
-            <IngredientAlertsSheet
-              visible={!!openIngredient}
-              ingredientName={openIngredient?.name ?? ''}
-              alerts={
-                openIngredient ? household.alertsFor(openIngredient.id) : []
-              }
-              stale={household.check === 'stale'}
-              options={
-                openIngredient
-                  ? substitutes.substitutesFor(openIngredient.id)
-                  : []
-              }
-              isAdded={
-                !!openIngredient && listedIngredients.has(openIngredient.id)
-              }
-              onAdd={() => {
-                if (openIngredient) {
-                  void handleAddSingleIngredient(openIngredient);
-                }
-              }}
-              onDismiss={() => setOpenIngredient(null)}
-            />
-          </View>
+          <RecipeIngredientsSection
+            ingredients={displayData.ingredients}
+            detail={detail}
+            household={household}
+            onOpenFlagged={ingredient =>
+              sheets.open({ type: 'ingredient', ingredient })
+            }
+          />
         )}
 
         <RecipeInstructions instructions={displayData.instructions} />
@@ -772,87 +302,13 @@ const RecipeDetailScreen: React.FC = () => {
         )}
       </CollapsingHeroDetail>
 
-      <ShoppingListPickerSheet
-        visible={listPickerVisible}
-        shoppingLists={shoppingLists}
-        listsState={shoppingListsState}
-        onRetryLists={retryShoppingLists}
-        defaultNewListName={displayData.title}
-        creatingList={creatingList}
-        onListSelected={handleListSelected}
-        onCreateListAndAdd={handleCreateListAndAddIngredients}
-        onDismiss={handleSheetDismiss}
-      />
-
-      <RecipeCookFlow
-        visible={cookedModalVisible}
-        onClose={() => setCookedModalVisible(false)}
-        cooking={{
-          handleMarkAsCooked,
-          handleSkipReview,
-          handleConfirmReview,
-          handleRecordWithoutDeducting,
-          ingredientMatching,
-        }}
-        recipeName={displayData.title}
-        defaultServings={startingServings(
-          cooksFor,
-          displayData.servings === 0 ? 1 : displayData.servings ?? 1,
-        )}
-      />
-
-      {/* Folder Picker Modal - for editing existing saved recipe folder */}
-      <FolderPicker
-        visible={showFolderPicker}
-        folders={folders}
-        unavailable={foldersUnavailable}
-        selectedFolder={savedFolder}
-        onSelect={handleUpdateFolder}
-        onCancel={() => setShowFolderPicker(false)}
-        loading={updatingFolderTags}
-        // The server-managed folder every saved recipe falls into; renaming or
-        // deleting it is not the user's to do.
-        protectedFolders={PROTECTED_RECIPE_FOLDERS}
-      />
-
-      {/* Save Recipe Sheet - Bottom sheet for saving new recipe with folder, tags, and notes */}
-      <SaveRecipeSheet
-        visible={showSaveSheet}
-        onClose={handleCloseSaveSheet}
-        folders={folders}
-        availableTags={availableTags}
-        onSave={handleConfirmSave}
-        saving={saving}
-        recipeName={displayData.title}
-      />
-
-      {/* Add to Meal Plan Sheet — owned by mealPlan, reached through its
-          public hook rather than by importing the component. */}
-      {addToMealPlan.element}
-
-      {/* Manage Recipe Sheet - Bottom sheet for managing saved recipes */}
-      <ManageRecipeSheet
-        visible={showManageSheet}
-        onClose={handleCloseManageSheet}
-        folders={folders}
-        availableTags={availableTags}
-        currentFolder={savedFolder}
-        currentTags={savedTags}
-        currentNotes={savedNotes}
-        currentRating={savedRating}
-        onUpdateFolder={handleUpdateFolder}
-        onUpdateTags={handleUpdateTags}
-        onUpdateNotes={handleUpdateNotes}
-        onUpdateRating={handleUpdateRating}
-        onRemove={handleUnfavoriteRecipe}
-        updating={updatingFolderTags}
-        recipeName={displayData.title}
-      />
-
-      <ReportContentSheet
-        visible={showReportSheet}
-        target={reportTarget}
-        onDismiss={() => setShowReportSheet(false)}
+      <RecipeDetailSheets
+        detail={detail}
+        sheets={sheets}
+        household={household}
+        title={displayData.title}
+        servings={displayData.servings}
+        mealPlanSheet={addToMealPlan.element}
       />
     </>
   );
@@ -876,23 +332,8 @@ const styles = StyleSheet.create(theme => ({
   recipeContent: {
     paddingTop: theme.spacing.md,
   },
-  detailsNotice: {
-    marginBottom: theme.spacing.md,
-  },
   titleSpacing: {
     marginBottom: theme.spacing.md,
-  },
-  metadata: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: theme.spacing.md,
-    rowGap: theme.spacing.xs,
-    marginBottom: theme.spacing.md,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
   },
   tags: {
     flexDirection: 'row',
@@ -909,12 +350,6 @@ const styles = StyleSheet.create(theme => ({
   },
   section: {
     marginBottom: theme.spacing.xl,
-  },
-  ingredientsSection: {
-    marginBottom: theme.spacing.xl,
-  },
-  ingredientsSectionHeader: {
-    marginBottom: theme.spacing.md,
   },
   description: {
     color: theme.colors.textSecondary,
