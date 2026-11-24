@@ -82,6 +82,7 @@ export function ModalPicker<T extends string>({
           <AppPressable
             key={opt.value}
             style={styles.option}
+            accessibilityState={{ selected: activeValue === opt.value }}
             onPress={() => {
               if (confirmLabel) {
                 setPendingValue(opt.value);
