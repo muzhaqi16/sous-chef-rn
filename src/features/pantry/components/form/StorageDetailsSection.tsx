@@ -99,7 +99,6 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
       <View style={styles.field}>
         <Label>{t('labels.storageState')}</Label>
         <ChipScrollRow
-          chipStyle={styles.statePill}
           options={getStorageStateOptions(t)}
           selected={storageState}
           onSelect={onStorageStateChange}
@@ -111,7 +110,6 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
       <View style={styles.field}>
         <Label>{t('labels.condition')}</Label>
         <ChipScrollRow
-          chipStyle={styles.statePill}
           options={conditionOptions}
           selected={condition}
           onSelect={onConditionChange}
@@ -160,9 +158,4 @@ const styles = StyleSheet.create(theme => ({
   },
   // Content-sized pill sharing the sibling inputs' md radius, with tighter
   // vertical padding so it doesn't read taller than them.
-  statePill: {
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
 }));

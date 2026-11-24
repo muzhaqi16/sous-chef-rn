@@ -115,7 +115,6 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
         options={roleOptions}
         selected={selectedRole}
         onSelect={setSelectedRole}
-        size="md"
         edgeFadeColor="background"
       />
     </View>
