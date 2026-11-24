@@ -66,11 +66,13 @@ interface ConsumeFormValues {
    */
   quantityInput: string | null;
   purpose: UsagePurpose;
+  notes: string;
 }
 
 const consumeDefaults: ConsumeFormValues = {
   quantityInput: null,
   purpose: UsagePurpose.General,
+  notes: '',
 };
 
 // The amount is held to the stock, which only the confirm reads
@@ -78,6 +80,7 @@ const consumeDefaults: ConsumeFormValues = {
 const consumeSchema: ObjectSchema<ConsumeFormValues> = object({
   quantityInput: string().nullable().defined(),
   purpose: mixed<UsagePurpose>().oneOf(Object.values(UsagePurpose)).defined(),
+  notes: string().defined(),
 });
 
 /** The amount before one is typed. */
@@ -136,7 +139,7 @@ const ConsumeForm: React.FC<ConsumeFormProps> = ({
 
   // The caller closes the sheet once the use is recorded; a refusal keeps it
   // open with what was entered.
-  const submit = handleSubmit(async ({ quantityInput, purpose }) => {
+  const submit = handleSubmit(async ({ quantityInput, purpose, notes }) => {
     const typed = quantityInput ?? untypedQuantity(shared);
     const quantityUsed = validateDeductionQuantity(
       typed,
@@ -148,13 +151,7 @@ const ConsumeForm: React.FC<ConsumeFormProps> = ({
     );
     if (quantityUsed === null) return;
 
-    await onConfirm(
-      quantityUsed,
-      typed,
-      purpose,
-      shared.notes,
-      shared.activeUnitId,
-    );
+    await onConfirm(quantityUsed, typed, purpose, notes, shared.activeUnitId);
   }, reportValidationErrors);
 
   const purposeOptions = PURPOSE_OPTIONS.map(({ labelKey, value }) => ({
@@ -291,14 +288,21 @@ const ConsumeFields: React.FC<{
 
           {/* Notes */}
           <View style={commonStyles.bottomSheetSection}>
-            <FormInput
-              label={t('labels.notes')}
-              value={shared.notes}
-              onChangeText={shared.setNotes}
-              placeholder={t('consumeItem.notesPlaceholder')}
-              multiline
-              numberOfLines={3}
-              useBottomSheetInput
+            <Controller
+              control={control}
+              name="notes"
+              render={({ field }) => (
+                <FormInput
+                  label={t('labels.notes')}
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder={t('consumeItem.notesPlaceholder')}
+                  multiline
+                  numberOfLines={3}
+                  useBottomSheetInput
+                />
+              )}
             />
           </View>
         </>

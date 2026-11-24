@@ -178,6 +178,10 @@ describe('RecordWastePantryItemModal', () => {
   it('starts fresh each time it opens, with no error left from the last', async () => {
     const view = await openWaste();
     fireEvent.press(screen.getByText('Composted'));
+    fireEvent.changeText(
+      screen.getByPlaceholderText(t('recordWaste.notesPlaceholder')),
+      'half a bag',
+    );
     typeAmount('15');
     await confirm();
     expect(within(amountField()).getByText(MORE_THAN_HELD())).toBeTruthy();

@@ -82,6 +82,7 @@ interface RestockFormValues extends Omit<PackageContentsValues, 'unitType'> {
   costPerUnitInput: string;
   totalCostInput: string;
   expiresAt: Date | null;
+  notes: string;
 }
 
 /** What the schema reads beyond the form (`useForm`'s `context`). */
@@ -95,6 +96,7 @@ const restockDefaults: RestockFormValues = {
   costPerUnitInput: '',
   totalCostInput: '',
   expiresAt: null,
+  notes: '',
   sizeInput: '',
   sizeUnitDisplay: '',
   sizeUnitId: null,
@@ -120,6 +122,7 @@ const restockSchema: ObjectSchema<RestockFormValues> = object({
   costPerUnitInput: optionalMoneyRule('errors.invalidAmountPaid'),
   totalCostInput: optionalMoneyRule('errors.invalidAmountPaid'),
   expiresAt: date().nullable().defined(),
+  notes: string().defined(),
   ...packageContentsFields,
   sizeInput: string()
     .defined()
@@ -229,7 +232,7 @@ const RestockForm: React.FC<RestockFormProps> = ({
     const answer = onConfirm(
       quantity,
       values.quantityInput,
-      shared.notes,
+      values.notes,
       shared.activeUnitId,
       paid(values.costPerUnitInput),
       paid(values.totalCostInput),
@@ -435,14 +438,21 @@ const RestockFields: React.FC<{
 
       {/* Notes */}
       <View style={commonStyles.bottomSheetSection}>
-        <FormInput
-          label={t('labels.notes')}
-          value={shared.notes}
-          onChangeText={shared.setNotes}
-          placeholder={t('restockItem.notesPlaceholder')}
-          multiline
-          numberOfLines={3}
-          useBottomSheetInput
+        <Controller
+          control={control}
+          name="notes"
+          render={({ field }) => (
+            <FormInput
+              label={t('labels.notes')}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              placeholder={t('restockItem.notesPlaceholder')}
+              multiline
+              numberOfLines={3}
+              useBottomSheetInput
+            />
+          )}
         />
       </View>
 

@@ -120,7 +120,6 @@ const PantryActionFrame: React.FC<PantryActionFrameProps> = ({
 
   const [selectedUnitInfo, setSelectedUnitInfo] =
     useState<SelectedUnitInfo | null>(null);
-  const [notes, setNotes] = useState('');
 
   // A row created offline holds a neutral unit with an empty id. Sent as
   // `usageUnitId` it names no unit; omitted, the server uses the stack's own.
@@ -259,8 +258,6 @@ const PantryActionFrame: React.FC<PantryActionFrameProps> = ({
   const shared: PantryActionSharedState = {
     selectedUnitInfo,
     setSelectedUnitInfo,
-    notes,
-    setNotes,
     trackingQuantity,
     trackingUnit,
     trackingUnitId,

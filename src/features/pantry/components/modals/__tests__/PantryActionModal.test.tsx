@@ -313,16 +313,6 @@ describe('a stack the device does not hold', () => {
 });
 
 describe('each time it opens', () => {
-  it('starts with no notes', () => {
-    const view = renderModal();
-    act(() => shared().setNotes('half a bag'));
-
-    view.rerender(modal({ visible: false }));
-    view.rerender(modal());
-
-    expect(shared().notes).toBe('');
-  });
-
   it('measures in the unit the server ranks first, whatever the last opening picked', async () => {
     const view = renderModal({
       units: [

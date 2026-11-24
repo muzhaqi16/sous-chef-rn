@@ -55,6 +55,7 @@ interface WasteFormValues {
   wasteReason: WasteReason;
   isComposted: boolean;
   isRecycled: boolean;
+  notes: string;
 }
 
 const wasteDefaults: WasteFormValues = {
@@ -62,6 +63,7 @@ const wasteDefaults: WasteFormValues = {
   wasteReason: WasteReason.Expired,
   isComposted: false,
   isRecycled: false,
+  notes: '',
 };
 
 // The amount is held to the stock, which only the confirm reads
@@ -71,6 +73,7 @@ const wasteSchema: ObjectSchema<WasteFormValues> = object({
   wasteReason: mixed<WasteReason>().oneOf(Object.values(WasteReason)).defined(),
   isComposted: boolean().defined(),
   isRecycled: boolean().defined(),
+  notes: string().defined(),
 });
 
 /** The amount before one is typed: everything the stack holds. */
@@ -128,7 +131,7 @@ const WasteForm: React.FC<WasteFormProps> = ({
 
   // The sheet closes at once; the write settles behind it.
   const submit = handleSubmit(
-    ({ amountInput, wasteReason, isComposted, isRecycled }) => {
+    ({ amountInput, wasteReason, isComposted, isRecycled, notes }) => {
       const typed = amountInput ?? untypedAmount(shared);
       const wasteValue = validateDeductionQuantity(
         typed,
@@ -145,7 +148,7 @@ const WasteForm: React.FC<WasteFormProps> = ({
         wasteReason,
         isComposted,
         isRecycled,
-        shared.notes,
+        notes,
         shared.activeUnitId,
       );
       onClose();
@@ -274,14 +277,21 @@ const WasteFields: React.FC<{
 
       {/* Notes */}
       <View style={commonStyles.bottomSheetSection}>
-        <FormInput
-          label={t('labels.notes')}
-          value={shared.notes}
-          onChangeText={shared.setNotes}
-          placeholder={t('recordWaste.notesPlaceholder')}
-          multiline
-          numberOfLines={3}
-          useBottomSheetInput
+        <Controller
+          control={control}
+          name="notes"
+          render={({ field }) => (
+            <FormInput
+              label={t('labels.notes')}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              placeholder={t('recordWaste.notesPlaceholder')}
+              multiline
+              numberOfLines={3}
+              useBottomSheetInput
+            />
+          )}
         />
       </View>
     </>

@@ -22,8 +22,6 @@ export function pantryActionShared(
   const state: PantryActionSharedState = {
     selectedUnitInfo: null,
     setSelectedUnitInfo: jest.fn(),
-    notes: '',
-    setNotes: jest.fn(),
     trackingQuantity,
     trackingUnit: CUP,
     trackingUnitId: 'u1',

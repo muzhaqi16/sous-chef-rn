@@ -31,8 +31,6 @@ export interface ShownQuantity {
 export interface PantryActionSharedState {
   selectedUnitInfo: PickableUnit | null;
   setSelectedUnitInfo: (unit: PickableUnit) => void;
-  notes: string;
-  setNotes: (notes: string) => void;
   /** Available quantity in the tracking unit, which is always the base. */
   trackingQuantity: number;
   trackingUnit: UnitLabelSource;
