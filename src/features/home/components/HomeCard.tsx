@@ -1,4 +1,5 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View, type ViewStyle } from 'react-native';
 import { useTranslation } from '#/i18n';
 import Animated, {
@@ -13,8 +14,6 @@ import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport'
 import { Icon } from '#components/atoms/Icon';
 import { MembersList } from './MembersList';
 import { Pressable } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { homeTestIDs } from '#features/home/testIDs';
 import { Text } from '#components/atoms/Text';
 import { HomeCard_HomeFragmentDoc } from './HomeCard.generated';
@@ -128,15 +127,15 @@ export const HomeCard: React.FC<HomeCardProps> = ({
               </Text>
             </View>
           ) : (
-            <AppPressable
+            <IconButton
+              name="star-outline"
+              size="md"
+              tone="textSecondary"
               onPress={() => onSetDefault(home.id)}
-              hitSlop={hitSlop.lg}
-              accessibilityRole="button"
               accessibilityLabel={t('labels.setDefault')}
+              accessibilityRole="button"
               testID={homeTestIDs.setDefaultButton(home.id)}
-            >
-              <Icon name="star-outline" size="md" tone="textSecondary" />
-            </AppPressable>
+            />
           )}
           {!!onPress && (
             <Icon name="chevron-forward" size="sm" tone="textSecondary" />

@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedActivityIndicator,
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
-import { Icon } from '#components/atoms/Icon';
 import { TagInput } from '#features/recipes/components/TagInput';
 import { Text } from '#components/atoms/Text';
 import { InlineFolderChooser } from '#features/recipes/components/InlineFolderChooser';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Sheet } from '#components/templates/Sheet';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { useOpening } from '#hooks/ui/useOpening';
 
 export interface ManageRecipeSheetProps {
@@ -111,23 +109,21 @@ const ManageRecipeContent: React.FC<ManageRecipeContentProps> = ({
           )}
         </View>
         <View style={styles.headerButtons}>
-          <Pressable
+          <IconButton
+            name="trash-outline"
+            size="md"
+            tone="error"
             onPress={handleRemove}
             accessibilityLabel={t('labels.remove')}
-            hitSlop={hitSlop.lg}
             disabled={updating}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Icon name="trash-outline" size="md" tone="error" />
-          </Pressable>
-          <Pressable
+          />
+          <IconButton
+            name="close"
+            size="md"
+            tone="textPrimary"
             onPress={onClose}
             accessibilityLabel={t('labels.close')}
-            hitSlop={hitSlop.lg}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Icon name="close" size="md" tone="textPrimary" />
-          </Pressable>
+          />
         </View>
       </View>
 
@@ -147,27 +143,17 @@ const ManageRecipeContent: React.FC<ManageRecipeContentProps> = ({
       </SectionHeader>
       <View style={styles.ratingContainer}>
         {[1, 2, 3, 4, 5].map(star => (
-          <Pressable
+          <IconButton
             key={star}
+            name={rating !== null && star <= rating ? 'star' : 'star-outline'}
+            size="lg"
+            tone={
+              rating !== null && star <= rating ? 'rating' : 'textSecondary'
+            }
             onPress={() => handleRatingPress(star)}
             accessibilityLabel={t('a11y.rateStars', { count: star })}
-            hitSlop={{
-              top: hitSlop.lg,
-              bottom: hitSlop.lg,
-              left: hitSlop.sm,
-              right: hitSlop.sm,
-            }}
             disabled={updating}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Icon
-              name={rating !== null && star <= rating ? 'star' : 'star-outline'}
-              size="lg"
-              tone={
-                rating !== null && star <= rating ? 'rating' : 'textSecondary'
-              }
-            />
-          </Pressable>
+          />
         ))}
         {rating !== null && (
           <Text role="caption" tone="secondary" style={styles.ratingText}>
@@ -301,8 +287,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
     minHeight: 80,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

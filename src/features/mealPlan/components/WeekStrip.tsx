@@ -1,14 +1,13 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { isSameDay, isToday, isBefore, isAfter, startOfDay } from 'date-fns';
-import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { formatDayOfMonth, formatWeekdayShort } from '#/utils/formatters/date';
 import { toDateKey } from '#/utils/dateUtils';
 import { useTranslation } from '#/i18n';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 interface WeekStripProps {
   weekDays: Date[];
@@ -45,20 +44,15 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
 
   return (
     <View style={styles.container}>
-      <AppPressable
-        onPress={canGoPrev ? onPrevWeek : undefined}
+      <IconButton
+        name="chevron-back"
+        size="sm"
+        tone="textSecondary"
+        onPress={onPrevWeek}
+        disabled={!canGoPrev}
         accessibilityLabel={t('a11y.previousWeek')}
-        style={[styles.arrowButton, !canGoPrev && styles.arrowButtonDisabled]}
-        hitSlop={hitSlop.md}
-      >
-        <Icon
-          name="chevron-back"
-          size="sm"
-          color={
-            canGoPrev ? styles.arrowIcon.color : styles.arrowIconDisabled.color
-          }
-        />
-      </AppPressable>
+        style={styles.arrowButton}
+      />
 
       <View style={styles.daysRow}>
         {weekDays.map(day => {
@@ -110,20 +104,15 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
         })}
       </View>
 
-      <AppPressable
-        onPress={canGoNext ? onNextWeek : undefined}
+      <IconButton
+        name="chevron-forward"
+        size="sm"
+        tone="textSecondary"
+        onPress={onNextWeek}
+        disabled={!canGoNext}
         accessibilityLabel={t('a11y.nextWeek')}
-        style={[styles.arrowButton, !canGoNext && styles.arrowButtonDisabled]}
-        hitSlop={hitSlop.md}
-      >
-        <Icon
-          name="chevron-forward"
-          size="sm"
-          color={
-            canGoNext ? styles.arrowIcon.color : styles.arrowIconDisabled.color
-          }
-        />
-      </AppPressable>
+        style={styles.arrowButton}
+      />
     </View>
   );
 };
@@ -139,15 +128,6 @@ const styles = StyleSheet.create(theme => ({
   },
   arrowButton: {
     padding: theme.spacing.xs,
-  },
-  arrowIcon: {
-    color: theme.colors.textSecondary,
-  },
-  arrowButtonDisabled: {
-    opacity: 0.3,
-  },
-  arrowIconDisabled: {
-    color: theme.colors.textTertiary,
   },
   daysRow: {
     flex: 1,

@@ -1,7 +1,7 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { Icon } from '#components/atoms/Icon';
@@ -27,7 +27,6 @@ import {
 import { Text } from '#components/atoms/Text';
 import type { BatchPricingSummary } from '#features/pantry/utils/summarizeBatchPricing';
 import { ItemCondition } from '#/graphql/generated/schemaTypes';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 interface PantryDetailInfoProps {
@@ -159,14 +158,14 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         >
           <Text role="bodyStrong">{netWeightText}</Text>
           {!!onCorrectPackageSize && (
-            <AppPressable
+            <IconButton
+              name="create-outline"
+              size="xs"
+              tone="primary"
               onPress={onCorrectPackageSize}
               accessibilityLabel={t('correctWeight.title')}
-              hitSlop={hitSlop.md}
               style={styles.correctWeightButton}
-            >
-              <Icon name="create-outline" size="xs" tone="primary" />
-            </AppPressable>
+            />
           )}
         </InfoRow>
       )}

@@ -1,7 +1,7 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
@@ -10,7 +10,6 @@ import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { formatQuantityDisplay } from '#/utils/formatQuantity';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 interface RecipeIngredientListProps {
   ingredients: IngredientFormState[];
@@ -65,16 +64,16 @@ export const RecipeIngredientList: React.FC<RecipeIngredientListProps> = ({
               {ingredient.isOptional ? t('recipes.optionalSuffix') : ''}
             </Text>
           </View>
-          <Pressable
+          <IconButton
+            name="close-circle"
+            size="sm"
+            tone="error"
             onPress={() => onRemoveIngredient(ingredient.id)}
             accessibilityLabel={t('a11y.removeNamed', {
               name: ingredient.name,
             })}
-            hitSlop={hitSlop.md}
             style={styles.removeButton}
-          >
-            <Icon name="close-circle" size="sm" tone="error" />
-          </Pressable>
+          />
         </AppPressable>
       ))}
       <AppPressable onPress={onAddIngredient} style={styles.addButton}>

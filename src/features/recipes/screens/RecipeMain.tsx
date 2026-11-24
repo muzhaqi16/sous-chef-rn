@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -17,7 +17,6 @@ import {
   SearchBar,
   type SearchBarAction,
 } from '#components/molecules/SearchBar';
-import { Icon } from '#components/atoms/Icon';
 import { ModeTabs } from '#components/molecules/ModeTabs';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
@@ -48,7 +47,6 @@ import {
   RecipeSearchInput,
   type RecipeSearchInputRef,
 } from '#features/recipes/components/RecipeSearchInput';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 type RecipeSearchMode = 'name' | 'ingredients';
 const SEARCH_MODES: readonly RecipeSearchMode[] = ['name', 'ingredients'];
@@ -323,19 +321,16 @@ const RecipeMainInner: React.FC = () => {
               : t('recipes.recipeIdeasToTry')}
           </Text>
         </View>
-        <AppPressable
-          style={styles.refreshButton}
+        <IconButton
+          name="refresh"
+          size="sm"
+          tone={busy ? 'textSecondary' : 'primary'}
           onPress={screen.discovery.refresh}
-          disabled={busy}
-          accessibilityRole="button"
           accessibilityLabel={t('recipes.refreshSuggestions')}
-        >
-          <Icon
-            name="refresh"
-            size="sm"
-            tone={busy ? 'textSecondary' : 'primary'}
-          />
-        </AppPressable>
+          accessibilityRole="button"
+          disabled={busy}
+          style={styles.refreshButton}
+        />
       </View>
     );
   })();
@@ -352,17 +347,17 @@ const RecipeMainInner: React.FC = () => {
             { count: screen.searchResults.length },
           )}
         </Text>
-        <Pressable
+        <IconButton
+          name="close"
+          size="sm"
+          tone="textSecondary"
           onPress={() => {
             screen.clearSearch();
             searchInputRef.current?.clear();
           }}
-          hitSlop={hitSlop.md}
-          accessibilityRole="button"
           accessibilityLabel={t('recipes.clearSearch')}
-        >
-          <Icon name="close" size="sm" tone="textSecondary" />
-        </Pressable>
+          accessibilityRole="button"
+        />
       </View>
     );
   })();

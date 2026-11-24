@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
@@ -116,15 +117,16 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
           </Text>
         </AppPressable>
         {clearable && value ? (
-          <AppPressable
-            style={styles.clearButton}
+          <IconButton
+            name="close"
+            size="sm"
+            tone="textSecondary"
             onPress={() => onChange(null)}
             accessibilityLabel={t('a11y.clearField', {
               label: label ?? t('labels.selectDate'),
             })}
-          >
-            <Icon name="close" size="sm" tone="textSecondary" />
-          </AppPressable>
+            style={styles.clearButton}
+          />
         ) : null}
       </View>
       {error ? (

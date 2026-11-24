@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useTranslation } from '#/i18n';
@@ -191,13 +192,14 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
           <Text role="heading" style={styles.title}>
             {copy.title}
           </Text>
-          <AppPressable
-            style={styles.closeButton}
+          <IconButton
+            name="close"
+            size="md"
+            tone="textSecondary"
             onPress={onClose}
             accessibilityLabel={t('labels.close')}
-          >
-            <Icon name="close" size="md" tone="textSecondary" />
-          </AppPressable>
+            style={styles.closeButton}
+          />
         </View>
 
         {/* Content */}

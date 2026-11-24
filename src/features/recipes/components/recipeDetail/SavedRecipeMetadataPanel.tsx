@@ -1,12 +1,11 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Icon } from '#components/atoms/Icon';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 interface SavedRecipeMetadataPanelProps {
   savedFolder: string | null;
@@ -37,27 +36,23 @@ export const SavedRecipeMetadataPanel: React.FC<
         </Text>
         <View style={styles.ratingStars}>
           {[1, 2, 3, 4, 5].map(star => (
-            <Pressable
+            <IconButton
               key={star}
+              name={
+                savedRating !== null && star <= savedRating
+                  ? 'star'
+                  : 'star-outline'
+              }
+              size="xsPlus"
+              tone={
+                savedRating !== null && star <= savedRating
+                  ? 'rating'
+                  : 'textSecondary'
+              }
               onPress={() => onUpdateRating(star === savedRating ? null : star)}
               accessibilityLabel={t('a11y.rateStars', { count: star })}
-              hitSlop={hitSlop.sm}
               disabled={updatingFolderTags}
-            >
-              <Icon
-                name={
-                  savedRating !== null && star <= savedRating
-                    ? 'star'
-                    : 'star-outline'
-                }
-                size="xsPlus"
-                tone={
-                  savedRating !== null && star <= savedRating
-                    ? 'rating'
-                    : 'textSecondary'
-                }
-              />
-            </Pressable>
+            />
           ))}
         </View>
       </View>

@@ -1,10 +1,10 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { Controller, useController, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { number, object, string, type ObjectSchema } from 'yup';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
@@ -20,7 +20,6 @@ import {
   formatWeekdayMonthDay,
 } from '#/utils/formatters/date';
 import { toDateKey } from '#/utils/dateUtils';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { useOpening } from '#hooks/ui/useOpening';
 import { lazyMessage, reportValidationErrors } from '#/utils/validation/common';
 
@@ -148,14 +147,14 @@ const DuplicatePlanForm: React.FC<DuplicatePlanFormProps> = ({
           {t('labels.startDate')}
         </Text>
         <View style={styles.dateAdjust}>
-          <Pressable
+          <IconButton
+            name="chevron-back"
+            size="sm"
+            tone="primary"
             onPress={() => offset.onChange(offset.value - 7)}
             accessibilityLabel={t('a11y.previousWeek')}
             style={styles.dateButton}
-            hitSlop={hitSlop.md}
-          >
-            <Icon name="chevron-back" size="sm" tone="primary" />
-          </Pressable>
+          />
           <View style={styles.dateDisplay}>
             <Text role="bodyStrong">{formatWeekdayMonthDay(start)}</Text>
             <Text role="caption" tone="secondary" style={styles.dateSubtext}>
@@ -164,14 +163,14 @@ const DuplicatePlanForm: React.FC<DuplicatePlanFormProps> = ({
               })}
             </Text>
           </View>
-          <Pressable
+          <IconButton
+            name="chevron-forward"
+            size="sm"
+            tone="primary"
             onPress={() => offset.onChange(offset.value + 7)}
             accessibilityLabel={t('a11y.nextWeek')}
             style={styles.dateButton}
-            hitSlop={hitSlop.md}
-          >
-            <Icon name="chevron-forward" size="sm" tone="primary" />
-          </Pressable>
+          />
         </View>
       </View>
 

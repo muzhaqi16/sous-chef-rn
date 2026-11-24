@@ -1,4 +1,5 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
+import { IconButton } from '#components/atoms/IconButton';
 import { PantryItemCard } from '#features/pantry/components/PantryItemCard';
 import { PantryActionsProvider } from '#features/pantry/components/PantryActionsContext';
 import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
@@ -8,7 +9,6 @@ import { useTranslation } from '#/i18n';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 // RNGH's Pressable for the cart button: nested in the row's RNGH Swipeable, its
 // native button captures the tap so the row's onPress does not also fire.
-import { Pressable } from 'react-native-gesture-handler';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
@@ -16,7 +16,6 @@ import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { Icon } from '#components/atoms/Icon';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { PartialDataNote } from '#components/molecules/PartialDataNote';
@@ -187,18 +186,19 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
 
   const cartButton =
     showCart && handleAddToList ? (
-      <Pressable
+      <IconButton
+        name="cart-outline"
+        size="sm"
+        tone="primary"
         onPress={() =>
           handleAddToList(item.itemId, {
             itemName: item.itemName,
             unitId: item.unit?.id,
           })
         }
-        style={styles.actionButton}
         accessibilityLabel={t('labels.addToShoppingList')}
-      >
-        <Icon name="cart-outline" size="sm" tone="primary" />
-      </Pressable>
+        style={styles.actionButton}
+      />
     ) : null;
 
   return (

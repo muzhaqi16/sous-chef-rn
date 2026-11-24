@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { AppPressable } from '#components/atoms/AppPressable';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
@@ -19,7 +19,6 @@ const ThemedNavigationRow = withUnistyles(NavigationRow, theme => ({
 import { HomeMembersSection } from '#features/home/components/HomeMembersSection';
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { useUser } from '#store/useAppStore';
-import { Icon } from '#components/atoms/Icon';
 import { Button } from '#components/molecules/Button';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
@@ -235,32 +234,31 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                   {home.joinCode}
                 </Text>
               </View>
-              <AppPressable
-                style={styles.copyButton}
+              <IconButton
+                name={copied ? 'checkmark-circle' : 'copy-outline'}
+                size="sm"
+                tone={copied ? 'success' : 'textPrimary'}
                 onPress={handleCopyJoinCode}
                 accessibilityLabel={t('homeDetail.labelJoinCode')}
-              >
-                <Icon
-                  name={copied ? 'checkmark-circle' : 'copy-outline'}
-                  size="sm"
-                  tone={copied ? 'success' : 'textPrimary'}
-                />
-              </AppPressable>
-              <AppPressable
                 style={styles.copyButton}
+              />
+              <IconButton
+                name="share-outline"
+                size="sm"
+                tone="primary"
                 onPress={handleShareJoinLink}
                 accessibilityLabel={t('labels.shareLink')}
-              >
-                <Icon name="share-outline" size="sm" tone="primary" />
-              </AppPressable>
-              <AppPressable
                 style={styles.copyButton}
+              />
+              <IconButton
+                name="refresh-outline"
+                size="sm"
+                tone="textPrimary"
                 onPress={handleRotateJoinCode}
-                disabled={rotatingJoinCode}
                 accessibilityLabel={t('homeDetail.rotateJoinCodeConfirm')}
-              >
-                <Icon name="refresh-outline" size="sm" tone="textPrimary" />
-              </AppPressable>
+                disabled={rotatingJoinCode}
+                style={styles.copyButton}
+              />
             </View>
           ) : null}
         </>

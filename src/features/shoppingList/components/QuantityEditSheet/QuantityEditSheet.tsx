@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -12,7 +13,6 @@ import {
 } from '#components/atoms/themedComponents';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { Chip } from '#components/molecules/Chip';
-import { Icon } from '#components/atoms/Icon';
 import {
   formatQuantityForInput,
   unitLabel,
@@ -219,19 +219,16 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
             {t('labels.quantity')}
           </Text>
           <View style={variantStyles.counterContainer}>
-            <AppPressable
-              testID={shoppingListTestIDs.quantityEditDecrement}
-              accessibilityLabel={t('editableCounter.decrease')}
-              style={variantStyles.counterButton}
+            <IconButton
+              name="remove-outline"
+              size="md"
+              tone={decrementDisabled ? 'textTertiary' : 'textPrimary'}
               onPress={handleDecrement}
+              accessibilityLabel={t('editableCounter.decrease')}
               disabled={decrementDisabled}
-            >
-              <Icon
-                name="remove-outline"
-                size="md"
-                tone={decrementDisabled ? 'textTertiary' : 'textPrimary'}
-              />
-            </AppPressable>
+              testID={shoppingListTestIDs.quantityEditDecrement}
+              style={variantStyles.counterButton}
+            />
 
             <AppPressable
               testID={shoppingListTestIDs.quantityEditValue}
@@ -257,15 +254,16 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
               )}
             </AppPressable>
 
-            <AppPressable
-              testID={shoppingListTestIDs.quantityEditIncrement}
-              accessibilityLabel={t('editableCounter.increase')}
-              style={variantStyles.incrementButton}
+            <IconButton
+              name="add"
+              size="md"
+              tone="onPrimary"
               onPress={handleIncrement}
+              accessibilityLabel={t('editableCounter.increase')}
               disabled={stepDisabled}
-            >
-              <Icon name="add" size="md" tone="onPrimary" />
-            </AppPressable>
+              testID={shoppingListTestIDs.quantityEditIncrement}
+              style={variantStyles.incrementButton}
+            />
           </View>
           {/* An empty field is "nothing typed yet", not a malformed quantity —
               the save button is disabled either way. */}

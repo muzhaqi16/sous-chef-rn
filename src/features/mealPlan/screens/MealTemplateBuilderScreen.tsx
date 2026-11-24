@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import {
@@ -40,7 +41,6 @@ import {
   type TemplateItemFormValues,
 } from './mealTemplateBuilderFormConfig';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 const CATEGORY_OPTIONS = [
   TemplateCategory.Weekly,
@@ -445,16 +445,16 @@ export const MealTemplateBuilderScreen: React.FC<
                   })}
                 </Text>
               </Pressable>
-              <Pressable
+              <IconButton
+                name="close-circle"
+                size="md"
+                tone="error"
                 onPress={() => handleRemoveItem(item)}
                 accessibilityLabel={t('a11y.removeNamed', {
                   name: mealName || t(MEAL_TYPE_LABEL_KEYS[item.mealType]),
                 })}
-                hitSlop={hitSlop.md}
                 testID={mealPlanTestIDs.templateRemoveItem(item.key)}
-              >
-                <Icon name="close-circle" size="md" tone="error" />
-              </Pressable>
+              />
             </View>
           );
         })
@@ -471,16 +471,16 @@ export const MealTemplateBuilderScreen: React.FC<
             <Text role="label" style={styles.recipeName} numberOfLines={1}>
               {itemRecipeName || t('mealTemplateBuilder.savedRecipe')}
             </Text>
-            <Pressable
+            <IconButton
+              name="close-circle"
+              size="sm"
+              tone="textSecondary"
               onPress={clearRecipe}
               accessibilityLabel={t('a11y.removeNamed', {
                 name: itemRecipeName || t('mealTemplateBuilder.savedRecipe'),
               })}
-              hitSlop={hitSlop.md}
               testID={mealPlanTestIDs.templateClearRecipeButton}
-            >
-              <Icon name="close-circle" size="sm" tone="textSecondary" />
-            </Pressable>
+            />
           </View>
         ) : (
           <Controller

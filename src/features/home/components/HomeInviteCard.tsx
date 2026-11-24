@@ -1,10 +1,9 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import {
   formatInviteStatus,
   getInviteStatusKey,
@@ -92,13 +91,13 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
           {statusText}
         </InviteStatusBadge>
         {!!canRevoke && invite.status === InviteStatus.Pending && (
-          <AppPressable
-            style={styles.revokeButton}
+          <IconButton
+            name="close"
+            size="sm"
             onPress={onRevoke}
             accessibilityLabel={t('a11y.revokeInvite')}
-          >
-            <Icon name="close" size="sm" />
-          </AppPressable>
+            style={styles.revokeButton}
+          />
         )}
       </View>
     </InviteSurface>

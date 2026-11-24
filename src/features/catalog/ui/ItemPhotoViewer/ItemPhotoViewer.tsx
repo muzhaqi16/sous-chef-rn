@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import {
   View,
   FlatList,
@@ -40,7 +41,6 @@ import { useReportWrongPhoto } from '#features/catalog/hooks/useReportWrongPhoto
 import { writesItemDirectly } from '#domain/itemWriteAccess';
 import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
 import { catalogTestIDs } from '#features/catalog/testIDs';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { useOpening } from '#hooks/ui/useOpening';
 
 const MIN_SCALE = 1;
@@ -143,15 +143,15 @@ const ItemPhotoViewerContent: React.FC<ItemPhotoViewerContentProps> = ({
         )}
       />
 
-      <Pressable
+      <IconButton
+        name="close"
+        size="md"
+        tone="onScrim"
         onPress={onClose}
-        style={[styles.closeButton, { top: insets.top + 8 }]}
-        hitSlop={hitSlop.lg}
-        accessibilityRole="button"
         accessibilityLabel={t('labels.close')}
-      >
-        <Icon name="close" size="md" tone="onScrim" />
-      </Pressable>
+        accessibilityRole="button"
+        style={[styles.closeButton, { top: insets.top + 8 }]}
+      />
 
       {/* box-none so the photo keeps receiving the taps that close it, while
             the action button inside still gets its own. */}

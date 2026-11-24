@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { useTranslation } from '#/i18n';
 import { View, Dimensions } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -126,14 +127,15 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
 
           {/* Show crop icon below image if not cropped yet */}
           {!!selectedImage && !croppedImage && (
-            <AppPressable
+            <IconButton
+              name="crop"
+              size="sm"
+              tone="background"
               onPress={handleCropImage}
               accessibilityLabel={t('a11y.cropPhoto')}
-              style={styles.cropIconButton}
               disabled={isUploading}
-            >
-              <Icon tone="background" name="crop" size="sm" />
-            </AppPressable>
+              style={styles.cropIconButton}
+            />
           )}
         </View>
 

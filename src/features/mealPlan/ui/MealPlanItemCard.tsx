@@ -1,9 +1,9 @@
 import { deleteAction } from '#components/organisms/SwipeableItem/commonActions';
+import { IconButton } from '#components/atoms/IconButton';
 import { RowCard } from '#components/atoms/RowCard';
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
@@ -14,7 +14,6 @@ import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem
 import { ListItem } from '#components/molecules/ListItem';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import { MealPlanItemCard_ItemFragmentDoc } from './MealPlanItemCard.generated';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 
@@ -70,22 +69,18 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
   // it toggles completion without also firing the row's onPress. An RN Pressable
   // here lives in a separate gesture system and the tap fires both.
   const checkboxElement = onToggleCompleted ? (
-    <Pressable
+    <IconButton
+      name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
+      size="md"
+      tone={item.isCompleted ? 'success' : 'border'}
       onPress={() =>
         onToggleCompleted(item.id, item.isCompleted, !!item.recipe)
       }
-      hitSlop={hitSlop.md}
-      testID={mealPlanTestIDs.itemCompleteToggle(item.id)}
       accessibilityLabel={
         item.isCompleted ? t('a11y.markIncomplete') : t('a11y.markComplete')
       }
-    >
-      <Icon
-        name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
-        size="md"
-        tone={item.isCompleted ? 'success' : 'border'}
-      />
-    </Pressable>
+      testID={mealPlanTestIDs.itemCompleteToggle(item.id)}
+    />
   ) : item.isCompleted ? (
     // Read-only: a done meal says so; an empty circle would read as a control.
     <Icon name="checkmark-circle" size="md" tone="success" />

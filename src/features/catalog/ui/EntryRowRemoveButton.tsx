@@ -1,9 +1,8 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#components/atoms/Icon';
 import { Label } from '#components/atoms/Label';
 
 interface EntryRowRemoveButtonProps {
@@ -29,14 +28,15 @@ export const EntryRowRemoveButton: React.FC<EntryRowRemoveButtonProps> = ({
       >
         <Label> </Label>
       </View>
-      <AppPressable
+      <IconButton
+        name="trash-outline"
+        size="sm"
+        tone="error"
         onPress={onPress}
         accessibilityLabel={t('labels.remove')}
         disabled={disabled}
         style={styles.button}
-      >
-        <Icon name="trash-outline" size="sm" tone="error" />
-      </AppPressable>
+      />
     </View>
   );
 };

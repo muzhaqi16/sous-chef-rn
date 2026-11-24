@@ -1,8 +1,8 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useFragment } from '@apollo/client/react';
-import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -14,7 +14,6 @@ import {
 } from '#features/recipes/graphql/recipeFragments.generated';
 import { formatRelativeToNow } from '#/utils/formatters/date';
 import { personName } from '#/utils/formatters/memberFormatters';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { useUser } from '#store/useAppStore';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 
@@ -89,38 +88,35 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
         {!!isOwn && (
           <View style={styles.ownActions}>
             {!!onEdit && (
-              <Pressable
+              <IconButton
+                name="create-outline"
+                size="xsPlus"
+                tone="primary"
                 onPress={onEdit}
-                hitSlop={hitSlop.md}
-                style={({ pressed }) => pressed && styles.pressed}
                 accessibilityLabel={t('recipes.editReviewA11y')}
-              >
-                <Icon name="create-outline" size="xsPlus" tone="primary" />
-              </Pressable>
+              />
             )}
             {!!onDelete && (
-              <Pressable
+              <IconButton
+                name="trash-outline"
+                size="xsPlus"
+                tone="error"
                 onPress={onDelete}
-                hitSlop={hitSlop.md}
-                style={({ pressed }) => pressed && styles.pressed}
                 accessibilityLabel={t('recipes.deleteReviewA11y')}
-              >
-                <Icon name="trash-outline" size="xsPlus" tone="error" />
-              </Pressable>
+              />
             )}
           </View>
         )}
         {!!reportable && (
-          <Pressable
+          <IconButton
+            name="flag-outline"
+            size="xsPlus"
+            tone="textSecondary"
             onPress={() => onReport(authorId)}
-            hitSlop={hitSlop.md}
-            style={({ pressed }) => pressed && styles.pressed}
-            accessibilityRole="button"
             accessibilityLabel={t('reports.reportReview')}
+            accessibilityRole="button"
             testID={recipesTestIDs.reviewReportButton(review.id)}
-          >
-            <Icon name="flag-outline" size="xsPlus" tone="textSecondary" />
-          </Pressable>
+          />
         )}
       </View>
       {/* Stars */}
@@ -236,8 +232,5 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primaryLight,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { OnPrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import { FormInput } from '#components/atoms/FormInput';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { localizedErrorMessage } from '#/services/errorService';
@@ -121,13 +121,13 @@ export const EditableField: React.FC<EditableFieldProps> = ({
         <Text role="heading">{value}</Text>
       </View>
       {!readOnly && (
-        <AppPressable
-          style={styles.editIconButton}
+        <IconButton
+          name="create-outline"
+          size="sm"
           onPress={handleStartEdit}
           accessibilityLabel={t('labels.edit')}
-        >
-          <Icon name="create-outline" size="sm" />
-        </AppPressable>
+          style={styles.editIconButton}
+        />
       )}
     </View>
   );

@@ -1,8 +1,7 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import { MealPlanItemCard } from '#features/mealPlan/ui/MealPlanItemCard';
 import { Text } from '#components/atoms/Text';
 import type { MealType } from '#/graphql/generated/schemaTypes';
@@ -10,7 +9,6 @@ import type { FragmentType } from '@apollo/client/masking';
 import type { MealPlanItemCard_ItemFragmentDoc } from '#features/mealPlan/ui/MealPlanItemCard.generated';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import { useTranslation } from '#/i18n';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 /** A plan's item as its query holds it; the card reads its fields. */
 export type MealPlanItemRef = FragmentType<
@@ -50,13 +48,13 @@ export const MealTypeSection: React.FC<MealTypeSectionProps> = ({
       <View style={styles.sectionHeader}>
         <Text role="bodyStrong">{label}</Text>
         {!!onAddMeal && (
-          <Pressable
+          <IconButton
+            name="add"
+            size="sm"
+            tone="primary"
             onPress={() => onAddMeal(mealType)}
             accessibilityLabel={t('labels.addNamed', { name: label })}
-            hitSlop={hitSlop.lg}
-          >
-            <Icon name="add" size="sm" tone="primary" />
-          </Pressable>
+          />
         )}
       </View>
 

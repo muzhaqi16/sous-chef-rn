@@ -1,7 +1,7 @@
 import React from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import type { IconLibrary } from '#components/atoms/Icon';
+import type { IconLibrary, IconSizeName } from '#components/atoms/Icon';
 import { Icon, type IconTone } from '#components/atoms/Icon';
 import { HapticService } from '#services/haptic/HapticService';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -22,8 +22,8 @@ export interface IconButtonProps {
   accessibilityHint?: string;
   /** Accessibility role (defaults to 'button') */
   accessibilityRole?: 'button' | 'imagebutton';
-  /** icon size variant (default 'md') */
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  /** A step of the icon ramp (default 'md'); the target stays 44pt. */
+  size?: IconSizeName;
   /**
    * Named colour role. `tone` is how a caller asks for a theme colour, so a
    * themed icon button needs no `withUnistyles` wrapper of its own.
@@ -36,6 +36,8 @@ export interface IconButtonProps {
   library?: IconLibrary;
   /** whether button is disabled */
   disabled?: boolean;
+  /** A toggle's state, such as a pinned store; left out, the button is no toggle. */
+  selected?: boolean;
   /** test ID for testing */
   testID?: string;
 }
@@ -52,6 +54,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
   style,
   library,
   disabled = false,
+  selected,
   testID,
 }) => {
   const handlePress = () => {
@@ -72,7 +75,9 @@ export const IconButton: React.FC<IconButtonProps> = ({
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{ disabled }}
+      accessibilityState={
+        selected === undefined ? { disabled } : { disabled, selected }
+      }
       testID={testID}
     >
       <UniIcon

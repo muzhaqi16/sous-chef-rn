@@ -1,8 +1,7 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { Chip } from '#components/molecules/Chip';
 import { useTranslation } from '#/i18n';
@@ -36,13 +35,14 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
         <Text role="bodyStrong" tone="secondary">
           {title}
         </Text>
-        <AppPressable
+        <IconButton
+          name="add"
+          size="xsPlus"
+          tone="primary"
           onPress={onAddPress}
-          style={styles.addButton}
           accessibilityLabel={t('labels.addNamed', { name: title })}
-        >
-          <Icon name="add" size="xsPlus" tone="primary" />
-        </AppPressable>
+          style={styles.addButton}
+        />
       </View>
       {/* Chip grid showing existing items */}
       {existingItems.length > 0 ? (

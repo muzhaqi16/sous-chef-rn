@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { useTranslation } from '#/i18n';
@@ -12,7 +13,6 @@ import type { SelectedImage } from '#features/catalog/types';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { Text } from '#components/atoms/Text';
 import { LocalImage } from '#components/atoms/LocalImage';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 interface MultiImagePickerProps {
   images: SelectedImage[];
@@ -167,36 +167,32 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
           <View key={`${image.uri}-${index}`} style={styles.imageEntry}>
             <View style={styles.thumbnailWrapper}>
               <LocalImage uri={image.uri} style={styles.thumbnail} />
-              <AppPressable
-                style={styles.removeButton}
+              <IconButton
+                name="close"
+                size="2xsPlus"
+                tone="onScrim"
                 onPress={() => handleRemoveImage(index)}
-                disabled={disabled}
-                hitSlop={hitSlop.lg}
-                accessibilityRole="button"
                 accessibilityLabel={t('imagePicker.removeImage')}
-              >
-                <Icon name="close" size="2xsPlus" tone="onScrim" />
-              </AppPressable>
+                accessibilityRole="button"
+                disabled={disabled}
+                style={styles.removeButton}
+              />
               {!!allowPrimarySelection && (
-                <AppPressable
-                  style={styles.primaryButton}
+                <IconButton
+                  name={image.isPrimary ? 'star' : 'star-outline'}
+                  size="2xsPlus"
+                  tone={image.isPrimary ? 'rating' : 'onScrim'}
                   onPress={() => handleSetPrimary(index)}
-                  disabled={disabled || image.isPrimary}
-                  hitSlop={hitSlop.lg}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: !!image.isPrimary }}
                   accessibilityLabel={t(
                     image.isPrimary
                       ? 'itemPhotos.mainPhoto'
                       : 'itemPhotos.setAsMain',
                   )}
-                >
-                  <Icon
-                    name={image.isPrimary ? 'star' : 'star-outline'}
-                    size="2xsPlus"
-                    tone={image.isPrimary ? 'rating' : 'onScrim'}
-                  />
-                </AppPressable>
+                  accessibilityRole="button"
+                  disabled={disabled || image.isPrimary}
+                  selected={!!image.isPrimary}
+                  style={styles.primaryButton}
+                />
               )}
             </View>
             <AppPressable

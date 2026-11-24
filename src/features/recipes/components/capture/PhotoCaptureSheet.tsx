@@ -1,14 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { errorCopy } from '#/services/errorService';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
-import { Icon } from '#components/atoms/Icon';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { useCapturePhotos } from '#features/recipes/components/capture/useCapturePhotos';
 import type {
   CaptureRequest,
@@ -99,18 +97,18 @@ const PhotoForm: React.FC<PhotoFormProps> = ({
                 style={styles.thumbnail}
                 displaySize={THUMBNAIL_SIZE}
               />
-              <Pressable
-                style={styles.remove}
+              <IconButton
+                name="close-circle"
+                size="md"
+                tone="textInverse"
                 onPress={() => photos.remove(uri)}
-                disabled={busy}
-                accessibilityRole="button"
                 accessibilityLabel={t('a11y.removeNamed', {
                   name: String(index + 1),
                 })}
-                hitSlop={hitSlop.md}
-              >
-                <Icon name="close-circle" size="md" tone="textInverse" />
-              </Pressable>
+                accessibilityRole="button"
+                disabled={busy}
+                style={styles.remove}
+              />
             </View>
           ))}
         </View>

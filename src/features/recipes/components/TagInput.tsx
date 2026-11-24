@@ -1,16 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { useTranslation } from '#/i18n';
 import { View, Keyboard, ScrollView } from 'react-native';
-import {
-  Pressable,
-  ThemedBottomSheetTextInput,
-} from '#components/atoms/themedComponents';
+import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { filterByTerm, identity } from '#hooks/search/useLocalSearch';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 export interface TagInputProps {
   tags: string[];
@@ -91,14 +87,13 @@ export const TagInput: React.FC<TagInputProps> = ({
               {tag}
             </Text>
             {!!editable && (
-              <Pressable
+              <IconButton
+                name="close"
+                size="2xsPlus"
+                tone="primary"
                 onPress={() => handleRemoveTag(tag)}
                 accessibilityLabel={t('a11y.removeNamed', { name: tag })}
-                hitSlop={hitSlop.md}
-                style={({ pressed }) => pressed && styles.pressed}
-              >
-                <Icon name="close" size="2xsPlus" tone="primary" />
-              </Pressable>
+              />
             )}
           </View>
         ))}
@@ -216,8 +211,5 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.sm,
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

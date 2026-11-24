@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 
 import { StyleSheet } from 'react-native-unistyles';
 import type { TextInputProps } from 'react-native';
 import type { BaseInputProps } from '#components/molecules/BaseInput/BaseInput';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#components/atoms/Icon';
 import { useTranslation } from '#/i18n';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { NEW_PASSWORD_RULES } from '#/utils/validation/common';
 
 /** Which password a field takes, so autofill offers the saved one or a new one. */
@@ -62,20 +60,16 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
       placeholder="••••••••"
       {...AUTOFILL[purpose]}
       rightIcon={
-        <AppPressable
+        <IconButton
+          name={visible ? 'eye-outline' : 'eye-off-outline'}
+          size="sm"
+          tone={visible ? 'textPrimary' : 'textTertiary'}
           onPress={() => setVisible(v => !v)}
           accessibilityLabel={
             visible ? t('a11y.hidePassword') : t('a11y.showPassword')
           }
-          hitSlop={hitSlop.lg}
           style={pressedStyles.toggle}
-        >
-          <Icon
-            name={visible ? 'eye-outline' : 'eye-off-outline'}
-            size="sm"
-            tone={visible ? 'textPrimary' : 'textTertiary'}
-          />
-        </AppPressable>
+        />
       }
       {...props}
     />

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import type { TextInputProps, StyleProp, ViewStyle } from 'react-native';
@@ -9,11 +10,9 @@ import { Text } from '#components/atoms/Text';
 type TextInputFocusEvent = Parameters<
   NonNullable<TextInputProps['onFocus']>
 >[0];
-import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import styles from '#components/molecules/BaseInput/BaseInput.styles';
-import { Icon } from '#components/atoms/Icon';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 import {
   ThemedActivityIndicator,
@@ -24,7 +23,6 @@ import {
 } from '#components/atoms/themedComponents';
 import { motion } from '#/theme/motion';
 import { kitTestIDs } from '#components/testIDs';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { useFieldAccessibility } from '#hooks/ui/useFieldAccessibility';
 
 export interface BaseInputProps extends TextInputProps {
@@ -155,15 +153,15 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           />
         )}
         {!isLoading && !!showClear && (
-          <AppPressable
-            style={variantStyles.leftIconWrapper}
-            onPress={onClear}
-            hitSlop={hitSlop.lg}
-            accessibilityRole="button"
+          <IconButton
+            name="close"
+            size="xsPlus"
+            tone="textSecondary"
+            onPress={() => onClear?.()}
             accessibilityLabel={t('labels.clearInput')}
-          >
-            <Icon name="close" size="xsPlus" tone="textSecondary" />
-          </AppPressable>
+            accessibilityRole="button"
+            style={variantStyles.leftIconWrapper}
+          />
         )}
         {rightIcon != null && (
           <View style={variantStyles.rightIconWrapper}>{rightIcon}</View>

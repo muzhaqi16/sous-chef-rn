@@ -1,4 +1,5 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { useToday } from '#hooks/app/useToday';
 import { useTranslation } from '#/i18n';
@@ -12,7 +13,6 @@ import { safeParseDate } from '#utils/dateUtils';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { formatRelativeToNow } from '#/utils/formatters/date';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 interface NotificationItemProps {
   notification: NotificationType;
@@ -82,14 +82,14 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
         </Text>
       </View>
       {!!onDismiss && (
-        <AppPressable
-          style={styles.dismissButton}
+        <IconButton
+          name="close"
+          size="sm"
+          tone="textTertiary"
           onPress={handleDismiss}
-          hitSlop={hitSlop.lg}
           accessibilityLabel={t('notifications.dismissA11y')}
-        >
-          <Icon name="close" size="sm" tone="textTertiary" />
-        </AppPressable>
+          style={styles.dismissButton}
+        />
       )}
     </AppPressable>
   );

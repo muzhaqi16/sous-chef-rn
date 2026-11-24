@@ -1,14 +1,13 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import type { StepFormState } from '#features/recipes/types';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 interface RecipeStepListProps {
   steps: StepFormState[];
@@ -46,16 +45,16 @@ export const RecipeStepList: React.FC<RecipeStepListProps> = ({
           <Text role="body" style={styles.stepText} numberOfLines={2}>
             {step.instruction || t('recipes.tapToAddInstruction')}
           </Text>
-          <Pressable
+          <IconButton
+            name="close-circle"
+            size="sm"
+            tone="error"
             onPress={() => onRemoveStep(step.id)}
             accessibilityLabel={t('a11y.removeNamed', {
               name: step.instruction,
             })}
-            hitSlop={hitSlop.md}
             style={styles.removeButton}
-          >
-            <Icon name="close-circle" size="sm" tone="error" />
-          </Pressable>
+          />
         </AppPressable>
       ))}
       <AppPressable onPress={onAddStep} style={styles.addButton}>

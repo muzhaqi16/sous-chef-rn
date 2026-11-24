@@ -1,11 +1,11 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import { daysUntilExpiry, expiryLabel, isExpiryEstimate } from '#domain/expiry';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { BatchStatus, UnitType } from '#/graphql/generated/schemaTypes';
@@ -25,7 +25,6 @@ import { BatchListItem_PantryItemFragmentDoc } from './BatchListItem.generated';
 import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
 import { formatMonthDay } from '#/utils/formatters/date';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { useToday } from '#hooks/app/useToday';
 import { pantryTestIDs } from '../testIDs';
 
@@ -209,45 +208,45 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
       {!!isActive && (
         <View style={styles.actions}>
           {onUse ? (
-            <AppPressable
+            <IconButton
+              name="restaurant-outline"
+              size="xsPlus"
+              tone="primary"
               onPress={() => onUse(batch.id)}
               accessibilityLabel={t('a11y.useFromBatch')}
-              style={styles.actionButton}
-              hitSlop={hitSlop.md}
               testID={pantryTestIDs.batchUse(batch.id)}
-            >
-              <Icon name="restaurant-outline" size="xsPlus" tone="primary" />
-            </AppPressable>
+              style={styles.actionButton}
+            />
           ) : null}
           {!batch.isOpened && !!onOpen && (
-            <AppPressable
+            <IconButton
+              name="open-outline"
+              size="xsPlus"
+              tone="primary"
               onPress={() => onOpen(batch.id)}
               accessibilityLabel={t('a11y.openBatch')}
               style={styles.actionButton}
-              hitSlop={hitSlop.md}
-            >
-              <Icon name="open-outline" size="xsPlus" tone="primary" />
-            </AppPressable>
+            />
           )}
           {onCorrectSize && holdsContents ? (
-            <AppPressable
+            <IconButton
+              name="scale-outline"
+              size="xsPlus"
+              tone="primary"
               onPress={() => onCorrectSize(batch.id)}
               accessibilityLabel={t('correctWeight.title')}
               style={styles.actionButton}
-              hitSlop={hitSlop.md}
-            >
-              <Icon name="scale-outline" size="xsPlus" tone="primary" />
-            </AppPressable>
+            />
           ) : null}
           {!!onWaste && (
-            <AppPressable
+            <IconButton
+              name="trash-outline"
+              size="xsPlus"
+              tone="error"
               onPress={() => onWaste(batch.id)}
               accessibilityLabel={t('a11y.wasteBatch')}
               style={styles.actionButton}
-              hitSlop={hitSlop.md}
-            >
-              <Icon name="trash-outline" size="xsPlus" tone="error" />
-            </AppPressable>
+            />
           )}
         </View>
       )}

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { RowCard } from '#components/atoms/RowCard';
 import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { useTranslation } from '#/i18n';
@@ -6,7 +7,6 @@ import { View } from 'react-native';
 // RNGH's Pressable (not AppPressable/RN) for the archive button: it's nested in
 // the row's RNGH Swipeable, so RNGH's native button captures the tap and it
 // doesn't also fire the row's onPress (which would navigate to details).
-import { Pressable } from 'react-native-gesture-handler';
 import { useFragment } from '@apollo/client/react';
 import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport';
 import Animated from 'react-native-reanimated';
@@ -42,8 +42,6 @@ import type { ShoppingListRowItem } from './types';
 import { motion } from '#/theme/motion';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { suggestedLineCost } from '#features/shoppingList/utils/purchasePrice';
-import { hitSlop } from '#/theme/foundations/sizes';
-import { layout } from '#/theme/foundations/spacing';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 /**
@@ -224,15 +222,15 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         collapsable={false}
         onLayout={isTutorialArchiveTarget ? measureArchiveIcon : undefined}
       >
-        <Pressable
+        <IconButton
+          name="archive-outline"
+          size="md"
+          color={themeColors?.primary}
           onPress={() => onMoveToPantry(itemId)}
-          style={styles.moveToPantryButton}
-          hitSlop={MOVE_TO_PANTRY_SLOP}
           accessibilityLabel={t('moveToPantry.title')}
           testID={shoppingListTestIDs.itemMoveToPantry(itemId)}
-        >
-          <Icon name="archive-outline" size="md" color={themeColors?.primary} />
-        </Pressable>
+          style={styles.moveToPantryButton}
+        />
       </View>
     );
 
@@ -382,14 +380,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       </RowCard>
     </Animated.View>
   );
-};
-
-/** Half the 4 dp gap to the quantity chip on the left; the row's inset on the right. */
-const MOVE_TO_PANTRY_SLOP = {
-  top: hitSlop.md,
-  bottom: hitSlop.md,
-  left: 2,
-  right: layout.rowInsetHorizontal,
 };
 
 const styles = StyleSheet.create(theme => ({

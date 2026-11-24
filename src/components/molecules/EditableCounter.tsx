@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { useTranslation } from '#/i18n';
 import {
   View,
@@ -6,12 +7,10 @@ import {
   type TextInputProps,
 } from 'react-native';
 import {
-  Pressable,
   ThemedBottomSheetTextInput,
   ThemedTextInput,
 } from '#components/atoms/themedComponents';
 import { assignRef, type FocusableInputRef } from '#components/atoms/inputRef';
-import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
@@ -147,25 +146,17 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           }
         }}
       >
-        <Pressable
+        <IconButton
+          name="remove-outline"
+          size="xs"
+          tone={disabled ? 'iconDisabled' : 'onPrimary'}
           onPress={handleDecrement}
-          disabled={disabled}
-          style={({ pressed }) => [
-            variantStyles.button,
-            pressed && !disabled && variantStyles.pressed,
-          ]}
-          accessible
-          accessibilityRole="button"
           accessibilityLabel={t('editableCounter.decrease')}
           accessibilityHint={t('a11y.currentQuantity', { value })}
-          accessibilityState={{ disabled }}
-        >
-          <Icon
-            name="remove-outline"
-            size="xs"
-            tone={disabled ? 'iconDisabled' : 'onPrimary'}
-          />
-        </Pressable>
+          accessibilityRole="button"
+          disabled={disabled}
+          style={variantStyles.button}
+        />
 
         {inSheet ? (
           <ThemedBottomSheetTextInput
@@ -176,25 +167,17 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           <ThemedTextInput ref={node => assignRef(ref, node)} {...inputProps} />
         )}
 
-        <Pressable
+        <IconButton
+          name="add"
+          size="xs"
+          tone={disabled ? 'iconDisabled' : 'onPrimary'}
           onPress={handleIncrement}
-          disabled={disabled}
-          style={({ pressed }) => [
-            variantStyles.button,
-            pressed && !disabled && variantStyles.pressed,
-          ]}
-          accessible
-          accessibilityRole="button"
           accessibilityLabel={t('editableCounter.increase')}
           accessibilityHint={t('a11y.currentQuantity', { value })}
-          accessibilityState={{ disabled }}
-        >
-          <Icon
-            name="add"
-            size="xs"
-            tone={disabled ? 'iconDisabled' : 'onPrimary'}
-          />
-        </Pressable>
+          accessibilityRole="button"
+          disabled={disabled}
+          style={variantStyles.button}
+        />
       </View>
       {error ? (
         <Text role="error" tone="error" style={variantStyles.errorText}>
@@ -255,9 +238,6 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.border,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
   input: {
     ...singleLineInputStyle(theme),

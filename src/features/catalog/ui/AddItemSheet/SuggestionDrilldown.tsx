@@ -1,4 +1,5 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View, type FlatListProps } from 'react-native';
 import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import Animated, {
@@ -7,10 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { motion } from '#/theme/motion';
 import type { BaseSuggestionItem } from '#features/catalog/types';
 
@@ -68,15 +66,15 @@ export function SuggestionDrilldown<T extends BaseSuggestionItem>({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <AppPressable
+        <IconButton
+          name="chevron-back"
+          size="md"
+          tone="textPrimary"
           onPress={onBack}
-          style={styles.backButton}
-          hitSlop={hitSlop.md}
-          accessibilityRole="button"
           accessibilityLabel={backLabel}
-        >
-          <Icon name="chevron-back" size="md" tone="textPrimary" />
-        </AppPressable>
+          accessibilityRole="button"
+          style={styles.backButton}
+        />
         <Text role="subheading" style={styles.title}>
           {title}
         </Text>
