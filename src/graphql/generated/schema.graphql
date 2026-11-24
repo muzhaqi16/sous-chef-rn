@@ -3997,8 +3997,6 @@ enum ErrorCode {
   AUTH_TOKEN_MISSING
   CONFLICT
   DEADLOCK
-  EMAIL_ALREADY_EXISTS
-  EMAIL_ALREADY_VERIFIED
   FORBIDDEN
   HOME_ACCESS_DENIED
   """
@@ -4027,7 +4025,6 @@ enum ErrorCode {
   INTERNAL_SERVER_ERROR
   NOT_FOUND
   PANTRY_ITEM_ALREADY_EXISTS
-  RESOURCE_ALREADY_EXISTS
   """
   A unit change whose route is an estimate, sent without CONVERT or RECOUNT. Show the preview's two choices and resend with one.
   """
@@ -16066,8 +16063,6 @@ enum TopLevelErrorCode {
   """
   CLIENT_UPGRADE_REQUIRED
   DB_CONSTRAINT_VIOLATION
-  EMAIL_ALREADY_EXISTS
-  EMAIL_ALREADY_VERIFIED
   """
   A feature the operation needs is OFF for the caller. Carries feature, the FeatureFlagName. Retrying cannot fix it: re-read myFeatureFlags and hide the feature. A 403 — clients must not sign the user out.
   """
@@ -16124,7 +16119,6 @@ enum TopLevelErrorCode {
   PREMIUM_REQUIRED
   """Global rate limit. Carries retryAfter in seconds."""
   RATE_LIMIT_EXCEEDED
-  RESOURCE_ALREADY_EXISTS
   """
   A thrown ConflictError escaping a resolver. The union-member spelling is CONFLICT.
   """
