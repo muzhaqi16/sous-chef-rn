@@ -367,7 +367,7 @@ const styles = StyleSheet.create(theme => ({
     paddingTop: theme.spacing.sm,
   },
   sections: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
   },
   section: {
     marginBottom: theme.spacing.lg,

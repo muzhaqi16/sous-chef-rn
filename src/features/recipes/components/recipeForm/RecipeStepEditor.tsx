@@ -131,7 +131,7 @@ RecipeStepEditor.displayName = 'RecipeStepEditor';
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.xl,
   },
 }));

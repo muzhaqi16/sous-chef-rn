@@ -287,7 +287,7 @@ const styles = StyleSheet.create(theme => ({
   },
   // On the inner view, so the header still spans the sheet's full width.
   sections: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
   },
   itemName: {
     textAlign: 'center',
