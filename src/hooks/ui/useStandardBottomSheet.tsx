@@ -274,7 +274,6 @@ export function useStandardBottomSheet({
     ref,
     modalProps,
     contentContainerStyle,
-    insets,
     dismiss,
   };
 }
