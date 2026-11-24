@@ -60,7 +60,6 @@ export const errorService: ErrorServiceModule['errorService'] = Object.assign(
     // caller's fallback, so no code has copy of its own here. A suite asserting
     // on a mapped code's sentence overrides both.
     hasUserFriendlyMessage: jest.fn(() => false),
-    getErrorCategory: jest.fn(() => 'General'),
     isAuthError: jest.fn(() => false),
     isExpectedUserError: jest.fn(() => false),
     // Unclassified, as the real parse reports an error it cannot read.
@@ -70,7 +69,6 @@ export const errorService: ErrorServiceModule['errorService'] = Object.assign(
         error: {
           code: 'UNKNOWN_ERROR',
           message: GENERIC,
-          category: 'General',
           isAuthError: false,
         },
       }),

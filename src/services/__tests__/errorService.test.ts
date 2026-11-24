@@ -105,49 +105,6 @@ describe('errorService', () => {
   });
 
   // -----------------------------------------------------------------------
-  // getErrorCategory
-  // -----------------------------------------------------------------------
-  describe('getErrorCategory', () => {
-    it('returns Authentication for AUTH_ prefix', () => {
-      expect(errorService.getErrorCategory('AUTH_TOKEN_EXPIRED')).toBe(
-        'Authentication',
-      );
-    });
-
-    it('returns Authorization for FORBIDDEN', () => {
-      expect(errorService.getErrorCategory('FORBIDDEN')).toBe('Authorization');
-    });
-
-    it('returns Authentication for UNAUTHENTICATED', () => {
-      expect(errorService.getErrorCategory('UNAUTHENTICATED')).toBe(
-        'Authentication',
-      );
-    });
-
-    it('returns Validation for VALIDATION_ prefix', () => {
-      expect(errorService.getErrorCategory('VALIDATION_FAILED')).toBe(
-        'Validation',
-      );
-    });
-
-    it('returns Resource for RESOURCE_ prefix', () => {
-      expect(errorService.getErrorCategory('RESOURCE_NOT_FOUND')).toBe(
-        'Resource',
-      );
-    });
-
-    it('returns Service for SERVICE_ prefix', () => {
-      expect(errorService.getErrorCategory('SERVICE_UNAVAILABLE')).toBe(
-        'Service',
-      );
-    });
-
-    it('returns Unknown for unrecognized prefix', () => {
-      expect(errorService.getErrorCategory('FOOBAR_SOMETHING')).toBe('Unknown');
-    });
-  });
-
-  // -----------------------------------------------------------------------
   // isAuthError
   // -----------------------------------------------------------------------
   describe('isAuthError', () => {
@@ -485,7 +442,7 @@ describe('errorService', () => {
       expect(Telemetry.trackError).toHaveBeenCalledWith(
         'telemetry test',
         expect.objectContaining({
-          component: 'Unknown',
+          component: 'UNKNOWN_ERROR',
           code: 'UNKNOWN_ERROR',
           operation: 'TelemetryOp',
         }),
@@ -511,7 +468,7 @@ describe('errorService', () => {
       expect(Telemetry.warn).toHaveBeenCalledWith(
         `Validation: PANTRY_ITEM_ALREADY_EXISTS in ${create}`,
         expect.objectContaining({
-          component: 'Pantry',
+          component: 'PANTRY_ITEM_ALREADY_EXISTS',
           code: 'PANTRY_ITEM_ALREADY_EXISTS',
           operation: create,
         }),
@@ -558,7 +515,6 @@ describe('errorService', () => {
 
       expect(result.code).toBe('UNKNOWN_ERROR');
       expect(result.message).toBe('An unexpected error occurred');
-      expect(result.category).toBe('Unknown');
       expect(result.isAuthError).toBe(false);
     });
   });

@@ -8,6 +8,7 @@ import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { serializeError } from '#/utils/errorSerialization';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { isOwnKey } from '#utils/isOwnKey';
 import {
   GraphQLNetworkError,
   refusalEnvelopeOf,
@@ -36,7 +37,6 @@ export interface ErrorResult<T = unknown> {
   error?: {
     code: string;
     message: string;
-    category: string;
     isAuthError: boolean;
     validationErrors?: Record<string, string>;
   };
@@ -46,7 +46,6 @@ export interface ErrorResult<T = unknown> {
 export interface ApolloErrorResult {
   code: string;
   message: string;
-  category: string;
   isAuthError: boolean;
   validationErrors?: Record<string, string>;
 }
@@ -70,15 +69,19 @@ function toValidationErrors(
   return messages;
 }
 
+/** Every code the server can send: the two generated enums. */
+type ServerErrorCode = `${ErrorCode}` | `${TopLevelErrorCode}`;
+/** Codes this client raises itself, which have no SDL. */
+type ClientErrorCode = 'NETWORK_ERROR' | 'CIRCUIT_OPEN' | 'CIRCUIT_HALF_OPEN';
+
 export class ErrorService {
   /**
    * Error code → `errors.codes.<suffix>`. Suffixes, not strings: `t()` in a
-   * static field would freeze the language active at module load.
+   * static field would freeze the language active at module load. Typed by
+   * the generated enums, so a code nothing sends does not compile and a new
+   * one without a sentence fails typecheck.
    */
-  private static readonly ERROR_MESSAGE_KEY_SUFFIXES: Record<
-    string,
-    KeyUnder<'errors.codes'>
-  > = {
+  private static readonly ERROR_MESSAGE_KEY_SUFFIXES = {
     // Authentication Errors
     AUTH_TOKEN_MISSING: 'signInRequired',
     AUTH_TOKEN_INVALID: 'sessionInvalid',
@@ -136,9 +139,6 @@ export class ErrorService {
     // Version Control Errors
     VERSION_CONFLICT: 'versionConflict',
 
-    // Every `ErrorCode` and `TopLevelErrorCode` member appears here, or it falls
-    // to `errors.codes.unexpected` (errorCodeCoverage.test.ts); the table is
-    // WIDER than the enums, since client-raised codes have no SDL.
     NOT_FOUND: 'resourceNotFound',
     CONFLICT: 'resourceConflict',
     UNIT_INVALID: 'unitInvalid',
@@ -177,7 +177,10 @@ export class ErrorService {
     // Application-Specific Errors
     HOME_ACCESS_DENIED: 'homeAccessDenied',
     HOME_MEMBER_LIMIT_REACHED: 'homeMemberLimitReached',
-  };
+  } satisfies Record<
+    ServerErrorCode | ClientErrorCode,
+    KeyUnder<'errors.codes'>
+  >;
 
   // Codes arrive as plain strings, so these are typed `string`.
   private static readonly UNAUTHENTICATED: string =
@@ -206,30 +209,13 @@ export class ErrorService {
     'BAD_USER_INPUT',
   ]);
 
-  private static readonly ERROR_CATEGORIES: Record<string, string> = {
-    AUTH_: 'Authentication',
-    // The two Apollo-standard codes carry no category prefix, so they are listed
-    // in full. There is no 'AUTHZ_' family to prefix-match.
-    [TopLevelErrorCode.Unauthenticated]: 'Authentication',
-    [TopLevelErrorCode.Forbidden]: 'Authorization',
-    API_: 'API Key',
-    VALIDATION_: 'Validation',
-    RESOURCE_: 'Resource',
-    RATE_: 'Rate Limiting',
-    SERVICE_: 'Service',
-    NETWORK_: 'Network',
-    CIRCUIT_: 'Circuit Breaker',
-    PANTRY_: 'Pantry',
-    HOME_: 'Home Management',
-  };
-
   /**
    * Whether the app has its own sentence for this code. A caller choosing
    * between the code's copy and something more generic needs to know the code
    * resolves to more than the fallback it was going to use anyway.
    */
   hasUserFriendlyMessage(errorCode: string): boolean {
-    return errorCode in ErrorService.ERROR_MESSAGE_KEY_SUFFIXES;
+    return isOwnKey(ErrorService.ERROR_MESSAGE_KEY_SUFFIXES, errorCode);
   }
 
   getUserFriendlyMessage(errorCode: string, fallbackMessage?: string): string {
@@ -242,27 +228,16 @@ export class ErrorService {
     translate: Translate,
     fallbackMessage?: string,
   ): string {
-    const suffix = ErrorService.ERROR_MESSAGE_KEY_SUFFIXES[errorCode];
+    const table = ErrorService.ERROR_MESSAGE_KEY_SUFFIXES;
     // An unmapped code takes the caller's own localized copy; the server's
     // message never reaches here.
-    if (!suffix) {
+    if (!isOwnKey(table, errorCode)) {
       return (
         firstNonBlank(fallbackMessage) ?? translate('errors.codes.unexpected')
       );
     }
     // The table holds suffixes; the whole key is composed here.
-    return translate(`errors.codes.${suffix}`);
-  }
-
-  getErrorCategory(errorCode: string): string {
-    for (const [prefix, category] of Object.entries(
-      ErrorService.ERROR_CATEGORIES,
-    )) {
-      if (errorCode.startsWith(prefix)) {
-        return category;
-      }
-    }
-    return 'Unknown';
+    return translate(`errors.codes.${table[errorCode]}`);
   }
 
   isAuthError(errorCode: string): boolean {
@@ -413,7 +388,6 @@ export class ErrorService {
       const { errorCode, validationErrors } = classified;
       const diagnostic = classified.diagnostic ?? getVersionConflictMessage();
 
-      const category = this.getErrorCategory(errorCode);
       const userFriendlyMessage =
         firstNonBlank(customMessage) ?? this.getUserFriendlyMessage(errorCode);
 
@@ -437,13 +411,13 @@ export class ErrorService {
       // Expected user-input outcomes go to warn and skip app_errors_total.
       if (isExpectedUserError) {
         Telemetry.warn(`Validation: ${errorCode} in ${operation}`, {
-          component: category,
+          component: errorCode,
           operation,
           code: errorCode,
         });
       } else {
         Telemetry.trackError(diagnostic, {
-          component: category,
+          component: errorCode,
           operation,
           code: errorCode,
           serialized_error: serializeError(error),
@@ -455,7 +429,6 @@ export class ErrorService {
         error: {
           code: errorCode,
           message: userFriendlyMessage,
-          category,
           isAuthError: this.isAuthError(errorCode),
           validationErrors,
         },
@@ -466,7 +439,6 @@ export class ErrorService {
         error: {
           code: 'ERROR_HANDLER_FAILED',
           message: t('errors.codes.genericRetry'),
-          category: 'Unknown',
           isAuthError: false,
         },
       };
@@ -483,7 +455,6 @@ export class ErrorService {
       result.error ?? {
         code: 'UNKNOWN_ERROR',
         message: t('errors.codes.unexpected'),
-        category: 'Unknown',
         isAuthError: false,
       }
     );
