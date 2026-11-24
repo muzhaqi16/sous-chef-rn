@@ -12,7 +12,7 @@ import {
 import { Reveal } from '#components/atoms/Reveal';
 import { ReligiousDietPicker } from '#features/profile/ui/ReligiousDietPicker';
 import { Text } from '#components/atoms/Text';
-import { AnimatedChip } from '#components/molecules/AnimatedChip';
+import { Chip } from '#components/molecules/Chip';
 import { Button } from '#components/molecules/Button';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -145,7 +145,7 @@ export const DietaryStepScreen = ({
           <Text role="bodyStrong">{t('onBoarding.dietaryAllergensTitle')}</Text>
           <View style={styles.chips}>
             {INTOLERANCE_OPTIONS_MAJOR_FIRST.map(option => (
-              <AnimatedChip
+              <Chip
                 key={option.value}
                 label={t(option.labelKey)}
                 selected={allergens.some(
@@ -195,7 +195,7 @@ export const DietaryStepScreen = ({
           <Text role="bodyStrong">{t('onBoarding.dietaryDietTitle')}</Text>
           <View style={styles.chips}>
             {LIFESTYLE_DIETS.map(option => (
-              <AnimatedChip
+              <Chip
                 key={option.value}
                 label={t(option.labelKey)}
                 selected={diets.includes(option.value)}
@@ -221,7 +221,7 @@ export const DietaryStepScreen = ({
           {foods.length > 0 ? (
             <View style={styles.chips}>
               {foods.map(food => (
-                <AnimatedChip
+                <Chip
                   key={food.id}
                   label={food.name}
                   selected

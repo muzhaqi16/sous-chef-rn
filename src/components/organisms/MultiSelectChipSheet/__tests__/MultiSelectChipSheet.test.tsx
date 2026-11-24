@@ -19,14 +19,8 @@ jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-jest.mock('#components/molecules/AnimatedChip', () => ({
-  AnimatedChip: ({
-    label,
-    onPress,
-  }: {
-    label: string;
-    onPress: () => void;
-  }) => {
+jest.mock('#components/molecules/Chip', () => ({
+  Chip: ({ label, onPress }: { label: string; onPress: () => void }) => {
     const RN = require('react-native');
     const R = require('react');
     return R.createElement(

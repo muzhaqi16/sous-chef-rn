@@ -25,7 +25,7 @@ orchestrated together".
   - a slide that must follow the selection but not a relayout (`ModeTabs`,
     `SegmentedControl`);
   - motion orchestrated across nodes, springs or a completion callback (the add menu,
-    `AlertProvider`, `AnimatedChip`, `CompletionHero`).
+    `AlertProvider`, `Chip`, `CompletionHero`).
 - Themed values stay off a CSS-animated node as they do off any Reanimated node: a
   theme-only `useAnimatedStyle` over `useAnimatedTheme()`, or a child.
 - Curves come from `motion.cssEasing`, which mirrors `motion.easing` (Reanimated's
@@ -110,7 +110,7 @@ watch the rows below slide up (`useRowReflow`).
 
 **Inside bottom sheets**, where the engine runs inside gorhom's portal:
 
-- `src/components/molecules/AnimatedChip.tsx`: reached through `MultiSelectChipSheet`,
+- `src/components/molecules/Chip.tsx`: reached through `MultiSelectChipSheet`,
   `CuisineSelector` and onboarding's `StaplesPicker`. Toggle chips quickly.
 - The Add a meal sheet's dim must hold after the sheet settles and release on close.
 

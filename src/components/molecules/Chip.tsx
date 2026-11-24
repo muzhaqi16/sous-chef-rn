@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
+import { View, type LayoutChangeEvent } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
+import { Icon, type IconName } from '#components/atoms/Icon';
+import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -37,33 +40,51 @@ const CHECK_EXITING = FadeOut.duration(motion.timing.FAST).easing(
   motion.easing.standard.factory(),
 );
 
-type AnimatedChipProps = {
+type ChipProps = {
   label: string;
-  selected: boolean;
   onPress: () => void;
+  /**
+   * A filter chip, single- or multi-select alike: selected draws the check
+   * (Material 3's filter chip). Left out, the chip is an action.
+   */
+  selected?: boolean;
+  /** An input chip: pressing it removes it, and a trailing close says so. */
+  removable?: boolean;
+  icon?: IconName;
   disabled?: boolean;
   imageUrl?: string;
   /** As tall as a chip with a photo, for a list where some have none. */
   reserveImageHeight?: boolean;
+  /** Defaults to the label; a removable chip names what pressing removes. */
+  accessibilityLabel?: string;
+  testID?: string;
+  onLayout?: (event: LayoutChangeEvent) => void;
 };
 
-export const AnimatedChip: React.FC<AnimatedChipProps> = ({
+/** The kit's one chip: its selection, haptic and radius are the same everywhere. */
+export const Chip: React.FC<ChipProps> = ({
   label,
-  selected,
   onPress,
+  selected,
+  removable = false,
+  icon,
   disabled = false,
   imageUrl,
   reserveImageHeight = false,
+  accessibilityLabel,
+  testID,
+  onLayout,
 }) => {
+  const isSelected = selected === true;
   const animatedTheme = useAnimatedTheme();
 
   // Drive selection animations via shared value — only animates when selected truly changes
-  const selectedProgress = useSharedValue(selected ? 1 : 0);
-  const [prevSelected, setPrevSelected] = useState(selected);
-  if (selected !== prevSelected) {
-    setPrevSelected(selected);
+  const selectedProgress = useSharedValue(isSelected ? 1 : 0);
+  const [prevSelected, setPrevSelected] = useState(isSelected);
+  if (isSelected !== prevSelected) {
+    setPrevSelected(isSelected);
     selectedProgress.set(
-      withTiming(selected ? 1 : 0, {
+      withTiming(isSelected ? 1 : 0, {
         duration: motion.timing.STANDARD,
         easing: motion.easing.standard,
       }),
@@ -146,25 +167,48 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
 
   // Layout animation on outer container so Pressable doesn't conflict with it
   return (
-    <Animated.View style={styles.container} layout={CHIP_LAYOUT_TRANSITION}>
+    <Animated.View
+      style={styles.container}
+      layout={CHIP_LAYOUT_TRANSITION}
+      onLayout={onLayout}
+    >
       <Pressable
         onPress={handlePress}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel={label}
-        accessibilityState={{ selected }}
+        accessibilityLabel={accessibilityLabel ?? label}
+        accessibilityState={
+          selected === undefined ? { disabled } : { selected, disabled }
+        }
+        testID={testID}
         style={({ pressed }) => pressed && styles.pressed}
       >
         <Animated.View
           style={[styles.chip, chipSurfaceStyle, animatedContainerStyle]}
         >
+          {/* The icons below are themed, under an animated surface. */}
+          <ThemeEpochSentinel />
+          {!!icon && (
+            <View style={styles.leadingIcon}>
+              <Icon
+                name={icon}
+                size="xs"
+                tone={isSelected ? 'primary' : 'textSecondary'}
+              />
+            </View>
+          )}
           {!!imageUrl && (
             <CachedImage uri={imageUrl} style={styles.image} displaySize={24} />
           )}
           <Animated.Text style={[labelTypeStyle, animatedTextStyle]}>
             {label}
           </Animated.Text>
-          {!!selected && (
+          {removable ? (
+            <View style={styles.iconContainer}>
+              <Icon name="close-circle" size="xs" tone="textSecondary" />
+            </View>
+          ) : null}
+          {isSelected ? (
             <Animated.View
               style={styles.iconContainer}
               layout={CHECK_LAYOUT_TRANSITION}
@@ -183,7 +227,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
                 />
               </Svg>
             </Animated.View>
-          )}
+          ) : null}
         </Animated.View>
       </Pressable>
     </Animated.View>
@@ -212,5 +256,8 @@ const styles = StyleSheet.create(theme => ({
   },
   iconContainer: {
     marginLeft: theme.spacing.sm,
+  },
+  leadingIcon: {
+    marginRight: theme.spacing.xs,
   },
 }));

@@ -10,14 +10,8 @@ import {
   RecipeStatus,
 } from '#/graphql/generated/schemaTypes';
 
-jest.mock('#components/molecules/AnimatedChip', () => ({
-  AnimatedChip: ({
-    label,
-    onPress,
-  }: {
-    label?: string;
-    onPress?: () => void;
-  }) => {
+jest.mock('#components/molecules/Chip', () => ({
+  Chip: ({ label, onPress }: { label?: string; onPress?: () => void }) => {
     const { Text } = require('react-native');
     return <Text onPress={onPress}>{label}</Text>;
   },

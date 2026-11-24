@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { AnimatedChip } from '#components/molecules/AnimatedChip';
+import { Chip } from '#components/molecules/Chip';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import type { Cuisine } from '#/graphql/generated/schemaTypes';
@@ -27,7 +27,7 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
     <View style={styles.container}>
       <View style={styles.chipGrid}>
         {cuisinesToShow.map(cuisine => (
-          <AnimatedChip
+          <Chip
             key={cuisine.value}
             label={t(cuisine.labelKey)}
             selected={selected.includes(cuisine.value)}

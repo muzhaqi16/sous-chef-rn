@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
-import { AnimatedChip } from '#components/molecules/AnimatedChip';
+import { Chip } from '#components/molecules/Chip';
 import type { useStaplesSelection } from '#features/onboarding/hooks/useStaplesSelection';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 
@@ -45,7 +45,7 @@ export const StaplesPicker = ({
             </Text>
             <View style={styles.chips}>
               {group.items.map(item => (
-                <AnimatedChip
+                <Chip
                   key={item.id}
                   label={item.name}
                   selected={item.selected}

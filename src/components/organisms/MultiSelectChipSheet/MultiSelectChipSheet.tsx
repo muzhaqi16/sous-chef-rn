@@ -7,7 +7,7 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
-import { AnimatedChip } from '#components/molecules/AnimatedChip';
+import { Chip } from '#components/molecules/Chip';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { useLocalSearch } from '#hooks/search/useLocalSearch';
@@ -119,7 +119,7 @@ function MultiSelectChipContent<T extends string>({
         >
           <View style={styles.chipContainer}>
             {filteredItems.map(item => (
-              <AnimatedChip
+              <Chip
                 key={item.id}
                 label={item.label}
                 selected={selectedItems.includes(item.id)}

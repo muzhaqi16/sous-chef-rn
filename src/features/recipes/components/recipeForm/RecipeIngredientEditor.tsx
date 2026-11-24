@@ -16,7 +16,7 @@ import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAut
 import { FormInput } from '#components/atoms/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/atoms/FieldRow';
-import { AnimatedChip } from '#components/molecules/AnimatedChip';
+import { Chip } from '#components/molecules/Chip';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { generateId } from '#/utils/generateId';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
@@ -176,7 +176,7 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
               {t('recipes.captureMatchTo')}
             </Text>
             {candidates.map(candidate => (
-              <AnimatedChip
+              <Chip
                 key={candidate.itemId}
                 label={candidate.name}
                 selected={itemId === candidate.itemId}
