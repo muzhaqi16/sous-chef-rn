@@ -127,7 +127,11 @@ const GenerateShoppingListForm: React.FC<GenerateShoppingListFormProps> = ({
       {/* Home sharing info */}
       {!!homeName && (
         <View style={styles.infoNote}>
-          <Icon name="information-circle-outline" size={18} tone="primary" />
+          <Icon
+            name="information-circle-outline"
+            size="xsPlus"
+            tone="primary"
+          />
           <Text role="caption" tone="accent" style={styles.infoNoteText}>
             {t('generateShoppingList.sharedWithHome', { name: homeName })}
           </Text>
@@ -174,7 +178,7 @@ const GenerateShoppingListForm: React.FC<GenerateShoppingListFormProps> = ({
           >
             <Icon
               name="add-circle-outline"
-              size={20}
+              size="sm"
               tone={mode.value === 'new' ? 'onPrimary' : 'textSecondary'}
             />
             <Text
@@ -196,7 +200,7 @@ const GenerateShoppingListForm: React.FC<GenerateShoppingListFormProps> = ({
           >
             <Icon
               name="list-outline"
-              size={20}
+              size="sm"
               tone={mode.value === 'existing' ? 'onPrimary' : 'textSecondary'}
             />
             <Text

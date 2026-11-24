@@ -433,7 +433,7 @@ export const MealTemplateBuilderScreen: React.FC<
               >
                 <View style={styles.itemTitle}>
                   {!!item.recipeId && (
-                    <Icon name="book-outline" size={14} tone="primary" />
+                    <Icon name="book-outline" size="2xsPlus" tone="primary" />
                   )}
                   <Text role="label">{mealName}</Text>
                 </View>
@@ -453,7 +453,7 @@ export const MealTemplateBuilderScreen: React.FC<
                 hitSlop={hitSlop.md}
                 testID={mealPlanTestIDs.templateRemoveItem(item.key)}
               >
-                <Icon name="close-circle" size={22} tone="error" />
+                <Icon name="close-circle" size="md" tone="error" />
               </Pressable>
             </View>
           );
@@ -467,7 +467,7 @@ export const MealTemplateBuilderScreen: React.FC<
             style={styles.recipeRow}
             testID={mealPlanTestIDs.templateItemRecipe}
           >
-            <Icon name="book-outline" size={18} tone="primary" />
+            <Icon name="book-outline" size="xsPlus" tone="primary" />
             <Text role="label" style={styles.recipeName} numberOfLines={1}>
               {itemRecipeName || t('mealTemplateBuilder.savedRecipe')}
             </Text>
@@ -479,7 +479,7 @@ export const MealTemplateBuilderScreen: React.FC<
               hitSlop={hitSlop.md}
               testID={mealPlanTestIDs.templateClearRecipeButton}
             >
-              <Icon name="close-circle" size={20} tone="textSecondary" />
+              <Icon name="close-circle" size="sm" tone="textSecondary" />
             </Pressable>
           </View>
         ) : (
@@ -507,7 +507,7 @@ export const MealTemplateBuilderScreen: React.FC<
           onPress={() => setRecipePickerVisible(true)}
           testID={mealPlanTestIDs.templateChooseRecipeButton}
         >
-          <Icon name="book-outline" size={18} tone="primary" />
+          <Icon name="book-outline" size="xsPlus" tone="primary" />
           <Text role="label" tone="primary">
             {itemRecipeId
               ? t('mealTemplateBuilder.changeRecipe')
@@ -570,7 +570,7 @@ export const MealTemplateBuilderScreen: React.FC<
         >
           <Icon
             name={editingKey ? 'checkmark' : 'add'}
-            size={18}
+            size="xsPlus"
             tone="primary"
           />
           <Text role="body" tone="primary" style={styles.addMealText}>

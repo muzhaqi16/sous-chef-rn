@@ -79,7 +79,7 @@ export const ScanUpcButton: React.FC<{ onPress: () => void }> = ({
       accessibilityLabel={t('addItemForm.scanUpcA11y')}
       style={scanButtonStyles.button}
     >
-      <Icon name="barcode-outline" size={22} tone="primary" />
+      <Icon name="barcode-outline" size="md" tone="primary" />
     </AppPressable>
   );
 };

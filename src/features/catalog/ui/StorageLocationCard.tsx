@@ -176,7 +176,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               >
                 <Icon
                   name="star-outline"
-                  size={18}
+                  size="xsPlus"
                   tone={actionsDisabled ? 'textSecondary' : undefined}
                 />
                 <Text
@@ -194,7 +194,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             >
               <Icon
                 name="create-outline"
-                size={18}
+                size="xsPlus"
                 tone={actionsDisabled ? 'textSecondary' : undefined}
               />
               <Text
@@ -211,7 +211,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             >
               <Icon
                 name="trash-outline"
-                size={18}
+                size="xsPlus"
                 tone={actionsDisabled ? 'textSecondary' : 'error'}
               />
               <Text role="label" tone={actionsDisabled ? 'tertiary' : 'danger'}>

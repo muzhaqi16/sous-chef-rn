@@ -88,7 +88,7 @@ const NewListForm: React.FC<NewListFormProps> = ({
               {creating ? (
                 <OnPrimaryActivityIndicator />
               ) : (
-                <Icon name="checkmark" size={20} tone="onPrimary" />
+                <Icon name="checkmark" size="sm" tone="onPrimary" />
               )}
             </Pressable>
           </View>
@@ -162,7 +162,7 @@ export const ShoppingListPickerSheet: React.FC<
           </Text>
         </View>
       )}
-      <Icon name="chevron-forward" size={20} tone="textSecondary" />
+      <Icon name="chevron-forward" size="sm" tone="textSecondary" />
     </Pressable>
   );
 

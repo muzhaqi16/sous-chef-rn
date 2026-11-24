@@ -71,7 +71,7 @@ export const JoinByShareCodeScreen: React.FC<
     <SubScreen title={t('shoppingListScreens.joinTitle')} scroll="none">
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Icon name="link-outline" size={48} tone="primary" />
+          <Icon name="link-outline" size="xl" tone="primary" />
         </View>
 
         <Text role="heading" align="center" style={styles.title}>

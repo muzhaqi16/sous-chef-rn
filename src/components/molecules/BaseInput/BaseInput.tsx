@@ -162,7 +162,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
             accessibilityRole="button"
             accessibilityLabel={t('labels.clearInput')}
           >
-            <Icon name="close" size={18} tone="textSecondary" />
+            <Icon name="close" size="xsPlus" tone="textSecondary" />
           </AppPressable>
         )}
         {rightIcon != null && (

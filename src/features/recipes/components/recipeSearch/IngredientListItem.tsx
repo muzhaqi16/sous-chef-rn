@@ -19,7 +19,7 @@ const IngredientItemComponent: React.FC<{
     <AppPressable style={styles.ingredientItem} onPress={handlePress}>
       <Icon
         name={selected ? 'checkbox' : 'square-outline'}
-        size={24}
+        size="md"
         tone={selected ? 'primary' : 'textSecondary'}
       />
       <Text role="body" style={styles.ingredientText}>

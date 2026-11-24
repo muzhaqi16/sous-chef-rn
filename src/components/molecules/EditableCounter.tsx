@@ -162,7 +162,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
         >
           <Icon
             name="remove-outline"
-            size={16}
+            size="xs"
             tone={disabled ? 'iconDisabled' : 'onPrimary'}
           />
         </Pressable>
@@ -191,7 +191,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
         >
           <Icon
             name="add"
-            size={16}
+            size="xs"
             tone={disabled ? 'iconDisabled' : 'onPrimary'}
           />
         </Pressable>

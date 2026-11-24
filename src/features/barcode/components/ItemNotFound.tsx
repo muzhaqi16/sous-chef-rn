@@ -18,7 +18,7 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({
   const { t } = useTranslation();
   return (
     <View style={styles.container}>
-      <Icon name="qr-code-outline" size={48} tone="textSecondary" />
+      <Icon name="qr-code-outline" size="xl" tone="textSecondary" />
       <Text role="subheading" align="center">
         {t('barcode.itemNotFound')}
       </Text>

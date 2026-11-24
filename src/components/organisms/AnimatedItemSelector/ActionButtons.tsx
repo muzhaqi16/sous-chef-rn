@@ -39,7 +39,7 @@ const ActionButton: React.FC<{
       >
         <Icon
           name={action.icon}
-          size={20}
+          size="sm"
           color={action.color}
           tone={variant === 'primary' ? 'onPrimary' : 'secondary'}
           library={action.iconLibrary}

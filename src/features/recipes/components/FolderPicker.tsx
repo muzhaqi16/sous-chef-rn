@@ -218,7 +218,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         <View style={styles.bottomSheetContent}>
           {folders.length > 5 && (
             <View style={styles.searchContainer}>
-              <Icon name="search" size={18} tone="textSecondary" />
+              <Icon name="search" size="xsPlus" tone="textSecondary" />
               <ThemedBottomSheetTextInput
                 style={styles.searchInput}
                 placeholder={t('folderPicker.searchPlaceholder')}
@@ -238,7 +238,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           >
             <Icon
               name="mail-outline"
-              size={20}
+              size="sm"
               tone={!selectedFolder ? 'primary' : 'textSecondary'}
             />
             <Text
@@ -249,7 +249,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               {t('labels.noFolder')}
             </Text>
             {!selectedFolder && (
-              <Icon name="checkmark" size={20} tone="primary" />
+              <Icon name="checkmark" size="sm" tone="primary" />
             )}
           </AppPressable>
 
@@ -266,7 +266,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                 style={styles.newFolderButton}
                 onPress={() => setShowNewFolder(true)}
               >
-                <Icon name="add" size={20} tone="primary" />
+                <Icon name="add" size="sm" tone="primary" />
                 <Text role="bodyStrong" tone="accent">
                   {t('labels.createNewFolder')}
                 </Text>

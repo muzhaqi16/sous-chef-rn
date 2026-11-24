@@ -172,11 +172,7 @@ const DetailLine: React.FC<{
   children: string;
 }> = ({ icon, accent = false, testID, children }) => (
   <View style={styles.detailLine} testID={testID}>
-    <Icon
-      name={icon}
-      size={DETAIL_ICON_SIZE}
-      tone={accent ? 'primary' : 'textSecondary'}
-    />
+    <Icon name={icon} size="xs" tone={accent ? 'primary' : 'textSecondary'} />
     <Text
       role="footnote"
       tone={accent ? 'accent' : 'secondary'}
@@ -186,8 +182,6 @@ const DetailLine: React.FC<{
     </Text>
   </View>
 );
-
-const DETAIL_ICON_SIZE = 16;
 
 const styles = StyleSheet.create(theme => ({
   header: {

@@ -96,7 +96,7 @@ const RoleOption: React.FC<RoleOptionProps> = ({
           <View style={variantStyles.roleHeaderLeft}>
             <Icon
               name={role.icon}
-              size={22}
+              size="md"
               tone={selected ? 'primary' : 'textSecondary'}
             />
             <Text role="bodyStrong" style={variantStyles.roleOptionLabel}>

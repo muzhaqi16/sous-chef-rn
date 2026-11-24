@@ -85,7 +85,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
           >
             <Icon
               name={option.icon}
-              size={18}
+              size="xsPlus"
               library={option.library}
               tone="primary"
             />
@@ -105,7 +105,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
                     ? 'arrow-up'
                     : 'arrow-down'
                 }
-                size={18}
+                size="xsPlus"
                 tone="primary"
               />
             )}

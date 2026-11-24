@@ -126,7 +126,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
       <View style={styles.container}>
         {/* Search bar */}
         <View style={styles.searchContainer}>
-          <Icon name="search" size={18} tone="textTertiary" />
+          <Icon name="search" size="xsPlus" tone="textTertiary" />
           <ThemedBottomSheetTextInput
             style={styles.searchInput}
             placeholder={t('templateBrowser.searchPlaceholder')}
@@ -156,7 +156,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
           <DataStateView state={dataState} onRetry={refetch} />
         ) : dataState === 'empty' ? (
           <View style={styles.emptyInset}>
-            <Icon name="document-text-outline" size={48} tone="textTertiary" />
+            <Icon name="document-text-outline" size="xl" tone="textTertiary" />
             <Text role="body" tone="secondary" align="center">
               {t('templateBrowser.noTemplates')}
             </Text>

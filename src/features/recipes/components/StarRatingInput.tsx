@@ -2,21 +2,21 @@ import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
+import { Icon, type IconSizeName } from '#components/atoms/Icon';
 import { useTranslation } from '#/i18n';
 import { hitSlop } from '#/theme/foundations/sizes';
 
 interface StarRatingInputProps {
   value: number;
   onChange: (rating: number) => void;
-  size?: number;
+  size?: IconSizeName;
   disabled?: boolean;
 }
 
 export const StarRatingInput: React.FC<StarRatingInputProps> = ({
   value,
   onChange,
-  size = 28,
+  size = 'md',
   disabled = false,
 }) => {
   const { t } = useTranslation();

@@ -262,7 +262,7 @@ export const ListSettings: React.FC<
                   {homes.find(h => h.id === homeId)?.name ??
                     t('shoppingListScreens.personalNoHome')}
                 </Text>
-                <Icon name="chevron-down" size={20} tone="textSecondary" />
+                <Icon name="chevron-down" size="sm" tone="textSecondary" />
               </Pressable>
             </View>
           )}
@@ -315,7 +315,7 @@ export const ListSettings: React.FC<
                 {selectedTemplate?.displayName ??
                   t('shoppingListScreens.noTemplateBlankList')}
               </Text>
-              <Icon name="chevron-down" size={20} tone="textSecondary" />
+              <Icon name="chevron-down" size="sm" tone="textSecondary" />
             </Pressable>
             <Text role="caption" tone="secondary" style={styles.fieldNote}>
               {t('shoppingListScreens.startFromTemplateDesc')}
@@ -389,11 +389,11 @@ export const ListSettings: React.FC<
             ]}
             onPress={() => toShareList({ listId: listId })}
           >
-            <Icon name="person-add" size={20} tone="primary" />
+            <Icon name="person-add" size="sm" tone="primary" />
             <Text role="body" tone="accent" style={styles.actionText}>
               {t('shoppingListScreens.manageMembers')}
             </Text>
-            <Icon name="chevron-forward" size={20} tone="textSecondary" />
+            <Icon name="chevron-forward" size="sm" tone="textSecondary" />
           </Pressable>
 
           {!!isShared && (
@@ -415,7 +415,7 @@ export const ListSettings: React.FC<
           {isHomeMember ? (
             <>
               <View style={styles.disabledLeaveButton}>
-                <Icon name="log-out-outline" size={20} tone="textSecondary" />
+                <Icon name="log-out-outline" size="sm" tone="textSecondary" />
                 <Text
                   role="bodyStrong"
                   tone="secondary"
@@ -441,11 +441,11 @@ export const ListSettings: React.FC<
                   ]}
                   onPress={() => toHomeDetail({ homeId: linkedHomeId })}
                 >
-                  <Icon name="people-outline" size={20} tone="primary" />
+                  <Icon name="people-outline" size="sm" tone="primary" />
                   <Text role="body" tone="accent" style={styles.actionText}>
                     {t('shoppingListScreens.manageHome')}
                   </Text>
-                  <Icon name="chevron-forward" size={20} tone="textSecondary" />
+                  <Icon name="chevron-forward" size="sm" tone="textSecondary" />
                 </Pressable>
               )}
             </>
@@ -459,7 +459,7 @@ export const ListSettings: React.FC<
                 onPress={handleLeaveList}
                 disabled={leaving}
               >
-                <Icon name="log-out-outline" size={20} tone="error" />
+                <Icon name="log-out-outline" size="sm" tone="error" />
                 <Text
                   role="bodyStrong"
                   tone="danger"
@@ -495,7 +495,7 @@ export const ListSettings: React.FC<
             ]}
             onPress={handleDelete}
           >
-            <Icon name="trash-outline" size={20} tone="error" />
+            <Icon name="trash-outline" size="sm" tone="error" />
             <Text
               role="bodyStrong"
               tone="danger"

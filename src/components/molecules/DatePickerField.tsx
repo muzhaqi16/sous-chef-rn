@@ -108,7 +108,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
           accessibilityRole="button"
           accessibilityState={{ expanded: open }}
         >
-          <Icon name="calendar-outline" size={20} tone="textSecondary" />
+          <Icon name="calendar-outline" size="sm" tone="textSecondary" />
           <Text style={[styles.dateText, !value && styles.placeholder]}>
             {value
               ? formatMonthDayYear(value)
@@ -123,7 +123,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
               label: label ?? t('labels.selectDate'),
             })}
           >
-            <Icon name="close" size={20} tone="textSecondary" />
+            <Icon name="close" size="sm" tone="textSecondary" />
           </AppPressable>
         ) : null}
       </View>

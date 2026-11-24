@@ -47,7 +47,7 @@ export const RatingBreakdown: React.FC<RatingBreakdownProps> = ({
             <Icon
               key={star}
               name={star <= Math.round(averageRating) ? 'star' : 'star-outline'}
-              size={14}
+              size="2xsPlus"
               tone="rating"
             />
           ))}

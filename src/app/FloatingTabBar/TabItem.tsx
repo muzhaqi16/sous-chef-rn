@@ -105,7 +105,7 @@ export const TabItem: React.FC<TabItemProps> = ({
   const renderIcon = () => (
     <Icon
       name={isFocused ? icon.active : icon.inactive}
-      size={24}
+      size="md"
       tone={isFocused ? 'primary' : 'onNavigation'}
     />
   );

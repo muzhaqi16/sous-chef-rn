@@ -134,7 +134,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
           onPress={() => setSheetVisible(true)}
           style={styles.writeButton}
         >
-          <Icon name="create-outline" size={18} tone="primary" />
+          <Icon name="create-outline" size="xsPlus" tone="primary" />
           <Text role="label" tone="accent">
             {t('recipes.writeReview')}
           </Text>

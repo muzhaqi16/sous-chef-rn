@@ -188,7 +188,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           {item.type === 'text' && (
             <>
               <ValueText>{textValue}</ValueText>
-              <Icon name="pencil" size={16} tone="textSecondary" />
+              <Icon name="pencil" size="xs" tone="textSecondary" />
             </>
           )}
 
@@ -210,7 +210,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                   ? 'radio-button-on'
                   : 'radio-button-off'
               }
-              size={20}
+              size="sm"
               tone={item.selected === item.value ? 'primary' : 'textSecondary'}
             />
           )}
@@ -222,12 +222,12 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                   item.options?.find(opt => opt.value === item.value)?.label ??
                   t('labels.select')}
               </Text>
-              <Icon name="chevron-forward" size={20} tone="textSecondary" />
+              <Icon name="chevron-forward" size="sm" tone="textSecondary" />
             </View>
           )}
 
           {item.type === 'navigation' && (
-            <Icon name="chevron-forward" size={20} tone="textSecondary" />
+            <Icon name="chevron-forward" size="sm" tone="textSecondary" />
           )}
         </View>
       </AppPressable>
@@ -274,7 +274,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             >
               <Text style={styles.sheetOptionText}>{opt.label}</Text>
               {item.value === opt.value && (
-                <Icon name="checkmark" size={20} tone="primary" />
+                <Icon name="checkmark" size="sm" tone="primary" />
               )}
             </AppPressable>
           ))}

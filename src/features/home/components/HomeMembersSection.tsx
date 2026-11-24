@@ -111,7 +111,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
         })
       ) : (
         <View style={styles.emptyInset}>
-          <Icon name="people-outline" size={24} tone="textSecondary" />
+          <Icon name="people-outline" size="md" tone="textSecondary" />
           <Text role="caption" tone="secondary">
             {t('homeMembers.noMembers')}
           </Text>

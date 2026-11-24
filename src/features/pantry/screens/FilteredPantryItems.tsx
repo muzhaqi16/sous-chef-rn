@@ -166,7 +166,6 @@ function buildModeConfig(
 
 const keyExtractor = (item: { id: string }) => item.id;
 const getItemType = () => 'item';
-const CART_ICON_SIZE = 20;
 
 type LayoutRect = { x: number; y: number; width: number; height: number };
 
@@ -198,7 +197,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
         style={styles.actionButton}
         accessibilityLabel={t('labels.addToShoppingList')}
       >
-        <Icon name="cart-outline" size={CART_ICON_SIZE} tone="primary" />
+        <Icon name="cart-outline" size="sm" tone="primary" />
       </Pressable>
     ) : null;
 

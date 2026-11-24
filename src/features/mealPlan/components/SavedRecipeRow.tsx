@@ -61,7 +61,7 @@ export const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
           </Text>
         )}
       </View>
-      <Icon name="add-circle-outline" size={24} tone="primary" />
+      <Icon name="add-circle-outline" size="md" tone="primary" />
     </AppPressable>
   );
 };

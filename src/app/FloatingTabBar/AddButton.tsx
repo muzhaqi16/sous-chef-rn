@@ -41,7 +41,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
       }}
     >
       <Animated.View style={glyphStyle}>
-        <Icon name={icon} size={28} tone="onPrimary" library={iconLibrary} />
+        <Icon name={icon} size="md" tone="onPrimary" library={iconLibrary} />
       </Animated.View>
     </PressableScale>
   );

@@ -94,7 +94,7 @@ const AddManuallyOption = ({
       onPress={onPress}
       testID={catalogTestIDs.addManuallyButton(testIDPrefix)}
     >
-      <Icon name="add-circle-outline" size={20} tone="primary" />
+      <Icon name="add-circle-outline" size="sm" tone="primary" />
       <Text role="bodyStrong" tone="accent">
         {saysNoMatches
           ? t('addItemSheet.noMatchesAddManually', { term: searchQuery })
@@ -116,7 +116,7 @@ const ReportItemOption = ({ onPress }: { onPress: () => void }) => {
       accessibilityRole="button"
       accessibilityLabel={t('reportItem.footer')}
     >
-      <Icon name="alert-circle-outline" size={18} tone="secondary" />
+      <Icon name="alert-circle-outline" size="xsPlus" tone="secondary" />
       <Text role="caption" tone="secondary">
         {t('reportItem.footer')}
       </Text>

@@ -140,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
           header carries the signal rather than just the tab headers. Renders
           null when online, so screens with no actions are unaffected. */}
       <BarActions
-        leading={<OfflineStatusPill size={22} />}
+        leading={<OfflineStatusPill />}
         actions={barActions}
         onLayout={trackSide('right')}
       />

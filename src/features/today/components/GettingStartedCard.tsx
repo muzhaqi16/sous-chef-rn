@@ -48,7 +48,7 @@ export const GettingStartedCard = ({
     return (
       <Card radius="xl" testID={todayTestIDs.gettingStarted}>
         <View style={styles.allDone}>
-          <Icon name="checkmark-circle" size={28} tone="primary" />
+          <Icon name="checkmark-circle" size="md" tone="primary" />
           <View style={styles.flex}>
             <Text role="heading">{t('today.gettingStarted.allDoneTitle')}</Text>
             <Text role="body" tone="secondary">
@@ -101,7 +101,7 @@ export const GettingStartedCard = ({
             >
               <Icon
                 name={done ? 'checkmark-circle' : 'ellipse-outline'}
-                size={22}
+                size="md"
                 tone={done ? 'primary' : 'textTertiary'}
               />
               <Text

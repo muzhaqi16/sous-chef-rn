@@ -82,13 +82,13 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     >
       <Icon
         name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
-        size={24}
+        size="md"
         tone={item.isCompleted ? 'success' : 'border'}
       />
     </Pressable>
   ) : item.isCompleted ? (
     // Read-only: a done meal says so; an empty circle would read as a control.
-    <Icon name="checkmark-circle" size={24} tone="success" />
+    <Icon name="checkmark-circle" size="md" tone="success" />
   ) : undefined;
 
   const leftElement = <RowThumbnail uri={imageUrl} />;
@@ -116,7 +116,7 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
         )}
         {!!hasPantryDeductions && (
           <View style={styles.pantryBadge}>
-            <Icon name="leaf-outline" size={12} tone="success" />
+            <Icon name="leaf-outline" size="2xs" tone="success" />
             <Text role="label" style={styles.pantryBadgeText}>
               {t('mealPlanItem.pantryUpdated')}
             </Text>

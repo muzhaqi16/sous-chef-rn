@@ -49,7 +49,7 @@ export const ReminderSection: React.FC<ReminderSectionProps> = ({
           style={({ pressed }) => [styles.actionRow, pressed && styles.pressed]}
           onPress={handleClearReminder}
         >
-          <Icon name="notifications-off-outline" size={20} tone="primary" />
+          <Icon name="notifications-off-outline" size="sm" tone="primary" />
           <Text role="body" tone="accent" style={styles.actionText}>
             {t('shoppingListScreens.clearReminder')}
           </Text>

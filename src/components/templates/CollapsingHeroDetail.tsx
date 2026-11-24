@@ -78,7 +78,7 @@ const HeroChip: React.FC<{ action: HeaderAction }> = ({ action }) => (
     accessibilityRole="button"
     accessibilityLabel={action.accessibilityLabel}
   >
-    <HeaderActionIcon action={action} defaultSize={sizes.icon.md} />
+    <HeaderActionIcon action={action} defaultSize="md" />
     <StatusMark icon={action.mark} />
   </AppPressable>
 );
@@ -280,7 +280,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
             {/* Leads the chips so a pushed detail screen carries the offline
                 signal too, not just the tab headers. Renders null when online,
                 leaving the chip row untouched. */}
-            <OfflineStatusPill size={22} />
+            <OfflineStatusPill />
             {barActions.map((action, index) => (
               <HeroChip
                 key={action.testID ?? `${action.icon}-${index}`}

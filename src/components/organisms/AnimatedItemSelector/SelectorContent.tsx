@@ -173,7 +173,7 @@ export const SelectorContent = <T extends SelectableItem>({
           <Animated.View
             entering={FadeInUp.duration(motion.timing.STANDARD).springify()}
           >
-            <Icon name="checkmark" size={18} tone="primary" />
+            <Icon name="checkmark" size="xsPlus" tone="primary" />
           </Animated.View>
         )}
       </SelectorItemContainer>

@@ -84,7 +84,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         >
           {selectedOption ? selectedOption.label : resolvedPlaceholder}
         </Text>
-        <Icon name="chevron-down" size={24} tone="textSecondary" />
+        <Icon name="chevron-down" size="md" tone="textSecondary" />
       </AppPressable>
       {modalVisible ? (
         <Modal

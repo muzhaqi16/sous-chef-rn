@@ -158,7 +158,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               {expiryInfo.text}
             </Text>
             {!!batch.expiresAtIsManual && (
-              <Icon name="lock-closed-outline" size={12} tone="textTertiary" />
+              <Icon name="lock-closed-outline" size="2xs" tone="textTertiary" />
             )}
             {isExpiryEstimate(batch.expiryKind) ? (
               <Text role="caption" tone="tertiary">
@@ -216,7 +216,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               hitSlop={hitSlop.md}
               testID={pantryTestIDs.batchUse(batch.id)}
             >
-              <Icon name="restaurant-outline" size={18} tone="primary" />
+              <Icon name="restaurant-outline" size="xsPlus" tone="primary" />
             </AppPressable>
           ) : null}
           {!batch.isOpened && !!onOpen && (
@@ -226,7 +226,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               style={styles.actionButton}
               hitSlop={hitSlop.md}
             >
-              <Icon name="open-outline" size={18} tone="primary" />
+              <Icon name="open-outline" size="xsPlus" tone="primary" />
             </AppPressable>
           )}
           {onCorrectSize && holdsContents ? (
@@ -236,7 +236,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               style={styles.actionButton}
               hitSlop={hitSlop.md}
             >
-              <Icon name="scale-outline" size={18} tone="primary" />
+              <Icon name="scale-outline" size="xsPlus" tone="primary" />
             </AppPressable>
           ) : null}
           {!!onWaste && (
@@ -246,7 +246,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               style={styles.actionButton}
               hitSlop={hitSlop.md}
             >
-              <Icon name="trash-outline" size={18} tone="error" />
+              <Icon name="trash-outline" size="xsPlus" tone="error" />
             </AppPressable>
           )}
         </View>

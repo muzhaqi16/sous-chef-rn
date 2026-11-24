@@ -201,7 +201,7 @@ export const ResetPasswordScreen: React.FC = () => {
       >
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Icon name="checkmark-circle-outline" size={64} tone="success" />
+            <Icon name="checkmark-circle-outline" size="2xl" tone="success" />
           </View>
           <Text role="subheading" align="center" style={styles.title}>
             {t('auth.resetPasswordDoneTitle')}
@@ -237,7 +237,7 @@ export const ResetPasswordScreen: React.FC = () => {
       >
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Icon name="close-circle-outline" size={64} tone="error" />
+            <Icon name="close-circle-outline" size="2xl" tone="error" />
           </View>
           <Text role="subheading" align="center" style={styles.title}>
             {t('auth.invalidResetLinkTitle')}
@@ -286,7 +286,7 @@ export const ResetPasswordScreen: React.FC = () => {
     >
       <View style={styles.formContent}>
         <View style={styles.iconContainer}>
-          <Icon name="lock-closed-outline" size={64} tone="primary" />
+          <Icon name="lock-closed-outline" size="2xl" tone="primary" />
         </View>
 
         <Text role="subheading" align="center" style={styles.title}>

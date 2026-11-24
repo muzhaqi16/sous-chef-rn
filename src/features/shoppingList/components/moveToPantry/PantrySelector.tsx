@@ -50,7 +50,7 @@ export const PantrySelector: React.FC<PantrySelectorProps> = ({
           >
             <Icon
               name="cube-outline"
-              size={20}
+              size="sm"
               tone={
                 selectedPantryId === pantry.id ? 'onPrimary' : 'textSecondary'
               }

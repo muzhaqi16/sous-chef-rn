@@ -24,13 +24,13 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
   return (
     <View style={styles.container}>
       <AppPressable style={styles.button} onPress={onMarkAllRead}>
-        <Icon name="checkmark-done" size={20} tone="primary" />
+        <Icon name="checkmark-done" size="sm" tone="primary" />
         <Text role="label" style={styles.buttonText}>
           {t('notifications.markAllRead')}
         </Text>
       </AppPressable>
       <AppPressable style={styles.button} onPress={onClearRead}>
-        <Icon name="list-outline" size={20} tone="primary" />
+        <Icon name="list-outline" size="sm" tone="primary" />
         <Text role="label" style={styles.buttonText}>
           {t('labels.clearRead')}
         </Text>

@@ -126,7 +126,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
           onPress={handleStartEdit}
           accessibilityLabel={t('labels.edit')}
         >
-          <Icon name="create-outline" size={20} />
+          <Icon name="create-outline" size="sm" />
         </AppPressable>
       )}
     </View>

@@ -64,7 +64,7 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
               <Text role="label" tone="accent">
                 {t('labels.viewDetails')}
               </Text>
-              <Icon name="chevron-forward" size={20} />
+              <Icon name="chevron-forward" size="sm" />
             </View>
           </>
         ) : (

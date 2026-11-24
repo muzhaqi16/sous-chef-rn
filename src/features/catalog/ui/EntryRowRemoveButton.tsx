@@ -35,7 +35,7 @@ export const EntryRowRemoveButton: React.FC<EntryRowRemoveButtonProps> = ({
         disabled={disabled}
         style={styles.button}
       >
-        <Icon name="trash-outline" size={20} tone="error" />
+        <Icon name="trash-outline" size="sm" tone="error" />
       </AppPressable>
     </View>
   );

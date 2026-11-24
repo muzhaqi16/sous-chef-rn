@@ -93,7 +93,7 @@ function cookedSummary(
 function MetaItem({ icon, children }: { icon: IconName; children: string }) {
   return (
     <View style={styles.metaItem}>
-      <Icon name={icon} size={14} tone="textSecondary" />
+      <Icon name={icon} size="2xsPlus" tone="textSecondary" />
       <Text role="caption" tone="secondary">
         {children}
       </Text>
@@ -563,7 +563,7 @@ const RecipeDetailScreen: React.FC = () => {
                         ? 'checkmark-circle'
                         : 'checkmark-circle-outline'
                     }
-                    size={14}
+                    size="2xsPlus"
                     tone={cookedCount > 0 ? 'success' : 'textSecondary'}
                   />
                   <Text

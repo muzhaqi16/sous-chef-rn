@@ -187,7 +187,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
             >
               {({ pressed }) => (
                 <View style={[styles.closeButton, pressed && styles.pressed]}>
-                  <Icon name="close" size={16} tone="textSecondary" />
+                  <Icon name="close" size="xs" tone="textSecondary" />
                 </View>
               )}
             </Pressable>

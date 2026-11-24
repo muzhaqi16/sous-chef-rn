@@ -96,11 +96,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
           badge={badge}
           onPress={() => setSettingsOpen(true)}
           rightElement={
-            <Icon
-              name="chevron-forward"
-              size={CHEVRON_SIZE}
-              tone="textSecondary"
-            />
+            <Icon name="chevron-forward" size="sm" tone="textSecondary" />
           }
         />
       </RowCard>

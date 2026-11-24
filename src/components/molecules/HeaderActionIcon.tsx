@@ -6,7 +6,13 @@ import {
   ThemedActivityIndicator,
   ThemedIcon,
 } from '#components/atoms/themedComponents';
-import type { IconName, IconLibrary, IconTone } from '#components/atoms/Icon';
+import type {
+  IconName,
+  IconLibrary,
+  IconSizeName,
+  IconTone,
+} from '#components/atoms/Icon';
+import { sizes } from '#/theme/foundations/sizes';
 
 export type ActionVariant =
   | 'default'
@@ -43,7 +49,7 @@ export interface HeaderAction {
   badge?: number;
   /** A state glyph on the button's corner, such as a photo pending review. */
   mark?: IconName;
-  size?: number;
+  size?: IconSizeName;
   library?: IconLibrary;
   testID?: string;
   /** Layout measurement for positioning spotlight tutorials. */
@@ -90,7 +96,7 @@ function resolveVariantColor(
 interface HeaderActionIconProps {
   action: HeaderAction;
   /** Icon size when the action doesn't specify one. */
-  defaultSize?: number;
+  defaultSize?: IconSizeName;
 }
 
 /**
@@ -100,7 +106,7 @@ interface HeaderActionIconProps {
  */
 export const HeaderActionIcon: React.FC<HeaderActionIconProps> = ({
   action,
-  defaultSize = 24,
+  defaultSize = 'md',
 }) => {
   if (action.loading) {
     return (
@@ -119,7 +125,7 @@ export const HeaderActionIcon: React.FC<HeaderActionIconProps> = ({
       <CachedImage
         uri={action.photoUri}
         style={styles.photo(size)}
-        displaySize={size}
+        displaySize={sizes.icon[size]}
         accessible={false}
       />
     );
@@ -147,10 +153,10 @@ export const HeaderActionIcon: React.FC<HeaderActionIconProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  photo: (size: number) => ({
-    width: size,
-    height: size,
-    borderRadius: size / 2,
+const styles = StyleSheet.create(theme => ({
+  photo: (size: IconSizeName) => ({
+    width: theme.sizes.icon[size],
+    height: theme.sizes.icon[size],
+    borderRadius: theme.sizes.icon[size] / 2,
   }),
-});
+}));

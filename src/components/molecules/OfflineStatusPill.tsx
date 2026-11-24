@@ -6,13 +6,13 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { useOfflineStatus } from '#hooks/ui/useOfflineStatus';
 import { toastService } from '#/services/toastService';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#components/atoms/Icon';
+import { Icon, type IconSizeName } from '#components/atoms/Icon';
 import { kitTestIDs } from '#components/testIDs';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { motion } from '#/theme/motion';
 
 interface OfflineStatusPillProps {
-  size?: number;
+  size?: IconSizeName;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -22,7 +22,7 @@ interface OfflineStatusPillProps {
  * the transition once, from `OfflineTransitionAnnouncer` at the app root.
  */
 export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
-  size = 22,
+  size = 'md',
   style,
 }) => {
   const { offline, title, detail, message, pendingCount } = useOfflineStatus();

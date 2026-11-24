@@ -94,7 +94,7 @@ function OptionRow({
     >
       <Icon
         name={option.icon}
-        size={24}
+        size="md"
         tone={option.destructive ? 'error' : 'primary'}
       />
       <Text

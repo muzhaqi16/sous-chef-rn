@@ -50,7 +50,7 @@ export const PeopleStepper = ({
       >
         <Icon
           name="remove-circle-outline"
-          size={32}
+          size="lg"
           tone={value <= min ? 'textTertiary' : 'primary'}
         />
       </AppPressable>
@@ -66,7 +66,7 @@ export const PeopleStepper = ({
       >
         <Icon
           name="add-circle-outline"
-          size={32}
+          size="lg"
           tone={value >= max ? 'textTertiary' : 'primary'}
         />
       </AppPressable>

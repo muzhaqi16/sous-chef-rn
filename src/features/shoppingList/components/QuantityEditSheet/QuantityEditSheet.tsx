@@ -228,7 +228,7 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
             >
               <Icon
                 name="remove-outline"
-                size={24}
+                size="md"
                 tone={decrementDisabled ? 'textTertiary' : 'textPrimary'}
               />
             </AppPressable>
@@ -264,7 +264,7 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
               onPress={handleIncrement}
               disabled={stepDisabled}
             >
-              <Icon name="add" size={24} tone="onPrimary" />
+              <Icon name="add" size="md" tone="onPrimary" />
             </AppPressable>
           </View>
           {/* An empty field is "nothing typed yet", not a malformed quantity —

@@ -205,7 +205,7 @@ export function BottomSheetAutocompleteInput<T>({
     if (isOffline) {
       return (
         <View style={styles.messageContainer}>
-          <Icon name="cloud-offline-outline" size={48} />
+          <Icon name="cloud-offline-outline" size="xl" />
           <Text
             role="bodyStrong"
             tone="secondary"

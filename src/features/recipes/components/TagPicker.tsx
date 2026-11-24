@@ -62,7 +62,7 @@ const TagPickerContent: React.FC<TagPickerContentProps> = ({
       >
         <Icon
           name="pricetag-outline"
-          size={20}
+          size="sm"
           tone={isSelected ? 'primary' : 'textSecondary'}
         />
         <Text
@@ -73,7 +73,7 @@ const TagPickerContent: React.FC<TagPickerContentProps> = ({
         >
           {item}
         </Text>
-        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
+        {!!isSelected && <Icon name="checkmark" size="sm" tone="primary" />}
       </AppPressable>
     );
   };
@@ -87,7 +87,7 @@ const TagPickerContent: React.FC<TagPickerContentProps> = ({
       {/* Search Input */}
       {tags.length > 5 && (
         <View style={styles.searchContainer}>
-          <Icon name="search" size={18} tone="textSecondary" />
+          <Icon name="search" size="xsPlus" tone="textSecondary" />
           <ThemedBottomSheetTextInput
             style={styles.searchInput}
             placeholder={t('tagPicker.searchPlaceholder')}

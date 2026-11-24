@@ -44,7 +44,7 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({
   <View style={styles.container} testID={testID}>
     <View style={styles.iconContainer}>
       <View style={styles.iconBackground}>
-        <Icon name={iconName} size={48} tone="primary" />
+        <Icon name={iconName} size="xl" tone="primary" />
       </View>
     </View>
 
@@ -59,7 +59,7 @@ export const BiometricSetupView: React.FC<BiometricSetupViewProps> = ({
       <View style={styles.benefits}>
         {benefits.map(benefit => (
           <View key={benefit} style={styles.benefitItem}>
-            <Icon name="checkmark-circle" size={20} tone="success" />
+            <Icon name="checkmark-circle" size="sm" tone="success" />
             <Text style={styles.benefitText}>{benefit}</Text>
           </View>
         ))}

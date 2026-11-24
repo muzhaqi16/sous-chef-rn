@@ -11,6 +11,7 @@ import {
   spacing as baseSpacing,
 } from './foundations/spacing';
 import { typography as baseTypography } from './foundations/typography';
+import { sizes as baseSizes } from './foundations/sizes';
 import {
   MAX_FONT_SCALE,
   type as baseType,
@@ -90,6 +91,8 @@ export function applyAppearanceToRuntime(prefs: AppearanceSettings): void {
       colors: { ...base.colors },
       spacing: scaleObject(baseSpacing, densityMul),
       layout: scaleObject(baseLayout, densityMul),
+      // Icons grow with density, by the same step in rows and headers alike.
+      sizes: { ...base.sizes, icon: scaleObject(baseSizes.icon, densityMul) },
       typography: {
         ...base.typography,
         fontSize: scaleObject(baseTypography.fontSize, fontMul),

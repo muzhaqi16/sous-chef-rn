@@ -7,7 +7,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useRecyclingState } from '@shopify/flash-list';
-import { Icon } from '#components/atoms/Icon';
+import { Icon, iconStepNear } from '#components/atoms/Icon';
 import { HapticService } from '#services/haptic/HapticService';
 
 // RNGH's Pressable, not the themed RN re-export: nested inside the row's RNGH
@@ -159,7 +159,11 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
         ]}
       >
         {!!visuallyChecked && (
-          <Icon name="checkmark" size={size * 0.66} tone="onPrimary" />
+          <Icon
+            name="checkmark"
+            size={iconStepNear(size * 0.66)}
+            tone="onPrimary"
+          />
         )}
       </Animated.View>
     </Pressable>

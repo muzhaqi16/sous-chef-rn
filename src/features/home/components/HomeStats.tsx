@@ -60,7 +60,7 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
         >
           <Card padding="none" style={styles.statCard}>
             <View style={styles.iconBadge}>
-              <Icon name={stat.icon} size={18} tone="primary" />
+              <Icon name={stat.icon} size="xsPlus" tone="primary" />
             </View>
             <Text role="title" tone="accent">
               {stat.value}

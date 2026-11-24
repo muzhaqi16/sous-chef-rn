@@ -84,7 +84,7 @@ export const CollapsibleChipPicker = <T extends string>({
                     {option.label}
                   </Text>
                   {selected ? (
-                    <Icon name="checkmark" size={16} tone="primary" />
+                    <Icon name="checkmark" size="xs" tone="primary" />
                   ) : null}
                 </AppPressable>
               );

@@ -332,7 +332,7 @@ const RecipeMainInner: React.FC = () => {
         >
           <Icon
             name="refresh"
-            size={20}
+            size="sm"
             tone={busy ? 'textSecondary' : 'primary'}
           />
         </AppPressable>
@@ -361,7 +361,7 @@ const RecipeMainInner: React.FC = () => {
           accessibilityRole="button"
           accessibilityLabel={t('recipes.clearSearch')}
         >
-          <Icon name="close" size={20} tone="textSecondary" />
+          <Icon name="close" size="sm" tone="textSecondary" />
         </Pressable>
       </View>
     );

@@ -74,7 +74,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
       {!!leftIcon && (
         <ThemedIcon
           name={leftIcon}
-          size={24}
+          size="md"
           uniProps={theme => ({
             color: overrideIconColor ?? theme.colors.textSecondary,
           })}

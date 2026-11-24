@@ -54,7 +54,7 @@ export const NotificationDetailScreen: React.FC<
         <SubScreen title={t('labels.notifications')}>
           <View style={styles.header}>
             <View style={styles.iconContainer}>
-              <Icon name="notifications" size={32} tone="primary" />
+              <Icon name="notifications" size="lg" tone="primary" />
             </View>
             <Text role="title" style={styles.title}>
               {copy.title}

@@ -256,7 +256,7 @@ export const DietaryProfileScreen: React.FC = () => {
               })}
               style={styles.editButton}
             >
-              <Icon name="create-outline" size={20} tone="primary" />
+              <Icon name="create-outline" size="sm" tone="primary" />
             </AppPressable>
           </View>
           {profile.maxCookTimeMinutes ? (
@@ -291,7 +291,7 @@ export const DietaryProfileScreen: React.FC = () => {
               })}
               style={styles.editButton}
             >
-              <Icon name="create-outline" size={20} tone="primary" />
+              <Icon name="create-outline" size="sm" tone="primary" />
             </AppPressable>
           </View>
           {!hasMacroTarget && (

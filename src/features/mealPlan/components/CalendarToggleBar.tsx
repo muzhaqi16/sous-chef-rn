@@ -29,7 +29,7 @@ export const CalendarToggleBar: React.FC<CalendarToggleBarProps> = ({
       accessibilityRole="button"
     >
       <View style={styles.line} />
-      <ExpandChevron expanded={isExpanded} size={16} tone="textTertiary" />
+      <ExpandChevron expanded={isExpanded} size="xs" tone="textTertiary" />
       <View style={styles.line} />
     </Pressable>
   );

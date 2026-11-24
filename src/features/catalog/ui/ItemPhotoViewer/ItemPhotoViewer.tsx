@@ -150,7 +150,7 @@ const ItemPhotoViewerContent: React.FC<ItemPhotoViewerContentProps> = ({
         accessibilityRole="button"
         accessibilityLabel={t('labels.close')}
       >
-        <Icon name="close" size={24} tone="onScrim" />
+        <Icon name="close" size="md" tone="onScrim" />
       </Pressable>
 
       {/* box-none so the photo keeps receiving the taps that close it, while
@@ -422,7 +422,7 @@ const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
   if (photo.isPrimary) {
     return (
       <View style={styles.primaryBadge}>
-        <Icon name="star" size={14} tone="rating" />
+        <Icon name="star" size="2xsPlus" tone="rating" />
         <Text role="label" style={styles.captionText}>
           {t('itemPhotos.mainPhoto')}
         </Text>
@@ -443,7 +443,7 @@ const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
       accessibilityState={{ busy: loading }}
       accessibilityLabel={t('itemPhotos.setAsMain')}
     >
-      <Icon name="star-outline" size={14} tone="onScrim" />
+      <Icon name="star-outline" size="2xsPlus" tone="onScrim" />
       <Text role="label" style={styles.captionText}>
         {t('itemPhotos.setAsMain')}
       </Text>
@@ -473,7 +473,7 @@ const ReportPhotoAction: React.FC<{
       accessibilityLabel={t('reportItem.wrongPhotoAction')}
       testID={catalogTestIDs.photoViewerReportButton}
     >
-      <Icon name="flag-outline" size={14} tone="onScrim" />
+      <Icon name="flag-outline" size="2xsPlus" tone="onScrim" />
       <Text role="label" style={styles.captionText}>
         {t('reportItem.wrongPhotoAction')}
       </Text>
@@ -503,7 +503,7 @@ const UsePhotoAction: React.FC<{
       accessibilityLabel={t('entryPhoto.useThisPhoto')}
       testID={catalogTestIDs.photoViewerUseButton}
     >
-      <Icon name="checkmark-circle-outline" size={14} tone="onScrim" />
+      <Icon name="checkmark-circle-outline" size="2xsPlus" tone="onScrim" />
       <Text role="label" style={styles.captionText}>
         {t('entryPhoto.useThisPhoto')}
       </Text>
@@ -531,7 +531,7 @@ const PhotoCaption: React.FC<{ photoRef: ItemPhotoRef }> = ({ photoRef }) => {
       )}
       {photo.status === ItemImageStatus.Pending && (
         <View style={styles.pendingBadge}>
-          <Icon name="time-outline" size={12} tone="onScrim" />
+          <Icon name="time-outline" size="2xs" tone="onScrim" />
           <Text role="label" style={styles.captionText}>
             {t('itemPhotos.pendingReview')}
           </Text>

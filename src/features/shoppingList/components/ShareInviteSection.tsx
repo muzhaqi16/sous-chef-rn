@@ -104,7 +104,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
           {sharing ? (
             <OnPrimaryActivityIndicator size="small" />
           ) : (
-            <Icon name="send" size={20} tone="onPrimary" />
+            <Icon name="send" size="sm" tone="onPrimary" />
           )}
         </AppPressable>
       </View>

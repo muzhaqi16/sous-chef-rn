@@ -50,7 +50,7 @@ export const SavedRecipeMetadataPanel: React.FC<
                     ? 'star'
                     : 'star-outline'
                 }
-                size={18}
+                size="xsPlus"
                 tone={
                   savedRating !== null && star <= savedRating
                     ? 'rating'
@@ -69,7 +69,7 @@ export const SavedRecipeMetadataPanel: React.FC<
         <View style={styles.detailValue}>
           <Icon
             name="folder"
-            size={14}
+            size="2xsPlus"
             tone={folderName ? 'primary' : 'textSecondary'}
           />
           <Text role="caption" tone={folderName ? 'accent' : 'secondary'}>

@@ -69,7 +69,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
           <CachedImage uri={avatar} style={styles.avatar} displaySize={36} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Icon name="person" size={16} tone="textSecondary" />
+            <Icon name="person" size="xs" tone="textSecondary" />
           </View>
         )}
         <View style={styles.headerText}>
@@ -78,7 +78,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
               {displayName}
             </Text>
             {!!review.verified && (
-              <Icon name="checkmark-circle" size={14} tone="success" />
+              <Icon name="checkmark-circle" size="2xsPlus" tone="success" />
             )}
           </View>
           <Text role="caption" tone="secondary" style={styles.date}>
@@ -95,7 +95,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                 style={({ pressed }) => pressed && styles.pressed}
                 accessibilityLabel={t('recipes.editReviewA11y')}
               >
-                <Icon name="create-outline" size={18} tone="primary" />
+                <Icon name="create-outline" size="xsPlus" tone="primary" />
               </Pressable>
             )}
             {!!onDelete && (
@@ -105,7 +105,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
                 style={({ pressed }) => pressed && styles.pressed}
                 accessibilityLabel={t('recipes.deleteReviewA11y')}
               >
-                <Icon name="trash-outline" size={18} tone="error" />
+                <Icon name="trash-outline" size="xsPlus" tone="error" />
               </Pressable>
             )}
           </View>
@@ -119,7 +119,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
             accessibilityLabel={t('reports.reportReview')}
             testID={recipesTestIDs.reviewReportButton(review.id)}
           >
-            <Icon name="flag-outline" size={18} tone="textSecondary" />
+            <Icon name="flag-outline" size="xsPlus" tone="textSecondary" />
           </Pressable>
         )}
       </View>
@@ -129,7 +129,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
           <Icon
             key={star}
             name={star <= review.rating ? 'star' : 'star-outline'}
-            size={14}
+            size="2xsPlus"
             tone="rating"
           />
         ))}
@@ -149,7 +149,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       >
         <Icon
           name={hasVotedHelpful ? 'thumbs-up' : 'thumbs-up-outline'}
-          size={14}
+          size="2xsPlus"
           tone={hasVotedHelpful ? 'onPrimaryLight' : 'textSecondary'}
         />
         <Text

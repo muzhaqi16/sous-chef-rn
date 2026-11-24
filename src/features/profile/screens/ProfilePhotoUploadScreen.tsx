@@ -120,7 +120,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
                 style={styles.avatarImage}
               />
             ) : (
-              <Icon tone="textSecondary" name="person" size={100} />
+              <Icon tone="textSecondary" name="person" size="3xl" />
             )}
           </View>
 
@@ -132,7 +132,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
               style={styles.cropIconButton}
               disabled={isUploading}
             >
-              <Icon tone="background" name="crop" size={20} />
+              <Icon tone="background" name="crop" size="sm" />
             </AppPressable>
           )}
         </View>

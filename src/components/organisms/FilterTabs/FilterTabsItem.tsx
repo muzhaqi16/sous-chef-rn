@@ -132,7 +132,15 @@ function FilterTabsItemComponent<T extends string>({
         ) : (
           <ThemedIcon
             name={tab.icon}
-            size={tab.isAction ? (isCompact ? 18 : 20) : isCompact ? 14 : 16}
+            size={
+              tab.isAction
+                ? isCompact
+                  ? 'xsPlus'
+                  : 'sm'
+                : isCompact
+                ? '2xsPlus'
+                : 'xs'
+            }
             uniProps={t => ({ color: resolveIconColor(iconColorState, t) })}
             library={tab.iconLibrary}
           />
@@ -167,7 +175,7 @@ function FilterTabsItemComponent<T extends string>({
       {!!tab.showDropdownIndicator && (
         <ThemedIcon
           name="chevron-down"
-          size={isCompact ? 12 : 14}
+          size={isCompact ? '2xs' : '2xsPlus'}
           uniProps={t => ({ color: resolveIconColor(iconColorState, t) })}
         />
       )}

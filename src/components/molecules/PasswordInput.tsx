@@ -72,7 +72,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
         >
           <Icon
             name={visible ? 'eye-outline' : 'eye-off-outline'}
-            size={20}
+            size="sm"
             tone={visible ? 'textPrimary' : 'textTertiary'}
           />
         </AppPressable>

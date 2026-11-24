@@ -109,7 +109,7 @@ export function useMealPlanSelectorConfig(
             {` · ${item.home?.name ?? personalLabel}`}
           </Text>
         </View>
-        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
+        {!!isSelected && <Icon name="checkmark" size="sm" tone="primary" />}
       </SelectorItemContainer>
     );
   };

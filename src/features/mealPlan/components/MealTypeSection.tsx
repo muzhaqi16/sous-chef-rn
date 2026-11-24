@@ -55,7 +55,7 @@ export const MealTypeSection: React.FC<MealTypeSectionProps> = ({
             accessibilityLabel={t('labels.addNamed', { name: label })}
             hitSlop={hitSlop.lg}
           >
-            <Icon name="add" size={20} tone="primary" />
+            <Icon name="add" size="sm" tone="primary" />
           </Pressable>
         )}
       </View>

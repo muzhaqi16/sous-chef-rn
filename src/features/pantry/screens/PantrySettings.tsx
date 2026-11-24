@@ -299,7 +299,7 @@ export const PantrySettings: React.FC<
           </Text>
 
           <AppPressable style={styles.deleteButton} onPress={handleDelete}>
-            <Icon name="trash-outline" size={20} tone="error" />
+            <Icon name="trash-outline" size="sm" tone="error" />
             <Text
               role="bodyStrong"
               tone="danger"

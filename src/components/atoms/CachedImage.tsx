@@ -114,7 +114,7 @@ export const CachedImage = ({
       // shown, so a check targeting it finds nothing while the literal is
       // still in the source.
       <View {...rest} style={[styles.placeholder, style, containerStyle]}>
-        <Icon name="image-outline" size={24} tone="textTertiary" />
+        <Icon name="image-outline" size="md" tone="textTertiary" />
       </View>
     );
   }
@@ -165,7 +165,7 @@ export const CachedImage = ({
       )}
       {loadState === 'error' && (
         <View style={[styles.errorOverlay, radiusOverride]}>
-          <Icon name="image-outline" size={24} tone="textTertiary" />
+          <Icon name="image-outline" size="md" tone="textTertiary" />
         </View>
       )}
     </View>

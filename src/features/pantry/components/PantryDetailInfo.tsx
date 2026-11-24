@@ -165,7 +165,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
               hitSlop={hitSlop.md}
               style={styles.correctWeightButton}
             >
-              <Icon name="create-outline" size={16} tone="primary" />
+              <Icon name="create-outline" size="xs" tone="primary" />
             </AppPressable>
           )}
         </InfoRow>
@@ -353,7 +353,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {!!item.storageNotes && (
         <View style={styles.notesSection}>
           <View style={styles.notesHeader}>
-            <Icon name="document-text-outline" size={16} tone="textSecondary" />
+            <Icon name="document-text-outline" size="xs" tone="textSecondary" />
             <Text role="label" tone="secondary" style={styles.notesLabel}>
               {t('labels.notes')}
             </Text>

@@ -306,7 +306,7 @@ export const ShoppingListItemDetail: React.FC<
 
         {!!purchaseInfo?.isPurchased && (
           <View style={styles.statusBadge}>
-            <Icon name="checkmark-circle" size={18} tone="success" />
+            <Icon name="checkmark-circle" size="xsPlus" tone="success" />
             <Text role="label" tone="success" style={styles.statusBadgeText}>
               {t('labels.purchased')}
             </Text>

@@ -66,7 +66,7 @@ export const CaptureRows: React.FC = () => {
                   accessibilityLabel={t('labels.close')}
                   hitSlop={hitSlop.md}
                 >
-                  <Icon name="close" size={20} tone="textSecondary" />
+                  <Icon name="close" size="sm" tone="textSecondary" />
                 </Pressable>
               }
             />

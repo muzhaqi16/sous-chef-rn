@@ -56,7 +56,7 @@ export const RecipeCredit: React.FC<RecipeCreditProps> = ({
           <Text role="label" style={styles.viewOriginalText}>
             {t('recipes.viewOriginalRecipe')}
           </Text>
-          <Icon name="open-outline" size={14} tone="primary" />
+          <Icon name="open-outline" size="2xsPlus" tone="primary" />
         </View>
       )}
     </Pressable>

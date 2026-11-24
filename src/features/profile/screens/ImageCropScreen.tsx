@@ -337,7 +337,7 @@ export const ImageCropScreen: React.FC<
             accessibilityLabel: t('a11y.resetCrop'),
             onPress: resetTransforms,
             disabled: isCropping,
-            size: 20,
+            size: 'sm',
           },
         ],
       }}
@@ -387,7 +387,7 @@ export const ImageCropScreen: React.FC<
                   onLoad={handleImageLoad}
                 />
                 <View style={styles.loadingIconContainer}>
-                  <Icon tone="textSecondary" name="image-outline" size={40} />
+                  <Icon tone="textSecondary" name="image-outline" size="xl" />
                 </View>
               </View>
             )}

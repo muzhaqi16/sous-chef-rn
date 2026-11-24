@@ -63,7 +63,7 @@ function ActionItem({
     >
       <Icon
         name={icon}
-        size={22}
+        size="md"
         tone={destructive ? 'danger' : 'textPrimary'}
       />
       <View style={actionStyles.content}>
@@ -80,7 +80,7 @@ function ActionItem({
           </Text>
         )}
       </View>
-      <Icon name="chevron-forward" size={18} tone="textTertiary" />
+      <Icon name="chevron-forward" size="xsPlus" tone="textTertiary" />
     </AppPressable>
   );
 }
@@ -303,7 +303,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           <View style={styles.actionsCard}>
             {generatedLists.map(list => (
               <View key={list.id} style={styles.listRow}>
-                <Icon name="list-outline" size={18} tone="textSecondary" />
+                <Icon name="list-outline" size="xsPlus" tone="textSecondary" />
                 <Text role="caption" style={styles.listName}>
                   {list.name}
                 </Text>

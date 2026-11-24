@@ -359,7 +359,7 @@ export function LoginScreen(): React.JSX.Element {
           >
             <Icon
               name={getBiometricIcon()}
-              size={24}
+              size="md"
               tone={isBiometricLoading ? 'textTertiary' : 'primary'}
             />
             <Text

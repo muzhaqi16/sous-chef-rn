@@ -122,7 +122,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
           {unitLabel(unit.unit)}
           {isLowConfidence ? ' ~' : null}
         </Text>
-        {selected ? <Icon name="checkmark" size={16} tone="primary" /> : null}
+        {selected ? <Icon name="checkmark" size="xs" tone="primary" /> : null}
       </AppPressable>
     );
   };

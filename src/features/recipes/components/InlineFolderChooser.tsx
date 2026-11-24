@@ -64,7 +64,7 @@ export const InlineFolderChooser: React.FC<InlineFolderChooserProps> = ({
             >
               <Icon
                 name={isNoFolder ? 'folder-outline' : 'folder'}
-                size={18}
+                size="xsPlus"
                 tone={isSelected ? 'primary' : 'textSecondary'}
               />
               <Text
@@ -77,7 +77,7 @@ export const InlineFolderChooser: React.FC<InlineFolderChooserProps> = ({
                 {isNoFolder ? t('labels.noFolder') : folder}
               </Text>
               {!!isSelected && (
-                <Icon name="checkmark" size={18} tone="primary" />
+                <Icon name="checkmark" size="xsPlus" tone="primary" />
               )}
             </AppPressable>
           );
@@ -91,7 +91,7 @@ export const InlineFolderChooser: React.FC<InlineFolderChooserProps> = ({
           style={styles.newFolderButton}
           onPress={() => setShowNewFolder(true)}
         >
-          <Icon name="add" size={18} tone="primary" />
+          <Icon name="add" size="xsPlus" tone="primary" />
           <Text role="bodyStrong" tone="accent">
             {t('labels.createNewFolder')}
           </Text>

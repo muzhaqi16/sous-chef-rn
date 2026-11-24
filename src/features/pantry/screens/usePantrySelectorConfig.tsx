@@ -54,7 +54,7 @@ export function usePantrySelectorConfig(
         <Text role="bodyStrong" style={styles.itemName}>
           {item.name}
         </Text>
-        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
+        {!!isSelected && <Icon name="checkmark" size="sm" tone="primary" />}
       </SelectorItemContainer>
     );
   };

@@ -137,7 +137,7 @@ export const AddMenu: React.FC<AddMenuProps> = ({
                   <Icon
                     name={action.icon}
                     library={action.iconLibrary}
-                    size={22}
+                    size="md"
                     tone={action.disabledReason ? 'iconDisabled' : 'primary'}
                   />
                 </View>

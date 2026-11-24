@@ -54,12 +54,12 @@ export const RecipeStepList: React.FC<RecipeStepListProps> = ({
             hitSlop={hitSlop.md}
             style={styles.removeButton}
           >
-            <Icon name="close-circle" size={20} tone="error" />
+            <Icon name="close-circle" size="sm" tone="error" />
           </Pressable>
         </AppPressable>
       ))}
       <AppPressable onPress={onAddStep} style={styles.addButton}>
-        <Icon name="add-circle-outline" size={20} tone="primary" />
+        <Icon name="add-circle-outline" size="sm" tone="primary" />
         <Text role="bodyStrong" tone="accent" style={styles.addText}>
           {t('recipes.addStep')}
         </Text>

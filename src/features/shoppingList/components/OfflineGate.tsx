@@ -41,7 +41,7 @@ export const OfflineGate: React.FC<OfflineGateProps> = ({
   if (compact) {
     return (
       <View style={[styles.compactContainer, style]}>
-        <Icon name="cloud-offline-outline" size={16} />
+        <Icon name="cloud-offline-outline" size="xs" />
         <Text role="caption" tone="secondary">
           {message ?? t('errors.notAvailableOffline')}
         </Text>
@@ -51,7 +51,7 @@ export const OfflineGate: React.FC<OfflineGateProps> = ({
 
   return (
     <View style={[styles.container, style]}>
-      <Icon name="cloud-offline-outline" size={48} />
+      <Icon name="cloud-offline-outline" size="xl" />
       <Text role="heading" tone="secondary" align="center">
         {message ?? t('errors.notAvailableOffline')}
       </Text>

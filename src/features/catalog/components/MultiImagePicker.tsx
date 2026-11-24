@@ -140,7 +140,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
           isProfile={false}
         >
           <View style={styles.placeholderContainer}>
-            <Icon name="camera-outline" size={32} tone="textSecondary" />
+            <Icon name="camera-outline" size="lg" tone="textSecondary" />
             <Text role="body" tone="secondary" align="center">
               {t('imagePicker.addPhotos')}
             </Text>
@@ -175,7 +175,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel={t('imagePicker.removeImage')}
               >
-                <Icon name="close" size={14} tone="onScrim" />
+                <Icon name="close" size="2xsPlus" tone="onScrim" />
               </AppPressable>
               {!!allowPrimarySelection && (
                 <AppPressable
@@ -193,7 +193,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 >
                   <Icon
                     name={image.isPrimary ? 'star' : 'star-outline'}
-                    size={14}
+                    size="2xsPlus"
                     tone={image.isPrimary ? 'rating' : 'onScrim'}
                   />
                 </AppPressable>
@@ -213,7 +213,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
               >
                 {getPerspectiveLabel(image.perspective, t)}
               </Text>
-              <Icon name="chevron-down" size={14} tone="textSecondary" />
+              <Icon name="chevron-down" size="2xsPlus" tone="textSecondary" />
             </AppPressable>
           </View>
         ))}
@@ -228,7 +228,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
             isProfile={false}
           >
             <View style={styles.addMoreButton}>
-              <Icon name="camera-outline" size={24} tone="primary" />
+              <Icon name="camera-outline" size="md" tone="primary" />
               <Text role="label" tone="accent">
                 {t('imagePicker.addMore')}
               </Text>

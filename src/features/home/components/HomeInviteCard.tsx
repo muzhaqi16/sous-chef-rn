@@ -97,7 +97,7 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
             onPress={onRevoke}
             accessibilityLabel={t('a11y.revokeInvite')}
           >
-            <Icon name="close" size={20} />
+            <Icon name="close" size="sm" />
           </AppPressable>
         )}
       </View>

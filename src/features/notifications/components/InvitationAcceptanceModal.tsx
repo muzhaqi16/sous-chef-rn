@@ -184,7 +184,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
           <View style={styles.iconContainer}>
             <Icon
               name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
-              size={32}
+              size="lg"
               tone="onPrimaryLight"
             />
           </View>
@@ -196,7 +196,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
             onPress={onClose}
             accessibilityLabel={t('labels.close')}
           >
-            <Icon name="close" size={24} tone="textSecondary" />
+            <Icon name="close" size="md" tone="textSecondary" />
           </AppPressable>
         </View>
 
@@ -208,7 +208,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
 
           {!!invitation.inviterName && (
             <View style={styles.inviterContainer}>
-              <Icon name="person" size={16} tone="textSecondary" />
+              <Icon name="person" size="xs" tone="textSecondary" />
               <Text role="caption" tone="secondary" style={styles.inviterText}>
                 {t('labels.invitedBy', { name: invitation.inviterName })}
               </Text>
@@ -218,7 +218,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
           <View style={styles.entityContainer}>
             <Icon
               name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
-              size={16}
+              size="xs"
               tone="textSecondary"
             />
             <Text role="label" tone="secondary" style={styles.entityText}>
@@ -247,7 +247,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
                 <ErrorActivityIndicator />
               ) : (
                 <>
-                  <Icon name="close" size={20} tone="error" />
+                  <Icon name="close" size="sm" tone="error" />
                   <Text role="bodyStrong" tone="danger">
                     {t('labels.reject')}
                   </Text>
@@ -264,7 +264,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
                 <OnPrimaryActivityIndicator />
               ) : (
                 <>
-                  <Icon name="checkmark" size={20} tone="onPrimary" />
+                  <Icon name="checkmark" size="sm" tone="onPrimary" />
                   <Text role="bodyStrong" style={styles.acceptText}>
                     {t('labels.accept')}
                   </Text>

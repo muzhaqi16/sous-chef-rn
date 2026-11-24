@@ -62,7 +62,7 @@ export const ListStatusSection: React.FC<ListStatusSectionProps> = ({
         >
           <Icon
             name={isCompleted ? 'refresh-outline' : 'checkmark-done-outline'}
-            size={20}
+            size="sm"
             tone="primary"
           />
           <Text role="body" tone="accent" style={styles.actionText}>
@@ -79,7 +79,7 @@ export const ListStatusSection: React.FC<ListStatusSectionProps> = ({
       >
         <Icon
           name={isArchived ? 'arrow-undo-outline' : 'archive-outline'}
-          size={20}
+          size="sm"
           tone="primary"
         />
         <Text role="body" tone="accent" style={styles.actionText}>

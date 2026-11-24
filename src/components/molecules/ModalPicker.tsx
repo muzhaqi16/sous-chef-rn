@@ -92,7 +92,7 @@ export function ModalPicker<T extends string>({
           >
             <Text style={styles.optionText}>{opt.label}</Text>
             {activeValue === opt.value && (
-              <Icon name="checkmark" size={20} tone="primary" />
+              <Icon name="checkmark" size="sm" tone="primary" />
             )}
           </AppPressable>
         ))}

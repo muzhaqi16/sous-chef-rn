@@ -56,7 +56,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
       >
         <Icon
           name={getNotificationIcon(notification.type)}
-          size={24}
+          size="md"
           tone={!notification.isRead ? 'primary' : 'textSecondary'}
         />
       </View>
@@ -88,7 +88,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
           hitSlop={hitSlop.lg}
           accessibilityLabel={t('notifications.dismissA11y')}
         >
-          <Icon name="close" size={20} tone="textTertiary" />
+          <Icon name="close" size="sm" tone="textTertiary" />
         </AppPressable>
       )}
     </AppPressable>

@@ -89,7 +89,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
         onPress={showImagePicker}
         disabled={disabled}
       >
-        <Icon name="camera-outline" size={24} tone="primary" />
+        <Icon name="camera-outline" size="md" tone="primary" />
         <Text role="bodyStrong" tone="accent">
           {t('imagePicker.addPhoto')}
         </Text>

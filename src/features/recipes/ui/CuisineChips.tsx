@@ -43,7 +43,7 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
           onPress={() => setShowAll(true)}
           accessibilityRole="button"
         >
-          <Icon name="add-circle-outline" size={18} tone="primary" />
+          <Icon name="add-circle-outline" size="xsPlus" tone="primary" />
           <Text role="bodyStrong" tone="accent" style={styles.showMoreText}>
             {t('cuisineSelector.showAll')}
           </Text>
@@ -56,7 +56,11 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
           onPress={() => setShowAll(false)}
           accessibilityRole="button"
         >
-          <Icon name="remove-circle-outline" size={18} tone="textSecondary" />
+          <Icon
+            name="remove-circle-outline"
+            size="xsPlus"
+            tone="textSecondary"
+          />
           <Text role="body" style={styles.showMoreText}>
             {t('cuisineSelector.showLess')}
           </Text>

@@ -85,11 +85,11 @@ export const GestureDemo = ({ kind, rect }: GestureDemoProps) => {
       ) : (
         <View style={styles.still}>
           {kind === 'swipe' ? (
-            <Icon name="chevron-back" size={20} tone="onPrimary" />
+            <Icon name="chevron-back" size="sm" tone="onPrimary" />
           ) : null}
           <HandMark />
           {kind === 'swipe' ? (
-            <Icon name="chevron-forward" size={20} tone="onPrimary" />
+            <Icon name="chevron-forward" size="sm" tone="onPrimary" />
           ) : null}
         </View>
       )}
@@ -99,7 +99,7 @@ export const GestureDemo = ({ kind, rect }: GestureDemoProps) => {
 
 const HandMark = () => (
   <View style={styles.disc}>
-    <Icon name="hand-left" size={28} tone="onPrimary" />
+    <Icon name="hand-left" size="md" tone="onPrimary" />
   </View>
 );
 

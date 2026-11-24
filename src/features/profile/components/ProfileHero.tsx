@@ -119,14 +119,14 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
               }
             />
           ) : (
-            <Icon name="person" size={32} tone="textSecondary" />
+            <Icon name="person" size="lg" tone="textSecondary" />
           )}
         </Animated.View>
         <Animated.View
           collapsable={false}
           style={[styles.badge, badgeLayoutStyle, badgeStyle]}
         >
-          <Icon tone="iconOnPrimary" name="create" size={15} />
+          <Icon tone="iconOnPrimary" name="create" size="2xsPlus" />
         </Animated.View>
       </AppPressable>
       {(!!name || !!subtitle) && (

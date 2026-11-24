@@ -92,7 +92,7 @@ export const TabScreenHeader: React.FC<TabScreenHeaderProps> = ({
       {/* The offline pill renders null while online, so with no actions the
           group is simply empty. */}
       <BarActions
-        leading={<OfflineStatusPill size={20} />}
+        leading={<OfflineStatusPill size="sm" />}
         actions={actions}
         placement="gutter"
       />

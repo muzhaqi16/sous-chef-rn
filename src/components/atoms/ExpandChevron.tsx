@@ -3,7 +3,7 @@ import type { ViewStyle } from 'react-native';
 import Animated, {
   type CSSTransitionProperties,
 } from 'react-native-reanimated';
-import { Icon, type IconTone } from '#components/atoms/Icon';
+import { Icon, type IconTone, type IconSizeName } from '#components/atoms/Icon';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
 import { motion } from '#/theme/motion';
 
@@ -18,7 +18,7 @@ const TURN: CSSTransitionProperties = {
 
 interface ExpandChevronProps {
   expanded: boolean;
-  size?: number;
+  size?: IconSizeName;
   /** Default `textSecondary`. */
   tone?: IconTone;
 }
@@ -26,7 +26,7 @@ interface ExpandChevronProps {
 /** A chevron that turns to point up while what it opens is open. */
 export const ExpandChevron: React.FC<ExpandChevronProps> = ({
   expanded,
-  size = 20,
+  size = 'sm',
   tone = 'textSecondary',
 }) => {
   // Reanimated's CSS transitions ignore reduce motion.

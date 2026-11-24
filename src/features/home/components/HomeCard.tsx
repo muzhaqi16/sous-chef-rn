@@ -135,11 +135,11 @@ export const HomeCard: React.FC<HomeCardProps> = ({
               accessibilityLabel={t('labels.setDefault')}
               testID={homeTestIDs.setDefaultButton(home.id)}
             >
-              <Icon name="star-outline" size={22} tone="textSecondary" />
+              <Icon name="star-outline" size="md" tone="textSecondary" />
             </AppPressable>
           )}
           {!!onPress && (
-            <Icon name="chevron-forward" size={20} tone="textSecondary" />
+            <Icon name="chevron-forward" size="sm" tone="textSecondary" />
           )}
         </Pressable>
 

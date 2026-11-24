@@ -252,7 +252,7 @@ const AddMealContent: React.FC<AddMealContentProps> = ({
                 onPress={handleAddCustomMeal}
                 style={styles.customMealRow}
               >
-                <Icon name="add-circle-outline" size={24} tone="primary" />
+                <Icon name="add-circle-outline" size="md" tone="primary" />
                 <Text
                   role="bodyStrong"
                   style={styles.customMealText}
@@ -297,7 +297,7 @@ const AddMealContent: React.FC<AddMealContentProps> = ({
                 onPress={handleSearchCatalog}
                 style={styles.customMealRow}
               >
-                <Icon name="search" size={24} tone="primary" />
+                <Icon name="search" size="md" tone="primary" />
                 <Text
                   role="bodyStrong"
                   style={styles.customMealText}
@@ -370,7 +370,7 @@ const AddMealContent: React.FC<AddMealContentProps> = ({
                     ) : (
                       <Icon
                         name="add-circle-outline"
-                        size={24}
+                        size="md"
                         tone="primary"
                       />
                     )}

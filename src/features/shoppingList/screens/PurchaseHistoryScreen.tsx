@@ -126,7 +126,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
       <View style={styles.purchaseDetails}>
         <View style={styles.purchaseSummaryRow}>
           <View style={styles.purchaseInlineGroup}>
-            <Icon name="cube-outline" size={18} tone="iconSecondary" />
+            <Icon name="cube-outline" size="xsPlus" tone="iconSecondary" />
             <Text
               role="caption"
               tone="secondary"
@@ -142,7 +142,11 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
 
           {!!priceText && (
             <View style={styles.purchaseInlineGroup}>
-              <Icon name="pricetag-outline" size={18} tone="iconSecondary" />
+              <Icon
+                name="pricetag-outline"
+                size="xsPlus"
+                tone="iconSecondary"
+              />
               <Text
                 role="caption"
                 tone="secondary"
@@ -161,7 +165,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
         </View>
 
         <View style={styles.purchaseDetailRow}>
-          <Icon name="person-outline" size={18} tone="iconSecondary" />
+          <Icon name="person-outline" size="xsPlus" tone="iconSecondary" />
           <Text
             role="caption"
             tone="secondary"

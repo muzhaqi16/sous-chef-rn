@@ -103,7 +103,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
         <StarRatingInput
           value={rating.value}
           onChange={rating.onChange}
-          size={36}
+          size="lg"
           disabled={submitting}
         />
         {ratingState.error ? (

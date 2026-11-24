@@ -194,7 +194,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
               onPress={onEditItem}
               testID={barcodeTestIDs.productEditAction}
             >
-              <Icon name="create-outline" size={16} tone="primary" />
+              <Icon name="create-outline" size="xs" tone="primary" />
               <Text
                 role="label"
                 tone="accent"
@@ -211,7 +211,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
           )}
           {!!onCreateVariant && (
             <Pressable style={styles.actionLink} onPress={onCreateVariant}>
-              <Icon name="add-circle-outline" size={16} tone="primary" />
+              <Icon name="add-circle-outline" size="xs" tone="primary" />
               <Text role="label" tone="accent">
                 {t('barcode.newVersion')}
               </Text>

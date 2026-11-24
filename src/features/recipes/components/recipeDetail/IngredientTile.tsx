@@ -155,11 +155,11 @@ export const IngredientTile: React.FC<IngredientTileProps> = ({
       ) : null}
       {isAdded ? (
         <View style={variantStyles.corner}>
-          <Icon name="checkmark" size={12} tone="onSuccess" />
+          <Icon name="checkmark" size="2xs" tone="onSuccess" />
         </View>
       ) : lead ? null : (
         <View style={variantStyles.corner}>
-          <Icon name="add" size={16} tone="onPrimary" />
+          <Icon name="add" size="xs" tone="onPrimary" />
         </View>
       )}
     </Card>

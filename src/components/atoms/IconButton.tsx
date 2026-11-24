@@ -78,11 +78,9 @@ export const IconButton: React.FC<IconButtonProps> = ({
       <UniIcon
         library={library}
         name={name}
+        size={size}
         tone={disabled ? 'iconDisabled' : tone ?? 'iconPrimary'}
-        uniProps={theme => ({
-          size: theme.sizes.icon[size],
-          ...(color && !disabled ? { color } : {}),
-        })}
+        uniProps={() => (color && !disabled ? { color } : {})}
       />
     </Pressable>
   );

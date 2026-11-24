@@ -41,7 +41,7 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
           style={styles.addButton}
           accessibilityLabel={t('labels.addNamed', { name: title })}
         >
-          <Icon name="add" size={18} tone="primary" />
+          <Icon name="add" size="xsPlus" tone="primary" />
         </AppPressable>
       </View>
       {/* Chip grid showing existing items */}

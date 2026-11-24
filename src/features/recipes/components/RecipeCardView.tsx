@@ -89,7 +89,7 @@ export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
                 style={({ pressed }) => pressed && styles.pressed}
                 accessibilityLabel={t(action.labelKey)}
               >
-                <Icon name={action.icon} size={20} tone={action.tone} />
+                <Icon name={action.icon} size="sm" tone={action.tone} />
               </Pressable>
             ))}
           </View>

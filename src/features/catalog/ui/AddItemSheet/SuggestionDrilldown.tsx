@@ -75,7 +75,7 @@ export function SuggestionDrilldown<T extends BaseSuggestionItem>({
           accessibilityRole="button"
           accessibilityLabel={backLabel}
         >
-          <Icon name="chevron-back" size={24} tone="textPrimary" />
+          <Icon name="chevron-back" size="md" tone="textPrimary" />
         </AppPressable>
         <Text role="subheading" style={styles.title}>
           {title}

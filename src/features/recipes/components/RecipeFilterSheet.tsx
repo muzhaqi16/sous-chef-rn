@@ -114,7 +114,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
           {isIngredientSearch ? (
             <View style={styles.infoBanner}>
               <View style={styles.infoBannerIconCircle}>
-                <Icon name="information-circle" size={16} tone="onPrimary" />
+                <Icon name="information-circle" size="xs" tone="onPrimary" />
               </View>
               <Text role="label" style={styles.infoBannerTitle}>
                 {t('recipeFilters.infoBanner')}
@@ -205,7 +205,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                     >
                       <Icon
                         name={isSelected ? 'checkbox' : 'square-outline'}
-                        size={24}
+                        size="md"
                         tone={isSelected ? 'primary' : 'textSecondary'}
                       />
                       <Text role="caption" style={styles.checkboxText}>

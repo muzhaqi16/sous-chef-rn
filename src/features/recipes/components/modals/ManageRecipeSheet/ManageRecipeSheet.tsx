@@ -118,7 +118,7 @@ const ManageRecipeContent: React.FC<ManageRecipeContentProps> = ({
             disabled={updating}
             style={({ pressed }) => pressed && styles.pressed}
           >
-            <Icon name="trash-outline" size={22} tone="error" />
+            <Icon name="trash-outline" size="md" tone="error" />
           </Pressable>
           <Pressable
             onPress={onClose}
@@ -126,7 +126,7 @@ const ManageRecipeContent: React.FC<ManageRecipeContentProps> = ({
             hitSlop={hitSlop.lg}
             style={({ pressed }) => pressed && styles.pressed}
           >
-            <Icon name="close" size={24} tone="textPrimary" />
+            <Icon name="close" size="md" tone="textPrimary" />
           </Pressable>
         </View>
       </View>
@@ -162,7 +162,7 @@ const ManageRecipeContent: React.FC<ManageRecipeContentProps> = ({
           >
             <Icon
               name={rating !== null && star <= rating ? 'star' : 'star-outline'}
-              size={32}
+              size="lg"
               tone={
                 rating !== null && star <= rating ? 'rating' : 'textSecondary'
               }

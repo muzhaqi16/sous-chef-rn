@@ -53,7 +53,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
       >
         <Icon
           name="chevron-back"
-          size={20}
+          size="sm"
           color={
             canGoPrev ? styles.arrowIcon.color : styles.arrowIconDisabled.color
           }
@@ -118,7 +118,7 @@ export const WeekStrip: React.FC<WeekStripProps> = ({
       >
         <Icon
           name="chevron-forward"
-          size={20}
+          size="sm"
           color={
             canGoNext ? styles.arrowIcon.color : styles.arrowIconDisabled.color
           }

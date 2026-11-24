@@ -466,7 +466,7 @@ export const PantryItemDetail: React.FC<
 
         {(!!categoryName || !!storageStateDisplay) && (
           <View style={styles.categoryBadge}>
-            <Icon name="restaurant-outline" size={16} tone="primary" />
+            <Icon name="restaurant-outline" size="xs" tone="primary" />
             <Text role="label" style={styles.categoryText}>
               {categoryName ?? t('labels.item')}
               {storageStateDisplay

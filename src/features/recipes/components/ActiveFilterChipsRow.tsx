@@ -109,11 +109,11 @@ export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
         })}
         testID={recipesTestIDs.activeFiltersSummary}
       >
-        <Icon name="options-outline" size={14} tone="primary" />
+        <Icon name="options-outline" size="2xsPlus" tone="primary" />
         <Text role="label" tone="secondary">
           {t('recipes.filtersActiveSummary', { count: chips.length })}
         </Text>
-        <ExpandChevron expanded={expanded} size={14} />
+        <ExpandChevron expanded={expanded} size="2xsPlus" />
       </Pressable>
       {expanded ? (
         <ScrollView

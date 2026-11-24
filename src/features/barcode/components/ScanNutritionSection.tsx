@@ -93,7 +93,7 @@ export const ScanNutritionSection: React.FC<ScanNutritionSectionProps> = ({
             <Text role="label" tone="accent">
               {t('labels.details')}
             </Text>
-            <Icon name="chevron-forward" size={16} tone="primary" />
+            <Icon name="chevron-forward" size="xs" tone="primary" />
           </>
         ) : null}
       </AppPressable>

@@ -122,7 +122,7 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
           />
         ) : (
           <View style={[styles.placeholder, { height: imageHeight }]}>
-            <Icon name="image-outline" size={48} tone="textTertiary" />
+            <Icon name="image-outline" size="xl" tone="textTertiary" />
           </View>
         )}
       </View>
@@ -305,7 +305,7 @@ const PhotoFrame: React.FC<{
   if (failed) {
     return (
       <View style={[styles.errorContainer, { width, height }]}>
-        <Icon name="image-outline" size={48} tone="textTertiary" />
+        <Icon name="image-outline" size="xl" tone="textTertiary" />
       </View>
     );
   }

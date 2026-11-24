@@ -214,7 +214,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       >
         {/* Colour comes from the list's single theme read, like every other
             icon in this row — `tone=` would make each cell subscribe. */}
-        <Icon name="archive" size={24} color={themeColors?.textSecondary} />
+        <Icon name="archive" size="md" color={themeColors?.textSecondary} />
       </View>
     );
 
@@ -231,7 +231,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           accessibilityLabel={t('moveToPantry.title')}
           testID={shoppingListTestIDs.itemMoveToPantry(itemId)}
         >
-          <Icon name="archive-outline" size={24} color={themeColors?.primary} />
+          <Icon name="archive-outline" size="md" color={themeColors?.primary} />
         </Pressable>
       </View>
     );

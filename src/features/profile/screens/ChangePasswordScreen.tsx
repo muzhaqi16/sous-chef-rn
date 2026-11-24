@@ -146,7 +146,7 @@ export const ChangePasswordScreen: React.FC = () => {
     <SubScreen title={t('labels.changePassword')} scroll="form">
       <View style={styles.contentContainer}>
         <View style={styles.iconContainer}>
-          <Icon name="lock-closed-outline" size={64} tone="primary" />
+          <Icon name="lock-closed-outline" size="2xl" tone="primary" />
         </View>
 
         <Text role="body" style={styles.subtitle}>

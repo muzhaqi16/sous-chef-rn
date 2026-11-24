@@ -352,7 +352,7 @@ const TemplatePreviewContent: React.FC<TemplatePreviewContentProps> = ({
           <OnPrimaryActivityIndicator size="small" />
         ) : (
           <>
-            <Icon name="calendar-outline" size={20} tone="onPrimary" />
+            <Icon name="calendar-outline" size="sm" tone="onPrimary" />
             <Text role="bodyStrong" style={styles.confirmText}>
               {t('labels.createMealPlan')}
             </Text>
@@ -378,7 +378,7 @@ const TemplatePreviewContent: React.FC<TemplatePreviewContentProps> = ({
           ]}
           testID={mealPlanTestIDs.templatePreviewEditButton}
         >
-          <Icon name="create-outline" size={18} tone="primary" />
+          <Icon name="create-outline" size="xsPlus" tone="primary" />
           <Text role="bodyStrong" tone="primary" style={styles.editText}>
             {t('labels.editTemplate')}
           </Text>
@@ -396,7 +396,7 @@ const TemplatePreviewContent: React.FC<TemplatePreviewContentProps> = ({
           ]}
           testID={mealPlanTestIDs.templatePreviewDuplicateButton}
         >
-          <Icon name="copy-outline" size={18} tone="primary" />
+          <Icon name="copy-outline" size="xsPlus" tone="primary" />
           <Text role="bodyStrong" tone="primary" style={styles.editText}>
             {t('templatePreview.duplicateTemplate')}
           </Text>
@@ -412,7 +412,7 @@ const TemplatePreviewContent: React.FC<TemplatePreviewContentProps> = ({
           ]}
           testID={mealPlanTestIDs.templatePreviewDeleteButton}
         >
-          <Icon name="trash-outline" size={18} tone="error" />
+          <Icon name="trash-outline" size="xsPlus" tone="error" />
           <Text role="bodyStrong" tone="danger" style={styles.editText}>
             {t('templatePreview.deleteTemplate')}
           </Text>

@@ -35,7 +35,7 @@ export const FolderListItem: React.FC<FolderListItemProps> = ({
     >
       <Icon
         name="folder-outline"
-        size={20}
+        size="sm"
         tone={isSelected ? 'primary' : 'textSecondary'}
       />
       <Text
@@ -46,7 +46,7 @@ export const FolderListItem: React.FC<FolderListItemProps> = ({
       >
         {folder}
       </Text>
-      {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
+      {!!isSelected && <Icon name="checkmark" size="sm" tone="primary" />}
     </AppPressable>
   );
 };

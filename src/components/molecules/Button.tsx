@@ -88,7 +88,7 @@ export const Button: React.FC<ButtonProps> = ({
           {!!icon && (
             <Icon
               name={icon}
-              size={size === 'small' ? 16 : size === 'large' ? 24 : 20}
+              size={size === 'small' ? 'xs' : size === 'large' ? 'md' : 'sm'}
               tone={
                 variant === 'primary'
                   ? 'onPrimary'

@@ -242,7 +242,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
               >
                 <Icon
                   name={copied ? 'checkmark-circle' : 'copy-outline'}
-                  size={20}
+                  size="sm"
                   tone={copied ? 'success' : 'textPrimary'}
                 />
               </AppPressable>
@@ -251,7 +251,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                 onPress={handleShareJoinLink}
                 accessibilityLabel={t('labels.shareLink')}
               >
-                <Icon name="share-outline" size={20} tone="primary" />
+                <Icon name="share-outline" size="sm" tone="primary" />
               </AppPressable>
               <AppPressable
                 style={styles.copyButton}
@@ -259,7 +259,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                 disabled={rotatingJoinCode}
                 accessibilityLabel={t('homeDetail.rotateJoinCodeConfirm')}
               >
-                <Icon name="refresh-outline" size={20} tone="textPrimary" />
+                <Icon name="refresh-outline" size="sm" tone="textPrimary" />
               </AppPressable>
             </View>
           ) : null}

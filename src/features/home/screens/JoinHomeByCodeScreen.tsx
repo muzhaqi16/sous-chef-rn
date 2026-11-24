@@ -114,7 +114,7 @@ export const JoinHomeByCodeScreen: React.FC<
       return (
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Icon name="home-outline" size={48} tone="primary" />
+            <Icon name="home-outline" size="xl" tone="primary" />
           </View>
           <Text role="heading" align="center" style={styles.title}>
             {t('joinHome.enterCodeTitle')}
@@ -163,7 +163,7 @@ export const JoinHomeByCodeScreen: React.FC<
     return (
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Icon name="home" size={48} tone="primary" />
+          <Icon name="home" size="xl" tone="primary" />
         </View>
         <Text role="body" tone="secondary" align="center" style={styles.title}>
           {t('joinHome.invitedToJoin')}

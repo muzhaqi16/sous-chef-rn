@@ -71,7 +71,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
     >
       {/* Current folder name */}
       <View style={styles.currentFolderContainer}>
-        <Icon name="folder-outline" size={20} tone="primary" />
+        <Icon name="folder-outline" size="sm" tone="primary" />
         <Text role="bodyStrong" tone="accent">
           {managingFolder}
         </Text>
@@ -80,7 +80,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
       {/* Delete Confirmation View */}
       {showDeleteConfirm ? (
         <View style={styles.deleteConfirmContainer}>
-          <Icon name="warning-outline" size={32} tone="error" />
+          <Icon name="warning-outline" size="lg" tone="error" />
           <Text role="heading" style={styles.deleteConfirmTitle}>
             {managingFolder
               ? t('labels.deleteNamed', { name: managingFolder })
@@ -171,7 +171,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
                 onPress={() => onShowDeleteConfirm(true)}
                 disabled={folderActionLoading}
               >
-                <Icon name="trash-outline" size={18} tone="error" />
+                <Icon name="trash-outline" size="xsPlus" tone="error" />
                 <Text role="bodyStrong" tone="danger">
                   {t('folderPicker.deleteFolder')}
                 </Text>

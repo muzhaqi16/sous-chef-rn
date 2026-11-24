@@ -109,7 +109,7 @@ const PhotoForm: React.FC<PhotoFormProps> = ({
                 })}
                 hitSlop={hitSlop.md}
               >
-                <Icon name="close-circle" size={22} tone="textInverse" />
+                <Icon name="close-circle" size="md" tone="textInverse" />
               </Pressable>
             </View>
           ))}

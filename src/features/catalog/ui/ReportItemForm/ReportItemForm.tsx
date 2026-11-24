@@ -98,7 +98,7 @@ export const ReportItemForm: React.FC<ReportItemFormProps> = ({
                   />
                 ) : (
                   <View style={styles.candidatePlaceholder}>
-                    <Icon name="cube-outline" size={20} tone="primary" />
+                    <Icon name="cube-outline" size="sm" tone="primary" />
                   </View>
                 )}
                 <View style={styles.candidateInfo}>
@@ -111,7 +111,7 @@ export const ReportItemForm: React.FC<ReportItemFormProps> = ({
                     </Text>
                   )}
                 </View>
-                <Icon name="chevron-forward" size={18} tone="secondary" />
+                <Icon name="chevron-forward" size="xsPlus" tone="secondary" />
               </AppPressable>
             ))}
           </View>

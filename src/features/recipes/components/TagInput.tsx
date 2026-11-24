@@ -97,7 +97,7 @@ export const TagInput: React.FC<TagInputProps> = ({
                 hitSlop={hitSlop.md}
                 style={({ pressed }) => pressed && styles.pressed}
               >
-                <Icon name="close" size={14} tone="primary" />
+                <Icon name="close" size="2xsPlus" tone="primary" />
               </Pressable>
             )}
           </View>

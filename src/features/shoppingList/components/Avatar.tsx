@@ -8,7 +8,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { Icon } from '#components/atoms/Icon';
+import { Icon, iconStepNear } from '#components/atoms/Icon';
 import { getInitials } from '#features/shoppingList/utils/ownershipHelpers';
 import { Text } from '#components/atoms/Text';
 
@@ -96,7 +96,7 @@ export const Avatar: React.FC<AvatarProps> = ({
     >
       <Icon
         name={fallbackIcon}
-        size={size * 0.6}
+        size={iconStepNear(size * 0.6)}
         color={textColor}
         tone="textSecondary"
         library={fallbackIconLibrary}

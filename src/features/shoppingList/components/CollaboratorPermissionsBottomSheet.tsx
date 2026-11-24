@@ -228,7 +228,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                 <View style={styles.roleTitle}>
                   <Icon
                     name={roleInfo.icon}
-                    size={24}
+                    size="md"
                     tone={isSelected ? 'primary' : 'textSecondary'}
                   />
                   <View>
@@ -256,7 +256,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                       <View key={index} style={styles.permissionItem}>
                         <Icon
                           name={permission.granted ? 'checkmark' : 'close'}
-                          size={14}
+                          size="2xsPlus"
                           tone={
                             permission.granted ? 'success' : 'textSecondary'
                           }

@@ -67,7 +67,7 @@ export const RecurringSection: React.FC<RecurringSectionProps> = ({
             onPress={handleGenerateNext}
             disabled={generating}
           >
-            <Icon name="add-circle-outline" size={20} tone="primary" />
+            <Icon name="add-circle-outline" size="sm" tone="primary" />
             <Text role="body" tone="accent" style={styles.actionText}>
               {t('shoppingListScreens.generateNextList')}
             </Text>
@@ -79,7 +79,7 @@ export const RecurringSection: React.FC<RecurringSectionProps> = ({
             ]}
             onPress={handleStopRecurring}
           >
-            <Icon name="close-circle-outline" size={20} tone="primary" />
+            <Icon name="close-circle-outline" size="sm" tone="primary" />
             <Text role="body" tone="accent" style={styles.actionText}>
               {t('shoppingListScreens.stopRecurring')}
             </Text>
@@ -90,7 +90,7 @@ export const RecurringSection: React.FC<RecurringSectionProps> = ({
           style={({ pressed }) => [styles.actionRow, pressed && styles.pressed]}
           onPress={() => setShowPatternPicker(true)}
         >
-          <Icon name="repeat-outline" size={20} tone="primary" />
+          <Icon name="repeat-outline" size="sm" tone="primary" />
           <Text role="body" tone="accent" style={styles.actionText}>
             {t('shoppingListScreens.makeRecurring')}
           </Text>

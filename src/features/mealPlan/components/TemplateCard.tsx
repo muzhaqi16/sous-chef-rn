@@ -57,20 +57,20 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
       )}
       <View style={styles.metaRow}>
         <View style={styles.metaItem}>
-          <Icon name="calendar-outline" size={14} tone="textTertiary" />
+          <Icon name="calendar-outline" size="2xsPlus" tone="textTertiary" />
           <Text role="caption" tone="secondary">
             {t('labels.durationDays', { count: template.durationDays })}
           </Text>
         </View>
         <View style={styles.metaItem}>
-          <Icon name="people-outline" size={14} tone="textTertiary" />
+          <Icon name="people-outline" size="2xsPlus" tone="textTertiary" />
           <Text role="caption" tone="secondary">
             {t('labels.servingsCount', { count: template.defaultServings })}
           </Text>
         </View>
         {!!template.home?.name && (
           <View style={styles.homeBadge}>
-            <Icon name="home-outline" size={12} tone="textSecondary" />
+            <Icon name="home-outline" size="2xs" tone="textSecondary" />
             <Text role="caption" tone="secondary">
               {template.home.name}
             </Text>

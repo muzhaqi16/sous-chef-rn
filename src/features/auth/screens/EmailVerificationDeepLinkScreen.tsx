@@ -206,7 +206,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
         {verificationResult === 'success' && (
           <>
             <View style={styles.iconContainer}>
-              <Icon name="checkmark-circle" size={64} tone="success" />
+              <Icon name="checkmark-circle" size="2xl" tone="success" />
             </View>
             <Text role="subheading" align="center" style={styles.title}>
               {t('auth.emailVerifiedTitle')}
@@ -243,7 +243,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
         {verificationResult === 'error' && (
           <>
             <View style={styles.iconContainer}>
-              <Icon name="close-circle-outline" size={64} tone="error" />
+              <Icon name="close-circle-outline" size="2xl" tone="error" />
             </View>
             <Text role="subheading" align="center" style={styles.title}>
               {t('auth.verificationFailedTitle')}

@@ -33,7 +33,7 @@ export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
           >
             <ThemedIcon
               name={icon}
-              size={20}
+              size="sm"
               uniProps={t => ({ color: color ?? t.colors.onPrimaryLight })}
             />
           </View>

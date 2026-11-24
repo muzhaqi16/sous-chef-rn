@@ -24,7 +24,7 @@ export const QuickAddButton: React.FC<QuickAddButtonProps> = ({
     accessibilityLabel={accessibilityLabel}
     testID={testID}
   >
-    <Icon name="add" size={20} tone="primary" />
+    <Icon name="add" size="sm" tone="primary" />
   </AppPressable>
 );
 

@@ -158,7 +158,7 @@ export const UsualStoresScreen: React.FC<
                 >
                   <Icon
                     name={pin.icon}
-                    size={22}
+                    size="md"
                     tone={item.pinned ? 'primary' : 'textSecondary'}
                   />
                 </Pressable>

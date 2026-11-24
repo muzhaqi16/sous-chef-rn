@@ -120,7 +120,7 @@ export const DeleteAccountScreen: React.FC = () => {
 
   const renderErrorState = () => (
     <View style={styles.centerContainer}>
-      <Icon name="alert-circle-outline" size={48} tone="error" />
+      <Icon name="alert-circle-outline" size="xl" tone="error" />
       <Text role="heading" style={styles.errorTitle}>
         {t('account.deleteUnableToCheck')}
       </Text>
@@ -141,7 +141,7 @@ export const DeleteAccountScreen: React.FC = () => {
   const renderBlockedState = () => (
     <View style={styles.contentContainer}>
       <View style={styles.blockedWarningContainer}>
-        <Icon name="alert-circle-outline" size={48} tone="warning" />
+        <Icon name="alert-circle-outline" size="xl" tone="warning" />
         <Text role="subheading" style={styles.blockedWarningTitle}>
           {t('account.deleteBlockedTitle')}
         </Text>
@@ -164,7 +164,7 @@ export const DeleteAccountScreen: React.FC = () => {
         return (
           <View key={blocker.resourceId} style={styles.blockerCard}>
             <View style={styles.blockerHeader}>
-              <Icon name={copy.icon} size={20} tone="primary" />
+              <Icon name={copy.icon} size="sm" tone="primary" />
               <Text role="bodyStrong" style={styles.blockerResourceName}>
                 {blocker.resourceName}
               </Text>
@@ -205,7 +205,7 @@ export const DeleteAccountScreen: React.FC = () => {
   const renderDeleteForm = () => (
     <View style={styles.contentContainer}>
       <View style={styles.warningContainer}>
-        <Icon name="warning-outline" size={48} tone="error" />
+        <Icon name="warning-outline" size="xl" tone="error" />
         <Text role="subheading" tone="danger" style={styles.warningTitle}>
           {t('account.deleteWarningTitle')}
         </Text>
@@ -216,25 +216,25 @@ export const DeleteAccountScreen: React.FC = () => {
           {t('account.deleteWhatWillBeDeleted')}
         </SectionHeader>
         <View style={styles.bulletPoint}>
-          <Icon name="close-circle-outline" size={20} tone="error" />
+          <Icon name="close-circle-outline" size="sm" tone="error" />
           <Text role="body" style={styles.bulletText}>
             {t('account.deleteWipeProfile')}
           </Text>
         </View>
         <View style={styles.bulletPoint}>
-          <Icon name="close-circle-outline" size={20} tone="error" />
+          <Icon name="close-circle-outline" size="sm" tone="error" />
           <Text role="body" style={styles.bulletText}>
             {t('account.deleteWipePantry')}
           </Text>
         </View>
         <View style={styles.bulletPoint}>
-          <Icon name="close-circle-outline" size={20} tone="error" />
+          <Icon name="close-circle-outline" size="sm" tone="error" />
           <Text role="body" style={styles.bulletText}>
             {t('account.deleteWipeShoppingLists')}
           </Text>
         </View>
         <View style={styles.bulletPoint}>
-          <Icon name="close-circle-outline" size={20} tone="error" />
+          <Icon name="close-circle-outline" size="sm" tone="error" />
           <Text role="body" style={styles.bulletText}>
             {t('account.deleteWipePreferences')}
           </Text>

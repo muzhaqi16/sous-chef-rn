@@ -264,7 +264,7 @@ export function useShoppingListSelectorModal({
         >
           <Icon
             name={isSelectedForDelete ? 'checkbox' : 'square-outline'}
-            size={20}
+            size="sm"
             tone={isSelectedForDelete ? 'error' : 'textSecondary'}
           />
           <ShoppingListAvatar list={list} size={32} />
@@ -310,7 +310,7 @@ export function useShoppingListSelectorModal({
             })}
           </Text>
         )}
-        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
+        {!!isSelected && <Icon name="checkmark" size="sm" tone="primary" />}
       </SelectorItemContainer>
     );
   };

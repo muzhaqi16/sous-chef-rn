@@ -43,7 +43,7 @@ export const InlineTourHint = ({
         accessibilityLabel={`${progress}. ${text}`}
       >
         <View style={styles.iconCircle}>
-          <Icon name="hand-left-outline" size={16} tone="onPrimary" />
+          <Icon name="hand-left-outline" size="xs" tone="onPrimary" />
         </View>
         <View style={styles.text}>
           <Text role="caption" tone="secondary">

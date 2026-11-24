@@ -81,10 +81,20 @@ export type IconTone = keyof typeof TONE_TO_COLOR;
 /** A named step of `theme.sizes.icon`, resolved here so a call site need not. */
 export type IconSizeName = keyof typeof sizes.icon;
 
+const ICON_STEPS = Object.keys(sizes.icon) as IconSizeName[];
+
+/** The ramp step nearest `px`, for an icon drawn in proportion to its box. */
+export const iconStepNear = (px: number): IconSizeName =>
+  ICON_STEPS.reduce((best, step) =>
+    Math.abs(sizes.icon[step] - px) < Math.abs(sizes.icon[best] - px)
+      ? step
+      : best,
+  );
+
 interface IconProps {
   name: string;
-  /** A named step, or a raw number where no step fits. */
-  size?: number | IconSizeName;
+  /** A step of the icon ramp, which scales with display density. */
+  size?: IconSizeName;
   /** Static color (hex / rgba). Use `tone` for theme-derived colors. */
   color?: string;
   /** Theme-derived color that reactively updates when the user changes the
@@ -99,17 +109,14 @@ export const Icon: React.FC<IconProps> = ({
   color,
   tone,
 }) => {
-  // A named step resolves from the THEME, not the foundation module: resolving
-  // it here would freeze it exactly as a literal does, which is the thing the
-  // name exists to avoid. A raw number is the caller's own decision and passes
-  // through. `uniProps` wins over the prop, so the prop carries the fallback.
-  const px = typeof size === 'number' ? size : sizes.icon[size];
-  const sizeProps = (t: Theme) =>
-    typeof size === 'number' ? {} : { size: t.sizes.icon[size] };
+  // A step resolves from the THEME, not the foundation module, so density
+  // scales it; resolving it here would freeze it as a literal does.
+  // `uniProps` wins over the prop, so the prop carries the fallback.
+  const px = sizes.icon[size];
+  const sizeProps = (t: Theme) => ({ size: t.sizes.icon[size] });
   if (isGlyph(name)) {
     const Glyph = GLYPHS[name];
-    const side = (t: Theme) =>
-      typeof size === 'number' ? size : t.sizes.icon[size];
+    const side = (t: Theme) => t.sizes.icon[size];
     return (
       <Glyph
         {...DECORATIVE}

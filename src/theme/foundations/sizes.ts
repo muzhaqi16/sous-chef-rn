@@ -22,12 +22,16 @@ export const sizes = {
     '2xl': 80,
   },
   icon: {
+    '2xs': 12,
+    '2xsPlus': 14,
     xs: 16,
+    xsPlus: 18,
     sm: 20,
     md: 24,
     lg: 32,
     xl: 48,
     '2xl': 64,
+    '3xl': 96,
   },
   chip: {
     // A member chip holds an initial or a short name; the floor keeps a row of

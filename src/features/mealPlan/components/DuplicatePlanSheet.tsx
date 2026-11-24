@@ -154,7 +154,7 @@ const DuplicatePlanForm: React.FC<DuplicatePlanFormProps> = ({
             style={styles.dateButton}
             hitSlop={hitSlop.md}
           >
-            <Icon name="chevron-back" size={20} tone="primary" />
+            <Icon name="chevron-back" size="sm" tone="primary" />
           </Pressable>
           <View style={styles.dateDisplay}>
             <Text role="bodyStrong">{formatWeekdayMonthDay(start)}</Text>
@@ -170,7 +170,7 @@ const DuplicatePlanForm: React.FC<DuplicatePlanFormProps> = ({
             style={styles.dateButton}
             hitSlop={hitSlop.md}
           >
-            <Icon name="chevron-forward" size={20} tone="primary" />
+            <Icon name="chevron-forward" size="sm" tone="primary" />
           </Pressable>
         </View>
       </View>
@@ -178,7 +178,7 @@ const DuplicatePlanForm: React.FC<DuplicatePlanFormProps> = ({
       <View style={styles.infoCard}>
         <Icon
           name="information-circle-outline"
-          size={18}
+          size="xsPlus"
           tone="textSecondary"
         />
         <Text role="caption" style={styles.infoText}>

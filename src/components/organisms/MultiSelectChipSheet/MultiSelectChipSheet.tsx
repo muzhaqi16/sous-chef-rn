@@ -75,7 +75,7 @@ function MultiSelectChipContent<T extends string>({
       {/* Search Input */}
       {!!showSearch && (
         <View style={styles.searchContainer}>
-          <Icon name="search" size={18} tone="textSecondary" />
+          <Icon name="search" size="xsPlus" tone="textSecondary" />
           <ThemedBottomSheetTextInput
             style={styles.searchInput}
             placeholder={t('multiSelectChipSheet.searchPlaceholder')}
