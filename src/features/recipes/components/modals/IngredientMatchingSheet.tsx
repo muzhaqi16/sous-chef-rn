@@ -4,8 +4,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
@@ -89,27 +88,23 @@ export const IngredientMatchingSheet: React.FC<
   const readingSystem = useReadingSystem();
   // Nothing included: the cook can still be recorded, deducting nothing.
   const recordsOnly = matchSummary.included === 0;
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['80%'],
-  });
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      {/* A plain View, NOT `BottomSheetView`: gorhom composes the caller's
-        style FIRST and its own is absolutely positioned with no bottom, so the
-        `flex: 1` below loses and the FlashList is never height-bounded. It also
-        registers SCROLLABLE_TYPE.VIEW after the list, losing arbitration. */}
-      <View style={[styles.container, contentContainerStyle]}>
-        {/* The choice is the pair at the foot: skip the review, or deduct. */}
+    <Sheet
+      mode="list"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['80%']}
+      // The choice is the pair at the foot: skip the review, or deduct.
+      header={
         <SheetHeader
-          contentPadding="md"
           title={t('ingredientMatching.reviewIngredients')}
           onClose={onClose}
         />
-
+      }
+    >
+      <View style={styles.container}>
         {/* Summary bar */}
         <View style={styles.summaryBar}>
           <Badge variant="success">
@@ -181,7 +176,7 @@ export const IngredientMatchingSheet: React.FC<
           </Button>
         </View>
       </View>
-    </BottomSheetModal>
+    </Sheet>
   );
 };
 
