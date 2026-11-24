@@ -21,6 +21,12 @@ export type BudgetSaveOutcome = 'saved' | 'unchanged' | 'invalid';
 const budgetOf = (input: string): number | null =>
   input.trim() === '' ? null : parseDecimalInput(input);
 
+/** A limit the list can take: empty, or a number from zero up. */
+export const isBudgetInput = (input: string): boolean => {
+  const amount = budgetOf(input);
+  return amount === null || (!Number.isNaN(amount) && amount >= 0);
+};
+
 /**
  * A list's money for Budget & prices, read from the cache so it shows offline,
  * and the writes the screen's controls make, each saving itself local-first.
@@ -64,10 +70,8 @@ export function useListBudget(listId: string) {
   };
 
   const saveBudget = (input: string): BudgetSaveOutcome => {
+    if (!isBudgetInput(input)) return 'invalid';
     const amount = budgetOf(input);
-    if (amount !== null && (Number.isNaN(amount) || amount < 0)) {
-      return 'invalid';
-    }
     if (!list || amount === list.budgetAmount) return 'unchanged';
     const planning = list.currency
       ? { budgetAmount: amount, currency: list.currency }

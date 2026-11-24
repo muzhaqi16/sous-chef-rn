@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
@@ -13,6 +15,10 @@ import {
 } from '#/utils/formatters/number';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import {
+  listPriceSettingsSchema,
+  type ListPriceSettingsValues,
+} from './listPriceSettingsForm';
 
 type Store = { id: string; name: string };
 
@@ -24,8 +30,8 @@ interface ListPriceSettingsProps {
   priceTracking: boolean;
   /** Who may change them; others read the values. */
   canEdit: boolean;
-  /** Saves the finished field; false when it isn't a number. */
-  onBudgetDone: (input: string) => boolean;
+  /** Saves the finished field, once it reads as a budget. */
+  onBudgetDone: (input: string) => void;
   /** Saves at once: a picked store, or null once the field is cleared. */
   onPickStore: (store: Store | null) => void;
   onPriceTrackingChange: (value: boolean) => void;
@@ -43,29 +49,23 @@ export const ListPriceSettings: React.FC<ListPriceSettingsProps> = ({
   onPriceTrackingChange,
 }) => {
   const { t } = useTranslation();
-  const [budgetInput, setBudgetInput] = useState(() =>
-    formatNumberForInput(budgetAmount),
-  );
-  const [budgetError, setBudgetError] = useState<string | null>(null);
-  const [storeInput, setStoreInput] = useState(store?.name ?? '');
-  // A save, or another member's change, restates the field.
-  const [budgetSeed, setBudgetSeed] = useState(budgetAmount);
-  if (budgetAmount !== budgetSeed) {
-    setBudgetSeed(budgetAmount);
-    setBudgetInput(formatNumberForInput(budgetAmount));
-  }
-  const [storeSeed, setStoreSeed] = useState(store?.id);
-  if (store?.id !== storeSeed) {
-    setStoreSeed(store?.id);
-    setStoreInput(store?.name ?? '');
-  }
+  const { control, trigger, getValues, resetField } =
+    useForm<ListPriceSettingsValues>({
+      resolver: yupResolver(listPriceSettingsSchema),
+      // A save, or another member's change, restates a field the user is not
+      // editing; each field is set back to clean once it is finished.
+      values: {
+        budget: formatNumberForInput(budgetAmount),
+        store: store?.name ?? '',
+      },
+      resetOptions: { keepDirtyValues: true },
+    });
 
-  const finishBudget = () => {
-    setBudgetError(
-      onBudgetDone(budgetInput)
-        ? null
-        : t('shoppingListScreens.budget.invalid'),
-    );
+  const finishBudget = async () => {
+    if (!(await trigger('budget'))) return;
+    const input = getValues('budget');
+    onBudgetDone(input);
+    resetField('budget', { defaultValue: input });
   };
 
   return (
@@ -79,32 +79,51 @@ export const ListPriceSettings: React.FC<ListPriceSettingsProps> = ({
 
       {canEdit ? (
         <>
-          <BaseInput
-            label={t('shoppingListScreens.budgetAmountLabel')}
-            value={budgetInput}
-            onChangeText={setBudgetInput}
-            onEndEditing={finishBudget}
-            keyboardType="decimal-pad"
-            placeholder={t('shoppingListScreens.budgetPlaceholder')}
-            errorMessage={budgetError ?? undefined}
-            testID={shoppingListTestIDs.budgetInput}
+          <Controller
+            control={control}
+            name="budget"
+            render={({ field, fieldState }) => (
+              <BaseInput
+                ref={field.ref}
+                label={t('shoppingListScreens.budgetAmountLabel')}
+                value={field.value}
+                onChangeText={field.onChange}
+                onEndEditing={() => {
+                  void finishBudget();
+                }}
+                keyboardType="decimal-pad"
+                placeholder={t('shoppingListScreens.budgetPlaceholder')}
+                errorMessage={fieldState.error?.message}
+                testID={shoppingListTestIDs.budgetInput}
+              />
+            )}
           />
-          <StoreAutocompleteField
-            variant="modal"
-            label={t('shoppingListScreens.listStoreLabel')}
-            value={storeInput}
-            onChangeText={setStoreInput}
-            // Cleared once the emptied field is finished, so retyping a store
-            // sends only its pick; a typed name waits for a pick.
-            onEndEditing={() => {
-              if (!storeInput.trim() && store) onPickStore(null);
-            }}
-            onStoreSelected={(id, name) => {
-              if (id && name) onPickStore({ id, name });
-            }}
-            placeholder={t('shoppingListScreens.storePlaceholder')}
-            helperText={t('labels.storeSelectHint')}
-            testID={shoppingListTestIDs.listBudgetStore}
+          <Controller
+            control={control}
+            name="store"
+            render={({ field }) => (
+              <StoreAutocompleteField
+                variant="modal"
+                label={t('shoppingListScreens.listStoreLabel')}
+                value={field.value}
+                onChangeText={field.onChange}
+                // Cleared once the emptied field is finished, so retyping a
+                // store sends only its pick; a typed name waits for a pick.
+                onEndEditing={() => {
+                  if (field.value.trim() || !store) return;
+                  onPickStore(null);
+                  resetField('store', { defaultValue: '' });
+                }}
+                onStoreSelected={(id, name) => {
+                  if (!id || !name) return;
+                  onPickStore({ id, name });
+                  resetField('store', { defaultValue: name });
+                }}
+                placeholder={t('shoppingListScreens.storePlaceholder')}
+                helperText={t('labels.storeSelectHint')}
+                testID={shoppingListTestIDs.listBudgetStore}
+              />
+            )}
           />
         </>
       ) : (

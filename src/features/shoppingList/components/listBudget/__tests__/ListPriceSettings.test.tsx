@@ -3,6 +3,7 @@ import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { formatCurrency } from '#/utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { settledInAct } from '#/test-utils/settledInAct';
 import { ListPriceSettings } from '../ListPriceSettings';
 
 jest.mock('#/services/errorService');
@@ -18,7 +19,7 @@ const renderSettings = (overrides: Partial<Props> = {}) => {
     store: STORE,
     priceTracking: true,
     canEdit: true,
-    onBudgetDone: jest.fn(() => true),
+    onBudgetDone: jest.fn(),
     onPickStore: jest.fn(),
     onPriceTrackingChange: jest.fn(),
     ...overrides,
@@ -51,15 +52,14 @@ describe('ListPriceSettings', () => {
   });
 
   // Reported on the field, never through an alert.
-  it('says on the field when the budget is not a number', () => {
-    const onBudgetDone = jest.fn(() => false);
-    renderSettings({ onBudgetDone });
+  it('says on the field when the budget is not a number, saving nothing', async () => {
+    const { onBudgetDone } = renderSettings();
 
     const field = screen.getByTestId(shoppingListTestIDs.budgetInput);
     fireEvent.changeText(field, 'abc');
-    fireEvent(field, 'endEditing');
+    await settledInAct(() => fireEvent(field, 'endEditing'));
 
-    expect(onBudgetDone).toHaveBeenCalledWith('abc');
+    expect(onBudgetDone).not.toHaveBeenCalled();
     expect(
       screen.getByText('Enter a budget, like 60, or leave it empty.'),
     ).toBeTruthy();

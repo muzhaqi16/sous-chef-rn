@@ -46,7 +46,7 @@ export const ListBudget: React.FC<StaticScreenProps<{ listId: string }>> = ({
             store={list.targetStore}
             priceTracking={list.priceTracking}
             canEdit={budget.canEdit}
-            onBudgetDone={input => budget.saveBudget(input) !== 'invalid'}
+            onBudgetDone={budget.saveBudget}
             onPickStore={budget.pickStore}
             onPriceTrackingChange={budget.setPriceTracking}
           />
