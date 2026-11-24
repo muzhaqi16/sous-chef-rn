@@ -127,13 +127,14 @@ export const Sheet: React.FC<SheetProps> = ({
   const content = (() => {
     switch (mode) {
       case 'list':
-        // The modal bounds the child itself. `BottomSheetView` is absolutely
-        // positioned with no height, so a scrollable inside it never scrolls.
+        // A plain flex parent: `BottomSheetView` is absolutely positioned with
+        // no height, so a scrollable inside it never scrolls. The inset keeps
+        // the last row clear of the home indicator.
         return (
-          <>
+          <View style={[styles.fill, insetStyle]}>
             {header}
             {body}
-          </>
+          </View>
         );
       case 'view':
         return header ? (

@@ -13,10 +13,7 @@ import {
   PrimaryActivityIndicator,
   OnPrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { FormInput } from '#components/atoms/FormInput';
@@ -432,42 +429,29 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
   duplicating = false,
   ...content
 }) => {
-  const insets = useSafeAreaInsets();
   const presented = visible && !!template;
-
-  // Standard bottom-sheet boilerplate handled by useStandardBottomSheet.
-  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
-    visible: presented,
-    onDismiss: onClose,
-    snapPoints: ['85%'],
-  });
   const opening = useOpening(presented, template);
 
+  // `form`: the sheet holds inputs, and only the form scrollable supplies
+  // gorhom's input context, so the sheet sees the keyboard over a field.
   return (
-    <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
-      {/* Not `BottomSheetScrollView`: this sheet holds inputs, and only the
-          form scrollable supplies gorhom's input context — without it they
-          resolve to a plain RN TextInput and the sheet is blind to the
-          keyboard covering the field being typed into. Fixed snap points, so
-          a keyboard-aware scrollable is safe here. */}
-      <BottomSheetFormScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.contentContainer,
-          { paddingBottom: insets.bottom + 16 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {opening?.payload ? (
-          <TemplatePreviewContent
-            key={opening.id}
-            template={opening.payload}
-            duplicating={duplicating}
-            {...content}
-          />
-        ) : null}
-      </BottomSheetFormScrollView>
-    </BottomSheetModal>
+    <Sheet
+      mode="form"
+      visible={presented}
+      onDismiss={onClose}
+      snapPoints={['85%']}
+      style={styles.scrollView}
+      contentContainerStyle={styles.contentContainer}
+    >
+      {opening?.payload ? (
+        <TemplatePreviewContent
+          key={opening.id}
+          template={opening.payload}
+          duplicating={duplicating}
+          {...content}
+        />
+      ) : null}
+    </Sheet>
   );
 };
 

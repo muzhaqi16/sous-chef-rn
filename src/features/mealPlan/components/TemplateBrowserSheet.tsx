@@ -2,13 +2,13 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import {
-  Pressable,
   PrimaryActivityIndicator,
   ThemedBottomSheetTextInput,
 } from '#components/atoms/themedComponents';
 import { FlashList } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
@@ -28,11 +28,9 @@ import {
 } from '#features/mealPlan/hooks/useMealTemplates';
 import { TemplateCategory } from '#/graphql/generated/schemaTypes';
 import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 const CATEGORY_KEYS: {
   key: TemplateCategory | undefined;
@@ -92,11 +90,6 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   const { t } = useTranslation();
   const categories: ChipOption<TemplateCategory | undefined>[] =
     CATEGORY_KEYS.map(o => ({ key: o.key, label: t(o.labelKey) }));
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['85%'],
-  });
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   const {
@@ -121,26 +114,16 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   });
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      {/*
-        A plain View, NOT `BottomSheetView`: gorhom's own container style is
-        absolutely positioned with no bottom and no height, and it composes
-        AFTER the caller's — so a `flex: 1` here loses and the FlashList below
-        is never height-bounded.
-      */}
-      <View style={[styles.container, contentContainerStyle]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text role="heading">{t('templateBrowser.title')}</Text>
-          <Pressable
-            onPress={onClose}
-            hitSlop={hitSlop.md}
-            accessibilityLabel={t('labels.close')}
-          >
-            <Icon name="close" size={24} tone="textSecondary" />
-          </Pressable>
-        </View>
-
+    <Sheet
+      mode="list"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['85%']}
+      header={
+        <SheetHeader title={t('templateBrowser.title')} onClose={onClose} />
+      }
+    >
+      <View style={styles.container}>
         {/* Search bar */}
         <View style={styles.searchContainer}>
           <Icon name="search" size={18} tone="textTertiary" />
@@ -201,20 +184,13 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
           </TemplateBrowserProvider>
         )}
       </View>
-    </BottomSheetModal>
+    </Sheet>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
   },
   searchContainer: {
     flexDirection: 'row',
