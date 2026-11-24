@@ -1579,7 +1579,6 @@ type CookingLog {
   recipe: Recipe
   servingsMade: Int
   user: User!
-  wouldMakeAgain: Boolean
 }
 
 """
@@ -6098,7 +6097,10 @@ enum ItemType {
 type ItemUnit {
   contentUnit: Unit
   contentUnitId: ID
-  displayFormat: DisplayFormat!
+  """
+  How quantities in this unit should be displayed. No operation sets it, so every unit reads AUTO
+  """
+  displayFormat: DisplayFormat! @deprecated(reason: "Always AUTO: no operation sets it. Format the quantity by its unit's own rule, as AUTO does.")
   id: ID!
   isCommon: Boolean!
   isDefault: Boolean!
@@ -6150,7 +6152,6 @@ input ItemUnitInput {
   averagePricePerUnit: Float
   """For a package unit: the unit one package holds packageSize of"""
   contentUnit: UnitRefInput
-  externalSourceMappingId: ID
   isDefault: Boolean
   isPreferred: Boolean
   packageDescription: String
@@ -11075,7 +11076,10 @@ input PurchasedItemInput @oneOf {
 type QuantityBreakdown {
   """The content unit (e.g., can)"""
   contentUnit: Unit
-  """Number of full unopened packages (e.g., 1 full case)"""
+  """
+  Whole packages held (e.g., 1 full case), counted as StockBreakdown.fullPackages
+  counts them: each batch by its own package size.
+  """
   fullPackages: Int!
   """Loose content units from opened packages (e.g., 9 cans)"""
   looseContentUnits: Float!
@@ -14488,7 +14492,7 @@ type ShoppingListItem {
   """
   How quantity should be displayed. No operation sets it, so every line reads AUTO
   """
-  displayFormat: DisplayFormat!
+  displayFormat: DisplayFormat! @deprecated(reason: "Always AUTO: no operation sets it. Format the quantity by its unit's own rule, as AUTO does.")
   """The line's id. An add may supply it, so an offline client can mint it"""
   id: ID!
   """
