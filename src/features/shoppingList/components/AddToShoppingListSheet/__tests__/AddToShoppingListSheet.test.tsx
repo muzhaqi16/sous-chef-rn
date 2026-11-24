@@ -26,8 +26,8 @@ jest.mock('#features/shoppingList/hooks/useShoppingListSuggestions', () => ({
   })),
 }));
 
-jest.mock('#features/catalog/ui/AddItemSheet/useAddItemSheetState', () => ({
-  useAddItemSheetState: jest.fn(() => ({ shouldFetch: true })),
+jest.mock('#features/catalog/ui/AddItemSheet/useDeferredSheetFetch', () => ({
+  useDeferredSheetFetch: jest.fn(() => true),
 }));
 
 jest.mock('../ShoppingListDetailsStep', () => ({

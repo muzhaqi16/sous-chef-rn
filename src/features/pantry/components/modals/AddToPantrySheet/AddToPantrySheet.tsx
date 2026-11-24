@@ -15,7 +15,7 @@ import {
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';
-import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddItemSheetState';
+import { useDeferredSheetFetch } from '#features/catalog/ui/AddItemSheet/useDeferredSheetFetch';
 import { pantrySheetConfig } from '#features/pantry/components/modals/AddToPantrySheet/pantrySheetConfig';
 import { AddDetailsSheet } from './AddDetailsSheet';
 
@@ -57,8 +57,8 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const [prefilledItemName, setPrefilledItemName] = useState('');
 
   // Shared state management
-  const state = useAddItemSheetState({
-    visible,
+  const shouldFetch = useDeferredSheetFetch({
+    open: visible && !!pantryId,
     contextId: pantryId,
     deferFetch: pantrySheetConfig.deferFetch,
   });
@@ -78,7 +78,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const suggestionsResult = usePantryItemSuggestions({
     pantryId,
     limit: PANTRY_SUGGESTIONS_LIMIT,
-    skip: !visible || !state.shouldFetch,
+    skip: !visible || !shouldFetch,
   });
 
   // Dismiss a junk/unwanted suggestion from the PANTRY surface.
@@ -235,7 +235,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       onDismissSuggestion={handleDismissSuggestion}
       onAddManually={handleAddManually}
       startStep={startStep}
-      shouldFetch={state.shouldFetch}
       initialSearchQuery={initialSearchQuery}
       renderDetails={({ goBack, holdOpen }) => (
         <AddDetailsSheet

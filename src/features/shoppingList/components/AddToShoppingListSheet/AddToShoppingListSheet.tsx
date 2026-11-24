@@ -15,7 +15,7 @@ import { useFirstShopTourContext } from '#features/shoppingList/context/FirstSho
 import { InlineTourHint } from '#components/molecules/InlineTourHint';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';
-import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddItemSheetState';
+import { useDeferredSheetFetch } from '#features/catalog/ui/AddItemSheet/useDeferredSheetFetch';
 import { shoppingListSheetConfig } from '#features/shoppingList/components/AddToShoppingListSheet/shoppingListSheetConfig';
 import { ShoppingListDetailsStep } from './ShoppingListDetailsStep';
 
@@ -50,8 +50,8 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const guide = useFirstShopTourContext()?.guide;
 
   // Shared state management for sheet visibility and deferred data fetching
-  const state = useAddItemSheetState({
-    visible,
+  const shouldFetch = useDeferredSheetFetch({
+    open: visible && !!shoppingListId,
     contextId: shoppingListId,
     deferFetch: shoppingListSheetConfig.deferFetch,
   });
@@ -60,7 +60,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const suggestionsResult = useShoppingListSuggestions({
     shoppingListId,
     limit: SHOPPING_SUGGESTIONS_LIMIT,
-    skip: !visible || !state.shouldFetch,
+    skip: !visible || !shouldFetch,
   });
 
   // Dismiss a junk/unwanted suggestion from the SHOPPING surface.
@@ -173,7 +173,6 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       onDismissSuggestion={handleDismissSuggestion}
       onAddManually={handleAddManually}
       startStep={startStep}
-      shouldFetch={state.shouldFetch}
       initialSearchQuery={initialSearchQuery}
       showImages={showImages}
       tutorialHint={tutorialHintElement}

@@ -17,7 +17,6 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#components/atoms/Icon';
 import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
 import type { AddItemSheetProps, SuggestionGroupConfig } from './types';
-import { useAddItemSheetState } from './useAddItemSheetState';
 import { SuggestionDrilldown } from './SuggestionDrilldown';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
@@ -25,6 +24,7 @@ import { DataStateView } from '#components/organisms/DataStateView';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import { hitSlop } from '#/theme/foundations/sizes';
 import type { BaseSuggestionItem } from '#features/catalog/types';
+import { useOpening } from '#hooks/ui/useOpening';
 
 /**
  * How many rows each section shows in the overview before a "More" affordance
@@ -33,12 +33,16 @@ import type { BaseSuggestionItem } from '#features/catalog/types';
  */
 const PREVIEW_COUNT = 5;
 
-/** Shared add-item bottom sheet, used by AddToPantrySheet and AddToShoppingListSheet. */
-export function AddItemSheet<
-  T extends BaseSuggestionItem = BaseSuggestionItem,
->({
-  visible,
-  contextId,
+type AddItemSheetContentProps<T extends BaseSuggestionItem> = Omit<
+  AddItemSheetProps<T>,
+  'visible' | 'contextId'
+> & { holdOpen: (held: boolean) => void };
+
+/**
+ * One opening, on the step asked for, the overview and an empty search. The
+ * suggestions render once the open animation has settled.
+ */
+function AddItemSheetContent<T extends BaseSuggestionItem>({
   onClose,
   config,
   suggestions,
@@ -51,17 +55,11 @@ export function AddItemSheet<
   showImages = true,
   tutorialHint,
   renderDetails,
-}: AddItemSheetProps<T>) {
+  holdOpen,
+}: AddItemSheetContentProps<T>) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const searchBarRef = useRef<SearchBarRef>(null);
-
-  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
-    visible: visible && !!contextId,
-    onDismiss: onClose,
-    snapPoints: ['70%', '95%'],
-    keyboardBehavior: 'extend',
-  });
 
   // ONE sheet morphs between search, details and report: a second
   // BottomSheetModal races the global backdrop, and gorhom's default
@@ -74,18 +72,16 @@ export function AddItemSheet<
   const goBackToSearch = () => {
     setStep('search');
   };
-  // Set by a details form holding input, so a pan-down cannot drop it.
-  const [heldOpen, setHeldOpen] = useState(false);
-
-  // Shared state management
-  const state = useAddItemSheetState({
-    visible,
-    contextId,
-    deferFetch: config.deferFetch,
-  });
-
-  // Destructure for stable references in callbacks
-  const { setSearchQuery } = state;
+  const [searchQuery, setSearchQuery] = useState('');
+  const deferRender = config.deferFetch;
+  const [shouldRenderSuggestions, setShouldRenderSuggestions] = useState(
+    !deferRender,
+  );
+  useEffect(() => {
+    if (!deferRender) return;
+    const idleId = requestIdleCallback(() => setShouldRenderSuggestions(true));
+    return () => cancelIdleCallback(idleId);
+  }, [deferRender]);
 
   // Autocomplete search — debounceMs: 0 because the search bar already debounces
   const autocomplete = useItemAutocomplete({ debounceMs: 0 });
@@ -125,31 +121,10 @@ export function AddItemSheet<
     }
   };
 
-  // useStandardBottomSheet handles present/dismiss.
-  const isOpen = visible && !!contextId;
-
-  // Reset the drill-down whenever the sheet's open state changes so it always
-  // opens on the overview and never reopens into a stale drilled-in source.
-  // Adjusting state during render (not an effect) per the React Compiler rules.
-  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
-  if (prevIsOpen !== isOpen) {
-    setPrevIsOpen(isOpen);
-    setActiveSourceKey(null);
-    // Always reopen on the step asked for, so a stale details or report step
-    // can never persist from a previous visit.
-    setStep(openingStep);
-  }
-
-  // Nothing clears the search bar on open: the sheet's content mounts on every
-  // present, holding the query it was opened with.
+  // Opened on the form: the owner preps its inputs, as "Add manually" does.
   useEffect(() => {
-    if (isOpen) {
-      // Opened on the form: the owner preps its inputs, as "Add manually" does.
-      if (startStep === 'details') onAddManually('');
-    } else {
-      resetAutocomplete();
-    }
-  }, [isOpen, resetAutocomplete, startStep, onAddManually]);
+    if (startStep === 'details') onAddManually('');
+  }, [startStep, onAddManually]);
 
   // With `renderDetails` this same sheet morphs to the details step, keeping
   // its search snap height; the user can drag it up to the 95% max.
@@ -225,137 +200,162 @@ export function AddItemSheet<
   };
 
   return (
+    <View
+      style={styles.sheetBody}
+      testID={catalogTestIDs.addItemSheetModal(config.testIDPrefix)}
+    >
+      {step === 'report' ? (
+        <ReportItemForm
+          candidates={autocomplete.displayItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            imageUrl: item.imageUrl,
+            brandName: item.brands[0]?.name,
+          }))}
+          onClose={goBackToSearch}
+        />
+      ) : step === 'details' && renderDetails ? (
+        // Opened on the form, there is no search to go back to: back closes.
+        renderDetails({
+          goBack: openingStep === 'details' ? onClose : goBackToSearch,
+          holdOpen,
+        })
+      ) : inDrilldown ? (
+        <SuggestionDrilldown
+          title={t(activeGroup.titleKey)}
+          items={activeItems}
+          renderItem={item =>
+            renderSuggestionItem(item, !!activeGroup.dismissible)
+          }
+          onBack={() => setActiveSourceKey(null)}
+          backLabel={t('labels.back')}
+          emptyLabel={t('addItemSheet.allAdded')}
+        />
+      ) : (
+        <BottomSheetScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.contentContainer,
+            { paddingBottom: insets.bottom + 16 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
+          <Text role="subheading" style={styles.title}>
+            {t(config.titleKey)}
+          </Text>
+
+          {/* Search Input */}
+          <SearchBar
+            ref={searchBarRef}
+            containerStyle={styles.searchBar}
+            testID={catalogTestIDs.addItemSheetSearchInput(config.testIDPrefix)}
+            placeholder={t(config.searchPlaceholderKey)}
+            onChangeText={handleSearchChange}
+            onClear={() => setSearchQuery('')}
+            defaultValue={initialSearchQuery}
+            debounceMs={250}
+            autoCapitalize="words"
+            returnKeyType="search"
+            isLoading={!!autocomplete.isLoading && hasSearchQuery}
+          />
+
+          {/* Search Results */}
+          {!!showSearchResults && (
+            <ItemSuggestionsList
+              searchQuery={searchQuery}
+              suggestions={autocomplete.displayItems}
+              addManuallyPosition={config.addManuallyPosition}
+              testIDPrefix={config.testIDPrefix}
+              onAddManually={handleAddManually}
+              onSelectSuggestion={handleSelectSearchSuggestion}
+              showBrands={false}
+              showImages={showImages}
+              onReportItem={() => setStep('report')}
+            />
+          )}
+
+          {/* Tutorial hint (e.g. "Tap + next to an item to add it") */}
+          {!!tutorialHint && !showSearchResults && tutorialHint}
+
+          {/* Suggestions Sections - shown when search is empty, deferred until after animation */}
+          {!!showSuggestions && !!shouldRenderSuggestions && (
+            <>
+              {suggestions.state === 'loading' ? (
+                <View style={styles.centeredSpinner}>
+                  <PrimaryActivityIndicator size="small" />
+                </View>
+              ) : suggestions.state === 'error' ||
+                suggestions.state === 'offline' ? (
+                <DataStateView
+                  state={suggestions.state}
+                  onRetry={suggestions.refetch}
+                />
+              ) : suggestions.state === 'empty' ? (
+                <View style={styles.emptyInset}>
+                  <Text
+                    role="bodyStrong"
+                    tone="secondary"
+                    style={styles.emptyMessage}
+                  >
+                    {t(config.emptyStateMessageKey)}
+                  </Text>
+                  <Text role="caption" tone="tertiary" align="center">
+                    {t(config.emptyStateSubtextKey)}
+                  </Text>
+                </View>
+              ) : (
+                // The rows painted with the sheet do not fade in; a row that
+                // arrives later (a refill, an undo) does.
+                <LayoutAnimationConfig skipEntering>
+                  {/* Render suggestion sections in priority order. Copy
+                        before sorting — `.sort()` mutates in place, and the
+                        array belongs to the caller's `config` prop. */}
+                  {[...config.suggestionGroups]
+                    .sort((a, b) => a.priority - b.priority)
+                    .map(renderSuggestionSection)}
+                </LayoutAnimationConfig>
+              )}
+            </>
+          )}
+        </BottomSheetScrollView>
+      )}
+    </View>
+  );
+}
+
+/** Shared add-item bottom sheet, used by AddToPantrySheet and AddToShoppingListSheet. */
+export function AddItemSheet<
+  T extends BaseSuggestionItem = BaseSuggestionItem,
+>({ visible, contextId, ...content }: AddItemSheetProps<T>) {
+  const open = visible && !!contextId;
+  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
+    visible: open,
+    onDismiss: content.onClose,
+    snapPoints: ['70%', '95%'],
+    keyboardBehavior: 'extend',
+  });
+  // Set by a details form holding input, so a pan-down cannot drop it; the
+  // form releases it as it unmounts.
+  const [heldOpen, setHeldOpen] = useState(false);
+  const opening = useOpening(open);
+
+  return (
     <BottomSheetModal
       ref={bottomSheetRef}
       {...modalProps}
       enablePanDownToClose={!heldOpen}
       // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
-      testID={catalogTestIDs.addItemSheetModal(config.testIDPrefix)}
+      testID={catalogTestIDs.addItemSheetModal(content.config.testIDPrefix)}
     >
-      <View
-        style={styles.sheetBody}
-        testID={catalogTestIDs.addItemSheetModal(config.testIDPrefix)}
-      >
-        {step === 'report' ? (
-          <ReportItemForm
-            candidates={autocomplete.displayItems.map(item => ({
-              id: item.id,
-              name: item.name,
-              imageUrl: item.imageUrl,
-              brandName: item.brands[0]?.name,
-            }))}
-            onClose={goBackToSearch}
-          />
-        ) : step === 'details' && renderDetails ? (
-          // Opened on the form, there is no search to go back to: back closes.
-          renderDetails({
-            goBack: openingStep === 'details' ? onClose : goBackToSearch,
-            holdOpen: setHeldOpen,
-          })
-        ) : inDrilldown ? (
-          <SuggestionDrilldown
-            title={t(activeGroup.titleKey)}
-            items={activeItems}
-            renderItem={item =>
-              renderSuggestionItem(item, !!activeGroup.dismissible)
-            }
-            onBack={() => setActiveSourceKey(null)}
-            backLabel={t('labels.back')}
-            emptyLabel={t('addItemSheet.allAdded')}
-          />
-        ) : (
-          <BottomSheetScrollView
-            style={styles.scrollView}
-            contentContainerStyle={[
-              styles.contentContainer,
-              { paddingBottom: insets.bottom + 16 },
-            ]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Header */}
-            <Text role="subheading" style={styles.title}>
-              {t(config.titleKey)}
-            </Text>
-
-            {/* Search Input */}
-            <SearchBar
-              ref={searchBarRef}
-              containerStyle={styles.searchBar}
-              testID={catalogTestIDs.addItemSheetSearchInput(
-                config.testIDPrefix,
-              )}
-              placeholder={t(config.searchPlaceholderKey)}
-              onChangeText={handleSearchChange}
-              onClear={() => setSearchQuery('')}
-              defaultValue={initialSearchQuery}
-              debounceMs={250}
-              autoCapitalize="words"
-              returnKeyType="search"
-              isLoading={!!autocomplete.isLoading && hasSearchQuery}
-            />
-
-            {/* Search Results */}
-            {!!showSearchResults && (
-              <ItemSuggestionsList
-                searchQuery={state.searchQuery}
-                suggestions={autocomplete.displayItems}
-                addManuallyPosition={config.addManuallyPosition}
-                testIDPrefix={config.testIDPrefix}
-                onAddManually={handleAddManually}
-                onSelectSuggestion={handleSelectSearchSuggestion}
-                showBrands={false}
-                showImages={showImages}
-                onReportItem={() => setStep('report')}
-              />
-            )}
-
-            {/* Tutorial hint (e.g. "Tap + next to an item to add it") */}
-            {!!tutorialHint && !showSearchResults && tutorialHint}
-
-            {/* Suggestions Sections - shown when search is empty, deferred until after animation */}
-            {!!showSuggestions && !!state.shouldRenderSuggestions && (
-              <>
-                {suggestions.state === 'loading' ? (
-                  <View style={styles.centeredSpinner}>
-                    <PrimaryActivityIndicator size="small" />
-                  </View>
-                ) : suggestions.state === 'error' ||
-                  suggestions.state === 'offline' ? (
-                  <DataStateView
-                    state={suggestions.state}
-                    onRetry={suggestions.refetch}
-                  />
-                ) : suggestions.state === 'empty' ? (
-                  <View style={styles.emptyInset}>
-                    <Text
-                      role="bodyStrong"
-                      tone="secondary"
-                      style={styles.emptyMessage}
-                    >
-                      {t(config.emptyStateMessageKey)}
-                    </Text>
-                    <Text role="caption" tone="tertiary" align="center">
-                      {t(config.emptyStateSubtextKey)}
-                    </Text>
-                  </View>
-                ) : (
-                  // The rows painted with the sheet do not fade in; a row that
-                  // arrives later (a refill, an undo) does.
-                  <LayoutAnimationConfig skipEntering>
-                    {/* Render suggestion sections in priority order. Copy
-                        before sorting — `.sort()` mutates in place, and the
-                        array belongs to the caller's `config` prop. */}
-                    {[...config.suggestionGroups]
-                      .sort((a, b) => a.priority - b.priority)
-                      .map(renderSuggestionSection)}
-                  </LayoutAnimationConfig>
-                )}
-              </>
-            )}
-          </BottomSheetScrollView>
-        )}
-      </View>
+      {opening ? (
+        <AddItemSheetContent
+          key={opening.id}
+          {...content}
+          holdOpen={setHeldOpen}
+        />
+      ) : null}
     </BottomSheetModal>
   );
 }

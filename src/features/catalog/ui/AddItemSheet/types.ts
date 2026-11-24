@@ -1,6 +1,3 @@
-import type { RefObject } from 'react';
-import type { BottomSheetModalRef } from '#hooks/ui/useStandardBottomSheet';
-import type { SearchBarRef } from '#components/molecules/SearchBar';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import type { TranslationKey } from '#/i18n';
 import type {
@@ -74,10 +71,7 @@ export interface AddItemSheetProps<
    * sheet opens on the form, after asking `onAddManually('')` to prep it.
    */
   startStep?: 'search' | 'details';
-  shouldFetch?: boolean;
   initialSearchQuery?: string;
-  bottomSheetRef?: RefObject<BottomSheetModalRef>;
-  searchBarRef?: RefObject<SearchBarRef>;
   /** Defaults to true. */
   showImages?: boolean;
   /** Rendered above the action buttons. */
@@ -95,12 +89,4 @@ export interface AddItemSheetProps<
     goBack: () => void;
     holdOpen: (held: boolean) => void;
   }) => React.ReactNode;
-}
-
-export interface AddItemSheetState {
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  /** Deferred until after the sheet's open animation. */
-  shouldFetch: boolean;
-  shouldRenderSuggestions: boolean;
 }

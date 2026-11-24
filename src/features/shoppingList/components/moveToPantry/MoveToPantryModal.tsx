@@ -9,6 +9,8 @@ import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { PackageContentsFields } from '#features/pantry/ui/PackageContentsFields';
 import { parseFractionalInput } from '#/utils/fractionUtils';
@@ -95,9 +97,23 @@ function missingFactField(
   }
 }
 
-export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
-  visible,
-  shoppingListItemId,
+type MoveItem = ReturnType<typeof useMoveToPantryItem>;
+
+type MoveToPantryFormProps = Omit<
+  MoveToPantryModalProps,
+  'visible' | 'shoppingListItemId'
+> & {
+  moveItem: MoveItem & {
+    shoppingListItem: NonNullable<MoveItem['shoppingListItem']>;
+  };
+};
+
+/**
+ * One opening, seeded from the line and what was bought; amounts that land
+ * after it opens are seeded then, never over something typed.
+ */
+const MoveToPantryForm: React.FC<MoveToPantryFormProps> = ({
+  moveItem,
   pantries,
   pantriesUnavailable,
   selectedPantryId,
@@ -114,7 +130,30 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     purchasedQuantity,
     purchasedUnitPrice,
     purchasedUnit,
-  } = useMoveToPantryItem({ shoppingListItemId, skip: !visible });
+  } = moveItem;
+
+  // What the amounts are seeded from: what was BOUGHT, falling back to what was
+  // requested. Prefilling the request is how a line asked for as 1 piece and
+  // bought as 5 reached the pantry as 1.
+  const seedQuantity = purchasedQuantity ?? shoppingListItem.quantity;
+
+  // ONE source decides both halves. Separate fallback chains let a line with
+  // free-text `unitName` show "bag" while submitting the purchase's unit id.
+  const resolvedUnit = shoppingListItem.unit
+    ? {
+        label: unitLabel(shoppingListItem.unit),
+        id: shoppingListItem.unit.id,
+        type: shoppingListItem.unit.type,
+      }
+    : shoppingListItem.unitName
+    ? { label: shoppingListItem.unitName, id: null, type: null }
+    : purchasedUnit
+    ? {
+        label: purchasedUnit.unitSymbol,
+        id: purchasedUnit.unit.id,
+        type: purchasedUnit.unit.type,
+      }
+    : { label: '', id: null, type: null };
 
   const {
     control,
@@ -127,7 +166,17 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     formState: { errors },
   } = useForm<MoveToPantryFormValues>({
     resolver: yupResolver(moveToPantrySchema),
-    defaultValues: moveToPantryDefaults(StorageState.Ambient),
+    defaultValues: {
+      ...moveToPantryDefaults(StorageState.Ambient),
+      quantityInput: formatQuantityForInput(seedQuantity) || '1',
+      unitValue: resolvedUnit.label,
+      unitId: resolvedUnit.id,
+      unitType: resolvedUnit.type,
+      pantryId: selectedPantryId,
+      actualPriceInput: formatNumberForInput(
+        totalFromUnitPrice(purchasedUnitPrice, seedQuantity ?? 1),
+      ),
+    },
     mode: 'onTouched',
   });
 
@@ -143,97 +192,35 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // Interaction state, not fields: the per-unit price the total was seeded
   // from, and whether the shopper has typed over either amount, decide which
   // survives an edit (`handleQuantityChange`).
-  const [seededUnitPrice, setSeededUnitPrice] = useState<number | null>(null);
+  const [seededUnitPrice, setSeededUnitPrice] = useState(purchasedUnitPrice);
   // The unit that price is per: the line's, else the purchase's.
   const [seededUnit, setSeededUnit] = useState<{
     id: string | null;
     label: string;
-  } | null>(null);
+  } | null>({ id: resolvedUnit.id, label: resolvedUnit.label });
   const [amountsTouched, setAmountsTouched] = useState(false);
   const [priceTouched, setPriceTouched] = useState(false);
 
-  // What the amounts are seeded from: what was BOUGHT, falling back to what was
-  // requested. Prefilling the request is how a line asked for as 1 piece and
-  // bought as 5 reached the pantry as 1.
-  const seedQuantity = purchasedQuantity ?? shoppingListItem?.quantity ?? null;
-
-  // ONE source decides both halves. Separate fallback chains let a line with
-  // free-text `unitName` show "bag" while submitting the purchase's unit id.
-  const resolvedUnit = shoppingListItem?.unit
-    ? {
-        label: unitLabel(shoppingListItem.unit),
-        id: shoppingListItem.unit.id,
-        type: shoppingListItem.unit.type,
-      }
-    : shoppingListItem?.unitName
-    ? { label: shoppingListItem.unitName, id: null, type: null }
-    : purchasedUnit
-    ? {
-        label: purchasedUnit.unitSymbol,
-        id: purchasedUnit.unit.id,
-        type: purchasedUnit.unit.type,
-      }
-    : { label: '', id: null, type: null };
-
-  // Reset form when modal opens with new item (render-time state update).
-  // Key on the item id (not the materialized object) so cache updates to the
-  // same item don't clobber input.
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevShoppingListItemId, setPrevShoppingListItemId] = useState(
-    shoppingListItem?.id,
-  );
-  const [prevSelectedPantryId, setPrevSelectedPantryId] =
-    useState(selectedPantryId);
   // `setValue` notifies mounted `Controller` children synchronously, so the
   // seed is accumulated here and applied from an effect — writing it during
   // render updates components that are not rendering.
   const [pendingSeed, setPendingSeed] =
     useState<Partial<MoveToPantryFormValues> | null>(null);
-  // Both blocks below can run in ONE pass, where `unitId` still holds its
-  // pre-update value — so the seed block would overwrite what the reset queued.
   let seedThisPass: Partial<MoveToPantryFormValues> | null = null;
-  let unitIdThisPass = unitId;
-  if (
-    visible !== prevVisible ||
-    shoppingListItem?.id !== prevShoppingListItemId ||
-    selectedPantryId !== prevSelectedPantryId
-  ) {
-    setPrevVisible(visible);
-    setPrevShoppingListItemId(shoppingListItem?.id);
-    setPrevSelectedPantryId(selectedPantryId);
-    if (visible && shoppingListItem) {
-      seedThisPass = {
-        ...moveToPantryDefaults(StorageState.Ambient),
-        quantityInput: formatQuantityForInput(seedQuantity) || '1',
-        unitValue: resolvedUnit.label,
-        unitId: resolvedUnit.id,
-        unitType: resolvedUnit.type,
-        pantryId: selectedPantryId,
-        actualPriceInput: formatNumberForInput(
-          totalFromUnitPrice(purchasedUnitPrice, seedQuantity ?? 1),
-        ),
-      };
-      unitIdThisPass = resolvedUnit.id;
-      setSeededUnitPrice(purchasedUnitPrice);
-      setSeededUnit({ id: resolvedUnit.id, label: resolvedUnit.label });
-      setAmountsTouched(false);
-      setPriceTouched(false);
-    }
-  }
 
   // A cold start has no cached purchase, so the amounts can land a beat after
   // the sheet opens. Seed them then too — but never over something typed.
-  const [prevSeed, setPrevSeed] = useState<string | null>(null);
   const seedKey = `${purchasedQuantity ?? ''}|${purchasedUnitPrice ?? ''}|${
     purchasedUnit?.unit.id ?? ''
   }`;
-  if (visible && seedKey !== prevSeed) {
+  // The amounts the form opened on are already in its defaults.
+  const [prevSeed, setPrevSeed] = useState(seedKey);
+  if (seedKey !== prevSeed) {
     setPrevSeed(seedKey);
     // A line with no unit of its own takes the purchase's, which arrives with
     // the amounts rather than with the fragment.
-    if (!unitIdThisPass && purchasedUnit) {
+    if (!unitId && purchasedUnit) {
       seedThisPass = {
-        ...seedThisPass,
         unitValue: purchasedUnit.unitSymbol,
         unitId: purchasedUnit.unit.id,
         unitType: purchasedUnit.unit.type,
@@ -370,7 +357,6 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // reported on its field too.
   const [isMoving, setIsMoving] = useState(false);
   const onValid = async (values: MoveToPantryFormValues) => {
-    if (!shoppingListItem) return;
     const {
       pantryId: confirmedPantryId,
       quantityInput: confirmedQuantity,
@@ -457,14 +443,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   };
 
   return (
-    <Sheet
-      mode="form"
-      visible={visible ? !!shoppingListItem : false}
-      onDismiss={onClose}
-      snapPoints={['75%', '95%']}
-      contentContainerStyle={styles.contentContainer}
-      style={styles.scrollView}
-      header={
+    <>
+      <SheetHeaderSlot>
         <SheetHeader
           title={t('moveToPantry.title')}
           onClose={onClose}
@@ -480,226 +460,251 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             testID: shoppingListTestIDs.moveToPantryConfirm,
           }}
         />
-      }
-    >
-      {!!shoppingListItem && (
-        <>
-          {/* Item Info */}
-          <View style={styles.itemInfo}>
-            <Text role="heading" style={styles.itemName}>
-              {shoppingListItem.itemName}
-            </Text>
-            <Text role="body" tone="secondary">
-              {purchasedQuantity != null
-                ? t('moveToPantry.purchasedAmount', {
-                    amount: formatQuantityForDisplay(purchasedQuantity),
-                    unit: lineUnitLabel,
-                  })
-                : t('moveToPantry.requestedAmount', {
-                    // A missing or zero requested quantity reads as one.
-                    amount: formatQuantityForDisplay(
-                      (shoppingListItem.quantity ?? 0) || 1,
-                    ),
-                    unit: lineUnitLabel,
-                  })}
-            </Text>
+      </SheetHeaderSlot>
+      {/* Item Info */}
+      <View style={styles.itemInfo}>
+        <Text role="heading" style={styles.itemName}>
+          {shoppingListItem.itemName}
+        </Text>
+        <Text role="body" tone="secondary">
+          {purchasedQuantity != null
+            ? t('moveToPantry.purchasedAmount', {
+                amount: formatQuantityForDisplay(purchasedQuantity),
+                unit: lineUnitLabel,
+              })
+            : t('moveToPantry.requestedAmount', {
+                // A missing or zero requested quantity reads as one.
+                amount: formatQuantityForDisplay(
+                  (shoppingListItem.quantity ?? 0) || 1,
+                ),
+                unit: lineUnitLabel,
+              })}
+        </Text>
+      </View>
+
+      {/* Pantry Selector */}
+      {pantriesUnavailable}
+      <PantrySelector
+        pantries={pantries}
+        selectedPantryId={pantryId}
+        onSelect={id => setValue('pantryId', id, { shouldValidate: true })}
+        error={errors.pantryId?.message}
+      />
+
+      {/* Quantity and Unit Input */}
+      <DropdownStack>
+        <View style={styles.section}>
+          <View style={styles.quantityUnitRow}>
+            <View style={styles.quantityField}>
+              <FractionInput
+                label={t('labels.quantity')}
+                value={quantityInput}
+                onChangeText={handleQuantityChange}
+                placeholder={t('labels.eG1114')}
+                required
+                error={errors.quantityInput?.message}
+              />
+            </View>
+            <View style={styles.unitField}>
+              <UnitAutocompleteField
+                variant="inline"
+                label={t('labels.unit')}
+                value={unitValue}
+                onChangeText={value =>
+                  setValue('unitValue', value, { shouldValidate: true })
+                }
+                placeholder={t('moveToPantry.unitPlaceholder')}
+                required
+                error={errors.unitValue?.message}
+                onUnitSelected={(picked, _name, pickedType) => {
+                  const unit = pickedOrHeld(
+                    picked,
+                    pickedType,
+                    getValues('unitValue'),
+                  );
+                  setValue('unitId', unit.id);
+                  setValue('unitType', unit.type);
+                  reprice(
+                    getValues('quantityInput'),
+                    unit.id,
+                    getValues('unitValue'),
+                  );
+                  void trigger('packageSizeInput');
+                  // The rule reports on the TEXT while reading the id, and
+                  // the field clears the id after writing the text — so
+                  // without this the emptied field carries no message.
+                  void trigger('unitValue');
+                }}
+              />
+            </View>
           </View>
+        </View>
 
-          {/* Pantry Selector */}
-          {pantriesUnavailable}
-          <PantrySelector
-            pantries={pantries}
-            selectedPantryId={pantryId}
-            onSelect={id => setValue('pantryId', id, { shouldValidate: true })}
-            error={errors.pantryId?.message}
-          />
-
-          {/* Quantity and Unit Input */}
-          <DropdownStack>
-            <View style={styles.section}>
-              <View style={styles.quantityUnitRow}>
-                <View style={styles.quantityField}>
-                  <FractionInput
-                    label={t('labels.quantity')}
-                    value={quantityInput}
-                    onChangeText={handleQuantityChange}
-                    placeholder={t('labels.eG1114')}
-                    required
-                    error={errors.quantityInput?.message}
-                  />
-                </View>
-                <View style={styles.unitField}>
-                  <UnitAutocompleteField
+        {/* Package size (Optional) */}
+        <View style={styles.section}>
+          <Controller
+            control={control}
+            name="packageSizeInput"
+            render={({ field: size, fieldState: sizeState }) => (
+              <Controller
+                control={control}
+                name="packageSizeUnitValue"
+                render={({ field: unit, fieldState: unitState }) => (
+                  <PackageContentsFields
                     variant="inline"
-                    label={t('labels.unit')}
-                    value={unitValue}
-                    onChangeText={value =>
-                      setValue('unitValue', value, { shouldValidate: true })
-                    }
-                    placeholder={t('moveToPantry.unitPlaceholder')}
-                    required
-                    error={errors.unitValue?.message}
+                    size={size.value}
+                    onSizeChange={text => {
+                      size.onChange(text);
+                      void trigger('packageSizeUnitValue');
+                    }}
+                    sizeError={sizeState.error?.message}
+                    unit={unit.value}
+                    onUnitChange={unit.onChange}
+                    unitError={unitState.error?.message}
+                    unitTestID={shoppingListTestIDs.moveToPantryPackageSizeUnit}
                     onUnitSelected={(picked, _name, pickedType) => {
-                      const unit = pickedOrHeld(
+                      const held = pickedOrHeld(
                         picked,
                         pickedType,
-                        getValues('unitValue'),
+                        getValues('packageSizeUnitValue'),
                       );
-                      setValue('unitId', unit.id);
-                      setValue('unitType', unit.type);
-                      reprice(
-                        getValues('quantityInput'),
-                        unit.id,
-                        getValues('unitValue'),
-                      );
-                      void trigger('packageSizeInput');
-                      // The rule reports on the TEXT while reading the id, and
-                      // the field clears the id after writing the text — so
-                      // without this the emptied field carries no message.
-                      void trigger('unitValue');
+                      setValue('packageSizeUnitId', held.id);
+                      setValue('packageSizeUnitType', held.type);
+                      void trigger('packageSizeUnitValue');
+                      // The size's count rule reads the size's unit too.
+                      if (getFieldState('packageSizeInput').invalid) {
+                        void trigger('packageSizeInput');
+                      }
                     }}
                   />
-                </View>
-              </View>
-            </View>
-
-            {/* Package size (Optional) */}
-            <View style={styles.section}>
-              <Controller
-                control={control}
-                name="packageSizeInput"
-                render={({ field: size, fieldState: sizeState }) => (
-                  <Controller
-                    control={control}
-                    name="packageSizeUnitValue"
-                    render={({ field: unit, fieldState: unitState }) => (
-                      <PackageContentsFields
-                        variant="inline"
-                        size={size.value}
-                        onSizeChange={text => {
-                          size.onChange(text);
-                          void trigger('packageSizeUnitValue');
-                        }}
-                        sizeError={sizeState.error?.message}
-                        unit={unit.value}
-                        onUnitChange={unit.onChange}
-                        unitError={unitState.error?.message}
-                        unitTestID={
-                          shoppingListTestIDs.moveToPantryPackageSizeUnit
-                        }
-                        onUnitSelected={(picked, _name, pickedType) => {
-                          const held = pickedOrHeld(
-                            picked,
-                            pickedType,
-                            getValues('packageSizeUnitValue'),
-                          );
-                          setValue('packageSizeUnitId', held.id);
-                          setValue('packageSizeUnitType', held.type);
-                          void trigger('packageSizeUnitValue');
-                          // The size's count rule reads the size's unit too.
-                          if (getFieldState('packageSizeInput').invalid) {
-                            void trigger('packageSizeInput');
-                          }
-                        }}
-                      />
-                    )}
-                  />
                 )}
               />
-              <Text role="caption" tone="secondary" style={styles.perUnitHint}>
-                {t('moveToPantry.packageSizeHint')}
-              </Text>
-            </View>
+            )}
+          />
+          <Text role="caption" tone="secondary" style={styles.perUnitHint}>
+            {t('moveToPantry.packageSizeHint')}
+          </Text>
+        </View>
 
-            {/* Storage State */}
-            <Controller
-              control={control}
-              name="storageState"
-              render={({ field }) => (
-                <StorageStateControl
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              )}
+        {/* Storage State */}
+        <Controller
+          control={control}
+          name="storageState"
+          render={({ field }) => (
+            <StorageStateControl
+              value={field.value}
+              onChange={field.onChange}
             />
+          )}
+        />
 
-            <DatePickerField
-              label={t('labels.expirationDate')}
-              value={expirationDate ?? null}
-              onChange={date => setValue('expirationDate', date ?? undefined)}
-              placeholder={t('instructions.expiryOptional')}
-              minimumDate={new Date()}
-              clearable
+        <DatePickerField
+          label={t('labels.expirationDate')}
+          value={expirationDate ?? null}
+          onChange={date => setValue('expirationDate', date ?? undefined)}
+          placeholder={t('instructions.expiryOptional')}
+          minimumDate={new Date()}
+          clearable
+        />
+
+        {/* Total paid (Optional) */}
+        {askPrice ? (
+          <View style={styles.section}>
+            <FormInput
+              label={t('labels.totalPaid')}
+              value={actualPriceInput}
+              onChangeText={handlePriceChange}
+              placeholder={localizeNumericHint('0.00')}
+              keyboardType="decimal-pad"
+              error={errors.actualPriceInput?.message}
             />
-
-            {/* Total paid (Optional) */}
-            {askPrice ? (
-              <View style={styles.section}>
-                <FormInput
-                  label={t('labels.totalPaid')}
-                  value={actualPriceInput}
-                  onChangeText={handlePriceChange}
-                  placeholder={localizeNumericHint('0.00')}
-                  keyboardType="decimal-pad"
-                  error={errors.actualPriceInput?.message}
-                />
-                {perUnitPrice != null ? (
-                  <PerUnitHint
-                    price={money(perUnitPrice)}
-                    unit={lineUnitLabel}
-                    style={styles.perUnitHint}
-                  />
-                ) : null}
-              </View>
+            {perUnitPrice != null ? (
+              <PerUnitHint
+                price={money(perUnitPrice)}
+                unit={lineUnitLabel}
+                style={styles.perUnitHint}
+              />
             ) : null}
+          </View>
+        ) : null}
 
-            {/* Notes (Optional) */}
-            <View style={styles.section}>
-              <Controller
-                control={control}
-                name="notes"
-                render={({ field }) => (
-                  <FormInput
-                    label={t('labels.notesOptional')}
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    placeholder={t('moveToPantry.notesPlaceholder')}
-                    multiline
-                    numberOfLines={2}
-                  />
-                )}
+        {/* Notes (Optional) */}
+        <View style={styles.section}>
+          <Controller
+            control={control}
+            name="notes"
+            render={({ field }) => (
+              <FormInput
+                label={t('labels.notesOptional')}
+                value={field.value}
+                onChangeText={field.onChange}
+                placeholder={t('moveToPantry.notesPlaceholder')}
+                multiline
+                numberOfLines={2}
               />
-            </View>
+            )}
+          />
+        </View>
 
-            {/* Remove from List Toggle */}
-            <View style={styles.toggleSection}>
-              <View style={styles.toggleInfo}>
-                <Text role="bodyStrong">
-                  {t('moveToPantry.removeFromShopping')}
-                </Text>
-                <Text
-                  role="caption"
-                  tone="secondary"
-                  style={styles.toggleDescription}
-                >
-                  {t('moveToPantry.removeFromShoppingDesc')}
-                </Text>
-              </View>
-              <Controller
-                control={control}
-                name="removeFromList"
-                render={({ field }) => (
-                  <BaseSwitch
-                    accessibilityLabel={t('moveToPantry.removeFromShopping')}
-                    value={field.value}
-                    onValueChange={field.onChange}
-                  />
-                )}
+        {/* Remove from List Toggle */}
+        <View style={styles.toggleSection}>
+          <View style={styles.toggleInfo}>
+            <Text role="bodyStrong">
+              {t('moveToPantry.removeFromShopping')}
+            </Text>
+            <Text
+              role="caption"
+              tone="secondary"
+              style={styles.toggleDescription}
+            >
+              {t('moveToPantry.removeFromShoppingDesc')}
+            </Text>
+          </View>
+          <Controller
+            control={control}
+            name="removeFromList"
+            render={({ field }) => (
+              <BaseSwitch
+                accessibilityLabel={t('moveToPantry.removeFromShopping')}
+                value={field.value}
+                onValueChange={field.onChange}
               />
-            </View>
-          </DropdownStack>
-        </>
-      )}
+            )}
+          />
+        </View>
+      </DropdownStack>
+    </>
+  );
+};
+
+export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
+  visible,
+  shoppingListItemId,
+  ...form
+}) => {
+  const moveItem = useMoveToPantryItem({ shoppingListItemId, skip: !visible });
+  const { shoppingListItem } = moveItem;
+  const open = visible && !!shoppingListItem;
+  const opening = useOpening(open);
+
+  return (
+    <Sheet
+      mode="form"
+      headerFromContent
+      visible={open}
+      onDismiss={form.onClose}
+      snapPoints={['75%', '95%']}
+      contentContainerStyle={styles.contentContainer}
+      style={styles.scrollView}
+    >
+      {opening && shoppingListItem ? (
+        <MoveToPantryForm
+          // A new line or pantry seeds afresh, as a new opening does.
+          key={`${opening.id}:${shoppingListItem.id}:${form.selectedPantryId}`}
+          moveItem={{ ...moveItem, shoppingListItem }}
+          {...form}
+        />
+      ) : null}
     </Sheet>
   );
 };
