@@ -130,6 +130,28 @@ it("keeps a refused row's answer open and says why", async () => {
   expect(onDismiss).not.toHaveBeenCalled();
 });
 
+it('refuses an amount left it cannot read on the field, and sends nothing', async () => {
+  const recorded = recordMock(RecordPantryStockCheckDocument, {
+    data: { recordPantryStockCheck: null },
+  });
+  const onDismiss = jest.fn();
+  renderWithApollo(<StockCheckSheet visible onDismiss={onDismiss} />, {
+    operationMocks: [toCheck(stack('eggs', 4)).mock, recorded.mock],
+  });
+  await drainTimers();
+
+  pick('eggs', StockCheckAnswer.SomeLeft);
+  fireEvent.changeText(
+    screen.getByTestId(pantryTestIDs.stockCheckLeft('eggs')),
+    'a few',
+  );
+  await save();
+
+  expect(screen.getByText(t('errors.invalidQuantity'))).toBeTruthy();
+  expect(recorded.fired).toHaveLength(0);
+  expect(onDismiss).not.toHaveBeenCalled();
+});
+
 it("shows the server's evidence, with when each stack was last confirmed", async () => {
   renderWithApollo(<StockCheckSheet visible onDismiss={jest.fn()} />, {
     operationMocks: [toCheck(stack('eggs', 4)).mock],
