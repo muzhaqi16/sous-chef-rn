@@ -19,6 +19,7 @@ import {
   MembershipRole,
 } from '#/graphql/generated/schemaTypes';
 import {
+  DeleteHomeDocument,
   EnableHomeJoinLinkDocument,
   LeaveHomeDocument,
   TransferHomeOwnershipDocument,
@@ -188,6 +189,12 @@ const unverified = () => {
 
 const leaving = (answer: MockDataFor<typeof LeaveHomeDocument>['leaveHome']) =>
   recordMock(LeaveHomeDocument, { data: { leaveHome: answer } });
+
+const deleting = (
+  answer: MockDataFor<typeof DeleteHomeDocument>['deleteHome'],
+) => recordMock(DeleteHomeDocument, { data: { deleteHome: answer } });
+
+const deleteHomeTitle = () => t('confirmations.deleteHomeTitle');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -527,5 +534,70 @@ describe('leaving', () => {
     await act(async () => undefined);
 
     expect(mockNav.goBack).not.toHaveBeenCalled();
+  });
+});
+
+describe('deleting', () => {
+  it('is offered to the owner alone', async () => {
+    await openHome({ home: homeOf({ role: MembershipRole.Admin }) });
+
+    expect(screen.queryByText(deleteHomeTitle())).not.toBeOnTheScreen();
+    expect(screen.getByText(t('labels.leaveHome'))).toBeOnTheScreen();
+  });
+
+  it('closes the home once it stands', async () => {
+    const answer = deleting({
+      __typename: 'DeleteHomePayload',
+      converged: false,
+      home: { __typename: 'Home', id: HOME_ID },
+    });
+    await openHome({ answers: [answer] });
+
+    await userEvent.setup().press(screen.getByText(deleteHomeTitle()));
+    await answerAlert(t('labels.delete'));
+    await log.landed(DeleteHomeDocument);
+    await act(async () => undefined);
+
+    expect(inputOf(answer.fired[0] ?? {})).toEqual({ id: HOME_ID });
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays when it is refused, saying so once', async () => {
+    await openHome({
+      answers: [
+        deleting({
+          __typename: 'ForbiddenError',
+          code: ErrorCode.Forbidden,
+          disposition: ErrorDisposition.Fail,
+          message: 'No',
+        }),
+      ],
+    });
+
+    await userEvent.setup().press(screen.getByText(deleteHomeTitle()));
+    await answerAlert(t('labels.delete'));
+    await log.landed(DeleteHomeDocument);
+    await act(async () => undefined);
+
+    expect(mockNav.goBack).not.toHaveBeenCalled();
+    // The confirmation, then exactly one refusal.
+    expect(alertService.alert).toHaveBeenCalledTimes(2);
+  });
+
+  it('moves the selection off a home the server says is already gone', async () => {
+    useStore.setState({ selectedHomeId: HOME_ID });
+    await openHome({
+      answers: [
+        deleting({ __typename: 'NotFoundError', code: ErrorCode.NotFound }),
+      ],
+    });
+
+    await userEvent.setup().press(screen.getByText(deleteHomeTitle()));
+    await answerAlert(t('labels.delete'));
+    await log.landed(DeleteHomeDocument);
+    await act(async () => undefined);
+
+    expect(useStore.getState().selectedHomeId).toBeNull();
+    expect(mockNav.goBack).toHaveBeenCalledTimes(1);
   });
 });

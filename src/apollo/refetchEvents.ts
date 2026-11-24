@@ -133,7 +133,7 @@ const languageChanged = (client: ApolloClient) => () =>
 // changes what every screen of it shows, as a resync does.
 let householdLeft = (): void => {};
 
-/** The caller left a home or was removed from one: resync what the app shows. */
+/** The caller left, deleted or was removed from a home: resync what the app shows. */
 export const announceHouseholdLeft = (): void => householdLeft();
 
 const householdLeftSource = () =>

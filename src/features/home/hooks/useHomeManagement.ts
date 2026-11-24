@@ -23,9 +23,8 @@ export function useHomeManagement() {
     });
 
   // Mutations hook - CRUD operations
-  const { createHome, deleteHome, creating } = useHomeMutations({
+  const { createHome, creating } = useHomeMutations({
     refetch,
-    setDefaultHome,
     setSelectedPantryId,
   });
 
@@ -59,7 +58,6 @@ export function useHomeManagement() {
 
     // Actions
     createHome,
-    deleteHome,
     setDefaultHome,
     inviteUserToHome,
     joinHomeByCode,

@@ -3,7 +3,6 @@
  * imports: Detox's Jest reads this by relative path, outside the aliases.
  */
 export const homeTestIDs = {
-  homeActions: 'home-actions',
   managementScroll: 'home-management-scroll',
   setDefaultButton: (homeId: string) => `home-set-default-${homeId}`,
   managementAddButton: 'home-management-add-button',

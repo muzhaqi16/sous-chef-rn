@@ -33,6 +33,8 @@ export function useHomeDetailManagement(homeId: string) {
     revokeInvite,
     leaveHome,
     leaving,
+    deleteHome,
+    deleting,
     enableJoinLink,
     rotateJoinCode,
     rotatingJoinCode,
@@ -108,6 +110,7 @@ export function useHomeDetailManagement(homeId: string) {
     home,
     homeState,
     leaving,
+    deleting,
     refetch,
 
     // Actions
@@ -116,6 +119,7 @@ export function useHomeDetailManagement(homeId: string) {
     removeMember,
     revokeInvite,
     leaveHome,
+    deleteHome,
     toggleJoinCode,
     rotateJoinCode,
     rotatingJoinCode,

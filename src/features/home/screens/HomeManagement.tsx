@@ -31,7 +31,6 @@ import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { motion } from '#/theme/motion';
 import { SubScreen } from '#components/templates/SubScreen';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { homeTestIDs } from '#features/home/testIDs';
 import type { CreateHomeFormValues } from '#features/home/components/createHomeFormConfig';
 import { useSelectedHomeId } from '#store/useAppStore';
@@ -72,7 +71,6 @@ export const HomeManagement: React.FC = () => {
     loadingPreview,
     previewHome,
     createHome,
-    deleteHome,
     setDefaultHome,
     inviteUserToHome,
     joinHomeByCode,
@@ -308,11 +306,6 @@ export const HomeManagement: React.FC = () => {
                   home.myMembership.canInviteOthers,
                 )
               : false;
-            // The server lets only the OWNER delete a home — the role, not the
-            // canManageHome flag (which ADMINs hold by default). Gating on the
-            // flag shows ADMINs a Delete that can only ever be refused.
-            const userCanDelete =
-              home.myMembership?.role === MembershipRole.Owner;
 
             return (
               <Animated.View
@@ -330,11 +323,9 @@ export const HomeManagement: React.FC = () => {
                   isCurrent={home.id === selectedHomeId}
                   isHighlighted={home.id === highlightedHomeId}
                   canInvite={userCanInvite}
-                  canDelete={userCanDelete}
                   onPress={handleViewHomeDetail}
                   onSetDefault={handleSetDefault}
                   onInvite={inviteUserPrompt}
-                  onDelete={deleteHome}
                 />
               </Animated.View>
             );

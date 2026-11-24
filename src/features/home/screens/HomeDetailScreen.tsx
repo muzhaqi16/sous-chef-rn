@@ -63,12 +63,14 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     home,
     homeState,
     leaving,
+    deleting,
     refetch,
     saveName,
     changeRole,
     removeMember,
     revokeInvite,
     leaveHome,
+    deleteHome,
     toggleJoinCode,
     rotateJoinCode,
     rotatingJoinCode,
@@ -153,21 +155,12 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 
   const handleLeaveHome = async () => {
     if (!home) return;
+    if (await leaveHome(home.name)) goBack();
+  };
 
-    // Check if user is owner
-    if (isOwner) {
-      alertService.alert(
-        t('labels.cannotLeave'),
-        t('homeDetail.ownerCannotLeaveMessage'),
-        [{ text: t('labels.ok') }],
-      );
-      return;
-    }
-
-    const success = await leaveHome(home.name);
-    if (success) {
-      goBack();
-    }
+  const handleDeleteHome = async () => {
+    if (!home) return;
+    if (await deleteHome(home.name)) goBack();
   };
 
   // Gate on the absence of the home, never `loading`: Apollo reports `loading:
@@ -349,32 +342,38 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
         />
       ),
     },
-    // Only show Leave Home section for non-owners
-    ...(!isOwner
-      ? [
-          {
-            title: t('labels.dangerZone'),
-            content: (
-              <View style={styles.leaveHomeSection}>
-                <Text
-                  role="caption"
-                  tone="secondary"
-                  style={styles.leaveHomeDescription}
-                >
-                  {t('homeDetail.leaveHomeDescription')}
-                </Text>
-                <Button
-                  title={t('labels.leaveHome')}
-                  onPress={handleLeaveHome}
-                  variant="danger"
-                  loading={leaving}
-                  disabled={leaving}
-                />
-              </View>
-            ),
-          },
-        ]
-      : []),
+    // The server lets only the OWNER delete a home — the role, not the
+    // canManageHome flag ADMINs hold — and an owner cannot leave one.
+    {
+      title: t('labels.dangerZone'),
+      content: isOwner ? (
+        <View style={styles.dangerZone}>
+          <Text role="caption" tone="secondary">
+            {t('homeDetail.deleteHomeDescription')}
+          </Text>
+          <Button
+            title={t('confirmations.deleteHomeTitle')}
+            onPress={handleDeleteHome}
+            variant="danger"
+            loading={deleting}
+            disabled={deleting}
+          />
+        </View>
+      ) : (
+        <View style={styles.dangerZone}>
+          <Text role="caption" tone="secondary">
+            {t('homeDetail.leaveHomeDescription')}
+          </Text>
+          <Button
+            title={t('labels.leaveHome')}
+            onPress={handleLeaveHome}
+            variant="danger"
+            loading={leaving}
+            disabled={leaving}
+          />
+        </View>
+      ),
+    },
   ];
 
   return (
@@ -412,8 +411,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: 'transparent',
     borderBottomWidth: theme.borderWidth.none,
   },
-  leaveHomeSection: {
+  dangerZone: {
     gap: theme.spacing.md,
   },
-  leaveHomeDescription: {},
 }));

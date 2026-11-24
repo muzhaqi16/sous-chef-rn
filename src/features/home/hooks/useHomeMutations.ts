@@ -1,41 +1,27 @@
-/** Create and delete mutations for homes. Renaming lives in the detail hook. */
+/** Creating a home. Renaming and deleting live in the detail screen's hooks. */
 
 import { t } from '#/i18n';
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import {
-  DeleteHomeDocument,
-  GetHomesDocument,
-} from '#operations/home/home.generated';
+import { useApolloClient } from '@apollo/client/react';
+import { GetHomesDocument } from '#operations/home/home.generated';
 import { useCreateHome } from '#features/home/hooks/useCreateHome';
 import { useCreatePantry } from '#features/pantry/hooks/useCreatePantry';
 import { readDefaultPantryId } from '#features/home/utils/homePantries';
 import { alertService } from '#/services/alertService';
-import {
-  useSelectedHomeId,
-  useHomeState,
-  useHasUnverifiedEmail,
-} from '#store/useAppStore';
+import { useHomeState, useHasUnverifiedEmail } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
-import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
-import { removeFromHomesCache } from './homeCacheUpdaters';
-import { errorService } from '#/services/errorService';
 
 interface UseHomeMutationsOptions {
   refetch: () => Promise<void>;
-  setDefaultHome: (homeId: string) => Promise<boolean>;
   setSelectedPantryId: (pantryId: string | null) => void;
 }
 
-/** Home create/delete mutations. */
+/** Home create mutation. */
 export function useHomeMutations({
   refetch,
-  setDefaultHome,
   setSelectedPantryId,
 }: UseHomeMutationsOptions) {
-  const selectedHomeId = useSelectedHomeId();
   const hasUnverifiedEmail = useHasUnverifiedEmail();
   const { setSelectedHomeId } = useHomeState();
-  const { createRemoveOperation } = useCrudOperations();
   const client = useApolloClient();
 
   // One home create, wherever it is made — the local-first one, which writes
@@ -46,42 +32,6 @@ export function useHomeMutations({
   // `createDefaultPantry` is forced off so no pantry carries a server-minted
   // id, which makes minting the home's first pantry this caller's job.
   const { createPantry, creating: creatingPantry } = useCreatePantry();
-
-  const [deleteHomeMutation] = useMutation(DeleteHomeDocument);
-
-  /**
-   * Takes a deleted home out of the cache and, when it was the selection, moves
-   * the selection on. Run for every removal that did not fail — including a
-   * top-level gone code, which carries no payload for an `update` to read.
-   */
-  function removeDeletedHome(homeId: string) {
-    try {
-      removeFromHomesCache(client.cache, homeId, { evictItem: true });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Cache update failed for deleteHome:',
-      });
-      void refetch();
-    }
-    if (homeId !== selectedHomeId) return;
-
-    const cachedData = client.cache.readQuery({
-      query: GetHomesDocument,
-      optimistic: true,
-    });
-    const [newDefaultHome] = extractNodes(cachedData?.homes);
-    if (newDefaultHome) {
-      setSelectedHomeId(newDefaultHome.id);
-      // Clear orphaned pantry selection - useDefaultHome will auto-select new home's default
-      setSelectedPantryId(null);
-      // Presents its own failure and rolls the selection back.
-      void setDefaultHome(newDefaultHome.id);
-    } else {
-      // No homes left, clear all selections
-      setSelectedHomeId(null);
-      setSelectedPantryId(null);
-    }
-  }
 
   /**
    * Writes, then adopts the new home and its default pantry. Adoption is keyed
@@ -169,24 +119,8 @@ export function useHomeMutations({
     if (defaultPantry) setSelectedPantryId(defaultPantry);
   }
 
-  const deleteHome = (homeId: string, homeName: string) => {
-    const operation = createRemoveOperation({
-      mutation: deleteHomeMutation,
-      document: DeleteHomeDocument,
-      fallback: t('errors.deleteHomeFailed'),
-      itemId: homeId,
-      onRemoved: () => removeDeletedHome(homeId),
-      confirmTitle: t('confirmations.deleteHomeTitle'),
-      confirmMessage: t('labels.areYouSureYouWantToDeleteThisCannotBeUndone', {
-        name: homeName,
-      }),
-    });
-    return operation();
-  };
-
   return {
     createHome,
-    deleteHome,
     // The default pantry's round trip is part of creating a home: the submit
     // control stays disabled until both have settled.
     creating: creating || creatingPantry,

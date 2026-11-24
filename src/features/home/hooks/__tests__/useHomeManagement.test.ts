@@ -20,7 +20,6 @@ const mockHomeSelection = {
 const mockHomeMutations = {
   createHome: jest.fn(),
   updateHome: jest.fn(),
-  deleteHome: jest.fn(),
   creating: false,
 };
 
@@ -70,7 +69,6 @@ describe('useHomeManagement', () => {
 
     // Functions from useHomeMutations
     expect(result.current.createHome).toBe(mockHomeMutations.createHome);
-    expect(result.current.deleteHome).toBe(mockHomeMutations.deleteHome);
 
     // Loading states
     expect(result.current.creating).toBe(false);
@@ -112,7 +110,6 @@ describe('useHomeManagement', () => {
     const { useHomeMutations } = jest.requireMock('../useHomeMutations');
     expect(useHomeMutations).toHaveBeenCalledWith({
       refetch: mockHomeQuery.refetch,
-      setDefaultHome: mockHomeSelection.setDefaultHome,
       setSelectedPantryId: mockHomeSelection.setSelectedPantryId,
     });
   });

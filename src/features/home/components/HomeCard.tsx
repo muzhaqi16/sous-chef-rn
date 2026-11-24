@@ -11,7 +11,6 @@ import { useFragment } from '@apollo/client/react';
 import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport';
 
 import { Icon } from '#components/atoms/Icon';
-import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -37,12 +36,10 @@ interface HomeCardProps {
   /** The home this device is on; a default it is not on offers the switch back. */
   isCurrent: boolean;
   isHighlighted?: boolean;
-  canInvite?: boolean;
-  canDelete?: boolean;
+  canInvite: boolean;
   onPress?: (homeId: string) => void;
   onSetDefault: (homeId: string) => void;
   onInvite: (homeId: string) => void;
-  onDelete: (homeId: string, homeName: string) => void;
 }
 
 export const HomeCard: React.FC<HomeCardProps> = ({
@@ -51,11 +48,9 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   isCurrent,
   isHighlighted = false,
   canInvite,
-  canDelete,
   onPress,
   onSetDefault,
   onInvite,
-  onDelete,
 }) => {
   const { t } = useTranslation();
   // Per-entity cache subscription: this card re-renders only when this Home's
@@ -88,10 +83,6 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   const pantryCount = home.pantriesConnection.totalCount;
   const members = home.membersConnection.edges.map(e => e.node);
   const invites = home.invitesConnection.edges.map(e => e.node);
-
-  const handleDelete = () => {
-    onDelete(home.id, home.name);
-  };
 
   return (
     <View style={styles.homeCardWrapper}>
@@ -152,15 +143,11 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           )}
         </Pressable>
 
-        <HomeActions
-          homeId={home.id}
-          canInvite={canInvite}
-          canDelete={canDelete}
-          onInvite={onInvite}
-          onDelete={handleDelete}
+        <MembersList
+          members={members}
+          invites={invites}
+          onInvite={canInvite ? () => onInvite(home.id) : undefined}
         />
-
-        <MembersList members={members} invites={invites} />
       </View>
     </View>
   );
@@ -194,7 +181,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing.base,
     gap: theme.spacing.md,
   },
   homeInfo: {

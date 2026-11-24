@@ -229,7 +229,8 @@ describe('the homes', () => {
     expect(mockNav.toHomeDetail).toHaveBeenCalledWith({ homeId: CABIN.id });
   });
 
-  it('offer delete to the owner alone, and invite to whoever may', async () => {
+  // Deleting lives on the home's details; a card offers only the invite.
+  it('offer invite to whoever may, and delete on no card', async () => {
     await openHomes({
       homes: [
         KITCHEN,
@@ -243,17 +244,15 @@ describe('the homes', () => {
       ],
     });
 
+    expect(screen.queryByText(t('labels.delete'))).not.toBeOnTheScreen();
     expect(
-      within(cardOf(KITCHEN.id)).getByText(t('labels.delete')),
+      within(cardOf(KITCHEN.id)).getByLabelText(t('labels.inviteMemberToHome')),
     ).toBeTruthy();
     expect(
-      within(cardOf(CABIN.id)).queryByText(t('labels.delete')),
-    ).not.toBeOnTheScreen();
-    expect(
-      within(cardOf(CABIN.id)).getByText(t('homeManagement.cardInvite')),
+      within(cardOf(CABIN.id)).getByLabelText(t('labels.inviteMemberToHome')),
     ).toBeTruthy();
     expect(
-      within(cardOf('home-3')).queryByText(t('homeManagement.cardInvite')),
+      within(cardOf('home-3')).queryByLabelText(t('labels.inviteMemberToHome')),
     ).not.toBeOnTheScreen();
   });
 
@@ -276,7 +275,7 @@ describe('an invite', () => {
     await userEvent
       .setup()
       .press(
-        within(cardOf(CABIN.id)).getByText(t('homeManagement.cardInvite')),
+        within(cardOf(CABIN.id)).getByLabelText(t('labels.inviteMemberToHome')),
       );
     const modal = screen.UNSAFE_getByType(InviteUserModal);
     expect(modal.props.visible).toBe(true);
@@ -299,7 +298,7 @@ describe('an invite', () => {
     await userEvent
       .setup()
       .press(
-        within(cardOf(CABIN.id)).getByText(t('homeManagement.cardInvite')),
+        within(cardOf(CABIN.id)).getByLabelText(t('labels.inviteMemberToHome')),
       );
 
     askedToVerify();
