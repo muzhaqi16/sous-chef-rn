@@ -223,29 +223,12 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
             />
           )}
 
-          <AppPressable
-            style={[
-              styles.folderItem,
-              !selectedFolder && styles.folderItemSelected,
-            ]}
-            onPress={() => handleSelectFolder(null)}
-          >
-            <Icon
-              name="mail-outline"
-              size="sm"
-              tone={!selectedFolder ? 'primary' : 'textSecondary'}
-            />
-            <Text
-              role={!selectedFolder ? 'bodyStrong' : 'body'}
-              tone={!selectedFolder ? 'accent' : 'primary'}
-              style={styles.folderName}
-            >
-              {t('labels.noFolder')}
-            </Text>
-            {!selectedFolder && (
-              <Icon name="checkmark" size="sm" tone="primary" />
-            )}
-          </AppPressable>
+          <FolderListItem
+            folder={null}
+            label={t('labels.noFolder')}
+            isSelected={!selectedFolder}
+            onPress={handleSelectFolder}
+          />
 
           <Divider style={styles.dividerGap} />
 
@@ -335,21 +318,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  folderItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.base,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    gap: theme.spacing.base,
-  },
-  folderItemSelected: {
-    backgroundColor: theme.colors.primaryLight,
-  },
-  folderName: {
-    flex: 1,
-  },
   dividerGap: {
     marginVertical: theme.spacing.md,
   },

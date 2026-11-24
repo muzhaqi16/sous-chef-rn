@@ -4,9 +4,11 @@ import { ListItem } from '#components/molecules/ListItem';
 import { Icon } from '#components/atoms/Icon';
 
 export interface FolderListItemProps {
-  folder: string;
+  /** Null is the "no folder" choice, named by `label`. */
+  folder: string | null;
+  label?: string;
   isSelected: boolean;
-  onPress: (folder: string) => void;
+  onPress: (folder: string | null) => void;
   /** When provided, enables the long-press manage menu. */
   onLongPress?: (folder: string) => void;
 }
@@ -18,6 +20,7 @@ export interface FolderListItemProps {
  */
 export const FolderListItem: React.FC<FolderListItemProps> = ({
   folder,
+  label,
   isSelected,
   onPress,
   onLongPress,
@@ -26,10 +29,12 @@ export const FolderListItem: React.FC<FolderListItemProps> = ({
     <RowCard>
       <ListItem
         leftIcon="folder-outline"
-        title={folder}
+        title={label ?? folder ?? ''}
         titleNumberOfLines={1}
         onPress={() => onPress(folder)}
-        onLongPress={onLongPress ? () => onLongPress(folder) : undefined}
+        onLongPress={
+          onLongPress && folder !== null ? () => onLongPress(folder) : undefined
+        }
         selected={isSelected}
         rightElement={
           isSelected ? <Icon name="checkmark" size="sm" tone="primary" /> : null
