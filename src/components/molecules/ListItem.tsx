@@ -26,6 +26,12 @@ interface ListItemProps {
   titleNumberOfLines?: number;
   subtitle?: string | React.ReactNode;
   onPress?: () => void;
+  /** A pressable row's second action, such as a folder's manage menu. */
+  onLongPress?: () => void;
+  /** A pressable row that does nothing for now; said so to assistive tech. */
+  disabled?: boolean;
+  /** A row picked in a list of choices: tinted, and reported as selected. */
+  selected?: boolean;
   leftIcon?: React.ComponentProps<typeof Icon>['name'];
   badge?: BadgeContent;
   rightElement?: React.ReactNode;
@@ -45,6 +51,9 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   titleNumberOfLines = 2,
   subtitle,
   onPress,
+  onLongPress,
+  disabled = false,
+  selected,
   leftIcon,
   badge,
   rightElement,
@@ -111,17 +120,27 @@ const ListItemComponent: React.FC<ListItemProps> = ({
     const subtitleText = typeof subtitle === 'string' ? subtitle : '';
 
     return (
-      <View style={commonStyles.rowSurface}>
+      <View
+        style={[commonStyles.rowSurface, selected && styles.selectedSurface]}
+      >
         <AppPressable
           style={commonStyles.rowContent}
           onPress={onPress}
+          onLongPress={onLongPress}
+          delayLongPress={onLongPress ? 500 : undefined}
+          // Only when set: Pressable's `disabled={false}` would override the
+          // purchased row's spoken state below.
+          disabled={disabled || undefined}
           accessibilityRole="button"
           accessibilityLabel={
             accessibilityLabel ??
             accessibilityLabelOf(title, subtitleText, badge?.text)
           }
           accessibilityHint={accessibilityHint ?? t('labels.tapToViewDetails')}
-          accessibilityState={{ disabled: isPurchased }}
+          accessibilityState={{
+            disabled: isPurchased || disabled,
+            ...(selected === undefined ? {} : { selected }),
+          }}
         >
           {content}
         </AppPressable>
@@ -187,6 +206,9 @@ const ListItemSubtitle: React.FC<{
 export const ListItem = ListItemComponent;
 
 const styles = StyleSheet.create(theme => ({
+  selectedSurface: {
+    backgroundColor: theme.colors.primaryLight,
+  },
   checkboxContainer: {
     justifyContent: 'center',
     // Never compressed when the row has no image.

@@ -1,8 +1,7 @@
 import React from 'react';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { StyleSheet } from 'react-native-unistyles';
+import { RowCard } from '#components/atoms/RowCard';
+import { ListItem } from '#components/molecules/ListItem';
 import { Icon } from '#components/atoms/Icon';
-import { Text } from '#components/atoms/Text';
 
 export interface FolderListItemProps {
   folder: string;
@@ -26,45 +25,21 @@ export const FolderListItem: React.FC<FolderListItemProps> = ({
   disabled = false,
 }) => {
   return (
-    <AppPressable
-      style={[styles.folderItem, isSelected && styles.folderItemSelected]}
-      onPress={() => onPress(folder)}
-      onLongPress={onLongPress ? () => onLongPress(folder) : undefined}
-      delayLongPress={500}
-      disabled={disabled}
-    >
-      <Icon
-        name="folder-outline"
-        size="sm"
-        tone={isSelected ? 'primary' : 'textSecondary'}
+    <RowCard>
+      <ListItem
+        leftIcon="folder-outline"
+        title={folder}
+        titleNumberOfLines={1}
+        onPress={() => onPress(folder)}
+        onLongPress={onLongPress ? () => onLongPress(folder) : undefined}
+        disabled={disabled}
+        selected={isSelected}
+        rightElement={
+          isSelected ? <Icon name="checkmark" size="sm" tone="primary" /> : null
+        }
+        // Its label is the folder; the tap picks it.
+        accessibilityHint=""
       />
-      <Text
-        role={isSelected ? 'bodyStrong' : 'body'}
-        tone={isSelected ? 'accent' : 'primary'}
-        style={styles.folderName}
-        numberOfLines={1}
-      >
-        {folder}
-      </Text>
-      {!!isSelected && <Icon name="checkmark" size="sm" tone="primary" />}
-    </AppPressable>
+    </RowCard>
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  folderItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.base,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    gap: theme.spacing.base,
-  },
-  folderItemSelected: {
-    backgroundColor: theme.colors.primaryLight,
-  },
-  folderName: {
-    flex: 1,
-  },
-}));
