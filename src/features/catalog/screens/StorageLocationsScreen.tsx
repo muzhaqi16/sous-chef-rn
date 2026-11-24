@@ -19,7 +19,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
-import { SegmentedControl } from '#components/molecules/SegmentedControl';
+import { ModeTabs } from '#components/molecules/ModeTabs';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 
@@ -238,7 +238,7 @@ export const StorageLocationsScreen: React.FC<
 
           {/* View Mode Toggle */}
           {locations.length > 0 && (
-            <SegmentedControl
+            <ModeTabs
               options={VIEW_MODES}
               value={viewMode}
               onChange={setViewMode}

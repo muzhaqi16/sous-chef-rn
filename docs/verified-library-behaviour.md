@@ -474,7 +474,11 @@ that API hides). Hence the exact `10.0.2` in `package.json`.
 
 **Verified against `react-native-tab-view@4.3.2` (and 4.3.5, the newest 4.x) +
 `react-native-pager-view@10.0.2`/`10.0.3` (2026-11-23),** by `npm run typecheck`:
-10.0.3 fails in `src/features/pantry/components/TabView/TabView.tsx`, 10.0.2 passes.
+10.0.3 failed in the pantry `TabView`, which passed `renderLazyPlaceholder`;
+10.0.2 passes. That `TabView` was removed on 2026-11-24 (PantryAnalytics moved to
+`ModeTabs`). The one left, `ShoppingListTabs`, passes `lazy` but not
+`renderLazyPlaceholder`, so the pin may no longer be needed: re-run the
+typecheck on 10.0.3 before dropping it.
 
 Re-check on a tab-view or pager-view bump: the pin can go once tab-view's omit
 list names `lazy` and `renderLazyPlaceholder`, or tab-view stops extending
