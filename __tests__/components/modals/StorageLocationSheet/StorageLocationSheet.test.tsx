@@ -52,13 +52,13 @@ describe('StorageLocationSheet', () => {
     expect(getByText('Edit Storage Location')).toBeTruthy();
   });
 
-  it('shows Cancel button', () => {
-    const { getByText } = render(<StorageLocationSheet {...defaultProps} />);
-    expect(getByText('Cancel')).toBeTruthy();
+  it('closes from the bar', () => {
+    const { getByRole } = render(<StorageLocationSheet {...defaultProps} />);
+    expect(getByRole('button', { name: 'Close' })).toBeTruthy();
   });
 
-  it('shows Create button for new locations', () => {
-    const { getByText } = render(<StorageLocationSheet {...defaultProps} />);
-    expect(getByText('Create')).toBeTruthy();
+  it('confirms a new location as Create', () => {
+    const { getByRole } = render(<StorageLocationSheet {...defaultProps} />);
+    expect(getByRole('button', { name: 'Create' })).toBeTruthy();
   });
 });

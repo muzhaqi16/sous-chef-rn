@@ -79,6 +79,8 @@ export interface SheetProps extends UseStandardBottomSheetOptions {
    * content, when each of its steps pads its own scroll content.
    */
   bottomInset?: 'container' | 'content';
+  /** The page gutter on the content, as `Screen`'s; `action` always has it. */
+  gutter?: 'page' | 'none';
 }
 
 /**
@@ -98,6 +100,7 @@ export const Sheet: React.FC<SheetProps> = ({
   actions,
   modalOptions,
   bottomInset = 'container',
+  gutter = 'none',
   ...sheetOptions
 }) => {
   const {
@@ -124,7 +127,8 @@ export const Sheet: React.FC<SheetProps> = ({
     </>
   );
 
-  const containerStyle = [contentContainerStyle, insetStyle];
+  const gutterStyle = gutter === 'page' ? styles.pageGutter : undefined;
+  const containerStyle = [gutterStyle, contentContainerStyle, insetStyle];
 
   // `keyboardShouldPersistTaps` is stated, not inherited: neither gorhom nor
   // the keyboard-aware view supplies one, and RN's default spends the first
@@ -168,7 +172,7 @@ export const Sheet: React.FC<SheetProps> = ({
         return header ? (
           <BottomSheetView style={insetStyle}>
             {header}
-            <View style={contentContainerStyle}>{body}</View>
+            <View style={[gutterStyle, contentContainerStyle]}>{body}</View>
           </BottomSheetView>
         ) : (
           <BottomSheetView style={containerStyle}>{body}</BottomSheetView>
@@ -177,7 +181,7 @@ export const Sheet: React.FC<SheetProps> = ({
         return underHeader(
           <BottomSheetScrollView
             {...scrollProps}
-            contentContainerStyle={[styles.actionContent, containerStyle]}
+            contentContainerStyle={[styles.pageGutter, containerStyle]}
           >
             {body}
           </BottomSheetScrollView>,
@@ -221,7 +225,7 @@ const styles = StyleSheet.create(theme => ({
   title: {
     flex: 1,
   },
-  actionContent: {
+  pageGutter: {
     paddingHorizontal: theme.layout.pageGutter,
   },
 }));

@@ -1,19 +1,13 @@
 import React, { useRef } from 'react';
-import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { StyleSheet } from 'react-native-unistyles';
-import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import {
   StorageLocationForm,
   type StorageLocationFormRef,
   type StorageLocationFormValues,
 } from '#features/catalog/ui/StorageLocationForm';
-import { Text } from '#components/atoms/Text';
-
 import type { StorageLocation } from '#/graphql/generated/schemaTypes';
-import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
 
 /**
  * The subset of {@link StorageLocation} fields the sheet actually reads to
@@ -82,51 +76,23 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
 
   return (
     <Sheet
-      mode="action"
+      mode="form"
+      gutter="page"
       visible={visible}
       onDismiss={onClose}
       snapPoints={['80%', '95%']}
-      style={styles.content}
+      header={
+        <SheetHeader
+          title={title}
+          onClose={onClose}
+          confirm={{
+            onPress: handleHeaderSave,
+            accessibilityLabel: saveText,
+            loading: isSubmitting,
+          }}
+        />
+      }
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <AppPressable
-          onPress={onClose}
-          style={styles.headerButton}
-          accessibilityRole="button"
-          accessibilityLabel={t('labels.cancel')}
-          disabled={isSubmitting}
-        >
-          <Text role="body" tone="secondary">
-            {t('labels.cancel')}
-          </Text>
-        </AppPressable>
-
-        <Text role="heading" align="center" style={styles.title}>
-          {title}
-        </Text>
-
-        <AppPressable
-          onPress={handleHeaderSave}
-          style={styles.headerButton}
-          accessibilityRole="button"
-          accessibilityLabel={saveText}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ThemedActivityIndicator size="small" />
-          ) : (
-            <Text role="bodyStrong" align="right" tone="accent">
-              {saveText}
-            </Text>
-          )}
-        </AppPressable>
-      </View>
-
-      {/* Divider */}
-      <Divider style={styles.dividerGap} />
-
-      {/* Form */}
       <StorageLocationForm
         ref={formRef}
         initialData={initialData}
@@ -139,26 +105,3 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
     </Sheet>
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  content: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
-  },
-  headerButton: {
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.xs,
-    minWidth: 60,
-  },
-  title: {
-    flex: 1,
-  },
-  dividerGap: {
-    marginBottom: theme.spacing.lg,
-  },
-}));
