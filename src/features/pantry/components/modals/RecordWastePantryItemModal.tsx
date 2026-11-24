@@ -80,7 +80,6 @@ const wasteSchema: ObjectSchema<WasteFormValues> = object({
 const untypedAmount = (shared: PantryActionSharedState) =>
   formatQuantityForInput(shared.trackingQuantity, {
     notation: resolveQuantityNotation(
-      null,
       shared.displayAsFractionOf(shared.trackingUnitId),
     ),
   });

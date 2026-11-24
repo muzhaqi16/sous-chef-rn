@@ -110,7 +110,7 @@ export function localAmountLeft(
     symbol: unit?.symbol ?? '',
     localizedSymbol: unitLabel(unit, {
       quantity,
-      notation: resolveQuantityNotation(null, displayAsFraction),
+      notation: resolveQuantityNotation(displayAsFraction),
     }),
     displayAsFraction,
     type: unit?.type ?? UnitType.Count,

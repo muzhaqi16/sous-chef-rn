@@ -318,7 +318,6 @@ export const ShoppingListItemDetail: React.FC<
             <FormattedItemSubtitle
               quantity={item.quantity}
               quantityInput={item.quantityInput}
-              displayFormat={item.displayFormat}
               unit={lineUnit}
             />
           </DetailRow>

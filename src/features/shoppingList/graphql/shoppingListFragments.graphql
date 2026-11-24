@@ -15,7 +15,6 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   itemName
   quantity
   quantityInput
-  displayFormat
   purchaseInfo {
     isPurchased
     # The row renders a stocked line differently, and a field the write omits
@@ -168,7 +167,6 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
   itemName
   quantity
   quantityInput
-  displayFormat
   purchaseInfo {
     isPurchased
     # The row renders a stocked line differently, and a field the write omits

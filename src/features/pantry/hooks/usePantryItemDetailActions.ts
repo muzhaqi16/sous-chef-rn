@@ -223,10 +223,7 @@ export function usePantryItemDetailActions({
     if (!item) return;
 
     const hasBatches = (item.activeBatchCount ?? 0) > 0;
-    const notation = resolveQuantityNotation(
-      null,
-      item.unit?.displayAsFraction,
-    );
+    const notation = resolveQuantityNotation(item.unit?.displayAsFraction);
     const title = hasBatches
       ? t('pantryItemDetail.discardBatchesTitle')
       : t('pantryItemDetail.discardItemTitle');

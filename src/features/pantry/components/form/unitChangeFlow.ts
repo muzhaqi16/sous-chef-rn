@@ -81,7 +81,7 @@ type PreviewUnit = UnitChangePreview['toUnit'];
 
 const amountText = (quantity: number | null | undefined, unit: PreviewUnit) =>
   formatQuantityWithUnit(quantity, unit, {
-    notation: resolveQuantityNotation(null, unit.displayAsFraction),
+    notation: resolveQuantityNotation(unit.displayAsFraction),
   });
 
 /**

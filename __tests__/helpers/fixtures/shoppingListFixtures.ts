@@ -5,7 +5,6 @@
 import {
   CollaboratorRole,
   CollaboratorStatus,
-  DisplayFormat,
   MembershipRole,
   type StoreDepartment,
 } from '#/graphql/generated/schemaTypes';
@@ -374,7 +373,6 @@ export const displayedLine = (
   itemName: 'Milk',
   quantity: 2,
   quantityInput: '2',
-  displayFormat: DisplayFormat.Auto,
   version: 3,
   updatedAt: '2025-01-01T00:00:00.000Z',
   category: 'Dairy',

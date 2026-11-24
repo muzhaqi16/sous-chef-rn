@@ -50,7 +50,6 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import {
   ShoppingListItemDisplayFragmentDoc,
   type ShoppingListItemDisplayFragment,
@@ -80,7 +79,6 @@ function seedItem(cache: InMemoryCache, isPurchased: boolean) {
     itemName: 'Milk',
     quantity: 1,
     quantityInput: '1',
-    displayFormat: DisplayFormat.Decimal,
     // Two fields, because that is all `ShoppingListItemDisplayFragment`
     // selects — the seed cannot hold more than the fragment it is written
     // through.

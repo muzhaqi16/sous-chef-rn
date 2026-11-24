@@ -209,7 +209,6 @@ query GetShoppingListItemsFiltered(
           itemName
           quantity
           quantityInput
-          displayFormat
           purchaseInfo {
             isPurchased
             # Read by the row to show a line already stocked in the pantry.

@@ -116,7 +116,6 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                 })
               : formatQuantityForInput(pantryItem.quantity, {
                   notation: resolveQuantityNotation(
-                    null,
                     pantryItem.unit.displayAsFraction,
                   ),
                 }),

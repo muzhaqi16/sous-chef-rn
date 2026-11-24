@@ -1,6 +1,5 @@
 import Fraction from 'fraction.js';
 import { formatNumberForInput } from '#/utils/formatters/number';
-import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import type { PluralForms } from '#/graphql/generated/schemaTypes';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { getResolvedLanguage } from '#/i18n';
@@ -35,27 +34,13 @@ export function formatQuantity(value: number): string {
 export type QuantityNotation = 'mixed' | 'fraction' | 'decimal';
 
 /**
- * The item's `displayFormat` wins, then the unit's `displayAsFraction`; absent
- * both, a cooking fraction wins over a decimal.
+ * The unit's `displayAsFraction` decides; absent it, a cooking fraction wins over
+ * a decimal. Only an explicit `false` (a unit nobody halves) opts out.
  */
 export function resolveQuantityNotation(
-  displayFormat: DisplayFormat | null | undefined,
   displayAsFraction: boolean | null | undefined,
 ): QuantityNotation {
-  switch (displayFormat) {
-    case DisplayFormat.Fraction:
-      return 'fraction';
-    case DisplayFormat.Mixed:
-      return 'mixed';
-    case DisplayFormat.Decimal:
-      return 'decimal';
-    case DisplayFormat.Auto:
-    case null:
-    case undefined:
-    default:
-      // Only an explicit `false` — a unit nobody halves — opts out of fractions.
-      return displayAsFraction === false ? 'decimal' : 'mixed';
-  }
+  return displayAsFraction === false ? 'decimal' : 'mixed';
 }
 
 /**
@@ -312,7 +297,7 @@ export function statedAmount(
   unit: UnitLabelSource,
   displayAsFraction: boolean | null | undefined,
 ): { fraction: string | null; localizedSymbol: string } {
-  const notation = resolveQuantityNotation(null, displayAsFraction);
+  const notation = resolveQuantityNotation(displayAsFraction);
   const figure = formatQuantityAsFraction(Math.abs(quantity), notation);
   const fraction = figure.includes('/') ? figure.split(' ').pop() : null;
   return {

@@ -7,7 +7,6 @@ fragment useToggleShoppingItem_item on ShoppingListItem {
   itemName
   quantity
   quantityInput
-  displayFormat
   purchaseInfo {
     isPurchased
     # The revert restores this. A flip CLEARS the stamp (the server does the

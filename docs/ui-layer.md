@@ -724,9 +724,9 @@ they read it.
   (`snapDeductionToCap`). A waste field seeded with 2.4566 shows `2.457`, which
   parses above the stock; it matches the stock in the seed's decimal or fraction
   form, or in the displayed form, so "use all of it" is never refused.
-- **`QuantityDisplay`** maps the item's `DisplayFormat` and the unit's
-  `displayAsFraction` onto its `notation`. Only an explicit
-  `displayAsFraction: false` — a unit nobody halves — opts out of fractions.
+- **`QuantityDisplay`** maps the unit's `displayAsFraction` onto its
+  `notation`. Only an explicit `displayAsFraction: false` — a unit nobody
+  halves — opts out of fractions.
 - **`quantityInput` is re-formatted, never shown verbatim.** It holds the user's
   own text ("1 1/4"), but the API echoes it back as a stringified float, so a
   1/3-cup recipe line comes back carrying `"0.33333334"`. Text no parser can read

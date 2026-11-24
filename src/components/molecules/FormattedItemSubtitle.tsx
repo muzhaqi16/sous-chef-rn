@@ -3,7 +3,6 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { QuantityDisplay } from '#components/atoms/QuantityDisplay';
-import type { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 import { unitLabel, type UnitLabelSource } from '#/utils/formatQuantity';
 
@@ -11,7 +10,6 @@ interface FormattedItemSubtitleProps {
   quantity?: number | null;
   initialQuantity?: number | null;
   quantityInput?: string | null;
-  displayFormat?: DisplayFormat | null;
   displayAsFraction?: boolean | null;
   netWeight?: number | null;
   unit?: UnitLabelSource | null;
@@ -26,7 +24,6 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   quantity,
   initialQuantity,
   quantityInput,
-  displayFormat,
   displayAsFraction,
   netWeight,
   unit,
@@ -86,7 +83,6 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
         <QuantityDisplay
           quantity={displayQuantity}
           quantityInput={isPartialSingleItem ? undefined : quantityInput}
-          displayFormat={displayFormat}
           displayAsFraction={displayAsFraction}
           showUnit={false}
           style={styles.quantity}
@@ -126,7 +122,6 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
         <QuantityDisplay
           quantity={displayQuantity}
           quantityInput={isPartialSingleItem ? undefined : quantityInput}
-          displayFormat={displayFormat}
           unit={unit}
           displayAsFraction={displayAsFraction}
           style={styles.quantity}
@@ -181,7 +176,6 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
         <QuantityDisplay
           quantity={displayQuantity}
           quantityInput={isPartialSingleItem ? undefined : quantityInput}
-          displayFormat={displayFormat}
           displayAsFraction={displayAsFraction}
           showUnit={false}
           style={styles.quantity}

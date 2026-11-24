@@ -68,7 +68,7 @@ export function readingNotation(
 ): QuantityNotation {
   return reading.type === UnitType.Count
     ? 'mixed'
-    : resolveQuantityNotation(null, reading.displayAsFraction);
+    : resolveQuantityNotation(reading.displayAsFraction);
 }
 
 /** "3 lb", "1 1/2 cup", "1 1/2 can": a measure in its unit's own notation. */

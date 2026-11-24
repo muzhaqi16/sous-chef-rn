@@ -47,7 +47,6 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
     image: null,
     quantity: '2',
     quantityInput: '2',
-    displayFormat: null,
     unitName: 'loaves',
     category: 'Bakery',
     priority: 2,

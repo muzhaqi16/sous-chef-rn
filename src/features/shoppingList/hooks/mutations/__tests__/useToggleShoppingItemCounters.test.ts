@@ -69,7 +69,6 @@ function seed(completedItems: number) {
       itemName: 'Milk',
       quantity: 1,
       quantityInput: '1',
-      displayFormat: 'DECIMAL',
       purchaseInfo: {
         __typename: 'ShoppingListItemPurchaseInfo',
         isPurchased: true,

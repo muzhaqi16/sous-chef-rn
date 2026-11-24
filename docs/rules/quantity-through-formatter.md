@@ -25,7 +25,7 @@ t('remaining', { quantity: formatQuantityForDisplay(item.quantity), unit })
 formatQuantityDisplay(unit.totalQuantity, unit.unitSymbol) // g→kg, mL→L
 ```
 
-All from `#/utils/formatQuantity`; `resolveQuantityNotation(displayFormat, displayAsFraction)` picks the notation where a string is needed and the item or unit carries it.
+All from `#/utils/formatQuantity`; `resolveQuantityNotation(displayAsFraction)` picks the notation where a string is needed and the unit carries it.
 
 ## Why
 

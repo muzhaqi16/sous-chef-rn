@@ -17,7 +17,7 @@ function reportExceeds(
   cap: ShownQuantity,
   report: (message: string) => void,
 ): void {
-  const notation = resolveQuantityNotation(null, cap.displayAsFraction);
+  const notation = resolveQuantityNotation(cap.displayAsFraction);
   report(
     t(
       actionVerb === 'waste'

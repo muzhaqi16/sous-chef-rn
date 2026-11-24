@@ -8,7 +8,6 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 import type { Unmasked } from '@apollo/client/masking';
 import {
   AddedContext,
-  DisplayFormat,
   EntryImageSource,
 } from '#/graphql/generated/schemaTypes';
 import { makeCache } from '../cache';
@@ -53,7 +52,6 @@ const fullItem: Unmasked<ItemDetail_ShoppingListItemFragment> = {
   itemName: 'Lemon juice',
   quantity: 1,
   quantityInput: '1',
-  displayFormat: DisplayFormat.Decimal,
   unitName: 'lemon',
   category: 'Produce',
   notes: null,
@@ -124,7 +122,6 @@ const narrowItem: Unmasked<UseToggleShoppingItem_ItemFragment> = {
   itemName: 'Lemon juice',
   quantity: 1,
   quantityInput: '1',
-  displayFormat: DisplayFormat.Decimal,
   purchaseInfo: {
     __typename: 'ShoppingListItemPurchaseInfo',
     isPurchased: true,
