@@ -198,7 +198,6 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
     return (
       <AppPressable
         onPress={onPress}
-        android_ripple={null}
         needsOffscreenAlphaCompositing
         style={variantStyles.pressableWrapper}
       >

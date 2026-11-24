@@ -1,10 +1,9 @@
-import React, { useLayoutEffect } from 'react';
-import { View } from 'react-native';
+import React from 'react';
+import { View, type ViewStyle } from 'react-native';
 import { useTranslation } from '#/i18n';
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
-  withTiming,
+  type CSSTransitionProperties,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
@@ -21,6 +20,16 @@ import { homeTestIDs } from '#features/home/testIDs';
 import { Text } from '#components/atoms/Text';
 import { HomeCard_HomeFragmentDoc } from './HomeCard.generated';
 import { motion } from '#/theme/motion';
+import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
+
+const LIT: ViewStyle = { opacity: 1 };
+const UNLIT: ViewStyle = { opacity: 0 };
+
+const FADE: CSSTransitionProperties = {
+  transitionProperty: 'opacity',
+  transitionDuration: motion.timing.FAST,
+  transitionTimingFunction: motion.cssEasing.gentle,
+};
 
 interface HomeCardProps {
   homeId: string;
@@ -62,25 +71,14 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   });
   useIncompleteCellReport('HomeCard_home', missing);
 
-  // Animated value for highlight effect
-  const highlightOpacity = useSharedValue(0);
-
-  // Trigger highlight animation when isHighlighted changes
-  useLayoutEffect(() => {
-    highlightOpacity.set(
-      withTiming(isHighlighted ? 1 : 0, {
-        duration: motion.timing.FAST,
-        easing: motion.easing.gentle,
-      }),
-    );
-  }, [isHighlighted, highlightOpacity]);
-
+  // Reanimated's CSS transitions ignore reduce motion.
+  // Verified: #reanimated-css-transitions-ignore-reduce-motion.
+  const motionEnabled = useMotionEnabled();
   const animatedTheme = useAnimatedTheme();
 
-  // Opacity animates; the brand colour is read in the worklet because the
-  // animated node takes no themed style.
-  const animatedHighlightStyle = useAnimatedStyle(() => ({
-    opacity: highlightOpacity.get(),
+  // The opacity transitions; the brand colour is read in a theme-only worklet
+  // because the animated node takes no themed style.
+  const highlightThemeStyle = useAnimatedStyle(() => ({
     backgroundColor: animatedTheme.get().colors.primaryLight,
   }));
 
@@ -98,9 +96,13 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   return (
     <View style={styles.homeCardWrapper}>
       <View style={styles.card}>
-        {/* Highlight overlay - opacity animates; brand color is set in the worklet */}
         <Animated.View
-          style={[styles.highlightOverlay, animatedHighlightStyle]}
+          style={[
+            styles.highlightOverlay,
+            highlightThemeStyle,
+            isHighlighted ? LIT : UNLIT,
+            motionEnabled ? FADE : null,
+          ]}
         />
 
         <Pressable
@@ -185,7 +187,7 @@ const styles = StyleSheet.create(theme => ({
     left: 0,
     right: 0,
     bottom: 0,
-    // backgroundColor comes from `animatedHighlightStyle`.
+    // backgroundColor comes from `highlightThemeStyle`.
     pointerEvents: 'none',
   },
   homeHeader: {

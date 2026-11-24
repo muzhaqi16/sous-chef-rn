@@ -1,5 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { AccessibilityInfo, BackHandler, View } from 'react-native';
+import {
+  AccessibilityInfo,
+  BackHandler,
+  View,
+  type ViewInstance,
+} from 'react-native';
 import Animated, {
   FadeInDown,
   FadeOut,
@@ -40,7 +45,7 @@ export const AddMenu: React.FC<AddMenuProps> = ({
   buttonBottom,
   onClose,
 }) => {
-  const firstEntryRef = useRef<View>(null);
+  const firstEntryRef = useRef<ViewInstance>(null);
 
   useEffect(() => {
     if (!open) return;

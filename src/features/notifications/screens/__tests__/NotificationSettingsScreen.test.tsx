@@ -214,7 +214,7 @@ describe('push', () => {
 
   it('offers the system settings while push is on but the OS blocks it', async () => {
     jest.mocked(PermissionService.check).mockResolvedValue('denied');
-    jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     await openSettings({ preferences: { pushEnabled: true } });
     await focus();
 

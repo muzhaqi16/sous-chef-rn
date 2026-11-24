@@ -1,6 +1,6 @@
 # Sous Chef RN — project instructions
 
-React Native 0.86 (New Architecture) · React 19.2 + React Compiler · Apollo
+React Native 0.87 (New Architecture) · React 19.2 + React Compiler · Apollo
 Client 4.2 (`dataMasking` on) + GraphQL codegen · Unistyles 3 · FlashList v2 ·
 React Navigation 8 · Zustand · i18next · MMKV. Offline-first: writes land in
 the cache immediately and replay through an offline queue.
@@ -367,6 +367,9 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **The motion scale stops at 300 ms**; a loop's longer period stays a literal.
 - **Never branch an animation on reduce motion** — Reanimated applies it.
   `useMotionEnabled()` is the ONE read, for what a zero duration can't stop. Verified: `#reanimated-applies-reduce-motion-itself`.
+- **State moving one node is a Reanimated CSS transition; a self-running loop is a CSS
+  animation**, both gated by `useMotionEnabled()` (CSS ignores reduce motion). Shared
+  values are for gestures, scroll, live values and orchestrated motion — `docs/reanimated.md`.
 
 ### Gestures & scroll hosts
 
@@ -418,7 +421,7 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **A skeleton over a mounting FlashList releases on `hasContentLayout`**, never
   on loading flags or `onLoad`; its cover exists from the list's FIRST commit,
   and a settled EMPTY list releases on `rowCount: 0`. Verified: `#flashlist-v2-first-layout-opacity-gate`.
-- **`InteractionManager` is a no-op stub in RN 0.86.3**; use `requestIdleCallback`. Verified: `#interactionmanager-is-a-no-op-stub`.
+- **`InteractionManager` is gone from React Native** (reading it throws in development); use `requestIdleCallback`. Verified: `#interactionmanager-is-gone`.
 
 ### Pickers, row actions, forms
 

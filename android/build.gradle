@@ -1,8 +1,8 @@
 buildscript {
     ext {
-        buildToolsVersion = "36.0.0"
+        buildToolsVersion = "37.0.0"
         minSdkVersion = 24
-        compileSdkVersion = 36
+        compileSdkVersion = 37
         targetSdkVersion = 36
         ndkVersion = "27.1.12297006"
         kotlinVersion = "2.2.0"
@@ -14,10 +14,9 @@ buildscript {
     dependencies {
         classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        // Versioned, or RN 0.86's Gradle plugin supplies its own 2.1.20 and
-        // `kotlinVersion` changes nothing. 2.2 reads the Kotlin 2.3 metadata
+        // RN's Gradle plugin supplies 2.2, which reads the Kotlin 2.3 metadata
         // ML Kit GenAI ships (docs/verified-library-behaviour.md).
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
         // FCM (push): processes android/app/google-services.json at build time.
         classpath("com.google.gms:google-services:4.4.2")
         // Crashlytics: uploads the R8 mapping so native stack traces are readable.

@@ -5,7 +5,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import PagerView from 'react-native-pager-view';
+import PagerView, { type PagerViewRef } from 'react-native-pager-view';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePantryItemSubmission } from '#features/pantry/hooks/usePantryItemSubmission';
 import {
@@ -61,7 +61,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     t('labels.storage'),
     t('addToPantry.pageStock'),
   ];
-  const pagerRef = useRef<PagerView>(null);
+  const pagerRef = useRef<PagerViewRef>(null);
 
   // Page state
   const [currentPage, setCurrentPage] = useState(0);

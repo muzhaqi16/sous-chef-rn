@@ -6,7 +6,7 @@ const BASE = 'https://app.souschef.dev';
 describe('shareUrl', () => {
   const shareSpy = jest
     .spyOn(Share, 'share')
-    .mockResolvedValue({ action: Share.sharedAction });
+    .mockResolvedValue({ action: Share.sharedAction, activityType: undefined });
 
   afterEach(() => {
     shareSpy.mockClear();

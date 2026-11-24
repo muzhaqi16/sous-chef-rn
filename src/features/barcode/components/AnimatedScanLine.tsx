@@ -1,16 +1,26 @@
-import React, { useLayoutEffect } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import Animated, {
-  useSharedValue,
+  css,
   useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  interpolate,
-  cancelAnimation,
+  type CSSAnimationProperties,
 } from 'react-native-reanimated';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
+import { motion } from '#/theme/motion';
+
+/** Down the frame and back, for as long as the scanner shows. */
+const sweep = (travel: number, duration: number): CSSAnimationProperties => ({
+  animationName: css.keyframes({
+    from: { transform: [{ translateY: 0 }] },
+    to: { transform: [{ translateY: travel }] },
+  }),
+  animationDuration: duration,
+  animationDirection: 'alternate',
+  animationIterationCount: 'infinite',
+  animationTimingFunction: motion.cssEasing.emphasized,
+});
 
 interface AnimatedScanLineProps {
   left: number;
@@ -31,33 +41,17 @@ const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
   duration,
   cornerOffset = 4,
 }) => {
-  const animatedValue = useSharedValue(0);
+  // A loop is motion a zero duration cannot stop, and Reanimated's CSS
+  // animations ignore reduce motion: the line rests at the top instead.
   const motionEnabled = useMotionEnabled();
-
-  useLayoutEffect(() => {
-    if (!motionEnabled) return;
-    animatedValue.set(withRepeat(withTiming(1, { duration }), -1, true));
-    return () => {
-      cancelAnimation(animatedValue);
-    };
-  }, [animatedValue, duration, motionEnabled]);
 
   const animatedTheme = useAnimatedTheme();
   const lineThicknessStyle = useAnimatedStyle(() => ({
     height: animatedTheme.get().borderWidth.medium,
   }));
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const translateY = interpolate(
-      animatedValue.get(),
-      [0, 1],
-      [0, height - cornerOffset * 2 - 2], // Account for corner offset and line height
-    );
-
-    return {
-      transform: [{ translateY }],
-    };
-  });
+  // The frame's inner height, less the line itself.
+  const travel = height - cornerOffset * 2 - 2;
 
   return (
     <View
@@ -87,7 +81,7 @@ const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
               },
             ],
           },
-          animatedStyle,
+          motionEnabled ? sweep(travel, duration) : null,
         ]}
       />
     </View>

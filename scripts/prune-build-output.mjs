@@ -96,8 +96,9 @@ function remove(label, paths, reason) {
 // output mtimes: an incremental build leaves up-to-date outputs untouched.
 
 const XCODE_STAMP = '.xcode-build-version';
-// RN codegen output the Pods project links into; only `pod install` rewrites it.
-const CODEGEN_OUTPUT = 'generated';
+// What `pod install` writes into ios/build and the Pods project links to: RN
+// codegen output and the prebuilt core's header facades. Only it rewrites them.
+const POD_INSTALL_OUTPUT = ['generated', 'rncore-facades', 'rndeps-facades'];
 const xcodeBuild = tryRun('xcodebuild', ['-version'])?.replace('\n', ' ');
 const iosKept = [];
 
@@ -142,9 +143,9 @@ if (xcodeBuild && IOS_IN_SCOPE && !iosBusy) {
     }
 
     const children = readdirSync(dir).filter(name => name !== XCODE_STAMP);
-    const doomed = children.includes(CODEGEN_OUTPUT)
+    const doomed = children.some(name => POD_INSTALL_OUTPUT.includes(name))
       ? children
-          .filter(name => name !== CODEGEN_OUTPUT)
+          .filter(name => !POD_INSTALL_OUTPUT.includes(name))
           .map(name => join(dir, name))
       : [dir];
     const label = dir.startsWith(REPO_ROOT)

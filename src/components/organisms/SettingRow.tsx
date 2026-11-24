@@ -153,7 +153,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           item.type !== 'info' && item.type !== 'switch' && !item.disabled
         }
         disabled={isInert}
-        android_ripple={isInert ? null : RIPPLE.SUBTLE}
+        android_ripple={isInert ? undefined : RIPPLE.SUBTLE}
         style={[
           styles.rowWrapper,
           isFirst && styles.rowFirst,

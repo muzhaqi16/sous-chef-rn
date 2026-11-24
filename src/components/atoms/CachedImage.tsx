@@ -2,7 +2,7 @@
 // while loading, a placeholder icon with no URI, a fallback icon on error.
 import React from 'react';
 import { View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import Animated, { SharedTransition } from 'react-native-reanimated';
 import TurboImage from 'react-native-turbo-image';
 import type {
   TurboImageProps,
@@ -15,6 +15,7 @@ import { useRecyclingState } from '@shopify/flash-list';
 import { Icon } from '#components/atoms/Icon';
 import { logger } from '#/utils/environment';
 import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
+import { motion } from '#/theme/motion';
 
 // The load handlers end the shimmer, so a caller reacts through `onError`.
 export interface CachedImageProps
@@ -31,8 +32,9 @@ export interface CachedImageProps
   displaySize?: number;
   /** Runs alongside the internal error overlay so a parent can react (e.g. collapse a hero). */
   onError?: () => void;
-  /** Opts this image into a shared-element transition. Present means the
-   *  Reanimated wrapper is rendered, so a recycled list cell never pays for it. */
+  /** Pairs this image with the one carrying the same tag on the next screen,
+   *  and flies it there. Present means the Reanimated wrapper is rendered, so a
+   *  recycled list cell never pays for it. */
   sharedTransitionTag?: string;
   /** What the picture shows. Omit ONLY with `accessible={false}`: an unnamed
    *  image is announced as "image" and nothing else. */
@@ -45,6 +47,13 @@ type LoadState = 'idle' | 'loading' | 'success' | 'error';
 // the animated component. It costs a class instance and ref plumbing per image,
 // which the list path does not pay: the plain TurboImage stays the default.
 const AnimatedTurboImage = Animated.createAnimatedComponent(TurboImage);
+
+// A transition runs the style of the view it starts from, so every tagged
+// image takes this one builder and flies the same way back. Not on `motion`:
+// worklets capture that object whole, and a builder cannot be copied to them.
+const SHARED_TRANSITION = SharedTransition.duration(motion.timing.SLOW).easing(
+  motion.easing.standard,
+);
 
 // Module-level so it survives unmount: scrolling back to an already-decoded
 // image skips the shimmer entirely.
@@ -69,11 +78,6 @@ function rememberLoaded(uri: string): void {
 // First decode only; images already in `loadedUris` render instantly so the list
 // doesn't flicker on recycle.
 const IMAGE_FADE_MS = 200;
-
-// `flatten` returns `undefined` for an absent style, which its type omits.
-const flattenImageStyle = (
-  style: StyleProp<ImageStyle>,
-): ImageStyle | undefined => StyleSheet.flatten(style);
 
 export const CachedImage = ({
   uri,
@@ -118,7 +122,7 @@ export const CachedImage = ({
   const source = { uri };
   const isPreloaded = loadedUris.has(uri);
 
-  const flat = flattenImageStyle(style);
+  const flat = StyleSheet.flatten(style);
   const borderRadius =
     typeof flat?.borderRadius === 'number' ? flat.borderRadius : 0;
   const innerRadius =
@@ -140,6 +144,9 @@ export const CachedImage = ({
         resizeMode={resizeMode}
         resize={displaySize ? displaySize * 2 : undefined}
         sharedTransitionTag={sharedTransitionTag}
+        sharedTransitionStyle={
+          sharedTransitionTag ? SHARED_TRANSITION : undefined
+        }
         {...rest}
         onSuccess={handleSuccess}
         onFailure={handleFailure}

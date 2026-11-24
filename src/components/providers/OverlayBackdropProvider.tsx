@@ -160,7 +160,7 @@ export const OverlayBackdropProvider: React.FC<
     () => {
       let max = 0;
       for (const entry of slots) {
-        const v = entry.sv.value;
+        const v = entry.sv.get();
         if (v > max) max = v;
       }
       return max;
@@ -248,7 +248,6 @@ export const OverlayBackdropProvider: React.FC<
       if (entry?.ownedByProvider) {
         entry.sv.set(
           withTiming(0, { duration: SHEET.BACKDROP_FADE_OUT }, () => {
-            'worklet';
             scheduleOnRN(removeSlot, id);
           }),
         );

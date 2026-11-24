@@ -97,7 +97,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
         />
         <AppPressable
           style={styles.sendButton}
-          onPress={handleShare}
+          onPress={() => handleShare()}
           accessibilityLabel={t('labels.inviteMembers')}
           disabled={sharing}
         >

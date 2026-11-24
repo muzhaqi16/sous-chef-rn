@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, type CellRendererProps } from 'react-native';
+import { View, type FlatListProps } from 'react-native';
 import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import Animated, {
   LayoutAnimationConfig,
@@ -15,6 +15,11 @@ import { motion } from '#/theme/motion';
 import type { BaseSuggestionItem } from '#features/catalog/types';
 
 const CELL_LAYOUT = LinearTransition.duration(motion.timing.MODERATE);
+
+// React Native's typings expose the cell's props only through FlatListProps.
+type CellRendererProps<T> = React.ComponentProps<
+  NonNullable<FlatListProps<T>['CellRendererComponent']>
+>;
 
 /**
  * Glides each cell to its new place when a row above it leaves or returns.

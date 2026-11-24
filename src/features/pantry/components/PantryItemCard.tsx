@@ -115,7 +115,6 @@ const SlideAnimatedWrapper: React.FC<{
         },
         config,
         finished => {
-          'worklet';
           isAnimating.set(false);
           if (finished) {
             scheduleOnRN(doDelete);

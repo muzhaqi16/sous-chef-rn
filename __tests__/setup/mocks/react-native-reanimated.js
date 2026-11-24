@@ -237,6 +237,18 @@ jest.mock('react-native-reanimated', () => {
     },
     // Only gates its children's layout animations; it renders them as they are.
     LayoutAnimationConfig: ({ children }) => children,
+    // CSS animations and transitions are style props, so their rules pass through.
+    css: { create: styles => styles, keyframes: keyframes => keyframes },
+    // `display: contents` natively: it adds no box around its children.
+    SharedTransitionBoundary: ({ children }) => children,
+    SharedTransition: {
+      duration: returnSelf,
+      delay: returnSelf,
+      springify: returnSelf,
+      easing: returnSelf,
+      reduceMotion: returnSelf,
+      fadeContent: returnSelf,
+    },
     SequencedTransition: {
       duration: returnSelf,
       delay: returnSelf,

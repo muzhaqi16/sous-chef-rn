@@ -20,7 +20,7 @@ export function useSheetBackdropOpacity(): {
   const animatedIndex = useSharedValue(-1);
   const backdropOpacity = useDerivedValue(() =>
     interpolate(
-      animatedIndex.value,
+      animatedIndex.get(),
       [-1, 0],
       [0, SHEET.BACKDROP_OPACITY],
       Extrapolation.CLAMP,

@@ -1,5 +1,5 @@
 import { createNativeStackScreen } from '@react-navigation/native-stack';
-import { noInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
+import { edgeToEdgeScreenLayout } from '#navigation/layouts/TopInsetLayout';
 import { detailScreenOptions } from '#navigation/detailScreenOptions';
 import { RecipeDetail } from './RecipeDetail';
 import { RecipeLinkScreen } from './RecipeLinkScreen';
@@ -16,8 +16,8 @@ import { MyRecipes } from './MyRecipes';
 export const recipeDetailScreens = {
   RecipeDetail: createNativeStackScreen({
     screen: RecipeDetail,
-    // Hero screen — draws edge-to-edge, so it opts out of the top inset.
-    layout: noInsetScreenLayout,
+    // Hero screen: it draws under the status bar itself.
+    layout: edgeToEdgeScreenLayout,
     options: detailScreenOptions,
     linking: null,
   }),

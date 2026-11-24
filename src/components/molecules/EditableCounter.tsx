@@ -169,7 +169,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
 
         {inSheet ? (
           <ThemedBottomSheetTextInput
-            ref={node => assignRef(ref, node ?? null)}
+            ref={node => assignRef(ref, node)}
             {...inputProps}
           />
         ) : (

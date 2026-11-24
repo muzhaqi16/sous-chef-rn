@@ -1,6 +1,6 @@
 import React from 'react';
 import { createNativeStackScreen } from '@react-navigation/native-stack';
-import { noInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
+import { edgeToEdgeScreenLayout } from '#navigation/layouts/TopInsetLayout';
 import { PantryItemScreen } from './PantryItemScreen';
 import { PantryItemDetail } from './PantryItemDetail';
 import { FilteredPantryItems } from './FilteredPantryItems';
@@ -34,8 +34,8 @@ export const pantryDetailScreens = {
   }),
   PantryItemDetail: createNativeStackScreen({
     screen: PantryItemDetail,
-    // Hero screen — draws edge-to-edge, so it opts out of the top inset.
-    layout: noInsetScreenLayout,
+    // Hero screen: it draws under the status bar itself.
+    layout: edgeToEdgeScreenLayout,
     options: detailScreenOptions,
     linking: null,
   }),

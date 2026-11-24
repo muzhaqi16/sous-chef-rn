@@ -3,6 +3,7 @@ import {
   View,
   useWindowDimensions,
   type LayoutChangeEvent,
+  type ViewInstance,
 } from 'react-native';
 import {
   useSharedValue,
@@ -131,7 +132,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   // In passthrough mode the overlay is a View inside the screen container,
   // not a full-screen Modal: page coordinates from measure() are converted to
   // the overlay's by its own page frame.
-  const overlayRef = useRef<View>(null);
+  const overlayRef = useRef<ViewInstance>(null);
   const windowFrame = {
     x: 0,
     y: 0,
@@ -333,7 +334,6 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   const swipeGesture = usePanGesture({
     activeOffsetX: [-20, 20],
     onDeactivate: event => {
-      'worklet';
       if (event.translationX < -SWIPE_THRESHOLD) {
         scheduleOnRN(handleSwipeAdvance);
       }

@@ -568,9 +568,9 @@ they read it.
   that goes empty to empty, FlashList commits once. That commit lands while the
   skeletons are still up, and the placeholder guard discards it — so a list
   waiting on a commit, with no rows to reveal, waits forever.
-- **`InteractionManager` is a no-op stub in RN 0.86.3** (`runAfterInteractions`
-  is `setImmediate`). Defer non-urgent work with `requestIdleCallback`
-  ([InteractionManager is a no-op stub](verified-library-behaviour.md#interactionmanager-is-a-no-op-stub)).
+- **`InteractionManager` is gone from React Native** (reading it throws in a
+  development build). Defer non-urgent work with `requestIdleCallback`
+  ([InteractionManager is gone](verified-library-behaviour.md#interactionmanager-is-gone)).
 
 ## Autocomplete & dropdowns
 

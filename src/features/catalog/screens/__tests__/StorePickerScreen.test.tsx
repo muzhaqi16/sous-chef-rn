@@ -159,7 +159,9 @@ describe('StorePickerScreen', () => {
     });
 
     it('opens the data licence from that credit', async () => {
-      const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+      const openURL = jest
+        .spyOn(Linking, 'openURL')
+        .mockResolvedValue(undefined);
       renderPicker([listed().mock]);
 
       typeZip('15221');

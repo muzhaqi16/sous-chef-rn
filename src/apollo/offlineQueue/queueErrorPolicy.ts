@@ -69,14 +69,12 @@ const REPLAY_NOT_PREPARED_CODE = 'REPLAY_NOT_PREPARED';
  */
 export class ReplayNotPreparedError extends Error {
   readonly operationName: string;
-  readonly cause: unknown;
 
   constructor(operationName: string, cause: unknown) {
     const detail = cause instanceof Error ? cause.message : String(cause);
-    super(`Cannot prepare replay of ${operationName}: ${detail}`);
+    super(`Cannot prepare replay of ${operationName}: ${detail}`, { cause });
     this.name = 'ReplayNotPreparedError';
     this.operationName = operationName;
-    this.cause = cause;
   }
 }
 

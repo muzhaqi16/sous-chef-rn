@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useRef } from 'react';
-import type { View } from 'react-native';
+import type { ViewInstance } from 'react-native';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 
 /** A view still moving after this many frames is reported where it is. */
@@ -18,7 +18,7 @@ export function useMeasuredRect(
   onMeasure: ((rect: TargetRect) => void) | undefined,
   shape?: TargetRect['shape'],
 ) {
-  const ref = useRef<View>(null);
+  const ref = useRef<ViewInstance>(null);
 
   // Reads the rect a frame from now; `null` for a view not laid out yet, whose
   // zero-size hole would point at nothing.

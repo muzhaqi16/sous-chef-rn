@@ -1,13 +1,8 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import Animated, {
-  Easing,
-  cancelAnimation,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
+  css,
+  type CSSAnimationProperties,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
@@ -17,6 +12,42 @@ import { DEMO_PERIOD_MS, DEMO_REPEATS } from './spotlightConstants';
 
 /** How far the hand travels, as a share of the row's width. */
 const SWIPE_TRAVEL = 0.3;
+
+/**
+ * Each showing: appear, act, hold, fade, `DEMO_REPEATS` times, then rest faded
+ * out. `travel` is the swipe's length; a long press presses and lets go.
+ */
+const demo = (
+  kind: GestureDemoProps['kind'],
+  travel: number,
+): CSSAnimationProperties => ({
+  animationName:
+    kind === 'swipe'
+      ? css.keyframes({
+          '0%': { opacity: 0, transform: [{ translateX: travel / 2 }] },
+          '10%': { opacity: 1 },
+          '15%': { transform: [{ translateX: travel / 2 }] },
+          '65%': { transform: [{ translateX: -travel / 2 }] },
+          '75%': { opacity: 1 },
+          '90%': { opacity: 0 },
+          '100%': { opacity: 0, transform: [{ translateX: -travel / 2 }] },
+        })
+      : css.keyframes({
+          '0%': { opacity: 0, transform: [{ scale: 1 }] },
+          '10%': { opacity: 1 },
+          '20%': { transform: [{ scale: 1 }] },
+          '30%': { transform: [{ scale: 0.85 }] },
+          '70%': { transform: [{ scale: 0.85 }] },
+          '75%': { opacity: 1 },
+          '80%': { transform: [{ scale: 1 }] },
+          '90%': { opacity: 0 },
+          '100%': { opacity: 0, transform: [{ scale: 1 }] },
+        }),
+  animationDuration: DEMO_PERIOD_MS,
+  animationIterationCount: DEMO_REPEATS,
+  animationTimingFunction: 'linear',
+  animationFillMode: 'forwards',
+});
 
 interface GestureDemoProps {
   kind: 'swipe' | 'longPress';
@@ -30,50 +61,9 @@ interface GestureDemoProps {
  * arrows for a swipe.
  */
 export const GestureDemo = ({ kind, rect }: GestureDemoProps) => {
+  // Reanimated's CSS animations ignore reduce motion, so a still hand stands in.
   const motionEnabled = useMotionEnabled();
-  const progress = useSharedValue(0);
   const travel = rect.width * SWIPE_TRAVEL;
-
-  useEffect(() => {
-    if (!motionEnabled) return;
-    progress.set(0);
-    progress.set(
-      withRepeat(
-        withTiming(1, { duration: DEMO_PERIOD_MS, easing: Easing.linear }),
-        DEMO_REPEATS,
-        false,
-      ),
-    );
-    return () => cancelAnimation(progress);
-  }, [motionEnabled, progress, kind]);
-
-  // Each showing: appear, act, hold, fade. A finished demo rests faded out.
-  const handStyle = useAnimatedStyle(() => {
-    const p = progress.get();
-    const opacity = interpolate(p, [0, 0.1, 0.75, 0.9, 1], [0, 1, 1, 0, 0]);
-    if (kind === 'swipe') {
-      return {
-        opacity,
-        transform: [
-          {
-            translateX: interpolate(
-              p,
-              [0, 0.15, 0.65, 1],
-              [travel / 2, travel / 2, -travel / 2, -travel / 2],
-            ),
-          },
-        ],
-      };
-    }
-    return {
-      opacity,
-      transform: [
-        {
-          scale: interpolate(p, [0, 0.2, 0.3, 0.7, 0.8], [1, 1, 0.85, 0.85, 1]),
-        },
-      ],
-    };
-  });
 
   const centre = {
     left: rect.x + rect.width / 2,
@@ -89,7 +79,7 @@ export const GestureDemo = ({ kind, rect }: GestureDemoProps) => {
       testID={kitTestIDs.spotlightGestureDemo}
     >
       {motionEnabled ? (
-        <Animated.View style={[handFrame.hand, handStyle]}>
+        <Animated.View style={[handFrame.hand, demo(kind, travel)]}>
           <HandMark />
         </Animated.View>
       ) : (

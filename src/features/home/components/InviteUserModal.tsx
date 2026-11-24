@@ -290,7 +290,7 @@ const InviteUserForm: React.FC<Omit<InviteUserModalProps, 'visible'>> = ({
               variantStyles2.submitButton,
               isSubmitting && variantStyles2.disabledButton,
             ]}
-            onPress={handleSubmit}
+            onPress={() => handleSubmit()}
             disabled={isSubmitting}
           >
             {isSubmitting ? (

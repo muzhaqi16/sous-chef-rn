@@ -116,7 +116,7 @@ describe('LandingAuthScreen', () => {
     ['Privacy Policy', 'https://app.example.com/privacy-policy'],
   ])('offers "%s" as its own link to %s', async (name, url) => {
     const user = userEvent.setup();
-    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     render(<LandingAuthScreen />);
 
     await user.press(screen.getByRole('link', { name }));

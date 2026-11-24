@@ -931,6 +931,7 @@ const overrides = [
       'sous-chef/no-prose-literal': ['error', { followRendered: true }],
       'sous-chef/no-string-keyed-lookup': 'error',
       'sous-chef/no-number-noun-concat': 'error',
+      'sous-chef/shared-value-is-read-with-get': 'error',
     },
   },
   {

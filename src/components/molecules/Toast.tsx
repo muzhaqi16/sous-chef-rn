@@ -94,7 +94,6 @@ const animateDismiss = (
   };
   translateY.set(
     withSpring(TOAST.OFFSCREEN_Y, motion.spring.TOAST_DISMISS, finished => {
-      'worklet';
       if (finished) {
         translateX.set(0);
         scheduleOnRN(onDismissComplete);
@@ -359,7 +358,6 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
   const panGesture = usePanGesture({
     minDistance: 10,
     onUpdate: event => {
-      'worklet';
       // Drag up only — the toast rests at its laid-out position (translateY 0).
       if (event.translationY < 0) {
         translateY.set(event.translationY);
@@ -367,7 +365,6 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
       translateX.set(event.translationX);
     },
     onDeactivate: event => {
-      'worklet';
       const shouldDismiss =
         event.translationY < -TOAST.SWIPE_THRESHOLD ||
         Math.abs(event.translationX) > TOAST.SWIPE_THRESHOLD;

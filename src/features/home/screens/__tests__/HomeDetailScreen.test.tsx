@@ -415,6 +415,7 @@ describe('its join code', () => {
   it("is shared as the server's link", async () => {
     const share = jest.spyOn(Share, 'share').mockResolvedValue({
       action: Share.sharedAction,
+      activityType: undefined,
     });
     await openHome();
 

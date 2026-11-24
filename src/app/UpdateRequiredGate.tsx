@@ -1,5 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Platform, View } from 'react-native';
+import {
+  AccessibilityInfo,
+  Platform,
+  View,
+  type ViewInstance,
+} from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
 import { Button } from '#components/molecules/Button';
@@ -29,7 +34,7 @@ export const UpdateRequiredGate: React.FC<{ children: React.ReactNode }> = ({
   const { t } = useTranslation();
   const required = useIsClientUpgradeRequired();
   const [storeFailed, setStoreFailed] = useState(false);
-  const titleRef = useRef<View>(null);
+  const titleRef = useRef<ViewInstance>(null);
 
   // What it covers is hidden from screen readers, so focus moves to it.
   useEffect(() => {

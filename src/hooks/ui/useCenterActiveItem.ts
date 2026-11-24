@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState, type Component } from 'react';
-import type { LayoutChangeEvent } from 'react-native';
-import type Animated from 'react-native-reanimated';
+import { useEffect, useRef, useState } from 'react';
+import type { LayoutChangeEvent, ScrollViewInstance } from 'react-native';
 import {
   cancelAnimation,
   scrollTo,
@@ -60,21 +59,22 @@ interface UseCenterActiveItemParams<K> {
  * `initialContentOffset`. The UI-thread glide is gated by `driving`, so a manual
  * scroll is never fought and the first paint is not yanked to 0 pre-measurement.
  */
-export function useCenterActiveItem<
-  K,
-  TScroll extends Component = Animated.ScrollView,
->({ activeKey, metrics, cacheKey }: UseCenterActiveItemParams<K>) {
+export function useCenterActiveItem<K>({
+  activeKey,
+  metrics,
+  cacheKey,
+}: UseCenterActiveItemParams<K>) {
   // Gates the glide: the first positioning is instant so the strip doesn't
   // visibly scroll on appear; later activeKey changes glide smoothly.
   const hasAutoCenteredRef = useRef(false);
   // Per-instance layouts when there's no shared cache.
   const instanceLayouts = useRef<Map<unknown, ItemLayout>>(new Map());
 
-  const animatedRef = useAnimatedRef<TScroll>();
+  const animatedRef = useAnimatedRef<ScrollViewInstance>();
   const target = useSharedValue(0);
   const driving = useSharedValue(false);
   useAnimatedReaction(
-    () => (driving.value ? target.value : null),
+    () => (driving.get() ? target.get() : null),
     x => {
       if (x !== null) scrollTo(animatedRef, x, 0, false);
     },

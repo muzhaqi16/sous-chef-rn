@@ -37,5 +37,6 @@ module.exports = {
     'network-read-selects-version': require('./rules/network-read-selects-version'),
     'animated-node-takes-no-themed-style': require('./rules/animated-node-takes-no-themed-style'),
     'use-variants-return-is-read': require('./rules/use-variants-return-is-read'),
+    'shared-value-is-read-with-get': require('./rules/shared-value-is-read-with-get'),
   },
 };

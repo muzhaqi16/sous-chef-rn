@@ -15,7 +15,7 @@ const openURL = jest.spyOn(Linking, 'openURL');
 
 beforeEach(() => {
   openURL.mockReset();
-  openURL.mockResolvedValue(true);
+  openURL.mockResolvedValue(undefined);
 });
 
 describe('PhotoCredit', () => {

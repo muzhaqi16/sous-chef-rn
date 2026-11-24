@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import {
   AccessibilityInfo,
   View,
+  type ViewInstance,
   type LayoutChangeEvent,
   type StyleProp,
   type ViewStyle,
@@ -71,7 +72,7 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
       : null;
   const spoken = [progress, title, subtitle].filter(Boolean).join('. ');
 
-  const textRef = useRef<View>(null);
+  const textRef = useRef<ViewInstance>(null);
   useEffect(() => {
     const text = textRef.current;
     if (text) AccessibilityInfo.sendAccessibilityEvent(text, 'focus');

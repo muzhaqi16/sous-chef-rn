@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
+import { ScreenBoundary } from './ScreenBoundary';
 
 /**
  * Applies the top safe-area inset per screen rather than globally, so an
@@ -32,7 +33,11 @@ export const topInsetScreenLayout = ({
   children,
 }: {
   children: React.ReactElement;
-}) => <TopInsetLayout>{children}</TopInsetLayout>;
+}) => (
+  <ScreenBoundary>
+    <TopInsetLayout>{children}</TopInsetLayout>
+  </ScreenBoundary>
+);
 
 /**
  * Combines the inset with an existing wrapper: a per-screen/group `layout`
@@ -43,12 +48,21 @@ export const topInsetWith =
   ({ children }: { children: React.ReactElement }) =>
     (
       <Boundary>
-        <TopInsetLayout>{children}</TopInsetLayout>
+        <ScreenBoundary>
+          <TopInsetLayout>{children}</TopInsetLayout>
+        </ScreenBoundary>
       </Boundary>
     );
 
-/** Opts a screen out of a group-level `topInsetScreenLayout`. */
-export const noInsetScreenLayout = ({
+/** A screen that draws under the status bar itself, such as a hero detail. */
+export const edgeToEdgeScreenLayout = ({
+  children,
+}: {
+  children: React.ReactElement;
+}) => <ScreenBoundary>{children}</ScreenBoundary>;
+
+/** A screen that is itself a navigator: its own screens bring their layout. */
+export const navigatorScreenLayout = ({
   children,
 }: {
   children: React.ReactElement;

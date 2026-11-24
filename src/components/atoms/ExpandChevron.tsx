@@ -1,11 +1,20 @@
-import React, { useLayoutEffect } from 'react';
+import React from 'react';
+import type { ViewStyle } from 'react-native';
 import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
+  type CSSTransitionProperties,
 } from 'react-native-reanimated';
 import { Icon, type IconTone } from '#components/atoms/Icon';
+import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
 import { motion } from '#/theme/motion';
+
+const POINTS_DOWN: ViewStyle = { transform: [{ rotate: '0deg' }] };
+const POINTS_UP: ViewStyle = { transform: [{ rotate: '180deg' }] };
+
+const TURN: CSSTransitionProperties = {
+  transitionProperty: 'transform',
+  transitionDuration: motion.timing.STANDARD,
+  transitionTimingFunction: motion.cssEasing.standard,
+};
 
 interface ExpandChevronProps {
   expanded: boolean;
@@ -20,18 +29,13 @@ export const ExpandChevron: React.FC<ExpandChevronProps> = ({
   size = 20,
   tone = 'textSecondary',
 }) => {
-  const rotation = useSharedValue(expanded ? 180 : 0);
-
-  useLayoutEffect(() => {
-    rotation.set(withSpring(expanded ? 180 : 0, motion.spring.EXPAND));
-  }, [expanded, rotation]);
-
-  const turned = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotation.get()}deg` }],
-  }));
-
+  // Reanimated's CSS transitions ignore reduce motion.
+  // Verified: #reanimated-css-transitions-ignore-reduce-motion.
+  const motionEnabled = useMotionEnabled();
   return (
-    <Animated.View style={turned}>
+    <Animated.View
+      style={[expanded ? POINTS_UP : POINTS_DOWN, motionEnabled ? TURN : null]}
+    >
       <Icon name="chevron-down" size={size} tone={tone} />
     </Animated.View>
   );

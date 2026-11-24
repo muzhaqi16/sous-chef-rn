@@ -447,17 +447,41 @@ needs from `_other` before `init`.
 
 Re-check: `npx jest __tests__/i18n/pluralCategories.test.ts`.
 
-### InteractionManager is a no-op stub
+### InteractionManager is gone
 
-**Claim:** `InteractionManager` must never be used — in the installed RN it is
-a no-op stub. `runAfterInteractions` is just `setImmediate`;
-`createInteractionHandle()` returns `-1`; the other methods do nothing. Use
-`requestIdleCallback` for deferring non-urgent work.
+**Claim:** React Native removed `InteractionManager`. In a development build,
+reading it from `react-native` throws "InteractionManager has been removed from
+react-native core"; in a release build it is `undefined`, and its types are
+gone. Use `requestIdleCallback` for deferring non-urgent work.
 
-**Verified against `react-native@0.86.3`.** Re-check:
+**Verified against `react-native@0.87.1`** by reading the source. Re-check:
 
 ```
-grep -n "InteractionManagerStub\|setImmediate(\|return -1" node_modules/react-native/Libraries/Interaction/InteractionManager.js
+grep -n "InteractionManager has been removed" node_modules/react-native/index.js
+```
+
+### Tab-view's types take every pager-view prop, so pager-view stays at 10.0.2
+
+**Claim:** `react-native-tab-view` 4.3 types `TabView`'s props as pager-view's
+props minus a fixed list, plus its own `lazy`, `lazyPreloadDistance` and
+`renderLazyPlaceholder`. Pager-view 10.0.3 added props of those three names
+with other types (`renderLazyPlaceholder(index)`), so the two intersect and a
+`TabView` that passes `renderLazyPlaceholder` no longer typechecks. At runtime
+`TabView` hands the pager none of them. Pager-view 10.0.2 is the newest release
+without them, and its types, like every 10.x's, work under React Native's strict
+TypeScript API (7.x imports `react-native/Libraries/Types/CodegenTypes`, which
+that API hides). Hence the exact `10.0.2` in `package.json`.
+
+**Verified against `react-native-tab-view@4.3.2` (and 4.3.5, the newest 4.x) +
+`react-native-pager-view@10.0.2`/`10.0.3` (2026-11-23),** by `npm run typecheck`:
+10.0.3 fails in `src/features/pantry/components/TabView/TabView.tsx`, 10.0.2 passes.
+
+Re-check on a tab-view or pager-view bump: the pin can go once tab-view's omit
+list names `lazy` and `renderLazyPlaceholder`, or tab-view stops extending
+pager-view's props.
+
+```
+sed -n '/export type PagerProps = Omit</,/>/p' node_modules/react-native-tab-view/src/types.tsx
 ```
 
 ### Navigator packages call the router's action creators by name
@@ -621,7 +645,7 @@ call-site branch. A branch is needed only for motion a zero duration cannot
 stop — a loop's resting state, an ambient illustration, a shimmer.
 
 **Verified 2026-09-03 against `react-native-reanimated@4.6.0`; probe re-run
-2026-10-02 against 4.7.1.** An animation that passes no `reduceMotion` resolves
+2026-11-23 against 4.8.0.** An animation that passes no `reduceMotion` resolves
 to the device setting (`getReduceMotionFromConfig` in `animation/utilCommon.js`).
 This is why `src/theme/motion.ts` holds one set of tokens rather
 than a reduced twin of each, and `src/hooks/animations/useMotionEnabled.ts` is
@@ -642,8 +666,8 @@ falls as `e^(-t * damping / mass)` and the spring ends at 6e-9 of its start, so
 that spring runs about four times longer and overshoots far more than the same
 numbers at mass 1. Every frame of it commits, however little the value moves.
 
-**Verified against `react-native-reanimated@4.7.1` (2026-11-02, iOS simulator),**
-by timing `withSpring` from 120 to 0 in the running app. `{ damping: 20,
+**Verified against `react-native-reanimated@4.7.1` (2026-11-02, iOS simulator;
+the source re-check re-run 2026-11-23 against 4.8.0),** by timing `withSpring` from 120 to 0 in the running app. `{ damping: 20,
 stiffness: 180 }` ran 3,851 ms and overshot 28%; with `mass: 1`, 968 ms and 3%.
 `{ damping: 15, stiffness: 300 }` ran 5,034 ms and overshot 50%; with `mass: 1`,
 1,283 ms and 22%.
@@ -666,8 +690,8 @@ nothing itself: it disables recycling and offset correction for the next
 commit only.
 
 **Verified 2026-09-28 against `react-native-reanimated@4.6.0` and
-`@shopify/flash-list@2.3.2`; source re-checks re-run 2026-10-02 against 4.7.1 and
-2.3.3.** On the iOS simulator, attaching one commit earlier spread a delete's
+`@shopify/flash-list@2.3.2`; the Reanimated source re-checks re-run 2026-11-23
+against 4.8.0, FlashList's 2026-10-02 against 2.3.3.** On the iOS simulator, attaching one commit earlier spread a delete's
 reflow over 8 frames (250 ms); with a transition held on, a flick sent recycled
 rows sliding across the viewport, and detaching on `onScrollBeginDrag` removed
 them. Consumed by `useRowReflow`.
@@ -688,7 +712,8 @@ transition runs at its full duration under the OS setting. Motion driven by one
 reads `useMotionEnabled()` and skips attaching it.
 
 **Verified 2026-09-28 against `react-native-reanimated@4.6.0`, re-checked
-2026-10-02 against 4.7.1,** by source only. Not probed on a device.
+2026-11-23 against 4.8.0,** by source only. Not probed on a device. The 4.8 docs
+for CSS animations and transitions say nothing about reduce motion either.
 
 Re-check (expect no output):
 
@@ -1060,9 +1085,13 @@ Verified 2026-09-30 against `com.google.mlkit:genai-prompt:1.0.0-beta4` (with `g
 1. `processDebugMainManifest`: the library's minSdk is 26, against the app's 24. `tools:overrideLibrary` clears it.
 2. `compileDebugKotlin`: the library's Kotlin metadata is 2.3.0, which Kotlin 2.1.20 cannot read. The failure hits `MainApplication.kt`, so the whole app stops compiling.
 
-Resolved with `kotlinVersion = "2.2.0"` AND the Kotlin Gradle plugin's classpath entry versioned by it: unversioned, RN 0.86's Gradle plugin supplies 2.1.20 and the ext property changes nothing. Gemini Nano runs only on AICore devices; the emulator has none, so its labelling is still unverified on a device.
+Resolved by Kotlin 2.2, which RN 0.87's Gradle plugin supplies to the unversioned classpath entry. The `kotlinVersion` ext property alone changes nothing: with an unversioned entry the plugin's own Kotlin wins, so a newer one needs the entry versioned. Gemini Nano runs only on AICore devices; the emulator has none, so its labelling is still unverified on a device.
 
-Re-check: `genai-prompt` is already a dependency in `android/app/build.gradle`; to see the failure again, set `kotlinVersion` back to `"2.1.20"` in `android/build.gradle` and run `./gradlew :app:compileDebugKotlin`.
+Re-check: `genai-prompt` is already a dependency in `android/app/build.gradle`. The Kotlin that RN's Gradle plugin supplies must be 2.2 or newer:
+
+```
+grep -n '^kotlin = ' node_modules/@react-native/gradle-plugin/gradle/libs.versions.toml
+```
 
 ### ML Kit text recognition kills the app on the arm64 Android emulator
 

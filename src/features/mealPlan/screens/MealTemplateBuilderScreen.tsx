@@ -563,7 +563,9 @@ export const MealTemplateBuilderScreen: React.FC<
             styles.addMealButton,
             pressed && styles.pressed,
           ]}
-          onPress={itemForm.handleSubmit(onValidItem, reportValidationErrors)}
+          onPress={() =>
+            itemForm.handleSubmit(onValidItem, reportValidationErrors)()
+          }
           testID={mealPlanTestIDs.templateSubmitItemButton}
         >
           <Icon

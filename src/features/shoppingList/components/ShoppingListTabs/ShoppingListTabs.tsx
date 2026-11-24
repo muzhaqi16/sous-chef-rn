@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   useWindowDimensions,
   View,
+  type ViewInstance,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
@@ -145,7 +146,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 }) => {
   const { t } = useTranslation();
   const permissions = useShoppingListItemPermissions();
-  const tabBarRef = useRef<View>(null);
+  const tabBarRef = useRef<ViewInstance>(null);
   const layout = useWindowDimensions();
   const tour = useFirstShopTourContext();
   const tabForGuide = tour?.tabForGuide ?? null;

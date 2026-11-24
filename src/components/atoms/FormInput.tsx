@@ -84,7 +84,7 @@ export const FormInput: React.FC<FormInputProps> = ({
           <ThemedBottomSheetTextInput
             ref={node => {
               assignRef(sheetRef, node);
-              assignRef(ref, node ?? null);
+              assignRef(ref, node);
             }}
             {...inputProps}
           />

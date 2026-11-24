@@ -6,6 +6,7 @@ import {
   Pressable as RNPressable,
   RefreshControl as RNRefreshControl,
   TextInput,
+  type TextInputInstance,
   type TextInputProps,
 } from 'react-native';
 // RNGH's, not RN's — see `ThemedRefreshControl` below.
@@ -66,9 +67,14 @@ const inputProps = (
 const UniTextInput = withUnistyles(TextInput, (theme, rt) =>
   inputProps(theme, rt.themeName),
 );
-const UniBottomSheetTextInput = withUnistyles(
-  BottomSheetTextInput,
-  (theme, rt) => inputProps(theme, rt.themeName),
+// gorhom types its ref with RNGH's TextInput, which the strict React Native
+// types read as a component, not an instance. What it hands back is RN's
+// TextInput, so this is the one place the ref takes that type.
+const SheetTextInput = BottomSheetTextInput as React.FC<
+  TextInputProps & { ref?: React.Ref<TextInputInstance> }
+>;
+const UniBottomSheetTextInput = withUnistyles(SheetTextInput, (theme, rt) =>
+  inputProps(theme, rt.themeName),
 );
 
 // The color is a base STYLE, not a mapping prop: `withUnistyles` replaces its
@@ -78,18 +84,13 @@ const inputStyles = StyleSheet.create(theme => ({
   base: { color: theme.colors.inputText },
 }));
 
-export type ThemedTextInputRef = React.ComponentRef<typeof TextInput>;
-export type ThemedBottomSheetTextInputRef = React.ComponentRef<
-  typeof BottomSheetTextInput
->;
+export type ThemedTextInputRef = TextInputInstance;
+export type ThemedBottomSheetTextInputRef = TextInputInstance;
 
 /** `withUnistyles` flattens once, so `[base, [a, b]]` leaves a, b unresolved. */
 const withFieldStyle = (
   style: React.ComponentProps<typeof UniTextInput>['style'],
-) =>
-  Array.isArray(style)
-    ? [inputStyles.base, ...style]
-    : [inputStyles.base, style];
+) => [inputStyles.base, style].flat();
 
 /** RN TextInput carrying the theme's field color, placeholder and keyboard. */
 export const ThemedTextInput = ({

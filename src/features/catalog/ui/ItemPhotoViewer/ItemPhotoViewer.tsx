@@ -272,7 +272,6 @@ const ZoomablePhoto: React.FC<{
 
   const pinch = usePinchGesture({
     onUpdate: event => {
-      'worklet';
       // Allow a little overshoot below 1x so the pinch feels elastic; onDeactivate
       // settles it back to the clamped range.
       scale.set(
@@ -283,7 +282,6 @@ const ZoomablePhoto: React.FC<{
       );
     },
     onDeactivate: () => {
-      'worklet';
       const settled = Math.min(Math.max(scale.get(), MIN_SCALE), MAX_SCALE);
       // Snap the near-1x band to exactly 1 so every later comparison is exact.
       const next = settled <= MIN_SCALE + ZOOM_EPSILON ? MIN_SCALE : settled;
@@ -317,7 +315,6 @@ const ZoomablePhoto: React.FC<{
     // pager, and only a disabled handler leaves it there.
     enabled: panEnabled,
     onUpdate: event => {
-      'worklet';
       const current = savedScale.get();
       translateX.set(
         clampPan(savedX.get() + event.translationX, width, current),
@@ -327,7 +324,6 @@ const ZoomablePhoto: React.FC<{
       );
     },
     onDeactivate: () => {
-      'worklet';
       savedX.set(translateX.get());
       savedY.set(translateY.get());
     },
@@ -336,7 +332,6 @@ const ZoomablePhoto: React.FC<{
   const doubleTap = useTapGesture({
     numberOfTaps: 2,
     onActivate: () => {
-      'worklet';
       if (savedScale.get() > MIN_SCALE + ZOOM_EPSILON) {
         scale.set(withTiming(MIN_SCALE));
         translateX.set(withTiming(0));
@@ -358,7 +353,6 @@ const ZoomablePhoto: React.FC<{
   const singleTap = useTapGesture({
     numberOfTaps: 1,
     onActivate: () => {
-      'worklet';
       // Tap-to-dismiss only at fit-to-screen: while zoomed a stray tap should
       // not throw away the position the user just worked to reach.
       if (savedScale.get() <= MIN_SCALE + ZOOM_EPSILON) {

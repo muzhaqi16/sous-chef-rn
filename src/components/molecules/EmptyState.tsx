@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import type { StyleProp, ViewStyle } from 'react-native';
+import type { StyleProp, ViewInstance, ViewStyle } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
@@ -32,7 +32,7 @@ export interface EmptyStateProps {
     /** Shown but not tappable; the `hint` says why. */
     disabled?: boolean;
     /** Measures the button for a spotlight: `useMeasuredRect`'s ref and `measure`. */
-    measure?: { ref: React.Ref<View>; onLayout: () => void };
+    measure?: { ref: React.Ref<ViewInstance>; onLayout: () => void };
     testID?: string;
   };
 

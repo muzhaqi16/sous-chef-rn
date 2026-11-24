@@ -60,7 +60,6 @@ const AlertCard: React.FC<AlertCardProps> = ({
         ALERT.EXIT_SCALE_TO,
         { duration: motion.timing.FAST },
         finished => {
-          'worklet';
           if (finished) {
             scheduleOnRN(handleDismissEntry);
           }

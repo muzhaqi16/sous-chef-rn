@@ -1,16 +1,23 @@
-import React, { useLayoutEffect } from 'react';
+import React from 'react';
 import { View, type DimensionValue, type ViewStyle } from 'react-native';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  interpolate,
-  cancelAnimation,
+  css,
+  type CSSAnimationProperties,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
 import { motion } from '#/theme/motion';
+
+// A loop's period is longer than the motion scale, so it stays a literal.
+const SWEEP: CSSAnimationProperties = {
+  animationName: css.keyframes({
+    from: { transform: [{ translateX: -300 }] },
+    to: { transform: [{ translateX: 300 }] },
+  }),
+  animationDuration: 1500,
+  animationIterationCount: 'infinite',
+  animationTimingFunction: motion.cssEasing.plain,
+};
 
 interface SkeletonBaseProps {
   width?: number | string;
@@ -28,40 +35,10 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
   style,
   animated = true,
 }) => {
-  const shimmerTranslate = useSharedValue(0);
+  // A loop is motion a zero duration cannot stop, and Reanimated's CSS
+  // animations ignore reduce motion: the sweep is not mounted at all.
   const motionEnabled = useMotionEnabled();
   const shouldAnimate = animated && motionEnabled;
-
-  useLayoutEffect(() => {
-    if (shouldAnimate) {
-      shimmerTranslate.set(
-        withRepeat(
-          withTiming(1, {
-            duration: 1500,
-            easing: motion.easing.plain,
-          }),
-          -1, // infinite
-          false, // don't reverse
-        ),
-      );
-    }
-
-    return () => {
-      cancelAnimation(shimmerTranslate);
-    };
-  }, [shouldAnimate, shimmerTranslate]);
-
-  const animatedStyle = useAnimatedStyle(() => {
-    const translateX = interpolate(
-      shimmerTranslate.get(),
-      [0, 1],
-      [-300, 300], // Shimmer moves from left to right
-    );
-
-    return {
-      transform: [{ translateX }],
-    };
-  });
 
   return (
     <View
@@ -75,11 +52,11 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
         style,
       ]}
     >
-      {/* The sweep never rests, so its colour sits on a child rather than in the
-          worklet: the animated node takes no themed style. */}
+      {/* The sweep never rests, so its colour sits on a child: the animated
+          node takes no themed style. */}
       {!!shouldAnimate && (
         <View style={styles.shimmer}>
-          <Animated.View style={[styles.shimmer, animatedStyle]}>
+          <Animated.View style={[styles.shimmer, SWEEP]}>
             <View style={styles.shimmerFill} />
           </Animated.View>
         </View>

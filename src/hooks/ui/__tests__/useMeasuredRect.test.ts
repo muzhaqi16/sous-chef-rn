@@ -1,15 +1,15 @@
 import { renderHook } from '@testing-library/react-native';
-import type { View } from 'react-native';
+import type { ViewInstance } from 'react-native';
 import { useMeasuredRect } from '../useMeasuredRect';
 
-type MeasureCallback = Parameters<View['measure']>[0];
+type MeasureCallback = Parameters<ViewInstance['measure']>[0];
 
 // A view at page (10, 30) measuring width x height.
 const viewMeasuring = (width: number, height: number) =>
   ({
     measure: (callback: MeasureCallback) =>
       callback(0, 0, width, height, 10, 30),
-  } as unknown as View);
+  } as unknown as ViewInstance);
 
 beforeEach(() => {
   jest.spyOn(global, 'requestAnimationFrame').mockImplementation(callback => {
@@ -83,7 +83,7 @@ describe('useMeasuredRect', () => {
     result.current.ref.current = {
       measure: (callback: MeasureCallback) =>
         callback(0, 0, 40, 20, positions.shift() ?? 10, 30),
-    } as unknown as View;
+    } as unknown as ViewInstance;
 
     rerender({ receiver: onMeasure });
 
@@ -99,7 +99,7 @@ describe('useMeasuredRect', () => {
   it('leaves a receiver present from mount to its layout', () => {
     const measure = jest.fn();
     const { result, rerender } = renderHook(() => useMeasuredRect(jest.fn()));
-    result.current.ref.current = { measure } as unknown as View;
+    result.current.ref.current = { measure } as unknown as ViewInstance;
 
     rerender({});
 
@@ -109,7 +109,7 @@ describe('useMeasuredRect', () => {
   it('measures nothing without a receiver', () => {
     const measure = jest.fn();
     const { result } = renderHook(() => useMeasuredRect(undefined));
-    result.current.ref.current = { measure } as unknown as View;
+    result.current.ref.current = { measure } as unknown as ViewInstance;
 
     result.current.measure();
 

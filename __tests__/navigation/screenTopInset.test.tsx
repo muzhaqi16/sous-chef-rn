@@ -7,7 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   topInsetScreenLayout,
   topInsetWith,
-  noInsetScreenLayout,
+  edgeToEdgeScreenLayout,
+  navigatorScreenLayout,
 } from '#navigation/layouts/TopInsetLayout';
 import { Screen, type ScreenProps } from '#components/templates/Screen';
 import { Text } from '#components/atoms/Text';
@@ -122,10 +123,13 @@ describe('the top inset is applied exactly once', () => {
     expect(insetPaddings(tree)).toHaveLength(1);
   });
 
-  it('applies none for a screen that opts out', () => {
+  it.each([
+    ['an edge-to-edge screen', edgeToEdgeScreenLayout],
+    ['a nested navigator', navigatorScreenLayout],
+  ])('applies none for %s', (_label, layout) => {
     const tree = render(
       <>
-        {noInsetScreenLayout({
+        {layout({
           children: (
             <Screen header={{ variant: 'none' }}>
               <Text role="body">content</Text>
@@ -205,15 +209,25 @@ describe('the side insets are applied exactly once', () => {
  * like one that meant to, and only the roster shows the difference.
  */
 describe('every screen that opts out of the inset is a deliberate one', () => {
-  const IMMERSIVE = [
-    // Hero screens: the detail header draws edge-to-edge under the status bar.
-    'src/features/pantry/screens/registration.ts',
-    'src/features/recipes/screens/registration.ts',
-    'src/features/shoppingList/screens/registration.ts',
-    // A nested navigator insets in its own stack, so the parent must not.
-    'src/navigation/RootNavigator.tsx',
-    // The module that DEFINES the opt-out.
-    'src/navigation/layouts/TopInsetLayout.tsx',
+  // The module that DEFINES both opt-outs.
+  const LAYOUTS = 'src/navigation/layouts/TopInsetLayout.tsx';
+  const OPT_OUTS: Array<[string, string[]]> = [
+    [
+      // Hero screens: the detail header draws edge-to-edge under the status bar.
+      'edgeToEdgeScreenLayout',
+      [
+        'src/features/pantry/screens/registration.ts',
+        'src/features/recipes/screens/registration.ts',
+        'src/features/shoppingList/screens/registration.ts',
+        LAYOUTS,
+      ],
+    ],
+    [
+      // A nested navigator insets in its own stack, so the parent must not, and
+      // its screens bring their own shared-transition boundary.
+      'navigatorScreenLayout',
+      ['src/navigation/RootNavigator.tsx', LAYOUTS],
+    ],
   ];
 
   const registrations = [
@@ -227,12 +241,12 @@ describe('every screen that opts out of the inset is a deliberate one', () => {
     expect(registrations.length).toBeGreaterThan(10);
   });
 
-  it('names noInsetScreenLayout only in the recorded modules', () => {
+  it.each(OPT_OUTS)('names %s only in the recorded modules', (name, files) => {
     const users = registrations.filter(file =>
-      /\bnoInsetScreenLayout\b/.test(readFileSync(file, 'utf8')),
+      new RegExp(`\\b${name}\\b`).test(readFileSync(file, 'utf8')),
     );
     expect(users.sort()).toEqual(
-      IMMERSIVE.filter(f => registrations.includes(f)).sort(),
+      files.filter(f => registrations.includes(f)).sort(),
     );
   });
 });
