@@ -109,40 +109,21 @@ export class ErrorService {
     API_KEY_INVALID: 'genericLater',
     API_KEY_EXPIRED: 'genericLater',
     API_KEY_REVOKED: 'genericLater',
-    API_KEY_RATE_LIMITED: 'genericLater',
     API_KEY_INSUFFICIENT_PERMISSIONS: 'genericLater',
 
     // Validation Errors
     VALIDATION_FAILED: 'validationFailed',
-    VALIDATION_FIELD_REQUIRED: 'fieldRequired',
-    VALIDATION_FIELD_INVALID: 'fieldInvalid',
-    VALIDATION_FORMAT_INVALID: 'formatInvalid',
-    VALIDATION_LENGTH_INVALID: 'lengthInvalid',
-    VALIDATION_RANGE_INVALID: 'rangeInvalid',
     VALIDATION_UNIQUE_CONSTRAINT: 'uniqueConstraint',
 
     // Resource Errors
     RESOURCE_NOT_FOUND: 'resourceNotFound',
     RESOURCE_CONFLICT: 'resourceConflict',
-    RESOURCE_GONE: 'resourceGone',
-    RESOURCE_LOCKED: 'resourceLocked',
-
-    // Business Logic Errors
-    BUSINESS_RULE_VIOLATION: 'businessRuleViolation',
-    BUSINESS_STATE_INVALID: 'businessStateInvalid',
-    BUSINESS_OPERATION_NOT_ALLOWED: 'operationNotAllowed',
-    BUSINESS_QUOTA_EXCEEDED: 'quotaExceeded',
-    BUSINESS_FEATURE_DISABLED: 'featureDisabled',
 
     // Rate Limiting Errors
     RATE_LIMIT_EXCEEDED: 'rateLimitExceeded',
-    RATE_LIMIT_IP_BLOCKED: 'rateLimitBlocked',
-    RATE_LIMIT_USER_BLOCKED: 'rateLimitBlocked',
-    RATE_LIMIT_API_KEY_BLOCKED: 'rateLimitBlocked',
 
     // Service Errors
     SERVICE_UNAVAILABLE: 'serviceUnavailable',
-    SERVICE_MAINTENANCE: 'serviceMaintenance',
 
     // Network/Offline Errors
     NETWORK_ERROR: 'offline',
@@ -194,14 +175,7 @@ export class ErrorService {
     UNIT_CHANGE_NEEDS_RESOLUTION: 'unitChangeNeedsResolution',
 
     // Application-Specific Errors
-    SHOPPING_LIST_NOT_FOUND: 'shoppingListNotFound',
-    SHOPPING_ITEM_NOT_FOUND: 'shoppingItemNotFound',
-    SHOPPING_ITEM_ALREADY_EXISTS: 'shoppingItemAlreadyExists',
-    HOME_NOT_FOUND: 'homeNotFound',
     HOME_ACCESS_DENIED: 'homeAccessDenied',
-    HOME_INVITE_INVALID: 'homeInviteInvalid',
-    HOME_INVITE_EXPIRED: 'homeInviteExpired',
-    HOME_MEMBER_ALREADY_EXISTS: 'homeMemberAlreadyExists',
     HOME_MEMBER_LIMIT_REACHED: 'homeMemberLimitReached',
   };
 
@@ -223,9 +197,13 @@ export class ErrorService {
     TopLevelErrorCode.SubscriptionFilterError,
   ]);
 
+  // BAD_USER_INPUT is Apollo's, passed through for a malformed typed value.
+  // Its other codes (a parse or validation failure) mean a broken build, and
+  // stay faults.
   private static readonly SERVER_CODES = new Set<string>([
     ...Object.values(ErrorCode),
     ...Object.values(TopLevelErrorCode),
+    'BAD_USER_INPUT',
   ]);
 
   private static readonly ERROR_CATEGORIES: Record<string, string> = {
@@ -237,14 +215,11 @@ export class ErrorService {
     API_: 'API Key',
     VALIDATION_: 'Validation',
     RESOURCE_: 'Resource',
-    BUSINESS_: 'Business Logic',
     RATE_: 'Rate Limiting',
     SERVICE_: 'Service',
     NETWORK_: 'Network',
     CIRCUIT_: 'Circuit Breaker',
-    EMAIL_: 'Email',
     PANTRY_: 'Pantry',
-    SHOPPING_: 'Shopping',
     HOME_: 'Home Management',
   };
 

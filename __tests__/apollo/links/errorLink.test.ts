@@ -201,7 +201,7 @@ describe('errorLink.ts', () => {
     // 'unauthorized', 'invalid token', 'jwt'), but none of them is an
     // access-token problem, so none may spend a token refresh.
     it.each([
-      ['Your subscription has expired', 'BUSINESS_QUOTA_EXCEEDED'],
+      ['This invitation has expired', 'CONFLICT'],
       [
         'Unauthorized: key lacks the required permission',
         'API_KEY_INSUFFICIENT_PERMISSIONS',
