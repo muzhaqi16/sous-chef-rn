@@ -13,7 +13,7 @@ import { useAddToMealPlanSheet } from '#features/mealPlan/ui/useAddToMealPlanShe
 import { useRecipeReviews } from '#features/recipes/hooks/useRecipeReviews';
 import { ReviewSection } from '#features/recipes/components/ReviewSection';
 import { useRecipeDetail } from './useRecipeDetail';
-import { useRecipeDetailSheets } from './useRecipeDetailSheets';
+import { useActiveSheet } from '#hooks/ui/useActiveSheet';
 import { useRecipeHeaderActions } from './useRecipeHeaderActions';
 import type {
   CatalogRecipeHint,
@@ -23,7 +23,10 @@ import { DataAttributionNotices } from '#features/recipes/components/DataAttribu
 import { RecipeDetailSkeleton } from '#features/recipes/components/skeletons/RecipeDetailSkeleton';
 import { RecipeEnrichment } from '#features/recipes/components/recipeDetail/RecipeEnrichment';
 import { RecipeDetailsNotice } from '#features/recipes/components/recipeDetail/RecipeDetailsNotice';
-import { RecipeDetailSheets } from '#features/recipes/components/recipeDetail/RecipeDetailSheets';
+import {
+  RecipeDetailSheets,
+  type RecipeSheet,
+} from '#features/recipes/components/recipeDetail/RecipeDetailSheets';
 import { RecipeIngredientsSection } from '#features/recipes/components/recipeDetail/RecipeIngredientsSection';
 import { RecipeMetaRow } from '#features/recipes/components/recipeDetail/RecipeMetaRow';
 import { DietaryCheckNote } from '#features/recipes/components/recipeDetail/DietaryCheckNote';
@@ -82,7 +85,7 @@ const RecipeDetailScreen: React.FC = () => {
     if (recipeId) noteTipFact('recipeOpened');
   }, [recipeId]);
 
-  const sheets = useRecipeDetailSheets();
+  const sheets = useActiveSheet<RecipeSheet>();
   const addToMealPlan = useAddToMealPlanSheet({ recipeId: recipeId ?? '' });
   const household = useRecipeDietaryAlerts(recipeId);
   const headerActions = useRecipeHeaderActions(

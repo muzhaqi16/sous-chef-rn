@@ -11,7 +11,7 @@ import { recipesTestIDs } from '#features/recipes/testIDs';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useUser } from '#store/useAppStore';
 import type { RecipeDetailState } from './useRecipeDetail';
-import type { RecipeSheet } from './useRecipeDetailSheets';
+import type { RecipeSheet } from '#features/recipes/components/recipeDetail/RecipeDetailSheets';
 
 /** Submit a draft, withdraw one in review, unpublish a published one. */
 const PUBLISH_ACTION_ICON: Readonly<Record<RecipeStatus, IconName>> = {

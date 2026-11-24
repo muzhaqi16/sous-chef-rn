@@ -1,4 +1,7 @@
 import React from 'react';
+import type { ActiveSheet } from '#hooks/ui/useActiveSheet';
+import type { ReportTarget } from '#features/profile/ui/ReportContentSheet';
+import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
 import { startingServings } from '#domain/servings';
 import { ReportContentSheet } from '#features/profile/ui/ReportContentSheet';
 import { useCooksFor } from '#features/profile/hooks/useCooksFor';
@@ -8,15 +11,22 @@ import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
 import type { useRecipeDietaryAlerts } from '#features/recipes/hooks/useRecipeDietaryAlerts';
 import { useRecipeSubstitutes } from '#features/recipes/hooks/useRecipeSubstitutes';
 import type { RecipeDetailState } from '#features/recipes/screens/RecipeDetail/useRecipeDetail';
-import type { RecipeSheetsState } from '#features/recipes/screens/RecipeDetail/useRecipeDetailSheets';
 import { useRecipeTags } from '#features/recipes/screens/useRecipeTags';
 import { RecipeCookFlow } from '#features/recipes/ui/RecipeCookFlow';
 import { ShoppingListPickerSheet } from '#features/shoppingList/ui/ShoppingListPickerSheet';
 import { IngredientAlertsSheet } from './IngredientAlertsSheet';
 
+// The sheets the screen opens itself. The list picker and the cook flow are
+// opened by the flows that own them, inside `useRecipeDetail`.
+export type RecipeSheet =
+  | { type: 'save' }
+  | { type: 'manage' }
+  | { type: 'report'; target: ReportTarget }
+  | { type: 'ingredient'; ingredient: DisplayIngredient };
+
 interface RecipeDetailSheetsProps {
   detail: RecipeDetailState;
-  sheets: RecipeSheetsState;
+  sheets: ActiveSheet<RecipeSheet>;
   household: ReturnType<typeof useRecipeDietaryAlerts>;
   title: string;
   servings: number | null | undefined;
