@@ -1,4 +1,5 @@
 import React from 'react';
+import { useRowsOnCardFill } from '#components/atoms/RowCard';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { ThemedIcon } from '#components/atoms/themedComponents';
@@ -68,10 +69,13 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 }) => {
   const { t } = useTranslation();
   const overrideIconColor = themeColors?.textSecondary;
+  // On a card that lights up, the card's fill shows through the row.
+  const onCardFill = useRowsOnCardFill();
+  const surface = [commonStyles.rowSurface, onCardFill && styles.onCardFill];
 
   if (children) {
     return (
-      <View style={commonStyles.rowSurface}>
+      <View style={surface}>
         <View style={commonStyles.rowContent}>{children}</View>
       </View>
     );
@@ -124,10 +128,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
     return (
       <View
-        style={[
-          commonStyles.rowSurface,
-          (selected === true || tinted) && styles.tintedSurface,
-        ]}
+        style={[surface, (selected === true || tinted) && styles.tintedSurface]}
       >
         <AppPressable
           style={commonStyles.rowContent}
@@ -156,7 +157,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
   // A named row with nothing to press still reads as one element.
   return (
-    <View style={commonStyles.rowSurface}>
+    <View style={surface}>
       <View
         style={commonStyles.rowContent}
         accessible={!!accessibilityLabel}
@@ -212,6 +213,9 @@ const ListItemSubtitle: React.FC<{
 export const ListItem = ListItemComponent;
 
 const styles = StyleSheet.create(theme => ({
+  onCardFill: {
+    backgroundColor: 'transparent',
+  },
   tintedSurface: {
     backgroundColor: theme.colors.primaryLight,
   },
