@@ -342,6 +342,7 @@ export const MealTemplateBuilderScreen: React.FC<
         name="name"
         render={({ field, fieldState }) => (
           <FormInput
+            ref={field.ref}
             label={t('labels.templateName')}
             value={field.value}
             onChangeText={field.onChange}
