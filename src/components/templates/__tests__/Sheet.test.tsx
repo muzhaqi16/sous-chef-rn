@@ -53,4 +53,22 @@ describe('Sheet', () => {
 
     expect(screen.getByText('kept 1')).toBeTruthy();
   });
+
+  // A form holding input turns pan-down off; the standard `true` must not win.
+  it('lets a modal option replace the standard value', () => {
+    render(
+      <Sheet
+        visible
+        onDismiss={() => undefined}
+        snapPoints={['50%']}
+        modalOptions={{ enablePanDownToClose: false }}
+      >
+        <Draft />
+      </Sheet>,
+    );
+
+    expect(
+      screen.UNSAFE_getByProps({ enablePanDownToClose: false }),
+    ).toBeTruthy();
+  });
 });

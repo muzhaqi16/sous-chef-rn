@@ -74,6 +74,11 @@ export interface SheetProps extends UseStandardBottomSheetOptions {
   /** Actions beside the title, icon or text. */
   actions?: BarAction[];
   modalOptions?: SheetModalOptions;
+  /**
+   * Who clears the home indicator in `list`: the container (default), or the
+   * content, when each of its steps pads its own scroll content.
+   */
+  bottomInset?: 'container' | 'content';
 }
 
 /**
@@ -92,6 +97,7 @@ export const Sheet: React.FC<SheetProps> = ({
   title,
   actions,
   modalOptions,
+  bottomInset = 'container',
   ...sheetOptions
 }) => {
   const {
@@ -151,7 +157,9 @@ export const Sheet: React.FC<SheetProps> = ({
         // no height, so a scrollable inside it never scrolls. The inset keeps
         // the last row clear of the home indicator.
         return (
-          <View style={[styles.fill, insetStyle]}>
+          <View
+            style={[styles.fill, bottomInset === 'container' && insetStyle]}
+          >
             {header}
             {body}
           </View>

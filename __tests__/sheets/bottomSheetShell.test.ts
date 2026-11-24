@@ -36,7 +36,6 @@ const SHELL = [
 const PENDING_ADOPTION = [
   'src/features/recipes/components/FolderPicker/ManageFolderSheet.tsx',
   'src/features/recipes/components/FolderPicker.tsx',
-  'src/features/catalog/ui/AddItemSheet/AddItemSheet.tsx',
 ];
 
 const SRC = join(process.cwd(), 'src');

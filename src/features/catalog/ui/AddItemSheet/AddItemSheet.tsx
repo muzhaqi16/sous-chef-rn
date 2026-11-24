@@ -3,9 +3,8 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { LayoutAnimationConfig } from 'react-native-reanimated';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
@@ -330,24 +329,21 @@ export function AddItemSheet<
   T extends BaseSuggestionItem = BaseSuggestionItem,
 >({ visible, contextId, ...content }: AddItemSheetProps<T>) {
   const open = visible && !!contextId;
-  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
-    visible: open,
-    onDismiss: content.onClose,
-    snapPoints: ['70%', '95%'],
-    keyboardBehavior: 'extend',
-  });
   // Set by a details form holding input, so a pan-down cannot drop it; the
   // form releases it as it unmounts.
   const [heldOpen, setHeldOpen] = useState(false);
   const opening = useOpening(open);
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      {...modalProps}
-      enablePanDownToClose={!heldOpen}
-      // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
-      testID={catalogTestIDs.addItemSheetModal(content.config.testIDPrefix)}
+    <Sheet
+      mode="list"
+      visible={open}
+      onDismiss={content.onClose}
+      snapPoints={['70%', '95%']}
+      keyboardBehavior="extend"
+      // Every step scrolls itself and pads its own end.
+      bottomInset="content"
+      modalOptions={{ enablePanDownToClose: !heldOpen }}
     >
       {opening ? (
         <AddItemSheetContent
@@ -356,7 +352,7 @@ export function AddItemSheet<
           holdOpen={setHeldOpen}
         />
       ) : null}
-    </BottomSheetModal>
+    </Sheet>
   );
 }
 
