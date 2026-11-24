@@ -291,7 +291,7 @@ const FORM_OWNERS: Record<string, string> = {
   shoppingItemSchema:
     'src/features/shoppingList/hooks/useShoppingListItemForm.ts',
   moveToPantrySchema:
-    'src/features/shoppingList/components/moveToPantry/MoveToPantryModal.tsx',
+    'src/features/shoppingList/components/moveToPantry/useMoveToPantryForm.ts',
   resetPasswordSchema: 'src/features/auth/screens/ResetPasswordScreen.tsx',
   changePasswordSchema: 'src/features/profile/screens/ChangePasswordScreen.tsx',
   templateItemSchema:
