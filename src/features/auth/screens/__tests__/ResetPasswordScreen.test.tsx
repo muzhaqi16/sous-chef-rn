@@ -8,6 +8,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
+import { t } from '#i18n';
 import { useStore } from '#store';
 import { authService } from '#services/authService';
 import {
@@ -347,46 +348,48 @@ describe('ResetPasswordScreen', () => {
     expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the submit button disabled until the confirmation is filled in', async () => {
+  it('says on the confirmation that it is needed, its submit never greyed out', async () => {
     const user = userEvent.setup();
     await renderOnForm();
 
     const submit = screen.getByTestId('button-Reset Password');
-    expect(submit).toBeDisabled();
-
-    // A valid password alone is not enough — confirmation is still empty.
-    await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
-    expect(submit).toBeDisabled();
-  });
-
-  it('enables the submit button once both passwords are valid and match', async () => {
-    const user = userEvent.setup();
-    await renderOnForm();
+    expect(submit).toBeEnabled();
 
     await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
-    await user.type(CONFIRM_PASSWORD_INPUT(), 'Test123!');
+    await user.press(submit);
+    await drainTimers();
 
-    expect(screen.getByTestId('button-Reset Password')).toBeEnabled();
+    expect(CONFIRM_PASSWORD_INPUT().props.accessibilityHint).toBe(
+      t('auth.newPasswordConfirmRequired'),
+    );
   });
 
-  it('keeps the submit button disabled when the passwords do not match', async () => {
+  it('says on the confirmation that the passwords differ', async () => {
     const user = userEvent.setup();
     await renderOnForm();
 
     await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
     await user.type(CONFIRM_PASSWORD_INPUT(), 'Test123?');
+    await user.press(screen.getByTestId('button-Reset Password'));
+    await drainTimers();
 
-    expect(screen.getByTestId('button-Reset Password')).toBeDisabled();
+    expect(CONFIRM_PASSWORD_INPUT().props.accessibilityHint).toBe(
+      t('auth.passwordsMustMatch'),
+    );
   });
 
-  it('keeps the submit button disabled for a password that fails complexity', async () => {
+  it('says on the password what a password failing complexity lacks', async () => {
     const user = userEvent.setup();
     await renderOnForm();
 
     await user.type(NEW_PASSWORD_INPUT(), 'alllowercase');
     await user.type(CONFIRM_PASSWORD_INPUT(), 'alllowercase');
+    await user.press(screen.getByTestId('button-Reset Password'));
+    await drainTimers();
 
-    expect(screen.getByTestId('button-Reset Password')).toBeDisabled();
+    expect(NEW_PASSWORD_INPUT().props.accessibilityHint).toBe(
+      t('commonValidation.passwordUppercase'),
+    );
   });
 
   it('shows the invalid-link view when the server reports the token spent', async () => {

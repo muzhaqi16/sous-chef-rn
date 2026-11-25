@@ -313,8 +313,8 @@ export const ResetPasswordScreen: React.FC = () => {
         )}
 
         {/* The inputs write through setValue rather than register/Controller,
-            so `shouldValidate` is what keeps formState.isValid — and with it
-            the submit button — in step with what the user has typed. */}
+            so `shouldValidate` is what keeps each field's error in step with
+            what the user has typed. */}
         <View style={styles.form}>
           <View style={styles.field}>
             <Text role="bodyStrong" style={styles.label}>
@@ -358,7 +358,6 @@ export const ResetPasswordScreen: React.FC = () => {
           <Button
             variant="primary"
             onPress={form.handleSubmit(onSubmit, reportValidationErrors)}
-            disabled={!form.formState.isValid}
             loading={isSubmitting}
             style={styles.buttonSpacing}
             testID={authTestIDs.resetPasswordSubmitButton}
