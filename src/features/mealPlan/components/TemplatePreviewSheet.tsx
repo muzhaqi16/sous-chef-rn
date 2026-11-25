@@ -2,18 +2,15 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { date, object, string, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
 import {
   MEAL_TYPE_LABEL_KEYS,
   TEMPLATE_CATEGORY_LABEL_KEYS,
 } from '#features/mealPlan/utils/mealPlanEnumLabels';
-import {
-  Pressable,
-  PrimaryActivityIndicator,
-  OnPrimaryActivityIndicator,
-} from '#components/atoms/themedComponents';
+import { Pressable } from '#components/atoms/themedComponents';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { FormInput } from '#components/atoms/FormInput';
@@ -30,36 +27,14 @@ import { useDataState } from '#hooks/data/useDataState';
 import { useOpening } from '#hooks/ui/useOpening';
 import { toDateKey } from '#utils/dateUtils';
 import { destructiveConfirm } from '#services/destructiveConfirm';
-import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
+import {
+  duplicateTemplateSchema,
+  planFromTemplateSchema,
+  type DuplicateTemplateFormValues,
+  type PlanFromTemplateFormValues,
+} from './templatePreviewFormConfig';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
-
-interface PlanFromTemplateFormValues {
-  /** Blank takes the template's name. */
-  name: string;
-  startDate: Date | null;
-  servings: string;
-}
-
-const planFromTemplateSchema: ObjectSchema<PlanFromTemplateFormValues> = object(
-  {
-    name: string().trim().defined(),
-    startDate: date()
-      .nullable()
-      .required(lazyMessage('mealPlan.startDateRequiredMessage')),
-    servings: string().defined(),
-  },
-);
-
-interface DuplicateTemplateFormValues {
-  name: string;
-}
-
-const duplicateTemplateSchema: ObjectSchema<DuplicateTemplateFormValues> =
-  object({
-    name: string()
-      .trim()
-      .required(lazyMessage('mealTemplateBuilder.nameRequiredMessage')),
-  });
 
 interface TemplatePreviewSheetProps {
   visible: boolean;
@@ -110,6 +85,21 @@ const DuplicateTemplateForm: React.FC<DuplicateTemplateFormProps> = ({
 
   return (
     <View style={styles.duplicateForm}>
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={t('templatePreview.duplicateTemplate')}
+          leading="back"
+          onClose={onCancel}
+          confirm={{
+            onPress: () => {
+              void duplicate();
+            },
+            accessibilityLabel: t('duplicatePlan.duplicate'),
+            loading: duplicating,
+            testID: mealPlanTestIDs.templateDuplicateConfirmButton,
+          }}
+        />
+      </SheetHeaderSlot>
       <Controller
         control={control}
         name="name"
@@ -124,49 +114,19 @@ const DuplicateTemplateForm: React.FC<DuplicateTemplateFormProps> = ({
           />
         )}
       />
-      <View style={styles.duplicateActions}>
-        <Pressable
-          onPress={onCancel}
-          style={({ pressed }) => [
-            styles.secondaryButton,
-            pressed && styles.buttonPressed,
-          ]}
-        >
-          <Text role="bodyStrong" tone="secondary">
-            {t('labels.cancel')}
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() => {
-            void duplicate();
-          }}
-          disabled={duplicating}
-          style={({ pressed }) => [
-            styles.secondaryButton,
-            pressed && styles.buttonPressed,
-            duplicating && styles.buttonDisabled,
-          ]}
-          testID={mealPlanTestIDs.templateDuplicateConfirmButton}
-        >
-          <Text role="bodyStrong" tone="primary">
-            {duplicating
-              ? t('duplicatePlan.duplicating')
-              : t('duplicatePlan.duplicate')}
-          </Text>
-        </Pressable>
-      </View>
     </View>
   );
 };
 
 type TemplatePreviewContentProps = Omit<
   TemplatePreviewSheetProps,
-  'visible' | 'template' | 'onClose' | 'duplicating'
+  'visible' | 'template' | 'duplicating'
 > & { template: MealTemplateDisplayFragment; duplicating: boolean };
 
 /** One opening: the template's days, the plan made from it, and its actions. */
 const TemplatePreviewContent: React.FC<TemplatePreviewContentProps> = ({
   template,
+  onClose,
   onConfirm,
   confirmLoading,
   onEdit,
@@ -225,13 +185,35 @@ const TemplatePreviewContent: React.FC<TemplatePreviewContentProps> = ({
     );
   };
 
+  // Duplicating is a step of its own; the plan form keeps its values behind it.
+  if (onDuplicate && copyFormOpen) {
+    return (
+      <DuplicateTemplateForm
+        templateName={template.name}
+        duplicating={duplicating}
+        onCancel={() => setCopyFormOpen(false)}
+        onDuplicate={newName => onDuplicate(template.id, newName)}
+      />
+    );
+  }
+
   return (
     <>
-      {/* Template header */}
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={template.name}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void createPlan();
+            },
+            accessibilityLabel: t('labels.createMealPlan'),
+            loading: confirmLoading,
+            testID: mealPlanTestIDs.templatePreviewConfirmButton,
+          }}
+        />
+      </SheetHeaderSlot>
       <View style={styles.templateHeader}>
-        <Text role="heading" style={styles.templateName}>
-          {template.name}
-        </Text>
         {!!template.description && (
           <Text
             role="caption"
@@ -307,19 +289,12 @@ const TemplatePreviewContent: React.FC<TemplatePreviewContentProps> = ({
         <SectionHeader variant="title" style={styles.sectionTitle}>
           {t('templatePreview.preview')}
         </SectionHeader>
-        {previewState === 'loading' ? (
-          <PrimaryActivityIndicator size="small" />
-        ) : previewState === 'error' || previewState === 'offline' ? (
-          <DataStateView state={previewState} onRetry={refetch} />
-        ) : previewState === 'empty' ? (
-          <Text
-            role="caption"
-            tone="tertiary"
-            align="center"
-            style={styles.emptyPreview}
-          >
-            {t('templatePreview.emptyPreview')}
-          </Text>
+        {previewState !== 'ready' ? (
+          <DataStateView
+            state={previewState}
+            onRetry={refetch}
+            empty={{ title: t('templatePreview.emptyPreview') }}
+          />
         ) : (
           groupedByDay.map(day => (
             <View key={day.dayOffset} style={styles.dayGroup}>
@@ -346,39 +321,6 @@ const TemplatePreviewContent: React.FC<TemplatePreviewContentProps> = ({
           ))
         )}
       </View>
-
-      {/* Confirm button */}
-      <Pressable
-        onPress={() => {
-          void createPlan();
-        }}
-        disabled={confirmLoading}
-        style={({ pressed }) => [
-          styles.confirmButton,
-          pressed && styles.buttonPressed,
-          confirmLoading && styles.buttonDisabled,
-        ]}
-      >
-        {confirmLoading ? (
-          <OnPrimaryActivityIndicator size="small" />
-        ) : (
-          <>
-            <Icon name="calendar-outline" size="sm" tone="onPrimary" />
-            <Text role="bodyStrong" style={styles.confirmText}>
-              {t('labels.createMealPlan')}
-            </Text>
-          </>
-        )}
-      </Pressable>
-
-      {!!onDuplicate && !!copyFormOpen && (
-        <DuplicateTemplateForm
-          templateName={template.name}
-          duplicating={duplicating}
-          onCancel={() => setCopyFormOpen(false)}
-          onDuplicate={newName => onDuplicate(template.id, newName)}
-        />
-      )}
 
       {!!onEdit && (
         <Pressable
@@ -450,6 +392,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
       mode="form"
       visible={presented}
       onDismiss={onClose}
+      headerFromContent
       snapPoints={['85%']}
       style={styles.scrollView}
       contentContainerStyle={styles.contentContainer}
@@ -459,6 +402,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
           key={opening.id}
           template={opening.payload}
           duplicating={duplicating}
+          onClose={onClose}
           {...content}
         />
       ) : null}
@@ -480,9 +424,6 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
   },
-  templateName: {
-    marginBottom: theme.spacing.xs,
-  },
   templateDescription: {
     marginBottom: theme.spacing.sm,
   },
@@ -500,9 +441,6 @@ const styles = StyleSheet.create(theme => ({
   },
   previewSection: {
     marginBottom: theme.spacing.lg,
-  },
-  emptyPreview: {
-    paddingVertical: theme.spacing.md,
   },
   dayGroup: {
     marginBottom: theme.spacing.md,
@@ -523,19 +461,6 @@ const styles = StyleSheet.create(theme => ({
   mealName: {
     flex: 1,
   },
-  confirmButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.primary,
-  },
-  confirmText: {
-    color: theme.colors.onPrimary,
-  },
   editButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -549,15 +474,6 @@ const styles = StyleSheet.create(theme => ({
   duplicateForm: {
     marginTop: theme.spacing.md,
     gap: theme.spacing.sm,
-  },
-  duplicateActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: theme.spacing.sm,
-  },
-  secondaryButton: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
   },
   buttonPressed: {
     opacity: theme.opacity.pressed,

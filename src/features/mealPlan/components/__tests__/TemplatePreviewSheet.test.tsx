@@ -172,7 +172,7 @@ describe('TemplatePreviewSheet', () => {
 
   it('renders Create Meal Plan button', () => {
     render(<TemplatePreviewSheet {...defaultProps} />);
-    expect(screen.getByText('Create Meal Plan')).toBeTruthy();
+    expect(screen.getByLabelText('Create Meal Plan')).toBeTruthy();
   });
 
   it('returns null when template is null', () => {
@@ -265,7 +265,7 @@ describe('TemplatePreviewSheet', () => {
   it('calls onConfirm when Create Meal Plan is pressed', async () => {
     const user = userEvent.setup();
     render(<TemplatePreviewSheet {...defaultProps} />);
-    await user.press(screen.getByText('Create Meal Plan'));
+    await user.press(screen.getByLabelText('Create Meal Plan'));
     expect(defaultProps.onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({
         templateId: 'tmpl-1',
@@ -285,7 +285,7 @@ describe('TemplatePreviewSheet', () => {
       '  Spring Plan  ',
     );
     fireEvent.changeText(screen.getByTestId('servings-input'), '6');
-    await user.press(screen.getByText('Create Meal Plan'));
+    await user.press(screen.getByLabelText('Create Meal Plan'));
     expect(defaultProps.onConfirm).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Spring Plan', servings: 6 }),
     );

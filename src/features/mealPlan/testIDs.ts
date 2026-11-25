@@ -22,6 +22,7 @@ export const mealPlanTestIDs = {
   templateItemRecipe: 'template-item-recipe',
   templateClearRecipeButton: 'template-clear-recipe-button',
 
+  templatePreviewConfirmButton: 'template-preview-confirm-button',
   templatePreviewEditButton: 'template-preview-edit-button',
   templatePreviewDuplicateButton: 'template-preview-duplicate-button',
   templatePreviewDeleteButton: 'template-preview-delete-button',
