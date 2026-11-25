@@ -6,7 +6,6 @@ import type {
   FeedSnapshot,
 } from '#apollo/feed/types';
 import { readWholeScope } from '#apollo/feed/readWholeScope';
-import { queueStore } from '#apollo/offlineQueue/queueStore';
 import { isHeld } from '#apollo/utils/writeLocalEntity';
 import { SyncScopeKind } from '#graphql/generated/schemaTypes';
 import { useStore } from '#store';
@@ -184,8 +183,6 @@ export const listFeedAdapter: FeedAdapter = {
     evictListRows(cache, id);
     discardListShard(id);
   },
-
-  holdsUnacknowledgedCreate: id => queueStore.holdsCreateFor(id),
 
   isOnScreen: id => useStore.getState().selectedShoppingListId === id,
 

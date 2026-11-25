@@ -60,8 +60,6 @@ export interface FeedAdapter {
   ): Promise<FeedAnswer<FeedSnapshot>>;
   /** Removes the scope's rows from the device, a stored copy included. */
   evict(cache: ApolloCache, scopeId: string): void;
-  /** A create the server has not taken, whose rows a pull would race. */
-  holdsUnacknowledgedCreate(scopeId: string): boolean;
   /** The scope on screen, which reads in full ahead of the rest. */
   isOnScreen(scopeId: string): boolean;
   /** Whether a restart brought back the rows a stored position claims. */

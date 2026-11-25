@@ -6,7 +6,6 @@ import type {
   FeedSnapshot,
 } from '#apollo/feed/types';
 import { readWholeScope } from '#apollo/feed/readWholeScope';
-import { queueStore } from '#apollo/offlineQueue/queueStore';
 import { isHeld } from '#apollo/utils/writeLocalEntity';
 import { dropHome } from '#domain/dropHome';
 import { SyncPageStatus, SyncScopeKind } from '#graphql/generated/schemaTypes';
@@ -274,8 +273,6 @@ export const homeFeedAdapter: FeedAdapter = {
     evictHomeRows(cache, id);
     dropHome(cache, id);
   },
-
-  holdsUnacknowledgedCreate: id => queueStore.holdsCreateFor(id),
 
   isOnScreen: id => useStore.getState().selectedHomeId === id,
 
