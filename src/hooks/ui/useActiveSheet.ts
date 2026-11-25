@@ -11,8 +11,10 @@ export interface ActiveSheet<Sheet extends { type: string }> {
 }
 
 /**
- * A screen's one open sheet, holding what it shows. Opening one closes any
- * other, so two never stack.
+ * A screen's one open sheet among those it opens from its own actions, holding
+ * what it shows: opening one closes the others it holds. A sheet a flow owns,
+ * such as a write's batch-use sheet, keeps that flow's state instead, and
+ * gorhom stacks the presentations.
  */
 export function useActiveSheet<
   Sheet extends { type: string },

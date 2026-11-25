@@ -287,7 +287,8 @@ export function useStandardBottomSheet({
     isPresentedRef.current = false;
     handleBackdrop(-1);
     // A blur dismiss must NOT notify the consumer: `visible` staying true is
-    // what lets the focus effect re-present the sheet with its typed state.
+    // what lets the focus effect re-present the sheet. gorhom unmounts its
+    // content meanwhile, so what must outlive a blur lives in the parent.
     if (blurDismissRef.current) {
       blurDismissRef.current = false;
       return;

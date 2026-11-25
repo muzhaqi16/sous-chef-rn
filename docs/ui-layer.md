@@ -115,6 +115,15 @@ optional:
     so state held in that content starts clean with no reset. A sheet whose
     state sat beside its `Sheet` moves it into a content component keyed by
     `useOpening(visible)`; what a sheet keeps on purpose lives in its parent.
+    A payload a sheet opens on, such as the batch it acts on, rides the
+    opening (`useOpening(visible, payload)`), so the sheet stays mounted,
+    driven by `visible`, and keeps its payload while it animates out.
+  - **One open sheet per screen, from `useActiveSheet`.** The sheets a screen
+    opens from its own actions are one union in `useActiveSheet`: opening one
+    closes the others, and a sheet's late dismiss never closes the one that
+    replaced it. A sheet a flow owns, such as a write's batch-use or recount
+    sheet, keeps that flow's state instead, since the flow produces its data;
+    gorhom stacks presentations, not payloads.
   - **Typed input is never dropped without asking.** A form in a sheet reports
     `useSheetUnsavedInput(formState.isDirty)`, and closing it by the header's
     close, the backdrop, Back or a drag then asks "Discard changes?", as
