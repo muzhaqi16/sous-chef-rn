@@ -51,6 +51,8 @@ import { logger } from '#utils/environment';
 describe('wsLink.ts', () => {
   // We need to re-import for each test to get fresh module state
   let wsLinkModule: typeof import('#apollo/links/wsLink');
+  // The fresh module's graphql-ws, from the registry it was loaded in.
+  let createClient: jest.Mock;
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -58,6 +60,7 @@ describe('wsLink.ts', () => {
     // Reset module state for each test
     jest.isolateModules(() => {
       wsLinkModule = require('#apollo/links/wsLink');
+      ({ createClient } = require('graphql-ws'));
     });
   });
 
@@ -76,20 +79,46 @@ describe('wsLink.ts', () => {
   // ─── reconnectWebSocket ───────────────────────────────────────
 
   describe('reconnectWebSocket', () => {
-    it('calls terminate on the WebSocket client', () => {
+    type Config = {
+      url: () => Promise<string>;
+      on: {
+        connecting: () => void;
+        connected: (socket: unknown, payload?: unknown) => void;
+      };
+    };
+    /** The fresh module's client: a dial reads the generation, then is acked. */
+    const connect = async () => {
+      const [config] = (createClient.mock.calls.at(-1) ?? []) as [Config?];
+      if (!config) throw new Error('no client was built');
+      config.on.connecting();
+      await config.url();
+      config.on.connected({}, undefined);
+      return config;
+    };
+
+    it('calls terminate on an open socket', async () => {
+      await connect();
       wsLinkModule.reconnectWebSocket();
-      expect(mockTerminate).toHaveBeenCalled();
+      expect(mockTerminate).toHaveBeenCalledTimes(1);
     });
 
-    it('debounces rapid reconnection attempts', () => {
+    it('leaves a dial in flight to re-dial once it connects', async () => {
+      const config = await connect();
+      wsLinkModule.reconnectWebSocket(); // A token re-dial.
+      mockTerminate.mockClear();
+
+      config.on.connecting();
+      await config.url();
+      wsLinkModule.reconnectWebSocket(); // A language switch, mid-dial.
       wsLinkModule.reconnectWebSocket();
-      wsLinkModule.reconnectWebSocket(); // Should be debounced
-      expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('debounced'),
-      );
+      expect(mockTerminate).not.toHaveBeenCalled();
+
+      config.on.connected({}, undefined);
+      expect(mockTerminate).toHaveBeenCalledTimes(1);
     });
 
-    it('handles terminate throwing an error', () => {
+    it('handles terminate throwing an error', async () => {
+      await connect();
       mockTerminate.mockImplementationOnce(() => {
         throw new Error('terminate failed');
       });
@@ -187,7 +216,7 @@ describe('wsLink.ts', () => {
   describe('getWebSocketState', () => {
     it('returns the current WebSocket state', () => {
       const state = wsLinkModule.getWebSocketState();
-      expect(state).toHaveProperty('lastReconnectTime');
+      expect(state).toHaveProperty('redialGeneration');
       expect(state).toHaveProperty('hasClient');
       expect(state.hasClient).toBe(true);
     });

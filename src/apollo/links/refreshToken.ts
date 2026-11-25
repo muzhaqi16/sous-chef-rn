@@ -298,7 +298,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
     if (write === 'session_ending') return newToken;
 
     // Re-dial so the socket presents the token just stored.
-    // `reconnectWebSocket` debounces on its own; no guard is needed here.
+    // `reconnectWebSocket` coalesces a burst on its own; no guard is needed here.
     try {
       reconnectWebSocket();
     } catch (wsError) {

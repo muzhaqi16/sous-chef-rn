@@ -45,8 +45,11 @@ const wsUrl = (): string => Environment.getApiConfig().wsUrl;
 // reset, after which every retry silently gives up. A session end must drop
 // the client rather than hand the next sign-in a poisoned one.
 let currentClient: Client | null = null;
-let lastReconnectTime = 0;
-const RECONNECT_DEBOUNCE_MS = 2000; // 2 seconds debounce for reconnections
+// Re-dial requests, and the one the socket dialled at: a request made while a
+// dial is in flight re-dials once that dial connects, so a burst of them costs
+// one extra dial and none is dropped (graphql-ws's graceful-restart recipe).
+let redialGeneration = 0;
+let dialledGeneration = 0;
 
 // Reconnect listeners — fired when the socket reconnects after a prior drop:
 // the client's `wsReconnected` resync and subscription transport recovery.
@@ -283,7 +286,8 @@ const abandonOnlineWaiters = () => {
  * refuses a subscription over the per-user cap.
  */
 const awaitDialPermission = async (): Promise<void> => {
-  if (dialAttempts > 0) {
+  // A re-dial asked for since the last dial is no failure, so it is not paced.
+  if (dialAttempts > 0 && dialledGeneration === redialGeneration) {
     const delay = getReconnectDelay(dialAttempts - 1);
     logger.info(
       `🔄 WebSocket re-dialling in ${Math.round(delay)}ms (attempt ${
@@ -327,6 +331,7 @@ const createWsClient = () => {
   return createClient({
     url: async () => {
       await awaitDialPermission();
+      dialledGeneration = redialGeneration;
       return wsUrl();
     },
     webSocketImpl: transport.webSocketImpl,
@@ -397,9 +402,17 @@ const createWsClient = () => {
     },
     on: {
       connected: (_socket: unknown, payload: unknown) => {
+        // An ack's rotated tokens are kept even on a socket about to go.
+        persistRotatedTokensFromAck(payload);
+        // Asked to re-dial since this dial read its token and language: the
+        // socket is closed again so the next dial reads the new ones.
+        if (dialledGeneration !== redialGeneration) {
+          logger.info('🔄 WebSocket re-dialling for a change made mid-dial');
+          currentClient?.terminate();
+          return;
+        }
         dialStage = 'acked';
         setChannelOpen(true);
-        persistRotatedTokensFromAck(payload);
 
         // A connect that follows a previous connection is a reconnect — the
         // listeners resync what was missed while dropped.
@@ -652,25 +665,21 @@ const wsClientFacade: Client = {
 export const wsLink = new GraphQLWsLink(wsClientFacade);
 
 /**
- * Force a re-dial so the socket picks up a token that just changed; the retry
- * re-runs `connectionParams`. A no-op with no socket open — correct, since the
- * subscription layer re-subscribing is what dials again.
+ * Re-dial so the socket picks up a token or language that just changed; the
+ * retry re-runs `connectionParams`. Asked mid-dial, it re-dials once that dial
+ * connects, so requests in a burst all land and cost one extra dial. A no-op
+ * with no socket: the subscription layer re-subscribing is what dials again.
  */
 export const reconnectWebSocket = () => {
-  const now = Date.now();
-
-  if (now - lastReconnectTime < RECONNECT_DEBOUNCE_MS) {
-    logger.info('🔌 WebSocket reconnection debounced');
-    return;
-  }
-
-  lastReconnectTime = now;
+  redialGeneration += 1;
   // A dial parked on the backoff would otherwise hold the new token until the
   // wait elapsed, which past the streak limit is minutes.
   cancelDialDelay?.(true);
+  // A dial in flight re-dials itself once it connects (`connected`).
+  if (dialStage !== 'acked') return;
 
   try {
-    logger.info('🔄 WebSocket reconnecting with new token...');
+    logger.info('🔄 WebSocket re-dialling for a new token or language');
     currentClient?.terminate();
   } catch (error) {
     logger.error('❌ WebSocket reconnection failed:', {
@@ -732,7 +741,6 @@ export const disposeWebSocket = () => {
   // Module state, reset whether or not there was a client, so the next
   // session's first connect counts as fresh rather than firing the reconnect
   // listeners and triggering a spurious resync.
-  lastReconnectTime = 0;
   hasConnectedBefore = false;
   setChannelOpen(false);
 
@@ -749,7 +757,7 @@ export const disposeWebSocket = () => {
 /** @internal Test seam. */
 export const getWebSocketState = () => {
   return {
-    lastReconnectTime,
+    redialGeneration,
     hasClient: !!currentClient,
     // Dials since the last connection that proved stable — what the backoff
     // curve is actually indexed on.

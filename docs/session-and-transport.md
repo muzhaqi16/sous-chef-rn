@@ -227,6 +227,12 @@ skips `retryWait` for close 1000 — pacing lives in `url()`, which every dial
 passes through. Asserted by the "server that accepts then immediately closes"
 cases in the library test.)
 
+**A re-dial the app asks for** (`reconnectWebSocket`: a token stored, the
+language switched) terminates an acked socket at once. Asked while a dial is in
+flight, it leaves that dial to re-dial itself: `url()` records the request
+generation it dials at, and `connected` terminates again if it moved. A burst
+costs one extra dial and drops none, and a requested re-dial skips the backoff.
+
 | Code                      | Meaning                                                                       | Response                                                         |
 | ------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | 4403                      | Token is stale — expired, or superseded by a rotation we lost                 | **Never terminal.** Retry; one HTTP refresh as a fast path       |
