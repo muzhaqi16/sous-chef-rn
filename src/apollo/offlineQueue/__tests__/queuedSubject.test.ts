@@ -2,6 +2,7 @@ import {
   deletesItsSubject,
   queuedSubject,
   subjectTypeOf,
+  withoutSubjects,
 } from '../queuedSubject';
 import type {
   PantryItem,
@@ -18,6 +19,7 @@ import {
   CompleteShoppingListDocument,
   MoveShoppingItemToPantryDocument,
   RemoveItemFromShoppingListDocument,
+  RemoveItemsFromShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
@@ -85,6 +87,18 @@ describe('queuedSubject', () => {
         },
       }),
     ).toMatchObject({ subjectIds: ['pi-1', 'pi-2'], mintedIds: [] });
+  });
+
+  // A clear names its rows by id alone.
+  it('reads a clear of several rows as removing each one it names', () => {
+    expect(
+      queuedSubject({
+        mutation: RemoveItemsFromShoppingListDocument,
+        variables: {
+          input: { shoppingListId: 'list-1', ids: ['sli-1', 'sli-2'] },
+        },
+      }),
+    ).toMatchObject({ subjectIds: ['sli-1', 'sli-2'], mintedIds: [] });
   });
 
   it('reads a fork as creating the new recipe and deriving from the source', () => {
@@ -290,5 +304,29 @@ describe('deletesItsSubject', () => {
     ['an update', UpdateShoppingListItemDocument, false],
   ])('reads %s', (_label, mutation, expected) => {
     expect(deletesItsSubject({ mutation })).toBe(expected);
+  });
+});
+
+describe('a write without some of its rows', () => {
+  const clear = (ids: string[]) => ({
+    mutation: RemoveItemsFromShoppingListDocument,
+    variables: { input: { shoppingListId: 'list-1', ids } },
+  });
+
+  it('keeps the rows a list names that are not dropped', () => {
+    expect(
+      withoutSubjects(clear(['sli-1', 'sli-2']), new Set(['sli-1'])),
+    ).toEqual({ input: { shoppingListId: 'list-1', ids: ['sli-2'] } });
+  });
+
+  it('is gone once it names no row left', () => {
+    expect(
+      withoutSubjects(clear(['sli-1']), new Set(['sli-1'])),
+    ).toBeUndefined();
+  });
+
+  it('is the write as it was when it names none of them', () => {
+    const write = clear(['sli-1']);
+    expect(withoutSubjects(write, new Set(['sli-9']))).toBe(write.variables);
   });
 });

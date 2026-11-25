@@ -8,7 +8,6 @@ import type {
 } from '#graphql/generated/schemaTypes';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#services/telemetry';
-import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { localMoveRow } from '#entities/shoppingList/localMove';
 import type { MoveToPantryInputs } from '#entities/shoppingList/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
@@ -58,9 +57,6 @@ export function useMoveToPantry({
     input: MoveToPantryInput,
   ): Promise<boolean> => {
     const pantryItemId = generateEntityId();
-    // A detail read on a client-minted id 404s and renders the deleted state;
-    // `useIsCreateUnconfirmed` skips it until the server confirms.
-    unconfirmedCreates.mark(pantryItemId);
     const inputs: MoveToPantryInputs = {
       row: localMoveRow({ item, ...input }),
       listId: currentListId,
@@ -93,9 +89,6 @@ export function useMoveToPantry({
       },
       inputs,
     );
-    // Released on every outcome; a queued move is tracked by the offline
-    // queue's pending set from here on.
-    unconfirmedCreates.confirm(pantryItemId);
     // Not `onCompleted`, which a refusal's answer fires too.
     if (settled.status === 'failed') return false;
     onSuccess?.();

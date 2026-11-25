@@ -238,7 +238,8 @@ call that needs another context key passes the callback form, `context: hook => 
 finds the write. `sous-chef/queueable-write-is-local-first` enforces it: a queueable write carries the
 marker, a per-call `localFirst` on a hook that already sets it is redundant, a per-call context object on
 such a hook drops it, and a local-first write takes no `optimisticResponse`. A helper that fires whatever
-mutate function its caller passes (`createShoppingListRow`) and `client.mutate` callers pass it per call.
+mutate function its caller passes (`createShoppingListRow`, under `useAddShoppingRows`) and `client.mutate`
+callers pass it per call.
 
 **Settling.** Under the global `errorPolicy: 'all'` a `ValidationError` / `ConflictError` **resolves**
 (it's a valid union member, not a thrown error), so `onError` never fires and only inspecting the result
@@ -392,16 +393,16 @@ live in the write's layer, so the answer replaces them.
 
 The shopping add path is shared rather than copied:
 
-- **`createShoppingListRow(cache, { listId, row, line, send, document, fallback })`**
-  (`features/shoppingList/cache/createShoppingListRow.ts`) — the whole lifecycle of one row: mint the id,
-  hold the row as a pending write, send `AddItemToShoppingList` local-first, settle with
-  `settleMutation`. Returns `{ id, outcome, failure, data }`, where `id` is the row the line landed on
-  (the server's when it folded the add into a line it held, else the minted id), and never presents the
-  failure, so each surface keeps its own success and error UX. `useAddShoppingItem`,
-  `useShoppingListItemWrites.createItem`, `useAddPantryItemToShoppingList`, `useAddToShoppingList`,
-  `usePantryItemDetailActions` and
-  `useAddScannedItem` go through it. A row names the item its line names, unless it states its own
-  `itemId` (a scanned line naming a product record still names the record's item).
+- **`useAddShoppingRows`** (`features/shoppingList/hooks/useAddShoppingRows.ts`) is the one door, from
+  any feature: `addRow({ listId, row, line, fallback })` for one line, `addRows` for a batch the API
+  accepts in slices, each settled on its own and reported once to `onBatch`. Under it,
+  `createShoppingListRow` (`entities/shoppingList/createShoppingListRow.ts`) holds the whole lifecycle
+  of one row: mint the id, hold the row as a pending write, send `AddItemToShoppingList` local-first,
+  settle with `settleMutation`. It returns `{ id, outcome, failure, data }`, where `id` is the row the
+  line landed on (the server's when it folded the add into a line it held, else the minted id), and never
+  presents the failure, so each surface keeps its own success and error UX. Only `useAddShoppingRows`
+  calls it. A row names the item its line names, unless it states its own `itemId` (a scanned line
+  naming a product record still names the record's item).
 - **Catalog merge** — when the server folded the line into a row it held (a different id), the minted
   row was only ever in the write's layer, so it goes with it, and `addRows.commit` lists the row the
   answer names. On replay, `reconcileShoppingAddReplay` moves the writes queued behind it (§ 7).
@@ -803,7 +804,7 @@ every queueable write to it, and `queueLink` queues only those and the registere
 Everything else is online-only and fails fast offline. On 2026-10-30, 92 of the 147 authored mutations
 were queueable. Areas, with what is worth knowing beyond the pattern:
 
-- **Shopping:** every add surface goes through `createShoppingListRow` (§4); remove, toggle and record
+- **Shopping:** every add surface goes through `useAddShoppingRows` (§4); remove, toggle and record
   purchased, update, quantity, aisle, clear, complete/reactivate, budget, reminder, template,
   recurring, copy, set default, move to pantry (single; the batch move writes nothing before it
   lands).
@@ -956,7 +957,7 @@ replay only after their parent has landed — the drain reads the parent referen
 | Pending layers                                     | `src/apollo/pendingWrites/pendingWrites.ts`, `readFence.ts`, `localWriteRegistry.ts`; each feature's `offline/localWrites.ts`; coverage: `__tests__/apollo/localWriteCoverage.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Cache persistence (debounce + `flushPending`)      | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Background flush trigger                           | `src/hooks/app/useAppStateLifecycle.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Shared shopping writers                            | `src/features/shoppingList/cache/items.ts` (`createLocalShoppingListItem`, `addLocalShoppingListItem`), `createShoppingListRow.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Shared shopping writers                            | `src/entities/shoppingList/items.ts` (`createLocalShoppingListItem`, `addLocalShoppingListItem`), `createShoppingListRow.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Replay reconcilers                                 | `src/apollo/offlineQueue/replayRegistry.ts` (`REPLAY_RECONCILERS`), `queueReplayReconcilers.ts`, each feature's `offline/replayReconcilers.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Change feed engine and scope adapters              | `src/apollo/feed/feedEngine.ts`, `feedRegistry.ts`, `feedStorage.ts`; `src/features/shoppingList/offline/listFeed.ts`, `src/features/pantry/offline/pantryFeed.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | List shards                                        | `src/features/shoppingList/offline/listShards.ts`, `scopeStorage` in `ApolloCachePersistence.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |

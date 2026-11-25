@@ -5,7 +5,6 @@ import { localIntakeRow } from '#entities/pantryItem/localIntake';
 import type { CreateItemInputs } from '#features/pantry/offline/localWrites';
 import { readHeldStackUnit } from '#features/pantry/utils/pantryCacheReaders';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
-import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#utils/generateEntityId';
 import { todayKey } from '#utils/dateUtils';
 import { useTranslation } from '#i18n';
@@ -79,10 +78,6 @@ export function usePantryIntake(pantryId: string | undefined) {
       item: withMintedItemId(input.item),
       forceAdd: true,
     };
-    // Publishing this id to `Pantry.itemsConnection` makes the row tappable,
-    // and its detail/edit screens query by it. Hold those off until the server
-    // has the row — see `unconfirmedCreates`.
-    unconfirmedCreates.mark(id);
     const today = todayKey();
     const inputs: CreateItemInputs = {
       row: localIntakeRow(pantryId, itemName, sent, local),
@@ -104,9 +99,6 @@ export function usePantryIntake(pantryId: string | undefined) {
       };
     }
 
-    // Released on every outcome; a queued create is tracked by the offline
-    // queue's pending set from here on.
-    unconfirmedCreates.confirm(id);
     return outcome;
   };
 

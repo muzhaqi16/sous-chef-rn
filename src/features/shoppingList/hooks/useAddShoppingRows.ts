@@ -12,10 +12,17 @@ import {
   type ShoppingRowLine,
 } from '#entities/shoppingList/createShoppingListRow';
 import { isListedToBuy } from '#entities/shoppingList/connections';
+import { appliedPayload } from '#utils/errors/mutationPayload';
 import type { LocalShoppingListItem } from '#entities/shoppingList/items';
 
 /** What an add-to-list answers, for a surface that reads it. */
 export type AddShoppingRowsAnswer = AddItemToShoppingListMutation;
+
+/** The rows an applied answer names. */
+const answeredRowIds = (data: AddShoppingRowsAnswer | null | undefined) =>
+  (appliedPayload(data)?.results ?? []).flatMap(line =>
+    line.item ? [line.item.id] : [],
+  );
 
 /** One batch, as it ended: what was sent, and what the server said of it. */
 export interface AddedBatch<TItem> {
@@ -67,33 +74,36 @@ export function useAddShoppingRows() {
       rowOf,
       write => {
         const sent = write.variables.input.items;
-        const refused = () =>
+        let answer: AddShoppingRowsAnswer | null | undefined = null;
+        let listed: ReadonlySet<string> = new Set();
+        // Once, as the batch ended: the update runs for a refusal too.
+        const report = (failed: boolean) =>
           onBatch?.({
             sent,
-            answer: null,
-            failed: true,
-            wasListed: () => false,
+            answer: failed ? null : answer,
+            failed,
+            wasListed: rowId => !failed && listed.has(rowId),
           });
         return mutate({
           ...write,
           // Read before the answer is committed: a merged line counts as
           // already listed only when the list showed it beforehand.
           update: (cache, result) => {
-            onBatch?.({
-              sent,
-              answer: result.data,
-              failed: false,
-              wasListed: rowId => isListedToBuy(cache, listId, rowId),
-            });
+            answer = result.data;
+            listed = new Set(
+              answeredRowIds(result.data).filter(rowId =>
+                isListedToBuy(cache, listId, rowId),
+              ),
+            );
             write.update(cache, result);
           },
         }).then(
           result => {
-            if (settledStatus(result) === 'failed') refused();
+            report(settledStatus(result) === 'failed');
             return result;
           },
           (error: unknown) => {
-            refused();
+            report(true);
             throw error;
           },
         );

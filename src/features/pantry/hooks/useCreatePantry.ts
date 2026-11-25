@@ -3,7 +3,6 @@ import type { CreatePantryInputs } from '#features/pantry/offline/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { SettledFailure } from '#apollo/utils/settleMutation';
 import { generateEntityId } from '#utils/generateEntityId';
-import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import type { CreatePantryInput } from '#graphql/generated/schemaTypes';
 import { useTranslation } from '#i18n';
 import { todayKey } from '#utils/dateUtils';
@@ -40,9 +39,6 @@ export function useCreatePantry() {
   ): Promise<CreatePantryOutcome> => {
     const id = generateEntityId();
     const input = { ...fields, id };
-    // Selecting the pantry opens its event subscription, which the server
-    // refuses until the create lands — see `unconfirmedCreates`.
-    unconfirmedCreates.mark(id);
     const today = todayKey();
     const inputs: CreatePantryInputs = { pantry: input, today };
 
@@ -54,9 +50,6 @@ export function useCreatePantry() {
         return answer;
       },
     });
-    // Released on every outcome; a queued create is tracked by the offline
-    // queue's pending set from here on.
-    unconfirmedCreates.confirm(id);
     if (settled.status === 'failed') {
       return { status: 'rejected', failure: settled.failure, result, id };
     }

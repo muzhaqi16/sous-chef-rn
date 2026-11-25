@@ -48,7 +48,7 @@ interface ShoppingRowCreate<TData> {
   listId: string;
   row: ShoppingRowFields;
   line: ShoppingRowLine;
-  /** Fires the surface's own copy of the batch add. */
+  /** Fires the batch add; `useAddShoppingRows`, the one door, passes it. */
   send: (
     options: LocalWriteSend<{ input: AddItemsToShoppingListInput }>,
   ) => Promise<{ data?: TData | null; error?: unknown }>;

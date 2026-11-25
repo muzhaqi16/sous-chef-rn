@@ -6,22 +6,16 @@
  */
 
 import { toastService } from '#services/toastService';
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { addItemsInSlices } from '#entities/shoppingList/createShoppingListRow';
+import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
 import { createLocalShoppingListItem } from '#entities/shoppingList/items';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import type { DerivedList } from '#features/shoppingList/utils/listFromTemplate';
 import { t } from '#i18n';
 
 export function useCopyShoppingList(fallbackErrorMessage: string) {
-  const client = useApolloClient();
   const { createShoppingList, loading: creating } =
     useCreateShoppingList(fallbackErrorMessage);
-  const [addItems, { loading: adding }] = useMutation(
-    AddItemToShoppingListDocument,
-    { context: { localFirst: true } },
-  );
+  const { addRows, adding } = useAddShoppingRows();
 
   /**
    * The new list's id, or null when the create could not be made. A refused
@@ -48,16 +42,11 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
     }
     const listId = created.shoppingList.id;
 
-    const failure = await addItemsInSlices(
-      client.cache,
+    const failure = await addRows(
       listId,
       created.unsent,
       line => rowOf(line.id, listId, derived),
-      addItems,
-      {
-        document: AddItemToShoppingListDocument,
-        fallback: fallbackErrorMessage,
-      },
+      fallbackErrorMessage,
     );
     if (failure) toastService.error(failure.body);
 

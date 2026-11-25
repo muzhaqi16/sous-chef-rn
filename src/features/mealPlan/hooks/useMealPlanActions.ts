@@ -13,7 +13,6 @@ import type {
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { readVersion } from '#apollo/utils/entityWriteChain';
 import type { SettledFailure } from '#apollo/utils/settleMutation';
-import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import { alertService } from '#services/alertService';
@@ -74,10 +73,6 @@ export function useMealPlanActions() {
   ): Promise<MealPlanCreateOutcome> => {
     // A caller deriving a plan mints it first, since its items name it as parent.
     const plan = { ...input, id: input.id ?? generateEntityId() };
-    // The local write publishes this id to every consumer, including the detail
-    // query on MealPlanMain. Hold that query off until the server has a row to
-    // answer with — see `unconfirmedCreates`.
-    unconfirmedCreates.mark(plan.id);
     const inputs: CreatePlanInputs = {
       plan,
       creatorId: user?.id,
@@ -87,11 +82,6 @@ export function useMealPlanActions() {
     const settled = await createPlan.send({ input: plan }, inputs, {
       settle: { ...(present && { present }) },
     });
-
-    // Released on every outcome: acknowledged and rejected both leave nothing
-    // for a detail read to miss, and a queued create has already been handed
-    // off to `queueStore` by the time the mutation resolves.
-    unconfirmedCreates.confirm(plan.id);
 
     if (settled.failure) return { status: 'failed', failure: settled.failure };
     return { status: settled.status === 'queued' ? 'queued' : 'applied' };

@@ -36,6 +36,7 @@ import {
   mentionsId,
   queuedSubject,
   subjectTypeOf,
+  withoutSubjects,
 } from './queuedSubject';
 import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
 import { proactiveTokenRefresh } from '../links/refreshToken';
@@ -867,9 +868,19 @@ export class QueueManager {
         !deletesItsSubject(pending) && overwritesMergedQuantity(pending),
     );
 
+    // The merged row may hold another member's line: a removal never follows
+    // it. One naming other rows too keeps those and drops only this one.
+    const dropped: QueuedMutation[] = [];
     for (const removal of removals) {
+      const rest = withoutSubjects(removal, new Set([mintedId]));
+      if (rest) {
+        queueStore.updateMutation(removal.id, { variables: rest });
+        this.rewrittenThisDrain.set(removal.id, rest);
+        continue;
+      }
       queueStore.removeMutation(removal.id);
       this.rewrittenThisDrain.delete(removal.id);
+      dropped.push(removal);
     }
     // The minted row is already evicted; the survivor's type names the change.
     const survivingType =
@@ -886,7 +897,7 @@ export class QueueManager {
       this.withdrawAsConflict(overwrite, survivingType);
     }
 
-    for (const { id } of [...removals, ...overwrites]) {
+    for (const { id } of [...dropped, ...overwrites]) {
       this.settledByAdoption.add(id);
     }
     this.rewritePending(

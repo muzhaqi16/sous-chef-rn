@@ -5,7 +5,9 @@ import {
   dependencyIdsOf,
   inputOnSurvivingRow,
   queuedSubject,
+  withoutSubjects,
 } from '#apollo/offlineQueue/queuedSubject';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import type { RowAdoption } from '#apollo/offlineQueue/types';
 import { operationNameOf } from '#apollo/utils/documentOperation';
 import { returnedVersionOf, versionOf } from '#apollo/utils/returnedVersion';
@@ -114,9 +116,11 @@ export class PendingWrites {
    * have answered: sent at once it would reach the server first, as an edit
    * before its row's create, or at a version the earlier write moved. A write
    * on a row whose create was refused is refused with it, and only that
-   * create's failure is reported. `settle` runs the mutation and reads its
-   * outcome. Queued, the write stays pending and the queue carries it. `given`
-   * is what only the caller knows, such as a new row's display.
+   * create's failure is reported; one naming other rows too goes without it.
+   * `settle` runs the mutation and reads its outcome. Queued, the write stays
+   * pending and the queue carries it. `given` is what only the caller knows,
+   * such as a new row's display. The rows it mints read as unconfirmed until it
+   * answers, so nothing asks the server for them first.
    */
   async send<TData, TVariables extends OperationVariables>(
     document: DocumentNode,
@@ -124,11 +128,34 @@ export class PendingWrites {
     settle: (send: LocalWriteSend<TVariables>) => Promise<Settled<TData>>,
     given?: LocalInputs,
   ): Promise<Settled<TData>> {
-    const write = this.begin(document, variables, given);
     const { subjectIds, mintedIds } = queuedSubject({
       mutation: document,
       variables,
     });
+    mintedIds.forEach(id => unconfirmedCreates.mark(id));
+    try {
+      return await this.sendMarked(
+        document,
+        variables,
+        settle,
+        given,
+        subjectIds,
+        mintedIds,
+      );
+    } finally {
+      mintedIds.forEach(id => unconfirmedCreates.confirm(id));
+    }
+  }
+
+  private async sendMarked<TData, TVariables extends OperationVariables>(
+    document: DocumentNode,
+    variables: TVariables,
+    settle: (send: LocalWriteSend<TVariables>) => Promise<Settled<TData>>,
+    given: LocalInputs | undefined,
+    subjectIds: string[],
+    mintedIds: string[],
+  ): Promise<Settled<TData>> {
+    const write = this.begin(document, variables, given);
     const orderedBy = this.orderOf(write);
     const sentAs = orderedBy ? [...subjectIds, orderedBy] : subjectIds;
     const named = new Set([
@@ -145,51 +172,71 @@ export class PendingWrites {
     });
     this.sending.set(write.id, { subjectIds: sentAs, mintedIds, answered });
 
-    const landed = await Promise.all(
-      earlier.map(async entry => ({ ...entry, ...(await entry.answered) })),
-    );
-    const refused = landed.find(
-      ({ settled, mintedIds: minted }) =>
-        settled.status === 'failed' && minted.some(id => named.has(id)),
-    );
-    if (refused) {
-      this.sending.delete(write.id);
-      this.drop(write.id);
-      answer({ settled: refused.settled, data: undefined });
-      return { ...refused.settled, data: undefined };
-    }
-
-    let data: unknown;
-    let settled: Settled<TData>;
+    // What waits on this write hears of it on every way out, or it waits forever.
+    let outcome: Answered = {
+      settled: { status: 'failed', data: undefined },
+      data: undefined,
+    };
     try {
-      const { input } = this.get(write.id)?.variables ?? variables;
-      settled = await settle({
+      const landed = await Promise.all(
+        earlier.map(async entry => ({ ...entry, ...(await entry.answered) })),
+      );
+      const refusedRows = new Set(
+        landed
+          .filter(({ settled }) => settled.status === 'failed')
+          .flatMap(({ mintedIds: minted }) => minted)
+          .filter(id => named.has(id)),
+      );
+      const refused = landed.find(
+        ({ settled, mintedIds: minted }) =>
+          settled.status === 'failed' && minted.some(id => named.has(id)),
+      );
+      const current = this.get(write.id)?.variables ?? variables;
+      // A write naming other rows too goes without a row whose create failed.
+      const remaining = refused
+        ? withoutSubjects(
+            { mutation: document, variables: current },
+            refusedRows,
+          )
+        : current;
+      const onlyRefusedRows =
+        !!refused &&
+        (remaining === current ||
+          remaining === undefined ||
+          dependencyIdsOf({ mutation: document, variables }).some(id =>
+            refusedRows.has(id),
+          ));
+      if (refused && onlyRefusedRows) {
+        this.drop(write.id);
+        outcome = { settled: refused.settled, data: undefined };
+        return { ...refused.settled, data: undefined };
+      }
+
+      let data: unknown;
+      const { input } = remaining ?? current;
+      const settled = await settle({
         variables: this.onAnsweredVersion({ ...variables, input }, subjectIds),
         context: { localFirst: true, pendingWriteId: write.id },
         update: (_cache, result) => {
           data = result.data;
         },
       });
+      if (settled.status === 'applied') {
+        this.noteAnsweredVersion(subjectIds, data ?? settled.data);
+        this.confirm(write.id, data ?? settled.data);
+      } else if (settled.status === 'failed') {
+        this.drop(write.id);
+      }
+      outcome = { settled, data };
+      return settled;
     } catch (error) {
-      // Only reporting a failure can throw, and what waits on the write must
-      // still hear of it.
-      this.sending.delete(write.id);
+      // Only reporting a failure can throw.
       this.drop(write.id);
-      answer({
-        settled: { status: 'failed', data: undefined },
-        data: undefined,
-      });
       throw error;
+    } finally {
+      this.sending.delete(write.id);
+      answer(outcome);
     }
-    if (settled.status === 'applied') {
-      this.noteAnsweredVersion(subjectIds, data ?? settled.data);
-      this.confirm(write.id, data ?? settled.data);
-    } else if (settled.status === 'failed') {
-      this.drop(write.id);
-    }
-    this.sending.delete(write.id);
-    answer({ settled, data });
-    return settled;
   }
 
   /**
@@ -389,14 +436,14 @@ export class PendingWrites {
     }
   }
 
+  /** Each row the answer returned, so a later write on any of them sends it. */
   private noteAnsweredVersion(
     subjectIds: readonly string[],
     data: unknown,
   ): void {
-    const [subject] = subjectIds;
-    const returned = subject ? returnedVersionOf(data, subject) : undefined;
-    if (subject && returned !== undefined) {
-      this.answeredVersions.set(subject, returned);
+    for (const subject of subjectIds) {
+      const returned = returnedVersionOf(data, subject);
+      if (returned !== undefined) this.answeredVersions.set(subject, returned);
     }
   }
 

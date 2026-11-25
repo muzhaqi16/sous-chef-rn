@@ -223,7 +223,10 @@ export const FEATURE_LOCAL_WRITES: ByOperation<LocalWrite> = [
     RemoveItemFromShoppingListDocument,
     { ...removeRows, subject: { deletes: true } },
   ],
-  [RemoveItemsFromShoppingListDocument, removeRows],
+  [
+    RemoveItemsFromShoppingListDocument,
+    { ...removeRows, subject: { key: 'ids', deletes: true } },
+  ],
   [UpdateShoppingListDocument, entityFields],
   [CompleteShoppingListDocument, entityFields],
   [MarkShoppingListActiveDocument, entityFields],

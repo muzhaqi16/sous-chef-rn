@@ -3,13 +3,9 @@ import {
   skipToken,
   useApolloClient,
   useFragment,
-  useMutation,
   useQuery,
 } from '@apollo/client/react';
-import {
-  AddItemToShoppingListDocument,
-  UpdateShoppingListItemDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ShoppingListItemForEditDocument } from './useShoppingListItemWrites.generated';
 import type {
   ShoppingListItem,
@@ -20,11 +16,11 @@ import { localBrand, localUnit } from '#entities/catalog/localRefs';
 import { appliedPayload } from '#utils/errors/mutationPayload';
 import { parseStoredQuantityText } from '#utils/formatQuantity';
 import { UseShoppingListItemForm_ItemFragmentDoc } from '#features/shoppingList/hooks/useShoppingListItemForm.generated';
-import {
-  createShoppingListRow,
-  type ShoppingRowFields,
-  type ShoppingRowLine,
+import type {
+  ShoppingRowFields,
+  ShoppingRowLine,
 } from '#entities/shoppingList/createShoppingListRow';
+import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
 import { useDataState } from '#hooks/data/useDataState';
 import type { UpdateRowInputs } from '#entities/shoppingList/localWrites';
 import { alertService } from '#services/alertService';
@@ -173,7 +169,7 @@ export function useShoppingListItemWrites(
     isEmpty: false,
   });
 
-  const [addItemMutation] = useMutation(AddItemToShoppingListDocument);
+  const { addRow } = useAddShoppingRows();
 
   const update = useLocalWrite(UpdateShoppingListItemDocument, {
     fallback: t('shoppingListScreens.serverNotUpdated', {
@@ -182,12 +178,10 @@ export function useShoppingListItemWrites(
   });
 
   const createItem = async (row: ShoppingRowFields, line: ShoppingRowLine) => {
-    const created = await createShoppingListRow(client.cache, {
+    const created = await addRow({
       listId,
       row,
       line,
-      send: addItemMutation,
-      document: AddItemToShoppingListDocument,
       fallback: t('shoppingListScreens.serverNotUpdated', {
         action: t('shoppingListScreens.added'),
       }),

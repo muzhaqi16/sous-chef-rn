@@ -9,7 +9,6 @@ import type { ShoppingListItemNode } from '#features/shoppingList/hooks/usePagin
 import type { NewUsualStore } from '#entities/store/usualStores';
 import { localIntakeRow } from '#entities/pantryItem/localIntake';
 import { localMoveRow } from '#entities/shoppingList/localMove';
-import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { askForReviewAfterSuccess } from '#domain/reviewPrompt';
 import { appliedPayload } from '#utils/errors/mutationPayload';
@@ -158,18 +157,6 @@ const localLines = (
   });
 };
 
-const markLines = (lines: readonly CheckInLineToSend[]) => {
-  for (const { input } of lines) {
-    if (input.pantryItemId) unconfirmedCreates.mark(input.pantryItemId);
-  }
-};
-
-const releaseLines = (lines: readonly CheckInLineToSend[]) => {
-  for (const { input } of lines) {
-    if (input.pantryItemId) unconfirmedCreates.confirm(input.pantryItemId);
-  }
-};
-
 /**
  * Records a confirmed receipt in one call per 100 lines. Each line shows in the
  * pantry and list before its call fires and while it is queued, as a pending
@@ -260,7 +247,6 @@ export function useReceiptCheckIn(listId: string | undefined) {
       lines: localLines(receipt.pantryId, lines),
       now: new Date().toISOString(),
     };
-    markLines(lines);
     const settled = createCheckIn.send({ input, today }, inputs, {
       ready: async (write, amend) => {
         const placed = await turn;
@@ -338,7 +324,6 @@ export function useReceiptCheckIn(listId: string | undefined) {
         input = retried.input;
         settled = await retried.settled;
       }
-      releaseLines(chunk);
       if (settled.status === 'queued') {
         queued = true;
         continue;
@@ -360,7 +345,6 @@ export function useReceiptCheckIn(listId: string | undefined) {
         for (const later of unsent) {
           later.open(null);
           await later.sent.settled;
-          releaseLines(later.chunk);
         }
         markUnsent(
           unsent.flatMap(later => later.chunk.map(line => line.index)),

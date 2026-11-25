@@ -8,6 +8,7 @@ import {
   dependencyIdsOf,
   holdsBack,
   queuedSubject,
+  withoutSubjects,
 } from './queuedSubject';
 import { MUTATION_DOCUMENTS } from '#graphql/generated/mutationDocuments.generated';
 import { isOwnKey } from '#utils/isOwnKey';
@@ -248,20 +249,21 @@ export class QueueStore {
   }
 
   /**
-   * Drops the pending (or re-auth-parked, non-minting) writes to the row a delete
-   * removes: left queued, each holds the delete behind it. A row the server never
-   * had takes the delete with it. Returns whether it settled the enqueue.
+   * Drops the pending (or re-auth-parked, non-minting) writes to the rows a
+   * delete removes: left queued, each holds the delete behind it. A row the
+   * server never had leaves the delete, which goes once it names none. Returns
+   * whether it settled the enqueue.
    */
   private supersedeByDelete(
     queue: QueuedMutation[],
     deletion: QueuedMutation,
   ): boolean {
-    const [deletedId] = queuedSubject(deletion).subjectIds;
-    if (!deletedId) return false;
+    const deletedIds = new Set(queuedSubject(deletion).subjectIds);
+    if (deletedIds.size === 0) return false;
 
     const kept: QueuedMutation[] = [];
     let oldest = Infinity;
-    let mintedHere = false;
+    const mintedHere = new Set<string>();
     for (const m of queue) {
       const { subjectIds, mintedIds } = queuedSubject(m);
       const superseded =
@@ -269,22 +271,31 @@ export class QueueStore {
         (m.status === QueueStatus.PENDING ||
           (m.status === QueueStatus.AUTH_ERROR && mintedIds.length === 0)) &&
         subjectIds.length > 0 &&
-        subjectIds.every(id => id === deletedId);
+        subjectIds.every(id => deletedIds.has(id));
       if (!superseded) {
         kept.push(m);
         continue;
       }
       oldest = Math.min(oldest, m.agedFrom ?? m.createdAt);
-      mintedHere ||= mintedIds.length > 0;
+      mintedIds.forEach(id => mintedHere.add(id));
     }
     const supersededCount = queue.length - kept.length;
     if (supersededCount === 0) return false;
 
     logger.debug(
-      `🔄 Queue: ${deletion.operationName} supersedes ${supersededCount} pending write(s) to ${deletedId}`,
+      `🔄 Queue: ${
+        deletion.operationName
+      } supersedes ${supersededCount} pending write(s) to ${[
+        ...deletedIds,
+      ].join(', ')}`,
     );
-    if (!mintedHere) {
-      kept.push({ ...deletion, agedFrom: deletion.agedFrom ?? oldest });
+    const variables = withoutSubjects(deletion, mintedHere);
+    if (variables) {
+      kept.push({
+        ...deletion,
+        variables,
+        agedFrom: deletion.agedFrom ?? oldest,
+      });
     }
     this.saveQueue(kept);
     return true;

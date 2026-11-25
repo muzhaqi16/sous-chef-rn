@@ -18,11 +18,10 @@ import { join, relative } from 'path';
  * until the user navigated away and re-entered. `unconfirmedCreates` is the
  * repo's answer to exactly this and was wired for meal plans only.
  *
- * Both halves are load-bearing and fail differently:
- *   - a create that does not `mark` leaves the gate below permanently open, so
- *     the detail screen races the server and loses;
- *   - a create that marks but never `confirm`s strands the gate closed, so the
- *     screen never fetches at all.
+ * `PendingWrites.send` claims every id a write mints and releases it however
+ * the write ends (`pendingWrites.test.ts`), so a create path holds the claim by
+ * sending as a pending write. One that sent otherwise would leave the gate
+ * below open, and the detail screen races the server and loses.
  *
  * Derived from the tree rather than a hand-kept list, so another pantry create
  * path cannot ship without the decision being made.
@@ -146,11 +145,15 @@ describe('unconfirmed-create wiring (pantry items)', () => {
     );
   });
 
-  it.each(creators)('%s claims and releases its client-minted id', file => {
-    const code = stripComments(readFileSync(join(process.cwd(), file), 'utf8'));
-    expect(code).toContain('unconfirmedCreates.mark(');
-    expect(code).toContain('unconfirmedCreates.confirm(');
-  });
+  it.each(creators)(
+    '%s sends its create as a pending write, which claims the id it mints',
+    file => {
+      const code = stripComments(
+        readFileSync(join(process.cwd(), file), 'utf8'),
+      );
+      expect(PENDING_WRITE_SENDS.some(send => code.includes(send))).toBe(true);
+    },
+  );
 
   it.each(creators)(
     '%s reconciles a server-resolved id divergence',
@@ -238,13 +241,12 @@ describe('unconfirmed-create wiring (homes and pantries)', () => {
   });
 
   it.each(homeAndPantryCreators)(
-    '%s claims and releases its client-minted id',
+    '%s sends its create as a pending write, which claims the id it mints',
     file => {
       const code = stripComments(
         readFileSync(join(process.cwd(), file), 'utf8'),
       );
-      expect(code).toContain('unconfirmedCreates.mark(');
-      expect(code).toContain('unconfirmedCreates.confirm(');
+      expect(PENDING_WRITE_SENDS.some(send => code.includes(send))).toBe(true);
     },
   );
 

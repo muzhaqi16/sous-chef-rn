@@ -4,7 +4,6 @@ import { holdsHomesList } from '#features/home/hooks/homeCacheUpdaters';
 import type { CreateHomeInputs } from '#features/home/offline/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { SettledFailure } from '#apollo/utils/settleMutation';
-import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import type { CreateHomeInput } from '#graphql/generated/schemaTypes';
@@ -38,9 +37,6 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
   ): Promise<CreateHomeOutcome> => {
     const id = generateEntityId();
     const input = { ...fields, id, createDefaultPantry: false };
-    // Selecting the home opens its event subscriptions, which the server refuses
-    // until the create lands — see `unconfirmedCreates`.
-    unconfirmedCreates.mark(id);
 
     // `useDefaultHome` fires the app's only GetHomes fetch once per session,
     // and during onboarding that happens when the account has zero homes — so a
@@ -57,9 +53,6 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
     const settled = await create.send({ input }, inputs, {
       settle: { fallback },
     });
-    // Released on every outcome; a queued create is tracked by the offline
-    // queue's pending set from here on.
-    unconfirmedCreates.confirm(id);
 
     if (settled.failure) {
       return { status: 'rejected', id, failure: settled.failure };

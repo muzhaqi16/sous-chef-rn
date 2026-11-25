@@ -1501,13 +1501,13 @@ cache.modify({
 
 > **Note on `args` vs `storeFieldName`**: The `args` object is available in type policy `read`/`merge` functions but is **not** available in `cache.modify` field modifiers. For `cache.modify`, `storeFieldName` string parsing is the correct approach. The `keyArgs: ['filters']` config on `itemsConnection` ensures each filter variant gets a distinct `storeFieldName`, making `.includes()` checks reliable.
 
-See `src/features/shoppingList/cache/connections.ts` for the full implementation.
+See `src/entities/shoppingList/connections.ts` for the full implementation.
 
 ---
 
 ## Reference implementations
 
-- **Mutation patterns**: `useLocalWrite` (`src/apollo/pendingWrites/useLocalWrite.ts`, every local-first send), `usePantryIntake.ts` (a local-first create), `createShoppingListRow` in `src/features/shoppingList/cache/createShoppingListRow.ts` (the shopping-row create lifecycle every add site shares), `useToggleShoppingItem.ts` (a pending write with its own `LocalWrite`), `useLocalWrite(...).sendFields` (plain field edits).
+- **Mutation patterns**: `useLocalWrite` (`src/apollo/pendingWrites/useLocalWrite.ts`, every local-first send), `usePantryIntake.ts` (a local-first create), `useAddShoppingRows` (`src/features/shoppingList/hooks/useAddShoppingRows.ts`, over `createShoppingListRow` in `src/entities/shoppingList/createShoppingListRow.ts`) (the shopping-row create lifecycle every add site shares), `useToggleShoppingItem.ts` (a pending write with its own `LocalWrite`), `useLocalWrite(...).sendFields` (plain field edits).
 - **Replay reconciliation**: `REPLAY_RECONCILERS` in `src/apollo/offlineQueue/replayRegistry.ts`; `__tests__/apollo/queueableWritesTakeNoUpdate.test.ts` fails when a queueable mutation takes an `update` of its own, as what an answer leaves goes in `commit`.
 - **Resync**: `src/apollo/refetchEvents.ts`.
 - **Fragment reads**: `useFragmentList` (`src/hooks/apollo/useFragmentList.ts`); `useRecipeData` for a single masked entity.

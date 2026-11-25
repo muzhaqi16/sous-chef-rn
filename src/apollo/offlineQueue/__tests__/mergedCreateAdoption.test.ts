@@ -21,6 +21,7 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import {
   AddItemToShoppingListDocument,
+  RemoveItemsFromShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
@@ -490,6 +491,29 @@ describe("a merged create's queued writes", () => {
 
     expect(mockClient.mutate).toHaveBeenCalledTimes(1);
     expect(queueStore.getMutation('delete')).toBeNull();
+    expect(failed).not.toHaveBeenCalled();
+    expect(kept).toHaveBeenCalledTimes(1);
+  });
+
+  // The merged row may hold another member's line: a clear never follows it,
+  // and it still removes the other rows it names.
+  it('keep the other rows of a clear queued while the create was replaying', async () => {
+    queueShoppingAdd();
+    mockClient.mutate.mockImplementationOnce(() => {
+      queueAfterCreate('clear', RemoveItemsFromShoppingListDocument, {
+        shoppingListId: 'list-1',
+        ids: ['minted-2', 'sli-1'],
+      });
+      return Promise.resolve(shoppingMerge);
+    });
+    const { manager, failed, kept } = managerWithHandlers();
+
+    await manager.processQueue();
+
+    expect(queueStore.getMutation('clear')).toMatchObject({
+      status: QueueStatus.PENDING,
+      variables: { input: { shoppingListId: 'list-1', ids: ['sli-1'] } },
+    });
     expect(failed).not.toHaveBeenCalled();
     expect(kept).toHaveBeenCalledTimes(1);
   });
