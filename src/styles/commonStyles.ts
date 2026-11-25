@@ -58,46 +58,8 @@ export const commonStyles = StyleSheet.create(theme => ({
     marginHorizontal: contentPadding ? -theme.spacing[contentPadding] : 0,
   }),
 
-  input: {
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.smPlus,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.inputBackground,
-  },
   inputGroup: {
     marginBottom: theme.spacing.lg,
-  },
-
-  button: {
-    paddingVertical: {
-      xs: theme.spacing.sm,
-      md: theme.spacing.md,
-    },
-    paddingHorizontal: {
-      xs: theme.spacing.md,
-      md: theme.spacing.lg,
-    },
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  buttonPrimary: {
-    backgroundColor: theme.colors.primary,
-  },
-  buttonSecondary: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-  },
-  buttonTextPrimary: {
-    color: theme.colors.onPrimary,
   },
 
   settingsSection: {
