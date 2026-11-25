@@ -22,6 +22,7 @@ export const shoppingListTestIDs = {
   /** Budget & prices: Could you save?, and its link to the household's stores. */
   listSavings: 'list-savings',
   listSavingsYourStores: 'list-savings-your-stores',
+  listSavingsState: 'list-savings-state',
   listBudgetScreen: 'list-budget-screen',
   listBudgetStore: 'list-budget-store',
   budgetInput: 'list-budget-input',

@@ -239,7 +239,6 @@
     "notEnoughPrices": "Prezzi ancora insufficienti",
     "standIn": "Prezzi di {{store}}, a {{distance}}",
     "pricesAsOf": "Prezzi di {{age}}",
-    "needsConnection": "Per confrontare i negozi serve una connessione",
     "empty": "Ancora nessun negozio da confrontare. Aggiungi i negozi dove fai la spesa.",
     "similar": "Simile",
     "estimated": "Stimato",
