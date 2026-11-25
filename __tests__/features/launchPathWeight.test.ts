@@ -21,21 +21,12 @@ import path from 'path';
 const ROOT = path.join(__dirname, '..', '..');
 const ENTRY = path.join(ROOT, 'src', 'i18n', 'config.ts');
 
-const ALIASES: Record<string, string> = {
-  '#features': 'src/features',
-  '#components': 'src/components',
-  '#hooks': 'src/hooks',
-  '#store': 'src/store',
-  '#utils': 'src/utils',
-  '#services': 'src/services',
-  '#constants': 'src/constants',
-  '#apollo': 'src/apollo',
-  '#platform': 'src/platform',
-  '#native': 'src/native',
-  '#operations': 'src/graphql/operations',
-  '#generated': 'src/graphql/generated',
-  '#': 'src',
+// The table Babel and Jest resolve with, so no spelling the app can import
+// stops this walk early and shrinks the graph it measures.
+const { babelAliases } = require('../../scripts/lib/aliases') as {
+  babelAliases: () => Record<string, string>;
 };
+const ALIASES = babelAliases();
 
 const IMPORT_SOURCE = /(?:from\s*|import\s*\(\s*)['"]([^'"]+)['"]/g;
 

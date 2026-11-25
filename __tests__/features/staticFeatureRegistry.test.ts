@@ -21,17 +21,17 @@ const ROOT = path.join(__dirname, '..', '..');
 const SRC = path.join(ROOT, 'src');
 const ENTRY = path.join(SRC, 'features', 'registry.static.ts');
 
-const ALIASES: Record<string, string> = {
-  '#features': path.join(SRC, 'features'),
-  '#components': path.join(SRC, 'components'),
-  '#hooks': path.join(SRC, 'hooks'),
-  '#store': path.join(SRC, 'store'),
-  '#utils': path.join(SRC, 'utils'),
-  '#navigation': path.join(SRC, 'navigation'),
-  '#operations': path.join(SRC, 'graphql', 'operations'),
-  '#generated': path.join(SRC, 'graphql', 'generated'),
-  '#': SRC,
+// The table Babel and Jest resolve with, so no spelling the app can import
+// leaves this walk unable to follow it.
+const { babelAliases } = require('../../scripts/lib/aliases') as {
+  babelAliases: () => Record<string, string>;
 };
+const ALIASES: Record<string, string> = Object.fromEntries(
+  Object.entries(babelAliases()).map(([alias, target]) => [
+    alias,
+    path.join(ROOT, target),
+  ]),
+);
 
 const IMPORT_SOURCE =
   /(?:from\s*|import\s*\(\s*|require\s*\(\s*)['"]([^'"]+)['"]/g;
