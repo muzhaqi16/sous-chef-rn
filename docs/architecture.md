@@ -276,8 +276,8 @@ Shared UI atoms, molecules, organisms, and templates live in `src/components/`,
 beside `providers/` and `performance/`. That is the whole taxonomy — there is no
 `base/`, `charts/`, `modals/`, `navigation/` or `settings/`. A component's tier
 follows from what it RENDERS, not from taste (`src/components/atoms/README.md`):
-`DataStateView` is a molecule, because routing between Loading, Error and Empty
-is composition, not a primitive. UI one feature renders stays in that feature's
+`DataStateView` is an organism, because it routes between Loading, Error and
+Empty, which are molecules themselves. UI one feature renders stays in that feature's
 `components/` (the pantry form is `src/features/pantry/components/form/`).
 Shared hooks live in `src/hooks/`. If two features need the same thing, it moves
 up — it doesn't get imported sideways, and it doesn't get imported _downwards_
