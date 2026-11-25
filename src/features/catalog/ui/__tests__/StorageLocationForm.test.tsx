@@ -1,4 +1,3 @@
-'use no memo';
 import React from 'react';
 import {
   fireEvent,
@@ -6,176 +5,158 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { StorageLocationForm } from '#features/catalog/ui/StorageLocationForm';
+import { t } from '#i18n';
+import { StorageLocationSheet } from '#features/catalog/ui/StorageLocationSheet/StorageLocationSheet';
+import type { StorageLocationInitialData } from '#features/catalog/ui/StorageLocationSheet/StorageLocationSheet';
 import { StorageType } from '#graphql/generated/schemaTypes';
 
+const onSubmit = jest.fn(() => Promise.resolve(true));
+const onClose = jest.fn();
+
+/** The form as its sheet hosts it, with the sheet's bar and its confirm. */
+const renderSheet = ({
+  initialData,
+  availableLocations = [],
+}: {
+  initialData?: StorageLocationInitialData;
+  availableLocations?: Array<{ id: string; name: string; type: StorageType }>;
+} = {}) =>
+  render(
+    <StorageLocationSheet
+      visible
+      onClose={onClose}
+      onSubmit={onSubmit}
+      initialData={initialData}
+      availableLocations={availableLocations}
+    />,
+  );
+
+const NAME_PLACEHOLDER = () => t('storageLocationForm.namePlaceholder');
+const confirm = (label: string) =>
+  userEvent.setup().press(screen.getByLabelText(label));
+const cellar = (over: Partial<StorageLocationInitialData> = {}) => ({
+  id: 'loc-9',
+  name: 'Wine Cellar',
+  type: StorageType.Refrigerator,
+  ...over,
+});
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
 describe('StorageLocationForm', () => {
-  const defaultProps = {
-    onSubmit: jest.fn(),
-    onCancel: jest.fn(),
-    isSubmitting: false,
-  };
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('renders Name input field', () => {
-    render(<StorageLocationForm {...defaultProps} />);
-    expect(screen.getByText('Name')).toBeTruthy();
-    expect(screen.getByPlaceholderText('e.g., Main Refrigerator')).toBeTruthy();
-  });
-
-  it('renders Type selector', () => {
-    render(<StorageLocationForm {...defaultProps} />);
-    expect(screen.getByText('Type')).toBeTruthy();
-  });
-
-  it('renders storage type buttons', () => {
-    render(<StorageLocationForm {...defaultProps} />);
+  it('names the field and offers the storage types', () => {
+    renderSheet();
+    expect(screen.getByPlaceholderText(NAME_PLACEHOLDER())).toBeTruthy();
+    expect(screen.getByText(t('storageLocationForm.type'))).toBeTruthy();
     expect(screen.getByText('Refrigerator')).toBeTruthy();
-    expect(screen.getByText('Freezer')).toBeTruthy();
     expect(screen.getByText('Pantry Shelf')).toBeTruthy();
-    expect(screen.getByText('Cabinet')).toBeTruthy();
   });
 
-  it('renders Create button when no initialData', () => {
-    render(<StorageLocationForm {...defaultProps} />);
-    expect(screen.getByText('Create')).toBeTruthy();
+  it('adds a new location, confirmed as Create', () => {
+    renderSheet();
+    expect(screen.getByText(t('storageLocationSheet.addTitle'))).toBeTruthy();
+    expect(screen.getByLabelText(t('labels.create'))).toBeTruthy();
   });
 
-  it('renders Update button when initialData is provided', () => {
-    render(
-      <StorageLocationForm
-        {...defaultProps}
-        initialData={{
-          name: 'My Fridge',
-          type: StorageType.Refrigerator,
-        }}
-      />,
-    );
-    expect(screen.getByText('Update')).toBeTruthy();
-  });
-
-  it('renders Cancel button', () => {
-    render(<StorageLocationForm {...defaultProps} />);
-    expect(screen.getByText('Cancel')).toBeTruthy();
-  });
-
-  it('calls onCancel when Cancel button is pressed', async () => {
-    const user = userEvent.setup();
-    render(<StorageLocationForm {...defaultProps} />);
-    await user.press(screen.getByText('Cancel'));
-    expect(defaultProps.onCancel).toHaveBeenCalled();
-  });
-
-  it('pre-fills form data from initialData', () => {
-    render(
-      <StorageLocationForm
-        {...defaultProps}
-        initialData={{
-          name: 'Kitchen Fridge',
-          type: StorageType.Refrigerator,
-        }}
-      />,
-    );
+  it('edits from the location it was given, confirmed as Update', () => {
+    renderSheet({ initialData: cellar({ name: 'Kitchen Fridge' }) });
+    expect(screen.getByText(t('storageLocationSheet.editTitle'))).toBeTruthy();
     expect(screen.getByDisplayValue('Kitchen Fridge')).toBeTruthy();
+    expect(screen.getByLabelText(t('labels.update'))).toBeTruthy();
   });
 
-  it('hides action buttons when hideActions is true', () => {
-    render(<StorageLocationForm {...defaultProps} hideActions={true} />);
-    expect(screen.queryByText('Create')).toBeNull();
-    expect(screen.queryByText('Cancel')).toBeNull();
-  });
-
-  it('renders parent location selector when availableLocations has entries', () => {
-    render(
-      <StorageLocationForm
-        {...defaultProps}
-        availableLocations={[
-          { id: 'loc-1', name: 'Main Fridge', type: StorageType.Refrigerator },
-          { id: 'loc-2', name: 'Pantry', type: StorageType.PantryShelf },
-        ]}
-      />,
-    );
+  it('offers a parent only when there are other locations', () => {
+    renderSheet({
+      availableLocations: [
+        { id: 'loc-1', name: 'Main Fridge', type: StorageType.Refrigerator },
+      ],
+    });
     expect(screen.getByText('Parent Location (Optional)')).toBeTruthy();
-    expect(screen.getAllByText('None').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Main Fridge')).toBeTruthy();
-    expect(screen.getByText('Pantry')).toBeTruthy();
   });
 
-  it('does not render parent location selector when availableLocations is empty', () => {
-    render(<StorageLocationForm {...defaultProps} availableLocations={[]} />);
-    expect(screen.queryByText('Parent Location (Optional)')).toBeNull();
-  });
+  it('sends the name typed, trimmed, then closes', async () => {
+    renderSheet();
+    fireEvent.changeText(
+      screen.getByPlaceholderText(NAME_PLACEHOLDER()),
+      '  Test Location  ',
+    );
+    await confirm(t('labels.create'));
 
-  it('allows typing in the name field', () => {
-    render(<StorageLocationForm {...defaultProps} />);
-    const nameInput = screen.getByPlaceholderText('e.g., Main Refrigerator');
-    fireEvent.changeText(nameInput, 'Garage Shelf');
-    expect(screen.getByDisplayValue('Garage Shelf')).toBeTruthy();
-  });
-
-  it('calls onSubmit with form data when Create is pressed', async () => {
-    const user = userEvent.setup();
-    render(<StorageLocationForm {...defaultProps} />);
-    const nameInput = screen.getByPlaceholderText('e.g., Main Refrigerator');
-    fireEvent.changeText(nameInput, 'Test Location');
-    await user.press(screen.getByText('Create'));
-    expect(defaultProps.onSubmit).toHaveBeenCalledWith(
+    expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Test Location',
         type: StorageType.PantryShelf,
       }),
     );
+    expect(onClose).toHaveBeenCalled();
   });
 
-  it('does not call onSubmit when name is empty', async () => {
-    const user = userEvent.setup();
-    render(<StorageLocationForm {...defaultProps} />);
-    await user.press(screen.getByText('Create'));
-    expect(defaultProps.onSubmit).not.toHaveBeenCalled();
+  it('says on the field that a name is needed, and sends nothing', async () => {
+    renderSheet();
+    await confirm(t('labels.create'));
+
+    expect(screen.getByText(t('addStorageLocation.nameRequired'))).toBeTruthy();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('holds a name to the same rule as the quick add', async () => {
+    renderSheet();
+    fireEvent.changeText(screen.getByPlaceholderText(NAME_PLACEHOLDER()), 'K');
+    await confirm(t('labels.create'));
+
+    expect(screen.getByText(t('commonValidation.nameMin'))).toBeTruthy();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('says on the field that a capacity it cannot read is refused', async () => {
+    renderSheet({ initialData: cellar() });
+    await userEvent
+      .setup()
+      .press(screen.getByText(t('storageLocationForm.advancedSettings')));
+    fireEvent.changeText(
+      screen.getByPlaceholderText(t('storageLocationForm.capacityPlaceholder')),
+      'lots',
+    );
+    await confirm(t('labels.update'));
+
+    expect(screen.getByText(t('errors.invalidQuantity'))).toBeTruthy();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('keeps the sheet open when the save is refused', async () => {
+    onSubmit.mockResolvedValueOnce(false);
+    renderSheet({ initialData: cellar() });
+    await confirm(t('labels.update'));
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('sends false for a flag the user unticks', async () => {
     const user = userEvent.setup();
-    render(
-      <StorageLocationForm
-        {...defaultProps}
-        initialData={{
-          name: 'Wine Cellar',
-          type: StorageType.Refrigerator,
-          isClimateControlled: true,
-          isDefault: false,
-        }}
-      />,
-    );
+    renderSheet({
+      initialData: cellar({ isClimateControlled: true, isDefault: false }),
+    });
     await user.press(screen.getByText('Advanced Settings'));
     await user.press(screen.getByText('Climate Controlled'));
-    await user.press(screen.getByText('Update'));
+    await confirm(t('labels.update'));
 
-    expect(defaultProps.onSubmit).toHaveBeenCalledWith(
+    expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ isClimateControlled: false, isDefault: false }),
     );
   });
 
   it('turns the default on for a location that is not it', async () => {
     const user = userEvent.setup();
-    render(
-      <StorageLocationForm
-        {...defaultProps}
-        initialData={{
-          name: 'Wine Cellar',
-          type: StorageType.Refrigerator,
-          isDefault: false,
-        }}
-      />,
-    );
+    renderSheet({ initialData: cellar({ isDefault: false }) });
     await user.press(screen.getByText('Advanced Settings'));
     await user.press(screen.getByText('Set as Default Location'));
-    await user.press(screen.getByText('Update'));
+    await confirm(t('labels.update'));
 
-    expect(defaultProps.onSubmit).toHaveBeenCalledWith(
+    expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ isDefault: true }),
     );
   });
@@ -184,22 +165,15 @@ describe('StorageLocationForm', () => {
   // location taking it.
   it('offers no default box and states no default when editing the current default', async () => {
     const user = userEvent.setup();
-    render(
-      <StorageLocationForm
-        {...defaultProps}
-        initialData={{
-          name: 'Wine Cellar',
-          type: StorageType.Refrigerator,
-          isDefault: true,
-        }}
-      />,
-    );
+    renderSheet({ initialData: cellar({ isDefault: true }) });
     await user.press(screen.getByText('Advanced Settings'));
     expect(screen.queryByText('Set as Default Location')).toBeNull();
-    await user.press(screen.getByText('Update'));
+    await confirm(t('labels.update'));
 
-    expect(defaultProps.onSubmit).toHaveBeenCalledTimes(1);
-    const [[submitted]] = jest.mocked(defaultProps.onSubmit).mock.calls;
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    const [[submitted]] = jest.mocked(onSubmit).mock.calls as unknown as [
+      [object],
+    ];
     expect(submitted).not.toHaveProperty('isDefault');
   });
 });

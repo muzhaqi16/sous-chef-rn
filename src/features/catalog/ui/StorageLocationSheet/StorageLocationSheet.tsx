@@ -1,13 +1,10 @@
-import React, { useRef } from 'react';
-import { useTranslation } from '#i18n';
+import React from 'react';
 import {
   StorageLocationForm,
-  type StorageLocationFormRef,
   type StorageLocationFormValues,
 } from '#features/catalog/ui/StorageLocationForm';
 import type { StorageLocation } from '#graphql/generated/schemaTypes';
 import { Sheet } from '#components/templates/Sheet';
-import { SheetHeader } from '#components/templates/SheetHeader';
 
 /**
  * The subset of {@link StorageLocation} fields the sheet actually reads to
@@ -53,55 +50,22 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
   initialData,
   availableLocations,
   isSubmitting = false,
-}) => {
-  const { t } = useTranslation();
-  const formRef = useRef<StorageLocationFormRef>(null);
-
-  const handleSubmit = async (data: StorageLocationFormValues) => {
-    const result = await onSubmit(data);
-    if (result !== false) {
-      onClose();
-    }
-  };
-
-  const handleHeaderSave = () => {
-    formRef.current?.submit();
-  };
-
-  const isEditing = !!initialData;
-  const title = isEditing
-    ? t('storageLocationSheet.editTitle')
-    : t('storageLocationSheet.addTitle');
-  const saveText = isEditing ? t('labels.update') : t('labels.create');
-
-  return (
-    <Sheet
-      mode="form"
-      gutter="page"
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={['80%', '95%']}
-      header={
-        <SheetHeader
-          title={title}
-          onClose={onClose}
-          confirm={{
-            onPress: handleHeaderSave,
-            accessibilityLabel: saveText,
-            loading: isSubmitting,
-          }}
-        />
-      }
-    >
-      <StorageLocationForm
-        ref={formRef}
-        initialData={initialData}
-        onSubmit={handleSubmit}
-        onCancel={onClose}
-        isSubmitting={isSubmitting}
-        availableLocations={availableLocations}
-        hideActions
-      />
-    </Sheet>
-  );
-};
+}) => (
+  // The form owns the bar: its confirm submits the form's own state.
+  <Sheet
+    mode="form"
+    gutter="page"
+    visible={visible}
+    onDismiss={onClose}
+    snapPoints={['80%', '95%']}
+    headerFromContent
+  >
+    <StorageLocationForm
+      initialData={initialData}
+      onSubmit={onSubmit}
+      onClose={onClose}
+      isSubmitting={isSubmitting}
+      availableLocations={availableLocations}
+    />
+  </Sheet>
+);

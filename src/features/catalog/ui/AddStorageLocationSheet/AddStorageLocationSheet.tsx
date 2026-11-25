@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useController, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { object, string, type ObjectSchema } from 'yup';
+import { object, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
 import {
   ThemedBottomSheetTextInput,
@@ -15,7 +15,8 @@ import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
-import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
+import { storageLocationNameRule } from '#features/catalog/components/storageLocationFormConfig';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 /** Module-level async wrapper to keep try-catch out of the component body (React Compiler). */
@@ -46,10 +47,7 @@ interface StorageLocationFormValues {
 }
 
 const storageLocationSchema: ObjectSchema<StorageLocationFormValues> = object({
-  name: string()
-    .trim()
-    .required(lazyMessage('addStorageLocation.nameRequired'))
-    .min(2, lazyMessage('commonValidation.nameMin')),
+  name: storageLocationNameRule,
 });
 
 type AddStorageLocationFormProps = Omit<
