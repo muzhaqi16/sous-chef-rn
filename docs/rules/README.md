@@ -8,6 +8,21 @@ fails on a rule without a page here, a spec, or a place in the config.
 A disable comment is itself an error (`eslint-comments/no-use`). A justified
 exemption is a file-scoped override in `eslint/project.js`, where review sees it.
 
+## Which gate a new rule takes
+
+The first that can hold it, in this order:
+
+1. Make the bad state impossible: an API that cannot express it.
+2. A type.
+3. A boundaries policy on resolved paths, with `specifiers`.
+4. An AST rule here, with RuleTester cases that include each alias spelling.
+5. A Jest test that parses the code with a real parser, and runs on a known
+   violation it must catch.
+6. A regex, only for the exact content of a named file, or for prose.
+
+A regex that scans source for code catches what it was written against and
+nothing it was not. Removing or loosening a gate needs a yes that names it.
+
 | Rule                                                                                      | Enforces                                                                                        |
 | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | [`sous-chef/no-schema-enum-cast`](no-schema-enum-cast.md)                                 | No casts to a generated schema enum.                                                            |
