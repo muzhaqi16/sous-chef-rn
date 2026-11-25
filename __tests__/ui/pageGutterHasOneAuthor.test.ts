@@ -34,6 +34,9 @@ const AUTHORS: Record<string, string> = {
   // The scaffolds that apply `gutter="page"` for every screen not built on a list.
   'src/components/templates/Screen.tsx': 'the gutter prop itself',
   'src/components/templates/Sheet.tsx': 'the gutter prop itself',
+  // The tray is a sheet built on its own: its header, body and footer are the page.
+  'src/components/templates/ActionTray/ActionTray.tsx':
+    'the tray is its own sheet container',
 
   // The collapsing-hero detail screens' content card.
   'src/components/templates/CollapsingHeroDetail.tsx':
@@ -225,5 +228,47 @@ describe('the page gutter has one author per page', () => {
     // author of an edge the list already owns.
     expect(body).not.toMatch(/\b(margin|padding)Horizontal\b/);
     expect(body).not.toMatch(/\b(margin|padding)(Left|Right|Start|End)\b/);
+  });
+
+  // A `view`, `form` or `action` sheet takes the gutter from `Sheet`; its host
+  // pads only the content's top and bottom.
+  describe('in a sheet', () => {
+    /** The hand insets a source's sheets give their content's sides. */
+    const sheetSideInsets = (src: string): string[] =>
+      [...src.matchAll(/<Sheet\b([\s\S]*?)>/g)].flatMap(([, tag = '']) => {
+        const mode = /mode="(\w+)"/.exec(tag)?.[1] ?? 'view';
+        if (mode === 'list' || /gutter="none"/.test(tag)) return [];
+        const style = /contentContainerStyle=\{([^}]*)\}/.exec(tag)?.[1] ?? '';
+        return [...style.matchAll(/styles\.(\w+)/g)].flatMap(([, name]) => {
+          const block = new RegExp(`\n  ${name}: \\{([\\s\\S]*?)\n  \\}`).exec(
+            src,
+          )?.[1];
+          return block && /\bpadding(Horizontal|Left|Right)?:/.test(block)
+            ? [name ?? '']
+            : [];
+        });
+      });
+
+    it('catches a host padding its sides by hand', () => {
+      const planted = [
+        '<Sheet mode="form" contentContainerStyle={styles.content}>',
+        'const styles = StyleSheet.create(theme => ({',
+        '  content: {',
+        '    paddingHorizontal: theme.spacing.md,',
+        '  },',
+        '}));',
+      ].join('\n');
+
+      expect(sheetSideInsets(planted)).toEqual(['content']);
+    });
+
+    it('leaves the sides to the sheet in every host', () => {
+      const padded = sources
+        .filter(f => f.endsWith('.tsx') && !f.includes('__tests__'))
+        .filter(f => sheetSideInsets(readFileSync(f, 'utf8')).length > 0)
+        .sort();
+
+      expect(padded).toEqual([]);
+    });
   });
 });

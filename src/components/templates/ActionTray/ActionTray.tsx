@@ -264,7 +264,7 @@ const styles = UnistylesStyleSheet.create(theme => ({
     // Clears the close chip of the last action's hit slop.
     gap: theme.spacing.md,
     paddingTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.layout.pageGutter,
     paddingBottom: theme.spacing.md,
   },
   fill: {
@@ -283,21 +283,21 @@ const styles = UnistylesStyleSheet.create(theme => ({
   },
   content: {
     paddingTop: 0,
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.layout.pageGutter,
     paddingBottom: theme.spacing.lg,
   },
   // With a pinned footer the bottom gap is `footerGap` plus gorhom's height
   // reserve, so the content container adds no bottom pad of its own.
   contentWithFooter: {
     paddingTop: 0,
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.layout.pageGutter,
     paddingBottom: 0,
   },
   footerGap: {
     height: theme.spacing.md,
   },
   footer: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.layout.pageGutter,
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.md,
     backgroundColor: theme.colors.surface,

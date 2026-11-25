@@ -527,7 +527,6 @@ export const ReceiptLineSheet: React.FC<ReceiptLineSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.md,
   },
   printed: {

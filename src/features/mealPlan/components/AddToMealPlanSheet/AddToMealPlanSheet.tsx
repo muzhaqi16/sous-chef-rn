@@ -248,7 +248,6 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
       visible={visible}
       onDismiss={form.onClose}
       snapPoints={SNAP_POINTS}
-      contentContainerStyle={styles.content}
     >
       {opening ? <AddToMealPlanForm key={opening.id} {...form} /> : null}
     </Sheet>
@@ -256,9 +255,6 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  content: {
-    paddingHorizontal: theme.spacing.md,
-  },
   warningText: {
     marginBottom: theme.spacing.md,
   },

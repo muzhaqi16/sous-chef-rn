@@ -54,7 +54,6 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
   // The form owns the bar: its confirm submits the form's own state.
   <Sheet
     mode="form"
-    gutter="page"
     visible={visible}
     onDismiss={onClose}
     snapPoints={['80%', '95%']}

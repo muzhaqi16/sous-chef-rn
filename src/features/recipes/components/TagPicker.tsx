@@ -176,7 +176,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   bottomSheetContent: {
-    padding: theme.spacing.mdPlus,
+    paddingVertical: theme.spacing.mdPlus,
   },
   selectionRow: {
     flexDirection: 'row',

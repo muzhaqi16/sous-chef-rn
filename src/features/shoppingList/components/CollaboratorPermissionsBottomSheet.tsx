@@ -309,7 +309,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   scrollContent: {
-    padding: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
   },
   headerBlock: {
     marginBottom: theme.spacing.lg,

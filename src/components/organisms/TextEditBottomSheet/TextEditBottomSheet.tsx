@@ -51,7 +51,6 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
       onDismiss={onClose}
       headerFromContent
       snapPoints={['30%']}
-      contentContainerStyle={styles.content}
     >
       {opening ? (
         <TextEditForm
@@ -152,9 +151,6 @@ const TextEditForm: React.FC<Omit<TextEditBottomSheetProps, 'visible'>> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  content: {
-    paddingHorizontal: theme.spacing.md,
-  },
   inputContainer: {
     marginBottom: theme.spacing.md,
   },

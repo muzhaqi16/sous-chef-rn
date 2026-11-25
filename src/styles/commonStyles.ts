@@ -160,8 +160,9 @@ export const commonStyles = StyleSheet.create(theme => ({
   bottomSheetScrollView: {
     flex: 1,
   },
+  // A sheet's own gutter insets the sides.
   bottomSheetContent: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   bottomSheetLoading: {
     paddingVertical: theme.spacing.xl,

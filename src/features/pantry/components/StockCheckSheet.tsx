@@ -367,7 +367,6 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
 const styles = StyleSheet.create(theme => ({
   content: {
     gap: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.md,
   },
   row: {
     gap: theme.spacing.sm,

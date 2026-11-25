@@ -165,7 +165,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   bottomSheetContent: {
-    padding: theme.spacing.mdPlus,
+    paddingVertical: theme.spacing.mdPlus,
   },
   currentFolderContainer: {
     flexDirection: 'row',

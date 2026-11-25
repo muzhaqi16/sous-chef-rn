@@ -241,9 +241,8 @@ export const SearchResultsScreen: React.FC<
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create({
   bottomSheetContent: {
     flex: 1,
-    paddingHorizontal: theme.spacing.md,
   },
-}));
+});

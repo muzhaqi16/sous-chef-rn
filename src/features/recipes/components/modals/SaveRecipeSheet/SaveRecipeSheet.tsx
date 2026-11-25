@@ -159,7 +159,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   contentContainer: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     paddingBottom: theme.spacing.xl,
   },
   recipeName: {

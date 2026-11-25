@@ -156,7 +156,6 @@ export const AddStorageLocationSheet: React.FC<
       visible={visible}
       onDismiss={form.onClose}
       snapPoints={['35%']}
-      contentContainerStyle={styles.content}
     >
       {opening ? <AddStorageLocationForm key={opening.id} {...form} /> : null}
     </Sheet>
@@ -164,9 +163,6 @@ export const AddStorageLocationSheet: React.FC<
 };
 
 const styles = StyleSheet.create(theme => ({
-  content: {
-    paddingHorizontal: theme.spacing.md,
-  },
   inputContainer: {
     marginBottom: theme.spacing.md,
   },

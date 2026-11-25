@@ -174,7 +174,7 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    padding: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
   },
   ratingSection: {
     marginBottom: theme.spacing.lg,

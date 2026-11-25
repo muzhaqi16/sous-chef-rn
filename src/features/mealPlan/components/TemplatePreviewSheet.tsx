@@ -415,7 +415,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   contentContainer: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   templateHeader: {
     marginBottom: theme.spacing.lg,

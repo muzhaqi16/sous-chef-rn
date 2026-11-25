@@ -79,7 +79,11 @@ export interface SheetProps extends UseStandardBottomSheetOptions {
    * content, when each of its steps pads its own scroll content.
    */
   bottomInset?: 'container' | 'content';
-  /** The page gutter on the content, as `Screen`'s; `action` always has it. */
+  /**
+   * The page gutter on the content, as `Screen`'s: `view` and `form` take it
+   * unless they say `none`, and `action` always has it. A host pads only its
+   * content's top and bottom.
+   */
   gutter?: 'page' | 'none';
 }
 
@@ -100,7 +104,7 @@ export const Sheet: React.FC<SheetProps> = ({
   actions,
   modalOptions,
   bottomInset = 'container',
-  gutter = 'none',
+  gutter = 'page',
   ...sheetOptions
 }) => {
   const closeGuard = useSheetCloseGuard();

@@ -106,7 +106,6 @@ export const CaptureFormFrame: React.FC<CaptureFormFrameProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.md,
   },
   note: {

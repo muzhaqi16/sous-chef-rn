@@ -253,7 +253,6 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           onDismiss={() => setModalVisible(false)}
           snapPoints={[]}
           enableDynamicSizing={true}
-          contentContainerStyle={styles.sheetContent}
         >
           <Text role="heading" align="center" style={styles.sheetTitle}>
             {item.label}
@@ -322,9 +321,6 @@ const styles = StyleSheet.create(theme => ({
     // The value truncates (it already asks for one line); without this it
     // holds its natural width and the label column pays for it instead.
     flexShrink: 1,
-  },
-  sheetContent: {
-    paddingHorizontal: theme.spacing.md,
   },
   sheetTitle: {
     paddingVertical: theme.spacing.sm,

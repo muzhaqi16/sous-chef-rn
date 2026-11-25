@@ -198,7 +198,6 @@ export const ReportContentSheet: React.FC<ReportContentSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.md,
   },
   field: {

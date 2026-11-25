@@ -139,7 +139,6 @@ export const PasteIngredientsSheet: React.FC<PasteIngredientsSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.md,
   },
   note: {
