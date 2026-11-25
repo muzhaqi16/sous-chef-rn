@@ -2,18 +2,10 @@ import React, { useRef } from 'react';
 import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { BottomSheetView } from '@gorhom/bottom-sheet';
-import {
-  BottomSheetModal,
-  useStandardBottomSheet,
-} from '#hooks/ui/useStandardBottomSheet';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { Sheet } from '#components/templates/Sheet';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-
-const VariantBottomSheetModal = withUnistyles(BottomSheetModal, theme => ({
-  backgroundStyle: { backgroundColor: theme.colors.surfaceVariant },
-}));
 
 interface ImagePickerSheetProps {
   visible: boolean;
@@ -22,6 +14,10 @@ interface ImagePickerSheetProps {
   onLibrary: () => void;
 }
 
+/**
+ * Camera or library. The choice runs once the sheet has finished closing: the
+ * system picker cannot present over a sheet still on screen.
+ */
 export const ImagePickerSheet: React.FC<ImagePickerSheetProps> = ({
   visible,
   onDismiss,
@@ -29,69 +25,52 @@ export const ImagePickerSheet: React.FC<ImagePickerSheetProps> = ({
   onLibrary,
 }) => {
   const { t } = useTranslation();
-  const pendingActionRef = useRef<(() => void) | null>(null);
+  const chosen = useRef<(() => void) | null>(null);
 
-  const { ref, modalProps, contentContainerStyle, dismiss } =
-    useStandardBottomSheet({
-      visible,
-      onDismiss: () => {
-        const action = pendingActionRef.current;
-        pendingActionRef.current = null;
-        onDismiss();
-        action?.();
-      },
-      snapPoints: [],
-      enableDynamicSizing: true,
-    });
-
-  const handleCamera = () => {
-    pendingActionRef.current = onCamera;
-    dismiss();
-  };
-
-  const handleLibrary = () => {
-    pendingActionRef.current = onLibrary;
-    dismiss();
+  const choose = (action: () => void) => {
+    chosen.current = action;
+    onDismiss();
   };
 
   return (
-    <VariantBottomSheetModal ref={ref} {...modalProps} stackBehavior="push">
-      <BottomSheetView style={[styles.container, contentContainerStyle]}>
-        <Text role="heading" align="center" style={styles.title}>
-          {t('imagePicker.addPhoto')}
-        </Text>
-        <View style={styles.optionsContainer}>
-          <AppPressable style={styles.option} onPress={handleCamera}>
-            <View style={styles.iconContainer}>
-              <Icon name="camera" size="md" tone="primary" />
-            </View>
-            <Text role="bodyStrong">{t('labels.takePhoto')}</Text>
-          </AppPressable>
-          <AppPressable style={styles.option} onPress={handleLibrary}>
-            <View style={styles.iconContainer}>
-              <Icon name="image" size="md" tone="primary" />
-            </View>
-            <Text role="bodyStrong">{t('imagePicker.chooseFromLibrary')}</Text>
-          </AppPressable>
-        </View>
-        <AppPressable style={styles.cancelButton} onPress={dismiss}>
-          <Text role="bodyStrong" tone="secondary">
-            {t('labels.cancel')}
-          </Text>
+    <Sheet
+      mode="action"
+      visible={visible}
+      onDismiss={() => {
+        const action = chosen.current;
+        chosen.current = null;
+        onDismiss();
+        action?.();
+      }}
+      snapPoints={[]}
+      enableDynamicSizing
+      title={t('imagePicker.addPhoto')}
+      modalOptions={{ stackBehavior: 'push' }}
+    >
+      <View style={styles.optionsContainer}>
+        <AppPressable style={styles.option} onPress={() => choose(onCamera)}>
+          <View style={styles.iconContainer}>
+            <Icon name="camera" size="md" tone="primary" />
+          </View>
+          <Text role="bodyStrong">{t('labels.takePhoto')}</Text>
         </AppPressable>
-      </BottomSheetView>
-    </VariantBottomSheetModal>
+        <AppPressable style={styles.option} onPress={() => choose(onLibrary)}>
+          <View style={styles.iconContainer}>
+            <Icon name="image" size="md" tone="primary" />
+          </View>
+          <Text role="bodyStrong">{t('imagePicker.chooseFromLibrary')}</Text>
+        </AppPressable>
+      </View>
+      <AppPressable style={styles.cancelButton} onPress={onDismiss}>
+        <Text role="bodyStrong" tone="secondary">
+          {t('labels.cancel')}
+        </Text>
+      </AppPressable>
+    </Sheet>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
-  },
-  title: {
-    marginBottom: theme.spacing.lg,
-  },
   optionsContainer: {
     gap: theme.spacing.sm,
   },
