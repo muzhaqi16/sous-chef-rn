@@ -3,7 +3,6 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useController, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { object, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
 import {
   ThemedTextInput,
@@ -16,8 +15,11 @@ import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
 import { reportValidationErrors } from '#utils/validation/common';
-import { storageLocationNameRule } from '#features/catalog/components/storageLocationFormConfig';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import {
+  addStorageLocationSchema,
+  type AddStorageLocationFormValues,
+} from './addStorageLocationFormConfig';
 
 /** Module-level async wrapper to keep try-catch out of the component body (React Compiler). */
 async function executeCreateLocation(
@@ -42,14 +44,6 @@ interface AddStorageLocationSheetProps {
   creating?: boolean;
 }
 
-interface StorageLocationFormValues {
-  name: string;
-}
-
-const storageLocationSchema: ObjectSchema<StorageLocationFormValues> = object({
-  name: storageLocationNameRule,
-});
-
 type AddStorageLocationFormProps = Omit<
   AddStorageLocationSheetProps,
   'visible'
@@ -67,8 +61,8 @@ const AddStorageLocationForm: React.FC<AddStorageLocationFormProps> = ({
     handleSubmit,
     setError,
     formState: { isDirty },
-  } = useForm<StorageLocationFormValues>({
-    resolver: yupResolver(storageLocationSchema),
+  } = useForm<AddStorageLocationFormValues>({
+    resolver: yupResolver(addStorageLocationSchema),
     defaultValues: { name: '' },
   });
   useSheetUnsavedInput(isDirty);

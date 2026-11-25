@@ -7,7 +7,6 @@ import {
   type Control,
 } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { date, object, string, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
@@ -17,11 +16,6 @@ import { DatePickerField } from '#components/molecules/DatePickerField';
 import { ConversionPreview } from '#features/pantry/components/ConversionPreview';
 import { FractionQuickSelect } from '#features/pantry/components/FractionQuickSelect';
 import { PackageContentsFields } from '#features/pantry/ui/PackageContentsFields';
-import {
-  isPickedWhenSized,
-  isWholeWhenSized,
-  packageContentsFields,
-} from '#features/pantry/ui/packageContentsRules';
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import { parseFractionalInput } from '#utils/fractionUtils';
 import {
@@ -34,7 +28,6 @@ import { inCountedUnit } from '#entities/pantryItem/stockDisplay';
 import {
   restockContentsOf,
   statedContents,
-  type PackageContentsValues,
   type RestockContents,
 } from '#domain/stockAmount';
 import { UnitType } from '#graphql/generated/schemaTypes';
@@ -47,10 +40,7 @@ import {
 import { Text } from '#components/atoms/Text';
 import { localizeNumericHint } from '#utils/formatters/number';
 import {
-  lazyMessage,
-  optionalMoneyRule,
   parseMoneyInput,
-  quantityRule,
   reportValidationErrors,
 } from '#utils/validation/common';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
@@ -59,6 +49,12 @@ import type {
   ShownQuantity,
 } from '#features/pantry/types';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import {
+  restockDefaults,
+  restockSchema,
+  type RestockFormContext,
+  type RestockFormValues,
+} from './restockFormConfig';
 
 interface RestockPantryItemModalProps {
   visible: boolean;
@@ -77,77 +73,6 @@ interface RestockPantryItemModalProps {
     contents?: RestockContents | null,
   ) => Promise<string | null>;
 }
-
-interface RestockFormValues extends Omit<PackageContentsValues, 'unitType'> {
-  quantityInput: string;
-  costPerUnitInput: string;
-  totalCostInput: string;
-  expiresAt: Date | null;
-  notes: string;
-}
-
-/** What the schema reads beyond the form (`useForm`'s `context`). */
-interface RestockFormContext {
-  /** The restock counts the stack's own packages, so it may state their size. */
-  countsPackages: boolean;
-}
-
-const restockDefaults: RestockFormValues = {
-  quantityInput: '1',
-  costPerUnitInput: '',
-  totalCostInput: '',
-  expiresAt: null,
-  notes: '',
-  sizeInput: '',
-  sizeUnitDisplay: '',
-  sizeUnitId: null,
-  sizeUnitType: null,
-};
-
-// A size is read only while the stack's own packages are counted: another
-// unit hides its fields, and what they hold is neither checked nor sent.
-const restockSchema: ObjectSchema<RestockFormValues> = object({
-  quantityInput: quantityRule('errors.invalidQuantity').when(
-    '$countsPackages',
-    ([countsPackages], schema) =>
-      countsPackages === true
-        ? schema.test(
-            'whole-packages',
-            lazyMessage('packageSize.wholePackages'),
-            (value, context: { parent: RestockFormValues }) =>
-              isWholeWhenSized(value, UnitType.Count, context.parent.sizeInput),
-          )
-        : schema,
-  ),
-  // Hidden with budget & prices off, so left blank: they never block.
-  costPerUnitInput: optionalMoneyRule('errors.invalidAmountPaid'),
-  totalCostInput: optionalMoneyRule('errors.invalidAmountPaid'),
-  expiresAt: date().nullable().defined(),
-  notes: string().defined(),
-  ...packageContentsFields,
-  sizeInput: string()
-    .defined()
-    .when('$countsPackages', ([countsPackages], schema) =>
-      countsPackages === true ? packageContentsFields.sizeInput : schema,
-    ),
-  sizeUnitId: string()
-    .nullable()
-    .defined()
-    .when('$countsPackages', ([countsPackages], schema) =>
-      countsPackages === true
-        ? schema.test(
-            'size-unit-picked',
-            lazyMessage('packageSize.unitRequired'),
-            (value, context: { parent: RestockFormValues }) =>
-              isPickedWhenSized(
-                value,
-                UnitType.Count,
-                context.parent.sizeInput,
-              ),
-          )
-        : schema,
-    ),
-});
 
 /** The server sizes only packages counted in the stack's own unit. */
 const countedInOwnUnit = ({ selectedUnitInfo }: PantryActionSharedState) =>

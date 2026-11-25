@@ -3,41 +3,19 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { object, string, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
 import { alertService } from '#services/alertService';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { FormInput } from '#components/atoms/FormInput';
-import { DIETARY_LIMITS } from '#domain/dietary';
 import { useOpening } from '#hooks/ui/useOpening';
-import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
-
-interface CookingPreferencesFormValues {
-  /** Minutes as typed; blank is no limit. */
-  cookTime: string;
-}
-
-const cookingPreferencesSchema: ObjectSchema<CookingPreferencesFormValues> =
-  object({
-    cookTime: string()
-      .defined()
-      .test(
-        'within-range',
-        lazyMessage(
-          'cookingPreferences.cookTimeRange',
-          DIETARY_LIMITS.cookTime,
-        ),
-        value => {
-          if (!value) return true;
-          const minutes = parseInt(value);
-          const { min, max } = DIETARY_LIMITS.cookTime;
-          return !isNaN(minutes) && minutes >= min && minutes <= max;
-        },
-      ),
-  });
+import {
+  cookingPreferencesSchema,
+  type CookingPreferencesFormValues,
+} from './cookingPreferencesFormConfig';
 
 interface CookingPreferencesSheetProps {
   visible: boolean;

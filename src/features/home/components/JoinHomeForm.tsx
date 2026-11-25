@@ -3,22 +3,14 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { object, string, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Button } from '#components/molecules/Button';
 import type { HomeLinkPreview } from '#features/home/utils/shareLink';
-import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
-
-interface JoinHomeFormValues {
-  code: string;
-}
-
-const joinHomeSchema: ObjectSchema<JoinHomeFormValues> = object({
-  code: string().trim().required(lazyMessage('labels.pleaseEnterAJoinCode')),
-});
+import { reportValidationErrors } from '#utils/validation/common';
+import { joinHomeSchema, type JoinHomeFormValues } from './joinHomeFormConfig';
 
 /** A code this long can name a home, so leaving the field looks it up. */
 const PREVIEW_MIN_LENGTH = 4;

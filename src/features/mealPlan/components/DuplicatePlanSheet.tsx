@@ -3,7 +3,6 @@ import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { Controller, useController, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { number, object, string, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
@@ -21,19 +20,12 @@ import {
 } from '#utils/formatters/date';
 import { toDateKey } from '#utils/dateUtils';
 import { useOpening } from '#hooks/ui/useOpening';
-import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
-
-interface DuplicatePlanFormValues {
-  name: string;
-  /** Days the copy moves on from the day after the plan ends, a week a step. */
-  startDateOffset: number;
-}
-
-const duplicatePlanSchema: ObjectSchema<DuplicatePlanFormValues> = object({
-  name: string().trim().required(lazyMessage('mealPlan.nameRequiredMessage')),
-  startDateOffset: number().defined(),
-});
+import {
+  duplicatePlanSchema,
+  type DuplicatePlanFormValues,
+} from './duplicatePlanFormConfig';
 
 /** The copy's first and last day: as many days as the plan, after it ends. */
 const copyRange = (mealPlan: MealPlanDisplayFragment, offset: number) => {

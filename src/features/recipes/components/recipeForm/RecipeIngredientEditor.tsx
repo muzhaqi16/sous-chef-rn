@@ -4,17 +4,11 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#i18n';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { boolean, object, string, type ObjectSchema } from 'yup';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
-import {
-  lazyMessage,
-  quantityCapMessage,
-  reportValidationErrors,
-  withinQuantityCap,
-} from '#utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
@@ -29,8 +23,13 @@ import type { IngredientFormState } from '#features/recipes/types';
 import { Text } from '#components/atoms/Text';
 import { parseFractionalInput } from '#utils/fractionUtils';
 import type { CaptureCandidate } from '#features/recipes/hooks/useCaptureReview';
-import { formatQuantityForInput, unitLabel } from '#utils/formatQuantity';
+import { unitLabel } from '#utils/formatQuantity';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import {
+  ingredientSchema,
+  valuesOf,
+  type IngredientFormValues,
+} from './ingredientFormConfig';
 
 interface RecipeIngredientEditorProps {
   visible: boolean;
@@ -43,61 +42,6 @@ interface RecipeIngredientEditorProps {
     originalText: string | null | undefined,
   ) => CaptureCandidate[];
 }
-
-/** The sheet's fields, as typed. */
-interface IngredientFormValues {
-  name: string;
-  itemId: string | null;
-  quantity: string;
-  unit: string;
-  unitId: string | null;
-  preparation: string;
-  section: string;
-  notes: string;
-  isOptional: boolean;
-}
-
-const ingredientSchema: ObjectSchema<IngredientFormValues> = object({
-  name: string().trim().required(lazyMessage('errors.itemNameRequired')),
-  itemId: string().nullable().defined(),
-  // Blank states no amount ("salt, to taste"); a stated one is held to the cap.
-  quantity: string()
-    .defined()
-    .test('quantity-cap', quantityCapMessage, withinQuantityCap),
-  unit: string().trim().defined(),
-  unitId: string().nullable().defined(),
-  preparation: string().trim().defined(),
-  section: string().trim().defined(),
-  notes: string().trim().defined(),
-  isOptional: boolean().defined(),
-});
-
-const valuesOf = (
-  ingredient: IngredientFormState | undefined,
-): IngredientFormValues =>
-  ingredient
-    ? {
-        name: ingredient.name,
-        itemId: ingredient.itemId ?? null,
-        quantity: formatQuantityForInput(ingredient.quantity),
-        unit: ingredient.unitLabel ?? '',
-        unitId: ingredient.unitId ?? null,
-        preparation: ingredient.preparation ?? '',
-        section: ingredient.section ?? '',
-        notes: ingredient.notes ?? '',
-        isOptional: ingredient.isOptional,
-      }
-    : {
-        name: '',
-        itemId: null,
-        quantity: '1',
-        unit: '',
-        unitId: null,
-        preparation: '',
-        section: '',
-        notes: '',
-        isOptional: false,
-      };
 
 type IngredientFormProps = Pick<
   RecipeIngredientEditorProps,

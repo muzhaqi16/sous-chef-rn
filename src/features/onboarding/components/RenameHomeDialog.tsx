@@ -1,20 +1,14 @@
 import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { object } from 'yup';
 import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Button } from '#components/molecules/Button';
 import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
-import {
-  cleanName,
-  homeNameRule,
-  reportValidationErrors,
-} from '#utils/validation/common';
+import { cleanName, reportValidationErrors } from '#utils/validation/common';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
-
-const renameHomeSchema = object({ name: homeNameRule });
+import { renameHomeSchema } from './renameHomeFormConfig';
 
 interface RenameHomeDialogProps {
   visible: boolean;

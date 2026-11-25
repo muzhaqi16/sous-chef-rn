@@ -2,7 +2,6 @@ import React from 'react';
 import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { object, string, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Sheet } from '#components/templates/Sheet';
@@ -10,9 +9,10 @@ import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
 import { generateId } from '#utils/generateId';
-import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import type { StepFormState } from '#features/recipes/types';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import { stepSchema, type StepFormValues } from './stepFormConfig';
 
 interface RecipeStepEditorProps {
   visible: boolean;
@@ -21,16 +21,6 @@ interface RecipeStepEditorProps {
   onDismiss: () => void;
   onSave: (step: StepFormState) => void;
 }
-
-interface StepFormValues {
-  instruction: string;
-}
-
-const stepSchema: ObjectSchema<StepFormValues> = object({
-  instruction: string()
-    .trim()
-    .required(lazyMessage('recipes.instructionRequired')),
-});
 
 interface StepFormProps {
   /** The step being edited; absent for a new one. */

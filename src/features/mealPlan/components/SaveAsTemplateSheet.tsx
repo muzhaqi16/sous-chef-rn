@@ -3,7 +3,6 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { mixed, object, string, type ObjectSchema } from 'yup';
 import { useTranslation, type TranslationKey } from '#i18n';
 import {
   ChipScrollRow,
@@ -18,13 +17,14 @@ import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
 import {
-  commaTagsRule,
-  lazyMessage,
   parseCommaTags,
   reportValidationErrors,
 } from '#utils/validation/common';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
-import { MAX_TEMPLATE_TAGS } from '#utils/validation/entryLimits';
+import {
+  saveAsTemplateSchema,
+  type SaveAsTemplateFormValues,
+} from './saveAsTemplateFormConfig';
 
 const CATEGORY_OPTION_KEYS: {
   key: TemplateCategory;
@@ -45,25 +45,6 @@ const CATEGORY_OPTION_KEYS: {
   },
   { key: TemplateCategory.Custom, labelKey: 'saveAsTemplate.categoryCustom' },
 ];
-
-interface SaveAsTemplateFormValues {
-  name: string;
-  description: string;
-  category: TemplateCategory;
-  /** Comma-separated, as typed. */
-  tags: string;
-}
-
-const saveAsTemplateSchema: ObjectSchema<SaveAsTemplateFormValues> = object({
-  name: string()
-    .trim()
-    .required(lazyMessage('mealTemplateBuilder.nameRequiredMessage')),
-  description: string().trim().defined(),
-  category: mixed<TemplateCategory>()
-    .oneOf(Object.values(TemplateCategory))
-    .defined(),
-  tags: commaTagsRule(MAX_TEMPLATE_TAGS),
-});
 
 interface SaveAsTemplateSheetProps {
   visible: boolean;

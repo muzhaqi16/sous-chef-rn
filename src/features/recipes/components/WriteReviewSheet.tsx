@@ -4,7 +4,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
 import { Controller, useController, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { number, object, string, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
 import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { StarRatingInput } from './StarRatingInput';
@@ -14,19 +13,9 @@ import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
-import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
-
-interface ReviewFormValues {
-  /** 0 until a star is picked. */
-  rating: number;
-  comment: string;
-}
-
-const reviewSchema: ObjectSchema<ReviewFormValues> = object({
-  rating: number().defined().min(1, lazyMessage('recipes.ratingRequired')),
-  comment: string().trim().defined(),
-});
+import { reviewSchema, type ReviewFormValues } from './reviewFormConfig';
 
 interface WriteReviewSheetProps {
   visible: boolean;

@@ -2,7 +2,6 @@ import React from 'react';
 import { View } from 'react-native';
 import { Controller, useController, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { boolean, mixed, object, string, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
 import {
   Pressable,
@@ -20,41 +19,13 @@ import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingLi
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { useOpening } from '#hooks/ui/useOpening';
-import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
-
-type Destination = 'new' | 'existing';
-
-interface GenerateShoppingListFormValues {
-  checkPantry: boolean;
-  mode: Destination;
-  /** A new list's name; blank takes the plan's. */
-  name: string;
-  /** Null until a list is picked; needed only for an existing list. */
-  shoppingListId: string | null;
-}
-
-const generateShoppingListDefaults: GenerateShoppingListFormValues = {
-  checkPantry: true,
-  mode: 'new',
-  name: '',
-  shoppingListId: null,
-};
-
-const generateShoppingListSchema: ObjectSchema<GenerateShoppingListFormValues> =
-  object({
-    checkPantry: boolean().defined(),
-    mode: mixed<Destination>().oneOf(['new', 'existing']).defined(),
-    name: string().trim().defined(),
-    shoppingListId: string()
-      .nullable()
-      .defined()
-      .when('mode', {
-        is: 'existing',
-        then: schema =>
-          schema.required(lazyMessage('generateShoppingList.selectListLabel')),
-      }),
-  });
+import {
+  generateShoppingListDefaults,
+  generateShoppingListSchema,
+  type GenerateShoppingListFormValues,
+} from './generateShoppingListFormConfig';
 
 interface GenerateShoppingListSheetProps {
   visible: boolean;

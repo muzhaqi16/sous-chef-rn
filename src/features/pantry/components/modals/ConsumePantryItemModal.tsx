@@ -7,7 +7,6 @@ import {
   type Control,
 } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { mixed, object, string, type ObjectSchema } from 'yup';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Button } from '#components/molecules/Button';
 import { pantryTestIDs } from '#features/pantry/testIDs';
@@ -20,7 +19,6 @@ import { parseFractionalInput } from '#utils/fractionUtils';
 import {
   allHeld,
   deductionCap,
-  heldToStock,
   judgeDeduction,
 } from '#features/pantry/utils/judgeDeduction';
 import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
@@ -42,6 +40,12 @@ import type {
   UsedBatch,
 } from '#features/pantry/types';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import {
+  consumeDefaults,
+  consumeSchema,
+  untypedQuantity,
+  type ConsumeFormValues,
+} from './consumeFormConfig';
 
 interface ConsumePantryItemModalProps {
   compact?: boolean;
@@ -64,33 +68,6 @@ const PURPOSE_OPTIONS: Array<{
   { labelKey: 'usagePurpose.GIFT', value: UsagePurpose.Gift },
   { labelKey: 'consumeItem.purposeTransfer', value: UsagePurpose.Transfer },
 ];
-
-interface ConsumeFormValues {
-  /**
-   * Null until typed: the amount then reads the default unit's step, which can
-   * land after the sheet opens.
-   */
-  quantityInput: string | null;
-  purpose: UsagePurpose;
-  notes: string;
-}
-
-const consumeDefaults: ConsumeFormValues = {
-  quantityInput: null,
-  purpose: UsagePurpose.General,
-  notes: '',
-};
-
-/** The amount before one is typed. */
-const untypedQuantity = ({ defaultUnitIncrement }: PantryActionSharedState) =>
-  defaultUnitIncrement ? formatQuantityForInput(defaultUnitIncrement) : '1';
-
-// The amount is held to the stock in `useForm`'s `context`.
-const consumeSchema: ObjectSchema<ConsumeFormValues> = object({
-  quantityInput: heldToStock('consume', untypedQuantity),
-  purpose: mixed<UsagePurpose>().oneOf(Object.values(UsagePurpose)).defined(),
-  notes: string().defined(),
-});
 
 export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   visible,

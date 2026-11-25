@@ -7,7 +7,6 @@ import {
   type Control,
 } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { boolean, mixed, object, string, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
@@ -19,11 +18,10 @@ import { parseFractionalInput } from '#utils/fractionUtils';
 import {
   allHeld,
   deductionCap,
-  heldToStock,
   judgeDeduction,
 } from '#features/pantry/utils/judgeDeduction';
 import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
-import { WasteReason } from '#graphql/generated/schemaTypes';
+import type { WasteReason } from '#graphql/generated/schemaTypes';
 import { commonStyles } from '#styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import {
@@ -33,20 +31,20 @@ import {
 import { Text } from '#components/atoms/Text';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 import { localizeNumericHint } from '#utils/formatters/number';
-import {
-  formatQuantityForInput,
-  resolveQuantityNotation,
-} from '#utils/formatQuantity';
+import { formatQuantityForInput } from '#utils/formatQuantity';
 import { reportValidationErrors } from '#utils/validation/common';
 import type {
   PantryActionSharedState,
   StatedWaste,
   UsedBatch,
 } from '#features/pantry/types';
+import { WASTE_REASON_OPTIONS } from '#features/pantry/utils/wasteReasons';
 import {
-  DEFAULT_WASTE_REASON,
-  WASTE_REASON_OPTIONS,
-} from '#features/pantry/utils/wasteReasons';
+  untypedAmount,
+  wasteDefaults,
+  wasteSchema,
+  type WasteFormValues,
+} from './wasteFormConfig';
 
 interface RecordWastePantryItemModalProps {
   visible: boolean;
@@ -57,40 +55,6 @@ interface RecordWastePantryItemModalProps {
   /** The caller closes the sheet once the waste is recorded. */
   onConfirm: (waste: StatedWaste) => Promise<unknown>;
 }
-
-interface WasteFormValues {
-  /** Null until typed: the amount then reads all the stack holds. */
-  amountInput: string | null;
-  wasteReason: WasteReason;
-  isComposted: boolean;
-  isRecycled: boolean;
-  notes: string;
-}
-
-const wasteDefaults: WasteFormValues = {
-  amountInput: null,
-  wasteReason: DEFAULT_WASTE_REASON,
-  isComposted: false,
-  isRecycled: false,
-  notes: '',
-};
-
-/** The amount before one is typed: everything the stack holds. */
-const untypedAmount = (shared: PantryActionSharedState) =>
-  formatQuantityForInput(shared.trackingQuantity, {
-    notation: resolveQuantityNotation(
-      shared.displayAsFractionOf(shared.trackingUnitId),
-    ),
-  });
-
-// The amount is held to the stock in `useForm`'s `context`.
-const wasteSchema: ObjectSchema<WasteFormValues> = object({
-  amountInput: heldToStock('waste', untypedAmount),
-  wasteReason: mixed<WasteReason>().oneOf(Object.values(WasteReason)).defined(),
-  isComposted: boolean().defined(),
-  isRecycled: boolean().defined(),
-  notes: string().defined(),
-});
 
 export const RecordWastePantryItemModal: React.FC<
   RecordWastePantryItemModalProps
