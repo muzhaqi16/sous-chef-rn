@@ -27,14 +27,6 @@ jest.mock('#features/pantry/hooks/useCurrentPantry', () => ({
   }),
 }));
 jest.mock('#hooks/app/useToday', () => ({ useToday: () => '2026-11-15' }));
-jest.mock('#components/templates/Sheet', () => {
-  const { View } = require('react-native');
-  return {
-    Sheet: ({ children }: { children?: React.ReactNode }) => (
-      <View>{children}</View>
-    ),
-  };
-});
 
 const stack = (id: string, version: number) => ({
   id,

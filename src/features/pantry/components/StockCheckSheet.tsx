@@ -5,9 +5,10 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation, type TranslationKey } from '#i18n';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { Text } from '#components/atoms/Text';
-import { Button } from '#components/molecules/Button';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { formatRelativeToNow } from '#utils/formatters/date';
@@ -166,6 +167,19 @@ const StockCheckForm: React.FC<StockCheckFormProps> = ({
 
   return (
     <>
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={t('pantryScreen.stockCheckTitle')}
+          onClose={onDismiss}
+          confirm={{
+            onPress: () => {
+              void handleSubmit(onValid, reportValidationErrors)();
+            },
+            loading: isSubmitting,
+            testID: pantryTestIDs.stockCheckSave,
+          }}
+        />
+      </SheetHeaderSlot>
       {/* A check the device cannot read says so, never an empty check. */}
       {rows.length === 0 ? (
         <DataStateView state={state} onRetry={retry} />
@@ -287,15 +301,6 @@ const StockCheckForm: React.FC<StockCheckFormProps> = ({
           {errors.root.noneAnswered.message}
         </Text>
       ) : null}
-      <Button
-        title={t('labels.save')}
-        onPress={() => {
-          void handleSubmit(onValid, reportValidationErrors)();
-        }}
-        loading={isSubmitting}
-        disabled={isSubmitting}
-        testID={pantryTestIDs.stockCheckSave}
-      />
     </>
   );
 };
@@ -308,7 +313,6 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
   visible,
   onDismiss,
 }) => {
-  const { t } = useTranslation();
   const { rows, asking, state, retry, answer } = useStockCheck(visible);
   const opening = useOpening(visible);
 
@@ -317,7 +321,7 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
       mode="form"
       visible={visible}
       onDismiss={onDismiss}
-      title={t('pantryScreen.stockCheckTitle')}
+      headerFromContent
       snapPoints={['85%']}
       contentContainerStyle={styles.content}
     >
