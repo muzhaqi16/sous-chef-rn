@@ -32,6 +32,7 @@ import { localizeNumericHint } from '#utils/formatters/number';
 import { formatQuantityForInput, unitLabel } from '#utils/formatQuantity';
 import { reportValidationErrors } from '#utils/validation/common';
 import type { PantryActionSharedState } from '#features/pantry/types';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface ConsumePantryItemModalProps {
   compact?: boolean;
@@ -132,10 +133,16 @@ const ConsumeForm: React.FC<ConsumeFormProps> = ({
   onConfirm,
 }) => {
   const { t } = useTranslation();
-  const { control, handleSubmit, setError } = useForm<ConsumeFormValues>({
+  const {
+    control,
+    handleSubmit,
+    setError,
+    formState: { isDirty },
+  } = useForm<ConsumeFormValues>({
     resolver: yupResolver(consumeSchema),
     defaultValues: consumeDefaults,
   });
+  useSheetUnsavedInput(isDirty);
 
   // The caller closes the sheet once the use is recorded; a refusal keeps it
   // open with what was entered.

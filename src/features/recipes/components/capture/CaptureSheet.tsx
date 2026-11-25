@@ -19,6 +19,7 @@ import type {
 import { httpUrl } from '#features/recipes/screens/RecipeForm/recipeFormConfig';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { CaptureFormFrame, CaptureSheetShell } from './CaptureSheetShell';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 export type CaptureSheetKind = 'link' | 'text';
 
@@ -70,11 +71,18 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
   const { t } = useTranslation();
   const [kind, setKind] = useState(initialKind);
   const [failure, setFailure] = useState<string | null>(null);
-  const { control, handleSubmit, getValues, setValue, setError } =
-    useForm<CaptureFormValues>({
-      resolver: yupResolver(captureFormSchema),
-      defaultValues: captureFormDefaults,
-    });
+  const {
+    control,
+    handleSubmit,
+    getValues,
+    setValue,
+    setError,
+    formState: { isDirty },
+  } = useForm<CaptureFormValues>({
+    resolver: yupResolver(captureFormSchema),
+    defaultValues: captureFormDefaults,
+  });
+  useSheetUnsavedInput(isDirty);
   const [url, text] = useWatch({ control, name: ['url', 'text'] });
   const canSend = (kind === 'link' ? url : text).trim() !== '';
 

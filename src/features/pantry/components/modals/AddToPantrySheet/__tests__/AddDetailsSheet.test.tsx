@@ -21,6 +21,7 @@ import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.genera
 import { SearchUnitsDocument } from '#operations/item/unit.generated';
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
+import { Sheet } from '#components/templates/Sheet';
 import { AddDetailsSheet } from '../AddDetailsSheet';
 
 type Props = React.ComponentProps<typeof AddDetailsSheet>;
@@ -70,14 +71,17 @@ function renderSheet(
   over: Partial<Props> = {},
   answers: ReturnType<typeof recordMock>[] = [],
 ) {
+  // In its sheet, as the add sheet hosts it: the sheet asks before a close.
   return renderWithApollo(
-    <AddDetailsSheet
-      pantryId="pantry-1"
-      storageLocations={LOCATIONS}
-      onClose={onClose}
-      onSuccess={onSuccess}
-      {...over}
-    />,
+    <Sheet visible onDismiss={() => undefined} snapPoints={['90%']}>
+      <AddDetailsSheet
+        pantryId="pantry-1"
+        storageLocations={LOCATIONS}
+        onClose={onClose}
+        onSuccess={onSuccess}
+        {...over}
+      />
+    </Sheet>,
     {
       links: [log.link],
       operationMocks: [
@@ -231,16 +235,14 @@ describe('cancelling', () => {
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
-  it('asks before dropping what was typed, and holds the sheet open', async () => {
-    const onHoldOpen = jest.fn();
-    renderSheet({ onHoldOpen });
+  it('asks before dropping what was typed', async () => {
+    renderSheet();
     await userEvent
       .setup()
       .type(screen.getByTestId(pantryTestIDs.addDetailsNameInput), 'Oats');
 
     fireEvent.press(screen.getByTestId(pantryTestIDs.addDetailsCancelButton));
 
-    expect(onHoldOpen).toHaveBeenLastCalledWith(true);
     expect(onClose).not.toHaveBeenCalled();
     expect(alertService.alert).toHaveBeenCalledWith(
       t('confirmations.discardChangesTitle'),

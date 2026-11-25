@@ -25,6 +25,7 @@ import { Text } from '#components/atoms/Text';
 import { parseFractionalInput } from '#utils/fractionUtils';
 import type { CaptureCandidate } from '#features/recipes/hooks/useCaptureReview';
 import { formatQuantityForInput, unitLabel } from '#utils/formatQuantity';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 export interface RecipeIngredientEditorRef {
   open: (ingredient?: IngredientFormState) => void;
@@ -106,10 +107,16 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
   candidatesFor,
 }) => {
   const { t } = useTranslation();
-  const { control, handleSubmit, setValue } = useForm<IngredientFormValues>({
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    formState: { isDirty },
+  } = useForm<IngredientFormValues>({
     resolver: yupResolver(ingredientSchema),
     defaultValues: valuesOf(ingredient),
   });
+  useSheetUnsavedInput(isDirty);
   const itemId = useWatch({ control, name: 'itemId' });
   const originalText = ingredient?.originalText ?? null;
 
@@ -117,7 +124,7 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
   const candidates = candidatesFor ? candidatesFor(originalText) : [];
 
   const handleItemSelect = ({ id, defaultUnit }: ItemSuggestion) => {
-    setValue('itemId', id);
+    setValue('itemId', id, { shouldDirty: true });
     const seededUnit = unitLabel(defaultUnit);
     if (seededUnit) setValue('unit', seededUnit);
     if (defaultUnit?.id) setValue('unitId', defaultUnit.id);
@@ -184,6 +191,7 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
                   setValue(
                     'itemId',
                     itemId === candidate.itemId ? null : candidate.itemId,
+                    { shouldDirty: true },
                   )
                 }
               />
@@ -236,7 +244,9 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
                 label={t('labels.unit')}
                 value={field.value}
                 onChangeText={field.onChange}
-                onUnitSelected={unitId => setValue('unitId', unitId)}
+                onUnitSelected={unitId =>
+                  setValue('unitId', unitId, { shouldDirty: true })
+                }
                 placeholder={t('labels.pcsKgEtc')}
               />
             )}

@@ -36,6 +36,7 @@ import {
 } from './receiptLineFormConfig';
 import { receiptsTestIDs } from '../testIDs';
 import { useEarlierPurchases } from './useEarlierPurchases';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 // The picker's choice for a line that is a purchase of its own.
 const NEW_PURCHASE = 'new';
@@ -104,11 +105,13 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
     setValue,
     setError,
     trigger,
+    formState: { isDirty },
   } = useForm<ReceiptLineFormValues, ReceiptLineFormContext>({
     resolver: yupResolver(receiptLineSchema),
     context: { free: line.price === 0 && (line.discount ?? 0) > 0 },
     defaultValues: receiptLineDefaults(line, choice, unitTypeOf, asked),
   });
+  useSheetUnsavedInput(isDirty);
 
   // Shown on the field it names as the sheet opens, until that field changes.
   const refusedOn = refusedField(refusal?.on);
@@ -292,6 +295,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                   if (picked.itemId !== itemId) dropEarlierPick();
                   setValue('itemName', picked.itemName, {
                     shouldValidate: true,
+                    shouldDirty: true,
                   });
                   setValue('itemId', picked.itemId);
                   onPickItem(picked.itemId);
@@ -313,7 +317,9 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
               onSelect={key => {
                 const picked = earlier.find(purchase => purchase.id === key);
                 if (key !== NEW_PURCHASE && !picked) return;
-                setValue('existingPurchaseId', picked?.id ?? null);
+                setValue('existingPurchaseId', picked?.id ?? null, {
+                  shouldDirty: true,
+                });
                 setValue('existingPurchaseVersion', picked?.version ?? null);
               }}
               edgeFadeColor="surface"

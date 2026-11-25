@@ -29,7 +29,7 @@ import { localizeNumericHint } from '#utils/formatters/number';
 import { reportValidationErrors } from '#utils/validation/common';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
-import { useDiscardGuard } from '#hooks/ui/useDiscardGuard';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface ShoppingListDetailsStepProps {
   shoppingListId: string | undefined;
@@ -39,8 +39,6 @@ interface ShoppingListDetailsStepProps {
   onClose: () => void;
   /** Item was created — the parent closes the whole sheet. */
   onSuccess: () => void;
-  /** Holds the parent sheet open against a pan-down while input would be lost. */
-  onHoldOpen?: (held: boolean) => void;
 }
 
 /**
@@ -50,13 +48,7 @@ interface ShoppingListDetailsStepProps {
  */
 export const ShoppingListDetailsStep: React.FC<
   ShoppingListDetailsStepProps
-> = ({
-  shoppingListId,
-  prefilledItemName = '',
-  onClose,
-  onSuccess,
-  onHoldOpen,
-}) => {
+> = ({ shoppingListId, prefilledItemName = '', onClose, onSuccess }) => {
   const { t } = useTranslation();
   // Off, the line is added with no price.
   const showPrices = useBudgetAndPricesEnabled();
@@ -89,11 +81,7 @@ export const ShoppingListDetailsStep: React.FC<
     hasDirtyFields,
   } = useShoppingListItemForm({ itemName: prefilledItemName });
 
-  const handleCancel = useDiscardGuard({
-    isDirty: hasDirtyFields,
-    onDiscard: onClose,
-    onHoldOpen,
-  });
+  useSheetUnsavedInput(hasDirtyFields);
 
   // The typed fields render through `Controller`, so react-hook-form holds
   // their inputs: the return key moves on by name, and a failed submit focuses
@@ -154,7 +142,7 @@ export const ShoppingListDetailsStep: React.FC<
     <View style={styles.container} testID={shoppingListTestIDs.addSheetDetails}>
       <SheetHeader
         title={t('labels.addItem')}
-        onClose={handleCancel}
+        onClose={onClose}
         leadingTestID={shoppingListTestIDs.addSheetCancelButton}
         titleTestID={shoppingListTestIDs.addSheetTitle}
         confirm={{

@@ -6,7 +6,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { NewFolderForm } from '#features/recipes/components/FolderPicker/NewFolderForm';
+import { FolderNameForm } from '#features/recipes/components/FolderPicker/FolderNameForm';
 
 interface InlineFolderChooserProps {
   folders: string[];
@@ -85,7 +85,12 @@ export const InlineFolderChooser: React.FC<InlineFolderChooserProps> = ({
       </View>
 
       {showNewFolder ? (
-        <NewFolderForm onCreate={handleCreate} style={styles.newFolder} />
+        <FolderNameForm
+          onSubmit={handleCreate}
+          actionLabel={t('labels.create')}
+          autoFocus
+          style={styles.newFolder}
+        />
       ) : (
         <AppPressable
           style={styles.newFolderButton}

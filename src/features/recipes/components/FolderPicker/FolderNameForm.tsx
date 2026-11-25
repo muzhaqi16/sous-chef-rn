@@ -3,39 +3,62 @@ import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { object, string, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
-import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import {
+  OnPrimaryActivityIndicator,
+  ThemedBottomSheetTextInput,
+} from '#components/atoms/themedComponents';
+import { reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
-interface NewFolderFormValues {
-  name: string;
-}
+import {
+  folderNameSchema,
+  type FolderNameFormContext,
+  type FolderNameFormValues,
+} from './folderNameFormConfig';
 
-const newFolderSchema: ObjectSchema<NewFolderFormValues> = object({
-  name: string().trim().required(lazyMessage('folderPicker.nameRequired')),
-});
-
-interface NewFolderFormProps {
+interface FolderNameFormProps {
   /** Called with the trimmed name. */
-  onCreate: (name: string) => void;
+  onSubmit: (name: string) => void;
+  /** Its action's label: Create, or Rename. */
+  actionLabel: string;
+  /** The name it starts from; empty for a new folder. */
+  initialName?: string;
+  /** Names other folders already have, refused on the field. */
+  takenNames?: readonly string[];
+  /** While the action runs, its button waits. */
+  busy?: boolean;
+  placeholder?: string;
+  autoFocus?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
-/** A new folder's name, mounted fresh each time the create row opens. */
-export const NewFolderForm: React.FC<NewFolderFormProps> = ({
-  onCreate,
+/** A folder's name, new or renamed, mounted fresh each time it opens. */
+export const FolderNameForm: React.FC<FolderNameFormProps> = ({
+  onSubmit,
+  actionLabel,
+  initialName = '',
+  takenNames = [],
+  busy = false,
+  placeholder,
+  autoFocus = false,
   style,
 }) => {
   const { t } = useTranslation();
-  const { control, handleSubmit } = useForm<NewFolderFormValues>({
-    resolver: yupResolver(newFolderSchema),
-    defaultValues: { name: '' },
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<FolderNameFormValues, FolderNameFormContext>({
+    resolver: yupResolver(folderNameSchema),
+    defaultValues: { name: initialName },
+    context: { takenNames },
   });
-  const create = handleSubmit(({ name }) => {
-    onCreate(name);
+  useSheetUnsavedInput(isDirty);
+  const submit = handleSubmit(({ name }) => {
+    onSubmit(name);
   }, reportValidationErrors);
 
   return (
@@ -47,25 +70,31 @@ export const NewFolderForm: React.FC<NewFolderFormProps> = ({
           <View style={styles.row}>
             <ThemedBottomSheetTextInput
               style={styles.input}
-              placeholder={t('labels.enterFolderName')}
+              placeholder={placeholder ?? t('labels.enterFolderName')}
               defaultValue={field.value}
               onChangeText={field.onChange}
               onBlur={field.onBlur}
-              autoFocus
+              autoFocus={autoFocus}
               autoCapitalize="words"
+              editable={!busy}
               onSubmitEditing={() => {
-                void create();
+                void submit();
               }}
             />
             <AppPressable
-              style={styles.createButton}
+              style={styles.actionButton}
               onPress={() => {
-                void create();
+                void submit();
               }}
+              disabled={busy}
             >
-              <Text role="bodyStrong" style={styles.createButtonText}>
-                {t('labels.create')}
-              </Text>
+              {busy ? (
+                <OnPrimaryActivityIndicator size="small" />
+              ) : (
+                <Text role="bodyStrong" style={styles.actionButtonText}>
+                  {actionLabel}
+                </Text>
+              )}
             </AppPressable>
           </View>
           {fieldState.error ? (
@@ -97,14 +126,14 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
   },
-  createButton: {
+  actionButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.base,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
   },
-  createButtonText: {
+  actionButtonText: {
     color: theme.colors.onPrimary,
   },
   errorText: {

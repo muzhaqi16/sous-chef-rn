@@ -27,6 +27,7 @@ import { reportValidationErrors } from '#utils/validation/common';
 import type { PackageSizeCorrectionInput } from '#features/pantry/types';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { currentReading, formatReading } from '#domain/measure';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface CorrectPackageSizeModalProps {
   visible: boolean;
@@ -70,11 +71,19 @@ export const CorrectPackageSizeModal: React.FC<
     readingSystem,
   );
 
-  const { control, handleSubmit, setValue, setError, reset, getValues } =
-    useForm<CorrectWeightFormValues>({
-      resolver: yupResolver(correctWeightSchema),
-      defaultValues: correctWeightDefaults(),
-    });
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    setError,
+    reset,
+    getValues,
+    formState: { isDirty },
+  } = useForm<CorrectWeightFormValues>({
+    resolver: yupResolver(correctWeightSchema),
+    defaultValues: correctWeightDefaults(),
+  });
+  useSheetUnsavedInput(isDirty);
   const definesCount = useWatch({ control, name: 'definesCount' });
 
   // `reset` notifies mounted `Controller`s synchronously, so the seed is

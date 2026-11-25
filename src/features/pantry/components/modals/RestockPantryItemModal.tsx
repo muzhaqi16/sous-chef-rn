@@ -58,6 +58,7 @@ import type {
   PantryActionSharedState,
   ShownQuantity,
 } from '#features/pantry/types';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface RestockPantryItemModalProps {
   visible: boolean;
@@ -203,14 +204,17 @@ const RestockForm: React.FC<RestockFormProps> = ({
   const asksCost = useBudgetAndPricesEnabled();
   const [askingSize, setAskingSize] = useState(false);
   const countsPackages = countedInOwnUnit(shared);
-  const { control, handleSubmit, setError } = useForm<
-    RestockFormValues,
-    RestockFormContext
-  >({
+  const {
+    control,
+    handleSubmit,
+    setError,
+    formState: { isDirty },
+  } = useForm<RestockFormValues, RestockFormContext>({
     resolver: yupResolver(restockSchema),
     defaultValues: restockDefaults,
     context: { countsPackages },
   });
+  useSheetUnsavedInput(isDirty);
 
   const submit = handleSubmit(async values => {
     const quantity = parseFractionalInput(values.quantityInput);

@@ -28,6 +28,7 @@ import {
   stockCheckSchema,
   type StockCheckFormValues,
 } from './stockCheckFormConfig';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 const ANSWERS: readonly StockCheckAnswer[] = [
   StockCheckAnswer.StillHave,
@@ -114,11 +115,12 @@ const StockCheckForm: React.FC<StockCheckFormProps> = ({
     setError,
     clearErrors,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<StockCheckFormValues>({
     resolver: yupResolver(stockCheckSchema),
     defaultValues: { rows: {} },
   });
+  useSheetUnsavedInput(isDirty);
   const answers = useWatch({ control, name: 'rows' });
 
   const onValid = async (values: StockCheckFormValues) => {
@@ -215,7 +217,7 @@ const StockCheckForm: React.FC<StockCheckFormProps> = ({
               onSelect={key => {
                 const next = ANSWERS.find(option => option === key);
                 if (!next) return;
-                setValue(`rows.${row.id}.answer`, next);
+                setValue(`rows.${row.id}.answer`, next, { shouldDirty: true });
                 setValue(`rows.${row.id}.seen`, row.version);
                 clearErrors('root.noneAnswered');
                 clearErrors([`rows.${row.id}.answer`, `rows.${row.id}.left`]);
@@ -265,7 +267,11 @@ const StockCheckForm: React.FC<StockCheckFormProps> = ({
                   value,
                 }))}
                 selectedValue={answers[row.id]?.reason ?? DEFAULT_WASTE_REASON}
-                onSelect={reason => setValue(`rows.${row.id}.reason`, reason)}
+                onSelect={reason =>
+                  setValue(`rows.${row.id}.reason`, reason, {
+                    shouldDirty: true,
+                  })
+                }
               />
             ) : null}
             {rowError ? (

@@ -84,6 +84,13 @@ export { ThemedBottomSheetModal as BottomSheetModal };
  */
 export type BottomSheetModalRef = GorhomBottomSheetModal<unknown>;
 
+/** Input the sheet's content holds, which a close would drop. */
+export interface SheetDiscardGuard {
+  holds: () => boolean;
+  /** Runs `close` at once, or once the person agrees to discard the input. */
+  requestClose: (close: () => void) => void;
+}
+
 export interface UseStandardBottomSheetOptions {
   /** When provided, auto-manages present/dismiss. Omit to manage presentation manually via ref. */
   visible?: boolean;
@@ -100,6 +107,8 @@ export interface UseStandardBottomSheetOptions {
     fromPosition: number,
     toPosition: number,
   ) => void;
+  /** Asked before a close the owner did not make: a drag, the backdrop, Back. */
+  discardGuard?: SheetDiscardGuard;
 }
 
 // Gorhom expects the snap-point type literal even though we don't branch on it.
@@ -121,17 +130,40 @@ export function useStandardBottomSheet({
   enableDynamicSizing = false,
   onChange: userOnChange,
   onAnimate: userOnAnimate,
+  discardGuard,
 }: UseStandardBottomSheetOptions) {
   const insets = useSafeAreaInsets();
   const ref = useRef<GorhomBottomSheetModal<unknown>>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
+  // A close this sheet's owner made, or one the person agreed to: never asked.
+  const closingRef = useRef(false);
+  const discardGuardRef = useRef(discardGuard);
+  useEffect(() => {
+    discardGuardRef.current = discardGuard;
+  });
+  const dismissNow = () => {
+    closingRef.current = true;
+    ref.current?.dismiss();
+  };
+  const requestDismissRef = useRef(dismissNow);
+  useEffect(() => {
+    requestDismissRef.current = () => {
+      const guard = discardGuardRef.current;
+      if (guard) guard.requestClose(dismissNow);
+      else dismissNow();
+    };
+  });
+  // What the backdrop and Back dismiss: through the guard, unlike the owner.
+  const [guardedRef] = useState(() => ({
+    current: { dismiss: () => requestDismissRef.current() },
+  }));
 
   const {
     animatedIndex,
     onChange: handleBackdrop,
     onAnimate: handleBackdropAnimate,
     release: releaseBackdrop,
-  } = useBottomSheetBackdropClaim(ref);
+  } = useBottomSheetBackdropClaim(guardedRef);
 
   // 'interactive' lifts the sheet by the keyboard height measured from its
   // TALLEST snap point (`max(0, highestDetentPosition - keyboardHeight)`), so a
@@ -165,7 +197,7 @@ export function useStandardBottomSheet({
   // Only while actually on screen: `visible` stays true across a navigation
   // away, so a handler gated on it alone stays subscribed on the pushed screen
   // and swallows back there.
-  useBottomSheetBackHandler(ref, (visible ?? false) && isFocused);
+  useBottomSheetBackHandler(guardedRef, (visible ?? false) && isFocused);
 
   const isPresentedRef = useRef(false);
   // Marks a dismiss caused purely by blur, so `safeOnDismiss` does not notify
@@ -176,12 +208,14 @@ export function useStandardBottomSheet({
     const active = visible && isFocused;
     if (active && !isPresentedRef.current) {
       isPresentedRef.current = true;
+      closingRef.current = false;
       // A rapid blur → refocus interrupts the close, so gorhom never fires
       // onDismiss and a stale flag would swallow the next genuine one.
       blurDismissRef.current = false;
       ref.current?.present();
     } else if (!active && isPresentedRef.current) {
       isPresentedRef.current = false;
+      closingRef.current = true;
       // `!active` with `visible` still true means the screen blurred (not a
       // consumer close) — flag it so `safeOnDismiss` preserves `visible`.
       if (visible) {
@@ -226,6 +260,20 @@ export function useStandardBottomSheet({
     fromPosition: number,
     toPosition: number,
   ): void => {
+    // A drag closing a sheet that holds input: back up, then ask. gorhom sends
+    // this as the close starts, and a gesture's close is not a forced one, so
+    // the snap replaces it.
+    const guard = discardGuardRef.current;
+    if (
+      toIndex === -1 &&
+      fromIndex >= 0 &&
+      !closingRef.current &&
+      guard?.holds()
+    ) {
+      ref.current?.snapToIndex(fromIndex);
+      guard.requestClose(dismissNow);
+      return;
+    }
     handleBackdropAnimate(fromIndex, toIndex);
     userOnAnimateRef.current?.(fromIndex, toIndex, fromPosition, toPosition);
   };

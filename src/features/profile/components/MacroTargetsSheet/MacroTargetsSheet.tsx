@@ -17,6 +17,7 @@ import {
   type MacroTargetsFormValues,
 } from './macroTargetsFormConfig';
 import { reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface MacroTargetsSheetProps {
   visible: boolean;
@@ -39,10 +40,16 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const { control, handleSubmit, reset } = useForm<MacroTargetsFormValues>({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isDirty },
+  } = useForm<MacroTargetsFormValues>({
     resolver: yupResolver(macroTargetsSchema),
     defaultValues: macroTargetsDefaults(),
   });
+  useSheetUnsavedInput(isDirty);
   const [saving, setSaving] = useState(false);
 
   // The sheet has ONE subject, so opening it is the only thing that should

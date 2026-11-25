@@ -12,6 +12,7 @@ import { useOpening } from '#hooks/ui/useOpening';
 import { generateId } from '#utils/generateId';
 import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
 import type { StepFormState } from '#features/recipes/types';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 export interface RecipeStepEditorRef {
   open: (step?: StepFormState) => void;
@@ -42,10 +43,15 @@ interface StepFormProps {
 /** One opening, on the step's instruction or empty for a new step. */
 const StepForm: React.FC<StepFormProps> = ({ step, onSave, onClose }) => {
   const { t } = useTranslation();
-  const { control, handleSubmit } = useForm<StepFormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<StepFormValues>({
     resolver: yupResolver(stepSchema),
     defaultValues: { instruction: step?.instruction ?? '' },
   });
+  useSheetUnsavedInput(isDirty);
 
   const save = handleSubmit(({ instruction }) => {
     onSave({

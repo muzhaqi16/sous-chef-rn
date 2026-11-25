@@ -3,7 +3,6 @@ import { SearchBar } from '#components/molecules/SearchBar';
 import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { alertService } from '#services/alertService';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
@@ -19,7 +18,7 @@ import { resolveFolderLongPress } from '#features/recipes/utils/folderProtection
 import { identity, useLocalSearch } from '#hooks/search/useLocalSearch';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { Divider } from '#components/atoms/Divider';
-import { NewFolderForm } from '#features/recipes/components/FolderPicker/NewFolderForm';
+import { FolderNameForm } from '#features/recipes/components/FolderPicker/FolderNameForm';
 
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
@@ -95,7 +94,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
 
   const [managingFolder, setManagingFolder] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const hasFolderActions = Boolean(onRenameFolder ?? onDeleteFolder);
@@ -125,7 +123,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   const handleManageDismiss = () => {
     setManageVisible(false);
     setManagingFolder(null);
-    setRenameValue('');
     setShowDeleteConfirm(false);
   };
 
@@ -145,24 +142,13 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     }
 
     setManagingFolder(folder);
-    setRenameValue(folder);
     setShowDeleteConfirm(false);
   };
 
-  const handleRenameConfirm = async () => {
-    if (!managingFolder || !renameValue.trim() || !onRenameFolder) return;
-
-    const newName = renameValue.trim();
+  const handleRenameConfirm = async (newName: string) => {
+    if (!managingFolder || !onRenameFolder) return;
     if (newName === managingFolder) {
       setManageVisible(false);
-      return;
-    }
-
-    if (folders.includes(newName)) {
-      alertService.alert(
-        t('labels.error'),
-        t('folderPicker.duplicate', { name: newName }),
-      );
       return;
     }
 
@@ -234,8 +220,10 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 
           {!!allowCreate &&
             (showNewFolder ? (
-              <NewFolderForm
-                onCreate={handleSelectFolder}
+              <FolderNameForm
+                onSubmit={handleSelectFolder}
+                actionLabel={t('labels.create')}
+                autoFocus
                 style={styles.newFolder}
               />
             ) : (
@@ -302,11 +290,12 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         visible={manageVisible}
         onDismiss={handleManageDismiss}
         managingFolder={managingFolder}
-        renameValue={renameValue}
-        onRenameValueChange={setRenameValue}
+        otherFolders={folders.filter(folder => folder !== managingFolder)}
         showDeleteConfirm={showDeleteConfirm}
         onShowDeleteConfirm={setShowDeleteConfirm}
-        onRenameConfirm={handleRenameConfirm}
+        onRenameConfirm={name => {
+          void handleRenameConfirm(name);
+        }}
         onDeleteConfirm={handleDeleteConfirm}
         onClose={() => setManageVisible(false)}
         folderActionLoading={folderActionLoading}

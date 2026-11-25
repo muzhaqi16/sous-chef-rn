@@ -21,6 +21,7 @@ import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { useOpening } from '#hooks/ui/useOpening';
 import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 type Destination = 'new' | 'existing';
 
@@ -79,10 +80,15 @@ const GenerateShoppingListForm: React.FC<GenerateShoppingListFormProps> = ({
   homeName,
 }) => {
   const { t } = useTranslation();
-  const { control, handleSubmit } = useForm<GenerateShoppingListFormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<GenerateShoppingListFormValues>({
     resolver: yupResolver(generateShoppingListSchema),
     defaultValues: generateShoppingListDefaults,
   });
+  useSheetUnsavedInput(isDirty);
   const { field: mode } = useController({
     control,
     name: 'mode',

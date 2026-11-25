@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#styles/commonStyles';
 import { useTranslation } from '#i18n';
 import { Header } from '#components/organisms/Header';
+import { useEnclosingSheetCloseGuard } from './SheetCloseGuard';
 
 interface SheetConfirm {
   onPress: () => void;
@@ -45,6 +46,13 @@ export const SheetHeader: React.FC<SheetHeaderProps> = ({
   titleTestID,
 }) => {
   const { t } = useTranslation();
+  // Leaving the sheet asks first while its content holds unsaved input; a
+  // step back inside it does not leave.
+  const closeGuard = useEnclosingSheetCloseGuard();
+  const close = () => {
+    if (closeGuard) closeGuard.requestClose(onClose);
+    else onClose();
+  };
   return (
     <View
       style={[
@@ -55,7 +63,7 @@ export const SheetHeader: React.FC<SheetHeaderProps> = ({
       <Header
         title={title}
         centerTitle
-        onClose={leading === 'close' ? onClose : undefined}
+        onClose={leading === 'close' ? close : undefined}
         onBack={leading === 'back' ? onClose : undefined}
         borderless={borderless}
         leadingTestID={leadingTestID}

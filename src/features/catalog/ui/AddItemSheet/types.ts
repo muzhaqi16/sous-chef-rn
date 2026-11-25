@@ -81,12 +81,6 @@ export interface AddItemSheetProps<
    * one backdrop, no stacking. The consumer still gets
    * `onAddManually(searchValue)` first, to prep the form's inputs.
    */
-  /**
-   * The in-place details step. `holdOpen(true)` stops a pan-down from closing
-   * the sheet, for a form holding input it would lose.
-   */
-  renderDetails?: (controls: {
-    goBack: () => void;
-    holdOpen: (held: boolean) => void;
-  }) => React.ReactNode;
+  /** The in-place details step; its form asks the sheet before input is lost. */
+  renderDetails?: (controls: { goBack: () => void }) => React.ReactNode;
 }

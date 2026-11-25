@@ -31,6 +31,7 @@ import { useOpening } from '#hooks/ui/useOpening';
 import { toDateKey } from '#utils/dateUtils';
 import { destructiveConfirm } from '#services/destructiveConfirm';
 import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface PlanFromTemplateFormValues {
   /** Blank takes the template's name. */
@@ -93,10 +94,15 @@ const DuplicateTemplateForm: React.FC<DuplicateTemplateFormProps> = ({
   onDuplicate,
 }) => {
   const { t } = useTranslation();
-  const { control, handleSubmit } = useForm<DuplicateTemplateFormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<DuplicateTemplateFormValues>({
     resolver: yupResolver(duplicateTemplateSchema),
     defaultValues: { name: t('labels.copyOfName', { name: templateName }) },
   });
+  useSheetUnsavedInput(isDirty);
 
   const duplicate = handleSubmit(({ name }) => {
     onDuplicate(name);
@@ -182,7 +188,11 @@ const TemplatePreviewContent: React.FC<TemplatePreviewContentProps> = ({
   // The copy is derived from the loaded items.
   const itemsLoaded = previewState === 'ready' || previewState === 'empty';
 
-  const { control, handleSubmit } = useForm<PlanFromTemplateFormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<PlanFromTemplateFormValues>({
     resolver: yupResolver(planFromTemplateSchema),
     defaultValues: {
       name: '',
@@ -190,6 +200,7 @@ const TemplatePreviewContent: React.FC<TemplatePreviewContentProps> = ({
       servings: template.defaultServings.toString(),
     },
   });
+  useSheetUnsavedInput(isDirty);
   const [copyFormOpen, setCopyFormOpen] = useState(false);
 
   const createPlan = handleSubmit(({ name, startDate, servings }) => {

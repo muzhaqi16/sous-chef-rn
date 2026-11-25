@@ -7,6 +7,7 @@ import {
 } from '@testing-library/react-native';
 import { t } from '#i18n';
 import { StorageType } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import { AddStorageLocationSheet } from '../AddStorageLocationSheet';
 
 const onClose = jest.fn();
@@ -38,10 +39,17 @@ describe('AddStorageLocationSheet', () => {
     expect(screen.getByText(/You can edit details later/)).toBeTruthy();
   });
 
-  it('closes without creating', async () => {
+  it('asks before closing over a typed name, then closes without creating', async () => {
     render(sheet());
-    fireEvent.changeText(nameInput(), 'Kitchen');
+    await userEvent.setup().type(nameInput(), 'Kitchen');
     await userEvent.setup().press(screen.getByLabelText(t('labels.close')));
+
+    expect(onClose).not.toHaveBeenCalled();
+    const [title, , buttons] =
+      jest.mocked(alertService.alert).mock.calls[0] ?? [];
+    expect(title).toBe(t('confirmations.discardChangesTitle'));
+    buttons?.[1]?.onPress?.();
+
     expect(onClose).toHaveBeenCalled();
     expect(onCreateLocation).not.toHaveBeenCalled();
   });

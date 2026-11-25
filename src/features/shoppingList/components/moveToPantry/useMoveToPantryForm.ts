@@ -24,6 +24,7 @@ import {
   type MoveToPantryFormValues,
 } from './moveToPantryFormConfig';
 import type { useMoveToPantryItem } from './useMoveToPantryItem';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 type MoveItem = ReturnType<typeof useMoveToPantryItem>;
 
@@ -91,7 +92,7 @@ export function useMoveToPantryForm({
     trigger,
     getFieldState,
     setError,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<MoveToPantryFormValues>({
     resolver: yupResolver(moveToPantrySchema),
     defaultValues: {
@@ -107,6 +108,7 @@ export function useMoveToPantryForm({
     },
     mode: 'onTouched',
   });
+  useSheetUnsavedInput(isDirty);
 
   // `useWatch` rather than `watch`: the latter returns a function the React
   // Compiler cannot memoize safely, which is a lint error here.
@@ -289,7 +291,7 @@ export function useMoveToPantryForm({
       );
     },
     changeQuantity: (value: string) => {
-      setValue('quantityInput', value);
+      setValue('quantityInput', value, { shouldDirty: true });
       // The size's count rule reads the quantity. Re-run only a refusal already
       // shown, so a fix clears it without a half-typed count raising a new one.
       if (getFieldState('packageSizeInput').invalid) {
@@ -302,15 +304,16 @@ export function useMoveToPantryForm({
       // Re-run only a refusal already shown, so a fix clears it.
       setValue('actualPriceInput', value, {
         shouldValidate: getFieldState('actualPriceInput').invalid,
+        shouldDirty: true,
       });
       setAmountsTouched(true);
       setPriceTouched(true);
     },
     changeUnitText: (value: string) =>
-      setValue('unitValue', value, { shouldValidate: true }),
+      setValue('unitValue', value, { shouldValidate: true, shouldDirty: true }),
     selectUnit: (picked: string | null, pickedType?: UnitType | null) => {
       const unit = pickedOrHeld(picked, pickedType, getValues('unitValue'));
-      setValue('unitId', unit.id);
+      setValue('unitId', unit.id, { shouldDirty: true });
       setValue('unitType', unit.type);
       reprice(getValues('quantityInput'), unit.id, getValues('unitValue'));
       void trigger('packageSizeInput');
@@ -329,7 +332,7 @@ export function useMoveToPantryForm({
         pickedType,
         getValues('packageSizeUnitValue'),
       );
-      setValue('packageSizeUnitId', held.id);
+      setValue('packageSizeUnitId', held.id, { shouldDirty: true });
       setValue('packageSizeUnitType', held.type);
       void trigger('packageSizeUnitValue');
       // The size's count rule reads the size's unit too.
@@ -338,8 +341,8 @@ export function useMoveToPantryForm({
       }
     },
     selectPantry: (id: string) =>
-      setValue('pantryId', id, { shouldValidate: true }),
+      setValue('pantryId', id, { shouldValidate: true, shouldDirty: true }),
     changeExpiry: (date: Date | null) =>
-      setValue('expirationDate', date ?? undefined),
+      setValue('expirationDate', date ?? undefined, { shouldDirty: true }),
   };
 }

@@ -48,6 +48,7 @@ import { ProductOriginSection } from './ProductOriginSection';
 import { useProductBrandListings } from '#features/barcode/hooks/useProductBrandListings';
 import { useBrandLists } from '#features/profile/hooks/useBrandLists';
 import { AddToBrandListSheet } from '#features/profile/ui/AddToBrandListSheet';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 /** The amount field a refusal names, so it is shown there and not alerted. */
 const amountFieldOf = (
@@ -126,6 +127,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     resolver: yupResolver(scanAmountSchema),
     defaultValues: prefilledAmount,
   });
+  useSheetUnsavedInput(amountForm.formState.isDirty);
   // The stack an add in the unit the form now states joins.
   const joinedStack = held.joinedIn(
     useWatch({ control: amountForm.control, name: 'unitId' }),

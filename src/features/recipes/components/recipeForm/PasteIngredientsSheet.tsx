@@ -15,6 +15,7 @@ import {
 } from '#features/recipes/utils/pastedIngredients';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { useOpening } from '#hooks/ui/useOpening';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface PasteFormProps {
   room: number;
@@ -26,6 +27,7 @@ const PasteForm: React.FC<PasteFormProps> = ({ room, onClose, onPasted }) => {
   const { t } = useTranslation();
   const { parseLines, parsing, unavailable } = useIngredientPaste();
   const [text, setText] = useState('');
+  useSheetUnsavedInput(text.trim() !== '');
   const lines = pastedLines(text);
 
   const add = async () => {

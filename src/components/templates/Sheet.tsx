@@ -20,18 +20,18 @@ import {
   SheetHeaderStoreProvider,
   useSheetHeaderStore,
 } from './SheetHeaderSlot';
+import { SheetCloseGuardProvider, useSheetCloseGuard } from './SheetCloseGuard';
 
 export type SheetMode = 'view' | 'form' | 'action' | 'list';
 
 /**
  * gorhom options a sheet sets beyond the standard ones: `push` to stack over a
- * host sheet, a pan-down held while a form holds input, an Android keyboard
- * that resizes. A key left out keeps the standard value.
+ * host sheet, an Android keyboard that resizes. A key left out keeps the
+ * standard value. Input its content holds is guarded by `useSheetUnsavedInput`.
  */
 export type SheetModalOptions = Pick<
   BottomSheetModalProps,
   | 'stackBehavior'
-  | 'enablePanDownToClose'
   | 'android_keyboardInputMode'
   | 'keyboardBlurBehavior'
   | 'enableContentPanningGesture'
@@ -103,11 +103,12 @@ export const Sheet: React.FC<SheetProps> = ({
   gutter = 'none',
   ...sheetOptions
 }) => {
+  const closeGuard = useSheetCloseGuard();
   const {
     ref,
     modalProps,
     contentContainerStyle: insetStyle,
-  } = useStandardBottomSheet(sheetOptions);
+  } = useStandardBottomSheet({ ...sheetOptions, discardGuard: closeGuard });
   const headerStore = useSheetHeaderStore();
   const header = headerFromContent ? (
     <SheetHeaderOutlet store={headerStore} />
@@ -203,13 +204,15 @@ export const Sheet: React.FC<SheetProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps} {...modalOptions}>
-      {headerFromContent ? (
-        <SheetHeaderStoreProvider value={headerStore}>
-          {content}
-        </SheetHeaderStoreProvider>
-      ) : (
-        content
-      )}
+      <SheetCloseGuardProvider value={closeGuard}>
+        {headerFromContent ? (
+          <SheetHeaderStoreProvider value={headerStore}>
+            {content}
+          </SheetHeaderStoreProvider>
+        ) : (
+          content
+        )}
+      </SheetCloseGuardProvider>
     </BottomSheetModal>
   );
 };

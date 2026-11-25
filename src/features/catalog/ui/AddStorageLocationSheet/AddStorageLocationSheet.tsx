@@ -16,6 +16,7 @@ import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
 import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 /** Module-level async wrapper to keep try-catch out of the component body (React Compiler). */
 async function executeCreateLocation(
@@ -63,11 +64,16 @@ const AddStorageLocationForm: React.FC<AddStorageLocationFormProps> = ({
 }) => {
   const { t } = useTranslation();
   const inputRef = useRef<ThemedBottomSheetTextInputRef>(null);
-  const { control, handleSubmit, setError } =
-    useForm<StorageLocationFormValues>({
-      resolver: yupResolver(storageLocationSchema),
-      defaultValues: { name: '' },
-    });
+  const {
+    control,
+    handleSubmit,
+    setError,
+    formState: { isDirty },
+  } = useForm<StorageLocationFormValues>({
+    resolver: yupResolver(storageLocationSchema),
+    defaultValues: { name: '' },
+  });
+  useSheetUnsavedInput(isDirty);
   const { field, fieldState } = useController({ control, name: 'name' });
 
   // Focus once the sheet's open animation has run.

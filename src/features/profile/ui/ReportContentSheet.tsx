@@ -27,6 +27,7 @@ import {
   type ReportContentFormValues,
 } from './reportContentFormConfig';
 import { useOpening } from '#hooks/ui/useOpening';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 /** Who is reported and, with both content fields, which of their content. */
 export type ReportTarget = Pick<
@@ -48,10 +49,15 @@ const ReportContentForm: React.FC<ReportContentFormProps> = ({
   const [sending, setSending] = useState(false);
   // The submission's failure; a field's own message stays on the field.
   const [failure, setFailure] = useState<string | null>(null);
-  const { control, handleSubmit } = useForm<ReportContentFormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<ReportContentFormValues>({
     resolver: yupResolver(reportContentSchema),
     defaultValues: reportContentDefaults,
   });
+  useSheetUnsavedInput(isDirty);
 
   const send = handleSubmit(async ({ type, description }) => {
     if (!type) return;

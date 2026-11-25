@@ -34,6 +34,7 @@ import {
 } from '#domain/measure';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import type { RecountUnits } from '#features/pantry/types';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface AdjustQuantityModalProps {
   visible: boolean;
@@ -93,10 +94,16 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
       ? remainingRead
       : null;
 
-  const { control, handleSubmit, reset } = useForm<AdjustQuantityFormValues>({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isDirty },
+  } = useForm<AdjustQuantityFormValues>({
     resolver: yupResolver(adjustQuantitySchema),
     defaultValues: adjustQuantityDefaults(),
   });
+  useSheetUnsavedInput(isDirty);
 
   // `reset` notifies mounted `Controller`s synchronously, so the seed is
   // computed during render and applied from an effect. Keyed on the item id so

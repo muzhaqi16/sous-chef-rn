@@ -11,6 +11,7 @@ import { reportValidationErrors } from '#utils/validation/common';
 import { Text } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface TextEditBottomSheetProps {
   visible: boolean;
@@ -55,6 +56,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
     resolver: yupResolver(schema),
     defaultValues: { [fieldKey]: initialValue },
   });
+  useSheetUnsavedInput(form.formState.isDirty);
 
   useEffect(() => {
     if (visible) {

@@ -22,6 +22,7 @@ import {
 import { toDateKey } from '#utils/dateUtils';
 import { useOpening } from '#hooks/ui/useOpening';
 import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface DuplicatePlanFormValues {
   name: string;
@@ -74,13 +75,18 @@ const DuplicatePlanForm: React.FC<DuplicatePlanFormProps> = ({
   loading,
 }) => {
   const { t } = useTranslation();
-  const { control, handleSubmit } = useForm<DuplicatePlanFormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<DuplicatePlanFormValues>({
     resolver: yupResolver(duplicatePlanSchema),
     defaultValues: {
       name: t('labels.copyOfName', { name: mealPlan.name }),
       startDateOffset: 0,
     },
   });
+  useSheetUnsavedInput(isDirty);
   const { field: offset } = useController({
     control,
     name: 'startDateOffset',

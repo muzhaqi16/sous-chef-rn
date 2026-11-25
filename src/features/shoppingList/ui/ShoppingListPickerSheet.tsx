@@ -18,6 +18,7 @@ import type { DataState } from '#hooks/data/useDataState';
 import type { SelectorConfig } from '#components/organisms/AnimatedItemSelector/types';
 import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
 import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface ShoppingList {
   id: string;
@@ -47,10 +48,15 @@ const NewListForm: React.FC<NewListFormProps> = ({
   onCreate,
 }) => {
   const { t } = useTranslation();
-  const { control, handleSubmit } = useForm<NewListFormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<NewListFormValues>({
     resolver: yupResolver(newListSchema),
     defaultValues: { name: defaultName },
   });
+  useSheetUnsavedInput(isDirty);
   const create = handleSubmit(({ name }) => {
     onCreate(name);
   }, reportValidationErrors);

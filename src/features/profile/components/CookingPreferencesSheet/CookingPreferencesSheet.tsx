@@ -13,6 +13,7 @@ import { FormInput } from '#components/atoms/FormInput';
 import { DIETARY_LIMITS } from '#domain/dietary';
 import { useOpening } from '#hooks/ui/useOpening';
 import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface CookingPreferencesFormValues {
   /** Minutes as typed; blank is no limit. */
@@ -59,10 +60,15 @@ const CookingPreferencesForm: React.FC<CookingPreferencesFormProps> = ({
   const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const stored = initialValues?.maxCookTimeMinutes;
-  const { control, handleSubmit } = useForm<CookingPreferencesFormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<CookingPreferencesFormValues>({
     resolver: yupResolver(cookingPreferencesSchema),
     defaultValues: { cookTime: stored?.toString() ?? '' },
   });
+  useSheetUnsavedInput(isDirty);
 
   const save = handleSubmit(async ({ cookTime }) => {
     const updates: { maxCookTimeMinutes?: number | null } = {};

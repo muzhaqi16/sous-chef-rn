@@ -21,6 +21,7 @@ import {
   recipeCookedSchema,
   type MarkCookedFormValues,
 } from './markCookedFormConfig';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface MarkCookedModalProps {
   visible: boolean;
@@ -56,7 +57,7 @@ const MarkCookedForm: React.FC<MarkCookedFormProps> = ({
     control,
     handleSubmit,
     setValue,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty },
   } = useForm<MarkCookedFormValues>({
     resolver: yupResolver(
       wholeServings ? plannedMealCookedSchema : recipeCookedSchema,
@@ -69,6 +70,7 @@ const MarkCookedForm: React.FC<MarkCookedFormProps> = ({
     },
     mode: 'onTouched',
   });
+  useSheetUnsavedInput(isDirty);
   const [deductFromPantry, useGranularDeduction] = useWatch({
     control,
     name: ['deductFromPantry', 'useGranularDeduction'],

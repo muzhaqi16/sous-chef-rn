@@ -15,6 +15,7 @@ import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
 import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface ReviewFormValues {
   /** 0 until a star is picked. */
@@ -58,13 +59,18 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
   });
   const existingReview = existingReviewId && complete ? data : null;
 
-  const { control, handleSubmit } = useForm<ReviewFormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<ReviewFormValues>({
     resolver: yupResolver(reviewSchema),
     defaultValues: {
       rating: existingReview?.rating ?? 0,
       comment: existingReview?.comment ?? '',
     },
   });
+  useSheetUnsavedInput(isDirty);
   const { field: rating, fieldState: ratingState } = useController({
     control,
     name: 'rating',

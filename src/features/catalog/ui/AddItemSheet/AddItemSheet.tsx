@@ -35,7 +35,7 @@ const PREVIEW_COUNT = 5;
 type AddItemSheetContentProps<T extends BaseSuggestionItem> = Omit<
   AddItemSheetProps<T>,
   'visible' | 'contextId'
-> & { holdOpen: (held: boolean) => void };
+>;
 
 /**
  * One opening, on the step asked for, the overview and an empty search. The
@@ -54,7 +54,6 @@ function AddItemSheetContent<T extends BaseSuggestionItem>({
   showImages = true,
   tutorialHint,
   renderDetails,
-  holdOpen,
 }: AddItemSheetContentProps<T>) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -217,7 +216,6 @@ function AddItemSheetContent<T extends BaseSuggestionItem>({
         // Opened on the form, there is no search to go back to: back closes.
         renderDetails({
           goBack: openingStep === 'details' ? onClose : goBackToSearch,
-          holdOpen,
         })
       ) : inDrilldown ? (
         <SuggestionDrilldown
@@ -329,9 +327,6 @@ export function AddItemSheet<
   T extends BaseSuggestionItem = BaseSuggestionItem,
 >({ visible, contextId, ...content }: AddItemSheetProps<T>) {
   const open = visible && !!contextId;
-  // Set by a details form holding input, so a pan-down cannot drop it; the
-  // form releases it as it unmounts.
-  const [heldOpen, setHeldOpen] = useState(false);
   const opening = useOpening(open);
 
   return (
@@ -343,15 +338,8 @@ export function AddItemSheet<
       keyboardBehavior="extend"
       // Every step scrolls itself and pads its own end.
       bottomInset="content"
-      modalOptions={{ enablePanDownToClose: !heldOpen }}
     >
-      {opening ? (
-        <AddItemSheetContent
-          key={opening.id}
-          {...content}
-          holdOpen={setHeldOpen}
-        />
-      ) : null}
+      {opening ? <AddItemSheetContent key={opening.id} {...content} /> : null}
     </Sheet>
   );
 }

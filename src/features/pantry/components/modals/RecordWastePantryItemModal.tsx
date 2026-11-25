@@ -26,6 +26,7 @@ import {
   PantryActionModal,
 } from '#features/pantry/components/modals/PantryActionModal';
 import { Text } from '#components/atoms/Text';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 import { localizeNumericHint } from '#utils/formatters/number';
 import {
   formatQuantityForInput,
@@ -123,10 +124,16 @@ const WasteForm: React.FC<WasteFormProps> = ({
   onConfirm,
 }) => {
   const { t } = useTranslation();
-  const { control, handleSubmit, setError } = useForm<WasteFormValues>({
+  const {
+    control,
+    handleSubmit,
+    setError,
+    formState: { isDirty },
+  } = useForm<WasteFormValues>({
     resolver: yupResolver(wasteSchema),
     defaultValues: wasteDefaults,
   });
+  useSheetUnsavedInput(isDirty);
 
   // The sheet closes at once; the write settles behind it.
   const submit = handleSubmit(

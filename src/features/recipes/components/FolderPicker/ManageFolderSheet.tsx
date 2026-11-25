@@ -2,16 +2,14 @@ import React from 'react';
 import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
+import { OnPrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  OnPrimaryActivityIndicator,
-  ThemedBottomSheetTextInput,
-} from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { FolderNameForm } from './FolderNameForm';
 
 export interface ManageFolderSheetProps {
   visible: boolean;
@@ -19,11 +17,12 @@ export interface ManageFolderSheetProps {
   onDismiss: () => void;
   /** Folder currently being managed (drives the displayed name). */
   managingFolder: string | null;
-  renameValue: string;
-  onRenameValueChange: (value: string) => void;
+  /** The other folders' names, which a rename may not take. */
+  otherFolders: readonly string[];
   showDeleteConfirm: boolean;
   onShowDeleteConfirm: (value: boolean) => void;
-  onRenameConfirm: () => void;
+  /** Called with the new name, trimmed and checked. */
+  onRenameConfirm: (name: string) => void;
   onDeleteConfirm: () => void;
   onClose: () => void;
   folderActionLoading: boolean;
@@ -43,8 +42,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
   visible,
   onDismiss,
   managingFolder,
-  renameValue,
-  onRenameValueChange,
+  otherFolders,
   showDeleteConfirm,
   onShowDeleteConfirm,
   onRenameConfirm,
@@ -55,9 +53,6 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
   canDelete,
 }) => {
   const { t } = useTranslation();
-  const renameDisabled =
-    !renameValue.trim() || renameValue.trim() === managingFolder;
-
   return (
     <Sheet
       mode="form"
@@ -127,39 +122,14 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
               <SectionHeader variant="overline" style={styles.sectionLabel}>
                 {t('labels.rename')}
               </SectionHeader>
-              <View style={styles.renameInputRow}>
-                <ThemedBottomSheetTextInput
-                  style={styles.renameInput}
-                  defaultValue={renameValue}
-                  onChangeText={onRenameValueChange}
-                  placeholder={t('folderPicker.renamePlaceholder')}
-                  autoCapitalize="words"
-                  onSubmitEditing={onRenameConfirm}
-                  editable={!folderActionLoading}
-                />
-                <AppPressable
-                  style={[
-                    styles.renameButton,
-                    renameDisabled && styles.renameButtonDisabled,
-                  ]}
-                  onPress={onRenameConfirm}
-                  disabled={renameDisabled || folderActionLoading}
-                >
-                  {folderActionLoading ? (
-                    <OnPrimaryActivityIndicator size="small" />
-                  ) : (
-                    <Text
-                      role="bodyStrong"
-                      style={[
-                        styles.renameButtonText,
-                        renameDisabled && styles.renameButtonTextDisabled,
-                      ]}
-                    >
-                      {t('labels.rename')}
-                    </Text>
-                  )}
-                </AppPressable>
-              </View>
+              <FolderNameForm
+                initialName={managingFolder ?? ''}
+                actionLabel={t('labels.rename')}
+                placeholder={t('folderPicker.renamePlaceholder')}
+                takenNames={otherFolders}
+                busy={folderActionLoading}
+                onSubmit={onRenameConfirm}
+              />
             </View>
           )}
 
@@ -212,41 +182,6 @@ const styles = StyleSheet.create(theme => ({
   },
   renameSection: {
     marginBottom: theme.spacing.lg,
-  },
-  renameInputRow: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
-  renameInput: {
-    flex: 1,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.base,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.background,
-  },
-  renameButton: {
-    backgroundColor: theme.colors.primary,
-    paddingVertical: theme.spacing.base,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 80,
-  },
-  renameButtonDisabled: {
-    backgroundColor: theme.colors.border,
-  },
-  renameButtonText: {
-    color: theme.colors.onPrimary,
-  },
-  renameButtonTextDisabled: {
-    color: theme.colors.textSecondary,
   },
   deleteSection: {
     borderTopWidth: theme.borderWidth.hairline,

@@ -18,6 +18,7 @@ import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
 import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 const CATEGORY_OPTION_KEYS: {
   key: TemplateCategory;
@@ -90,7 +91,11 @@ const SaveAsTemplateForm: React.FC<SaveAsTemplateFormProps> = ({
   const { t } = useTranslation();
   const categoryOptions: ChipOption<TemplateCategory>[] =
     CATEGORY_OPTION_KEYS.map(o => ({ key: o.key, label: t(o.labelKey) }));
-  const { control, handleSubmit } = useForm<SaveAsTemplateFormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<SaveAsTemplateFormValues>({
     resolver: yupResolver(saveAsTemplateSchema),
     defaultValues: {
       name: mealPlanName
@@ -101,6 +106,7 @@ const SaveAsTemplateForm: React.FC<SaveAsTemplateFormProps> = ({
       tags: '',
     },
   });
+  useSheetUnsavedInput(isDirty);
 
   const save = handleSubmit(({ name, description, category, tags }) => {
     const tagList = tags

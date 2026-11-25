@@ -24,7 +24,6 @@ import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator
 import { takesContents } from '#domain/stockAmount';
 import type { UnitType } from '#graphql/generated/schemaTypes';
 import { reportValidationErrors } from '#utils/validation/common';
-import { useDiscardGuard } from '#hooks/ui/useDiscardGuard';
 import { isOwnKey } from '#utils/isOwnKey';
 import {
   addPantryItemSchema,
@@ -32,6 +31,7 @@ import {
   FIELD_PAGE,
 } from './addPantryItemFormConfig';
 import type { AddPantryItemFormData } from '#features/pantry/types';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface AddDetailsSheetProps {
   pantryId: string | undefined;
@@ -41,8 +41,6 @@ interface AddDetailsSheetProps {
   onClose: () => void;
   /** Item was created — the parent closes the whole sheet. */
   onSuccess: () => void;
-  /** Holds the parent sheet open against a pan-down while input would be lost. */
-  onHoldOpen?: (held: boolean) => void;
 }
 
 export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
@@ -51,7 +49,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   storageLocations = [],
   onClose,
   onSuccess,
-  onHoldOpen,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -82,6 +79,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     // that fixes it rather than surviving until the next submit.
     mode: 'onChange',
   });
+  useSheetUnsavedInput(isDirty);
 
   // Subscribed, because the pages render from these values.
   const values = useWatch({
@@ -190,12 +188,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     pagerRef.current?.setPage(index);
   };
 
-  const handleCancel = useDiscardGuard({
-    isDirty,
-    onDiscard: onClose,
-    onHoldOpen,
-  });
-
   const { handleConfirm, loading } = usePantryItemSubmission({
     pantryId,
     onSuccess,
@@ -205,7 +197,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     <View style={styles.container} testID={pantryTestIDs.addDetailsModal}>
       <SheetHeader
         title={t('addToPantry.addItemDetails')}
-        onClose={handleCancel}
+        onClose={onClose}
         leadingTestID={pantryTestIDs.addDetailsCancelButton}
         titleTestID={pantryTestIDs.addDetailsTitle}
         confirm={{
