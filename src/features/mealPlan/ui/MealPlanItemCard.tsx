@@ -64,10 +64,8 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     Array.isArray(usedPantryItems) &&
     usedPantryItems.length > 0;
 
-  // Completion toggle. Uses RNGH's Pressable (like AnimatedCheckbox) because the
-  // row's Swipeable is an RNGH gesture: RNGH's native button captures the tap so
-  // it toggles completion without also firing the row's onPress. An RN Pressable
-  // here lives in a separate gesture system and the tap fires both.
+  // Completion toggle: the row's leading control, beside its press, so the tap
+  // toggles completion and never opens the meal.
   const checkboxElement = onToggleCompleted ? (
     <IconButton
       name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
@@ -160,14 +158,17 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
         onSwipeableWillOpen={onSwipeableWillOpen}
         onSwipeableClose={onSwipeableClose}
       >
-        <ListItem
-          checkboxElement={checkboxElement}
-          leftElement={leftElement}
-          title={recipeName}
-          titleNumberOfLines={1}
-          subtitle={subtitle}
-          isPurchased={item.isCompleted}
-        />
+        {press => (
+          <ListItem
+            swipe={press}
+            checkboxElement={checkboxElement}
+            leftElement={leftElement}
+            title={recipeName}
+            titleNumberOfLines={1}
+            subtitle={subtitle}
+            isPurchased={item.isCompleted}
+          />
+        )}
       </SwipeableItem>
     </RowCard>
   );

@@ -55,7 +55,7 @@ export const CaptureRows: React.FC = () => {
               }
               leftIcon="create-outline"
               onPress={() => toRecipeCreate({ captureId: entry.id })}
-              rightElement={
+              trailingActions={
                 <IconButton
                   name="close"
                   size="sm"

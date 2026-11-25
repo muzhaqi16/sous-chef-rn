@@ -6,7 +6,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
 import { useIncompleteCellReport } from '#hooks/apollo/useIncompleteCellReport';
 
-import { Icon } from '#components/atoms/Icon';
 import { MembersList } from './MembersList';
 import { RowCard } from '#components/atoms/RowCard';
 import { ListItem } from '#components/molecules/ListItem';
@@ -79,23 +78,18 @@ export const HomeCard: React.FC<HomeCardProps> = ({
             ? { text: t('homeManagement.cardDefault'), variant: 'primary' }
             : undefined
         }
-        rightElement={
-          <>
-            {isDefaultHere ? null : (
-              <IconButton
-                name="star-outline"
-                size="md"
-                tone="textSecondary"
-                onPress={() => onSetDefault(home.id)}
-                accessibilityLabel={t('labels.setDefault')}
-                accessibilityRole="button"
-                testID={homeTestIDs.setDefaultButton(home.id)}
-              />
-            )}
-            {!!onPress && (
-              <Icon name="chevron-forward" size="sm" tone="textSecondary" />
-            )}
-          </>
+        trailingActions={
+          isDefaultHere ? undefined : (
+            <IconButton
+              name="star-outline"
+              size="md"
+              tone="textSecondary"
+              onPress={() => onSetDefault(home.id)}
+              accessibilityLabel={t('labels.setDefault')}
+              accessibilityRole="button"
+              testID={homeTestIDs.setDefaultButton(home.id)}
+            />
+          )
         }
       />
       <View style={styles.members}>

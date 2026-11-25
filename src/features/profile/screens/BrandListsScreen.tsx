@@ -70,7 +70,7 @@ export const BrandListsScreen: React.FC = () => {
                     count: list.brands.length,
                   })}
                   onPress={() => toBrandList({ listId: list.id })}
-                  rightElement={
+                  trailingActions={
                     <BaseSwitch
                       value={list.enabled}
                       onValueChange={enabled => {

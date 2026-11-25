@@ -80,7 +80,7 @@ export const SuggestionListItem = ({
           // The tap adds, so the label says so and no "view details" follows.
           accessibilityLabel={addLabel}
           accessibilityHint=""
-          rightElement={
+          trailingActions={
             <>
               {!!onDismiss && (
                 <IconButton

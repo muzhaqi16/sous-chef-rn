@@ -4,9 +4,6 @@ import { RowCard } from '#components/atoms/RowCard';
 import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { useTranslation } from '#i18n';
 import { View } from 'react-native';
-// RNGH's Pressable (not AppPressable/RN) for the archive button: it's nested in
-// the row's RNGH Swipeable, so RNGH's native button captures the tap and it
-// doesn't also fire the row's onPress (which would navigate to details).
 import { useFragment } from '@apollo/client/react';
 import { useIncompleteCellReport } from '#hooks/apollo/useIncompleteCellReport';
 import Animated from 'react-native-reanimated';
@@ -203,7 +200,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       : undefined,
   );
 
-  const rightElement = (() => {
+  const trailingActions = (() => {
     const stockedIndicator = isPurchased && isStocked && (
       <View
         style={styles.moveToPantryButton}
@@ -366,16 +363,18 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             if (isTutorialItemCardTarget) measureItemCard();
           }}
         >
-          <ListItem
-            title={itemName}
-            subtitle={subtitle}
-            rightElement={rightElement}
-            leftElement={leftElement}
-            checkboxElement={checkboxElement}
-            dragHandleElement={null}
-            isPurchased={isPurchased}
-            themeColors={themeColors}
-          />
+          {press => (
+            <ListItem
+              swipe={press}
+              title={itemName}
+              subtitle={subtitle}
+              trailingActions={trailingActions}
+              leftElement={leftElement}
+              checkboxElement={checkboxElement}
+              isPurchased={isPurchased}
+              themeColors={themeColors}
+            />
+          )}
         </SwipeableItem>
       </RowCard>
     </Animated.View>
@@ -383,7 +382,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  // 40 wide: with its slop it reaches the touch floor inside the row.
   moveToPantryButton: {
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,

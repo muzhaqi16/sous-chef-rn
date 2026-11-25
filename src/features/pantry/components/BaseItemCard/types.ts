@@ -11,8 +11,10 @@ export interface BaseItemCardProps {
   /** Left element (image, emoji, icon). */
   leftElement?: React.ReactNode;
   children?: React.ReactNode;
-  /** Right element (meta info, counter, drag handle). */
+  /** After the content, inside the row's press: nothing that presses. */
   rightElement?: React.ReactNode;
+  /** Controls after the content, each its own element beside the press. */
+  trailingActions?: React.ReactNode;
 
   containerStyle?: StyleProp<ViewStyle>;
 

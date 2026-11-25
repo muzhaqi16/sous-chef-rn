@@ -47,7 +47,7 @@ const renderItem = (props: Record<string, unknown> = {}) =>
       ]}
       {...props}
     >
-      <Text>Row</Text>
+      {() => <Text>Row</Text>}
     </SwipeableItem>,
   );
 

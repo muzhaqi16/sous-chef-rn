@@ -115,10 +115,17 @@ optional:
     so state held in that content starts clean with no reset. A sheet whose
     state sat beside its `Sheet` moves it into a content component keyed by
     `useOpening(visible)`; what a sheet keeps on purpose lives in its parent.
+  - **Typed input is never dropped without asking.** A form in a sheet reports
+    `useSheetUnsavedInput(formState.isDirty)`, and closing it by the header's
+    close, the backdrop, Back or a drag then asks "Discard changes?", as
+    `FormScreen` does. A drag is snapped back first: gorhom reports the close
+    in `onAnimate` as it starts, and a gesture's close is not a forced one. A
+    close the owner makes, after a save, never asks. A pick written with
+    `setValue` counts only with `shouldDirty: true`; a prefill never does.
   - **A sheet the shell does not fit grows the shell an option**, never a
     hand-rendered modal: `modalOptions` passes a typed pick of gorhom's props
-    (`stackBehavior: 'push'` over a host sheet, a held `enablePanDownToClose`,
-    an Android keyboard that resizes); a key left out keeps the standard value.
+    (`stackBehavior: 'push'` over a host sheet, an Android keyboard that
+    resizes); a key left out keeps the standard value.
 - **`Dialog`** (`src/components/templates/Dialog.tsx`) is a centred card over a
   scrim, for a short decision or a small form. The scrim and card fade together;
   a `slide` would carry the scrim up with the card. The Modal is
@@ -193,6 +200,19 @@ they read it.
 - **A row's status is its status line alone** (`StatusLine`): one coloured line
   under the title, with no border, tint or badge repeating it.
 - **The whole row opens its detail.** No row shows a chevron.
+- **A control in a row sits beside the row's press, never inside it.**
+  `RowFrame` (`src/components/molecules/RowFrame.tsx`) lays a row out as a
+  leading control (`ListItem`'s `checkboxElement`), the press surface, and the
+  trailing controls (`trailingActions`); `rightElement` stays inside the press
+  and holds nothing that presses. The press surface is one accessible element
+  and, in a swipe row, RNGH's button: either swallows a control nested in it,
+  for a tap and for a screen reader alike, so the control would never fire or
+  be reached. A row's secondary actions that have no control of their own go
+  to the surface as `accessibilityActions`, as a swipe row's actions do.
+- **A swipe row is handed its press.** `SwipeableItem`'s child is a function of
+  the press (`SwipeRowPress`), which the row passes to `ListItem` or
+  `RowFrame` as `swipe`. Inside it, `GestureRowContext` makes `IconButton`
+  press through RNGH, which a control inside a `Swipeable` needs.
 - **Text** is `rowType` (`src/theme/foundations/type.ts`): `title` for the row's
   name and its trailing value, `subtitle` for everything supporting them. A shell
   names the role through `rowType`, never as a literal, so no screen can pick its

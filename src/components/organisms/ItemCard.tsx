@@ -95,13 +95,16 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
           onSwipeableWillOpen={onSwipeableWillOpen}
           testIDPrefix={testID}
         >
-          <ListItem
-            title={title}
-            subtitle={subtitle}
-            badge={badge}
-            rightElement={rightElement}
-            leftElement={leftElement}
-          />
+          {press => (
+            <ListItem
+              swipe={press}
+              title={title}
+              subtitle={subtitle}
+              badge={badge}
+              rightElement={rightElement}
+              leftElement={leftElement}
+            />
+          )}
         </SwipeableItem>
       </RowCard>
     </Animated.View>

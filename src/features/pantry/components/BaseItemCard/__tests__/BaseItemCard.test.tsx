@@ -7,8 +7,21 @@ import { CardContent } from '#features/pantry/components/BaseItemCard/CardConten
 import { CardRightSlot } from '#features/pantry/components/BaseItemCard/CardRightSlot';
 import { BaseItemCard } from '#features/pantry/components/BaseItemCard/BaseItemCard';
 
+// The swipe hands the row its press, as `SwipeableItem` does.
 jest.mock('#components/organisms/SwipeableItem/SwipeableItem', () => ({
-  SwipeableItem: ({ children }: { children: React.ReactNode }) => children,
+  SwipeableItem: ({
+    children,
+    accessibilityLabel,
+  }: {
+    children: (press: object) => React.ReactNode;
+    accessibilityLabel: string;
+  }) =>
+    children({
+      accessibilityLabel,
+      accessibilityHint: '',
+      accessibilityActions: [],
+      onAccessibilityAction: () => undefined,
+    }),
 }));
 
 describe('BaseItemCard', () => {

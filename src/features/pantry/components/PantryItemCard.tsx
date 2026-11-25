@@ -259,17 +259,15 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
         testID={pantryTestIDs.item(id)}
         leftElement={leftElement}
         rightElement={
-          <>
-            <CardRightSlot
-              // Keyed by item id, matching the row's own `pantry-item-${id}` and
-              // shopping list's `shopping-list-item-${itemId}-quantity`.
-              testID={pantryTestIDs.itemQuantity(id)}
-              primary={quantity}
-              secondary={rightSecondary}
-            />
-            {accessory}
-          </>
+          <CardRightSlot
+            // Keyed by item id, matching the row's own `pantry-item-${id}` and
+            // shopping list's `shopping-list-item-${itemId}-quantity`.
+            testID={pantryTestIDs.itemQuantity(id)}
+            primary={quantity}
+            secondary={rightSecondary}
+          />
         }
+        trailingActions={accessory}
       >
         <CardContent
           title={name}

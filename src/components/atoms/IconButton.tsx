@@ -4,8 +4,10 @@ import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import type { IconLibrary, IconSizeName } from '#components/atoms/Icon';
 import { Icon, type IconTone } from '#components/atoms/Icon';
 import { HapticService } from '#services/haptic/HapticService';
+import { Pressable as GesturePressable } from 'react-native-gesture-handler';
 import { Pressable } from '#components/atoms/themedComponents';
 import { borderlessRipple } from '#constants/ripple';
+import { useInGestureRow } from '#context/GestureRowContext';
 
 const UniIcon = withUnistyles(Icon);
 
@@ -57,37 +59,44 @@ export const IconButton: React.FC<IconButtonProps> = ({
   selected,
   testID,
 }) => {
+  const inGestureRow = useInGestureRow();
   const handlePress = () => {
     HapticService.selection();
     onPress();
   };
 
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.button,
-        pressed && !disabled && styles.pressed,
-        style,
-      ]}
-      onPress={handlePress}
-      disabled={disabled}
-      android_ripple={BORDERLESS_RIPPLE}
-      accessibilityRole={accessibilityRole}
-      accessibilityLabel={accessibilityLabel}
-      accessibilityHint={accessibilityHint}
-      accessibilityState={
-        selected === undefined ? { disabled } : { disabled, selected }
-      }
-      testID={testID}
-    >
-      <UniIcon
-        library={library}
-        name={name}
-        size={size}
-        tone={disabled ? 'iconDisabled' : tone ?? 'iconPrimary'}
-        uniProps={() => (color && !disabled ? { color } : {})}
-      />
-    </Pressable>
+  const pressProps = {
+    style: ({ pressed }: { pressed: boolean }) => [
+      styles.button,
+      pressed && !disabled && styles.pressed,
+      style,
+    ],
+    onPress: handlePress,
+    disabled,
+    android_ripple: BORDERLESS_RIPPLE,
+    accessibilityRole,
+    accessibilityLabel,
+    accessibilityHint,
+    accessibilityState:
+      selected === undefined ? { disabled } : { disabled, selected },
+    testID,
+  };
+  const icon = (
+    <UniIcon
+      library={library}
+      name={name}
+      size={size}
+      tone={disabled ? 'iconDisabled' : tone ?? 'iconPrimary'}
+      uniProps={() => (color && !disabled ? { color } : {})}
+    />
+  );
+
+  // Inside a swipe row, RNGH's: an RN Pressable there takes the touch, and a
+  // swipe that starts on the button never moves the row.
+  return inGestureRow ? (
+    <GesturePressable {...pressProps}>{icon}</GesturePressable>
+  ) : (
+    <Pressable {...pressProps}>{icon}</Pressable>
   );
 };
 

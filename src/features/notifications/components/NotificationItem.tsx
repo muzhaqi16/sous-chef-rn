@@ -70,7 +70,7 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
         accessibilityLabel={[copy.title, copy.message, formattedTimestamp]
           .filter(Boolean)
           .join(', ')}
-        rightElement={
+        trailingActions={
           onDismiss ? (
             <IconButton
               name="close"
