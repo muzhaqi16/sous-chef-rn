@@ -162,6 +162,57 @@ it('says why a counted row was refused on its amount, the field checked again', 
   );
 });
 
+// The server names the input it refused: what is left inside, not the count.
+it('says why on the field the server names', async () => {
+  const recorded = recordMock(RecordPantryStockCheckDocument, {
+    data: {
+      recordPantryStockCheck: {
+        __typename: 'RecordPantryStockCheckPayload',
+        results: [
+          {
+            pantryItemId: 'milk',
+            success: false,
+            failure: {
+              code: ErrorCode.ValidationFailed,
+              field: 'remainingNetWeight',
+            },
+            pantryItem: null,
+          },
+        ],
+      },
+    },
+  });
+  const carton = {
+    ...stack('milk', 2),
+    packageSize: { value: 64, unitId: 'unit-floz' },
+    netWeightUnit: { id: 'unit-floz', symbol: 'fl oz' },
+  };
+  renderWithApollo(<StockCheckSheet visible onDismiss={jest.fn()} />, {
+    operationMocks: [
+      recordMock(StockToConfirmDocument, {
+        data: { pantry: { id: 'P1', stockToConfirm: [carton] } },
+      }).mock,
+      recorded.mock,
+    ],
+  });
+  await drainTimers();
+
+  pick('milk', StockCheckAnswer.SomeLeft);
+  fireEvent.changeText(
+    screen.getByTestId(pantryTestIDs.stockCheckLeft('milk')),
+    '1',
+  );
+  fireEvent.changeText(screen.getByDisplayValue(''), '40');
+  await save();
+
+  expect(
+    screen.queryByTestId(
+      kitTestIDs.inputError(pantryTestIDs.stockCheckLeft('milk')),
+    ),
+  ).toBeNull();
+  expect(screen.getByText(t('errors.codes.validationFailed'))).toBeVisible();
+});
+
 it('refuses an amount left it cannot read on the field, and sends nothing', async () => {
   const recorded = recordMock(RecordPantryStockCheckDocument, {
     data: { recordPantryStockCheck: null },

@@ -155,11 +155,10 @@ const StockCheckForm: React.FC<StockCheckFormProps> = ({
         ]),
       ),
     });
-    // On the amount when one was counted, as that is what is checked again.
-    for (const { pantryItemId, message } of refused) {
+    for (const { pantryItemId, message, field } of refused) {
       const counted =
         values.rows[pantryItemId]?.answer === StockCheckAnswer.SomeLeft;
-      setError(`rows.${pantryItemId}.${counted ? 'left' : 'answer'}`, {
+      setError(`rows.${pantryItemId}.${refusedField(field, counted)}`, {
         message,
       });
     }
@@ -309,6 +308,29 @@ const StockCheckForm: React.FC<StockCheckFormProps> = ({
  * Up to five doubtful stacks, each answered Still have, Some left, Used up or
  * Threw out. Only answered rows are sent; closing leaves the rest as they were.
  */
+/**
+ * The row field a refusal goes on: the input the server names, else the amount
+ * when one was counted, as that is what is checked again, else the answer,
+ * whose message sits under the waste reason too.
+ */
+const refusedField = (
+  field: string | null,
+  counted: boolean,
+): 'left' | 'inside' | 'answer' => {
+  switch (field) {
+    case 'quantity':
+      return 'left';
+    case 'remainingNetWeight':
+    case 'remainingNetWeightUnitId':
+      return 'inside';
+    case 'wasteReason':
+      return 'answer';
+    case null:
+    default:
+      return counted ? 'left' : 'answer';
+  }
+};
+
 export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
   visible,
   onDismiss,

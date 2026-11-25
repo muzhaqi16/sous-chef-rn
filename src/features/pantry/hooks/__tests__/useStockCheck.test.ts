@@ -104,7 +104,11 @@ it('sends each answer against the version seen, and hands back a stale row', asy
   expect(answered).toEqual({
     status: 'applied',
     refused: [
-      { pantryItemId: milk, message: t('pantryScreen.stockCheckStale') },
+      {
+        pantryItemId: milk,
+        message: t('pantryScreen.stockCheckStale'),
+        field: expect.anything(),
+      },
     ],
   });
 });
@@ -139,7 +143,7 @@ it('sends Threw out with the reason picked', async () => {
 });
 
 // CHECK-04: a carton found holding 40 of its 64 fl oz reads so at once, as
-// 0.625 carton, while the check waits to be sent.
+// the server will record it: one carton, 40 fl oz left in it.
 it('shows a partial package as found while the check is queued', async () => {
   const milk = context.items.milk.stackId;
   const floz = { id: 'unit-floz', symbol: 'fl oz' };
@@ -171,7 +175,6 @@ it('shows a partial package as found while the check is queued', async () => {
   expect(milkRow?.contents).toEqual({
     unitId: floz.id,
     unitSymbol: 'fl oz',
-    perPackage: 64,
   });
 
   await drained(() =>
@@ -200,7 +203,7 @@ it('shows a partial package as found while the check is queued', async () => {
     cache.extract(true)[
       cache.identify({ __typename: 'PantryItem', id: milk })!
     ],
-  ).toMatchObject({ quantity: 0.625, remainingNetWeight: 40 });
+  ).toMatchObject({ quantity: 1, remainingNetWeight: 40 });
 });
 
 // A check moves the list it came from: the server's answer restates it, and

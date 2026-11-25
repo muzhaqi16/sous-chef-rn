@@ -342,8 +342,9 @@ row's absolute count ahead of the answer:
 - **Still have** moves nothing.
 - **Some left** sets the count in the stack's unit.
 - **Used up** and **Threw out** set zero.
-A count stated with what the packages hold (CHECK-04: one carton holding 40 fl oz) moves nothing until
-the server answers, which owns the package arithmetic. The ledger meaning is the API's:
+A count stated with what the packages hold (CHECK-04: one carton holding 40 fl oz) sets at once what
+the server records for it: the packages as stated and what is left in the open one, never a fraction the
+device works out; the server owns any arithmetic past that. The ledger meaning is the API's:
 - Some left records an adjustment of the difference (10 eggs found as 6 is a correction of 4, CHECK-01).
 - Used up is a correction to zero, never consumption.
 - Threw out is waste.

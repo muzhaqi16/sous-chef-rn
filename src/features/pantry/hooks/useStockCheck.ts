@@ -35,14 +35,10 @@ export interface StockCheckRow {
   amount: string;
   /** The stack's own unit, which "Some left" is counted in. */
   unitSymbol: string;
-  /**
-   * What one package holds, where it is known: "Some left" can count it too.
-   * `perPackage` is that size in `unitId`, or null where only the server can say.
-   */
+  /** The unit what a package holds is counted in: "Some left" can count it too. */
   contents: {
     unitId: string;
     unitSymbol: string;
-    perPackage: number | null;
   } | null;
   level: StockConfidence | null;
   reasons: readonly StockDoubtReason[];
@@ -66,24 +62,19 @@ export type StockCheckChoice =
 
 export interface StockCheckAnswered {
   status: SettleStatus;
-  /** Rows the server refused, each with why: to look at again. */
-  refused: { pantryItemId: string; message: string }[];
+  /** Rows the server refused, each with why and the field it names: to look at again. */
+  refused: { pantryItemId: string; message: string; field: string | null }[];
 }
 
 /**
- * What remains once answered: an absolute count, never a delta. Still have
- * confirms and moves nothing; a partial package holds what its contents fill.
+ * What the server records for an answer: an absolute count, never a delta, and
+ * the packages as stated, what is left in an open one going with them. Still
+ * have confirms and moves nothing.
  */
-const heldAfter = (
-  row: StockCheckRow,
-  choice: StockCheckChoice,
-): number | null => {
+const heldAfter = (choice: StockCheckChoice): number | null => {
   switch (choice.answer) {
-    case StockCheckAnswer.SomeLeft: {
-      if (!choice.contents) return choice.quantity;
-      const perPackage = row.contents?.perPackage;
-      return perPackage ? choice.contents.amount / perPackage : null;
-    }
+    case StockCheckAnswer.SomeLeft:
+      return choice.quantity;
     case StockCheckAnswer.UsedUp:
     case StockCheckAnswer.ThrewOut:
       return 0;
@@ -154,10 +145,6 @@ export function useStockCheck(enabled = true) {
         ? {
             unitId: stack.netWeightUnit.id,
             unitSymbol: stack.netWeightUnit.symbol,
-            perPackage:
-              stack.packageSize.unitId === stack.netWeightUnit.id
-                ? stack.packageSize.value
-                : null,
           }
         : null,
     ...(dayRead.isConfirmed
@@ -188,7 +175,7 @@ export function useStockCheck(enabled = true) {
       now: checkedAt,
       rows: answers.map(({ row, choice }) => ({
         pantryItemId: row.id,
-        held: heldAfter(row, choice),
+        held: heldAfter(choice),
         ...(choice.answer === StockCheckAnswer.SomeLeft &&
           choice.contents && { remainingNetWeight: choice.contents.amount }),
       })),
@@ -232,6 +219,7 @@ export function useStockCheck(enabled = true) {
         .map(result => ({
           pantryItemId: result.pantryItemId,
           message: refusalOf(result.failure?.code, t),
+          field: result.failure?.field ?? null,
         })),
     };
   };
