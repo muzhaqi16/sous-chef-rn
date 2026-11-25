@@ -125,6 +125,7 @@
     "itemNamePlaceholder": "es. latte, pane",
     "estimatedPrice": "Prezzo stimato",
     "estimatedPricePlaceholder": "es. 4,99",
+    "invalidEstimatedPrice": "Scrivi un prezzo come 4,99 o lascialo vuoto.",
     "notesPlaceholder": "Eventuali note speciali...",
     "pleaseEnterQuantity": "Inserisci una quantità",
     "serverNotUpdated": "Errore server: l'articolo non è stato {{action}}. Il server potrebbe avere problemi. Riprova.",

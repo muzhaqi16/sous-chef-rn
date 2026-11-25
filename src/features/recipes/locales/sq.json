@@ -387,8 +387,6 @@
     "unfavoriteA11y": "Hiq nga të preferuarat",
     "ingredientsTooMany": "Një recetë mund të ketë maksimumi {{count}} përbërës",
     "stepsTooMany": "Një recetë mund të ketë maksimumi {{count}} hapa",
-    "tagsTooMany": "Një recetë mund të ketë maksimumi {{count}} etiketa",
-    "tagTooLong": "Çdo etiketë mund të ketë maksimumi {{count}} karaktere",
     "tipsTooLong": "Këshillat mund të kenë maksimumi {{count}} karaktere",
     "stepsTooLarge": "Këta hapa janë shumë të gjatë për t’u ruajtur. Shkurtoji dhe provo sërish.",
     "ingredientAlerts": {

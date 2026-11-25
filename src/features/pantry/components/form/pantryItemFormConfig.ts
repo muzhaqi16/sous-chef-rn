@@ -1,5 +1,9 @@
 import { object, string } from 'yup';
-import { lazyMessage } from '#utils/validation/common';
+import {
+  lazyMessage,
+  quantityCapMessage,
+  withinQuantityCap,
+} from '#utils/validation/common';
 // Pages, order and label keys are the ADD form's, declared once in the catalog's
 // public `ui/`. `PageName` is an IDENTIFIER, never a tab label — resolve it
 // through `PAGE_LABEL_KEYS`. Only `TAB_FIELDS` below is this form's own.
@@ -46,6 +50,10 @@ export const editItemSchema = object({
       if (!value || value === seed) return true;
       const parsed = parseFractionalInput(value);
       return parsed === null || parsed > 0;
+    })
+    .test('quantity-cap', quantityCapMessage, (value, test) => {
+      const seed: unknown = test.options.context?.quantitySeed;
+      return value === seed || withinQuantityCap(value);
     }),
   unit: string(), // Tracking unit
   minQuantity: string(),

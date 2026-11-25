@@ -114,7 +114,6 @@ const SaveRecipeForm: React.FC<SaveRecipeFormProps> = ({
         onTagsChange={setTags}
         suggestions={availableTags}
         placeholder={t('saveRecipe.tagsPlaceholder')}
-        maxTags={5}
       />
 
       {/* Notes */}

@@ -24,7 +24,9 @@ import {
 import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { parseMoneyInput } from '#utils/validation/common';
+import { parseMoneyInput, quantityCapMessage } from '#utils/validation/common';
+import { MAX_MONEY, MAX_QUANTITY } from '#utils/validation/entryLimits';
+import { formatDecimal } from '#utils/formatters/number';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 interface PurchaseAmountSheetItem {
@@ -108,21 +110,30 @@ const PurchaseAmountForm: React.FC<PurchaseAmountFormProps> = ({
   // An empty or unparseable field is NOT a quantity of zero: defaulting it
   // trips `unitPriceFromTotal`'s zero-guard, which returns the total undivided
   // and records the purchase at quantity 0.
-  const quantityIsUsable = parsedQty != null && parsedQty > 0;
+  const quantityOverCap = parsedQty != null && parsedQty > MAX_QUANTITY;
+  const priceOverCap = parsedTotal != null && parsedTotal > MAX_MONEY;
+  const quantityIsUsable =
+    parsedQty != null && parsedQty > 0 && !quantityOverCap;
   // On the field, never through an alert: an alert covers the form, and once
   // dismissed it cannot say which field it meant.
-  const quantityError = quantityIsUsable
+  const quantityError = quantityOverCap
+    ? quantityCapMessage()
+    : quantityIsUsable
     ? null
     : t('purchaseAmountSheet.quantityRequired');
   const priceError =
-    parsedTotal === undefined ? t('errors.invalidAmountPaid') : null;
+    parsedTotal === undefined
+      ? t('errors.invalidAmountPaid')
+      : priceOverCap
+      ? t('errors.amountTooLarge', { max: formatDecimal(MAX_MONEY) })
+      : null;
   const priceNote =
     showPrices && describePrice && quantityIsUsable && parsedTotal != null
       ? describePrice(unitPriceFromTotal(parsedTotal, parsedQty) ?? parsedTotal)
       : null;
 
   const handleConfirm = () => {
-    if (!quantityIsUsable || parsedTotal === undefined) return;
+    if (!quantityIsUsable || parsedTotal === undefined || priceOverCap) return;
     onConfirm(parsedQty, parsedTotal);
   };
 
@@ -194,7 +205,7 @@ const PurchaseAmountForm: React.FC<PurchaseAmountFormProps> = ({
                 onChangeText={setPriceInput}
                 keyboardType="decimal-pad"
                 selectTextOnFocus
-                maxLength={10}
+                maxLength={16}
                 placeholder={
                   estimatedTotal == null
                     ? localizeNumericHint(

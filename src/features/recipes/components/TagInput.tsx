@@ -7,6 +7,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { filterByTerm, identity } from '#hooks/search/useLocalSearch';
+import { MAX_TAG_LENGTH, MAX_TAGS } from '#utils/validation/entryLimits';
 
 export interface TagInputProps {
   tags: string[];
@@ -22,7 +23,7 @@ export const TagInput: React.FC<TagInputProps> = ({
   onTagsChange,
   suggestions = [],
   placeholder,
-  maxTags = 10,
+  maxTags = MAX_TAGS,
   editable = true,
 }) => {
   const { t } = useTranslation();
@@ -105,6 +106,8 @@ export const TagInput: React.FC<TagInputProps> = ({
             style={styles.input}
             defaultValue={inputValue}
             onChangeText={setInputValue}
+            // The API holds a tag to this length, trimmed.
+            maxLength={MAX_TAG_LENGTH}
             placeholder={
               tags.length === 0 ? placeholder ?? t('tagInput.placeholder') : ''
             }

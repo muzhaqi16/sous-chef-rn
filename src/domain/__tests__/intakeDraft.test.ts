@@ -65,3 +65,16 @@ it('takes a measured amount without a unit only where the route supplies one', (
     unresolved: [],
   });
 });
+// The API refuses a stock amount past 999,999, so the line is asked about first.
+it('asks again about an amount past the cap', () => {
+  expect(
+    resolveIntakeDraft({
+      purchased: { quantity: 1_000_000, unitId: 'g', intent: 'measured' },
+    }),
+  ).toEqual({ amount: null, unresolved: ['quantity'] });
+  expect(
+    resolveIntakeDraft({
+      purchased: { quantity: 999_999, unitId: 'g', intent: 'measured' },
+    }).amount,
+  ).toEqual({ measured: { quantity: 999_999, unitId: 'g' } });
+});

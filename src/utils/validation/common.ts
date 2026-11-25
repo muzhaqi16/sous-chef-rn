@@ -5,6 +5,12 @@ import { logger } from '#utils/environment';
 import { t, type TranslationKey } from '#i18n';
 import { parseFractionalInput } from '#utils/fractionUtils';
 import { parseDecimalInput } from '#utils/parseDecimalInput';
+import { formatDecimal } from '#utils/formatters/number';
+import {
+  MAX_MONEY,
+  MAX_QUANTITY,
+  MAX_TAG_LENGTH,
+} from '#utils/validation/entryLimits';
 
 /**
  * A rule's message. Schemas are built once at module scope, so a message
@@ -151,6 +157,14 @@ export const nameRule = string()
     lazyMessage('errors.nameTooLong', { max: MAX_PERSON_NAME_LENGTH }),
   );
 
+/** Refused past the API's cap, which it states in the device's numerals. */
+export const quantityCapMessage = (): string =>
+  t('errors.quantityTooLarge', { max: formatDecimal(MAX_QUANTITY) });
+
+/** What a quantity field reads, within the cap; text it cannot read passes here. */
+export const withinQuantityCap = (value: string | null | undefined): boolean =>
+  (parseFractionalInput(value ?? '') ?? 0) <= MAX_QUANTITY;
+
 // A quantity takes a fraction ("1 1/4") as readily as a decimal, so the rule
 // runs on what `parseFractionalInput` reads — a regex restating its grammar
 // drifts from it (one took only `.`, and `2,5` became unreachable).
@@ -164,7 +178,8 @@ export const quantityRule = (
       const parsed = parseFractionalInput(value);
       if (parsed === null || Number.isNaN(parsed)) return false;
       return allowZero ? parsed >= 0 : parsed > 0;
-    });
+    })
+    .test('quantity-cap', quantityCapMessage, withinQuantityCap);
 
 // An amount paid: null when blank (unstated), undefined when unusable. Only
 // digits and separators pass: `parseFloat` reads `4,99x` as 4.99, and a sign
@@ -183,6 +198,33 @@ export const optionalMoneyRule = (key: TranslationKey) =>
       'money',
       lazyMessage(key),
       value => parseMoneyInput(value) !== undefined,
+    )
+    .test(
+      'money-cap',
+      () => t('errors.amountTooLarge', { max: formatDecimal(MAX_MONEY) }),
+      value => (parseMoneyInput(value) ?? 0) <= MAX_MONEY,
+    );
+
+/** Split a comma-separated tag field into its trimmed, non-blank tags. */
+export const parseCommaTags = (raw: string): string[] =>
+  raw
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean);
+
+/** A comma-separated tag field, held to the API's count and length. */
+export const commaTagsRule = (max: number) =>
+  string()
+    .defined()
+    .test(
+      'tags-count',
+      lazyMessage('errors.tagsTooMany', { max }),
+      value => parseCommaTags(value).length <= max,
+    )
+    .test(
+      'tag-length',
+      lazyMessage('errors.tagTooLong', { max: MAX_TAG_LENGTH }),
+      value => parseCommaTags(value).every(tag => tag.length <= MAX_TAG_LENGTH),
     );
 
 // A measure such as a package size: a decimal above zero, never a fraction.

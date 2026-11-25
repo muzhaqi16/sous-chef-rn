@@ -20,6 +20,8 @@ import {
 } from '#utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { parseFractionalInput } from '#utils/fractionUtils';
+import { quantityCapMessage } from '#utils/validation/common';
+import { MAX_QUANTITY } from '#utils/validation/entryLimits';
 import { localizeNumericHint } from '#utils/formatters/number';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
@@ -185,7 +187,10 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
 
   // The server parses this string itself and rejects anything it can't read,
   // which offline would surface only once the queue replayed. Catch it here.
-  const quantityIsValid = parsedQuantity !== null && parsedQuantity >= 0;
+  // A list line holds more than nothing, and no more than the API's cap.
+  const overCap = parsedQuantity !== null && parsedQuantity > MAX_QUANTITY;
+  const quantityIsValid =
+    parsedQuantity !== null && parsedQuantity > 0 && !overCap;
 
   // Never greyed out: a quantity it cannot read is said on the field, and
   // nothing changed has nothing to save.
@@ -286,7 +291,7 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
               style={variantStyles.quantityHint}
               testID={shoppingListTestIDs.quantityEditError}
             >
-              {t('errors.invalidQuantity')}
+              {overCap ? quantityCapMessage() : t('errors.invalidQuantity')}
             </Text>
           ) : null}
           {/* An empty field is "nothing typed yet", not a malformed quantity. */}

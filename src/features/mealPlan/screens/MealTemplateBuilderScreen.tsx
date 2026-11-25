@@ -28,7 +28,10 @@ import { generateId } from '#utils/generateId';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { reportValidationErrors } from '#utils/validation/common';
+import {
+  parseCommaTags,
+  reportValidationErrors,
+} from '#utils/validation/common';
 import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import {
   changedMealRef,
@@ -260,12 +263,6 @@ export const MealTemplateBuilderScreen: React.FC<
     if (editingKey === item.key) resetItemForm();
   };
 
-  const parseTags = (tags: string) =>
-    tags
-      .split(',')
-      .map((tag: string) => tag.trim())
-      .filter(Boolean);
-
   // Reaching here means the template schema passed, so the missing-name rule
   // has already reported itself on the name field.
   const onValidTemplate = async ({
@@ -283,7 +280,7 @@ export const MealTemplateBuilderScreen: React.FC<
         category,
         description: description.trim() || null,
         defaultServings: servingsValue,
-        tags: parseTags(tags),
+        tags: parseCommaTags(tags),
       });
       if (ok) goBack();
       return;
@@ -294,7 +291,7 @@ export const MealTemplateBuilderScreen: React.FC<
       category,
       description: description.trim() || undefined,
       defaultServings: servingsValue,
-      tags: parseTags(tags),
+      tags: parseCommaTags(tags),
       items: draftItems.map(item => ({
         dayOffset: item.dayOffset,
         mealType: item.mealType,
@@ -401,12 +398,13 @@ export const MealTemplateBuilderScreen: React.FC<
       <Controller
         control={templateForm.control}
         name="tags"
-        render={({ field }) => (
+        render={({ field, fieldState }) => (
           <FormInput
             label={t('labels.tags')}
             value={field.value}
             onChangeText={field.onChange}
             placeholder={t('labels.commaSeparated')}
+            error={fieldState.error?.message}
           />
         )}
       />

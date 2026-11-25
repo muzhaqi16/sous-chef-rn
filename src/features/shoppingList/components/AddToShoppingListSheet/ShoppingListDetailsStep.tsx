@@ -30,6 +30,7 @@ import { reportValidationErrors } from '#utils/validation/common';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import { MAX_SHOPPING_NOTE_LENGTH } from '#utils/validation/entryLimits';
 
 interface ShoppingListDetailsStepProps {
   shoppingListId: string | undefined;
@@ -324,7 +325,7 @@ export const ShoppingListDetailsStep: React.FC<
         <Controller
           control={control}
           name="notes"
-          render={({ field: { value, onChange, ref } }) => (
+          render={({ field: { value, onChange, ref }, fieldState }) => (
             <FormInput
               label={t('labels.notes')}
               value={value}
@@ -332,6 +333,8 @@ export const ShoppingListDetailsStep: React.FC<
               placeholder={t('shoppingListScreens.notesPlaceholder')}
               multiline
               numberOfLines={3}
+              maxLength={MAX_SHOPPING_NOTE_LENGTH}
+              error={fieldState.error?.message}
               ref={ref}
             />
           )}

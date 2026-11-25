@@ -16,11 +16,8 @@ import type {
   StepFormState,
   RecipeFormState,
 } from '../../types';
-import {
-  recipeFormSchema,
-  recipeFormDefaults,
-  parseCommaTags,
-} from './recipeFormConfig';
+import { recipeFormSchema, recipeFormDefaults } from './recipeFormConfig';
+import { parseCommaTags } from '#utils/validation/common';
 import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
 import { toPastedIngredient } from '#features/recipes/utils/pastedIngredients';
 import { extractNodes } from '#utils/connectionUtils';

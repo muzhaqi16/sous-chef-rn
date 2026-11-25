@@ -184,7 +184,6 @@ const ManageRecipeContent: React.FC<ManageRecipeContentProps> = ({
         }}
         suggestions={availableTags}
         placeholder={t('manageRecipe.tagsPlaceholder')}
-        maxTags={5}
         editable={!updating}
       />
 

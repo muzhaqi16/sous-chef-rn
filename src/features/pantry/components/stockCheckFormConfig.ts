@@ -2,7 +2,11 @@ import { lazy, mixed, number, object, string, type InferType } from 'yup';
 import { StockCheckAnswer, WasteReason } from '#graphql/generated/schemaTypes';
 import { DEFAULT_WASTE_REASON } from '#features/pantry/utils/wasteReasons';
 import { parseFractionalInput } from '#utils/fractionUtils';
-import { lazyMessage } from '#utils/validation/common';
+import {
+  lazyMessage,
+  quantityCapMessage,
+  withinQuantityCap,
+} from '#utils/validation/common';
 import type {
   StockCheckChoice,
   StockCheckRow,
@@ -28,7 +32,9 @@ const rowSchema = object({
     .when('answer', {
       is: isSomeLeft,
       then: rule =>
-        rule.test('left', lazyMessage('errors.invalidQuantity'), readsAsAmount),
+        rule
+          .test('left', lazyMessage('errors.invalidQuantity'), readsAsAmount)
+          .test('quantity-cap', quantityCapMessage, withinQuantityCap),
     }),
   // What the packages found hold: blank counts packages only.
   inside: string()

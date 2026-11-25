@@ -125,6 +125,7 @@
     "itemNamePlaceholder": "e.g., Milk, Bread",
     "estimatedPrice": "Estimated Price",
     "estimatedPricePlaceholder": "e.g., 4.99",
+    "invalidEstimatedPrice": "Enter a price like 4.99, or leave it empty.",
     "notesPlaceholder": "Any special notes...",
     "pleaseEnterQuantity": "Please enter a quantity",
     "serverNotUpdated": "Server error: Item was not {{action}}. The server may be experiencing issues. Please try again.",

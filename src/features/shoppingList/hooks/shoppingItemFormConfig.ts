@@ -1,5 +1,24 @@
-import { object, string, number } from 'yup';
-import { itemNameText, lazyMessage } from '#utils/validation/common';
+import { object, string, number, type TestContext } from 'yup';
+import {
+  itemNameText,
+  lazyMessage,
+  optionalMoneyRule,
+  quantityCapMessage,
+  withinQuantityCap,
+} from '#utils/validation/common';
+import { MAX_SHOPPING_NOTE_LENGTH } from '#utils/validation/entryLimits';
+import { parseFractionalInput } from '#utils/fractionUtils';
+
+/**
+ * A line's stored quantity text the API took before it read only amounts
+ * ("a pinch"): left untouched it is never sent, so it is never refused.
+ */
+const isStoredText = (value: string | undefined, { options }: TestContext) => {
+  const context: Partial<{ quantitySeed: string | null }> | undefined =
+    options.context;
+  const seed = context?.quantitySeed;
+  return seed != null && value === seed;
+};
 
 /**
  * Shape, defaults and validation for the shopping-list item form. Shared by the
@@ -62,14 +81,31 @@ export const DIRTY_TRACKED_FIELDS: readonly string[] = Object.keys(
 
 export const shoppingItemSchema = object({
   itemName: itemNameText(lazyMessage('errors.itemNameRequired')),
+  // The API reads only an amount: "2", "0.5", "1/3" or "1 1/4".
   quantityInput: string()
     .trim()
-    .required(lazyMessage('shoppingListScreens.pleaseEnterQuantity')),
+    .required(lazyMessage('shoppingListScreens.pleaseEnterQuantity'))
+    .test(
+      'quantity',
+      lazyMessage('errors.quantityFormat'),
+      (value, test) =>
+        isStoredText(value, test) || (parseFractionalInput(value) ?? 0) > 0,
+    )
+    .test(
+      'quantity-cap',
+      quantityCapMessage,
+      (value, test) => isStoredText(value, test) || withinQuantityCap(value),
+    ),
   unit: string(),
   selectedUnitId: string().nullable(),
-  notes: string(),
+  notes: string().max(
+    MAX_SHOPPING_NOTE_LENGTH,
+    lazyMessage('errors.notesTooLong', { max: MAX_SHOPPING_NOTE_LENGTH }),
+  ),
   category: string(),
-  estimatedPrice: string(),
+  estimatedPrice: optionalMoneyRule(
+    'shoppingListScreens.invalidEstimatedPrice',
+  ),
   priority: number(),
   storeId: string().nullable(),
   storeName: string(),

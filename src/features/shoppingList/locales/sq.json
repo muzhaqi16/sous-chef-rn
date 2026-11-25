@@ -125,6 +125,7 @@
     "itemNamePlaceholder": "p.sh. qumësht, bukë",
     "estimatedPrice": "Çmimi i parashikuar",
     "estimatedPricePlaceholder": "p.sh. 4,99",
+    "invalidEstimatedPrice": "Shkruaj një çmim si 4,99 ose lëre bosh.",
     "notesPlaceholder": "Çdo shënim i veçantë...",
     "pleaseEnterQuantity": "Shkruaj një sasi",
     "serverNotUpdated": "Gabim serveri: artikulli nuk u {{action}}. Serveri mund të ketë probleme. Provoje sërish.",

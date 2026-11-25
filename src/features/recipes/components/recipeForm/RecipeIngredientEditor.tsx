@@ -9,7 +9,12 @@ import { DropdownStack } from '#components/atoms/DropdownStack';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
-import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
+import {
+  lazyMessage,
+  quantityCapMessage,
+  reportValidationErrors,
+  withinQuantityCap,
+} from '#utils/validation/common';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
@@ -56,7 +61,10 @@ interface IngredientFormValues {
 const ingredientSchema: ObjectSchema<IngredientFormValues> = object({
   name: string().trim().required(lazyMessage('errors.itemNameRequired')),
   itemId: string().nullable().defined(),
-  quantity: string().defined(),
+  // Blank states no amount ("salt, to taste"); a stated one is held to the cap.
+  quantity: string()
+    .defined()
+    .test('quantity-cap', quantityCapMessage, withinQuantityCap),
   unit: string().trim().defined(),
   unitId: string().nullable().defined(),
   preparation: string().trim().defined(),
@@ -224,11 +232,12 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
           <Controller
             control={control}
             name="quantity"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <EditableCounter
                 label={t('labels.quantity')}
                 value={field.value}
                 onChangeText={field.onChange}
+                error={fieldState.error?.message}
                 placeholder={t('recipes.quantityNoAmountPlaceholder')}
                 min={0}
                 step={0.25}

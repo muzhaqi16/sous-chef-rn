@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   useForm,
   useWatch,
@@ -41,6 +42,8 @@ import {
 export function useShoppingListItemForm(
   initialState?: Partial<ShoppingItemFormData>,
 ) {
+  // A stored quantity no reader takes ("a pinch"), checked only once changed.
+  const [quantitySeed, setQuantitySeed] = useState<string | null>(null);
   const {
     control,
     handleSubmit,
@@ -53,6 +56,7 @@ export function useShoppingListItemForm(
   } = useForm<ShoppingItemFormData>({
     resolver: yupResolver(shoppingItemSchema) as Resolver<ShoppingItemFormData>,
     defaultValues: { ...SHOPPING_ITEM_DEFAULTS, ...initialState },
+    context: { quantitySeed },
     // Re-validates as the user edits, so a message retires on the keystroke
     // that fixes it rather than surviving until the next submit.
     mode: 'onChange',
@@ -72,6 +76,7 @@ export function useShoppingListItemForm(
     // text no parser reads ("a pinch") stays as the person wrote it.
     const typed = item.quantityInput?.trim();
     const typedValue = typed ? parseStoredQuantityText(typed) : null;
+    setQuantitySeed(typed && typedValue == null ? typed : null);
     const netWeightUnitLabel = unitLabel(item.netWeightUnit);
     reset({
       itemName: item.itemName ?? '',

@@ -387,8 +387,6 @@
     "unfavoriteA11y": "Rimuovi dai preferiti",
     "ingredientsTooMany": "Una ricetta può avere al massimo {{count}} ingredienti",
     "stepsTooMany": "Una ricetta può avere al massimo {{count}} passaggi",
-    "tagsTooMany": "Una ricetta può avere al massimo {{count}} tag",
-    "tagTooLong": "Ogni tag può avere al massimo {{count}} caratteri",
     "tipsTooLong": "I consigli possono avere al massimo {{count}} caratteri",
     "stepsTooLarge": "Questi passaggi sono troppo lunghi per essere salvati. Accorciali e riprova.",
     "ingredientAlerts": {

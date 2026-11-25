@@ -387,8 +387,6 @@
     "unfavoriteA11y": "Remove from favourites",
     "ingredientsTooMany": "A recipe can have at most {{count}} ingredients",
     "stepsTooMany": "A recipe can have at most {{count}} steps",
-    "tagsTooMany": "A recipe can have at most {{count}} tags",
-    "tagTooLong": "Each tag can be at most {{count}} characters",
     "tipsTooLong": "Tips can be at most {{count}} characters",
     "stepsTooLarge": "These steps are too long to save. Shorten them and try again.",
     "ingredientAlerts": {

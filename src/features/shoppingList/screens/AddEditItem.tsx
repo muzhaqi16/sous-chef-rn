@@ -37,6 +37,7 @@ import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { refByIdOrName, typedItemRef } from '#utils/refInput';
 import { unitLabel } from '#utils/formatQuantity';
+import { MAX_SHOPPING_NOTE_LENGTH } from '#utils/validation/entryLimits';
 
 type RouteParams = {
   listId: string;
@@ -396,7 +397,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           placeholder={localizeNumericHint(
             t('shoppingListScreens.estimatedPricePlaceholder'),
           )}
-          keyboardType="numeric"
+          keyboardType="decimal-pad"
+          error={errors.estimatedPrice?.message}
         />
       ) : null}
 
@@ -428,6 +430,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         placeholder={t('shoppingListScreens.notesPlaceholder')}
         multiline
         numberOfLines={3}
+        maxLength={MAX_SHOPPING_NOTE_LENGTH}
+        error={errors.notes?.message}
       />
     </FormScreen>
   );
