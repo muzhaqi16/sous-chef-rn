@@ -13,21 +13,30 @@ import type {
   ShownQuantity,
 } from '#features/pantry/types';
 
+/** A quantity as its stack shows it: its amount and unit, in its notation. */
+export const shownParts = ({
+  quantity,
+  unit,
+  displayAsFraction,
+}: ShownQuantity): { amount: string; unit: string } => {
+  const notation = resolveQuantityNotation(displayAsFraction);
+  return {
+    amount: formatQuantityForDisplay(quantity, { notation }),
+    unit: unitLabel(unit, { quantity, notation }),
+  };
+};
+
 function exceeds(
   actionVerb: DeductionVerb,
   cap: ShownQuantity,
 ): DeductionJudgement {
-  const notation = resolveQuantityNotation(cap.displayAsFraction);
   return {
     ok: false,
     message: t(
       actionVerb === 'waste'
         ? 'deduction.exceedsAvailableWaste'
         : 'deduction.exceedsAvailableConsume',
-      {
-        amount: formatQuantityForDisplay(cap.quantity, { notation }),
-        unit: unitLabel(cap.unit, { quantity: cap.quantity, notation }),
-      },
+      shownParts(cap),
     ),
   };
 }

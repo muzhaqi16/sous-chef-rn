@@ -317,6 +317,16 @@ describe('an amount it cannot use', () => {
       expect(screen.queryByText(t('consumeItem.fifoHint'))).toBeNull();
     });
 
+    it('says what the batch holds is what is available', async () => {
+      await open({ batch });
+
+      expect(
+        screen.getByText(
+          t('pantryAction.availableAmount', { amount: '2', unit: 'lbs' }),
+        ),
+      ).toBeOnTheScreen();
+    });
+
     it('holds the amount to what the batch holds', async () => {
       await open({ batch });
 

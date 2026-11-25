@@ -243,7 +243,8 @@
   },
   "pantryAction": {
     "useByDefault": "Përdor deri më",
-    "availableDefault": "I disponueshëm:"
+    "availableDefault": "I disponueshëm:",
+    "availableAmount": "{{amount}} {{unit}}"
   },
   "correctWeight": {
     "invalidWeight": "Shkruaj një madhësi të vlefshme",

@@ -43,7 +43,6 @@ import type {
   StatedWaste,
   UsedBatch,
 } from '#features/pantry/types';
-import { scopedToBatch } from '#features/pantry/utils/scopedToBatch';
 import {
   DEFAULT_WASTE_REASON,
   WASTE_REASON_OPTIONS,
@@ -105,9 +104,10 @@ export const RecordWastePantryItemModal: React.FC<
       snapPoints={['80%', '95%']}
       unitToggleLabel={t('recordWaste.wasteBy')}
       operation={PantryOperation.Waste}
+      batch={batch}
       renderForm={(shared, pantryItem) => (
         <WasteForm
-          shared={batch ? scopedToBatch(shared, batch) : shared}
+          shared={shared}
           fromBatch={!!batch}
           ready={!!pantryItem}
           onClose={onClose}

@@ -243,7 +243,8 @@
   },
   "pantryAction": {
     "useByDefault": "Use by",
-    "availableDefault": "Available:"
+    "availableDefault": "Available:",
+    "availableAmount": "{{amount}} {{unit}}"
   },
   "correctWeight": {
     "invalidWeight": "Please enter a valid size",

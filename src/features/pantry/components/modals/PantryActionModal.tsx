@@ -28,10 +28,13 @@ import {
   shownStock,
 } from '#entities/pantryItem/stockDisplay';
 import { formatAmountLeft } from '#features/pantry/hooks/usePantryItemTransformation';
+import { scopedToBatch } from '#features/pantry/utils/scopedToBatch';
+import { shownParts } from '#features/pantry/utils/judgeDeduction';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import type {
   PantryActionSharedState,
   ShownQuantity,
+  UsedBatch,
 } from '#features/pantry/types';
 
 interface PantryActionModalProps {
@@ -44,6 +47,11 @@ interface PantryActionModalProps {
   currentQuantityLabel?: string;
   /** Selects which unit-eligibility query runs. */
   operation: PantryOperation;
+  /**
+   * An action on this batch alone: what it holds is what is available, to the
+   * form as to the line above it.
+   */
+  batch?: UsedBatch | null;
   /**
    * The action's form: its bar (`PantryActionHeader`) and its fields, mounted
    * fresh for each opening. `pantryItem` is null until the stack is read.
@@ -103,6 +111,7 @@ const PantryActionFrame: React.FC<PantryActionFrameProps> = ({
   unitToggleLabel,
   currentQuantityLabel,
   operation,
+  batch = null,
   renderForm,
 }) => {
   const { t } = useTranslation();
@@ -283,6 +292,8 @@ const PantryActionFrame: React.FC<PantryActionFrameProps> = ({
     isDualTracked,
     portionUnitId: pantryItem?.portionUnitId ?? null,
   };
+  // What the action may take: the batch's, when it is on one.
+  const held = batch ? scopedToBatch(shared, batch) : shared;
 
   return (
     <>
@@ -298,7 +309,12 @@ const PantryActionFrame: React.FC<PantryActionFrameProps> = ({
                 {resolvedCurrentQuantityLabel}{' '}
               </Text>
               <Text role="bodyStrong">
-                {formatAmountLeft(pantryItem, readingSystem)}
+                {batch
+                  ? t(
+                      'pantryAction.availableAmount',
+                      shownParts(held.leftAfter(0)),
+                    )
+                  : formatAmountLeft(pantryItem, readingSystem)}
               </Text>
             </View>
           </View>
@@ -315,7 +331,7 @@ const PantryActionFrame: React.FC<PantryActionFrameProps> = ({
         </>
       )}
 
-      {renderForm(shared, pantryItem)}
+      {renderForm(held, pantryItem)}
 
       {!pantryItem && itemQueryLoading ? (
         <View style={commonStyles.bottomSheetLoading}>

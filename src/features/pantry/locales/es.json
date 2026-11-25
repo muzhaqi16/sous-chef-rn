@@ -243,7 +243,8 @@
   },
   "pantryAction": {
     "useByDefault": "Consumir antes de",
-    "availableDefault": "Disponible:"
+    "availableDefault": "Disponible:",
+    "availableAmount": "{{amount}} {{unit}}"
   },
   "correctWeight": {
     "invalidWeight": "Introduce un tamaño válido",

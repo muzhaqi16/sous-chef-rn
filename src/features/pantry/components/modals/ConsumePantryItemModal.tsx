@@ -41,7 +41,6 @@ import type {
   StatedUse,
   UsedBatch,
 } from '#features/pantry/types';
-import { scopedToBatch } from '#features/pantry/utils/scopedToBatch';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface ConsumePantryItemModalProps {
@@ -110,10 +109,11 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       snapPoints={['75%', '95%']}
       unitToggleLabel={t('consumeItem.consumeBy')}
       operation={PantryOperation.Consume}
+      batch={batch}
       renderForm={(shared, pantryItem) => (
         <ConsumeForm
           compact={compact}
-          shared={batch ? scopedToBatch(shared, batch) : shared}
+          shared={shared}
           fromBatch={!!batch}
           pantryItem={pantryItem}
           onClose={onClose}
