@@ -55,6 +55,7 @@ jest.mock('#app/FloatingTabBar/FloatingTabBar', () => ({
 
 import '../HomeTabs';
 import { TAB_APPEARANCE, TAB_FEATURES } from '#features/registry';
+import { STATIC_FEATURE_REGISTRY } from '#features/registry.static';
 
 describe('HomeTabs', () => {
   const screenOptions = () => mockNavigatorConfig?.screenOptions ?? {};
@@ -69,6 +70,22 @@ describe('HomeTabs', () => {
     expect(Object.keys(screens())).toEqual(
       TAB_FEATURES.map(f => f.tab.screenName),
     );
+  });
+
+  // A push names its tab and screen as strings, which the navigator's types
+  // cannot check, so each is held to the feature's own tab here.
+  it("opens a feature's push on that feature's tab, at its main screen", () => {
+    const routes = STATIC_FEATURE_REGISTRY.flatMap(feature =>
+      feature.pushRoute ? [{ id: feature.id, route: feature.pushRoute }] : [],
+    );
+    expect(routes.length).toBeGreaterThan(0);
+    for (const { id, route } of routes) {
+      const tab = TAB_FEATURES.find(feature => feature.id === id)?.tab;
+      expect({ tab: route.tab, screen: route.screen }).toEqual({
+        tab: tab?.screenName,
+        screen: tab?.mainScreen,
+      });
+    }
   });
 
   // The tab bar gets its icons, labels and reset-to-root targets from here, so a

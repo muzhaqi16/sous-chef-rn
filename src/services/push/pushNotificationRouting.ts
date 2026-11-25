@@ -7,7 +7,10 @@
 
 import NavigationService from '#services/NavigationService';
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
-import { notificationDestination } from './notificationDestination';
+import {
+  notificationDestination,
+  notificationDestinationAction,
+} from './notificationDestination';
 
 // FCM/Notifee payloads are flat string maps. Routing keys off `category` and
 // `notificationId`; the other fields ride along for dedup and correlation.
@@ -39,22 +42,9 @@ export const routeNotificationTap = (
     useNotificationStore.getState().noteOpenedFromPush(notificationId);
   }
 
-  const destination = notificationDestination(
-    category,
-    category ? notificationId : undefined,
+  NavigationService.dispatch(
+    notificationDestinationAction(
+      notificationDestination(category, category ? notificationId : undefined),
+    ),
   );
-  switch (destination.kind) {
-    case 'feature':
-      NavigationService.navigate('Home', {
-        screen: destination.tab,
-        params: { screen: destination.screen },
-      });
-      return;
-    case 'detail':
-      NavigationService.navigate('NotificationDetail', { id: destination.id });
-      return;
-    case 'feed':
-    default:
-      NavigationService.navigate('Notifications');
-  }
 };

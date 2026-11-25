@@ -46,14 +46,8 @@ const NotificationFeed: React.FC<{
 }> = ({ onAction }) => {
   const { t } = useTranslation();
   const listInset = useScreenListInset();
-  const {
-    toNotificationDetail,
-    toNotificationSettings,
-    toPantryMain,
-    toShoppingListMain,
-    toRecipeMain,
-    toMealPlanMain,
-  } = useAppNavigation();
+  const { toNotificationDestination, toNotificationSettings } =
+    useAppNavigation();
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);
 
@@ -88,26 +82,6 @@ const NotificationFeed: React.FC<{
     isEmpty: notifications.length === 0,
   });
 
-  /** A feature's own tab; false for one this screen cannot open. */
-  const openTab = (tab: string): boolean => {
-    switch (tab) {
-      case 'Pantry':
-        toPantryMain();
-        return true;
-      case 'ShoppingList':
-        toShoppingListMain();
-        return true;
-      case 'Recipe':
-        toRecipeMain();
-        return true;
-      case 'MealPlan':
-        toMealPlanMain();
-        return true;
-      default:
-        return false;
-    }
-  };
-
   // Where it leads is `notificationDestination`'s, which a tapped push asks too.
   const handleNotificationPress = (notification: NotificationType) => {
     // Never awaited: the read shows at once, and a tap must not wait on the
@@ -118,12 +92,9 @@ const NotificationFeed: React.FC<{
       onAction(notification);
       return;
     }
-    const destination = notificationDestination(
-      notification.category,
-      notification.id,
+    toNotificationDestination(
+      notificationDestination(notification.category, notification.id),
     );
-    if (destination.kind === 'feature' && openTab(destination.tab)) return;
-    toNotificationDetail({ id: notification.id, notification });
   };
 
   // Headers inlined into one array; FlashList tells the two apart by item type.

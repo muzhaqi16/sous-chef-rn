@@ -5,7 +5,10 @@ import {
 } from '@react-navigation/native';
 import type { RootStackParamList } from '#navigation/RootNavigator';
 import type { BarcodeStackParams } from '#navigation/stacks/BarcodeStack';
-import type { NotificationStackParams } from '#navigation/stacks/NotificationStack';
+import {
+  notificationDestinationAction,
+  type NotificationDestination,
+} from '#services/push/notificationDestination';
 
 /** Root routes whose params are an object or absent: what `replace` can carry. */
 type ReplaceableRoute = {
@@ -218,13 +221,9 @@ export function useAppNavigation() {
     // ─── Notification stack screens (nested) ──────────────────────────────
     toNotifications: () =>
       navigation.navigate('Notifications', { screen: 'NotificationList' }),
-    toNotificationDetail: (
-      params: NotificationStackParams['NotificationDetail'],
-    ) =>
-      navigation.navigate('Notifications', {
-        screen: 'NotificationDetail',
-        params,
-      }),
+    /** Where a tapped notification leads, built as a tapped push builds it. */
+    toNotificationDestination: (destination: NotificationDestination) =>
+      navigation.dispatch(notificationDestinationAction(destination)),
 
     // ─── Barcode modal flow (nested) ──────────────────────────────────────
     toBarcode: (params?: BarcodeStackParams['BarcodeScanner']) =>

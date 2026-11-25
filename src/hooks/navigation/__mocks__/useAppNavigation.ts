@@ -78,7 +78,7 @@ const mockNavigation = {
   toCreateMealPlan: jest.fn(),
   toMealTemplateBuilder: jest.fn(),
   toNotifications: jest.fn(),
-  toNotificationDetail: jest.fn(),
+  toNotificationDestination: jest.fn(),
   toBarcode: jest.fn(),
   toSearchResults: jest.fn(),
 };

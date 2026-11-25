@@ -385,7 +385,7 @@ describe('pressing a notification', () => {
     const read = markedRead('joined', { held: true });
     await openList([feed([homeJoined()])], [read]);
     const opened = calledOnce(
-      mockNav.toNotificationDetail,
+      mockNav.toNotificationDestination,
       'opening the detail',
     );
 
@@ -394,9 +394,9 @@ describe('pressing a notification', () => {
     );
     await opened;
 
-    expect(mockNav.toNotificationDetail).toHaveBeenCalledWith({
+    expect(mockNav.toNotificationDestination).toHaveBeenCalledWith({
+      kind: 'detail',
       id: 'joined',
-      notification: expect.objectContaining({ id: 'joined' }),
     });
     read.release();
     await act(() => log.landed(MarkNotificationAsReadDocument));
@@ -405,13 +405,19 @@ describe('pressing a notification', () => {
   // As tapping its push does: a feature's notification opens that feature.
   it('opens the pantry for a pantry notification, not its detail', async () => {
     await openList([feed([lowStock({ status: NotificationStatus.Read })])]);
-    const opened = calledOnce(mockNav.toPantryMain, 'opening the pantry');
+    const opened = calledOnce(
+      mockNav.toNotificationDestination,
+      'opening the pantry',
+    );
 
     fireEvent.press(screen.getByText(t('notifications.copy.title.LOW_STOCK')));
     await opened;
 
-    expect(mockNav.toPantryMain).toHaveBeenCalledTimes(1);
-    expect(mockNav.toNotificationDetail).not.toHaveBeenCalled();
+    expect(mockNav.toNotificationDestination).toHaveBeenCalledWith({
+      kind: 'feature',
+      tab: 'Pantry',
+      screen: 'PantryMain',
+    });
   });
 
   it('offers to answer an invitation at once', async () => {
@@ -425,7 +431,7 @@ describe('pressing a notification', () => {
     expect(
       screen.getByText(t('labels.invitedBy', { name: 'Sam' })),
     ).toBeVisible();
-    expect(mockNav.toNotificationDetail).not.toHaveBeenCalled();
+    expect(mockNav.toNotificationDestination).not.toHaveBeenCalled();
     read.release();
     await act(() => log.landed(MarkNotificationAsReadDocument));
   });

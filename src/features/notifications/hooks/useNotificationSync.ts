@@ -47,7 +47,10 @@ export function useNotificationSync() {
 
   const syncMarkAsRead = async (id: string) => {
     const cache = client.cache;
-    if (!isUnreadStatus(readNotificationStatus(cache, id))) return;
+    // A push can open one the device does not hold yet; the answer states the
+    // row and the badge, so only a row held as read is left alone.
+    const status = readNotificationStatus(cache, id);
+    if (status !== undefined && !isUnreadStatus(status)) return;
 
     const { failure } = await markRead.send({ input: { id } });
     if (!failure) return;

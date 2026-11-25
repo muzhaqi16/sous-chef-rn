@@ -468,4 +468,19 @@ describe('useMarkPushOpenedRead', () => {
     expect(readNotificationStatus(cache, 'n1')).toBe(READ);
     expect(useNotificationStore.getState().openedFromPush).toBeNull();
   });
+
+  // One that arrived while the app was closed is not held when its push opens.
+  it('marks read a notification the device does not hold, the badge as stated', async () => {
+    const cache = seedFeed(5);
+    useNotificationStore.getState().noteOpenedFromPush('n1');
+
+    renderHookWithApollo(() => useMarkPushOpenedRead(), {
+      cache,
+      operationMocks: [markReadMock(summary(4))],
+    });
+    await drainTimers();
+
+    expect(readNotificationStatus(cache, 'n1')).toBe(READ);
+    expect(readBadge(cache)?.unreadCount).toBe(4);
+  });
 });
