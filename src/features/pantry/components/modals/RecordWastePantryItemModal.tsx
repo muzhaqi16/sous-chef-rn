@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import {
   Controller,
@@ -16,7 +16,12 @@ import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { CollapsibleChipPicker } from '#features/pantry/components/CollapsibleChipPicker';
 import { QuantityInputFeedback } from '#features/pantry/components/QuantityInputFeedback';
 import { parseFractionalInput } from '#utils/fractionUtils';
-import { validateDeductionQuantity } from '#features/pantry/utils/validateDeductionQuantity';
+import {
+  allHeld,
+  deductionCap,
+  heldToStock,
+  judgeDeduction,
+} from '#features/pantry/utils/judgeDeduction';
 import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
 import { WasteReason } from '#graphql/generated/schemaTypes';
 import { commonStyles } from '#styles/commonStyles';
@@ -33,21 +38,25 @@ import {
   resolveQuantityNotation,
 } from '#utils/formatQuantity';
 import { reportValidationErrors } from '#utils/validation/common';
-import type { PantryActionSharedState } from '#features/pantry/types';
-import { WASTE_REASON_OPTIONS } from '#features/pantry/utils/wasteReasons';
+import type {
+  PantryActionSharedState,
+  StatedWaste,
+  UsedBatch,
+} from '#features/pantry/types';
+import { scopedToBatch } from '#features/pantry/utils/scopedToBatch';
+import {
+  DEFAULT_WASTE_REASON,
+  WASTE_REASON_OPTIONS,
+} from '#features/pantry/utils/wasteReasons';
 
 interface RecordWastePantryItemModalProps {
   visible: boolean;
   pantryItemId: string | null;
+  /** A waste from this batch alone; absent, the stack's oldest batches go first. */
+  batch?: UsedBatch | null;
   onClose: () => void;
-  onConfirm: (
-    wasteAmount: number,
-    wasteReason: WasteReason,
-    isComposted: boolean,
-    isRecycled: boolean,
-    notes: string,
-    wasteUnitId?: string,
-  ) => void;
+  /** The caller closes the sheet once the waste is recorded. */
+  onConfirm: (waste: StatedWaste) => Promise<unknown>;
 }
 
 interface WasteFormValues {
@@ -61,21 +70,11 @@ interface WasteFormValues {
 
 const wasteDefaults: WasteFormValues = {
   amountInput: null,
-  wasteReason: WasteReason.Expired,
+  wasteReason: DEFAULT_WASTE_REASON,
   isComposted: false,
   isRecycled: false,
   notes: '',
 };
-
-// The amount is held to the stock, which only the confirm reads
-// (`validateDeductionQuantity`, reported with `setError`).
-const wasteSchema: ObjectSchema<WasteFormValues> = object({
-  amountInput: string().nullable().defined(),
-  wasteReason: mixed<WasteReason>().oneOf(Object.values(WasteReason)).defined(),
-  isComposted: boolean().defined(),
-  isRecycled: boolean().defined(),
-  notes: string().defined(),
-});
 
 /** The amount before one is typed: everything the stack holds. */
 const untypedAmount = (shared: PantryActionSharedState) =>
@@ -85,9 +84,18 @@ const untypedAmount = (shared: PantryActionSharedState) =>
     ),
   });
 
+// The amount is held to the stock in `useForm`'s `context`.
+const wasteSchema: ObjectSchema<WasteFormValues> = object({
+  amountInput: heldToStock('waste', untypedAmount),
+  wasteReason: mixed<WasteReason>().oneOf(Object.values(WasteReason)).defined(),
+  isComposted: boolean().defined(),
+  isRecycled: boolean().defined(),
+  notes: string().defined(),
+});
+
 export const RecordWastePantryItemModal: React.FC<
   RecordWastePantryItemModalProps
-> = ({ visible, pantryItemId, onClose, onConfirm }) => {
+> = ({ visible, pantryItemId, batch = null, onClose, onConfirm }) => {
   const { t } = useTranslation();
   return (
     <PantryActionModal
@@ -99,7 +107,8 @@ export const RecordWastePantryItemModal: React.FC<
       operation={PantryOperation.Waste}
       renderForm={(shared, pantryItem) => (
         <WasteForm
-          shared={shared}
+          shared={batch ? scopedToBatch(shared, batch) : shared}
+          fromBatch={!!batch}
           ready={!!pantryItem}
           onClose={onClose}
           onConfirm={onConfirm}
@@ -111,6 +120,8 @@ export const RecordWastePantryItemModal: React.FC<
 
 interface WasteFormProps {
   shared: PantryActionSharedState;
+  /** Taken from one batch, where all it holds is the batch thrown out. */
+  fromBatch: boolean;
   /** The stack is read, so there is something to record. */
   ready: boolean;
   onClose: () => void;
@@ -119,6 +130,7 @@ interface WasteFormProps {
 
 const WasteForm: React.FC<WasteFormProps> = ({
   shared,
+  fromBatch,
   ready,
   onClose,
   onConfirm,
@@ -127,37 +139,39 @@ const WasteForm: React.FC<WasteFormProps> = ({
   const {
     control,
     handleSubmit,
-    setError,
-    formState: { isDirty },
+    trigger,
+    formState: { isDirty, isSubmitted },
   } = useForm<WasteFormValues>({
     resolver: yupResolver(wasteSchema),
     defaultValues: wasteDefaults,
+    context: { shared },
   });
   useSheetUnsavedInput(isDirty);
+  // A refusal shown stays true to the stock: a conversion landing or the stock
+  // moving checks the amount again.
+  const cap = deductionCap(shared);
+  useEffect(() => {
+    if (isSubmitted) void trigger('amountInput');
+  }, [cap, isSubmitted, trigger]);
 
-  // The sheet closes at once; the write settles behind it.
+  // A refusal keeps the sheet open with what was entered.
   const submit = handleSubmit(
-    ({ amountInput, wasteReason, isComposted, isRecycled, notes }) => {
-      const typed = amountInput ?? untypedAmount(shared);
-      const wasteValue = validateDeductionQuantity(
-        typed,
+    async ({ amountInput, wasteReason, isComposted, isRecycled, notes }) => {
+      const judged = judgeDeduction(
+        amountInput ?? untypedAmount(shared),
         shared,
         'waste',
-        message => {
-          setError('amountInput', { message });
-        },
       );
-      if (wasteValue === null) return;
-
-      onConfirm(
-        wasteValue,
+      if (!judged.ok) return;
+      await onConfirm({
+        quantity: judged.amount,
+        all: fromBatch && judged.amount === allHeld(shared),
         wasteReason,
         isComposted,
         isRecycled,
         notes,
-        shared.activeUnitId,
-      );
-      onClose();
+        usageUnitId: shared.activeUnitId,
+      });
     },
     reportValidationErrors,
   );
@@ -216,7 +230,6 @@ const WasteFields: React.FC<{
           onChangeText={amount.onChange}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
           error={amountState.error?.message}
-          useBottomSheetInput
         />
         <QuantityInputFeedback
           remaining={remaining}
@@ -295,7 +308,6 @@ const WasteFields: React.FC<{
               placeholder={t('recordWaste.notesPlaceholder')}
               multiline
               numberOfLines={3}
-              useBottomSheetInput
             />
           )}
         />

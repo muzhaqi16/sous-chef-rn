@@ -16,7 +16,7 @@ import {
 import type { ConflictRead, LocalWrite } from '#apollo/pendingWrites/types';
 import { writeEntityFields } from '#apollo/utils/localFirstFields';
 import { isHeld } from '#apollo/utils/writeLocalEntity';
-import { ItemCondition } from '#graphql/generated/schemaTypes';
+import { BatchStatus, ItemCondition } from '#graphql/generated/schemaTypes';
 import { appliedPayload } from '#utils/errors/mutationPayload';
 import { isRecord } from '#utils/isRecord';
 import {
@@ -203,22 +203,105 @@ export type DrawStockInputs = StockDeltaInputs & {
   stated?: { amount: number; unitId: string } | null;
   /** The unit a use remembers; waste leaves the stack's alone. */
   usedUnitId?: string | null;
+  /** A use taken from this batch alone, which moves with its stack. */
+  batchId?: string | null;
 };
 
+/**
+ * A use drawn from one batch, as the server draws it: the batch is opened, and
+ * emptied it is depleted. What opening does to its date is the server's.
+ */
+function drawBatch(
+  cache: ApolloCache,
+  batchId: string,
+  delta: number,
+  now: string,
+): void {
+  const id = cache.identify({ __typename: 'PantryItemBatch', id: batchId });
+  if (!id) return;
+  const left = (held: number) => Math.max(0, held + delta);
+  cache.modify<{
+    quantity: number;
+    status: BatchStatus;
+    depletedAt: string | null;
+    isOpened: boolean;
+    openedAt: string | null;
+  }>({
+    id,
+    fields: {
+      quantity: held => left(held),
+      status: (status, { readField }) =>
+        left(readField('quantity') ?? 0) === 0 ? BatchStatus.Depleted : status,
+      depletedAt: (at, { readField }) =>
+        left(readField('quantity') ?? 0) === 0 ? now : at,
+      isOpened: () => true,
+      openedAt: at => at ?? now,
+    },
+  });
+}
+
 export const drawStock: LocalWrite<DrawStockInputs> = {
-  apply(cache, { variables, inputs: { delta, stated, usedUnitId, now } }) {
+  apply(
+    cache,
+    { variables, inputs: { delta, stated, usedUnitId, batchId, now } },
+  ) {
     const stack = stackOf(variables);
     if (!stack) return;
     if (delta !== null) {
       bumpStock(cache, stack.id, delta, now);
+      if (batchId) drawBatch(cache, batchId, delta, now);
     } else if (stated) {
       drawInside(cache, stack.id, stated.amount, stated.unitId, now);
     }
     if (usedUnitId) rememberConsumeUnit(cache, stack.id, usedUnitId);
   },
+  // The answer states no batch: which ones a use drew on, their dates once
+  // opened and their versions are read again, as after a restock.
   commit(cache, { variables }, data) {
     const stack = stackOf(variables);
-    if (stack) leaveMergedStack(cache, stack.id, appliedPayload(data));
+    if (!stack) return;
+    leaveMergedStack(cache, stack.id, appliedPayload(data));
+    dropBatchesPage(cache, stack.id);
+  },
+};
+
+export type WasteBatchInputs = {
+  /** The batch's stack, which loses what the batch held. */
+  pantryItemId: string;
+  /** What the batch held, in the stack's tracking unit. */
+  held: number;
+  now: string;
+};
+
+/** A whole batch thrown out: it is wasted, and its stack holds that much less. */
+export const wasteBatch: LocalWrite<WasteBatchInputs> = {
+  subject: { key: 'batchId' },
+  // It moves its stack, so it stays behind that stack's writes.
+  orderedBy: ({ inputs: { pantryItemId } }) => pantryItemId,
+  apply(cache, { variables, inputs: { pantryItemId, held, now } }) {
+    const input: unknown = variables.input;
+    const batchId =
+      isRecord(input) && typeof input.batchId === 'string'
+        ? input.batchId
+        : null;
+    const batch = batchId && { __typename: 'PantryItemBatch', id: batchId };
+    if (!batch || !isHeld(cache, batch)) return;
+    writeEntityFields(cache, batch, {
+      status: BatchStatus.Wasted,
+      quantity: 0,
+      depletedAt: now,
+    });
+    if (!isHeld(cache, stackRef(pantryItemId))) return;
+    bumpStock(cache, pantryItemId, -held, now);
+    cache.modify<{ activeBatchCount: number }>({
+      id: cache.identify(stackRef(pantryItemId)),
+      fields: { activeBatchCount: count => Math.max(0, count - 1) },
+    });
+  },
+  // The answer states the stack, not the batch: the batches are read again.
+  commit(cache, { inputs: { pantryItemId } }, data) {
+    leaveMergedStack(cache, pantryItemId, appliedPayload(data));
+    dropBatchesPage(cache, pantryItemId);
   },
 };
 

@@ -29,6 +29,8 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
         style={styles.checkboxRow}
         onPress={onPress}
         disabled={disabled}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked, disabled }}
       >
         <View
           style={[

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import {
   Controller,
@@ -17,7 +17,12 @@ import { FormInput } from '#components/atoms/FormInput';
 import { CollapsibleChipPicker } from '#features/pantry/components/CollapsibleChipPicker';
 import { QuantityInputFeedback } from '#features/pantry/components/QuantityInputFeedback';
 import { parseFractionalInput } from '#utils/fractionUtils';
-import { validateDeductionQuantity } from '#features/pantry/utils/validateDeductionQuantity';
+import {
+  allHeld,
+  deductionCap,
+  heldToStock,
+  judgeDeduction,
+} from '#features/pantry/utils/judgeDeduction';
 import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
 import { UsagePurpose } from '#graphql/generated/schemaTypes';
 import { commonStyles } from '#styles/commonStyles';
@@ -31,21 +36,22 @@ import { Text } from '#components/atoms/Text';
 import { localizeNumericHint } from '#utils/formatters/number';
 import { formatQuantityForInput, unitLabel } from '#utils/formatQuantity';
 import { reportValidationErrors } from '#utils/validation/common';
-import type { PantryActionSharedState } from '#features/pantry/types';
+import type {
+  PantryActionSharedState,
+  StatedUse,
+  UsedBatch,
+} from '#features/pantry/types';
+import { scopedToBatch } from '#features/pantry/utils/scopedToBatch';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface ConsumePantryItemModalProps {
   compact?: boolean;
   visible: boolean;
   pantryItemId: string | null;
+  /** A use from this batch alone; absent, the stack's oldest batches go first. */
+  batch?: UsedBatch | null;
   onClose: () => void;
-  onConfirm: (
-    quantityUsed: number,
-    quantityInput: string,
-    purpose: UsagePurpose,
-    notes: string,
-    usageUnitId?: string,
-  ) => Promise<unknown>;
+  onConfirm: (use: StatedUse) => Promise<unknown>;
 }
 
 const PURPOSE_OPTIONS: Array<{
@@ -76,22 +82,22 @@ const consumeDefaults: ConsumeFormValues = {
   notes: '',
 };
 
-// The amount is held to the stock, which only the confirm reads
-// (`validateDeductionQuantity`, reported with `setError`).
-const consumeSchema: ObjectSchema<ConsumeFormValues> = object({
-  quantityInput: string().nullable().defined(),
-  purpose: mixed<UsagePurpose>().oneOf(Object.values(UsagePurpose)).defined(),
-  notes: string().defined(),
-});
-
 /** The amount before one is typed. */
 const untypedQuantity = ({ defaultUnitIncrement }: PantryActionSharedState) =>
   defaultUnitIncrement ? formatQuantityForInput(defaultUnitIncrement) : '1';
+
+// The amount is held to the stock in `useForm`'s `context`.
+const consumeSchema: ObjectSchema<ConsumeFormValues> = object({
+  quantityInput: heldToStock('consume', untypedQuantity),
+  purpose: mixed<UsagePurpose>().oneOf(Object.values(UsagePurpose)).defined(),
+  notes: string().defined(),
+});
 
 export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   visible,
   compact = false,
   pantryItemId,
+  batch = null,
   onClose,
   onConfirm,
 }) => {
@@ -107,7 +113,8 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       renderForm={(shared, pantryItem) => (
         <ConsumeForm
           compact={compact}
-          shared={shared}
+          shared={batch ? scopedToBatch(shared, batch) : shared}
+          fromBatch={!!batch}
           pantryItem={pantryItem}
           onClose={onClose}
           onConfirm={onConfirm}
@@ -120,6 +127,8 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
 interface ConsumeFormProps {
   compact: boolean;
   shared: PantryActionSharedState;
+  /** Taken from one batch, so no oldest-first order to explain. */
+  fromBatch: boolean;
   pantryItem: PantryActionModal_PantryItemFragment | null;
   onClose: () => void;
   onConfirm: ConsumePantryItemModalProps['onConfirm'];
@@ -128,6 +137,7 @@ interface ConsumeFormProps {
 const ConsumeForm: React.FC<ConsumeFormProps> = ({
   compact,
   shared,
+  fromBatch,
   pantryItem,
   onClose,
   onConfirm,
@@ -136,29 +146,37 @@ const ConsumeForm: React.FC<ConsumeFormProps> = ({
   const {
     control,
     handleSubmit,
-    setError,
-    formState: { isDirty },
+    trigger,
+    formState: { isDirty, isSubmitted },
   } = useForm<ConsumeFormValues>({
     resolver: yupResolver(consumeSchema),
     defaultValues: consumeDefaults,
+    context: { shared },
   });
   useSheetUnsavedInput(isDirty);
+  // A refusal shown stays true to the stock: a conversion landing or the stock
+  // moving checks the amount again.
+  const cap = deductionCap(shared);
+  useEffect(() => {
+    if (isSubmitted) void trigger('quantityInput');
+  }, [cap, isSubmitted, trigger]);
 
   // The caller closes the sheet once the use is recorded; a refusal keeps it
   // open with what was entered.
   const submit = handleSubmit(async ({ quantityInput, purpose, notes }) => {
-    const typed = quantityInput ?? untypedQuantity(shared);
-    const quantityUsed = validateDeductionQuantity(
-      typed,
+    const judged = judgeDeduction(
+      quantityInput ?? untypedQuantity(shared),
       shared,
       'consume',
-      message => {
-        setError('quantityInput', { message });
-      },
     );
-    if (quantityUsed === null) return;
-
-    await onConfirm(quantityUsed, typed, purpose, notes, shared.activeUnitId);
+    if (!judged.ok) return;
+    await onConfirm({
+      quantity: judged.amount,
+      all: fromBatch && judged.amount === allHeld(shared),
+      purpose,
+      notes,
+      usageUnitId: shared.activeUnitId,
+    });
   }, reportValidationErrors);
 
   const purposeOptions = PURPOSE_OPTIONS.map(({ labelKey, value }) => ({
@@ -179,7 +197,7 @@ const ConsumeForm: React.FC<ConsumeFormProps> = ({
           control={control}
           compact={compact}
           shared={shared}
-          showFifoHint={pantryItem.activeBatchCount > 1}
+          showFifoHint={!fromBatch && pantryItem.activeBatchCount > 1}
           purposeOptions={purposeOptions}
         />
       ) : null}
@@ -201,10 +219,7 @@ const ConsumeFields: React.FC<{
     name: 'quantityInput',
   });
   const quantityInput = quantity.value ?? untypedQuantity(shared);
-  const useAll =
-    shared.exactFactor != null
-      ? shared.trackingQuantity / shared.exactFactor
-      : shared.availableInSelectedUnit;
+  const useAll = allHeld(shared);
   const activeUnitText = unitLabel(shared.activeUnit);
   const consumeAmount = parseFractionalInput(quantityInput);
   const { conversion, remaining, available } = useQuantityFeedback(
@@ -228,7 +243,6 @@ const ConsumeFields: React.FC<{
           value={quantityInput}
           onChangeText={quantity.onChange}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
-          useBottomSheetInput
           testID={pantryTestIDs.consumeQuantity}
         />
         <QuantityInputFeedback
@@ -307,7 +321,6 @@ const ConsumeFields: React.FC<{
                   placeholder={t('consumeItem.notesPlaceholder')}
                   multiline
                   numberOfLines={3}
-                  useBottomSheetInput
                 />
               )}
             />

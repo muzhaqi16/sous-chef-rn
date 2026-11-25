@@ -1,6 +1,9 @@
 import type { TranslationKey } from '#i18n';
 import { WasteReason } from '#graphql/generated/schemaTypes';
 
+/** The reason every waste picker starts on. */
+export const DEFAULT_WASTE_REASON = WasteReason.Expired;
+
 /** Why food went to waste, as every waste picker offers it, the likeliest first. */
 export const WASTE_REASON_OPTIONS: ReadonlyArray<{
   labelKey: TranslationKey;

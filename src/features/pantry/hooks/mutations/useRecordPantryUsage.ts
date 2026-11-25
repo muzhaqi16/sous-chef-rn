@@ -27,6 +27,8 @@ const REMEMBERS_ITS_UNIT: ReadonlySet<UsagePurpose> = new Set([
 export interface PantryUsage {
   pantryItemId: string;
   quantity: number;
+  /** Everything the batch holds: the server takes what it holds, as held. */
+  all?: boolean;
   usageUnitId: string | undefined;
   usage: Pick<
     CreatePantryItemUsageInput,
@@ -43,14 +45,23 @@ export function useRecordPantryUsage() {
   const client = useApolloClient();
   const refetchRankedUnits = () => dropRankedUnits(client.cache);
   // Replays as the canonical mutation, deduped by its idempotencyKey.
+  // The sheet holds an amount to the stock it reads, so the server refuses one
+  // only when the stock moved meanwhile.
   const createUsage = useLocalWrite(CreatePantryItemUsageDocument, {
     fallback: t('errors.recordUsageFailedRetry'),
     on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
+    copy: {
+      INSUFFICIENT_QUANTITY: {
+        title: t('deduction.stockMovedTitle'),
+        body: t('deduction.stockMoved'),
+      },
+    },
   });
 
   const recordUsage = async ({
     pantryItemId,
     quantity,
+    all = false,
     usageUnitId,
     usage,
     batchId,
@@ -68,13 +79,15 @@ export function useRecordPantryUsage() {
       delta: used === null ? null : -used,
       stated: usageUnitId ? { amount: quantity, unitId: usageUnitId } : null,
       usedUnitId: REMEMBERS_ITS_UNIT.has(usage.purpose) ? usageUnitId : null,
+      batchId: batchId ?? null,
       now: new Date().toISOString(),
     };
     const today = todayKey();
     const input: CreatePantryItemUsageInput = {
       pantryItemId,
-      amount: { quantity },
-      usageUnitId,
+      ...(all && batchId
+        ? { amount: { all: true }, targetBatchId: batchId }
+        : { amount: { quantity }, usageUnitId }),
       ...usage,
       ...(batchId ? { targetBatchId: batchId } : {}),
       today,

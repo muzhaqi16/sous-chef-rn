@@ -2,12 +2,25 @@ import {
   eggsShared,
   pantryActionShared as shared,
 } from '#/test-utils/pantryActionShared';
-import { validateDeductionQuantity } from '../validateDeductionQuantity';
+import type { PantryActionSharedState } from '#features/pantry/types';
+import { judgeDeduction } from '../judgeDeduction';
 
-// A refusal is the amount field's to show: never an alert.
+// A refusal is the amount field's message: the amount taken, else the message
+// handed to `report`.
 const onError = jest.fn();
+const validateDeductionQuantity = (
+  input: string,
+  stock: PantryActionSharedState,
+  verb: 'consume' | 'waste',
+  report: (message: string) => void,
+): number | null => {
+  const judged = judgeDeduction(input, stock, verb);
+  if (judged.ok) return judged.amount;
+  report(judged.message);
+  return null;
+};
 
-describe('validateDeductionQuantity', () => {
+describe('judgeDeduction', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('names the available cap as a cooking fraction', () => {

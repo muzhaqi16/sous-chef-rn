@@ -363,7 +363,9 @@
     "exceedsAvailableWaste": "Cannot waste more than available quantity ({{amount}} {{unit}})",
     "remainingAfter": "Remaining: {{amount}} {{unit}}",
     "exceedsAvailable": "Exceeds available ({{amount}} {{unit}})",
-    "conversionUnavailable": "This unit cannot be converted. Choose another unit."
+    "conversionUnavailable": "This unit cannot be converted. Choose another unit.",
+    "stockMovedTitle": "Not that much left",
+    "stockMoved": "Some of it went since you opened this. Check what is left and try again."
   },
   "duplicateItem": {
     "title": "Item Already in Pantry"

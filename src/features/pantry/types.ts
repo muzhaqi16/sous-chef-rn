@@ -4,6 +4,7 @@ import type {
   StorageState,
   UnitType,
   UsagePurpose,
+  WasteReason,
 } from '#graphql/generated/schemaTypes';
 import type { OfferedAcquisitionMethod } from '#features/pantry/utils/itemEnumLabels';
 import type { MeasureShape } from '#domain/measure';
@@ -132,3 +133,34 @@ export type AddPantryItemFormData = {
   costPerUnit: string;
   acquisitionMethod: OfferedAcquisitionMethod;
 };
+
+/** A use as the sheet states it. */
+export interface StatedUse {
+  /** In `usageUnitId`. */
+  quantity: number;
+  /** Everything the batch holds, which the server takes as held. */
+  all: boolean;
+  purpose: UsagePurpose;
+  notes: string;
+  usageUnitId: string | undefined;
+}
+
+/** A waste as the sheet states it. */
+export interface StatedWaste {
+  /** In `usageUnitId`. */
+  quantity: number;
+  /** All the batch holds: the batch is thrown out whole. */
+  all: boolean;
+  wasteReason: WasteReason;
+  isComposted: boolean;
+  isRecycled: boolean;
+  notes: string;
+  usageUnitId: string | undefined;
+}
+
+/** A batch a use or a waste is taken from alone: what it holds bounds it. */
+export interface UsedBatch {
+  /** In the stack's tracking unit. */
+  quantity: number;
+  remainingNetWeight: number | null;
+}

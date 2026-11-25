@@ -363,7 +363,9 @@
     "exceedsAvailableWaste": "Nuk mund të hedhësh më shumë se sasia e disponueshme ({{amount}} {{unit}})",
     "remainingAfter": "Mbetet: {{amount}} {{unit}}",
     "exceedsAvailable": "Tejkalon sasinë e disponueshme ({{amount}} {{unit}})",
-    "conversionUnavailable": "Kjo njësi nuk mund të konvertohet. Zgjidh një njësi tjetër."
+    "conversionUnavailable": "Kjo njësi nuk mund të konvertohet. Zgjidh një njësi tjetër.",
+    "stockMovedTitle": "Nuk ka mbetur aq",
+    "stockMoved": "Një pjesë është përdorur që kur e hape këtë. Kontrollo sa ka mbetur dhe provo përsëri."
   },
   "duplicateItem": {
     "title": "Artikulli është tashmë në qilar"

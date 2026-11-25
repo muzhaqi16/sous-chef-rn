@@ -132,6 +132,7 @@ export const PantryItemInfoSections: React.FC<PantryItemInfoSectionsProps> = ({
               })
             }
             onUse={batchUse && canEdit ? actions.setUsingBatchId : undefined}
+            onWaste={actions.setWastingBatchId}
             onCorrectSize={canEdit ? actions.setCorrectingBatchId : undefined}
           />
         </DetailSection>

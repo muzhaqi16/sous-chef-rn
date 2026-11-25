@@ -363,7 +363,9 @@
     "exceedsAvailableWaste": "Non puoi sprecare più della quantità disponibile ({{amount}} {{unit}})",
     "remainingAfter": "Rimanente: {{amount}} {{unit}}",
     "exceedsAvailable": "Supera la disponibilità ({{amount}} {{unit}})",
-    "conversionUnavailable": "Impossibile convertire questa unità. Scegli un’altra unità."
+    "conversionUnavailable": "Impossibile convertire questa unità. Scegli un’altra unità.",
+    "stockMovedTitle": "Non ne resta così tanto",
+    "stockMoved": "Una parte è stata usata da quando hai aperto questa schermata. Controlla quanto resta e riprova."
   },
   "duplicateItem": {
     "title": "Articolo già in dispensa"

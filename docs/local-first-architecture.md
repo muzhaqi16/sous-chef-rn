@@ -329,6 +329,14 @@ sync" (`usePendingUses`); a use the device can prove is never held behind it (US
 and the pantry `localWrites.test.ts`. The API contracts behind this work are tracked in
 `docs/pantry-tracking-api-alignment.md`.
 
+**From one batch.** The use and waste sheets take the batch they were opened on: what it holds is their
+cap and their "all", and a use from it shows no oldest-first hint. A use (`targetBatchId`) moves that
+batch with its stack, as the server draws it: opened, and depleted once empty; all it holds is sent as
+`amount: { all: true }`. A whole batch thrown out is `WastePantryItemBatch` (`wasteBatch`), which marks it
+wasted and takes what it held off its stack; part of one is a waste use from it. Neither answer states a
+batch, so each commit drops the batch page and the detail reads it again, as after a restock: which
+batches moved, their dates once opened and their versions are the server's.
+
 **Stock checks.** `useStockCheck` reads `Pantry.stockToConfirm(limit: 5, today)`: at most five stacks
 in the server's order, each with its `stockConfidence(today)` level and reasons. Both are views no
 mutation owes, judged on the viewer's day. The check (`StockCheckSheet`, opened from `StockCheckEntry`

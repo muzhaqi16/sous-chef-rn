@@ -20,6 +20,8 @@ import { operationLog } from '#/test-utils/operationLog';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { t } from '#i18n';
 
+type Props = React.ComponentProps<typeof ConsumePantryItemModal>;
+
 it('waits for settlement and retains entered quantity after a refusal', async () => {
   let settle!: (outcome: string) => void;
   const pending = new Promise<string>(resolve => {
@@ -115,7 +117,13 @@ it('offers use-all with optional details in the compact presentation', async () 
   await act(async () => {
     await called;
   });
-  expect(onConfirm).toHaveBeenCalledWith(5, '5', expect.any(String), '', 'u1');
+  expect(onConfirm).toHaveBeenCalledWith({
+    quantity: 5,
+    all: false,
+    purpose: expect.any(String),
+    notes: '',
+    usageUnitId: 'u1',
+  });
   fireEvent.press(
     screen.getByRole('button', { name: t('consumeItem.optionalDetails') }),
   );
@@ -199,13 +207,13 @@ describe('a known use, confirmed with nothing typed', () => {
       await called;
     });
 
-    expect(onConfirm).toHaveBeenCalledWith(
-      increment,
-      String(increment),
-      UsagePurpose.General,
-      '',
-      unit.id,
-    );
+    expect(onConfirm).toHaveBeenCalledWith({
+      quantity: increment,
+      all: false,
+      purpose: UsagePurpose.General,
+      notes: '',
+      usageUnitId: unit.id,
+    });
   });
 });
 
@@ -214,22 +222,24 @@ describe('an amount it cannot use', () => {
     { id: 'u1', name: 'Pounds', symbol: 'lbs', type: UnitType.Weight },
     0,
   );
-  const MORE_THAN_HELD = () =>
-    t('deduction.exceedsAvailableConsume', { amount: '5', unit: 'lbs' });
+  const MORE_THAN_HELD = (amount = '5') =>
+    t('deduction.exceedsAvailableConsume', { amount, unit: 'lbs' });
 
   const onConfirm = jest.fn(() => Promise.resolve('applied'));
-  const sheet = (visible = true) => (
+  const sheet = (visible = true, over: Partial<Props> = {}) => (
     <ConsumePantryItemModal
       visible={visible}
       pantryItemId={ACTION_ITEM_ID}
       onClose={jest.fn()}
       onConfirm={onConfirm}
+      {...over}
     />
   );
-  const open = async () => {
+  // Three batches, so the stack's draw order has something to explain.
+  const open = async (over: Partial<Props> = {}) => {
     const log = operationLog();
-    const view = renderWithApollo(sheet(), {
-      cache: actionItemCache(),
+    const view = renderWithApollo(sheet(true, over), {
+      cache: actionItemCache({ activeBatchCount: 3 }),
       links: [log.link],
       operationMocks: [
         recordMock(ConsumptionUnitsForPantryItemDocument, {
@@ -266,6 +276,19 @@ describe('an amount it cannot use', () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
+  it('keeps saying so while the amount is still more than is held', async () => {
+    await open();
+    typeAmount('9');
+    await confirm();
+
+    const user = userEvent.setup();
+    const field = screen.getByTestId(pantryTestIDs.consumeQuantity);
+    await user.clear(field);
+    await user.type(field, '7');
+
+    expect(screen.getByText(MORE_THAN_HELD())).toBeOnTheScreen();
+  });
+
   it('opens again on its own amount, with no error left from the last', async () => {
     const view = await open();
     typeAmount('9');
@@ -279,5 +302,78 @@ describe('an amount it cannot use', () => {
       screen.getByTestId(pantryTestIDs.consumeQuantity),
     ).toHaveDisplayValue('1');
     expect(screen.queryByText(MORE_THAN_HELD())).toBeNull();
+  });
+
+  describe('from one batch', () => {
+    const batch = { quantity: 2, remainingNetWeight: null };
+
+    it('says nothing of the oldest batch going first', async () => {
+      await open();
+      expect(screen.getByText(t('consumeItem.fifoHint'))).toBeOnTheScreen();
+
+      screen.unmount();
+      await open({ batch });
+
+      expect(screen.queryByText(t('consumeItem.fifoHint'))).toBeNull();
+    });
+
+    it('holds the amount to what the batch holds', async () => {
+      await open({ batch });
+
+      typeAmount('3');
+      await confirm();
+
+      expect(screen.getByText(MORE_THAN_HELD('2'))).toBeOnTheScreen();
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('uses all the batch holds as all of it', async () => {
+      await open({ batch, compact: true });
+
+      fireEvent.press(
+        screen.getByRole('button', { name: t('consumeItem.useAll') }),
+      );
+      expect(
+        screen.getByTestId(pantryTestIDs.consumeQuantity),
+      ).toHaveDisplayValue('2');
+      await confirm();
+
+      expect(onConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({ quantity: 2, all: true }),
+      );
+    });
+  });
+});
+
+describe('the sheet', () => {
+  const renderSheet = (pantryItemId: string | null = ACTION_ITEM_ID) =>
+    renderWithApollo(
+      <ConsumePantryItemModal
+        visible
+        pantryItemId={pantryItemId}
+        onClose={jest.fn()}
+        onConfirm={jest.fn()}
+      />,
+      {
+        cache: actionItemCache(),
+        operationMocks: [
+          recordMock(ConsumptionUnitsForPantryItemDocument, {
+            data: { consumptionUnitsForPantryItem: [] },
+          }).mock,
+        ],
+      },
+    );
+
+  it('is titled for a use, its confirm labelled Confirm', () => {
+    renderSheet();
+    expect(screen.getByText(t('consumeItem.title'))).toBeOnTheScreen();
+    expect(
+      screen.getByRole('button', { name: t('labels.confirm') }),
+    ).toBeOnTheScreen();
+  });
+
+  it('shows nothing with no stack to use', () => {
+    renderSheet(null);
+    expect(screen.queryByText(t('consumeItem.title'))).toBeNull();
   });
 });

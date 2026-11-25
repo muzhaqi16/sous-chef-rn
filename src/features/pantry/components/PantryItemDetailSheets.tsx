@@ -6,10 +6,14 @@ import { useEntryPhoto } from '#features/catalog/hooks/useEntryPhoto';
 import { RelinkItemSheet } from '#features/pantry/components/RelinkItemSheet';
 import { AdjustQuantityModal } from '#features/pantry/components/modals/AdjustQuantityModal';
 import { ConsumePantryItemModal } from '#features/pantry/components/modals/ConsumePantryItemModal';
+import type { UsedBatch } from '#features/pantry/types';
+import { BatchWasteSheet } from '#features/pantry/components/BatchWasteSheet';
+import type { WastedBatch } from '#features/pantry/hooks/mutations/useWastePantryItemBatch';
 import { CorrectPackageSizeModal } from '#features/pantry/components/modals/CorrectPackageSizeModal';
 import type { UsePantryItemDetailActionsResult } from '#features/pantry/hooks/usePantryItemDetailActions';
 import type { PantryItemDetailItem } from '#features/pantry/screens/usePantryItemDetailData';
 import type { ActiveSheet } from '#hooks/ui/useActiveSheet';
+import { useOpening } from '#hooks/ui/useOpening';
 import { useSelectedHomeId } from '#store/useAppStore';
 
 // The sheets the screen opens itself. Adjusting, using a batch and correcting
@@ -25,6 +29,8 @@ interface PantryItemDetailSheetsProps {
   /** The gallery, in the order the hero shows it. */
   photos: NonNullable<PantryItemDetailItem['item']['photos']>[number][];
   actions: UsePantryItemDetailActionsResult;
+  /** The item's batches as the screen reads them: a use from one is bounded by it. */
+  batches: readonly (UsedBatch & WastedBatch)[];
   sheets: ActiveSheet<PantryItemSheet>;
   canEdit: boolean;
   onConflictRefresh: () => void;
@@ -36,6 +42,7 @@ export const PantryItemDetailSheets: React.FC<PantryItemDetailSheetsProps> = ({
   item,
   photos,
   actions,
+  batches,
   sheets,
   canEdit,
   onConflictRefresh,
@@ -48,34 +55,47 @@ export const PantryItemDetailSheets: React.FC<PantryItemDetailSheetsProps> = ({
     photo => photo.id !== item.image?.catalogImageId,
   );
 
+  // Mounted and driven by `visible`, each keeps the batch it opened on while
+  // it animates out, so a close never makes it vanish mid-presentation.
+  const batchUse = useOpening(!!actions.usingBatchId, actions.usingBatchId);
+  const usedBatch = batches.find(batch => batch.id === batchUse?.payload);
+  const correcting = useOpening(
+    !!actions.correctingBatchId,
+    actions.correctingBatchId,
+  );
+
   return (
     <>
-      {!!actions.adjustModalVisible && (
-        <AdjustQuantityModal
-          visible={actions.adjustModalVisible}
-          pantryItemId={itemId}
-          onClose={() => actions.setAdjustModalVisible(false)}
-          onConfirm={actions.handleConfirmAdjust}
-        />
-      )}
-      {!!actions.usingBatchId && (
-        <ConsumePantryItemModal
-          compact
-          visible
-          pantryItemId={itemId}
-          onClose={() => actions.setUsingBatchId(null)}
-          onConfirm={actions.handleConfirmBatchUse}
-        />
-      )}
-      {!!actions.correctingBatchId && (
+      <AdjustQuantityModal
+        visible={actions.adjustModalVisible}
+        pantryItemId={itemId}
+        onClose={() => actions.setAdjustModalVisible(false)}
+        onConfirm={actions.handleConfirmAdjust}
+      />
+      <ConsumePantryItemModal
+        compact
+        visible={!!actions.usingBatchId}
+        pantryItemId={itemId}
+        batch={usedBatch ?? null}
+        onClose={() => actions.setUsingBatchId(null)}
+        onConfirm={actions.handleConfirmBatchUse}
+      />
+      <BatchWasteSheet
+        pantryItemId={itemId}
+        batches={batches}
+        wastingBatchId={actions.wastingBatchId}
+        onClose={() => actions.setWastingBatchId(null)}
+        onConfirm={actions.handleConfirmBatchWaste}
+      />
+      {correcting?.payload ? (
         <CorrectPackageSizeModal
-          visible
+          visible={!!actions.correctingBatchId}
           pantryItemId={itemId}
-          batchId={actions.correctingBatchId}
+          batchId={correcting.payload}
           onClose={() => actions.setCorrectingBatchId(null)}
           onConfirm={actions.handleCorrectPackageSize}
         />
-      )}
+      ) : null}
       {photos.length > 0 && (
         <ItemPhotoViewer
           visible={active?.type === 'viewer'}

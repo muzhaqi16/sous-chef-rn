@@ -100,6 +100,7 @@ import {
   removePantry,
   setStock,
   updatePantryRow,
+  wasteBatch,
 } from './pantry/offline/localWrites';
 import {
   AddRecipeToFavoritesDocument,
@@ -269,10 +270,7 @@ export const FEATURE_LOCAL_WRITES: ByOperation<LocalWrite> = [
     OpenPantryItemBatchDocument,
     { ...entityFields, subject: { key: 'batchId' } },
   ],
-  [
-    WastePantryItemBatchDocument,
-    { ...entityFields, subject: { key: 'batchId' } },
-  ],
+  [WastePantryItemBatchDocument, wasteBatch],
   [CorrectPantryItemPackageSizeDocument, entityFields],
   [CreatePantryDocument, createPantry],
   [UpdatePantryDocument, entityFields],

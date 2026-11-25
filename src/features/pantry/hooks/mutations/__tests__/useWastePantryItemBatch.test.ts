@@ -5,7 +5,11 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { WastePantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
-import { BatchStatus, ErrorCode } from '#graphql/generated/schemaTypes';
+import {
+  BatchStatus,
+  ErrorCode,
+  WasteReason,
+} from '#graphql/generated/schemaTypes';
 import { alertService } from '#services/alertService';
 import { useWastePantryItemBatch } from '../useWastePantryItemBatch';
 
@@ -18,14 +22,38 @@ const READ_BATCH = gql`
   }
 `;
 
+const READ_STACK = gql`
+  fragment _readWastedStack on PantryItem {
+    id
+    quantity
+    activeBatchCount
+  }
+`;
+
+// A stack of 5 whose batch of 2 is thrown out.
 const seedBatch = () =>
   seedCache([
     {
       __typename: 'PantryItemBatch',
       id: 'batch-1',
       status: BatchStatus.Active,
+      quantity: 2,
+    },
+    {
+      __typename: 'PantryItem',
+      id: 'stack-1',
+      quantity: 5,
+      activeBatchCount: 2,
     },
   ]);
+
+const batch = { id: 'batch-1', pantryItemId: 'stack-1', quantity: 2 };
+const details = {
+  wasteReason: WasteReason.Mold,
+  isComposted: false,
+  isRecycled: false,
+  notes: '',
+};
 
 const readStatus = (cache: ReturnType<typeof seedCache>) =>
   cache.readFragment<{ status: BatchStatus }>({
@@ -34,8 +62,15 @@ const readStatus = (cache: ReturnType<typeof seedCache>) =>
     fragment: READ_BATCH,
   })?.status;
 
+const readStack = (cache: ReturnType<typeof seedCache>) =>
+  cache.readFragment<{ quantity: number; activeBatchCount: number }>({
+    optimistic: true,
+    id: 'PantryItem:stack-1',
+    fragment: READ_STACK,
+  });
+
 describe('useWastePantryItemBatch (local-first)', () => {
-  it('marks the batch WASTED PERMANENTLY before settle; a queued (null) result keeps it', async () => {
+  it('shows the batch wasted and its stack that much less while the waste is queued', async () => {
     const cache = seedBatch();
     const { result } = renderHookWithApollo(() => useWastePantryItemBatch(), {
       cache,
@@ -53,17 +88,21 @@ describe('useWastePantryItemBatch (local-first)', () => {
 
     let resolved: unknown = 'unset';
     await act(async () => {
-      const promise = result.current.wasteBatch('batch-1');
-      // Synchronous permanent write — visible before the mutation settles.
+      const promise = result.current.wasteBatch(batch, details);
+      // Shown before the mutation settles.
       expect(readStatus(cache)).toBe(BatchStatus.Wasted);
       resolved = await promise;
     });
 
-    expect(resolved).toBe(true);
+    expect(resolved).toBe('queued');
     expect(readStatus(cache)).toBe(BatchStatus.Wasted);
+    expect(readStack(cache)).toMatchObject({
+      quantity: 3,
+      activeBatchCount: 1,
+    });
   });
 
-  it('reverts the batch status on a rejection', async () => {
+  it('puts the batch and its stack back on a rejection', async () => {
     const cache = seedBatch();
     const { result } = renderHookWithApollo(() => useWastePantryItemBatch(), {
       cache,
@@ -89,11 +128,15 @@ describe('useWastePantryItemBatch (local-first)', () => {
 
     let resolved: unknown = 'unset';
     await act(async () => {
-      resolved = await result.current.wasteBatch('batch-1');
+      resolved = await result.current.wasteBatch(batch, details);
     });
 
-    expect(resolved).toBe(false);
+    expect(resolved).toBe('failed');
     expect(readStatus(cache)).toBe(BatchStatus.Active);
+    expect(readStack(cache)).toMatchObject({
+      quantity: 5,
+      activeBatchCount: 2,
+    });
     // A union-error payload carries no transport error, so onError never fires —
     // the hook must surface its own alert rather than reverting silently.
     // Localized copy for the field the refusal named (`batchId`), not the

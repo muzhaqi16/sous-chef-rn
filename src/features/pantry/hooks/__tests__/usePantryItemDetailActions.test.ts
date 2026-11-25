@@ -622,12 +622,13 @@ describe('a use from one batch', () => {
 
     let status: string | undefined;
     await act(async () => {
-      status = await result.current.handleConfirmBatchUse(
-        1,
-        '1',
-        UsagePurpose.Cooking,
-        '',
-      );
+      status = await result.current.handleConfirmBatchUse({
+        quantity: 1,
+        all: false,
+        purpose: UsagePurpose.Cooking,
+        notes: '',
+        usageUnitId: undefined,
+      });
     });
 
     expect(status).not.toBe('failed');

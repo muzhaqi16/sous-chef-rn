@@ -42,8 +42,8 @@ const sheet = (over: Partial<Props> = {}) => (
 );
 
 /** The sheet over five pounds of flour, once its units are read. */
-async function openWaste() {
-  const view = renderWithApollo(sheet(), {
+async function openWaste(over: Partial<Props> = {}) {
+  const view = renderWithApollo(sheet(over), {
     cache: actionItemCache(),
     links: [log.link],
     operationMocks: [
@@ -80,8 +80,20 @@ const retypeAmount = async (text: string) => {
   await user.type(amountInput(), text);
 };
 
-const MORE_THAN_HELD = () =>
-  t('deduction.exceedsAvailableWaste', { amount: '5', unit: 'lbs' });
+const MORE_THAN_HELD = (amount = '5') =>
+  t('deduction.exceedsAvailableWaste', { amount, unit: 'lbs' });
+
+/** A waste as the sheet states it, nothing changed but `over`. */
+const stated = (over: Record<string, unknown> = {}) => ({
+  quantity: 5,
+  all: false,
+  wasteReason: WasteReason.Expired,
+  isComposted: false,
+  isRecycled: false,
+  notes: '',
+  usageUnitId: 'u1',
+  ...over,
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -110,21 +122,39 @@ describe('RecordWastePantryItemModal', () => {
     expect(screen.getByText('Recycled (packaging)')).toBeTruthy();
   });
 
-  it('records all the stack holds when nothing is typed, and closes', async () => {
+  // The caller closes it once the waste is recorded.
+  it('records all the stack holds when nothing is typed', async () => {
     await openWaste();
 
     expect(amountInput()).toHaveDisplayValue('5');
     await confirm();
 
-    expect(onConfirm).toHaveBeenCalledWith(
-      5,
-      WasteReason.Expired,
-      false,
-      false,
-      '',
-      'u1',
+    expect(onConfirm).toHaveBeenCalledWith(stated());
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('keeps everything entered when the waste is refused', async () => {
+    const user = userEvent.setup();
+    onConfirm.mockResolvedValueOnce('failed');
+    await openWaste();
+
+    typeAmount('2');
+    await user.press(screen.getByText('Waste Reason *'));
+    await user.press(screen.getByText('Spoiled'));
+    fireEvent.press(screen.getByText('Composted'));
+    fireEvent.changeText(
+      screen.getByPlaceholderText(t('recordWaste.notesPlaceholder')),
+      'went mouldy',
     );
-    expect(onClose).toHaveBeenCalledTimes(1);
+    await confirm();
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(amountInput()).toHaveDisplayValue('2');
+    expect(screen.getByText('Spoiled')).toBeVisible();
+    expect(
+      screen.getByRole('checkbox', { name: 'Composted', checked: true }),
+    ).toBeVisible();
+    expect(screen.getByDisplayValue('went mouldy')).toBeVisible();
   });
 
   it('records the reason, what was kept from the bin, and the notes', async () => {
@@ -142,12 +172,12 @@ describe('RecordWastePantryItemModal', () => {
     await confirm();
 
     expect(onConfirm).toHaveBeenCalledWith(
-      2,
-      WasteReason.Spoiled,
-      true,
-      false,
-      'went mouldy',
-      'u1',
+      stated({
+        quantity: 2,
+        wasteReason: WasteReason.Spoiled,
+        isComposted: true,
+        notes: 'went mouldy',
+      }),
     );
   });
 
@@ -162,6 +192,16 @@ describe('RecordWastePantryItemModal', () => {
     expect(alertService.alert).not.toHaveBeenCalled();
     expect(onConfirm).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('keeps saying so while the amount is still more than is held', async () => {
+    await openWaste();
+    typeAmount('15');
+    await confirm();
+
+    await retypeAmount('12');
+
+    expect(within(amountField()).getByText(MORE_THAN_HELD())).toBeTruthy();
   });
 
   it('clears the amount error once the amount is edited', async () => {
@@ -192,13 +232,40 @@ describe('RecordWastePantryItemModal', () => {
     expect(amountInput()).toHaveDisplayValue('5');
     expect(within(amountField()).queryByText(MORE_THAN_HELD())).toBeNull();
     await confirm();
-    expect(onConfirm).toHaveBeenCalledWith(
-      5,
-      WasteReason.Expired,
-      false,
-      false,
-      '',
-      'u1',
-    );
+    expect(onConfirm).toHaveBeenCalledWith(stated());
+  });
+
+  describe('from one batch', () => {
+    const batch = { quantity: 2, remainingNetWeight: null };
+
+    it('throws the batch out whole when nothing is typed', async () => {
+      await openWaste({ batch });
+
+      expect(amountInput()).toHaveDisplayValue('2');
+      await confirm();
+
+      expect(onConfirm).toHaveBeenCalledWith(
+        stated({ quantity: 2, all: true }),
+      );
+    });
+
+    it('holds the amount to what the batch holds', async () => {
+      await openWaste({ batch });
+
+      typeAmount('3');
+      await confirm();
+
+      expect(within(amountField()).getByText(MORE_THAN_HELD('2'))).toBeTruthy();
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('records part of the batch as part of it', async () => {
+      await openWaste({ batch });
+
+      typeAmount('1');
+      await confirm();
+
+      expect(onConfirm).toHaveBeenCalledWith(stated({ quantity: 1 }));
+    });
   });
 });

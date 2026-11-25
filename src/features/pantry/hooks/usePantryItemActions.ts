@@ -4,12 +4,12 @@ import { useApolloClient } from '@apollo/client/react';
 import { errorService } from '#services/errorService';
 import type { SettleStatus } from '#apollo/utils/settleMutation';
 import { dropRankedUnits } from '#features/pantry/cache/rankedUnits';
-import type { WasteReason } from '#graphql/generated/schemaTypes';
 import {
   TopLevelErrorCode,
   UsagePurpose,
 } from '#graphql/generated/schemaTypes';
 import { Telemetry } from '#services/telemetry';
+import type { StatedUse, StatedWaste } from '#features/pantry/types';
 import { UsePantryItemActions_IdFragmentDoc } from './usePantryItemActions.generated';
 import { toDateKey } from '#utils/dateUtils';
 import { stockAmountOf, type RestockContents } from '#domain/stockAmount';
@@ -48,7 +48,7 @@ export function usePantryItemActions({
   const [activeModal, setActiveModal] = useState<ActiveModal>(CLOSED_MODAL);
 
   // Uses in flight, by sheet and stack: a second confirm of one is the same
-  // use, while another stack's goes ahead (a waste's sheet closes at once).
+  // use, while another stack's goes ahead.
   const usagesPending = useRef(new Set<string>());
 
   const closeModal = () => setActiveModal(CLOSED_MODAL);
@@ -77,31 +77,30 @@ export function usePantryItemActions({
     return status;
   };
 
-  const handleConfirmConsume = (
-    quantityUsed: number,
-    _quantityInput: string,
-    purpose: UsagePurpose,
-    notes: string,
-    usageUnitId?: string,
-  ) =>
+  const handleConfirmConsume = ({
+    quantity,
+    purpose,
+    notes,
+    usageUnitId,
+  }: StatedUse) =>
     recordUsage('consume', {
-      quantity: quantityUsed,
+      quantity,
       usageUnitId,
       usage: { purpose, notes: notes || undefined },
       fallback: t('errors.recordUsageFailedRetry'),
     });
 
-  const handleConfirmWaste = (
-    wasteAmount: number,
-    wasteReason: WasteReason,
-    isComposted: boolean,
-    isRecycled: boolean,
-    notes: string,
-    wasteUnitId?: string,
-  ) =>
+  const handleConfirmWaste = ({
+    quantity,
+    wasteReason,
+    isComposted,
+    isRecycled,
+    notes,
+    usageUnitId,
+  }: StatedWaste) =>
     recordUsage('waste', {
-      quantity: wasteAmount,
-      usageUnitId: wasteUnitId,
+      quantity,
+      usageUnitId,
       usage: {
         purpose: UsagePurpose.Waste,
         notes: notes || undefined,

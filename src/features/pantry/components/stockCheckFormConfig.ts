@@ -1,5 +1,6 @@
 import { lazy, mixed, number, object, string, type InferType } from 'yup';
 import { StockCheckAnswer, WasteReason } from '#graphql/generated/schemaTypes';
+import { DEFAULT_WASTE_REASON } from '#features/pantry/utils/wasteReasons';
 import { parseFractionalInput } from '#utils/fractionUtils';
 import { lazyMessage } from '#utils/validation/common';
 import type {
@@ -53,9 +54,6 @@ export const stockCheckSchema = object({
 
 export type StockCheckRowValues = InferType<typeof rowSchema>;
 export type StockCheckFormValues = InferType<typeof stockCheckSchema>;
-
-/** As the waste sheet does, until the household picks another. */
-export const DEFAULT_WASTE_REASON = WasteReason.Expired;
 
 /** A row's answer as the server takes it; null for one nobody answered. */
 export function stockCheckChoice(

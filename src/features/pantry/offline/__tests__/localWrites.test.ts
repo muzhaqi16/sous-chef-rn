@@ -43,6 +43,7 @@ import {
   RestockPantryItemDocument,
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
+  WastePantryItemBatchDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
@@ -57,6 +58,7 @@ import {
   removePantry,
   setStock,
   updatePantryRow,
+  wasteBatch,
   type AddStockInputs,
   type CreateItemInputs,
   type CreatePantryInputs,
@@ -66,6 +68,7 @@ import {
   type RemovePantryInputs,
   type SetStockInputs,
   type StockCheckInputs,
+  type WasteBatchInputs,
 } from '../localWrites';
 import { RecordPantryStockCheckDocument } from '#features/pantry/hooks/useStockCheck.generated';
 
@@ -90,6 +93,7 @@ const TABLE = {
   CreatePantry: createPantry,
   DeletePantry: removePantry,
   RecordPantryStockCheck: recordStockCheck,
+  WastePantryItemBatch: wasteBatch,
 };
 
 const unitOf = (id: string, type: UnitType): Row['unit'] =>
@@ -560,6 +564,154 @@ describe('a use', () => {
     );
 
     expect(rowOf(device)).toMatchObject({ quantity: 8, heldQuantity: 8 });
+  });
+});
+
+describe('from one batch', () => {
+  /** The detail's batch page: a batch of 4 not yet opened beside one of 6. */
+  function withBatchOf4() {
+    const device = stocked();
+    seedQuery(device.cache, {
+      query: GetPantryItemBatchesDocument,
+      variables: { pantryItemId: 'held' },
+      data: {
+        pantryItemBatchesConnection: {
+          __typename: 'PantryItemBatchConnection',
+          totalCount: 2,
+          pageInfo: { __typename: 'PageInfo', hasNextPage: false },
+          edges: [
+            {
+              __typename: 'PantryItemBatchEdge',
+              node: {
+                __typename: 'PantryItemBatch',
+                id: 'b4',
+                status: BatchStatus.Active,
+                quantity: 4,
+                isOpened: false,
+                openedAt: null,
+                depletedAt: null,
+              },
+            },
+            {
+              __typename: 'PantryItemBatchEdge',
+              node: {
+                __typename: 'PantryItemBatch',
+                id: 'b6',
+                status: BatchStatus.Active,
+                quantity: 6,
+                isOpened: false,
+                openedAt: null,
+                depletedAt: null,
+              },
+            },
+          ],
+        },
+      },
+    });
+    return device;
+  }
+
+  const batch = ({ cache }: Device, id: string, optimistic = true) =>
+    cache
+      .readQuery({
+        query: GetPantryItemBatchesDocument,
+        variables: { pantryItemId: 'held' },
+        optimistic,
+      })
+      ?.pantryItemBatchesConnection.edges.find(({ node }) => node.id === id)
+      ?.node;
+
+  const wasteWhole = ({ writes }: Device, batchId: string, holds: number) =>
+    writes.begin(
+      WastePantryItemBatchDocument,
+      { input: { batchId }, today: TODAY },
+      {
+        pantryItemId: 'held',
+        held: holds,
+        now: NOW,
+      } satisfies WasteBatchInputs,
+    );
+
+  it('moves the batch a use is drawn from with its stack, and opens it', () => {
+    const device = withBatchOf4();
+
+    use(device, { delta: -1, batchId: 'b4' });
+
+    expect(rowOf(device)).toMatchObject({ quantity: 9 });
+    expect(batch(device, 'b4')).toMatchObject({
+      quantity: 3,
+      status: BatchStatus.Active,
+      isOpened: true,
+      openedAt: NOW,
+    });
+    expect(batch(device, 'b6')).toMatchObject({ quantity: 6, isOpened: false });
+    expect(batch(device, 'b4', false)).toMatchObject({ quantity: 4 });
+  });
+
+  it('uses up a batch it empties', () => {
+    const device = withBatchOf4();
+
+    use(device, { delta: -4, batchId: 'b4' });
+
+    expect(batch(device, 'b4')).toMatchObject({
+      quantity: 0,
+      status: BatchStatus.Depleted,
+      depletedAt: NOW,
+    });
+  });
+
+  // The answer states no batch: which ones moved, and how, is read again.
+  it('reads the batches again once a use is answered', () => {
+    const device = withBatchOf4();
+    const write = use(device, { delta: -1, batchId: 'b4' });
+
+    answer(device, write, {
+      createPantryItemUsage: {
+        __typename: 'CreatePantryItemUsagePayload',
+        pantryItemUsage: {
+          id: 'usage-1',
+          pantryItem: { id: 'held', version: 2, quantity: 9, heldQuantity: 9 },
+        },
+      },
+    });
+
+    expect(batch(device, 'b4', false)).toBeUndefined();
+    expect(rowOf(device, false)).toMatchObject({ quantity: 9 });
+  });
+
+  it('throws a batch out whole: wasted, and its stack that much less', () => {
+    const device = withBatchOf4();
+
+    const write = wasteWhole(device, 'b4', 4);
+
+    expect(batch(device, 'b4')).toMatchObject({
+      quantity: 0,
+      status: BatchStatus.Wasted,
+      depletedAt: NOW,
+    });
+    expect(rowOf(device)).toMatchObject({ quantity: 6 });
+
+    answer(device, write, {
+      wastePantryItemBatch: {
+        __typename: 'WastePantryItemBatchPayload',
+        pantryItem: { id: 'held', version: 2, quantity: 6, heldQuantity: 6 },
+      },
+    });
+
+    expect(batch(device, 'b4', false)).toBeUndefined();
+    expect(rowOf(device, false)).toMatchObject({ quantity: 6 });
+  });
+
+  it('puts the batch and its stack back when the waste is refused', () => {
+    const device = withBatchOf4();
+
+    device.writes.drop(wasteWhole(device, 'b4', 4).id);
+
+    expect(batch(device, 'b4')).toMatchObject({
+      quantity: 4,
+      status: BatchStatus.Active,
+    });
+    expect(rowOf(device)).toMatchObject({ quantity: 10 });
   });
 });
 

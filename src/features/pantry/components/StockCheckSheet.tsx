@@ -19,12 +19,14 @@ import {
 } from '#graphql/generated/schemaTypes';
 import { useOpening } from '#hooks/ui/useOpening';
 import { reportValidationErrors } from '#utils/validation/common';
-import { WASTE_REASON_OPTIONS } from '#features/pantry/utils/wasteReasons';
+import {
+  DEFAULT_WASTE_REASON,
+  WASTE_REASON_OPTIONS,
+} from '#features/pantry/utils/wasteReasons';
 import { CollapsibleChipPicker } from './CollapsibleChipPicker';
 import { useStockCheck } from '../hooks/useStockCheck';
 import { pantryTestIDs } from '../testIDs';
 import {
-  DEFAULT_WASTE_REASON,
   stockCheckChoice,
   stockCheckSchema,
   type StockCheckFormValues,

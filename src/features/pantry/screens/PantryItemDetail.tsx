@@ -253,6 +253,7 @@ export const PantryItemDetail: React.FC<
         item={item}
         photos={itemPhotos}
         actions={actions}
+        batches={data.batches}
         sheets={sheets}
         canEdit={permissions.canEditItems}
         onConflictRefresh={handleRefresh}

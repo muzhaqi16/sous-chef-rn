@@ -243,13 +243,13 @@ async function consume(
     result.current.handleConsumeItem(itemId);
   });
   await act(async () => {
-    await result.current.handleConfirmConsume(
+    await result.current.handleConfirmConsume({
       quantity,
-      String(quantity),
+      all: false,
       purpose,
       notes,
-      unitId,
-    );
+      usageUnitId: unitId,
+    });
   });
 }
 
@@ -278,14 +278,15 @@ async function waste(
     result.current.handleWasteItem(itemId);
   });
   await act(async () => {
-    await result.current.handleConfirmWaste(
+    await result.current.handleConfirmWaste({
       quantity,
-      reason,
-      composted,
-      recycled,
+      all: false,
+      wasteReason: reason,
+      isComposted: composted,
+      isRecycled: recycled,
       notes,
-      unitId,
-    );
+      usageUnitId: unitId,
+    });
   });
 }
 
@@ -523,18 +524,20 @@ describe('using some', () => {
     const { result } = renderActions([m]);
     act(() => result.current.handleConsumeItem('item-1'));
     await act(async () => {
-      const first = result.current.handleConfirmConsume(
-        2,
-        '2',
-        UsagePurpose.General,
-        '',
-      );
-      const repeated = result.current.handleConfirmConsume(
-        2,
-        '2',
-        UsagePurpose.General,
-        '',
-      );
+      const first = result.current.handleConfirmConsume({
+        quantity: 2,
+        all: false,
+        purpose: UsagePurpose.General,
+        notes: '',
+        usageUnitId: undefined,
+      });
+      const repeated = result.current.handleConfirmConsume({
+        quantity: 2,
+        all: false,
+        purpose: UsagePurpose.General,
+        notes: '',
+        usageUnitId: undefined,
+      });
       expect(await repeated).toBeUndefined();
       expect(await first).toBe('applied');
     });
@@ -546,12 +549,13 @@ describe('using some', () => {
     act(() => result.current.handleConsumeItem('item-1'));
     await act(async () => {
       expect(
-        await result.current.handleConfirmConsume(
-          2,
-          '2',
-          UsagePurpose.General,
-          '',
-        ),
+        await result.current.handleConfirmConsume({
+          quantity: 2,
+          all: false,
+          purpose: UsagePurpose.General,
+          notes: '',
+          usageUnitId: undefined,
+        }),
       ).toBe('queued');
     });
   });
@@ -591,12 +595,13 @@ describe('using some', () => {
     const { result } = renderActions([m]);
 
     await act(async () => {
-      await result.current.handleConfirmConsume(
-        1,
-        '1',
-        UsagePurpose.Cooking,
-        '',
-      );
+      await result.current.handleConfirmConsume({
+        quantity: 1,
+        all: false,
+        purpose: UsagePurpose.Cooking,
+        notes: '',
+        usageUnitId: undefined,
+      });
     });
 
     expect(m.fired).toEqual([]);
@@ -828,13 +833,13 @@ describe('using what a package holds', () => {
     act(() => result.current.handleConsumeItem('item-1'));
     let settled: Promise<unknown> = Promise.resolve();
     await act(async () => {
-      settled = result.current.handleConfirmConsume(
-        12,
-        '12',
-        UsagePurpose.Cooking,
-        '',
-        'oz',
-      );
+      settled = result.current.handleConfirmConsume({
+        quantity: 12,
+        all: false,
+        purpose: UsagePurpose.Cooking,
+        notes: '',
+        usageUnitId: 'oz',
+      });
     });
 
     // 32 - 12 = 20 oz is certain; which pack it came from is not, yet.
