@@ -23,10 +23,7 @@ import {
   isQueryComplexityError,
   describeQueryComplexity,
 } from '#utils/errors/queryComplexity';
-import {
-  isVersionConflictError,
-  getVersionConflictMessage,
-} from '#utils/errors/versionConflict';
+import { isVersionConflictError } from '#utils/errors/versionConflict';
 import { Telemetry } from '#services/telemetry';
 import { t, type KeyUnder } from '#i18n';
 import type { Translate } from '#i18n/types';
@@ -51,9 +48,7 @@ export interface ApolloErrorResult {
 }
 
 export interface ErrorConfig {
-  operation?: string;
   customMessage?: string;
-  logError?: boolean;
 }
 
 // The server sends `validationErrors` as a field → message map; a non-string
@@ -254,12 +249,25 @@ export class ErrorService {
     );
   }
 
-  /** Report a non-Apollo error to telemetry and console, so it reaches Loki. */
+  /**
+   * Records a failure, once: an outcome the person can fix (a refused input, a
+   * rate limit) is a warning; anything else counts in `app_errors_total`.
+   */
   reportError(
     error: unknown,
     context?: { operation?: string; [key: string]: unknown },
   ): void {
     const operation = firstNonBlank(context?.operation) ?? 'Unknown';
+    const code = this.codeOf(error);
+    if (this.isExpectedUserError(code)) {
+      logger.warn(`Refused in ${operation}:`, { code });
+      Telemetry.warn(`Refused: ${code} in ${operation}`, {
+        component: code,
+        operation,
+        code,
+      });
+      return;
+    }
     const serialized = serializeError(error);
 
     if (__DEV__) {
@@ -278,6 +286,7 @@ export class ErrorService {
     Telemetry.trackError(diagnostic, {
       component: 'reported',
       operation,
+      code,
       serialized_error: serialized,
       ...context,
     });
@@ -377,58 +386,20 @@ export class ErrorService {
     }
   }
 
-  parseApolloError(
-    error: unknown,
-    config: ErrorConfig = {},
-  ): ErrorResult<never> {
-    const { operation = 'Unknown', customMessage, logError = true } = config;
-
+  /**
+   * What a failure is, with its copy: pure, so a caller deciding how to treat
+   * a failure records nothing. Recording is `reportError`'s, once per failure.
+   */
+  classifyError(error: unknown, config: ErrorConfig = {}): ErrorResult<never> {
     try {
-      const classified = this.classify(error);
-      const { errorCode, validationErrors } = classified;
-      const diagnostic = classified.diagnostic ?? getVersionConflictMessage();
-
-      const userFriendlyMessage =
-        firstNonBlank(customMessage) ?? this.getUserFriendlyMessage(errorCode);
-
-      const isExpectedUserError = this.isExpectedUserError(errorCode);
-
-      if (logError) {
-        if (isExpectedUserError) {
-          logger.warn(`Validation error in ${operation}:`, {
-            code: errorCode,
-            message: diagnostic,
-          });
-        } else {
-          logger.error(`Error in ${operation}:`, {
-            code: errorCode,
-            message: diagnostic,
-            originalError: serializeError(error),
-          });
-        }
-      }
-
-      // Expected user-input outcomes go to warn and skip app_errors_total.
-      if (isExpectedUserError) {
-        Telemetry.warn(`Validation: ${errorCode} in ${operation}`, {
-          component: errorCode,
-          operation,
-          code: errorCode,
-        });
-      } else {
-        Telemetry.trackError(diagnostic, {
-          component: errorCode,
-          operation,
-          code: errorCode,
-          serialized_error: serializeError(error),
-        });
-      }
-
+      const { errorCode, validationErrors } = this.classify(error);
       return {
         success: false,
         error: {
           code: errorCode,
-          message: userFriendlyMessage,
+          message:
+            firstNonBlank(config.customMessage) ??
+            this.getUserFriendlyMessage(errorCode),
           isAuthError: this.isAuthError(errorCode),
           validationErrors,
         },
@@ -445,12 +416,12 @@ export class ErrorService {
     }
   }
 
-  /** {@link parseApolloError}, flattened to the error branch. */
+  /** {@link classifyError}, flattened to the error branch. */
   handleApolloError(
     error: unknown,
     config: ErrorConfig = {},
   ): ApolloErrorResult {
-    const result = this.parseApolloError(error, config);
+    const result = this.classifyError(error, config);
     return (
       result.error ?? {
         code: 'UNKNOWN_ERROR',
@@ -458,36 +429,6 @@ export class ErrorService {
         isAuthError: false,
       }
     );
-  }
-
-  /** Wrap a mutation so a throw becomes a structured result. */
-  async handleMutation<T>(
-    fn: () => Promise<T>,
-    config: ErrorConfig = {},
-  ): Promise<ErrorResult<T>> {
-    try {
-      const data = await fn();
-      return { success: true, data };
-    } catch (error) {
-      return this.parseApolloError(error, config);
-    }
-  }
-
-  /** {@link handleMutation} plus an `isVersionConflict` flag. */
-  async handleMutationWithVersionConflict<T>(
-    fn: () => Promise<T>,
-    config: ErrorConfig = {},
-  ): Promise<ErrorResult<T> & { isVersionConflict?: boolean }> {
-    try {
-      const data = await fn();
-      return { success: true, data };
-    } catch (error) {
-      const result = this.parseApolloError(error, config);
-      return {
-        ...result,
-        isVersionConflict: result.error?.code === ErrorCode.VersionConflict,
-      };
-    }
   }
 }
 
@@ -506,8 +447,7 @@ const TRANSPORT_CODES = new Set(['NETWORK_ERROR', 'CIRCUIT_OPEN']);
  * unrecognised shape reads as "no verdict" rather than as a lockout.
  */
 export const isTransportFailure = (error: unknown): boolean => {
-  const code = errorService.parseApolloError(error, { logError: false }).error
-    ?.code;
+  const code = errorService.codeOf(error);
   return !code || code === 'UNKNOWN_ERROR' || TRANSPORT_CODES.has(code);
 };
 
@@ -515,8 +455,7 @@ export const localizedErrorMessage = (
   error: unknown,
   fallback?: string,
 ): string => {
-  const result = errorService.parseApolloError(error, { logError: false });
-  const code = result.error?.code;
+  const code = errorService.codeOf(error);
   if (!code) return fallback ?? t('errors.codes.unexpected');
   if (fallback && TRANSPORT_CODES.has(code)) return fallback;
   return errorService.getUserFriendlyMessage(code, fallback);

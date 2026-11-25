@@ -570,6 +570,51 @@ describe('settleMutation', () => {
     });
   });
 
+  // A failure is recorded once, from where it settles: classifying it to pick
+  // its copy records nothing.
+  describe('what one failure records', () => {
+    const setApiUnavailable = (unavailable: boolean) => {
+      storeApi.setState({
+        isOnline: !unavailable,
+        apiReachable: unavailable ? null : true,
+      } as Partial<ReturnType<typeof storeApi.getState>>);
+    };
+    beforeEach(() => reportError.mockRestore());
+    afterEach(() => setApiUnavailable(false));
+
+    it.each([
+      [
+        'an outcome the person can fix, as a warning',
+        graphQLError('PANTRY_ITEM_ALREADY_EXISTS'),
+        { warnings: 1, errors: 0 },
+      ],
+      [
+        'a fault, as one error',
+        graphQLError('INTERNAL_SERVER_ERROR'),
+        { warnings: 0, errors: 1 },
+      ],
+    ])('%s', async (_, error, { warnings, errors }) => {
+      setApiUnavailable(false);
+
+      await settleMutation(throwing(error), { ...options, present: 'none' });
+
+      expect(Telemetry.warn).toHaveBeenCalledTimes(warnings);
+      expect(Telemetry.trackError).toHaveBeenCalledTimes(errors);
+    });
+
+    it('nothing for a send refused offline while the API is unavailable', async () => {
+      setApiUnavailable(true);
+
+      await settleMutation(throwing(new OfflineRejectedError('Update')), {
+        ...options,
+        present: 'none',
+      });
+
+      expect(Telemetry.warn).not.toHaveBeenCalled();
+      expect(Telemetry.trackError).not.toHaveBeenCalled();
+    });
+  });
+
   describe('a committed write whose response also carries an error', () => {
     // Apollo 4.2 resolves `{ data, error }` together when a mutation commits
     // and a field in its selection errors. The payload is the server's verdict.

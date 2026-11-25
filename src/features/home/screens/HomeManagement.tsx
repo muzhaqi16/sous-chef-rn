@@ -89,7 +89,7 @@ export const HomeManagement: React.FC = () => {
     // Find the home and user's membership
     const home = homes.find(h => h.id === homeId);
     if (!home) {
-      toastService.error(t('errors.codes.homeNotFound'));
+      toastService.error(t('errors.homeNotFound'));
       return;
     }
 

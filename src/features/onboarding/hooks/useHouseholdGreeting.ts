@@ -32,6 +32,6 @@ export function useHouseholdGreeting() {
     canRename: home?.myMembership?.role === MembershipRole.Owner,
     /** True when the new name landed or is queued; `fallback` is the failure copy. */
     rename: async (name: string, fallback: string): Promise<boolean> =>
-      home ? updateHomeFields({ name }, home, fallback) : false,
+      home ? !(await updateHomeFields({ name }, home, fallback)) : false,
   };
 }

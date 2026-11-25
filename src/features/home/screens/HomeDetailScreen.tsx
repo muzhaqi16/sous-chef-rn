@@ -181,7 +181,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                 }}
                 empty={{
                   icon: 'home-outline',
-                  title: t('errors.codes.homeNotFound'),
+                  title: t('errors.homeNotFound'),
                 }}
               />
             ),

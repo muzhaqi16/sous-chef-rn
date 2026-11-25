@@ -44,7 +44,7 @@ export const SavedRecipeCard: React.FC<SavedRecipeCardProps> = ({
 
   return (
     <RecipeCardView
-      name={recipe ? recipe.name : t('errors.codes.resourceGone')}
+      name={recipe ? recipe.name : t('errors.resourceGone')}
       imageUrl={recipe?.imageUrl}
       servings={recipe ? recipe.servings : null}
       totalMinutes={recipe ? recipeTotalMinutes(recipe) : null}

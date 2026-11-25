@@ -148,7 +148,7 @@ export const JoinHomeByCodeScreen: React.FC<
       return (
         <ErrorState
           icon="alert-circle-outline"
-          title={t('errors.codes.homeNotFound')}
+          title={t('errors.homeNotFound')}
           message={t('joinHome.notFoundDescription')}
           severity="error"
           alignment="center"

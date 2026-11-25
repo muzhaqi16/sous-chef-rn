@@ -1,5 +1,6 @@
 import { UpdateHomeDocument } from '#operations/home/home.generated';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { SettledFailure } from '#apollo/utils/settleMutation';
 import { useTranslation } from '#i18n';
 
 /** What a settings screen can change about a home through `updateHome`. */
@@ -22,14 +23,15 @@ export function useUpdateHomeFields(homeId: string) {
 
   /**
    * `home` states the version the edit builds on. `fallback` is the copy a
-   * failure shows when its code has none. True when the change landed or is
-   * queued.
+   * failure shows when its code has none. The failure, if any: a form that
+   * shows it on its field passes `onField`, and nothing else shows it.
    */
   const updateHomeFields = async (
     updates: HomeFieldUpdates,
     home: { version: number },
     fallback: string,
-  ): Promise<boolean> => {
+    { onField = false }: { onField?: boolean } = {},
+  ): Promise<SettledFailure | undefined> => {
     const settled = await updateHome.sendFields(
       {
         entity: { __typename: 'Home', id: homeId },
@@ -38,9 +40,9 @@ export function useUpdateHomeFields(homeId: string) {
           input: { id: homeId, ...updates, version: home.version },
         },
       },
-      { settle: { fallback } },
+      { settle: { fallback, ...(onField && { present: 'none' }) } },
     );
-    return settled.status !== 'failed';
+    return settled.failure;
   };
 
   return { updateHomeFields };

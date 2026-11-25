@@ -510,6 +510,8 @@ describe('useHomeInvitations', () => {
       });
 
       expect(returnValue).toBeNull();
+      // Said, not swallowed: the read resolved with its error.
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
     });
   });
 });

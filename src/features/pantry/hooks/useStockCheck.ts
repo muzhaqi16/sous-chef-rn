@@ -99,9 +99,11 @@ const refusalOf = (
   t: ReturnType<typeof useTranslation>['t'],
 ): string => {
   if (isVersionConflictCode(code)) return t('pantryScreen.stockCheckStale');
-  return code && errorService.hasUserFriendlyMessage(code)
-    ? errorService.messageForCode(code, t)
-    : t('pantryScreen.stockCheckFailed');
+  return errorService.messageForCode(
+    code ?? '',
+    t,
+    t('pantryScreen.stockCheckFailed'),
+  );
 };
 
 /**

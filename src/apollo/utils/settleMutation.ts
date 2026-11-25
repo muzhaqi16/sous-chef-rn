@@ -127,12 +127,10 @@ const fieldPathKey = (path: string | null | undefined): string | null => {
 
 function failureFromError(error: unknown): Failure {
   // A failure the server gave no verdict on carries no code worth naming.
-  const code = isTransportFailure(error)
-    ? null
-    : errorService.parseApolloError(error, { logError: false }).error?.code;
+  const code = isTransportFailure(error) ? null : errorService.codeOf(error);
   const topLevel = getTopLevelGraphQLError(error);
   return {
-    code: code ?? null,
+    code,
     disposition: topLevel?.disposition,
     // A scalar refused before any resolver ran names its path here.
     field: fieldName(topLevel?.field),

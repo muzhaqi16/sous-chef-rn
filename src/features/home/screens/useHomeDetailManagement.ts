@@ -69,10 +69,17 @@ export function useHomeDetailManagement(homeId: string) {
    * cache before firing and idempotent on a queued replay. The server requires
    * the version for its optimistic-concurrency check.
    */
-  const saveName = async (typed: string) => {
+  /** The reason a rename was refused, for its field; null once it is taken. */
+  const saveName = async (typed: string): Promise<string | null> => {
     const name = cleanName(typed);
-    if (!home || !name) return;
-    await updateHomeFields({ name }, home, t('errors.updateHomeNameFailed'));
+    if (!home || !name) return null;
+    const failure = await updateHomeFields(
+      { name },
+      home,
+      t('errors.updateHomeNameFailed'),
+      { onField: true },
+    );
+    return failure?.body ?? null;
   };
 
   const changeRole = (membershipId: string, role: MembershipRole) =>

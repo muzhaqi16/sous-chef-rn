@@ -13,7 +13,8 @@ import { Text } from '#components/atoms/Text';
 interface EditableFieldProps {
   label: string;
   value: string;
-  onSave: (value: string) => Promise<void>;
+  /** The reason the value was refused, shown on the field; null once saved. */
+  onSave: (value: string) => Promise<string | null>;
   placeholder?: string;
   validation?: (value: string) => string | null;
   readOnly?: boolean;
@@ -63,7 +64,11 @@ export const EditableField: React.FC<EditableFieldProps> = ({
 
     void executeWithLoadingState(
       async () => {
-        await onSave(editValue);
+        const refused = await onSave(editValue);
+        if (refused) {
+          setError(refused);
+          return;
+        }
         setEditing(false);
       },
       setSaving,

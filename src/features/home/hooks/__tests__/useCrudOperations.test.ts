@@ -318,15 +318,13 @@ describe('useCrudOperations', () => {
     });
 
     describe('onRemoved', () => {
-      // A top-level code is read by the real parser; the module mock returns none.
+      // A top-level code is read by the real classifier; the module mock returns none.
       beforeEach(() => {
         const actual: typeof import('#services/errorService') =
           jest.requireActual('#services/errorService');
         jest
-          .mocked(errorService.parseApolloError)
-          .mockImplementation((...args) =>
-            actual.errorService.parseApolloError(...args),
-          );
+          .mocked(errorService.codeOf)
+          .mockImplementation(error => actual.errorService.codeOf(error));
       });
 
       const run = async (result: { data?: unknown; error?: unknown }) => {

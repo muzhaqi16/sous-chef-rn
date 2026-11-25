@@ -155,19 +155,18 @@ export function useHomeInvitations({
       return null;
     }
 
-    let result;
-    try {
-      result = await resolveShareLink({
-        variables: { code: joinCode.trim() },
-      });
-    } catch (error) {
-      errorService.reportError(error, { operation: 'Preview Home' });
+    // Under `errorPolicy: 'all'` a failed read resolves with its error.
+    const result = await resolveShareLink({
+      variables: { code: joinCode.trim() },
+    }).catch((error: unknown) => ({ data: undefined, error }));
+    if (result.error) {
+      errorService.reportError(result.error, { operation: 'Preview Home' });
       alertService.alert(
         t('labels.error'),
-        localizedErrorMessage(error, t('errors.codes.genericRetry')),
+        localizedErrorMessage(result.error, t('errors.codes.genericRetry')),
       );
+      return null;
     }
-    if (!result) return null;
 
     return homeLink(result.data?.resolveShareLink);
   };

@@ -158,13 +158,9 @@ function unmaskAuthPayload<
 
 function handleAuthError(error: unknown, operation = 'Authentication'): void {
   try {
-    const { message, code, isAuthError } = errorService.handleApolloError(
-      error,
-      {
-        operation,
-        logError: true,
-      },
-    );
+    const { message, code, isAuthError } =
+      errorService.handleApolloError(error);
+    errorService.reportError(error, { operation });
 
     toastService.error(message);
 
@@ -467,10 +463,8 @@ async function exchangeDeviceCredential(
 
   if (result.error) {
     handleAuthError(result.error, operation);
-    const code = errorService.parseApolloError(result.error, {
-      logError: false,
-    }).error?.code;
-    if (code && isDeadCredentialCode(code)) return { status: 'dead' };
+    const code = errorService.codeOf(result.error);
+    if (isDeadCredentialCode(code)) return { status: 'dead' };
     if (isTransportFailure(result.error)) return { status: 'unreachable' };
     const rateLimit = getRateLimitDetails(result.error);
     return {

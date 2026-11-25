@@ -225,7 +225,7 @@ describe('a home', () => {
   it('says so when there is no such home', async () => {
     await openHome({ home: null });
 
-    expect(screen.getByText(t('errors.codes.homeNotFound'))).toBeTruthy();
+    expect(screen.getByText(t('errors.homeNotFound'))).toBeTruthy();
   });
 
   it('stays on screen when it cannot be read again', async () => {

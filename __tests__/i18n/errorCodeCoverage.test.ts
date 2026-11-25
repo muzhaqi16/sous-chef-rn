@@ -5,18 +5,10 @@ import { errorService } from '#services/errorService';
 /**
  * Every error code the schema declares resolves to localized copy.
  *
- * `getUserFriendlyMessage` looks the code up in `ERROR_MESSAGE_KEY_SUFFIXES`
- * and, finding nothing, falls through to `errors.codes.unexpected`. The table
- * was hand-maintained against a generated enum, so six members of `ErrorCode`
- * and thirteen of `TopLevelErrorCode` had no entry: a user who hit a not-found,
- * a version conflict or a duplicate read "An unexpected error occurred" —
- * while localized copy for `resourceNotFound`, `resourceConflict` and
- * `pantryItemAlreadyExists` was already shipping, unreachable.
- *
- * The check runs in ONE direction on purpose. The table is deliberately wider
- * than the SDL: `NETWORK_ERROR` and `CIRCUIT_*` are raised on this side and
- * have no SDL to be declared in. An extra entry costs nothing; a missing one is
- * a sentence the user cannot read.
+ * `ERROR_MESSAGE_KEY_SUFFIXES` is typed by the generated enums, so a code
+ * without an entry, or an entry for a code the API cannot send, fails the
+ * typecheck. This holds the other half: each entry's key names copy that
+ * exists, so no code a user can meet falls through to "an unexpected error".
  */
 
 const SCHEMA_CODES = [

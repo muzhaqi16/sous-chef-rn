@@ -62,8 +62,8 @@ export const errorService: ErrorServiceModule['errorService'] = Object.assign(
     hasUserFriendlyMessage: jest.fn(() => false),
     isAuthError: jest.fn(() => false),
     isExpectedUserError: jest.fn(() => false),
-    // Unclassified, as the real parse reports an error it cannot read.
-    parseApolloError: jest.fn(
+    // Unclassified, as the real classifier reports an error it cannot read.
+    classifyError: jest.fn(
       (): ErrorResult<never> => ({
         success: false,
         error: {
@@ -80,8 +80,8 @@ export const localizedErrorMessage = jest.fn((): string => GENERIC);
 
 export const errorCopy = jest.fn((): string => GENERIC);
 
-// Derived from the mocked parse the way the real check derives it, so a suite
-// that overrides `parseApolloError` with a code gets that code's verdict. A
+// Derived from the mocked `codeOf` the way the real check derives it, so a
+// suite that overrides `codeOf` with a code gets that code's verdict. A
 // constant `true` nulled every thrown refusal's code in every suite.
 const TRANSPORT_CODES = new Set([
   'UNKNOWN_ERROR',
@@ -89,8 +89,7 @@ const TRANSPORT_CODES = new Set([
   'CIRCUIT_OPEN',
 ]);
 export const isTransportFailure = jest.fn((error: unknown): boolean => {
-  const code = errorService.parseApolloError(error, { logError: false }).error
-    ?.code;
+  const code = errorService.codeOf(error);
   return !code || TRANSPORT_CODES.has(code);
 });
 
