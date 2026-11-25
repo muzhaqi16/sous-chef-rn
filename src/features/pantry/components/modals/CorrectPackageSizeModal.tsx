@@ -226,7 +226,6 @@ export const CorrectPackageSizeModal: React.FC<
                   render={({ field: unit, fieldState: unitState }) => (
                     <PackageContentsFields
                       variant="modal"
-                      useBottomSheetInput
                       size={size.value}
                       onSizeChange={size.onChange}
                       sizeError={sizeState.error?.message}
@@ -254,7 +253,6 @@ export const CorrectPackageSizeModal: React.FC<
                     onChangeText={field.onChange}
                     error={fieldState.error?.message}
                     placeholder={t('correctWeight.reasonPlaceholder')}
-                    useBottomSheetInput
                   />
                 )}
               />

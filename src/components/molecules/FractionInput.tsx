@@ -3,11 +3,7 @@ import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
-import {
-  ThemedBottomSheetTextInput,
-  ThemedTextInput,
-} from '#components/atoms/themedComponents';
-import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { localizeNumericHint } from '#utils/formatters/number';
 
@@ -24,7 +20,6 @@ interface FractionInputProps {
     | 'numeric'
     | 'decimal-pad'
     | 'numbers-and-punctuation';
-  useBottomSheetInput?: boolean;
   required?: boolean;
 }
 
@@ -38,15 +33,9 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   disabled = false,
   testID,
   keyboardType = 'numbers-and-punctuation',
-  useBottomSheetInput = false,
   required = false,
 }) => {
   const { t } = useTranslation();
-  const contextValue = useIsBottomSheetInput();
-  const InputComponent =
-    useBottomSheetInput || contextValue
-      ? ThemedBottomSheetTextInput
-      : ThemedTextInput;
   const [isFocused, setIsFocused] = useState(false);
 
   // `,` as well as `.`: the keypad on a comma-locale device offers no `.` at
@@ -81,7 +70,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
       required={required}
       inputTestID={testID}
     >
-      <InputComponent
+      <ThemedTextInput
         style={variantStyles.input}
         value={value}
         onChangeText={handleChangeText}

@@ -7,13 +7,9 @@ import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  ThemedBottomSheetTextInput,
-  ThemedTextInput,
-} from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
-import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
@@ -107,12 +103,6 @@ export function BottomSheetAutocompleteInput<T>({
   onEndEditing,
 }: BottomSheetAutocompleteInputProps<T>) {
   const { t } = useTranslation();
-  // Only `BottomSheetTextInput` sets `animatedKeyboardState.target`; without it
-  // gorhom drops the keyboard-shown event and the sheet stays under the keyboard.
-  // It throws outside a sheet, and this field also serves full screens.
-  const InputComponent = useIsBottomSheetInput()
-    ? ThemedBottomSheetTextInput
-    : ThemedTextInput;
   const [userDismissed, setUserDismissed] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -267,7 +257,7 @@ export function BottomSheetAutocompleteInput<T>({
 
   return (
     <FormFieldWrapper label={label ?? ''} error={error} required={required}>
-      <InputComponent
+      <ThemedTextInput
         style={[styles.fieldInput, error && styles.fieldInputError]}
         value={value}
         onChangeText={handleTextChange}
@@ -293,7 +283,7 @@ export function BottomSheetAutocompleteInput<T>({
       >
         <View style={styles.sheetBody}>
           <View style={styles.headerSection}>
-            <ThemedBottomSheetTextInput
+            <ThemedTextInput
               style={styles.bottomSheetInput}
               defaultValue={searchTerm}
               onChangeText={handleBottomSheetTextChange}

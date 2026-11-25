@@ -6,7 +6,7 @@ import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { formatQuantityForInput } from '#utils/formatQuantity';
 import { parseDecimalInput } from '#utils/parseDecimalInput';
@@ -149,7 +149,7 @@ const PurchaseAmountForm: React.FC<PurchaseAmountFormProps> = ({
             {t('labels.quantity')}
           </SectionHeader>
           <View style={styles.inputRow}>
-            <ThemedBottomSheetTextInput
+            <ThemedTextInput
               style={styles.input}
               value={quantityInput}
               onChangeText={setQuantityInput}
@@ -188,7 +188,7 @@ const PurchaseAmountForm: React.FC<PurchaseAmountFormProps> = ({
                   {currencySymbol(currency)}
                 </Text>
               ) : null}
-              <ThemedBottomSheetTextInput
+              <ThemedTextInput
                 style={styles.input}
                 value={priceInput}
                 onChangeText={setPriceInput}

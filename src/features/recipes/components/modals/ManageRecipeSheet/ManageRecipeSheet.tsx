@@ -5,7 +5,7 @@ import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedActivityIndicator,
-  ThemedBottomSheetTextInput,
+  ThemedTextInput,
 } from '#components/atoms/themedComponents';
 import { TagInput } from '#features/recipes/components/TagInput';
 import { Text } from '#components/atoms/Text';
@@ -192,7 +192,7 @@ const ManageRecipeContent: React.FC<ManageRecipeContentProps> = ({
       <SectionHeader variant="overline" style={styles.sectionLabel}>
         {t('manageRecipe.notes')}
       </SectionHeader>
-      <ThemedBottomSheetTextInput
+      <ThemedTextInput
         style={styles.notesInput}
         placeholder={t('labels.addAnyNotesAboutThisRecipe')}
         value={notes}

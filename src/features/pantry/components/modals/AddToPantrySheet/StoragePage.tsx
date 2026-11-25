@@ -88,7 +88,6 @@ export const StoragePage: React.FC<StoragePageProps> = ({
           value={tags}
           onChangeText={setTags}
           placeholder={t('addToPantry.tagsPlaceholder')}
-          useBottomSheetInput
         />
 
         {/* Notes */}
@@ -98,7 +97,6 @@ export const StoragePage: React.FC<StoragePageProps> = ({
           onChangeText={setStorageNotes}
           placeholder={t('addToPantry.notesPlaceholder')}
           multiline
-          useBottomSheetInput
         />
       </DropdownStack>
     </BottomSheetFormScrollView>

@@ -13,8 +13,8 @@ import { StyleSheet } from 'react-native-unistyles';
 // Themed wrapper, not gorhom's raw `BottomSheetTextInput`: the raw one sets no
 // `placeholderTextColor` and falls back to the OS default, ignoring the theme.
 import {
-  ThemedBottomSheetTextInput,
-  type ThemedBottomSheetTextInputRef,
+  ThemedTextInput,
+  type ThemedTextInputRef,
 } from '#components/atoms/themedComponents';
 import { Label } from '#components/atoms/Label';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
@@ -31,7 +31,7 @@ const DROPDOWN_GAP = 4;
 
 /** How the return key moves on from a field: the next field's input, or done. */
 export interface FieldChaining {
-  inputRef?: React.Ref<ThemedBottomSheetTextInputRef>;
+  inputRef?: React.Ref<ThemedTextInputRef>;
   returnKeyType?: ReturnKeyTypeOptions;
   onSubmitEditing?: () => void;
 }
@@ -201,7 +201,7 @@ export function InlineAutocomplete<T>({
       <View style={variantStyles.container} collapsable={false}>
         {label ? <Label required={required}>{label}</Label> : null}
         <View style={variantStyles.inputContainer}>
-          <ThemedBottomSheetTextInput
+          <ThemedTextInput
             style={variantStyles.input}
             value={searchTerm}
             onChangeText={handleTextChange}

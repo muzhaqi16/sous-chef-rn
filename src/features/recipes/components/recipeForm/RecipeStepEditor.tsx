@@ -87,7 +87,6 @@ const StepForm: React.FC<StepFormProps> = ({ step, onSave, onClose }) => {
             placeholder={t('recipes.stepInstructionPlaceholder')}
             error={fieldState.error?.message}
             required
-            useBottomSheetInput
           />
         )}
       />

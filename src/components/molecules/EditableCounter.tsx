@@ -6,10 +6,7 @@ import {
   type GestureResponderEvent,
   type TextInputProps,
 } from 'react-native';
-import {
-  ThemedBottomSheetTextInput,
-  ThemedTextInput,
-} from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { assignRef, type FocusableInputRef } from '#components/atoms/inputRef';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseFractionalInput } from '#utils/fractionUtils';
@@ -20,7 +17,6 @@ import {
 import { Label } from '#components/atoms/Label';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import { Text } from '#components/atoms/Text';
-import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 
 interface EditableCounterProps {
   label?: string;
@@ -64,11 +60,6 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
-  // Inside a sheet the field must be a `BottomSheetTextInput` or gorhom misses
-  // the focus; picked from context because it throws on the full screens this
-  // counter also serves. Same rule as `FormInput`.
-  const inSheet = useIsBottomSheetInput();
-
   // `error` last so an invalid value stays visibly invalid while focused —
   // the focus ring would otherwise paint over the thing being reported.
   const variantStyles = styles.useVariants({
@@ -158,14 +149,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           style={variantStyles.button}
         />
 
-        {inSheet ? (
-          <ThemedBottomSheetTextInput
-            ref={node => assignRef(ref, node)}
-            {...inputProps}
-          />
-        ) : (
-          <ThemedTextInput ref={node => assignRef(ref, node)} {...inputProps} />
-        )}
+        <ThemedTextInput ref={node => assignRef(ref, node)} {...inputProps} />
 
         <IconButton
           name="add"

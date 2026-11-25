@@ -12,23 +12,21 @@ jest.mock('#components/molecules/BaseInput/BaseInput', () => ({
 }));
 
 /**
- * `sheetRef` reaches the input only inside a bottom sheet; outside one
- * `BaseInput` renders the plain host and routes `ref` instead. A debounced
- * SearchBar is uncontrolled, so a handle that reaches neither cannot change
- * what the person sees.
+ * One ref reaches the input, inside a sheet or out. A debounced SearchBar is
+ * uncontrolled, so a handle that missed it could not change what is shown.
  */
 describe('SearchBar debounced mode, imperative handle', () => {
   beforeEach(() => {
     lastProps = {};
   });
 
-  it('hands the input a ref for the plain host as well as the sheet host', () => {
+  it('hands the input one ref', () => {
     render(<SearchBar onChangeText={jest.fn()} debounceMs={250} />);
-    expect(lastProps.sheetRef).toBeTruthy();
     expect(lastProps.ref).toBeTruthy();
+    expect(lastProps).not.toHaveProperty('sheetRef');
   });
 
-  it('reaches the input that the plain host populated', () => {
+  it('reaches the input through it', () => {
     const searchRef = createRef<SearchBarRef>();
     const onChangeText = jest.fn();
     render(
@@ -52,9 +50,8 @@ describe('SearchBar debounced mode, imperative handle', () => {
     expect(onChangeText).toHaveBeenCalledWith('');
   });
 
-  it('leaves both refs off in controlled mode', () => {
+  it('hands it the ref in controlled mode too', () => {
     render(<SearchBar onChangeText={jest.fn()} value="milk" />);
-    expect(lastProps.sheetRef).toBeUndefined();
-    expect(lastProps.ref).toBeUndefined();
+    expect(lastProps.ref).toBeTruthy();
   });
 });

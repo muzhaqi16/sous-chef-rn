@@ -6,8 +6,8 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { object, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
 import {
-  ThemedBottomSheetTextInput,
-  type ThemedBottomSheetTextInputRef,
+  ThemedTextInput,
+  type ThemedTextInputRef,
 } from '#components/atoms/themedComponents';
 import { StorageType } from '#graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
@@ -61,7 +61,7 @@ const AddStorageLocationForm: React.FC<AddStorageLocationFormProps> = ({
   creating = false,
 }) => {
   const { t } = useTranslation();
-  const inputRef = useRef<ThemedBottomSheetTextInputRef>(null);
+  const inputRef = useRef<ThemedTextInputRef>(null);
   const {
     control,
     handleSubmit,
@@ -114,7 +114,7 @@ const AddStorageLocationForm: React.FC<AddStorageLocationFormProps> = ({
           {t('addStorageLocation.locationName')}
         </Text>
 
-        <ThemedBottomSheetTextInput
+        <ThemedTextInput
           ref={inputRef}
           style={variantStyles.input}
           defaultValue={field.value}

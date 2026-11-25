@@ -96,8 +96,8 @@ optional:
 - **`Sheet`** (`src/components/templates/Sheet.tsx`) is every bottom sheet:
   only it and `ActionTray` render a `BottomSheetModal`
   (`__tests__/sheets/bottomSheetShell.test.ts`). It takes
-  `view | form | action | list`. `form` supplies both the keyboard offset and
-  the input context, so inputs inside resolve to gorhom's `BottomSheetTextInput`.
+  `view | form | action | list`. `form` supplies the keyboard offset; in every
+  mode the inputs inside resolve to gorhom's `BottomSheetTextInput` themselves.
   `list` puts its child in a plain `flex: 1` view the modal bounds, and clears
   the home indicator there unless `bottomInset="content"` says the content pads
   its own scroll. `view` renders `BottomSheetView`, which is absolutely
@@ -280,7 +280,7 @@ they read it.
 - **`withUnistyles(Component)`** wraps a third-party component taking
   theme-derived props, so only the wrapper re-renders on a theme tick. Shared
   wrappers live in `src/components/atoms/themedComponents.tsx`
-  (`ThemedBottomSheetTextInput`, `ThemedActivityIndicator`,
+  (`ThemedTextInput`, `ThemedActivityIndicator`,
   `OnPrimaryActivityIndicator`, …); a new one goes there, not in a feature file.
   Switches use `BaseSwitch` (`src/components/atoms/BaseSwitch.tsx`); themed icon
   colours use `<Icon tone="X" />` (`src/components/atoms/Icon.tsx`), and the glyph
@@ -530,12 +530,13 @@ they read it.
   tutorials off. Not now puts a tour away until the next session; End marks
   every step shown.
 - **Inputs in a sheet resolve to `BottomSheetTextInput`.** A plain RN `TextInput`
-  leaves the sheet blind to the keyboard. `BottomSheetTextInput` throws outside a
-  sheet, so shared inputs pick it from context —
-  `useIsBottomSheetInput() ? ThemedBottomSheetTextInput : ThemedTextInput` — as
-  `FormInput`, `FractionInput`, `EditableCounter` and
-  `BottomSheetAutocompleteInput` do
-  ([gorhom keyboard handling requires BottomSheetTextInput](verified-library-behaviour.md#gorhom-keyboard-handling-requires-bottomsheettextinput)).
+  leaves the sheet blind to the keyboard, and `BottomSheetTextInput` throws
+  outside a sheet. `ThemedTextInput` picks one by asking gorhom where it renders
+  (`useInBottomSheet`, over `useBottomSheetInternal(true)`), so every kit input,
+  search field and counter is right in any sheet mode with no prop, and one ref
+  reaches the input either way. A text input is only ever `ThemedTextInput`
+  ([gorhom keyboard handling requires BottomSheetTextInput](verified-library-behaviour.md#gorhom-keyboard-handling-requires-bottomsheettextinput),
+  [gorhom's internal context answers whether a render is in a sheet](verified-library-behaviour.md#gorhoms-internal-context-answers-whether-a-render-is-in-a-sheet)).
 - **A content-sized sheet (`enableDynamicSizing`) takes no keyboard-aware
   scrollable.** `KeyboardAwareScrollView` pads its content by the keyboard's
   height, and gorhom sizes the sheet to that content, so focusing a field grows

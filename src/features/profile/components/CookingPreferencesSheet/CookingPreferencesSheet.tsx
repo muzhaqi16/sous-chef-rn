@@ -115,7 +115,6 @@ const CookingPreferencesForm: React.FC<CookingPreferencesFormProps> = ({
               error={fieldState.error?.message}
               keyboardType="number-pad"
               placeholder={t('cookingPreferences.cookTimePlaceholder')}
-              useBottomSheetInput
             />
           )}
         />

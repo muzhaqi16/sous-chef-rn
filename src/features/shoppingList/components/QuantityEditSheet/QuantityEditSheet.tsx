@@ -8,8 +8,8 @@ import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { StyleSheet } from 'react-native-unistyles';
 import {
-  ThemedBottomSheetTextInput,
-  type ThemedBottomSheetTextInputRef,
+  ThemedTextInput,
+  type ThemedTextInputRef,
 } from '#components/atoms/themedComponents';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { Chip } from '#components/molecules/Chip';
@@ -115,7 +115,7 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   // Set by a save the quantity refused; cleared once the field reads.
   const [refused, setRefused] = useState(false);
-  const inputRef = useRef<ThemedBottomSheetTextInputRef>(null);
+  const inputRef = useRef<ThemedTextInputRef>(null);
 
   // Sorted preferred first, then default, then alphabetically.
   const itemUnits =
@@ -249,7 +249,7 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
               onPress={handleQuantityPress}
             >
               {isEditing ? (
-                <ThemedBottomSheetTextInput
+                <ThemedTextInput
                   ref={inputRef}
                   style={variantStyles.quantityInput}
                   value={quantityInput}

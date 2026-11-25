@@ -134,7 +134,6 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
               error={fieldState.error?.message}
               keyboardType="number-pad"
               placeholder={t('macroTargets.caloriesPlaceholder')}
-              useBottomSheetInput
             />
           )}
         />
@@ -153,7 +152,6 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
               error={fieldState.error?.message}
               keyboardType="number-pad"
               placeholder={t('macroTargets.proteinPlaceholder')}
-              useBottomSheetInput
             />
           )}
         />
@@ -172,7 +170,6 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
               error={fieldState.error?.message}
               keyboardType="number-pad"
               placeholder={t('macroTargets.carbsPlaceholder')}
-              useBottomSheetInput
             />
           )}
         />
@@ -191,7 +188,6 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
               error={fieldState.error?.message}
               keyboardType="number-pad"
               placeholder={t('macroTargets.fatPlaceholder')}
-              useBottomSheetInput
             />
           )}
         />

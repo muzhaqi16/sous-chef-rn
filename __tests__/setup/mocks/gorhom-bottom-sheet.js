@@ -2,6 +2,14 @@
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = require('react');
   const { View, TextInput } = require('react-native');
+  // What `useBottomSheetInternal` reads: set inside a sheet, null outside.
+  const InternalContext = React.createContext(null);
+  const inSheet = children =>
+    React.createElement(InternalContext.Provider, { value: {} }, children);
+  // Named, so a test can tell gorhom's input from React Native's.
+  function BottomSheetTextInput(props) {
+    return React.createElement(TextInput, props);
+  }
 
   return {
     __esModule: true,
@@ -14,7 +22,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
         close: jest.fn(),
         forceClose: jest.fn(),
       }));
-      return React.createElement(View, props);
+      return inSheet(React.createElement(View, props));
     }),
     BottomSheetModal: React.forwardRef((props, ref) => {
       const [presented, setPresented] = React.useState(false);
@@ -46,16 +54,18 @@ jest.mock('@gorhom/bottom-sheet', () => {
         ...rest
       } = props;
       if (!presented) return null;
-      return React.createElement(
-        View,
-        rest,
-        Handle ? React.createElement(Handle) : null,
-        children,
-        Footer
-          ? React.createElement(Footer, {
-              animatedFooterPosition: { value: 0 },
-            })
-          : null,
+      return inSheet(
+        React.createElement(
+          View,
+          rest,
+          Handle ? React.createElement(Handle) : null,
+          children,
+          Footer
+            ? React.createElement(Footer, {
+                animatedFooterPosition: { value: 0 },
+              })
+            : null,
+        ),
       );
     }),
     BottomSheetModalProvider: ({ children }) => children,
@@ -63,7 +73,14 @@ jest.mock('@gorhom/bottom-sheet', () => {
     BottomSheetView: props => React.createElement(View, props),
     BottomSheetScrollView: props => React.createElement(View, props),
     BottomSheetFlatList: props => React.createElement(View, props),
-    BottomSheetTextInput: props => React.createElement(TextInput, props),
+    BottomSheetTextInput,
+    useBottomSheetInternal: unsafe => {
+      const internal = React.useContext(InternalContext);
+      if (!unsafe && internal === null) {
+        throw "'useBottomSheetInternal' cannot be used out of the BottomSheet!";
+      }
+      return internal;
+    },
     BottomSheetFooter: props => React.createElement(View, props),
     BottomSheetHandle: props => React.createElement(View, props),
     useBottomSheet: jest.fn(() => ({

@@ -11,10 +11,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
-import type {
-  ThemedBottomSheetTextInputRef,
-  ThemedTextInputRef,
-} from '#components/atoms/themedComponents';
+import type { ThemedTextInputRef } from '#components/atoms/themedComponents';
 import { CountBadge } from '#components/atoms/CountBadge';
 import { Pressable } from '#components/atoms/themedComponents';
 import { hitSlop } from '#theme/foundations/sizes';
@@ -110,12 +107,9 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
     const resolvedPlaceholder = placeholder ?? t('searchBar.placeholder');
 
     const debounced = debounceMs !== undefined;
-    // `BaseInput` renders gorhom's input inside a sheet and the plain one
-    // outside, and routes a different ref to each. A debounced SearchBar is
-    // uncontrolled, so a handle reaching neither cannot change what is shown.
-    const sheetInputRef = useRef<ThemedBottomSheetTextInputRef>(null);
-    const plainInputRef = useRef<ThemedTextInputRef>(null);
-    const liveInput = () => sheetInputRef.current ?? plainInputRef.current;
+    // A debounced SearchBar is uncontrolled: only its input shows the text.
+    const inputRef = useRef<ThemedTextInputRef>(null);
+    const liveInput = () => inputRef.current;
     const textRef = useRef('');
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [hasText, setHasText] = useState(false);
@@ -186,8 +180,7 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
         <BaseInput
           value={debounced ? undefined : value}
           defaultValue={debounced ? defaultValue : undefined}
-          ref={debounced ? plainInputRef : undefined}
-          sheetRef={debounced ? sheetInputRef : undefined}
+          ref={inputRef}
           onChangeText={handleChangeText}
           placeholder={resolvedPlaceholder}
           style={inputStyle}

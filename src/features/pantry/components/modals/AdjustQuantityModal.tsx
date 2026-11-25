@@ -249,7 +249,6 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                   onChangeText={field.onChange}
                   error={fieldState.error?.message}
                   placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
-                  useBottomSheetInput
                 />
               )}
             />
@@ -267,7 +266,6 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                   onChangeText={field.onChange}
                   error={fieldState.error?.message}
                   placeholder={t('adjustQuantity.reasonPlaceholder')}
-                  useBottomSheetInput
                 />
               )}
             />
@@ -285,7 +283,6 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                     onChangeText={field.onChange}
                     placeholder={t('adjustQuantity.remainingWeightPlaceholder')}
                     keyboardType="decimal-pad"
-                    useBottomSheetInput
                   />
                 )}
               />

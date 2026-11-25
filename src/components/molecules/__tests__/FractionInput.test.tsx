@@ -3,10 +3,6 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { FractionInput } from '../FractionInput';
 
-jest.mock('#context/BottomSheetInputContext', () => ({
-  useIsBottomSheetInput: jest.fn(() => false),
-}));
-
 describe('FractionInput', () => {
   const defaultProps = {
     value: '',

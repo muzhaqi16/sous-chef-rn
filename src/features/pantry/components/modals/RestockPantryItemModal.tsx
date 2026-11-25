@@ -348,7 +348,6 @@ const RestockFields: React.FC<{
           value={amount.value}
           onChangeText={amount.onChange}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
-          useBottomSheetInput
           required
           error={
             amountState.error?.message ??
@@ -413,7 +412,6 @@ const RestockFields: React.FC<{
                     onChangeText={field.onChange}
                     placeholder={localizeNumericHint('0.00')}
                     keyboardType="decimal-pad"
-                    useBottomSheetInput
                     error={fieldState.error?.message}
                   />
                 )}
@@ -430,7 +428,6 @@ const RestockFields: React.FC<{
                     onChangeText={field.onChange}
                     placeholder={localizeNumericHint('0.00')}
                     keyboardType="decimal-pad"
-                    useBottomSheetInput
                     error={fieldState.error?.message}
                   />
                 )}
@@ -454,7 +451,6 @@ const RestockFields: React.FC<{
               placeholder={t('restockItem.notesPlaceholder')}
               multiline
               numberOfLines={3}
-              useBottomSheetInput
             />
           )}
         />
@@ -509,7 +505,6 @@ const SizeFields: React.FC<{
   return (
     <PackageContentsFields
       variant="modal"
-      useBottomSheetInput
       size={size.value}
       onSizeChange={size.onChange}
       sizeError={sizeState.error?.message}

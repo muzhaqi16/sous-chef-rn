@@ -263,7 +263,6 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
               onChangeText={field.onChange}
               onBlur={field.onBlur}
               placeholder={t('recipes.preparationPlaceholder')}
-              useBottomSheetInput
             />
           )}
         />
@@ -278,7 +277,6 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
               onChangeText={field.onChange}
               onBlur={field.onBlur}
               placeholder={t('recipes.sectionPlaceholder')}
-              useBottomSheetInput
             />
           )}
         />
@@ -293,7 +291,6 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
               onChangeText={field.onChange}
               onBlur={field.onBlur}
               placeholder={t('labels.anyAdditionalNotes')}
-              useBottomSheetInput
             />
           )}
         />

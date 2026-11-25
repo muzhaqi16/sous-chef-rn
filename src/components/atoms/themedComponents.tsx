@@ -12,6 +12,7 @@ import {
 // RNGH's, not RN's — see `ThemedRefreshControl` below.
 import { RefreshControl } from 'react-native-gesture-handler';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { useInBottomSheet } from '#hooks/ui/useInBottomSheet';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 
@@ -85,28 +86,27 @@ const inputStyles = StyleSheet.create(theme => ({
 }));
 
 export type ThemedTextInputRef = TextInputInstance;
-export type ThemedBottomSheetTextInputRef = TextInputInstance;
 
 /** `withUnistyles` flattens once, so `[base, [a, b]]` leaves a, b unresolved. */
 const withFieldStyle = (
   style: React.ComponentProps<typeof UniTextInput>['style'],
 ) => [inputStyles.base, style].flat();
 
-/** RN TextInput carrying the theme's field color, placeholder and keyboard. */
+/**
+ * A TextInput carrying the theme's field color, placeholder and keyboard. Inside
+ * a bottom sheet it is gorhom's, whose keyboard handling waits for its own
+ * input's focus; the sheet is read from gorhom, so no caller says where it is.
+ * Verified: #gorhom-keyboard-handling-requires-bottomsheettextinput
+ */
 export const ThemedTextInput = ({
   style,
   ...rest
-}: React.ComponentProps<typeof UniTextInput>) => (
-  <UniTextInput {...rest} style={withFieldStyle(style)} />
-);
-
-/** The same, for a TextInput inside a BottomSheet. */
-export const ThemedBottomSheetTextInput = ({
-  style,
-  ...rest
-}: React.ComponentProps<typeof UniBottomSheetTextInput>) => (
-  <UniBottomSheetTextInput {...rest} style={withFieldStyle(style)} />
-);
+}: React.ComponentProps<typeof UniTextInput>) =>
+  useInBottomSheet() ? (
+    <UniBottomSheetTextInput {...rest} style={withFieldStyle(style)} />
+  ) : (
+    <UniTextInput {...rest} style={withFieldStyle(style)} />
+  );
 
 /** Keyboard-aware scroller for full-screen forms; `bottomOffset` defaults to
  *  `theme.spacing.md` (the library's 0 lands an input flush against the

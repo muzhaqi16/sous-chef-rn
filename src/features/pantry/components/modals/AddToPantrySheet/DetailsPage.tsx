@@ -92,7 +92,6 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
         {holdsContents ? (
           <PackageContentsFields
             variant="inline"
-            useBottomSheetInput
             size={sizeInput}
             onSizeChange={setSizeInput}
             sizeError={sizeError}

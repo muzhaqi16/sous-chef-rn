@@ -160,7 +160,6 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
                 autoCorrect={false}
                 error={fieldState.error?.message}
                 editable={!sending}
-                useBottomSheetInput
                 testID={recipesTestIDs.captureUrlInput}
               />
               <View style={styles.actions}>
@@ -230,7 +229,6 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
                 autoCorrect={false}
                 error={fieldState.error?.message}
                 editable={!sending}
-                useBottomSheetInput
                 testID={recipesTestIDs.captureSourceInput}
               />
             )}

@@ -6,7 +6,7 @@ import { Controller, useController, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { number, object, string, type ObjectSchema } from 'yup';
 import { useTranslation } from '#i18n';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { StarRatingInput } from './StarRatingInput';
 import { Text } from '#components/atoms/Text';
 import { WriteReviewSheet_ReviewFragmentDoc } from './WriteReviewSheet.generated';
@@ -128,7 +128,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
           control={control}
           name="comment"
           render={({ field }) => (
-            <ThemedBottomSheetTextInput
+            <ThemedTextInput
               defaultValue={field.value}
               onChangeText={field.onChange}
               onBlur={field.onBlur}

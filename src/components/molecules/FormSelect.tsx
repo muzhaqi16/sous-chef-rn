@@ -7,7 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { FormFieldWrapper } from '../atoms/FormFieldWrapper';
 import { ModalPicker } from '#components/molecules/ModalPicker';
-import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
+import { useInBottomSheet } from '#hooks/ui/useInBottomSheet';
 
 interface SelectOption {
   label: string;
@@ -39,7 +39,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   const resolvedPlaceholder = placeholder ?? t('formSelect.placeholder');
   const [pickerVisible, setPickerVisible] = useState(false);
   // Inside a sheet, the picker stacks over it; switching would minimize it.
-  const inSheet = useIsBottomSheetInput();
+  const inSheet = useInBottomSheet();
 
   const selectedOption = options.find(option => option.value === value);
 

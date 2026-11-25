@@ -86,7 +86,6 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
             value={value}
             onChangeText={onChange}
             placeholder={t('addToPantry.itemNamePlaceholder')}
-            useBottomSheetInput
             autoCapitalize="words"
             testID={pantryTestIDs.addDetailsNameInput}
           />

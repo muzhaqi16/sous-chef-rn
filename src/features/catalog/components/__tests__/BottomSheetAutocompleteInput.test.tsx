@@ -63,6 +63,8 @@ jest.mock('@gorhom/bottom-sheet', () => {
       dismiss: jest.fn(),
       dismissAll: jest.fn(),
     })),
+    // No input here asks which sheet it is in.
+    useBottomSheetInternal: () => null,
     useBottomSheetScrollableCreator: jest.fn(() => {
       const ScrollableMock = (props: ScrollViewProps) =>
         R.createElement(RN.ScrollView, props);

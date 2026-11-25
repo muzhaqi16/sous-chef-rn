@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { Chip } from '#components/molecules/Chip';
 import { MealPlanType } from '#graphql/generated/schemaTypes';
 import type { MealPlanFilterState } from '#features/mealPlan/utils/mealPlanFilters';
@@ -26,7 +26,7 @@ export const MealPlanFilterBar: React.FC<MealPlanFilterBarProps> = ({
 
   return (
     <View style={styles.container}>
-      <ThemedBottomSheetTextInput
+      <ThemedTextInput
         value={filters.search}
         onChangeText={search => onChange({ ...filters, search })}
         placeholder={t('mealPlanSelector.searchPlaceholder')}

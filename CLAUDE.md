@@ -327,8 +327,7 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **`Screen` never applies the top inset** — the navigator does. A bare
   `<SafeAreaView>` (no `edges`) insets all four sides.
 - **A sheet's shell is `Sheet`** (`view | form | action | list`); `form` supplies
-  the keyboard offset and input context. A sheet whose scrollable fills it is
-  `list`, never `view`.
+  the keyboard offset. A sheet whose scrollable fills it is `list`, never `view`.
 - **A `Dialog` stays mounted and is driven by `visible`**: unmounting it skips
   the fade-out and can orphan its scrim on Android. Content goes in
   `DialogBody`, actions in `DialogFooter`.
@@ -400,8 +399,9 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **A sheet opens fresh**: its form state lives in its content, which gorhom
   unmounts on dismiss, so no `prevVisible` reset; what a sheet deliberately
   keeps lives in its parent. Verified: `#gorhom-unmounts-a-modals-content-once-it-is-dismissed`.
-- **Every text input inside a sheet resolves to gorhom's `BottomSheetTextInput`**
-  via `useIsBottomSheetInput()` — it throws outside a sheet. Verified: `#gorhom-keyboard-handling-requires-bottomsheettextinput`.
+- **Every text input inside a sheet resolves to gorhom's `BottomSheetTextInput`**:
+  a text input is only ever `ThemedTextInput`, which asks gorhom where it renders
+  (`useInBottomSheet`); gorhom's throws outside a sheet. Verified: `#gorhom-keyboard-handling-requires-bottomsheettextinput`.
 - **A content-sized sheet (`enableDynamicSizing`) takes NO keyboard-aware
   scrollable**: `BottomSheetView` and gorhom's `interactive` lift. Verified: `#a-keyboard-aware-scrollable-cannot-size-a-sheet`.
 - **A fixed-snap sheet with inputs uses `BottomSheetFormScrollView`.** Never

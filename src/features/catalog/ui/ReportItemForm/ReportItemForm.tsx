@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
@@ -129,7 +129,7 @@ export const ReportItemForm: React.FC<ReportItemFormProps> = ({
             <Text role="label" style={styles.reasonLabel}>
               {t('reportItem.reasonLabel')}
             </Text>
-            <ThemedBottomSheetTextInput
+            <ThemedTextInput
               style={styles.reasonInput}
               value={reason}
               onChangeText={setReason}

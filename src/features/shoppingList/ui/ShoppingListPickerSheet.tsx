@@ -7,7 +7,7 @@ import { useTranslation } from '#i18n';
 import {
   OnPrimaryActivityIndicator,
   Pressable,
-  ThemedBottomSheetTextInput,
+  ThemedTextInput,
 } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
@@ -68,7 +68,7 @@ const NewListForm: React.FC<NewListFormProps> = ({
       render={({ field, fieldState }) => (
         <View style={styles.createList}>
           <View style={styles.createListRow}>
-            <ThemedBottomSheetTextInput
+            <ThemedTextInput
               style={styles.createListInput}
               value={field.value}
               onChangeText={field.onChange}

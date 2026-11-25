@@ -784,10 +784,10 @@ Chrome is composed once, not per screen.
   never the scaffold, or RNGH cannot route the scroll gesture into it.
 - **`Sheet`** (`src/components/templates/Sheet.tsx`) is a bottom sheet's shell:
   `view | form | action | list`; `list` hands a scrollable that fills the sheet
-  to the modal, since `BottomSheetView` cannot bound one. `form` brings both the keyboard offset and the input
-  context, so every `TextInput` under it resolves to gorhom's
-  `BottomSheetTextInput` rather than RN's, which would leave the sheet blind to
-  the keyboard. `__tests__/sheets/bottomSheetShell.test.ts` holds it.
+  to the modal, since `BottomSheetView` cannot bound one. `form` brings the keyboard offset. In every
+  mode `ThemedTextInput` resolves to gorhom's `BottomSheetTextInput` rather than
+  RN's, which would leave the sheet blind to the keyboard, by asking gorhom
+  whether it renders in a sheet. `__tests__/sheets/bottomSheetShell.test.ts` holds the shell.
 - **`FormScreen`** is a full-screen form — a screen with a form's chrome. It is
   not a sheet and does not share a mechanism with one.
 

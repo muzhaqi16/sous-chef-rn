@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { Controller, useForm, type FieldValues } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type AnyObjectSchema } from 'yup';
@@ -124,7 +124,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
           name={fieldKey}
           render={({ field, fieldState }) => (
             <View>
-              <ThemedBottomSheetTextInput
+              <ThemedTextInput
                 style={variantStyles.input}
                 value={
                   typeof field.value === 'string' ? field.value : undefined

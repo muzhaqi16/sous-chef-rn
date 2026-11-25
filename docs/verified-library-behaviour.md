@@ -81,14 +81,35 @@ keyboard covers the field.
 `BottomSheetTextInput.handleOnFocus` sets `animatedKeyboardState.target`, and
 `useAnimatedKeyboard.ts` caches a keyboard-shown event until a
 `BottomSheetTextInput` focus sets that target. The input reads the sheet's
-internal context and **throws outside a sheet**, which is why shared inputs
-pick their implementation from `useIsBottomSheetInput()`.
+internal context and **throws outside a sheet**, which is why `ThemedTextInput`
+picks its implementation from `useInBottomSheet()` (next entry).
 
 Re-check:
 
 ```
 grep -n "target" node_modules/@gorhom/bottom-sheet/src/components/bottomSheetTextInput/BottomSheetTextInput.tsx
 grep -n -A3 "temporaryCachedState" node_modules/@gorhom/bottom-sheet/src/hooks/useAnimatedKeyboard.ts
+```
+
+### gorhom's internal context answers whether a render is in a sheet
+
+**Claim:** `useBottomSheetInternal(true)` returns the sheet's internal context
+inside any gorhom sheet, a `BottomSheetModal` among them, and `null` anywhere
+else, without throwing. `useInBottomSheet` reads it, so an input knows it is in
+a sheet in every `Sheet` mode with nothing provided by the host.
+
+**Verified against `@gorhom/bottom-sheet@5.2.14`** (2026-11-25): the hook is
+exported from the package root; its `unsafe: true` overload returns
+`useContext(BottomSheetInternalContext)` and throws only when `unsafe` is not
+`true` and the context is `null`. On the iOS simulator, a `FractionInput` in the
+use sheet (`Sheet mode="form"`) lifted the sheet above the keyboard with no
+provider.
+
+Re-check:
+
+```
+grep -n "useBottomSheetInternal" node_modules/@gorhom/bottom-sheet/src/index.ts*
+sed -n 1,30p node_modules/@gorhom/bottom-sheet/src/hooks/useBottomSheetInternal.ts
 ```
 
 ### keyboard-controller bottomOffset measures input bottom

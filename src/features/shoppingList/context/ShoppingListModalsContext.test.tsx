@@ -8,6 +8,8 @@ jest.mock('@gorhom/bottom-sheet', () => {
   const R = require('react');
   return {
     __esModule: true,
+    // No input here asks which sheet it is in.
+    useBottomSheetInternal: () => null,
     default: R.forwardRef((props: unknown, ref: unknown) => {
       R.useImperativeHandle(ref, () => ({
         snapToIndex: jest.fn(),

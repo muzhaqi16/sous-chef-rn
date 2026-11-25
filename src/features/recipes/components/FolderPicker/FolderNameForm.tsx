@@ -8,7 +8,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import {
   OnPrimaryActivityIndicator,
-  ThemedBottomSheetTextInput,
+  ThemedTextInput,
 } from '#components/atoms/themedComponents';
 import { reportValidationErrors } from '#utils/validation/common';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
@@ -68,7 +68,7 @@ export const FolderNameForm: React.FC<FolderNameFormProps> = ({
       render={({ field, fieldState }) => (
         <View style={style}>
           <View style={styles.row}>
-            <ThemedBottomSheetTextInput
+            <ThemedTextInput
               style={styles.input}
               placeholder={placeholder ?? t('labels.enterFolderName')}
               defaultValue={field.value}

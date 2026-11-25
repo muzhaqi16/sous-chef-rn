@@ -1,9 +1,37 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import {
-  ThemedBottomSheetTextInput,
-  ThemedTextInput,
-} from '../themedComponents';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { Sheet, type SheetMode } from '#components/templates/Sheet';
+import { ThemedTextInput } from '../themedComponents';
+
+// Gorhom's keyboard handling waits for its own input's focus, so inside any
+// sheet the field is gorhom's; anywhere else gorhom's throws.
+describe('ThemedTextInput in a sheet', () => {
+  // The suite's gorhom mock names its input, which nothing else imports.
+  const { BottomSheetTextInput } = jest.requireMock<{
+    BottomSheetTextInput: React.ComponentType;
+  }>('@gorhom/bottom-sheet');
+
+  it.each<SheetMode>(['view', 'form', 'action', 'list'])(
+    "is gorhom's input in a %s sheet",
+    mode => {
+      renderWithApollo(
+        <Sheet mode={mode} visible onDismiss={jest.fn()} snapPoints={['50%']}>
+          <ThemedTextInput testID="input" />
+        </Sheet>,
+      );
+
+      expect(screen.UNSAFE_getByType(BottomSheetTextInput)).toBeTruthy();
+    },
+  );
+
+  it("is React Native's input outside one", () => {
+    render(<ThemedTextInput testID="input" />);
+
+    expect(screen.getByTestId('input')).toBeOnTheScreen();
+    expect(screen.UNSAFE_queryByType(BottomSheetTextInput)).toBeNull();
+  });
+});
 
 // RN's TextInput defaults to dark text, so an input whose style omits `color`
 // renders what the user typed nearly invisible on the dark theme. The atom
@@ -17,10 +45,9 @@ const colorOf = (testID: string) =>
     .filter(Boolean)
     .at(-1);
 
-describe.each([
-  ['ThemedTextInput', ThemedTextInput],
-  ['ThemedBottomSheetTextInput', ThemedBottomSheetTextInput],
-] as const)('%s', (_name, Input) => {
+describe('ThemedTextInput', () => {
+  const Input = ThemedTextInput;
+
   it('carries a text color when the caller passes no style', () => {
     render(<Input testID="input" />);
 
@@ -46,10 +73,9 @@ describe.each([
  * array inside its own leaves `[base, [a, b]]`, and the styles inside that
  * second level never resolve — the field renders without them, silently.
  */
-describe.each([
-  ['ThemedTextInput', ThemedTextInput],
-  ['ThemedBottomSheetTextInput', ThemedBottomSheetTextInput],
-] as const)('%s style composition', (_name, Input) => {
+describe('ThemedTextInput style composition', () => {
+  const Input = ThemedTextInput;
+
   const depth = (style: unknown): number =>
     Array.isArray(style) ? 1 + Math.max(0, ...style.map(depth)) : 0;
 

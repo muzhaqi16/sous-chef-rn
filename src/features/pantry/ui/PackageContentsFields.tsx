@@ -21,7 +21,6 @@ interface PackageContentsFieldsProps {
   unitError?: string;
   /** `inline` in a sheet that stacks its pickers, `modal` elsewhere. */
   variant: 'inline' | 'modal';
-  useBottomSheetInput?: boolean;
   sizeTestID?: string;
   unitTestID?: string;
 }
@@ -39,7 +38,6 @@ export const PackageContentsFields: React.FC<PackageContentsFieldsProps> = ({
   onUnitSelected,
   unitError,
   variant,
-  useBottomSheetInput,
   sizeTestID,
   unitTestID,
 }) => {
@@ -53,7 +51,6 @@ export const PackageContentsFields: React.FC<PackageContentsFieldsProps> = ({
         error={sizeError}
         placeholder={localizeNumericHint(t('labels.eG145'))}
         keyboardType="decimal-pad"
-        useBottomSheetInput={useBottomSheetInput}
         testID={sizeTestID}
       />
       <UnitAutocompleteField

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { useTranslation } from '#i18n';
 import { View, Keyboard, ScrollView } from 'react-native';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
@@ -100,7 +100,7 @@ export const TagInput: React.FC<TagInputProps> = ({
 
         {/* Input field */}
         {!!editable && tags.length < maxTags && (
-          <ThemedBottomSheetTextInput
+          <ThemedTextInput
             key={inputKey}
             style={styles.input}
             defaultValue={inputValue}

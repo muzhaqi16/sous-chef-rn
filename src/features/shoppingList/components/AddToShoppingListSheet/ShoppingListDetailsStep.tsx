@@ -180,7 +180,6 @@ export const ShoppingListDetailsStep: React.FC<
               value={value}
               onChangeText={onChange}
               placeholder={t('shoppingListScreens.itemNamePlaceholder')}
-              useBottomSheetInput
               ref={ref}
               returnKeyType="next"
               submitBehavior="submit"
@@ -255,7 +254,6 @@ export const ShoppingListDetailsStep: React.FC<
                 error={errors.netWeight?.message}
                 placeholder={t('shoppingListScreens.netWeightPlaceholder')}
                 keyboardType="decimal-pad"
-                useBottomSheetInput
                 ref={ref}
                 returnKeyType="next"
                 submitBehavior="submit"
@@ -294,7 +292,6 @@ export const ShoppingListDetailsStep: React.FC<
                   t('shoppingListScreens.estimatedPricePlaceholder'),
                 )}
                 keyboardType="numeric"
-                useBottomSheetInput
                 ref={ref}
                 returnKeyType="next"
                 submitBehavior="submit"
@@ -335,7 +332,6 @@ export const ShoppingListDetailsStep: React.FC<
               placeholder={t('shoppingListScreens.notesPlaceholder')}
               multiline
               numberOfLines={3}
-              useBottomSheetInput
               ref={ref}
             />
           )}
