@@ -14,6 +14,7 @@ import type {
 } from '#features/recipes/hooks/useRecipeCapture';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { CaptureFormFrame, CaptureSheetShell } from './CaptureSheetShell';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 const THUMBNAIL_SIZE = 88;
 
@@ -33,6 +34,8 @@ const PhotoForm: React.FC<PhotoFormProps> = ({
   const { t } = useTranslation();
   const photos = useCapturePhotos();
   const [failure, setFailure] = useState<string | null>(null);
+  // Pages taken are input a close would drop.
+  useSheetUnsavedInput(photos.pages.length > 0);
 
   // A dismissed sheet takes its pages off the phone.
   const discardRef = useRef(photos.discard);
@@ -47,6 +50,10 @@ const PhotoForm: React.FC<PhotoFormProps> = ({
   const canAdd = photos.canAddPage && !busy;
 
   const send = async () => {
+    if (photos.pages.length === 0) {
+      setFailure(t('recipes.capturePhotosRequired'));
+      return;
+    }
     setFailure(null);
     const keys = await photos.upload();
     if (!keys) {
@@ -80,7 +87,6 @@ const PhotoForm: React.FC<PhotoFormProps> = ({
       onClose={onClose}
       failure={failure}
       sending={busy}
-      canSend={photos.pages.length > 0}
       onSend={() => {
         void send();
       }}

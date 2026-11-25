@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation, type TranslationKey } from '#i18n';
 import type { TabBarAddAction } from '#context/TabBarActionsContext';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import type { CaptureSheetKind } from '#features/recipes/components/capture/CaptureSheet';
+import type { CaptureSheetKind } from '#features/recipes/components/capture/captureFormConfig';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { useCaptureSources } from '../../hooks/useCaptureSources';
 

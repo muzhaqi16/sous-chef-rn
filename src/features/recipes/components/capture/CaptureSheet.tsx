@@ -3,7 +3,6 @@ import { View } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { object, string, type ObjectSchema } from 'yup';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#i18n';
 import { errorCopy } from '#services/errorService';
@@ -16,34 +15,19 @@ import type {
   CaptureRequest,
   CaptureStart,
 } from '#features/recipes/hooks/useRecipeCapture';
-import { httpUrl } from '#features/recipes/screens/RecipeForm/recipeFormConfig';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { CaptureFormFrame, CaptureSheetShell } from './CaptureSheetShell';
+import {
+  captureFormDefaults,
+  captureFormSchema,
+  type CaptureFormContext,
+  type CaptureFormValues,
+  type CaptureSheetKind,
+} from './captureFormConfig';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
-
-export type CaptureSheetKind = 'link' | 'text';
 
 /** What the server reads at most from shared text (`RECIPE_CAPTURE_MAX_CHARS`). */
 export const MAX_CAPTURE_TEXT = 24_000;
-
-interface CaptureFormValues {
-  url: string;
-  text: string;
-  sourceUrl: string;
-}
-
-const captureFormDefaults: CaptureFormValues = {
-  url: '',
-  text: '',
-  sourceUrl: '',
-};
-
-// A blank field passes: the send button waits for the one the sheet shows.
-const captureFormSchema: ObjectSchema<CaptureFormValues> = object({
-  url: httpUrl('recipes.captureLinkInvalid'),
-  text: string().defined().trim(),
-  sourceUrl: httpUrl('recipes.captureLinkInvalid'),
-});
 
 /** The error type of a refusal the server made, as against a rule the form holds. */
 const REFUSED = 'refused';
@@ -78,13 +62,13 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
     setValue,
     setError,
     formState: { isDirty },
-  } = useForm<CaptureFormValues>({
+  } = useForm<CaptureFormValues, CaptureFormContext>({
     resolver: yupResolver(captureFormSchema),
     defaultValues: captureFormDefaults,
+    context: { kind },
   });
   useSheetUnsavedInput(isDirty);
-  const [url, text] = useWatch({ control, name: ['url', 'text'] });
-  const canSend = (kind === 'link' ? url : text).trim() !== '';
+  const text = useWatch({ control, name: 'text' });
 
   const switchToText = () => {
     setKind('text');
@@ -154,7 +138,6 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
       onClose={onClose}
       failure={failure}
       sending={sending}
-      canSend={canSend}
       onSend={() => {
         setFailure(null);
         void send();

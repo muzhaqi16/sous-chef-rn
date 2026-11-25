@@ -6,6 +6,7 @@ import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import { appConfig } from '#config/appConfig';
+import { t } from '#i18n';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { useRecipeCapture } from '#features/recipes/hooks/useRecipeCapture';
 import { CreateRecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';
@@ -99,6 +100,16 @@ describe('CaptureSheet: from a link', () => {
         'Enter the full link, starting with http:// or https://',
       ),
     ).toBeTruthy();
+    expect(mockStart).not.toHaveBeenCalled();
+  });
+
+  it('says on the field that a link is needed, and sends nothing', async () => {
+    renderSheet('link');
+
+    send();
+    await drainTimers();
+
+    expect(screen.getByText(t('recipes.captureLinkRequired'))).toBeTruthy();
     expect(mockStart).not.toHaveBeenCalled();
   });
 
@@ -206,6 +217,16 @@ describe('CaptureSheet: from a link', () => {
 });
 
 describe('CaptureSheet: from text', () => {
+  it('says on the field that the text is needed, and sends nothing', async () => {
+    renderSheet('text');
+
+    send();
+    await drainTimers();
+
+    expect(screen.getByText(t('recipes.captureTextRequired'))).toBeTruthy();
+    expect(mockStart).not.toHaveBeenCalled();
+  });
+
   it('sends a caption with where it came from', async () => {
     renderSheet('text');
 
