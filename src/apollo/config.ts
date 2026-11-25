@@ -16,10 +16,6 @@ Object.assign(globalThis, {
     print: 1000, // Default: 2,000
     'documentTransform.cache': 500, // Default: 2,000
 
-    // Fragment registry
-    'fragmentRegistry.lookup': 200, // Fragment lookups
-    'fragmentRegistry.findFragmentSpreads': 100,
-
     // Query deduplication
     'queryManager.getDocumentInfo': 500,
   } satisfies Partial<CacheSizes>,
