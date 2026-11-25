@@ -241,7 +241,7 @@ grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/Scr
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
-**Verified against `react-native-unistyles@3.8.2` (2026-11-17, in source).**
+**Verified against `react-native-unistyles@3.9.0` (2026-11-25, in source).**
 `withUnistyles.native.tsx` builds the forwarded style with
 `Object.assign(acc, secret.uni__getStyles())`. For a function-valued `style`
 that is the function itself, and an arrow function has no own enumerable
@@ -261,10 +261,15 @@ React, and the next React commit can put the old values back on a view that a
 Reanimated animated style has registered, and on everything under it.
 Reanimated re-applies only the props it owns.
 
-**Verified against `react-native-unistyles@3.8.2` +
-`react-native-reanimated@4.7.2` + `react-native@0.86.3` (2026-11-17, iOS
+**Verified against `react-native-unistyles@3.9.0` +
+`react-native-reanimated@4.8.0` + `react-native@0.87.1` (2026-11-25, iOS
 simulator; first measured on 3.5.0, and on Android on 3.5.3),** by running
-`UnistylesShadowRegistry.verify()` after every commit. On 3.8.2 + 4.7.2, a
+`UnistylesShadowRegistry.verify()` after every commit. On 3.9.0, a freshly
+mounted four-photo `PantryItemDetail` with every `ThemeEpochSentinel` rendering
+nothing left 3 `dot` views on the old theme 7 to 8 s after the change, light to
+dark and dark to light; `heroInner` no longer reverts (3.9.0's #1393 keeps
+React's node props on a refresh). With the sentinels, 0 of 156, and 0 on the
+pantry list (308 views) and the list under its tour popover (354). On 3.8.2 + 4.7.2, a
 freshly mounted gallery `PantryItemDetail` with every `ThemeEpochSentinel`
 rendering nothing left one `dot` on the old theme from 261 ms through 3 s; with
 the sentinels, 0 in both directions, and 0 on pantry rows, list rows under a
@@ -314,7 +319,7 @@ grep -n -B 3 "getHasBeenPromoted" node_modules/react-native-unistyles/cxx/hybrid
 not `UnistylesRuntime.updateTheme` giving the scoped theme itself new values.
 A view styled by `StyleSheet.create` is updated natively and does follow.
 
-**Verified against `react-native-unistyles@3.8.2` (2026-11-17, in source; on
+**Verified against `react-native-unistyles@3.9.0` (2026-11-25, in source; on
 an Android emulator on 3.5.2).** `useProxifiedUnistyles` builds its listener
 with `updateTheme: () => { if (scopedTheme) return; … }`, and inside a scope
 `scopedTheme` is the scope's name.
@@ -338,7 +343,7 @@ values. `useUnistyles` and `withUnistyles` catch up on their own.
 
 **Verified against `react-native-unistyles@3.5.3` +
 `react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-13, Android
-emulator); the hook's source is unchanged in 3.8.0 (2026-11-02).** With Profile two levels down the stack, the theme went from dark to
+emulator); the hook's source is unchanged in 3.9.0 (2026-11-25).** With Profile two levels down the stack, the theme went from dark to
 light. Back on Profile the page, text and icons were light, and `ProfileHero`'s
 avatar fill, which a `useAnimatedStyle` reads from the animated theme, was still
 the dark surface `rgb(54, 51, 44)`. `UnistylesShadowRegistry.verify()` reports

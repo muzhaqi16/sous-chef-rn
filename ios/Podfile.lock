@@ -2453,7 +2453,7 @@ PODS:
   - SocketRocket (0.7.1):
     - ReactNativeDependencies
   - SwiftUIIntrospect (1.3.0)
-  - Unistyles (3.8.2):
+  - Unistyles (3.9.0):
     - hermes-engine
     - NitroModules
     - RCTRequired
@@ -2993,7 +2993,7 @@ SPEC CHECKSUMS:
   RNWorklets: 2bfb66a7edfc893a14b417da0338045efdfbb612
   SocketRocket: 37aec555668fb852ec12e3c0de59a86ca58f0871
   SwiftUIIntrospect: fee9aa07293ee280373a591e1824e8ddc869ba5d
-  Unistyles: eac932e8ed0ed860d1e66a4d3d28627b90ae7497
+  Unistyles: 964e4b680da156a0d3fe0f25787cd18602c22ce2
   VisionCamera: 1b76ec326db3fb65e3a840a12383144a5c374db2
   Yoga: d1c536142c5ff8ec8cd856ab2a7c227a1d875c8e
 
