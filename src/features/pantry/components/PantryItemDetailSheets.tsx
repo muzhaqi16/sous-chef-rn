@@ -55,14 +55,10 @@ export const PantryItemDetailSheets: React.FC<PantryItemDetailSheetsProps> = ({
     photo => photo.id !== item.image?.catalogImageId,
   );
 
-  // Mounted and driven by `visible`, each keeps the batch it opened on while
-  // it animates out, so a close never makes it vanish mid-presentation.
+  // Mounted and driven by `visible`, the use sheet keeps the batch it opened on
+  // while it animates out, so a close never makes it vanish mid-presentation.
   const batchUse = useOpening(!!actions.usingBatchId, actions.usingBatchId);
   const usedBatch = batches.find(batch => batch.id === batchUse?.payload);
-  const correcting = useOpening(
-    !!actions.correctingBatchId,
-    actions.correctingBatchId,
-  );
 
   return (
     <>
@@ -87,15 +83,13 @@ export const PantryItemDetailSheets: React.FC<PantryItemDetailSheetsProps> = ({
         onClose={() => actions.setWastingBatchId(null)}
         onConfirm={actions.handleConfirmBatchWaste}
       />
-      {correcting?.payload ? (
-        <CorrectPackageSizeModal
-          visible={!!actions.correctingBatchId}
-          pantryItemId={itemId}
-          batchId={correcting.payload}
-          onClose={() => actions.setCorrectingBatchId(null)}
-          onConfirm={actions.handleCorrectPackageSize}
-        />
-      ) : null}
+      <CorrectPackageSizeModal
+        visible={!!actions.correctingBatchId}
+        pantryItemId={itemId}
+        batchId={actions.correctingBatchId}
+        onClose={() => actions.setCorrectingBatchId(null)}
+        onConfirm={actions.handleCorrectPackageSize}
+      />
       {photos.length > 0 && (
         <ItemPhotoViewer
           visible={active?.type === 'viewer'}

@@ -16,23 +16,6 @@ import {
 jest.mock('#hooks/settings/useReadingSystem', () => ({
   useReadingSystem: () => 'IMPERIAL',
 }));
-jest.mock('#components/templates/Sheet', () => {
-  const { View } = require('react-native');
-  return {
-    Sheet: ({
-      children,
-      header,
-    }: {
-      children?: React.ReactNode;
-      header?: React.ReactNode;
-    }) => (
-      <View>
-        {header}
-        {children}
-      </View>
-    ),
-  };
-});
 jest.mock('#features/pantry/ui/PackageContentsFields', () => {
   const { Pressable, TextInput, View } = require('react-native');
   const { Text: RnText } = require('react-native');

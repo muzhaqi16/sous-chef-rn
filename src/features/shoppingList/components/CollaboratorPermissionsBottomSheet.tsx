@@ -1,4 +1,4 @@
-import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import React, { useState } from 'react';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -6,6 +6,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#services/alertService';
 import { localizedErrorMessage } from '#services/errorService';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
 import { Icon } from '#components/atoms/Icon';
 import { CollaboratorRole } from '#graphql/generated/schemaTypes';
 import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
@@ -22,6 +24,9 @@ import { Text } from '#components/atoms/Text';
 
 interface CollaboratorPermissionsBottomSheetProps {
   shoppingListId: string;
+  /** The collaborator being edited; null closes the sheet. */
+  collaborator: ShoppingListCollaboratorFragment | null;
+  onDismiss: () => void;
   onSuccess?: () => void;
 }
 
@@ -37,11 +42,6 @@ const PERMISSION_ROWS: {
     labelKey: 'shoppingListScreens.permCanMarkPurchased',
   },
 ];
-
-export interface CollaboratorPermissionsBottomSheetRef {
-  open: (collaborator: ShoppingListCollaboratorFragment) => void;
-  close: () => void;
-}
 
 /** Role card with selected-state styling driven by Unistyles variants. */
 function RoleCard({
@@ -77,54 +77,66 @@ function RadioMarker({ isSelected }: { isSelected: boolean }) {
   );
 }
 
-const CollaboratorPermissionsBottomSheet = forwardRef<
-  CollaboratorPermissionsBottomSheetRef,
+const CollaboratorPermissionsBottomSheet: React.FC<
   CollaboratorPermissionsBottomSheetProps
->(({ shoppingListId, onSuccess }, ref) => {
+> = ({ collaborator, onDismiss, ...content }) => {
+  const opening = useOpening(collaborator !== null, collaborator);
+
+  return (
+    <Sheet
+      mode="action"
+      visible={collaborator !== null}
+      onDismiss={onDismiss}
+      headerFromContent
+      snapPoints={['75%', '90%']}
+      style={styles.scrollView}
+      contentContainerStyle={styles.scrollContent}
+    >
+      {opening?.payload ? (
+        <CollaboratorPermissions
+          key={opening.id}
+          {...content}
+          collaborator={opening.payload}
+          onDismiss={onDismiss}
+        />
+      ) : null}
+    </Sheet>
+  );
+};
+
+/** One opening: the role and switches start from the collaborator as opened. */
+const CollaboratorPermissions: React.FC<
+  Omit<CollaboratorPermissionsBottomSheetProps, 'collaborator'> & {
+    collaborator: ShoppingListCollaboratorFragment;
+  }
+> = ({ shoppingListId, collaborator, onDismiss, onSuccess }) => {
   // `useTranslation` and not the module-level `t`: every label in this sheet is
   // read during render, so the module-level helper leaves them showing the old
   // language until something else happens to re-render the sheet.
   const { t } = useTranslation();
-  const [collaborator, setCollaborator] =
-    useState<ShoppingListCollaboratorFragment | null>(null);
   const [selectedRole, setSelectedRole] = useState<CollaboratorRole | null>(
-    null,
+    collaborator.role,
   );
-  const [permissions, setPermissions] = useState<CollabPermissions | null>(
-    null,
-  );
-  const [isVisible, setIsVisible] = useState(false);
+  const [permissions, setPermissions] = useState<CollabPermissions | null>({
+    canAddItems: !!collaborator.canAddItems,
+    canEditItems: !!collaborator.canEditItems,
+    canRemoveItems: !!collaborator.canRemoveItems,
+    canMarkPurchased: !!collaborator.canMarkPurchased,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { updateRole, updatePermissions } =
     useCollaboratorPermissions(shoppingListId);
 
-  useImperativeHandle(ref, () => ({
-    open: (collab: ShoppingListCollaboratorFragment) => {
-      setCollaborator(collab);
-      setSelectedRole(collab.role);
-      setPermissions({
-        canAddItems: !!collab.canAddItems,
-        canEditItems: !!collab.canEditItems,
-        canRemoveItems: !!collab.canRemoveItems,
-        canMarkPurchased: !!collab.canMarkPurchased,
-      });
-      setIsVisible(true);
-    },
-    close: () => {
-      setIsVisible(false);
-    },
-  }));
-
   const handleSubmit = () => {
-    if (!collaborator || !selectedRole || !collaborator.collaboratorId) {
+    if (!selectedRole || !collaborator.collaboratorId) {
       alertService.alert(t('labels.error'), t('errors.missingRequiredInfo'));
       return;
     }
 
     if (selectedRole === collaborator.role) {
       // No change, just close
-      setIsVisible(false);
+      onDismiss();
       return;
     }
 
@@ -137,7 +149,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
         // A refusal was alerted by the hook; the sheet stays open.
         if (!(await updateRole(collaboratorId, role))) return;
 
-        setIsVisible(false);
+        onDismiss();
         onSuccess?.();
       },
       setIsSubmitting,
@@ -156,7 +168,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     key: keyof CollabPermissions,
     value: boolean,
   ) => {
-    if (!collaborator?.collaboratorId || !permissions) return;
+    if (!collaborator.collaboratorId || !permissions) return;
     const previous = permissions;
     const next = { ...permissions, [key]: value };
     setPermissions(next);
@@ -176,20 +188,12 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     CollaboratorRole.Admin,
   ];
 
-  if (!collaborator) return null;
-
   return (
-    <Sheet
-      mode="action"
-      visible={isVisible}
-      onDismiss={() => setIsVisible(false)}
-      snapPoints={['75%', '90%']}
-      style={styles.scrollView}
-      contentContainerStyle={styles.scrollContent}
-      header={
+    <>
+      <SheetHeaderSlot>
         <SheetHeader
           title={t('collaborators.editPermissions')}
-          onClose={() => setIsVisible(false)}
+          onClose={onDismiss}
           confirm={{
             onPress: handleSubmit,
             accessibilityLabel: t('labels.update'),
@@ -197,8 +201,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
             loading: isSubmitting,
           }}
         />
-      }
-    >
+      </SheetHeaderSlot>
       <View style={styles.headerBlock}>
         <Text role="bodyStrong">
           {getCollaboratorDisplayName(collaborator, t)}
@@ -297,9 +300,9 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
           ))}
         </View>
       )}
-    </Sheet>
+    </>
   );
-});
+};
 
 const styles = StyleSheet.create(theme => ({
   scrollView: {

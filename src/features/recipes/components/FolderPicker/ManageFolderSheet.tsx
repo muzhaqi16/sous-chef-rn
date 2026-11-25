@@ -123,6 +123,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
                 {t('labels.rename')}
               </SectionHeader>
               <FolderNameForm
+                key={managingFolder ?? ''}
                 initialName={managingFolder ?? ''}
                 actionLabel={t('labels.rename')}
                 placeholder={t('folderPicker.renamePlaceholder')}

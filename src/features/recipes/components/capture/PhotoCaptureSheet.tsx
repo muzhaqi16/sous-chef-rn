@@ -19,32 +19,25 @@ import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 const THUMBNAIL_SIZE = 88;
 
 interface PhotoFormProps {
-  visible: boolean;
   onSend: (request: CaptureRequest) => Promise<CaptureStart>;
   sending: boolean;
   onClose: () => void;
 }
 
-const PhotoForm: React.FC<PhotoFormProps> = ({
-  visible,
-  onSend,
-  sending,
-  onClose,
-}) => {
+const PhotoForm: React.FC<PhotoFormProps> = ({ onSend, sending, onClose }) => {
   const { t } = useTranslation();
   const photos = useCapturePhotos();
   const [failure, setFailure] = useState<string | null>(null);
   // Pages taken are input a close would drop.
   useSheetUnsavedInput(photos.pages.length > 0);
 
-  // A dismissed sheet takes its pages off the phone.
+  // An opening's pages leave the phone with it: gorhom unmounts the form once
+  // the sheet is dismissed.
   const discardRef = useRef(photos.discard);
   useEffect(() => {
     discardRef.current = photos.discard;
   });
-  useEffect(() => {
-    if (!visible) discardRef.current();
-  }, [visible]);
+  useEffect(() => () => discardRef.current(), []);
 
   const busy = photos.uploading || sending;
   const canAdd = photos.canAddPage && !busy;
@@ -169,14 +162,7 @@ export const PhotoCaptureSheet: React.FC<PhotoCaptureSheetProps> = ({
   onDismiss,
 }) => (
   <CaptureSheetShell visible={visible} snapPoint="70%" onDismiss={onDismiss}>
-    {() => (
-      <PhotoForm
-        visible={visible}
-        onSend={onSend}
-        sending={sending}
-        onClose={onDismiss}
-      />
-    )}
+    {() => <PhotoForm onSend={onSend} sending={sending} onClose={onDismiss} />}
   </CaptureSheetShell>
 );
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#i18n';
@@ -8,6 +8,7 @@ import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { ListItem } from '#components/molecules/ListItem';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { Sheet } from '#components/templates/Sheet';
+import { useOpening } from '#hooks/ui/useOpening';
 import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { useBrandAutocomplete } from '#features/catalog/hooks/useBrandAutocomplete';
 import { profileTestIDs } from '#features/profile/testIDs';
@@ -35,21 +36,37 @@ export const AddBrandSheet: React.FC<AddBrandSheetProps> = ({
   onPick,
 }) => {
   const { t } = useTranslation();
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      mode="form"
+      visible={visible}
+      onDismiss={onDismiss}
+      snapPoints={['85%']}
+      title={t('brandLists.addBrandTitle', { name: listName })}
+      contentContainerStyle={commonStyles.bottomSheetContent}
+    >
+      {opening ? (
+        <AddBrandContent
+          key={opening.id}
+          heldBrandIds={heldBrandIds}
+          onDismiss={onDismiss}
+          onPick={onPick}
+        />
+      ) : null}
+    </Sheet>
+  );
+};
+
+/** One opening: its note and its search start empty. */
+const AddBrandContent: React.FC<
+  Pick<AddBrandSheetProps, 'heldBrandIds' | 'onDismiss' | 'onPick'>
+> = ({ heldBrandIds, onDismiss, onPick }) => {
+  const { t } = useTranslation();
   const autocomplete = useBrandAutocomplete();
-  const { reset } = autocomplete;
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
-
-  // A closed sheet forgets its note, adjusted while rendering.
-  const [wasVisible, setWasVisible] = useState(visible);
-  if (visible !== wasVisible) {
-    setWasVisible(visible);
-    if (!visible) setNote('');
-  }
-
-  useEffect(() => {
-    if (!visible) reset();
-  }, [visible, reset]);
 
   // Brands show once the user searches: unprompted, the catalog's first page
   // is just its alphabetical start.
@@ -69,63 +86,54 @@ export const AddBrandSheet: React.FC<AddBrandSheetProps> = ({
   };
 
   return (
-    <Sheet
-      mode="form"
-      visible={visible}
-      onDismiss={onDismiss}
-      snapPoints={['85%']}
-      title={t('brandLists.addBrandTitle', { name: listName })}
-      contentContainerStyle={commonStyles.bottomSheetContent}
-    >
-      <View testID={profileTestIDs.addBrandSheet}>
-        <BaseInput
-          label={t('brandLists.noteLabel')}
-          defaultValue={note}
-          onChangeText={setNote}
-          placeholder={t('brandLists.notePlaceholder')}
-          maxLength={500}
-          testID={profileTestIDs.addBrandNoteInput}
-        />
-        <SearchBar
-          testID={profileTestIDs.addBrandSearchInput}
-          placeholder={t('brandLists.searchBrands')}
-          onChangeText={autocomplete.handleSearchTermChange}
-          debounceMs={250}
-          autoCapitalize="words"
-          returnKeyType="search"
-          isLoading={!!autocomplete.isLoading}
-          containerStyle={styles.spaced}
-        />
-        {results.map(brand => (
-          <RowCard
-            key={brand.id}
-            testID={profileTestIDs.addBrandCandidate(brand.id)}
-          >
-            <ListItem
-              title={brand.name}
-              onPress={() => {
-                void handlePick(brand);
-              }}
-              accessibilityLabel={t('labels.addNamed', {
-                name: brand.name,
-              })}
-            />
-          </RowCard>
-        ))}
-        {!!searched && results.length === 0 && (
-          <>
-            <Text role="body" tone="secondary" align="center">
-              {noMatch.title}
+    <View testID={profileTestIDs.addBrandSheet}>
+      <BaseInput
+        label={t('brandLists.noteLabel')}
+        defaultValue={note}
+        onChangeText={setNote}
+        placeholder={t('brandLists.notePlaceholder')}
+        maxLength={500}
+        testID={profileTestIDs.addBrandNoteInput}
+      />
+      <SearchBar
+        testID={profileTestIDs.addBrandSearchInput}
+        placeholder={t('brandLists.searchBrands')}
+        onChangeText={autocomplete.handleSearchTermChange}
+        debounceMs={250}
+        autoCapitalize="words"
+        returnKeyType="search"
+        isLoading={!!autocomplete.isLoading}
+        containerStyle={styles.spaced}
+      />
+      {results.map(brand => (
+        <RowCard
+          key={brand.id}
+          testID={profileTestIDs.addBrandCandidate(brand.id)}
+        >
+          <ListItem
+            title={brand.name}
+            onPress={() => {
+              void handlePick(brand);
+            }}
+            accessibilityLabel={t('labels.addNamed', {
+              name: brand.name,
+            })}
+          />
+        </RowCard>
+      ))}
+      {!!searched && results.length === 0 && (
+        <>
+          <Text role="body" tone="secondary" align="center">
+            {noMatch.title}
+          </Text>
+          {noMatch.description ? (
+            <Text role="caption" tone="secondary" align="center">
+              {noMatch.description}
             </Text>
-            {noMatch.description ? (
-              <Text role="caption" tone="secondary" align="center">
-                {noMatch.description}
-              </Text>
-            ) : null}
-          </>
-        )}
-      </View>
-    </Sheet>
+          ) : null}
+        </>
+      )}
+    </View>
   );
 };
 

@@ -235,6 +235,7 @@ describe('a new recipe', () => {
     await fillNew(user);
     await user.press(screen.getByText(t('recipes.diets')));
     await user.press(screen.getByText(t('recipes.diet.VEGETARIAN')));
+    await user.press(screen.getByRole('button', { name: t('labels.done') }));
 
     await user.press(formSave());
     await log.requested(CreateRecipeDocument);

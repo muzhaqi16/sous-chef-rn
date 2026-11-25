@@ -1,9 +1,7 @@
 'use no memo';
 import React from 'react';
-import { screen, act, fireEvent } from '@testing-library/react-native';
-import CollaboratorPermissionsBottomSheet, {
-  type CollaboratorPermissionsBottomSheetRef,
-} from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
+import { screen, fireEvent } from '@testing-library/react-native';
+import CollaboratorPermissionsBottomSheet from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
 import {
   CollaboratorRole,
   CollaboratorStatus,
@@ -45,6 +43,8 @@ afterEach(() => {
 describe('CollaboratorPermissionsBottomSheet', () => {
   const defaultProps = {
     shoppingListId: 'list-1',
+    collaborator: null,
+    onDismiss: jest.fn(),
     onSuccess: jest.fn(),
   };
 
@@ -52,85 +52,68 @@ describe('CollaboratorPermissionsBottomSheet', () => {
     jest.clearAllMocks();
   });
 
-  it('renders null when no collaborator is set', () => {
-    const { toJSON } = renderWithApollo(
-      <CollaboratorPermissionsBottomSheet {...defaultProps} />,
-    );
-    expect(toJSON()).toBeNull();
-  });
-
-  it('renders correctly with ref API', () => {
-    const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
-    renderWithApollo(
-      <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
-    );
-    expect(ref.current).toBeTruthy();
-    expect(ref.current?.open).toBeDefined();
-    expect(ref.current?.close).toBeDefined();
+  it('shows nothing with no collaborator to edit', () => {
+    renderWithApollo(<CollaboratorPermissionsBottomSheet {...defaultProps} />);
+    expect(screen.queryByText('test@example.com')).toBeNull();
   });
 
   it('opens and shows collaborator email after calling open', () => {
-    const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
     renderWithApollo(
-      <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
+      <CollaboratorPermissionsBottomSheet
+        {...defaultProps}
+        collaborator={makeCollaborator()}
+      />,
     );
-    act(() => {
-      ref.current?.open(makeCollaborator());
-    });
     expect(screen.getByText('test@example.com')).toBeTruthy();
   });
 
   it('renders role options after opening', () => {
-    const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
     renderWithApollo(
-      <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
+      <CollaboratorPermissionsBottomSheet
+        {...defaultProps}
+        collaborator={makeCollaborator()}
+      />,
     );
-    act(() => {
-      ref.current?.open(makeCollaborator());
-    });
     expect(screen.getByText('Viewer')).toBeTruthy();
     expect(screen.getByText('Shopper')).toBeTruthy();
     expect(screen.getByText('Editor')).toBeTruthy();
   });
 
   it('offers Update and close in the header', () => {
-    const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
     renderWithApollo(
-      <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
+      <CollaboratorPermissionsBottomSheet
+        {...defaultProps}
+        collaborator={makeCollaborator()}
+      />,
     );
-    act(() => {
-      ref.current?.open(makeCollaborator());
-    });
     expect(screen.getByLabelText('Update')).toBeTruthy();
     expect(screen.getByLabelText('Close')).toBeTruthy();
   });
 
   it('renders the granular permission toggles after opening', () => {
-    const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
     renderWithApollo(
-      <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
+      <CollaboratorPermissionsBottomSheet
+        {...defaultProps}
+        collaborator={makeCollaborator()}
+      />,
     );
-    act(() => {
-      ref.current?.open(makeCollaborator());
-    });
     expect(screen.getByText('Custom Permissions')).toBeTruthy();
     expect(screen.getByText('Can add items')).toBeTruthy();
     expect(screen.getByText('Can mark purchased')).toBeTruthy();
   });
 
   it('fires the permissions mutation when a toggle changes', async () => {
-    const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
     const update = recordMock(UpdateCollaboratorPermissionsDocument, {
       held: true,
       data: {},
     });
     renderWithApollo(
-      <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
+      <CollaboratorPermissionsBottomSheet
+        {...defaultProps}
+        collaborator={makeCollaborator()}
+      />,
       { operationMocks: [update.mock] },
     );
-    act(() => {
-      ref.current?.open(makeCollaborator());
-    });
     const switches = screen.getAllByRole('switch');
     fireEvent(switches[0]!, 'valueChange', false);
     await drainTimers();

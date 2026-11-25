@@ -16,6 +16,7 @@ import { FolderListItem } from '#features/recipes/components/FolderPicker/Folder
 import { ManageFolderSheet } from '#features/recipes/components/FolderPicker/ManageFolderSheet';
 import { resolveFolderLongPress } from '#features/recipes/utils/folderProtection';
 import { identity, useLocalSearch } from '#hooks/search/useLocalSearch';
+import { useOpening } from '#hooks/ui/useOpening';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { Divider } from '#components/atoms/Divider';
 import { FolderNameForm } from '#features/recipes/components/FolderPicker/FolderNameForm';
@@ -83,34 +84,19 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const BottomSheetScrollable = useBottomSheetScrollableCreator();
-
   // One sheet at a time: a long-pressed folder hides the picker, the manage
   // sheet opens once the picker has closed, and the picker returns once the
   // manage sheet has closed.
   const [manageVisible, setManageVisible] = useState(false);
-
-  const [showNewFolder, setShowNewFolder] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const [managingFolder, setManagingFolder] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const hasFolderActions = Boolean(onRenameFolder ?? onDeleteFolder);
 
-  const filteredFolders = useLocalSearch(folders, searchQuery, [identity]);
-
-  const handleSelectFolder = (folder: string | null) => {
-    setSearchQuery('');
-    setShowNewFolder(false);
-    onSelect(folder);
-  };
-
-  const handleCancel = () => {
-    setSearchQuery('');
-    setShowNewFolder(false);
-    onCancel();
-  };
+  // One opening of the picker: its search and new-folder form start empty,
+  // and a trip to the manage sheet and back keeps them.
+  const opening = useOpening(visible);
 
   const handlePickerDismiss = () => {
     if (managingFolder !== null) {
@@ -173,15 +159,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     }
   };
 
-  const renderFolderItem = ({ item }: { item: string }) => (
-    <FolderListItem
-      folder={item}
-      isSelected={item === selectedFolder}
-      onPress={handleSelectFolder}
-      onLongPress={hasFolderActions ? handleFolderLongPress : undefined}
-    />
-  );
-
   const pickerVisible = visible && managingFolder === null;
 
   return (
@@ -194,97 +171,23 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         header={
           <SheetHeader
             title={t('folderPicker.selectFolder')}
-            onClose={handleCancel}
+            onClose={onCancel}
           />
         }
       >
-        <View style={styles.bottomSheetContent}>
-          {folders.length > 5 && (
-            <SearchBar
-              placeholder={t('folderPicker.searchPlaceholder')}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-              containerStyle={styles.search}
-            />
-          )}
-
-          <FolderListItem
-            folder={null}
-            label={t('labels.noFolder')}
-            isSelected={!selectedFolder}
-            onPress={handleSelectFolder}
+        {opening ? (
+          <FolderPickerContent
+            key={opening.id}
+            folders={folders}
+            selectedFolder={selectedFolder}
+            onSelect={onSelect}
+            onLongPress={hasFolderActions ? handleFolderLongPress : undefined}
+            loading={loading}
+            unavailable={unavailable}
+            allowCreate={allowCreate}
+            folderActionLoading={folderActionLoading}
           />
-
-          <Divider style={styles.dividerGap} />
-
-          {!!allowCreate &&
-            (showNewFolder ? (
-              <FolderNameForm
-                onSubmit={handleSelectFolder}
-                actionLabel={t('labels.create')}
-                autoFocus
-                style={styles.newFolder}
-              />
-            ) : (
-              <AppPressable
-                style={styles.newFolderButton}
-                onPress={() => setShowNewFolder(true)}
-              >
-                <Icon name="add" size="sm" tone="primary" />
-                <Text role="bodyStrong" tone="accent">
-                  {t('labels.createNewFolder')}
-                </Text>
-              </AppPressable>
-            ))}
-
-          {unavailable ? (
-            <DataStateView
-              state={unavailable.state}
-              onRetry={unavailable.onRetry}
-            />
-          ) : loading ? (
-            <View style={styles.centeredSpinner}>
-              <Text role="body" tone="secondary">
-                {t('folderPicker.loading')}
-              </Text>
-            </View>
-          ) : filteredFolders.length > 0 ? (
-            <FlashList
-              renderScrollComponent={BottomSheetScrollable}
-              data={filteredFolders}
-              renderItem={renderFolderItem}
-              getItemType={getItemType}
-              keyExtractor={(item: string) => item}
-              showsVerticalScrollIndicator={false}
-              style={styles.folderList}
-              contentContainerStyle={styles.folderListContent}
-            />
-          ) : folders.length > 0 && searchQuery ? (
-            <View style={styles.emptyInset}>
-              <Text role="body" tone="secondary" align="center">
-                {t('folderPicker.noMatches', { query: searchQuery })}
-              </Text>
-            </View>
-          ) : null}
-
-          {!!hasFolderActions && filteredFolders.length > 0 && (
-            <Text
-              role="caption"
-              tone="secondary"
-              align="center"
-              style={styles.hintText}
-            >
-              {t('folderPicker.longPressHint')}
-            </Text>
-          )}
-
-          {!!folderActionLoading && (
-            <View style={styles.loadingOverlay}>
-              <ThemedActivityIndicator size="large" />
-            </View>
-          )}
-        </View>
+        ) : null}
       </Sheet>
       <ManageFolderSheet
         visible={manageVisible}
@@ -303,6 +206,134 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         canDelete={Boolean(onDeleteFolder)}
       />
     </>
+  );
+};
+
+type FolderPickerContentProps = Pick<
+  FolderPickerProps,
+  | 'folders'
+  | 'selectedFolder'
+  | 'onSelect'
+  | 'loading'
+  | 'unavailable'
+  | 'allowCreate'
+  | 'folderActionLoading'
+> & { onLongPress: ((folder: string) => void) | undefined };
+
+/** One opening of the picker: a fresh search and no new-folder form. */
+const FolderPickerContent: React.FC<FolderPickerContentProps> = ({
+  folders,
+  selectedFolder,
+  onSelect,
+  onLongPress,
+  loading = false,
+  unavailable,
+  allowCreate = true,
+  folderActionLoading = false,
+}) => {
+  const { t } = useTranslation();
+  const BottomSheetScrollable = useBottomSheetScrollableCreator();
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const filteredFolders = useLocalSearch(folders, searchQuery, [identity]);
+
+  const renderFolderItem = ({ item }: { item: string }) => (
+    <FolderListItem
+      folder={item}
+      isSelected={item === selectedFolder}
+      onPress={onSelect}
+      onLongPress={onLongPress}
+    />
+  );
+
+  return (
+    <View style={styles.bottomSheetContent}>
+      {folders.length > 5 && (
+        <SearchBar
+          placeholder={t('folderPicker.searchPlaceholder')}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCapitalize="none"
+          containerStyle={styles.search}
+        />
+      )}
+
+      <FolderListItem
+        folder={null}
+        label={t('labels.noFolder')}
+        isSelected={!selectedFolder}
+        onPress={onSelect}
+      />
+
+      <Divider style={styles.dividerGap} />
+
+      {!!allowCreate &&
+        (showNewFolder ? (
+          <FolderNameForm
+            onSubmit={onSelect}
+            actionLabel={t('labels.create')}
+            autoFocus
+            style={styles.newFolder}
+          />
+        ) : (
+          <AppPressable
+            style={styles.newFolderButton}
+            onPress={() => setShowNewFolder(true)}
+          >
+            <Icon name="add" size="sm" tone="primary" />
+            <Text role="bodyStrong" tone="accent">
+              {t('labels.createNewFolder')}
+            </Text>
+          </AppPressable>
+        ))}
+
+      {unavailable ? (
+        <DataStateView
+          state={unavailable.state}
+          onRetry={unavailable.onRetry}
+        />
+      ) : loading ? (
+        <View style={styles.centeredSpinner}>
+          <Text role="body" tone="secondary">
+            {t('folderPicker.loading')}
+          </Text>
+        </View>
+      ) : filteredFolders.length > 0 ? (
+        <FlashList
+          renderScrollComponent={BottomSheetScrollable}
+          data={filteredFolders}
+          renderItem={renderFolderItem}
+          getItemType={getItemType}
+          keyExtractor={(item: string) => item}
+          showsVerticalScrollIndicator={false}
+          style={styles.folderList}
+          contentContainerStyle={styles.folderListContent}
+        />
+      ) : folders.length > 0 && searchQuery ? (
+        <View style={styles.emptyInset}>
+          <Text role="body" tone="secondary" align="center">
+            {t('folderPicker.noMatches', { query: searchQuery })}
+          </Text>
+        </View>
+      ) : null}
+
+      {!!onLongPress && filteredFolders.length > 0 && (
+        <Text
+          role="caption"
+          tone="secondary"
+          align="center"
+          style={styles.hintText}
+        >
+          {t('folderPicker.longPressHint')}
+        </Text>
+      )}
+
+      {!!folderActionLoading && (
+        <View style={styles.loadingOverlay}>
+          <ThemedActivityIndicator size="large" />
+        </View>
+      )}
+    </View>
   );
 };
 

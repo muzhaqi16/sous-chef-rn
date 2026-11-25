@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
@@ -19,6 +19,8 @@ import {
   resolveQuantityNotation,
 } from '#utils/formatQuantity';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
 import {
   adjustQuantitySchema,
   adjustQuantityDefaults,
@@ -54,13 +56,50 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   onClose,
   onConfirm,
 }) => {
-  const { t } = useTranslation();
-  const { data, complete } = useFragment({
+  const { complete } = useFragment({
     fragment: AdjustQuantityModal_PantryItemFragmentDoc,
     fragmentName: 'AdjustQuantityModal_pantryItem',
     from: pantryItemId ? { __typename: 'PantryItem', id: pantryItemId } : null,
   });
-  const pantryItem = pantryItemId && complete ? data : null;
+  // Shown once the stack is read, so each opening's form seeds from it once:
+  // a cache update to the stack while it is open keeps what was typed.
+  const presented = visible && !!pantryItemId && complete;
+  const opening = useOpening(presented, pantryItemId);
+
+  return (
+    <Sheet
+      mode="form"
+      visible={presented}
+      onDismiss={onClose}
+      headerFromContent
+      snapPoints={['65%', '85%']}
+      contentContainerStyle={commonStyles.bottomSheetContent}
+    >
+      {opening?.payload ? (
+        <AdjustQuantityForm
+          key={opening.id}
+          pantryItemId={opening.payload}
+          onClose={onClose}
+          onConfirm={onConfirm}
+        />
+      ) : null}
+    </Sheet>
+  );
+};
+
+/** One opening's recount, seeded from the stack as it opened. */
+const AdjustQuantityForm: React.FC<
+  Omit<AdjustQuantityModalProps, 'visible' | 'pantryItemId'> & {
+    pantryItemId: string;
+  }
+> = ({ pantryItemId, onClose, onConfirm }) => {
+  const { t } = useTranslation();
+  const { data, complete } = useFragment({
+    fragment: AdjustQuantityModal_PantryItemFragmentDoc,
+    fragmentName: 'AdjustQuantityModal_pantryItem',
+    from: { __typename: 'PantryItem', id: pantryItemId },
+  });
+  const pantryItem = complete ? data : null;
   const readingSystem = useReadingSystem();
   // The count as the row reads it ("3 lb" for 1360.78 g) while the row reads
   // the count: an opened stack reads what is inside, so this keeps its own unit.
@@ -94,48 +133,30 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
       ? remainingRead
       : null;
 
+  const seed: AdjustQuantityFormValues | undefined = pantryItem
+    ? {
+        quantityInput: heldReading
+          ? formatQuantityForInput(heldReading.value, {
+              notation: readingNotation(heldReading),
+            })
+          : formatQuantityForInput(pantryItem.quantity, {
+              notation: resolveQuantityNotation(
+                pantryItem.unit.displayAsFraction,
+              ),
+            }),
+        reason: '',
+        remainingWeightInput: '',
+      }
+    : undefined;
   const {
     control,
     handleSubmit,
-    reset,
     formState: { isDirty },
   } = useForm<AdjustQuantityFormValues>({
     resolver: yupResolver(adjustQuantitySchema),
-    defaultValues: adjustQuantityDefaults(),
+    defaultValues: seed ?? adjustQuantityDefaults(),
   });
   useSheetUnsavedInput(isDirty);
-
-  // `reset` notifies mounted `Controller`s synchronously, so the seed is
-  // computed during render and applied from an effect. Keyed on the item id so
-  // a cache update to the same item keeps typed input.
-  const [pendingSeed, setPendingSeed] =
-    useState<AdjustQuantityFormValues | null>(null);
-  const [seedKey, setSeedKey] = useState<string | null>(null);
-  const nextSeedKey = visible && pantryItem ? pantryItem.id : null;
-  if (nextSeedKey !== seedKey) {
-    setSeedKey(nextSeedKey);
-    setPendingSeed(
-      nextSeedKey && pantryItem
-        ? {
-            quantityInput: heldReading
-              ? formatQuantityForInput(heldReading.value, {
-                  notation: readingNotation(heldReading),
-                })
-              : formatQuantityForInput(pantryItem.quantity, {
-                  notation: resolveQuantityNotation(
-                    pantryItem.unit.displayAsFraction,
-                  ),
-                }),
-            reason: '',
-            remainingWeightInput: '',
-          }
-        : null,
-    );
-  }
-
-  useEffect(() => {
-    if (pendingSeed) reset(pendingSeed);
-  }, [pendingSeed, reset]);
 
   // Reaching here means the schema passed; a refusal renders under its field.
   const handleConfirm = handleSubmit(values => {
@@ -173,13 +194,8 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   }, reportValidationErrors);
 
   return (
-    <Sheet
-      mode="form"
-      visible={visible ? !!pantryItem : false}
-      onDismiss={onClose}
-      snapPoints={['65%', '85%']}
-      contentContainerStyle={commonStyles.bottomSheetContent}
-      header={
+    <>
+      <SheetHeaderSlot>
         <SheetHeader
           title={t('adjustQuantity.title')}
           onClose={onClose}
@@ -190,8 +206,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
             accessibilityLabel: t('adjustQuantity.adjust'),
           }}
         />
-      }
-    >
+      </SheetHeaderSlot>
       {!!pantryItem && (
         <>
           <View style={commonStyles.bottomSheetItemInfo}>
@@ -289,6 +304,6 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
             )}
         </>
       )}
-    </Sheet>
+    </>
   );
 };

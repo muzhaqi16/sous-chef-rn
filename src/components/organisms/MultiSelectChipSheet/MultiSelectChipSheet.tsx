@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { StyleSheet } from 'react-native-unistyles';
 import { Chip } from '#components/molecules/Chip';
 import { Text } from '#components/atoms/Text';
@@ -22,10 +23,13 @@ export interface MultiSelectChipSheetProps<T extends string = string> {
   visible: boolean;
   title: string;
   items: MultiSelectChipSheetItem<T>[];
-  selectedItems: T[];
-  onSelect: (items: T[]) => void;
+  /** What each opening starts from; the picks stay the sheet's until Done. */
+  initialSelected: readonly T[];
+  /** The picks as they stand when Done is tapped. */
+  onDone: (selected: T[]) => void;
   onClose: () => void;
-  onDone: () => void;
+  /** How a tap changes the picks; by default it adds or removes its chip. */
+  toggle?: (selected: readonly T[], id: T) => T[];
   loading?: boolean;
   /** When true, only one chip can be selected — tapping a chip replaces the
    *  current selection instead of appending. Used for mutually-exclusive sets
@@ -35,42 +39,68 @@ export interface MultiSelectChipSheetProps<T extends string = string> {
 
 type MultiSelectChipContentProps<T extends string> = Pick<
   MultiSelectChipSheetProps<T>,
-  'items' | 'selectedItems' | 'onSelect' | 'loading' | 'singleSelect'
+  | 'title'
+  | 'items'
+  | 'initialSelected'
+  | 'onDone'
+  | 'onClose'
+  | 'toggle'
+  | 'loading'
+  | 'singleSelect'
 >;
 
-/** One opening: the search starts empty. */
+/** One opening: the picks start from `initialSelected`, the search empty. */
 function MultiSelectChipContent<T extends string>({
+  title,
   items,
-  selectedItems,
-  onSelect,
+  initialSelected,
+  onDone,
+  onClose,
+  toggle,
   loading = false,
   singleSelect = false,
 }: MultiSelectChipContentProps<T>) {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedItems, setSelectedItems] = useState<T[]>([...initialSelected]);
 
   const filteredItems = useLocalSearch(items, searchQuery, ['label']);
 
   const handleToggleItem = (id: T) => {
+    if (toggle) {
+      setSelectedItems(toggle(selectedItems, id));
+      return;
+    }
     if (singleSelect) {
       // Replace the selection (or clear it when re-tapping the active chip).
-      onSelect(selectedItems.includes(id) ? [] : [id]);
+      setSelectedItems(selectedItems.includes(id) ? [] : [id]);
       return;
     }
     const newSelection = selectedItems.includes(id)
       ? selectedItems.filter(i => i !== id)
       : [...selectedItems, id];
-    onSelect(newSelection);
+    setSelectedItems(newSelection);
   };
 
   const handleClearAll = () => {
-    onSelect([]);
+    setSelectedItems([]);
   };
 
   const showSearch = items.length > 8;
 
   return (
     <View style={styles.bottomSheetContent}>
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={title}
+          onClose={onClose}
+          confirm={{
+            onPress: () => onDone(selectedItems),
+            accessibilityLabel: t('labels.done'),
+            disabled: loading,
+          }}
+        />
+      </SheetHeaderSlot>
       {/* Search Input */}
       {!!showSearch && (
         <SearchBar
@@ -138,34 +168,27 @@ function MultiSelectChipContent<T extends string>({
 
 export function MultiSelectChipSheet<T extends string = string>({
   visible,
-  title,
   onClose,
-  onDone,
+  initialSelected,
   ...content
 }: MultiSelectChipSheetProps<T>) {
-  const { t } = useTranslation();
-  const opening = useOpening(visible);
+  const opening = useOpening(visible, initialSelected);
 
   return (
     <Sheet
       mode="list"
       visible={visible}
       onDismiss={onClose}
+      headerFromContent
       snapPoints={['60%', '80%']}
-      header={
-        <SheetHeader
-          title={title}
-          onClose={onClose}
-          confirm={{
-            onPress: onDone,
-            accessibilityLabel: t('labels.done'),
-            disabled: content.loading,
-          }}
-        />
-      }
     >
       {opening ? (
-        <MultiSelectChipContent key={opening.id} {...content} />
+        <MultiSelectChipContent
+          key={opening.id}
+          {...content}
+          initialSelected={opening.payload ?? []}
+          onClose={onClose}
+        />
       ) : null}
     </Sheet>
   );

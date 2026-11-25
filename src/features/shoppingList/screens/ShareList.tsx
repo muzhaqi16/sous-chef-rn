@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#services/alertService';
@@ -12,7 +12,6 @@ import { isShoppingListOwner } from '#features/shoppingList/utils/ownershipHelpe
 import { getInvitableCollaboratorRoles } from '#features/shoppingList/utils/shoppingListPermissions';
 import { INVITE_ROLES } from '#features/shoppingList/components/collaboratorRoles';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
-import type { CollaboratorPermissionsBottomSheetRef } from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
 import CollaboratorPermissionsBottomSheet from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
 import { useUser } from '#store/useAppStore';
 import { Button } from '#components/molecules/Button';
@@ -49,8 +48,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   const { goBack, toHomeDetail } = useAppNavigation();
   const { listId } = route.params;
 
-  const permissionsBottomSheetRef =
-    useRef<CollaboratorPermissionsBottomSheetRef>(null);
+  const [editingMember, setEditingMember] =
+    useState<ShoppingListCollaboratorFragment | null>(null);
 
   // Get current user to check if they are owner
   const currentUser = useUser();
@@ -217,9 +216,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                     !!member.collaboratorId &&
                     ownerUserIds.has(member.collaboratorId)
                   }
-                  onPress={() =>
-                    permissionsBottomSheetRef.current?.open(member)
-                  }
+                  onPress={() => setEditingMember(member)}
                   onRemove={() => handleRemoveMember(member.id)}
                 />
               ))}
@@ -246,7 +243,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
         </View>
 
         <CollaboratorPermissionsBottomSheet
-          ref={permissionsBottomSheetRef}
+          collaborator={editingMember}
+          onDismiss={() => setEditingMember(null)}
           shoppingListId={listId}
           onSuccess={refetch}
         />

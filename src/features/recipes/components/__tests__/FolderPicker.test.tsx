@@ -291,15 +291,18 @@ describe('FolderPicker', () => {
     expect(screen.getByText(t('folderPicker.nameRequired'))).toBeOnTheScreen();
   });
 
+  // A pick closes the picker; the next opening's create row is empty.
   it('opens the create row empty each time', async () => {
     const user = userEvent.setup();
-    render(<FolderPicker {...defaultProps} />);
+    const view = render(<FolderPicker {...defaultProps} />);
     await user.press(screen.getByText('Create New Folder'));
     fireEvent.changeText(
       screen.getByPlaceholderText('Enter folder name...'),
       'Draft',
     );
     await user.press(screen.getByText('No Folder'));
+    view.rerender(<FolderPicker {...defaultProps} visible={false} />);
+    view.rerender(<FolderPicker {...defaultProps} />);
 
     await user.press(screen.getByText('Create New Folder'));
 
@@ -572,5 +575,35 @@ describe('FolderPicker protected folders', () => {
     fireEvent.press(screen.getByLabelText('Clear input'));
 
     expect(screen.getByText('Lunch')).toBeOnTheScreen();
+  });
+
+  // A swipe away runs no handler of the picker's: the next opening is fresh.
+  it('opens again with an empty search and no new-folder form', async () => {
+    const user = userEvent.setup();
+    const folders = [
+      'Breakfast',
+      'Lunch',
+      'Dinner',
+      'Snacks',
+      'Drinks',
+      'Sweets',
+    ];
+    const view = render(<FolderPicker {...defaultProps} folders={folders} />);
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Search folders...'),
+      'bre',
+    );
+    await user.press(screen.getByText('Create New Folder'));
+
+    view.rerender(
+      <FolderPicker {...defaultProps} folders={folders} visible={false} />,
+    );
+    view.rerender(<FolderPicker {...defaultProps} folders={folders} />);
+
+    expect(screen.getByPlaceholderText('Search folders...')).toHaveDisplayValue(
+      '',
+    );
+    expect(screen.getByText('Lunch')).toBeOnTheScreen();
+    expect(screen.getByText('Create New Folder')).toBeOnTheScreen();
   });
 });

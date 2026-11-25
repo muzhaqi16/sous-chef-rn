@@ -73,39 +73,50 @@ jest.mock(
 jest.mock(
   '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet',
   () => {
+    const R = require('react');
     const { View, Text, Pressable } = require('react-native');
-    return {
-      // Toggles a chip as the real sheet's multi-select does.
-      MultiSelectChipSheet: ({
-        visible,
-        title,
-        items,
-        selectedItems,
-        onSelect,
-        onDone,
-      }: MultiSelectChipSheetProps<string>) =>
-        visible ? (
-          <View testID="multi-select-sheet">
-            <Text>{title}</Text>
-            {items.map(item => (
-              <Pressable
-                key={item.id}
-                onPress={() =>
-                  onSelect(
-                    selectedItems.includes(item.id)
-                      ? selectedItems.filter(id => id !== item.id)
-                      : [...selectedItems, item.id],
-                  )
-                }
-              >
-                <Text>{item.label}</Text>
-              </Pressable>
-            ))}
-            <Pressable testID="sheet-done" onPress={onDone}>
-              <Text>Done</Text>
+    const { useOpening } = require('#hooks/ui/useOpening');
+    // One opening's picks, toggled as the real sheet's are, handed to Done.
+    const Picks = ({
+      title,
+      items,
+      initialSelected,
+      toggle,
+      onDone,
+    }: MultiSelectChipSheetProps<string>) => {
+      const [picked, setPicked] = R.useState([...initialSelected]);
+      return (
+        <View testID="multi-select-sheet">
+          <Text>{title}</Text>
+          {items.map(item => (
+            <Pressable
+              key={item.id}
+              onPress={() =>
+                setPicked((prev: string[]) =>
+                  toggle
+                    ? toggle(prev, item.id)
+                    : prev.includes(item.id)
+                    ? prev.filter(id => id !== item.id)
+                    : [...prev, item.id],
+                )
+              }
+            >
+              <Text>{item.label}</Text>
             </Pressable>
-          </View>
-        ) : null,
+          ))}
+          <Pressable testID="sheet-done" onPress={() => onDone(picked)}>
+            <Text>Done</Text>
+          </Pressable>
+        </View>
+      );
+    };
+    return {
+      MultiSelectChipSheet: (props: MultiSelectChipSheetProps<string>) => {
+        const opening = useOpening(props.visible);
+        return props.visible && opening ? (
+          <Picks key={opening.id} {...props} />
+        ) : null;
+      },
     };
   },
 );

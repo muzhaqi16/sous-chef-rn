@@ -10,6 +10,7 @@ import { ListItem } from '#components/molecules/ListItem';
 import { Loading } from '#components/molecules/Loading';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { Sheet } from '#components/templates/Sheet';
+import { useOpening } from '#hooks/ui/useOpening';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
@@ -41,15 +42,45 @@ export const RelinkItemSheet: React.FC<RelinkItemSheetProps> = ({
   onConflictRefresh,
 }) => {
   const { t } = useTranslation();
+  // Each opening searches for the stack as it stood when it opened.
+  const opening = useOpening(visible, stack);
+
+  return (
+    <Sheet
+      mode="form"
+      visible={visible}
+      onDismiss={onDismiss}
+      snapPoints={['85%']}
+      title={t('relinkItem.title')}
+      contentContainerStyle={commonStyles.bottomSheetContent}
+    >
+      {opening?.payload ? (
+        <RelinkContent
+          key={opening.id}
+          stack={opening.payload}
+          onDismiss={onDismiss}
+          onConflictRefresh={onConflictRefresh}
+        />
+      ) : null}
+    </Sheet>
+  );
+};
+
+/** One opening: a fresh search, started on the entry's own name. */
+const RelinkContent: React.FC<Omit<RelinkItemSheetProps, 'visible'>> = ({
+  onDismiss,
+  stack,
+  onConflictRefresh,
+}) => {
+  const { t } = useTranslation();
   const { toPantryItemDetail } = useAppNavigation();
   const autocomplete = useItemAutocomplete({ debounceMs: 0 });
-  const { handleSearchTermChange, reset } = autocomplete;
+  const { handleSearchTermChange } = autocomplete;
   const { moveToItem, moving } = useMovePantryItem();
 
   useEffect(() => {
-    if (visible) handleSearchTermChange(stack.itemName);
-    else reset();
-  }, [visible, stack.itemName, handleSearchTermChange, reset]);
+    handleSearchTermChange(stack.itemName);
+  }, [stack.itemName, handleSearchTermChange]);
 
   const candidates = autocomplete.displayItems.filter(
     item => item.id !== stack.itemId,
@@ -86,63 +117,54 @@ export const RelinkItemSheet: React.FC<RelinkItemSheetProps> = ({
   };
 
   return (
-    <Sheet
-      mode="form"
-      visible={visible}
-      onDismiss={onDismiss}
-      snapPoints={['85%']}
-      title={t('relinkItem.title')}
-      contentContainerStyle={commonStyles.bottomSheetContent}
-    >
-      <View testID={pantryTestIDs.relinkSheet}>
-        <Text role="body" tone="secondary" style={styles.hint}>
-          {t('relinkItem.hint')}
-        </Text>
-        <SearchBar
-          testID={pantryTestIDs.relinkSearchInput}
-          placeholder={t('relinkItem.searchPlaceholder')}
-          value={stack.itemName}
-          onChangeText={handleSearchTermChange}
-          debounceMs={250}
-          autoCapitalize="words"
-          returnKeyType="search"
-          isLoading={!!autocomplete.isLoading}
-          containerStyle={styles.search}
-        />
-        {moving ? (
-          <Loading size="small" message={t('relinkItem.moving')} />
-        ) : (
-          candidates.map(item => (
-            <RowCard
-              key={item.id}
-              testID={pantryTestIDs.relinkCandidate(item.id)}
-            >
-              <ListItem
-                title={item.name}
-                subtitle={item.category?.name ?? undefined}
-                leftElement={<RowThumbnail uri={resolveImageUrl(item)} />}
-                onPress={() => {
-                  void handlePick(item);
-                }}
-                accessibilityLabel={t('relinkItem.moveTo', { name: item.name })}
-              />
-            </RowCard>
-          ))
-        )}
-        {!moving && !!searched && candidates.length === 0 && (
-          <>
-            <Text role="body" tone="secondary" align="center">
-              {noMatch.title}
+    <View testID={pantryTestIDs.relinkSheet}>
+      <Text role="body" tone="secondary" style={styles.hint}>
+        {t('relinkItem.hint')}
+      </Text>
+      <SearchBar
+        testID={pantryTestIDs.relinkSearchInput}
+        placeholder={t('relinkItem.searchPlaceholder')}
+        value={stack.itemName}
+        onChangeText={handleSearchTermChange}
+        debounceMs={250}
+        autoCapitalize="words"
+        returnKeyType="search"
+        isLoading={!!autocomplete.isLoading}
+        containerStyle={styles.search}
+      />
+      {moving ? (
+        <Loading size="small" message={t('relinkItem.moving')} />
+      ) : (
+        candidates.map(item => (
+          <RowCard
+            key={item.id}
+            testID={pantryTestIDs.relinkCandidate(item.id)}
+          >
+            <ListItem
+              title={item.name}
+              subtitle={item.category?.name ?? undefined}
+              leftElement={<RowThumbnail uri={resolveImageUrl(item)} />}
+              onPress={() => {
+                void handlePick(item);
+              }}
+              accessibilityLabel={t('relinkItem.moveTo', { name: item.name })}
+            />
+          </RowCard>
+        ))
+      )}
+      {!moving && !!searched && candidates.length === 0 && (
+        <>
+          <Text role="body" tone="secondary" align="center">
+            {noMatch.title}
+          </Text>
+          {noMatch.description ? (
+            <Text role="caption" tone="secondary" align="center">
+              {noMatch.description}
             </Text>
-            {noMatch.description ? (
-              <Text role="caption" tone="secondary" align="center">
-                {noMatch.description}
-              </Text>
-            ) : null}
-          </>
-        )}
-      </View>
-    </Sheet>
+          ) : null}
+        </>
+      )}
+    </View>
   );
 };
 
