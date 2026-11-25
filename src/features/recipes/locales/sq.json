@@ -484,7 +484,7 @@
     "deductFromPantryDesc": "Zvogëlo automatikisht sasitë e përbërësve në qilarin tënd",
     "smartDeduction": "Zbritje e zgjuar",
     "smartDeductionDesc": "Shqyrto dhe rregullo sasitë e përbërësve para se të zbriten",
-    "reviewUnavailable": "Përbërësit nuk u ngarkuan për rishikim, ndaj zbritja e zgjuar është çaktivizuar. Shtyp sërish {{action}} për të zbritur atë që përdor receta.",
+    "reviewUnavailable": "Përbërësit nuk u ngarkuan për rishikim, ndaj zbritja e zgjuar është çaktivizuar. Konfirmo sërish për të zbritur atë që përdor receta.",
     "notesPlaceholder": "Si dolën?"
   },
   "saveRecipe": {

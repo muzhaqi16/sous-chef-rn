@@ -24,7 +24,18 @@ export function useMealPlanItemHandlers({
   const { createItem, toggleCompleted, deleteItem } =
     useMealPlanItemActions(activePlanId);
   // The meal being cooked, kept once its sheet closes: a review follows it.
-  const [pendingCook, setPendingCook] = useState<PlannedCook | null>(null);
+  // Held by id, with its version read from the plan as it now stands, so a
+  // cook refused because the meal changed is sent again at the new version.
+  const [cooking, setCooking] = useState<Omit<PlannedCook, 'version'> | null>(
+    null,
+  );
+  const cookingItem = cooking
+    ? itemDetails.find(i => i.id === cooking.id)
+    : undefined;
+  const pendingCook: PlannedCook | null =
+    cooking && cookingItem
+      ? { ...cooking, version: cookingItem.version }
+      : null;
 
   const toggle = (id: string, isCompleted: boolean, hasRecipe: boolean) => {
     const item = itemDetails.find(i => i.id === id);
@@ -33,9 +44,8 @@ export function useMealPlanItemHandlers({
     // A recipe meal is cooked as it is completed, once: a meal a cook already
     // completed is checked again with nothing more cooked or deducted.
     if (!isCompleted && hasRecipe && item.recipe && !item.cookingLogId) {
-      setPendingCook({
+      setCooking({
         id: item.id,
-        version: item.version,
         recipeId: item.recipe.id,
         recipeName: item.recipe.name,
         defaultServings: item.servings ?? item.recipe.servings,
@@ -61,7 +71,7 @@ export function useMealPlanItemHandlers({
       servings: input.servings,
       notes: input.notes,
     });
-    setPendingCook(null);
+    setCooking(null);
   };
 
   const add = async (

@@ -11,7 +11,11 @@ import {
   RecipeIngredientFragmentDoc,
   type RecipeIngredientFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
-import { RecipeIngredientMatchKind } from '#graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  RecipeIngredientMatchKind,
+} from '#graphql/generated/schemaTypes';
+import type { SettledFailure } from '#apollo/utils/settleMutation';
 import {
   cookOutcome,
   type CookDraw,
@@ -90,6 +94,19 @@ export const plannedMealSettle = (
         ...(onMealChanged && { on: { CONFLICT: onMealChanged } }),
       }
     : {};
+
+// Widened to `string`: a failure's code is read off an untyped channel.
+const MEAL_ALREADY_COOKED: string = ErrorCode.Conflict;
+
+/**
+ * A planned meal another cook completed refuses every retry, so the cook ends
+ * there under the "already cooked" message; any other refusal keeps the sheet,
+ * whose next confirm reads the meal as it now stands.
+ */
+export const refusalEndsCook = (
+  failure: SettledFailure,
+  plannedMeal: PlannedMeal | null | undefined,
+): boolean => !!plannedMeal && failure.code === MEAL_ALREADY_COOKED;
 
 export type PantryStackOption = NonNullable<
   IngredientMatch['matchedPantryItem']
@@ -590,7 +607,13 @@ export function useRecipeIngredientMatching(
     }
     cooking.current = false;
     // Applied and queued both succeed; a queued cook replays later.
-    if (settled.failure) return;
+    if (settled.failure) {
+      if (refusalEndsCook(settled.failure, plannedMeal)) {
+        setIsSheetVisible(false);
+        setEditableMatches([]);
+      }
+      return;
+    }
     emitTutorialEvent('recipe.cooked');
     setIsSheetVisible(false);
     setEditableMatches([]);

@@ -484,7 +484,7 @@
     "deductFromPantryDesc": "Reduce automáticamente las cantidades de los ingredientes en tu despensa",
     "smartDeduction": "Descuento inteligente",
     "smartDeductionDesc": "Revisa y ajusta las cantidades de los ingredientes antes de descontar",
-    "reviewUnavailable": "No se pudieron cargar los ingredientes para revisarlos, así que el descuento inteligente está desactivado. Toca {{action}} de nuevo para descontar lo que usa la receta.",
+    "reviewUnavailable": "No se pudieron cargar los ingredientes para revisarlos, así que el descuento inteligente está desactivado. Confirma de nuevo para descontar lo que usa la receta.",
     "notesPlaceholder": "¿Cómo ha quedado?"
   },
   "saveRecipe": {

@@ -484,7 +484,7 @@
     "deductFromPantryDesc": "Automatically reduce ingredient quantities in your pantry",
     "smartDeduction": "Smart Deduction",
     "smartDeductionDesc": "Review and adjust ingredient quantities before deducting",
-    "reviewUnavailable": "The ingredients couldn't be loaded for review, so Smart Deduction is off. Tap {{action}} again to deduct what the recipe uses.",
+    "reviewUnavailable": "The ingredients couldn't be loaded for review, so Smart Deduction is off. Confirm again to deduct what the recipe uses.",
     "notesPlaceholder": "How did it turn out?"
   },
   "saveRecipe": {

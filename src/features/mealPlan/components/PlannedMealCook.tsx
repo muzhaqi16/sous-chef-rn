@@ -4,7 +4,7 @@ import { MarkCookedModal } from '#features/recipes/ui/MarkCookedModal';
 import { RecipeCookFlow } from '#features/recipes/ui/RecipeCookFlow';
 import { useRecipeCookingActions } from '#features/recipes/hooks/useRecipeCookingActions';
 
-/** The planned meal a cook from the plan completes, as last read. */
+/** The planned meal a cook from the plan completes, at its current version. */
 export interface PlannedCook {
   id: string;
   version: number;

@@ -1171,7 +1171,7 @@ describe('useRecipeIngredientMatching — what a cook recorded', () => {
     });
   });
 
-  it('shows the meal as it stands when another cook already completed it', async () => {
+  it('ends the cook and shows the meal as it stands when another cook already completed it', async () => {
     const onMealChanged = jest.fn();
     const refused = recordMock(MarkRecipeAsCookedDocument, {
       data: {
@@ -1192,6 +1192,25 @@ describe('useRecipeIngredientMatching — what a cook recorded', () => {
     );
     expect(onMealChanged).toHaveBeenCalledTimes(1);
     expect(mockToastSuccess).not.toHaveBeenCalled();
+    // No retry can pass, so the review does not wait for one.
+    expect(result.current.isSheetVisible).toBe(false);
+  });
+
+  it('keeps the review open when the meal changed since it was read', async () => {
+    const refused = recordMock(MarkRecipeAsCookedDocument, {
+      data: {
+        markRecipeAsCooked: {
+          __typename: 'ConflictError',
+          code: ErrorCode.VersionConflict,
+        },
+      },
+    });
+
+    const { result } = await cookEggs([refused], {
+      plannedMeal: { id: 'mpi-1', version: 2 },
+      onMealChanged: jest.fn(),
+    });
+
     expect(result.current.isSheetVisible).toBe(true);
   });
 });

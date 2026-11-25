@@ -153,6 +153,7 @@ import {
   removeRecipe,
   savedFields,
 } from './recipes/offline/localWrites';
+import { withCurrentMealVersion } from './recipes/offline/cookReplay';
 import {
   AddItemToShoppingListDocument,
   CancelRecurringDocument,
@@ -349,6 +350,7 @@ export const FEATURE_REPLAY_PREPARATIONS: ByOperation<ReplayPreparer> = [
   [AddItemToShoppingListDocument, withCurrentUnits],
   [UpdateShoppingListItemDocument, withCurrentUnits],
   [RemoveItemFromShoppingListDocument, asQueued],
+  [MarkRecipeAsCookedDocument, withCurrentMealVersion],
 ];
 
 /** Replays whose answer may name a stack merged since they were queued. */

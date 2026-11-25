@@ -484,7 +484,7 @@
     "deductFromPantryDesc": "Riduci automaticamente le quantità degli ingredienti nella dispensa",
     "smartDeduction": "Sottrazione intelligente",
     "smartDeductionDesc": "Rivedi e regola le quantità degli ingredienti prima della sottrazione",
-    "reviewUnavailable": "Non è stato possibile caricare gli ingredienti da rivedere, quindi la sottrazione intelligente è disattivata. Tocca di nuovo {{action}} per detrarre ciò che usa la ricetta.",
+    "reviewUnavailable": "Non è stato possibile caricare gli ingredienti da rivedere, quindi la sottrazione intelligente è disattivata. Conferma di nuovo per detrarre ciò che usa la ricetta.",
     "notesPlaceholder": "Com'è venuto?"
   },
   "saveRecipe": {

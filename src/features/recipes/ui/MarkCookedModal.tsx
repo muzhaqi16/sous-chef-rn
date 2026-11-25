@@ -22,6 +22,7 @@ import {
   type MarkCookedFormValues,
 } from './markCookedFormConfig';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import { requirePlatform } from '#platform/install';
 
 interface MarkCookedModalProps {
   visible: boolean;
@@ -90,6 +91,9 @@ const MarkCookedForm: React.FC<MarkCookedFormProps> = ({
       // Confirmed again, the cook deducts what the recipe uses, unreviewed.
       setValue('useGranularDeduction', false);
       setReviewUnavailable(true);
+      requirePlatform('screenReader').announce(
+        t('markCookedModal.reviewUnavailable'),
+      );
       return;
     }
     onClose();
@@ -196,9 +200,7 @@ const MarkCookedForm: React.FC<MarkCookedFormProps> = ({
           tone="warning"
           testID={recipesTestIDs.cookReviewUnavailable}
         >
-          {t('markCookedModal.reviewUnavailable', {
-            action: t('markCookedModal.markCooked'),
-          })}
+          {t('markCookedModal.reviewUnavailable')}
         </Text>
       ) : null}
 

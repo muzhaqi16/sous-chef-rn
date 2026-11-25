@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { t } from '#i18n';
+import { requirePlatform } from '#platform/install';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { settledInAct } from '#/test-utils/settledInAct';
 import { MarkCookedModal } from '../MarkCookedModal';
@@ -187,6 +188,7 @@ describe('MarkCookedModal while the cook settles', () => {
 
   // Confirmed again, the cook deducts unreviewed, as the sheet then says.
   it('turns the review off and says why when it could not load', async () => {
+    const announce = jest.spyOn(requirePlatform('screenReader'), 'announce');
     const onConfirm = jest.fn().mockResolvedValue('reviewUnavailable');
     const onClose = renderWith(onConfirm);
 
@@ -194,7 +196,11 @@ describe('MarkCookedModal while the cook settles', () => {
 
     expect(
       screen.getByTestId(recipesTestIDs.cookReviewUnavailable),
-    ).toBeTruthy();
+    ).toHaveTextContent(t('markCookedModal.reviewUnavailable'));
+    // A screen reader is told too: the caption appears where focus is not.
+    expect(announce).toHaveBeenCalledWith(
+      t('markCookedModal.reviewUnavailable'),
+    );
     expect(onClose).not.toHaveBeenCalled();
     expect(
       screen.getByLabelText(t('markCookedModal.smartDeduction')),

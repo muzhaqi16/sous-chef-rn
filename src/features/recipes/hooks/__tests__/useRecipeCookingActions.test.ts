@@ -761,4 +761,73 @@ describe('useRecipeCookingActions — from a recipe or from its planned meal', (
       mealPlanItemVersion: 2,
     });
   });
+
+  // How a planned meal's cook ends when the server will not take it.
+  describe('a planned meal the server refuses', () => {
+    const refusedAs = (code: ErrorCode) =>
+      recordMock(MarkRecipeAsCookedDocument, {
+        data: { markRecipeAsCooked: { __typename: 'ConflictError', code } },
+        maxUsageCount: 1,
+      });
+    const quickCook = (result: { current: Cooking }) =>
+      drained(() =>
+        result.current.handleMarkAsCooked({
+          servings: 4,
+          deductFromPantry: false,
+          useGranularDeduction: false,
+        }),
+      );
+
+    it('ends the cook when another cook already completed the meal', async () => {
+      const { result } = renderHookWithApollo(
+        () =>
+          useRecipeCookingActions({
+            recipeId: 'recipe-1',
+            plannedMeal: { id: 'mpi-1', version: 2 },
+            onMealChanged: jest.fn(),
+          }),
+        { operationMocks: [refusedAs(ErrorCode.Conflict).mock] },
+      );
+
+      expect(await quickCook(result)).toBe('done');
+    });
+
+    it('sends the next confirm at the version the meal has now', async () => {
+      const stale = refusedAs(ErrorCode.VersionConflict);
+      const cooked = cookedMock();
+      let meal = { id: 'mpi-1', version: 2 };
+      const { result, rerender } = renderHookWithApollo(
+        () =>
+          useRecipeCookingActions({
+            recipeId: 'recipe-1',
+            plannedMeal: meal,
+            onMealChanged: jest.fn(),
+          }),
+        { operationMocks: [stale.mock, cooked.mock] },
+      );
+
+      expect(await quickCook(result)).toBe('retry');
+      // The plan, refetched on the conflict, now holds the meal at 3.
+      meal = { id: 'mpi-1', version: 3 };
+      rerender({});
+      expect(await quickCook(result)).toBe('done');
+
+      expect(inputOf(stale.fired[0]!)).toMatchObject({
+        mealPlanItemVersion: 2,
+      });
+      expect(inputOf(cooked.fired[0]!)).toMatchObject({
+        mealPlanItemVersion: 3,
+      });
+    });
+  });
+
+  it('keeps the review open when a skipped review is refused', async () => {
+    const { result } = renderCooking([refusedCookMock().mock]);
+    const close = jest.spyOn(result.current.ingredientMatching, 'closeSheet');
+
+    act(() => result.current.handleSkipReview());
+    await drainTimers();
+
+    expect(close).not.toHaveBeenCalled();
+  });
 });
