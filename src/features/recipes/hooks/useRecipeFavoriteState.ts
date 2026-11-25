@@ -1,16 +1,16 @@
 import { noteTipFact } from '#hooks/settings/useFeatureHint';
 import { useState } from 'react';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { AddRecipeToFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
 import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { generateEntityId } from '#utils/generateEntityId';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { SaveToFavoritesOptions } from '#features/recipes/cache/favorites';
 import type { AddFavoriteInputs } from '#features/recipes/offline/localWrites';
-import { toastService } from '#/services/toastService';
-import { useTranslation } from '#/i18n';
+import { toastService } from '#services/toastService';
+import { useTranslation } from '#i18n';
 
 export interface UseRecipeFavoriteStateParams {
   backendRecipe: MaterializedRecipe | undefined;

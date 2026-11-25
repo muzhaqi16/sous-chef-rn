@@ -2,7 +2,7 @@ import { kitTestIDs } from '#components/testIDs';
 import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   PlainScrollRefreshControl,
   ThemedActivityIndicator,
@@ -16,9 +16,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
-import { commonStyles } from '#/styles/commonStyles';
-import { sizes } from '#/theme/foundations/sizes';
-import { spacing } from '#/theme/foundations/spacing';
+import { commonStyles } from '#styles/commonStyles';
+import { sizes } from '#theme/foundations/sizes';
+import { spacing } from '#theme/foundations/spacing';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
@@ -35,7 +35,7 @@ import {
   HeaderActionMenu,
   useHeaderOverflow,
 } from '#components/organisms/HeaderActionMenu';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { hitSlop } from '#theme/foundations/sizes';
 
 // Visible hero height below the status bar; `heroHeight` grows it by the top
 // inset so it fills edge-to-edge behind it.

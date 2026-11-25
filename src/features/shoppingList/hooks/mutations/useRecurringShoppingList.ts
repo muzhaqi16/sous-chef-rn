@@ -6,7 +6,7 @@
  */
 
 import { useApolloClient } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   CreateRecurringShoppingListDocument,
   CancelRecurringDocument,
@@ -18,10 +18,10 @@ import {
 import { readCopyableList } from '#features/shoppingList/cache/copySource';
 import { nextRecurringList } from '#features/shoppingList/utils/nextRecurringList';
 import { useCopyShoppingList } from './useCopyShoppingList';
-import type { RecurringPattern } from '#/graphql/generated/schemaTypes';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { formatMonthDayYear } from '#/utils/formatters/date';
-import { toastService } from '#/services/toastService';
+import type { RecurringPattern } from '#graphql/generated/schemaTypes';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { formatMonthDayYear } from '#utils/formatters/date';
+import { toastService } from '#services/toastService';
 
 export function useRecurringShoppingList() {
   const { t } = useTranslation();

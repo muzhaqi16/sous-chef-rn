@@ -1,6 +1,6 @@
 import type { InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { MealPlanType, MealType } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
+import { MealPlanType, MealType } from '#graphql/generated/schemaTypes';
 import type { PlanSource } from '#features/mealPlan/cache/derivationSources';
 import {
   UseDuplicateMealPlan_MealPlanFragmentDoc,

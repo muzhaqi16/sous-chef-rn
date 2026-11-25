@@ -41,7 +41,7 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import { addMocksToSchema } from '@graphql-tools/mock';
 import { gql } from '@apollo/client';
 import type { Unmasked } from '@apollo/client/masking';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   GetUserProfileDocument,
   UserEventsDocument,

@@ -1,8 +1,8 @@
 import { InMemoryCache } from '@apollo/client';
 ('use no memo');
 
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
+jest.mock('#apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#apollo/utils/cacheUpdaters'),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
@@ -15,7 +15,7 @@ import {
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
-} from '#/apollo/utils/cacheUpdaters';
+} from '#apollo/utils/cacheUpdaters';
 
 /**
  * These updaters were declared twice — once in `hooks/home/pantry/utils.ts` and

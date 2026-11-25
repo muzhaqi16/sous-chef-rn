@@ -15,11 +15,11 @@ import {
   ItemSuggestionStatus,
   ItemType,
   StorageState,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { EditableItemSnapshot } from '#domain/items/suggestItemChanges';
 import type { AddItemSubmitPayload } from '#features/catalog/types';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 
 const mockUploadItemImages = jest
   .fn()

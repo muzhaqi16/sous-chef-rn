@@ -1,8 +1,8 @@
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { useLazyQuery } from '@apollo/client/react';
 import { AutocompleteCategoriesDocument } from '#operations/item/item.generated';
-import type { CategorySuggestion } from '#/graphql/generated/schemaTypes';
-import { CategoryType } from '#/graphql/generated/schemaTypes';
+import type { CategorySuggestion } from '#graphql/generated/schemaTypes';
+import { CategoryType } from '#graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { useAppStore } from '#store/useAppStore';
 import { filterByName } from '#features/catalog/utils/arrayUtils';

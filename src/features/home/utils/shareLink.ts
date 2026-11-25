@@ -1,5 +1,5 @@
 import type { ResolveShareLinkQuery } from '#operations/home/home.generated';
-import { ShareLinkTargetType } from '#/graphql/generated/schemaTypes';
+import { ShareLinkTargetType } from '#graphql/generated/schemaTypes';
 
 export type HomeLinkPreview = NonNullable<
   ResolveShareLinkQuery['resolveShareLink']

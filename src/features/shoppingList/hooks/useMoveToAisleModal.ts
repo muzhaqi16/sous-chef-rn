@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useFragment } from '@apollo/client/react';
-import { StoreDepartment } from '#/graphql/generated/schemaTypes';
+import { StoreDepartment } from '#graphql/generated/schemaTypes';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { knownDepartment } from '#features/shoppingList/utils/aisles';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { UseMoveToAisleModal_ItemFragmentDoc } from './useMoveToAisleModal.generated';
 
 /** The line the aisle picker is open for. */

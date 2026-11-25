@@ -18,7 +18,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 import { SHEET } from '#constants/animations';
 import { Pressable } from '#components/atoms/themedComponents';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 export interface BackdropClaimOptions {
   /** A fixed target the provider animates itself, or a SharedValue the contributor

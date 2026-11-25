@@ -1,8 +1,8 @@
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
-import { OfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
+import { OfflineRejectedError } from '#apollo/offlineQueue/OfflineRejectedError';
 import { TimeoutError } from '../errors/timeoutError';
 import { isNetworkError } from '../isNetworkError';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
 
 describe('isNetworkError', () => {
   it.each([

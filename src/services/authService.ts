@@ -6,22 +6,22 @@
  * steps its host registers (`sessionHost`).
  */
 
-import { requireApolloClient } from '#/apollo/clientRegistry';
-import { queueManager } from '#/apollo/offlineQueue/queueManager';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { reconnectWebSocket } from '#/apollo/links/wsLink';
-import { errorService, isTransportFailure } from '#/services/errorService';
-import { toastService } from '#/services/toastService';
+import { requireApolloClient } from '#apollo/clientRegistry';
+import { queueManager } from '#apollo/offlineQueue/queueManager';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { reconnectWebSocket } from '#apollo/links/wsLink';
+import { errorService, isTransportFailure } from '#services/errorService';
+import { toastService } from '#services/toastService';
 import { useStore } from '#store';
 import { holdsSessionTokens } from '#store/slices/authSlice';
-import { logger } from '#/utils/environment';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { getRateLimitDetails } from '#/utils/errors/rateLimit';
+import { logger } from '#utils/environment';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { getRateLimitDetails } from '#utils/errors/rateLimit';
 import {
   isDeadCredentialCode,
   isStaleSignInTokenCode,
-} from '#/utils/authErrorCodes';
-import { incrementLoginCount } from '#/hooks/settings/useFeatureHint';
+} from '#utils/authErrorCodes';
+import { incrementLoginCount } from '#hooks/settings/useFeatureHint';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import {
   ExchangeDeviceCredentialDocument,
@@ -29,27 +29,24 @@ import {
   LoginDocument,
   RegisterDocument,
 } from '#operations/auth/auth.generated';
-import { ensureDeviceId } from '#/services/auth/deviceId';
+import { ensureDeviceId } from '#services/auth/deviceId';
 import {
   deviceRegionCurrency,
   isUnchosenCurrency,
-} from '#/domain/regionCurrency';
+} from '#domain/regionCurrency';
 import {
   LoginUserFragmentDoc,
   type LoginUserFragment,
 } from '#operations/auth/userFragments.generated';
-import type {
-  LoginInput,
-  RegisterInput,
-} from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import type { LoginInput, RegisterInput } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import {
   type PostSignInGate,
   type StoredSignInRenewal,
   sessionHost,
-} from '#/services/auth/sessionHost';
+} from '#services/auth/sessionHost';
 
 // --- Store bootstrap (pre-populate Zustand from auth response) ---
 

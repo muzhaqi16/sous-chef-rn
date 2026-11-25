@@ -4,7 +4,7 @@ import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 import { useIncompleteCellReport } from '../useIncompleteCellReport';
 
 type Batch = {

@@ -1,7 +1,7 @@
 import { useMutation } from '@apollo/client/react';
 import { RequestPasswordResetDocument } from '#operations/auth/auth.generated';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { useTranslation } from '#/i18n';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { useTranslation } from '#i18n';
 
 /** Ask the server to email a reset link. */
 export function useRequestPasswordReset() {

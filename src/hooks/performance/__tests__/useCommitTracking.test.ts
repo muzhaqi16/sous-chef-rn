@@ -4,9 +4,9 @@ import {
   _resetForTesting,
   _simulateBackground,
 } from '../useCommitTracking';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 
-jest.mock('#/services/performance/performanceStore', () => ({
+jest.mock('#services/performance/performanceStore', () => ({
   usePerformanceStore: {
     getState: jest.fn(() => ({
       recordComponentRender: jest.fn(),

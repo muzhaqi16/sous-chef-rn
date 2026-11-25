@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
-import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
-import { storage } from '#/store/deviceStorage';
+import { makeCache } from '#apollo/cache';
+import { apolloCachePersistence } from '#apollo/offline/ApolloCachePersistence';
+import { SyncScopeKind } from '#graphql/generated/schemaTypes';
+import { storage } from '#store/deviceStorage';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 import { clearPositions, holdPosition, positionOf } from '../feedPositions';
 import { feedStorage } from '../feedStorage';

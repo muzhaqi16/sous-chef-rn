@@ -1,5 +1,5 @@
 import { useApolloClient } from '@apollo/client/react';
-import { buildJoinHomeUrl } from '#/utils/deepLinkUrls';
+import { buildJoinHomeUrl } from '#utils/deepLinkUrls';
 import { useHomeMembership } from '#features/home/hooks/useHomeMembership';
 import { UseHouseholdInvite_HomeFragmentDoc } from './useHouseholdInvite.generated';
 

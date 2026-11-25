@@ -12,13 +12,13 @@ import { ApolloProvider } from '@apollo/client/react';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { OperationTypeNode } from 'graphql';
 import { Observable } from 'rxjs';
-import { registerApolloClient } from '#/apollo/clientRegistry';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { registerApolloClient } from '#apollo/clientRegistry';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { CoreSubscriptionProvider } from '#bootstrap/CoreSubscriptionProvider';
 import { startCore } from '#bootstrap/startCore';
 import { useCoreLifecycle } from '#bootstrap/useCoreLifecycle';
 import { requirePlatform } from '#platform/install';
-import { authService } from '#/services/authService';
+import { authService } from '#services/authService';
 import { useStore } from '#store';
 
 /** Subscriptions the server holds open, by operation name. */

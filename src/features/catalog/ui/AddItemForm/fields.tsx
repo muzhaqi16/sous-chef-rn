@@ -1,13 +1,13 @@
 import React from 'react';
 import { IconButton } from '#components/atoms/IconButton';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CreateItemFormData } from '#features/catalog/utils/itemValidation';
 import {
   StorageState,
   ItemType,
   BaseDimension,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { FormInput } from '#components/atoms/FormInput';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { FormNumberInput } from '#features/catalog/components/FormNumberInput';
@@ -18,7 +18,7 @@ import { catalogTestIDs } from '#features/catalog/testIDs';
 // Type-only, so this does not create a runtime cycle with AddItemForm (which
 // imports the field builders below).
 import type { AddItemFormMode } from './AddItemForm';
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 
 /** `edit` proposes changes for review; `directEdit` writes them through. Both
  *  render the same form, so most field logic branches on this rather than mode. */

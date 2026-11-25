@@ -1,6 +1,6 @@
-import type { ItemRefInput } from '#/graphql/generated/schemaTypes';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { generateEntityId } from '#/utils/generateEntityId';
+import type { ItemRefInput } from '#graphql/generated/schemaTypes';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { generateEntityId } from '#utils/generateEntityId';
 
 /**
  * A unit, brand or storage-location reference. The API's `*RefInput` types are

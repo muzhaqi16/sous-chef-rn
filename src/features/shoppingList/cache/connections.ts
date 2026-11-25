@@ -10,10 +10,10 @@ import {
   type ConnectionData,
   createRemoveFromParentConnectionUpdater,
   safeEvictMany,
-} from '#/apollo/utils/cacheUpdaters';
-import { hideEntity, isHeld } from '#/apollo/utils/writeLocalEntity';
-import type { ShoppingList } from '#/graphql/generated/schemaTypes';
-import { logger } from '#/utils/environment';
+} from '#apollo/utils/cacheUpdaters';
+import { hideEntity, isHeld } from '#apollo/utils/writeLocalEntity';
+import type { ShoppingList } from '#graphql/generated/schemaTypes';
+import { logger } from '#utils/environment';
 import { Connections_ListCountersFragmentDoc } from './connections.generated';
 import { readIsPurchased } from './purchase';
 

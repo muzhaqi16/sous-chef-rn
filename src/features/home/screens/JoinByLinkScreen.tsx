@@ -1,13 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { ErrorState } from '#components/molecules/ErrorState';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { useResolveShareLink } from '#features/home/screens/useResolveShareLink';
-import { ShareLinkTargetType } from '#/graphql/generated/schemaTypes';
+import { ShareLinkTargetType } from '#graphql/generated/schemaTypes';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { SubScreen } from '#components/templates/SubScreen';
 

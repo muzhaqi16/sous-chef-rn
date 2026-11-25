@@ -6,7 +6,7 @@ import type {
 } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { openWebUrl } from '#native/externalUrl';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { hitSlop } from '#theme/foundations/sizes';
 import { Text, type TextRole, type TextTone } from './Text';
 
 /** `caption` is a small underlined credit, such as a data source's notice. */

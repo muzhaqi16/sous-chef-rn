@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -13,8 +13,8 @@ import {
   BatchStatus,
   ErrorCode,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+} from '#graphql/generated/schemaTypes';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { usePantryItemDetailData } from '../usePantryItemDetailData';
 
 async function loadItem() {

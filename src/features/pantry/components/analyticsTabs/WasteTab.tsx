@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { moneyByCurrency } from '#/domain/money';
-import { formatPercent, UNKNOWN_AMOUNT } from '#/utils/formatters/number';
-import { useTranslation } from '#/i18n';
+import { moneyByCurrency } from '#domain/money';
+import { formatPercent, UNKNOWN_AMOUNT } from '#utils/formatters/number';
+import { useTranslation } from '#i18n';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { ChartSection } from '#features/pantry/components/analytics/ChartSection';

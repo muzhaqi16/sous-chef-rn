@@ -13,7 +13,7 @@ import type {
   LabeledLine,
   ReceiptLineLabel,
   ReceiptLineLabels,
-} from '#/types/receiptStructuring';
+} from '#types/receiptStructuring';
 
 // The printed words decide these whatever the model said.
 const PRINTED_KIND: readonly [RegExp, ParsedLineKind][] = [

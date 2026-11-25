@@ -7,7 +7,7 @@ import {
   templateItemSchema,
   templateSchema,
 } from '../mealTemplateBuilderFormConfig';
-import { MealType, TemplateCategory } from '#/graphql/generated/schemaTypes';
+import { MealType, TemplateCategory } from '#graphql/generated/schemaTypes';
 
 /**
  * A field the person can fix is reported ON the field: an alert covers the form

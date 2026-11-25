@@ -1,5 +1,5 @@
 import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { registerSessionTeardown } from '#store/sessionTeardown';
 
 /** What follows a password sign-in before the app opens, if anything. */

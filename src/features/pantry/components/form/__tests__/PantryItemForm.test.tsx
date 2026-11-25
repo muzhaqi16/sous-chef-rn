@@ -9,7 +9,7 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   type MockDataFor,
   recordMock,
@@ -20,17 +20,17 @@ import { operationLog } from '#/test-utils/operationLog';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { fromDateKey } from '#/utils/dateUtils';
-import { formatMonthDayYear } from '#/utils/formatters/date';
-import { localizeNumericHint } from '#/utils/formatters/number';
+import { t } from '#i18n';
+import { fromDateKey } from '#utils/dateUtils';
+import { formatMonthDayYear } from '#utils/formatters/date';
+import { localizeNumericHint } from '#utils/formatters/number';
 import {
   ItemCondition,
   StorageState,
   StorageType,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { FieldRendererProvider } from '#components/molecules/fieldRenderers';
 import { kitTestIDs } from '#components/testIDs';
 import { catalogFieldRenderers } from '#features/catalog/ui/catalogFieldRenderers';
@@ -60,7 +60,7 @@ import { PantryItemForm } from '../PantryItemForm';
 
 // The day stays fixed: the hook's midnight timer re-arms itself.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 jest.mock('#hooks/navigation/useAppNavigation');
 

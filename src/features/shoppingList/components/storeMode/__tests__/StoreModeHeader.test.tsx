@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { StoreDepartment } from '#/graphql/generated/schemaTypes';
+import { StoreDepartment } from '#graphql/generated/schemaTypes';
 import { kitTestIDs } from '#components/testIDs';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { StoreModeHeader } from '../StoreModeHeader';

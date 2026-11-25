@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { lightTheme } from '#/theme/themes';
+import { lightTheme } from '#theme/themes';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { kitTestIDs } from '#components/testIDs';
 

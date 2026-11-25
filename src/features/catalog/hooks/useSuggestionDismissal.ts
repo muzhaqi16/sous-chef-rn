@@ -1,14 +1,14 @@
 import { useApolloClient } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   MarkSuggestionDismissedDocument,
   MarkSuggestionActiveDocument,
 } from '#operations/item/item.generated';
-import type { SuggestionSurface } from '#/graphql/generated/schemaTypes';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import type { Settled } from '#/apollo/utils/settleMutation';
-import { toastService } from '#/services/toastService';
-import { generateEntityId } from '#/utils/generateEntityId';
+import type { SuggestionSurface } from '#graphql/generated/schemaTypes';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { Settled } from '#apollo/utils/settleMutation';
+import { toastService } from '#services/toastService';
+import { generateEntityId } from '#utils/generateEntityId';
 import {
   readHeldSuggestions,
   type HeldSuggestion,

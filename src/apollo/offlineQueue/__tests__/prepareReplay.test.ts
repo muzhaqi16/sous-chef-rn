@@ -5,8 +5,8 @@
  * day totals are counted on.
  */
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { makeCache } from '#apollo/cache';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import {
   makeQueuedMutation,
   queuedMutationFor,
@@ -22,14 +22,14 @@ import {
   MoveShoppingItemToPantryDocument,
   RemoveItemFromShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 import type { DocumentNode } from 'graphql';
-import type { QueuedMutation } from '#/apollo/offlineQueue/types';
+import type { QueuedMutation } from '#apollo/offlineQueue/types';
 import {
   captureReplayInputs,
   hasReplayPreparation,
   prepareReplay,
-} from '#/apollo/offlineQueue/prepareReplay';
+} from '#apollo/offlineQueue/prepareReplay';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 

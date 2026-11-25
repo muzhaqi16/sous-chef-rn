@@ -4,18 +4,18 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useController, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type ObjectSchema } from 'yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   ThemedBottomSheetTextInput,
   type ThemedBottomSheetTextInputRef,
 } from '#components/atoms/themedComponents';
-import { StorageType } from '#/graphql/generated/schemaTypes';
+import { StorageType } from '#graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
-import { lazyMessage, reportValidationErrors } from '#/utils/validation/common';
+import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
 
 /** Module-level async wrapper to keep try-catch out of the component body (React Compiler). */
 async function executeCreateLocation(

@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { TrendLineChart } from '../TrendLineChart';
-import type { TimeSeriesDataPoint } from '#/graphql/generated/schemaTypes';
+import type { TimeSeriesDataPoint } from '#graphql/generated/schemaTypes';
 
 type CartesianRenderArgs = {
   points: { y: { x: number; y: number }[] };

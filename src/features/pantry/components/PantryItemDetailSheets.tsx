@@ -1,5 +1,5 @@
 import React from 'react';
-import { EntryImageSource } from '#/graphql/generated/schemaTypes';
+import { EntryImageSource } from '#graphql/generated/schemaTypes';
 import { EntryPhotoSheet } from '#features/catalog/ui/EntryPhotoSheet';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
 import { useEntryPhoto } from '#features/catalog/hooks/useEntryPhoto';

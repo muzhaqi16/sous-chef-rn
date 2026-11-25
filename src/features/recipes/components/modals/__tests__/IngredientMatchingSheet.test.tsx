@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { RecipeIngredientMatchKind } from '#/graphql/generated/schemaTypes';
+import { RecipeIngredientMatchKind } from '#graphql/generated/schemaTypes';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { IngredientMatchingSheet } from '#features/recipes/components/modals/IngredientMatchingSheet';
 import type {

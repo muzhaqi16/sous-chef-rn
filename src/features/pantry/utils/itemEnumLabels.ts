@@ -6,8 +6,8 @@
 import {
   ItemCondition,
   AcquisitionMethod,
-} from '#/graphql/generated/schemaTypes';
-import type { TranslationKey } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import type { TranslationKey } from '#i18n';
 
 /** Conditions a user picks, in display order. */
 export const ITEM_CONDITION_OPTIONS = [

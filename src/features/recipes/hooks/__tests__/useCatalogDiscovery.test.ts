@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { memoryScreen } from '#/test-utils/memoryPlatform';
 import {
   recordMock,
@@ -13,8 +13,8 @@ import {
   Diet,
   ExternalSource,
   Intolerance,
-} from '#/graphql/generated/schemaTypes';
-import { getI18n } from '#/i18n/config';
+} from '#graphql/generated/schemaTypes';
+import { getI18n } from '#i18n/config';
 import { toDisplayItems } from '#features/recipes/screens/recipeDisplayItems';
 import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 import {

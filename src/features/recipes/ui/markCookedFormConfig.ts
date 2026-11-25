@@ -1,7 +1,7 @@
 import { boolean, object, string, type ObjectSchema } from 'yup';
-import type { TranslationKey } from '#/i18n';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { lazyMessage } from '#/utils/validation/common';
+import type { TranslationKey } from '#i18n';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { lazyMessage } from '#utils/validation/common';
 
 export interface MarkCookedFormValues {
   servings: string;

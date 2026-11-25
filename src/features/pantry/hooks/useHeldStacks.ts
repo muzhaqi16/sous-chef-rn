@@ -1,5 +1,5 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {

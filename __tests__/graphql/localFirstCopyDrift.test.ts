@@ -30,8 +30,8 @@ import type {
   FragmentDefinitionNode,
   SelectionSetNode,
 } from 'graphql';
-import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { REPLAY_PREPARATIONS } from '#apollo/offlineQueue/preparationRegistry';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 

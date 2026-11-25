@@ -1,6 +1,6 @@
 'use no memo';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 import { act } from '@testing-library/react-native';
 import {
@@ -15,7 +15,7 @@ import { Home_RowFragmentDoc } from '#features/home/cache/home.generated';
 import { useCreateHome } from '../useCreateHome';
 import { useCreatePantry } from '#features/pantry/hooks/useCreatePantry';
 import { useStore } from '#store';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 
 /**
  * A home created offline has to be usable before the server has heard of it:

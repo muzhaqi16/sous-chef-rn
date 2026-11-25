@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -11,7 +11,7 @@ import { FormSelect } from '#components/molecules/FormSelect';
 import { Text } from '#components/atoms/Text';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import { buildCapacityUnitOptions } from '#features/catalog/components/storageLocationFormConfig';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 interface StorageLocationAdvancedSectionProps {
   isClimateControlled: boolean;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   Pressable,
   ThemedActivityIndicator,
@@ -10,7 +10,7 @@ import { parseISO, startOfDay } from 'date-fns';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { MealType } from '#graphql/generated/schemaTypes';
 import {
   MEAL_TYPE_LABEL_KEYS,
   MEAL_TYPE_ORDER,
@@ -23,7 +23,7 @@ import { Text } from '#components/atoms/Text';
 import {
   formatFullWeekdayMonthDay,
   formatMonthDay,
-} from '#/utils/formatters/date';
+} from '#utils/formatters/date';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { useOpening } from '#hooks/ui/useOpening';
 

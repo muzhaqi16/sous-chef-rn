@@ -1,12 +1,12 @@
 import { ApolloLink, Observable } from '@apollo/client';
 import { Kind, OperationTypeNode, type GraphQLFormattedError } from 'graphql';
-import { env as buildEnv } from '#/config/env';
-import { Telemetry } from '#/services/telemetry';
-import { Environment } from '#/utils/environment';
-import { serializeError } from '#/utils/errorSerialization';
+import { env as buildEnv } from '#config/env';
+import { Telemetry } from '#services/telemetry';
+import { Environment } from '#utils/environment';
+import { serializeError } from '#utils/errorSerialization';
 import { isOfflineRejectedError } from '../offlineQueue/OfflineRejectedError';
 import { useStore } from '#store';
-import { isNetworkError } from '#/utils/isNetworkError';
+import { isNetworkError } from '#utils/isNetworkError';
 
 interface GraphQLTiming {
   operationName: string;

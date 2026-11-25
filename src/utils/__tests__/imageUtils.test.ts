@@ -14,7 +14,7 @@ import {
   EntryImageSource,
   ImageKind,
   ImagePerspective,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 describe('imageUtils', () => {
   // ==========================================================================

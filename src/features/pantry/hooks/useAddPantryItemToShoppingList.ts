@@ -1,5 +1,5 @@
 import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 /** Whether the row survived. The caller owns the copy for a failure. */
 export type AddToListOutcome = 'kept' | 'reverted';

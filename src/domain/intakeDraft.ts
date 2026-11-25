@@ -1,7 +1,7 @@
 import type {
   PackageSizeInput,
   StockAmountInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { boughtAmountOf, stockAmountOf, type HeldUnit } from './stockAmount';
 
 /** Facts about this acquisition. Shopping requests are deliberately not evidence. */

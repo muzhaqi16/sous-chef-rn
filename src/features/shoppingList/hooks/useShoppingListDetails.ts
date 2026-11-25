@@ -8,7 +8,7 @@ import {
   type ShoppingListCollaboratorFragment,
   type ShoppingListOwnershipFragment,
 } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useListReadPolicy } from './useListReadPolicy';
 
 export function useShoppingListDetails(listId: string | undefined) {

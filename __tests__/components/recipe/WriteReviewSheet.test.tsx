@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, screen, userEvent } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { WriteReviewSheet } from '#features/recipes/components/WriteReviewSheet';
 import { WriteReviewSheet_ReviewFragmentDoc } from '#features/recipes/components/WriteReviewSheet.generated';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';

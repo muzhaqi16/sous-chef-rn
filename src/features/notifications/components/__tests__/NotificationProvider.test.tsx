@@ -2,8 +2,8 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { render } from '@testing-library/react-native';
 import type { AwayNotification } from '#features/notifications/hooks/useNotifications';
-import { NotificationCategory } from '#/graphql/generated/schemaTypes';
-import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
+import { NotificationCategory } from '#graphql/generated/schemaTypes';
+import { showLocalNotification } from '#services/notifications/localNotificationHelper';
 import { NotificationProvider } from '../NotificationProvider';
 
 let mockArrivedWhileAway:
@@ -17,7 +17,7 @@ jest.mock('#features/notifications/hooks/useNotifications', () => ({
     mockArrivedWhileAway = options.onArrivedWhileAway;
   },
 }));
-jest.mock('#/services/notifications/localNotificationHelper', () => ({
+jest.mock('#services/notifications/localNotificationHelper', () => ({
   showLocalNotification: jest.fn(() => Promise.resolve()),
 }));
 jest.mock('../usePushTapHandlers', () => ({ usePushTapHandlers: () => {} }));

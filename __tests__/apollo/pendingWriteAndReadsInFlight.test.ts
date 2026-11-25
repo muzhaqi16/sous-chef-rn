@@ -1,12 +1,12 @@
 import { ApolloClient, ApolloLink, Observable, gql } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
 import type { Subscriber } from 'rxjs';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { createAnswerOrderingLink } from '#/apollo/links/answerOrderingLink';
-import { createLocalWritePrecedenceLink } from '#/apollo/links/localWritePrecedenceLink';
-import { PendingWrites } from '#/apollo/pendingWrites/pendingWrites';
-import type { LocalWriteTable } from '#/apollo/pendingWrites/types';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { createAnswerOrderingLink } from '#apollo/links/answerOrderingLink';
+import { createLocalWritePrecedenceLink } from '#apollo/links/localWritePrecedenceLink';
+import { PendingWrites } from '#apollo/pendingWrites/pendingWrites';
+import type { LocalWriteTable } from '#apollo/pendingWrites/types';
 import { drainTimers } from '#/test-utils/drainTimers';
 
 const ROW = gql`

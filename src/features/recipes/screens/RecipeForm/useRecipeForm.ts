@@ -7,7 +7,7 @@ import type {
   Diet,
   HealthGoal,
   Intolerance,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { UseRecipeFormWrites_RecipeFragment } from '#features/recipes/hooks/useRecipeFormWrites.generated';
 import type { RecipeCaptureQuery } from '#features/recipes/hooks/useRecipeCapture.generated';
 import type { RecipeUpdateFields } from '#features/recipes/hooks/useRecipeFormWrites';
@@ -23,11 +23,11 @@ import {
 } from './recipeFormConfig';
 import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
 import { toPastedIngredient } from '#features/recipes/utils/pastedIngredients';
-import { extractNodes } from '#/utils/connectionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { formatNumberForInput } from '#/utils/formatters/number';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { unitLabel } from '#/utils/formatQuantity';
+import { extractNodes } from '#utils/connectionUtils';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+import { formatNumberForInput } from '#utils/formatters/number';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { unitLabel } from '#utils/formatQuantity';
 
 let nextTempId = 1;
 function generateTempId(): string {

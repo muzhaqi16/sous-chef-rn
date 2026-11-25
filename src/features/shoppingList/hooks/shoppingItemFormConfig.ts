@@ -1,5 +1,5 @@
 import { object, string, number } from 'yup';
-import { itemNameText, lazyMessage } from '#/utils/validation/common';
+import { itemNameText, lazyMessage } from '#utils/validation/common';
 
 /**
  * Shape, defaults and validation for the shopping-list item form. Shared by the

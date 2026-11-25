@@ -16,10 +16,10 @@ import {
   getInitialNotification,
   type FirebaseMessagingTypes,
 } from '@react-native-firebase/messaging';
-import { t } from '#/i18n';
-import { logger } from '#/utils/environment';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
+import { t } from '#i18n';
+import { logger } from '#utils/environment';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { showLocalNotification } from '#services/notifications/localNotificationHelper';
 import { getPushTrayCopy } from '#features/notifications/pushCopy';
 import { registerTelemetryStateLoader } from '#services/telemetry/telemetryState';
 import { routeNotificationTap } from './pushNotificationRouting';

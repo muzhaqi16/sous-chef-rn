@@ -1,4 +1,4 @@
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { useUser } from '#store/useAppStore';
 
 /**

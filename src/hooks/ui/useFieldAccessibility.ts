@@ -1,4 +1,4 @@
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 interface FieldAccessibilityInput {
   /** The label shown above the field. */

@@ -4,7 +4,7 @@ import {
 } from '#components/organisms/SwipeableItem/commonActions';
 import React, { useEffect, useEffectEvent, useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -31,7 +31,7 @@ import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import {
   useTabBarSetters,
   useTabBarState,
-} from '#/context/TabBarActionsContext';
+} from '#context/TabBarActionsContext';
 import {
   useShoppingListModalActions,
   useAnyShoppingListSheetVisible,
@@ -46,8 +46,8 @@ import { FIRST_SHOP_STEP } from '#features/shoppingList/context/useFirstShopTour
 import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useStoreModeEnabled } from '#features/shoppingList/hooks/useStoreModeEnabled';
-import { Telemetry } from '#/services/telemetry';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { Telemetry } from '#services/telemetry';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { ShoppingListPermissionsProvider } from '#features/shoppingList/context/ShoppingListPermissionsContext';
 import { useDataState } from '#hooks/data/useDataState';

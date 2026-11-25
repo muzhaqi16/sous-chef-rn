@@ -1,6 +1,6 @@
 import { act } from '@testing-library/react-native';
 import { gql, type InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   inputOf,
   recordMock,
@@ -23,12 +23,12 @@ import {
   PriceSource,
   StorageState,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+} from '#graphql/generated/schemaTypes';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { onTutorialEvent } from '#domain/tutorialEvents';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { Telemetry } from '#services/telemetry';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { cacheShows } from '#/test-utils/cacheWaits';
 import { useMoveToPantry, type MoveToPantryInput } from '../useMoveToPantry';
 

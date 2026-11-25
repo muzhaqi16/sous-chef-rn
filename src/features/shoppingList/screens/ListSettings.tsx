@@ -4,15 +4,15 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { DataStateView } from '#components/organisms/DataStateView';
-import { RecurringPattern } from '#/graphql/generated/schemaTypes';
+import { RecurringPattern } from '#graphql/generated/schemaTypes';
 import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
 
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -25,7 +25,7 @@ import { RecurringSection } from '#features/shoppingList/components/listSettings
 import { ReminderSection } from '#features/shoppingList/components/listSettings/ReminderSection';
 import { TemplateSection } from '#features/shoppingList/components/listSettings/TemplateSection';
 import { SubScreen } from '#components/templates/SubScreen';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import type { ListSettingsValues } from '#features/shoppingList/hooks/listSettings/useListDetailsSection';
 import {
   EMPTY_LIST_SETTINGS,

@@ -32,7 +32,7 @@ jest.mock('#components/atoms/BottomSheetFormScrollView', () => {
   };
 });
 
-jest.mock('#/components/organisms/Header', () => {
+jest.mock('#components/organisms/Header', () => {
   const RN = require('react-native');
   const R = require('react');
   return {

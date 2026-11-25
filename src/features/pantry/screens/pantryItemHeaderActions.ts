@@ -1,5 +1,5 @@
-import type { TranslateFn } from '#/i18n';
-import { BatchStatus, ItemCondition } from '#/graphql/generated/schemaTypes';
+import type { TranslateFn } from '#i18n';
+import { BatchStatus, ItemCondition } from '#graphql/generated/schemaTypes';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { daysUntilExpiry } from '#domain/expiry';
 import { catalogTestIDs } from '#features/catalog/testIDs';

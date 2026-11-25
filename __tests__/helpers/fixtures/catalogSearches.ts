@@ -2,7 +2,7 @@
  * What the catalog pickers find, for a form test that picks a unit, a brand
  * or a store: litres and grams, Horizon, and the Corner Shop.
  */
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import {
   AutocompleteCategoriesDocument,
   SearchBrandsDocument,

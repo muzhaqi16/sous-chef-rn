@@ -1,8 +1,8 @@
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import {
   ModerationContentType,
   RecipeStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { IconName } from '#components/atoms/Icon';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';

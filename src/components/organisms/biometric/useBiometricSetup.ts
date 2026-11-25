@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { errorService } from '#/services/errorService';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { biometricService } from '#/services/biometric/deviceCredential';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { errorService } from '#services/errorService';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
+import { biometricService } from '#services/biometric/deviceCredential';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { authoritativeBiometryName } from './biometryLabel';
 
 /**

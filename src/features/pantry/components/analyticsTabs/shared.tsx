@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -10,18 +10,18 @@ import { EmptyState } from '#components/molecules/EmptyState';
 import { TrendLineChart as BaseTrendLineChart } from '#features/pantry/components/charts/TrendLineChart';
 import { TopItemsBarChart as BaseTopItemsBarChart } from '#features/pantry/components/charts/TopItemsBarChart';
 import type { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 import { isOwnKey } from '#utils/isOwnKey';
 import {
   UsagePurpose,
   UsageSource,
   WasteReason,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 // Wrapped only so `uniProps` type-checks at the call sites; no static theme
 // mapping — every theme read happens via `uniProps={t => ({ … })}`.
 export const TrendLineChart = withUnistyles(BaseTrendLineChart);
-import { formatCurrency } from '#/utils/formatters/number';
+import { formatCurrency } from '#utils/formatters/number';
 export const TopItemsBarChart = withUnistyles(BaseTopItemsBarChart);
 /**
  * An amount nobody recorded reads as an em dash, as InfoRow does. Module scope,

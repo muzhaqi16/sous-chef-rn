@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SearchBar } from '#components/molecules/SearchBar';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';

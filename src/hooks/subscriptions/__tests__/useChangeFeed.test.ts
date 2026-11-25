@@ -2,16 +2,16 @@ import { ApolloLink } from '@apollo/client';
 import { Observable } from 'rxjs';
 import { renderHook } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { FeedPokesDocument } from '#/apollo/feed/feed.generated';
-import { feedEngine } from '#/apollo/feed/feedEngine';
-import { clearPositions, holdPosition } from '#/apollo/feed/feedPositions';
-import type { FeatureFlag } from '#/config/featureFlags';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
+import { FeedPokesDocument } from '#apollo/feed/feed.generated';
+import { feedEngine } from '#apollo/feed/feedEngine';
+import { clearPositions, holdPosition } from '#apollo/feed/feedPositions';
+import type { FeatureFlag } from '#config/featureFlags';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { SyncScopeKind } from '#graphql/generated/schemaTypes';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useChangeFeed, useFeedKeeps } from '../useChangeFeed';
 
-jest.mock('#/apollo/feed/feedEngine', () => ({
+jest.mock('#apollo/feed/feedEngine', () => ({
   feedEngine: { start: jest.fn(), stop: jest.fn(), receivePoke: jest.fn() },
 }));
 jest.mock('#hooks/settings/useFeatureFlag', () => ({

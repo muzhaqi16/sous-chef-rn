@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { skipToken, useQuery } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import { errorCopy } from '#/services/errorService';
+import { useTranslation } from '#i18n';
+import { errorCopy } from '#services/errorService';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';

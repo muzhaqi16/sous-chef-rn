@@ -1,5 +1,5 @@
 import type { TelemetryTransport, LogEntry, MetricEntry } from '../types';
-import { Environment } from '#/utils/environment';
+import { Environment } from '#utils/environment';
 
 export class ConsoleTransport implements TelemetryTransport {
   private readonly enabledInDev: boolean;

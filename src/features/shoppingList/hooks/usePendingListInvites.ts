@@ -3,16 +3,16 @@ import { useQuery } from '@apollo/client/react';
 import {
   ErrorCode,
   type CollaboratorRole,
-} from '#/graphql/generated/schemaTypes';
-import { isGoneCode, type SettledFailure } from '#/apollo/utils/settleMutation';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
-import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
-import { extractNodes } from '#/utils/connectionUtils';
+} from '#graphql/generated/schemaTypes';
+import { isGoneCode, type SettledFailure } from '#apollo/utils/settleMutation';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
+import { destructiveConfirm } from '#services/destructiveConfirm';
+import { executeAsyncWithCleanup } from '#utils/finallyHelpers';
+import { extractNodes } from '#utils/connectionUtils';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { useTranslation } from '#/i18n';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { useTranslation } from '#i18n';
 import { GetPendingListInvitesDocument } from './usePendingListInvites.generated';
 import { useAnswerListInvite } from './useAnswerListInvite';
 

@@ -3,16 +3,16 @@
  * result with telemetry attached, rather than showing anything itself.
  */
 
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { logger } from '#/utils/environment';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { serializeError } from '#/utils/errorSerialization';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
+import { logger } from '#utils/environment';
+import { isNetworkError } from '#utils/isNetworkError';
+import { serializeError } from '#utils/errorSerialization';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { isOwnKey } from '#utils/isOwnKey';
 import {
   GraphQLNetworkError,
   refusalEnvelopeOf,
-} from '#/utils/errors/graphqlErrors';
+} from '#utils/errors/graphqlErrors';
 import {
   CombinedGraphQLErrors,
   CombinedProtocolErrors,
@@ -22,14 +22,14 @@ import {
 import {
   isQueryComplexityError,
   describeQueryComplexity,
-} from '#/utils/errors/queryComplexity';
+} from '#utils/errors/queryComplexity';
 import {
   isVersionConflictError,
   getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
-import { Telemetry } from '#/services/telemetry';
-import { t, type KeyUnder } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+} from '#utils/errors/versionConflict';
+import { Telemetry } from '#services/telemetry';
+import { t, type KeyUnder } from '#i18n';
+import type { Translate } from '#i18n/types';
 
 export interface ErrorResult<T = unknown> {
   success: boolean;

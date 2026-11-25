@@ -7,7 +7,7 @@ import {
   userEvent,
 } from '@testing-library/react-native';
 import { EditableCounter } from '../EditableCounter';
-import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+import { getDeviceDecimalSeparator } from '#utils/deviceLocale';
 
 jest.mock('@react-native-vector-icons/ionicons', () => ({
   __esModule: true,
@@ -15,8 +15,8 @@ jest.mock('@react-native-vector-icons/ionicons', () => ({
   Ionicons: 'Icon',
 }));
 
-jest.mock('#/utils/deviceLocale', () => ({
-  ...jest.requireActual('#/utils/deviceLocale'),
+jest.mock('#utils/deviceLocale', () => ({
+  ...jest.requireActual('#utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
 

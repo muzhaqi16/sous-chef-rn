@@ -1,13 +1,13 @@
-jest.mock('#/utils/errorSerialization', () => ({
+jest.mock('#utils/errorSerialization', () => ({
   serializeError: jest.fn((e: unknown) => ({ message: String(e) })),
 }));
 
-jest.mock('#/utils/errors/queryComplexity', () => ({
+jest.mock('#utils/errors/queryComplexity', () => ({
   isQueryComplexityError: jest.fn(),
   describeQueryComplexity: jest.fn(),
 }));
 
-jest.mock('#/utils/errors/versionConflict', () => ({
+jest.mock('#utils/errors/versionConflict', () => ({
   isVersionConflictError: jest.fn(),
   getVersionConflictMessage: jest.fn(),
 }));
@@ -20,25 +20,25 @@ jest.mock('@apollo/client/errors', () => ({
 }));
 
 import { errorService, localizedErrorMessage } from '../errorService';
-import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
-import { Telemetry } from '#/services/telemetry';
-import { logger } from '#/utils/environment';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { GraphQLNetworkError } from '#utils/errors/graphqlErrors';
+import { Telemetry } from '#services/telemetry';
+import { logger } from '#utils/environment';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
 import {
   isQueryComplexityError,
   describeQueryComplexity,
-} from '#/utils/errors/queryComplexity';
+} from '#utils/errors/queryComplexity';
 import {
   isVersionConflictError,
   getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+} from '#utils/errors/versionConflict';
 import {
   CombinedGraphQLErrors,
   ServerError,
   ServerParseError,
   CombinedProtocolErrors,
 } from '@apollo/client/errors';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { CreateItemDocument } from '#operations/item/item.generated';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { UpdateItemDocument } from '#features/catalog/hooks/useSuggestItemEdit.generated';

@@ -1,17 +1,17 @@
 import React, { useState, useRef } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   usePantryItemSuggestions,
   PANTRY_SUGGESTIONS_LIMIT,
   type PantryItemSuggestion,
 } from '#features/pantry/hooks/usePantryItemSuggestions';
 import { useAddToPantry } from '#features/pantry/hooks/mutations/useAddToPantry';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import {
   PantrySuggestionSource,
   SuggestionSurface,
   type ItemSuggestion,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';

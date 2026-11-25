@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState } from '#graphql/generated/schemaTypes';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import {
@@ -12,7 +12,7 @@ import { useHybridPantrySearch } from '../useHybridPantrySearch';
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({ useToday: () => '2026-03-10' }));
 
-jest.mock('#/utils/searchUtils', () => ({
+jest.mock('#utils/searchUtils', () => ({
   pantryItemSearch: jest.fn(
     (item: { itemName?: string | null }, query: string) =>
       (item.itemName ?? '').toLowerCase().includes(query.toLowerCase()),

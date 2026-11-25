@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useStockCheck } from '../hooks/useStockCheck';

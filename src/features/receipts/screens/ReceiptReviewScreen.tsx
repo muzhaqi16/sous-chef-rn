@@ -1,11 +1,11 @@
 import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { ItemList } from '#components/organisms/ItemList';
 import { Button } from '#components/molecules/Button';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useReceiptFlowExits } from './receiptFlowExits';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { ReceiptLineSheet } from '../components/ReceiptLineSheet';
 import { ReceiptReviewHeader } from '../components/ReceiptReviewHeader';
 import { useReceiptReviewItems } from '../components/useReceiptReviewItems';

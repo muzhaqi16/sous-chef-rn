@@ -1,7 +1,7 @@
-import type { ApproximateLocation as ApproximateLocationPort } from '#/platform/ports';
-import { PermissionService } from '#/services/permissions/PermissionService';
-import { Telemetry } from '#/services/telemetry';
-import { isRecord } from '#/utils/isRecord';
+import type { ApproximateLocation as ApproximateLocationPort } from '#platform/ports';
+import { PermissionService } from '#services/permissions/PermissionService';
+import { Telemetry } from '#services/telemetry';
+import { isRecord } from '#utils/isRecord';
 import { nativeMethod } from './nativeModule';
 
 const MODULE = 'ApproximateLocationModule';

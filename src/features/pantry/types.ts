@@ -4,10 +4,10 @@ import type {
   StorageState,
   UnitType,
   UsagePurpose,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { OfferedAcquisitionMethod } from '#features/pantry/utils/itemEnumLabels';
 import type { MeasureShape } from '#domain/measure';
-import type { UnitLabelSource } from '#/utils/formatQuantity';
+import type { UnitLabelSource } from '#utils/formatQuantity';
 
 /** A unit as `UnitPicker` renders it; the hooks that rank units produce this shape. */
 export interface PickableUnit {

@@ -1,14 +1,14 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
 import {
   discardRefusedChange,
   retryRefusedChange,
-} from '#/apollo/offlineQueue/refusedChanges';
-import { QueueStatus, type QueuedMutation } from '#/apollo/offlineQueue/types';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { storage } from '#/store/deviceStorage';
+} from '#apollo/offlineQueue/refusedChanges';
+import { QueueStatus, type QueuedMutation } from '#apollo/offlineQueue/types';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { storage } from '#store/deviceStorage';
 import {
   makeQueuedMutation,
   queuedMutationFor,
@@ -17,8 +17,8 @@ import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.genera
 import { profileTestIDs } from '#features/profile/testIDs';
 import ChangesNotSavedScreen from '../ChangesNotSavedScreen';
 
-jest.mock('#/apollo/offlineQueue/refusedChanges', () => ({
-  ...jest.requireActual('#/apollo/offlineQueue/refusedChanges'),
+jest.mock('#apollo/offlineQueue/refusedChanges', () => ({
+  ...jest.requireActual('#apollo/offlineQueue/refusedChanges'),
   retryRefusedChange: jest.fn(),
   discardRefusedChange: jest.fn(),
 }));

@@ -1,27 +1,27 @@
 import { DataStateView } from '#components/organisms/DataStateView';
 import React, { useState, useEffect } from 'react';
-import { getResolvedLanguage, useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { logger } from '#/utils/environment';
+import { getResolvedLanguage, useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { logger } from '#utils/environment';
 import { useUser, useNavigationUtils } from '#store/useAppStore';
-import { authService } from '#/services/authService';
-import { biometricService } from '#/services/biometric/deviceCredential';
+import { authService } from '#services/authService';
+import { biometricService } from '#services/biometric/deviceCredential';
 import type { SettingItem } from '#components/organisms/SettingRow';
 
 import {
   PROFILE_SETTINGS_CONFIG,
   type SettingItemConfig,
-} from '#/config/settingsConfig';
-import { SUPPORTED_LANGUAGES } from '#/i18n/config';
+} from '#config/settingsConfig';
+import { SUPPORTED_LANGUAGES } from '#i18n/config';
 import { BiometricSetupModal } from '#features/profile/components/BiometricSetupModal';
 import { authoritativeBiometryName } from '#components/organisms/biometric/biometryLabel';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { useAuthPreferences } from '#hooks/auth/useAuthPreferences';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useCurrencyPreference } from '#features/profile/hooks/useCurrencyPreference';
 import { useLanguagePreference } from '#features/profile/hooks/useLanguagePreference';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 /**
  * Builds the profile screen's setting rows. Takes no profile — every row here

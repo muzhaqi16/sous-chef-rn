@@ -1,5 +1,5 @@
 import type { ApolloCache } from '@apollo/client';
-import { rootFieldOf } from '#/apollo/utils/documentOperation';
+import { rootFieldOf } from '#apollo/utils/documentOperation';
 import {
   ConsumptionUnitsForPantryItemDocument,
   RestockUnitsForPantryItemDocument,

@@ -3,8 +3,8 @@ import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { JoinShoppingListByShareCodeDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
 import { JoinByShareCodeScreen } from '../JoinByShareCodeScreen';
 
 jest.mock('#components/organisms/Header', () => ({ Header: () => null }));

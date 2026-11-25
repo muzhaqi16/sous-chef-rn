@@ -1,6 +1,6 @@
 'use no memo';
 
-jest.mock('#/services/permissions/PermissionService', () => ({
+jest.mock('#services/permissions/PermissionService', () => ({
   PermissionService: {
     check: jest.fn().mockResolvedValue('granted'),
     request: jest.fn().mockResolvedValue('granted'),
@@ -14,7 +14,7 @@ import { usePermission } from '../usePermission';
 import {
   PermissionService,
   type AppPermission,
-} from '#/services/permissions/PermissionService';
+} from '#services/permissions/PermissionService';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 
 /**

@@ -3,7 +3,7 @@ import { IconButton } from '#components/atoms/IconButton';
 import { RowCard } from '#components/atoms/RowCard';
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
@@ -15,7 +15,7 @@ import { ListItem } from '#components/molecules/ListItem';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
 import { MealPlanItemCard_ItemFragmentDoc } from './MealPlanItemCard.generated';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 
 interface MealPlanItemCardProps {
   item: FragmentType<typeof MealPlanItemCard_ItemFragmentDoc>;

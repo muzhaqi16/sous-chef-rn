@@ -1,4 +1,4 @@
-import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
+import type { CreatePantryItemInput } from '#graphql/generated/schemaTypes';
 import { localQuantity } from '#domain/stockAmount';
 import type { LocalPantryItem } from './writeLocalPantryItem';
 

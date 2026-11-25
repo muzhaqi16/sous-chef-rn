@@ -3,21 +3,21 @@ import { View } from 'react-native';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { Sheet } from '#components/templates/Sheet';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { FractionInput } from '#components/molecules/FractionInput';
-import { formatRelativeToNow } from '#/utils/formatters/date';
+import { formatRelativeToNow } from '#utils/formatters/date';
 import {
   StockCheckAnswer,
   StockConfidence,
   StockDoubtReason,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useOpening } from '#hooks/ui/useOpening';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import { WASTE_REASON_OPTIONS } from '#features/pantry/utils/wasteReasons';
 import { CollapsibleChipPicker } from './CollapsibleChipPicker';
 import { useStockCheck } from '../hooks/useStockCheck';

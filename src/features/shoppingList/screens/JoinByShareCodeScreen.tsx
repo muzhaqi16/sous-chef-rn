@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Icon } from '#components/atoms/Icon';
@@ -11,8 +11,8 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useJoinLinkAuthGate } from '#hooks/deepLink/useJoinLinkAuthGate';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useStore } from '#store';
-import { toastService } from '#/services/toastService';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { toastService } from '#services/toastService';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 import { SubScreen } from '#components/templates/SubScreen';
 import { CodeEntryForm } from '#components/organisms/CodeEntryForm';

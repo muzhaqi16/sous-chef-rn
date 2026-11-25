@@ -1,6 +1,6 @@
 import { array, mixed, number, object, string, type ObjectSchema } from 'yup';
-import type { TranslationKey } from '#/i18n';
-import { lazyMessage } from '#/utils/validation/common';
+import type { TranslationKey } from '#i18n';
+import { lazyMessage } from '#utils/validation/common';
 import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 import {
   RecipeStatus,
@@ -10,7 +10,7 @@ import {
   type Diet,
   type HealthGoal,
   type Intolerance,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type {
   CapturedFrom,
   IngredientFormState,

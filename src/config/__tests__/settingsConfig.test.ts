@@ -2,7 +2,7 @@ import {
   PERSONAL_INFO_CONFIG,
   PROFILE_SETTINGS_CONFIG,
 } from '../settingsConfig';
-import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import { ProfileVisibility } from '#graphql/generated/schemaTypes';
 
 describe('settingsConfig', () => {
   describe('PERSONAL_INFO_CONFIG', () => {

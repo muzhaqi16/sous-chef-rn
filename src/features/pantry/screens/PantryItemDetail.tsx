@@ -1,9 +1,9 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useEffect, useState } from 'react';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { PantryItemHeldDetail } from '#features/pantry/components/PantryItemHeldDetail';
 import { useDataState } from '#hooks/data/useDataState';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { usePantryItemDetailData } from './usePantryItemDetailData';
 import { pantryItemHeaderActions } from './pantryItemHeaderActions';
 import {
@@ -20,7 +20,7 @@ import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail
 import { useReportPhotoHeaderAction } from '#features/catalog/ui/useReportPhotoHeaderAction';
 import { entryGallery } from '#features/catalog/ui/entryGallery';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
 import { useToday } from '#hooks/app/useToday';

@@ -12,7 +12,7 @@ import type {
   IconSizeName,
   IconTone,
 } from '#components/atoms/Icon';
-import { sizes } from '#/theme/foundations/sizes';
+import { sizes } from '#theme/foundations/sizes';
 
 export type ActionVariant =
   | 'default'

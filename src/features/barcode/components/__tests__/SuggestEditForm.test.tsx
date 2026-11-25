@@ -15,7 +15,7 @@ import {
   ItemType,
   NetWeightKind,
   StorageState,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 // AddItemForm drags in the whole form stack (react-hook-form, autocompletes,

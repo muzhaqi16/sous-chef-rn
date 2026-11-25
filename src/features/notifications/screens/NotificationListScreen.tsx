@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { NotificationItem } from '#features/notifications/components/NotificationItem';
@@ -14,7 +14,7 @@ import { UrgentNotificationsBanner } from '#features/notifications/components/Ur
 import { useNotifications } from '#features/notifications/hooks/useNotifications';
 import { useNotificationHistory } from '#features/notifications/hooks/useNotificationHistory';
 import type { DisplayNotification as NotificationType } from '#features/notifications/utils/toDisplayNotification';
-import type { NotificationCategory } from '#/graphql/generated/schemaTypes';
+import type { NotificationCategory } from '#graphql/generated/schemaTypes';
 import { notificationDestination } from '#services/push/notificationDestination';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';

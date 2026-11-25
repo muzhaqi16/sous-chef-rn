@@ -7,16 +7,16 @@ import {
   MembershipRole,
   MembershipStatus,
   ShareLinkTargetType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderWithApollo,
   seedCache,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { kitTestIDs } from '#components/testIDs';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { operationLog } from '#/test-utils/operationLog';
 import {
@@ -289,7 +289,7 @@ describe('JoinHomeByCodeScreen', () => {
   });
 
   it('joins the home and navigates to the pantry on confirm', async () => {
-    const { toastService } = require('#/services/toastService');
+    const { toastService } = require('#services/toastService');
     const user = userEvent.setup();
     const tree = renderWithApollo(
       <JoinHomeByCodeScreen route={makeRoute('ABC123')} />,
@@ -396,7 +396,7 @@ describe('typing a code', () => {
   });
 
   it('asks for a code on the field when Find is pressed without one', async () => {
-    const { toastService } = require('#/services/toastService');
+    const { toastService } = require('#services/toastService');
     const tree = renderWithApollo(
       <JoinHomeByCodeScreen route={makeRoute()} />,
       { operationMocks: [] },

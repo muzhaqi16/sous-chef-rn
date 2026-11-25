@@ -8,8 +8,8 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import {
   ConfirmProfileImageUploadDocument,
   CreateImageUploadUrlDocument,

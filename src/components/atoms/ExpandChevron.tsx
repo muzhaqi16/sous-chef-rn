@@ -5,7 +5,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Icon, type IconTone, type IconSizeName } from '#components/atoms/Icon';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 const POINTS_DOWN: ViewStyle = { transform: [{ rotate: '0deg' }] };
 const POINTS_UP: ViewStyle = { transform: [{ rotate: '180deg' }] };

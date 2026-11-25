@@ -8,9 +8,9 @@ import {
 import { operationLog } from '#/test-utils/operationLog';
 import { withDeadline } from '#/test-utils/cacheWaits';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import { kitTestIDs } from '#components/testIDs';
 import {
   CollaboratorRole,
@@ -18,7 +18,7 @@ import {
   ErrorCode,
   InviteStatus,
   MembershipRole,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { formatRoleDisplay } from '#features/shoppingList/utils/ownershipHelpers';
 import {
   AcceptShoppingListInviteDocument,

@@ -2,9 +2,9 @@
  * A shopping-list replay the server answered with a row other than the one
  * minted: the writes queued behind it move onto that row. The rest is `commit`.
  */
-import { extractMutationPayload } from '#/utils/errors/mutationPayload';
-import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
-import { isRecord } from '#/utils/isRecord';
+import { extractMutationPayload } from '#utils/errors/mutationPayload';
+import type { ReplayReconcilerTable } from '#apollo/offlineQueue/types';
+import { isRecord } from '#utils/isRecord';
 
 type Reconciler = ReplayReconcilerTable[string];
 

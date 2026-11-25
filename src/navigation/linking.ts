@@ -1,4 +1,4 @@
-import { appConfig } from '#/config/appConfig';
+import { appConfig } from '#config/appConfig';
 
 /**
  * The root navigator's deep-link options. `initialRouteName` puts `Home` beneath

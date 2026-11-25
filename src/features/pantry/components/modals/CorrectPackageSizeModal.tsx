@@ -3,19 +3,19 @@ import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useFragment } from '@apollo/client/react';
 import { FormInput } from '#components/atoms/FormInput';
 import { PackageContentsFields } from '#features/pantry/ui/PackageContentsFields';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { Text } from '#components/atoms/Text';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import {
   CorrectPackageSizeModal_BatchFragmentDoc,
   CorrectPackageSizeModal_PantryItemFragmentDoc,
 } from './CorrectPackageSizeModal.generated';
-import { formatNumberForInput } from '#/utils/formatters/number';
-import { formatNetWeightDisplay, unitLabel } from '#/utils/formatQuantity';
+import { formatNumberForInput } from '#utils/formatters/number';
+import { formatNetWeightDisplay, unitLabel } from '#utils/formatQuantity';
 import { Sheet } from '#components/templates/Sheet';
 import {
   correctWeightSchema,
@@ -23,7 +23,7 @@ import {
   parseWeight,
   type CorrectWeightFormValues,
 } from './correctWeightFormConfig';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import type { PackageSizeCorrectionInput } from '#features/pantry/types';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { currentReading, formatReading } from '#domain/measure';

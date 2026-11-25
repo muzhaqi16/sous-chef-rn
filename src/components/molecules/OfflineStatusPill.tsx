@@ -4,12 +4,12 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
 import { useOfflineStatus } from '#hooks/ui/useOfflineStatus';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { Text } from '#components/atoms/Text';
 import { Icon, type IconSizeName } from '#components/atoms/Icon';
 import { kitTestIDs } from '#components/testIDs';
-import { hitSlop } from '#/theme/foundations/sizes';
-import { motion } from '#/theme/motion';
+import { hitSlop } from '#theme/foundations/sizes';
+import { motion } from '#theme/motion';
 
 interface OfflineStatusPillProps {
   size?: IconSizeName;

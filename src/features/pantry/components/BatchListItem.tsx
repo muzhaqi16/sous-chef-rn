@@ -1,14 +1,14 @@
 import React from 'react';
 import { IconButton } from '#components/atoms/IconButton';
-import { useMoney } from '#/domain/money';
-import { useTranslation } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import { useMoney } from '#domain/money';
+import { useTranslation } from '#i18n';
+import type { Translate } from '#i18n/types';
 import { daysUntilExpiry, expiryLabel, isExpiryEstimate } from '#domain/expiry';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
-import { BatchStatus, UnitType } from '#/graphql/generated/schemaTypes';
+import { BatchStatus, UnitType } from '#graphql/generated/schemaTypes';
 import {
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
@@ -16,7 +16,7 @@ import {
 import {
   formatQuantityForDisplay,
   formatQuantityWithUnit,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import { shownStock } from '#features/pantry/utils/stockDisplay';
 import { currentReading, formatReading } from '#domain/measure';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
@@ -24,7 +24,7 @@ import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEna
 import { BatchListItem_PantryItemFragmentDoc } from './BatchListItem.generated';
 import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
-import { formatMonthDay } from '#/utils/formatters/date';
+import { formatMonthDay } from '#utils/formatters/date';
 import { useToday } from '#hooks/app/useToday';
 import { pantryTestIDs } from '../testIDs';
 

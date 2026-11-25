@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { parseISO } from 'date-fns';
 import type { BarAction } from '#components/molecules/BarActions';
 import { MealPlanEmptyState } from '#features/mealPlan/components/MealPlanEmptyState';
@@ -14,7 +14,7 @@ import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
-import { useTabBarSetters } from '#/context/TabBarActionsContext';
+import { useTabBarSetters } from '#context/TabBarActionsContext';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useActiveSheet } from '#hooks/ui/useActiveSheet';
 import {
@@ -36,9 +36,9 @@ import { useMealPlanPermissions } from '#features/mealPlan/hooks/useMealPlanPerm
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { MealPlanSkeleton } from '#features/mealPlan/components/skeletons/MealPlanSkeleton';
 import { useAppStore } from '#store/useAppStore';
-import type { MealType } from '#/graphql/generated/schemaTypes';
+import type { MealType } from '#graphql/generated/schemaTypes';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 

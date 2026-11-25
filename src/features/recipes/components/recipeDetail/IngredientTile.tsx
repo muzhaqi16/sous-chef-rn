@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useMoney } from '#/domain/money';
-import { useTranslation, type TranslateFn } from '#/i18n';
+import { useMoney } from '#domain/money';
+import { useTranslation, type TranslateFn } from '#i18n';
 import { Badge } from '#components/atoms/Badge';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Card } from '#components/atoms/Card';
@@ -18,9 +18,9 @@ import {
   type HouseholdAlert,
 } from '#domain/dietary';
 import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
-import { formatQuantityForDisplay, unitLabel } from '#/utils/formatQuantity';
-import { radii } from '#/theme/foundations/radii';
-import { type } from '#/theme/foundations/type';
+import { formatQuantityForDisplay, unitLabel } from '#utils/formatQuantity';
+import { radii } from '#theme/foundations/radii';
+import { type } from '#theme/foundations/type';
 
 const IMAGE_SIZE = 64;
 

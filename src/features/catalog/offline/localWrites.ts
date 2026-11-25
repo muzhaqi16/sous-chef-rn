@@ -6,14 +6,14 @@ import type { ApolloCache, OperationVariables } from '@apollo/client';
 import {
   rowBaseline,
   type RowFields,
-} from '#/apollo/pendingWrites/conflictRead';
-import { inputIdOf } from '#/apollo/pendingWrites/inputId';
-import type { ConflictRead, LocalWrite } from '#/apollo/pendingWrites/types';
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
-import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
+} from '#apollo/pendingWrites/conflictRead';
+import { inputIdOf } from '#apollo/pendingWrites/inputId';
+import type { ConflictRead, LocalWrite } from '#apollo/pendingWrites/types';
+import { writeEntityFields } from '#apollo/utils/localFirstFields';
+import { isHeld } from '#apollo/utils/writeLocalEntity';
+import { UsualStoreSource } from '#graphql/generated/schemaTypes';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
 import { storeChoiceKey, type StoreChoice } from '#domain/stores';
 import {
   writeLocalStore,

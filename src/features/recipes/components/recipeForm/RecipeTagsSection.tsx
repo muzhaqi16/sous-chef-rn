@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { MultiSelectChipSheet } from '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet';
 import { Text } from '#components/atoms/Text';
-import { Diet, HealthGoal, Intolerance } from '#/graphql/generated/schemaTypes';
+import { Diet, HealthGoal, Intolerance } from '#graphql/generated/schemaTypes';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface RecipeTagsSectionProps {

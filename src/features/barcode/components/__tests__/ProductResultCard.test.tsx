@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 import { ProductResultCard } from '../ProductResultCard';
 import type { ReadingSystem } from '#domain/measure';
@@ -9,7 +9,7 @@ import {
   NetWeightKind,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: ({ uri }: { uri: string }) => {

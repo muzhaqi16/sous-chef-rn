@@ -3,7 +3,7 @@ import {
   locationFilterToQueryFilter,
   sortOptionToOrderBy,
 } from '../pantryFilters';
-import { StorageState, SortOrder } from '#/graphql/generated/schemaTypes';
+import { StorageState, SortOrder } from '#graphql/generated/schemaTypes';
 import {
   PantrySortOption,
   PantrySortDirection,

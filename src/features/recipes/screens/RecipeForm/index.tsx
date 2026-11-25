@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormScreen } from '#components/templates/FormScreen';
 import { SubScreen } from '#components/templates/SubScreen';
@@ -38,11 +38,11 @@ import type {
   StepFormState,
 } from '../../types';
 import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
-import { localizedErrorMessage } from '#/services/errorService';
+import { localizedErrorMessage } from '#services/errorService';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { reportValidationErrors } from '#/utils/validation/common';
-import { presentFailure } from '#/utils/errors/presentFailure';
+import { reportValidationErrors } from '#utils/validation/common';
+import { presentFailure } from '#utils/errors/presentFailure';
 
 /** The fields whose sections render their own validation message. */
 const FIELDS_WITH_MESSAGES: ReadonlyArray<keyof RecipeFormState> = [

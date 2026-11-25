@@ -1,13 +1,13 @@
 'use no memo';
 
 import type { OperationVariables } from '@apollo/client';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { ApolloClient, ApolloLink, InMemoryCache } from '@apollo/client';
 import { print } from 'graphql';
 import { sha256 } from 'js-sha256';
 import { Observable } from 'rxjs';
 import { persistedQueryLink } from '../persistedQueryLink';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';

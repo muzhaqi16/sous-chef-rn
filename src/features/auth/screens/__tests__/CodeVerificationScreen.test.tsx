@@ -18,13 +18,13 @@ import React from 'react';
 import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { useStore } from '#store';
-import { alertService } from '#/services/alertService';
-import { authService } from '#/services/authService';
-import { toastService } from '#/services/toastService';
+import { alertService } from '#services/alertService';
+import { authService } from '#services/authService';
+import { toastService } from '#services/toastService';
 import { kitTestIDs } from '#components/testIDs';
-import { ErrorCode, ErrorDisposition } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, ErrorDisposition } from '#graphql/generated/schemaTypes';
 import {
   ResendVerificationEmailDocument,
   VerifyEmailDocument,

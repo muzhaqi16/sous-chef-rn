@@ -8,7 +8,7 @@ import {
 } from '@testing-library/react-native';
 import { QuantityEditSheet } from '../QuantityEditSheet';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+import { getDeviceDecimalSeparator } from '#utils/deviceLocale';
 
 type QuantityEditSheetProps = React.ComponentProps<typeof QuantityEditSheet>;
 type QuantityEditSheetItem = NonNullable<QuantityEditSheetProps['item']>;
@@ -40,8 +40,8 @@ jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: ChildrenProps) => children,
 }));
 
-jest.mock('#/utils/deviceLocale', () => ({
-  ...jest.requireActual('#/utils/deviceLocale'),
+jest.mock('#utils/deviceLocale', () => ({
+  ...jest.requireActual('#utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
 

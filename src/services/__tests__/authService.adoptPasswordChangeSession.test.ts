@@ -1,13 +1,13 @@
 import { useStore } from '#store';
-import { authService } from '#/services/authService';
-import { reconnectWebSocket } from '#/apollo/links/wsLink';
-import { registerSessionHost } from '#/services/auth/sessionHost';
+import { authService } from '#services/authService';
+import { reconnectWebSocket } from '#apollo/links/wsLink';
+import { registerSessionHost } from '#services/auth/sessionHost';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
 
 const mockRenewStoredSignIn = jest.fn();
 
-jest.mock('#/apollo/links/wsLink', () => ({
-  ...jest.requireActual('#/apollo/links/wsLink'),
+jest.mock('#apollo/links/wsLink', () => ({
+  ...jest.requireActual('#apollo/links/wsLink'),
   reconnectWebSocket: jest.fn(),
 }));
 

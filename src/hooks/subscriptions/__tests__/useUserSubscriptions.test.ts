@@ -1,22 +1,22 @@
 'use no memo';
 
 import { captureOnData } from '#/test-utils/subscriptionCapture';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import type { SubscriptionConfig } from '#/services/subscriptions/types';
+import type { SubscriptionConfig } from '#services/subscriptions/types';
 import {
   ModerationReasonCode,
   UserSubtype,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
-import { getDeviceId } from '#/services/auth/deviceId';
-import { onWorkSettled } from '#/services/subscriptions/settledWork';
+import { getDeviceId } from '#services/auth/deviceId';
+import { onWorkSettled } from '#services/subscriptions/settledWork';
 import { useUserSubscriptions } from '../useUserSubscriptions';
 import { useApolloClient } from '@apollo/client/react';
 import { GetHomesDocument } from '#operations/home/home.generated';
 
 const mockRegister = jest.fn().mockReturnValue({});
-jest.mock('#/services/subscriptions/SubscriptionService', () => ({
+jest.mock('#services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     register: (config: SubscriptionConfig) => mockRegister(config),
   },
@@ -25,9 +25,9 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 const mockToastError = jest.mocked(toastService.error);
 const mockToastSuccess = jest.mocked(toastService.success);
 
-jest.mock('#/services/auth/deviceId');
+jest.mock('#services/auth/deviceId');
 
-jest.mock('#/services/authService', () => ({
+jest.mock('#services/authService', () => ({
   authService: { logout: jest.fn(() => Promise.resolve()) },
 }));
 

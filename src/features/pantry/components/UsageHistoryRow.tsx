@@ -1,13 +1,13 @@
 import React from 'react';
-import { isTranslationKey, useTranslation } from '#/i18n';
-import type { TranslationKey } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import { isTranslationKey, useTranslation } from '#i18n';
+import type { TranslationKey } from '#i18n';
+import type { Translate } from '#i18n/types';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { AdjustmentKind, UsagePurpose } from '#/graphql/generated/schemaTypes';
+import { AdjustmentKind, UsagePurpose } from '#graphql/generated/schemaTypes';
 import { formatDate } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
-import { formatQuantityWithUnit } from '#/utils/formatQuantity';
+import { formatQuantityWithUnit } from '#utils/formatQuantity';
 import { useMoney } from '#domain/money';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import type { UsageRecord } from '#features/pantry/types';

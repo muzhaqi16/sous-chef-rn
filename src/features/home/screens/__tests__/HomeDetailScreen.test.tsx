@@ -11,13 +11,13 @@ import {
 import { operationLog } from '#/test-utils/operationLog';
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import {
   ErrorCode,
   ErrorDisposition,
   MembershipRole,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   DeleteHomeDocument,
   EnableHomeJoinLinkDocument,

@@ -1,4 +1,4 @@
-import { isTranslationKey, t } from '#/i18n';
+import { isTranslationKey, t } from '#i18n';
 
 /** The copy for a write refused because a record it names does not exist. */
 export function getNotFoundMessage(resource?: string | null): string {

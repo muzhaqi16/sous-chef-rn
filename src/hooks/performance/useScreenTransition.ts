@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import performance from 'react-native-performance';
-import { Telemetry } from '#/services/telemetry';
-import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
-import { usePerformanceStore } from '#/services/performance/performanceStore';
-import { logger } from '#/utils/environment';
+import { Telemetry } from '#services/telemetry';
+import { DEFAULT_PERFORMANCE_CONFIG } from '#services/performance/types';
+import { usePerformanceStore } from '#services/performance/performanceStore';
+import { logger } from '#utils/environment';
 
 /** Duration between two marks, or null if they were cleared — abort on null. */
 function safeMeasureOrAbort(

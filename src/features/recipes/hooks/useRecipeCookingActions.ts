@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   plannedMealInput,
@@ -8,18 +8,18 @@ import {
   type CookContext,
   type CookEntry,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
-import { toastService } from '#/services/toastService';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { toastService } from '#services/toastService';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { CookRecipeInputs } from '#features/recipes/offline/localWrites';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
-import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { logger } from '#/utils/environment';
+import { askForReviewAfterSuccess } from '#domain/reviewPrompt';
+import { generateEntityId } from '#utils/generateEntityId';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { logger } from '#utils/environment';
 import { useSelectedPantryId } from '#store/useAppStore';
-import { cappedNames } from '#/utils/cappedNames';
+import { cappedNames } from '#utils/cappedNames';
 import type { CookConfirmOutcome } from '#features/recipes/types';
 
 interface UseRecipeCookingActionsOptions extends CookContext {

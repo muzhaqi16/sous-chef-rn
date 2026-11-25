@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { useRecipeCapture } from '#features/recipes/hooks/useRecipeCapture';
 import { CreateRecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';

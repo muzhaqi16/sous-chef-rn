@@ -3,9 +3,9 @@ import { queueStore } from '../queueStore';
 import { useStore } from '#store';
 import { whileSessionEnds } from '#store/sessionEnding';
 import { proactiveTokenRefresh } from '../../links/refreshToken';
-import { SessionError } from '#/utils/errors/sessionError';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { makeCache } from '#/apollo/cache';
+import { SessionError } from '#utils/errors/sessionError';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
 import {
   queuedMutationFor,
   makeQueuedMutation,
@@ -28,7 +28,7 @@ jest.mock('#store', () => ({
 }));
 
 const mockClient = { mutate: jest.fn(), cache: makeCache() };
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),

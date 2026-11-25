@@ -7,7 +7,7 @@ import {
   type UseFormReturn,
 } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Card } from '#components/atoms/Card';
 import { FieldRow } from '#components/atoms/FieldRow';
@@ -22,8 +22,8 @@ import {
   formatQuantityWithUnit,
   type QuantityDisplayOptions,
 } from '#utils/formatQuantity';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 import type { ScanAmountFormValues } from './scanAmountFormConfig';
 
 interface ScanAmountSectionProps {

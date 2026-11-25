@@ -1,8 +1,8 @@
 import { useRef, useEffect, useEffectEvent, useState } from 'react';
 import { useApolloClient } from '@apollo/client/react';
-import { errorService } from '#/services/errorService';
-import { isDeadCursorError } from '#/utils/errors/graphqlErrors';
-import { logger } from '#/utils/environment';
+import { errorService } from '#services/errorService';
+import { isDeadCursorError } from '#utils/errors/graphqlErrors';
+import { logger } from '#utils/environment';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { fetchPage, type PagedQuery } from '#hooks/utils/fetchPage';
 import type { PaginationState } from '#hooks/utils/types';

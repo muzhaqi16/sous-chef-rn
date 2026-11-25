@@ -1,10 +1,10 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import type { UnitType } from '#graphql/generated/schemaTypes';
 import { FieldRow } from '#components/atoms/FieldRow';
 import { FormInput } from '#components/atoms/FormInput';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
-import { localizeNumericHint } from '#/utils/formatters/number';
+import { localizeNumericHint } from '#utils/formatters/number';
 
 interface PackageContentsFieldsProps {
   size: string;

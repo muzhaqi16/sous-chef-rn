@@ -5,7 +5,7 @@
  */
 
 import { useApolloClient } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   UseRecipeFormWrites_RecipeFragmentDoc,
@@ -14,10 +14,10 @@ import {
 import type { CreateRecipeInputs } from '#features/recipes/offline/localWrites';
 import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
 import { forkRecipe as buildFork } from '#features/recipes/utils/forkRecipe';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { generateEntityId } from '#/utils/generateEntityId';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { generateEntityId } from '#utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 
 export function useForkRecipe() {

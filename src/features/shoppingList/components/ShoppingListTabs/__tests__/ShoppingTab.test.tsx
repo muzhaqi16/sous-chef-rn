@@ -6,7 +6,7 @@ const mockSetAddMenuOpen = jest.fn();
 const mockOpenAddItemSheet = jest.fn();
 let mockSearchQuery = '';
 
-jest.mock('#/context/TabBarActionsContext', () => ({
+jest.mock('#context/TabBarActionsContext', () => ({
   useTabBarSetters: () => ({ setAddMenuOpen: mockSetAddMenuOpen }),
 }));
 

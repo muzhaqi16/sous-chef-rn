@@ -1,5 +1,5 @@
 import { useApolloClient } from '@apollo/client/react';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type { MockDataFor, MockPart } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,

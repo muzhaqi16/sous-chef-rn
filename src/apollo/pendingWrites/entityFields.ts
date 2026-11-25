@@ -1,5 +1,5 @@
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
+import { writeEntityFields } from '#apollo/utils/localFirstFields';
+import { isHeld } from '#apollo/utils/writeLocalEntity';
 import type { RowFields } from './conflictRead';
 import type { LocalWrite } from './types';
 

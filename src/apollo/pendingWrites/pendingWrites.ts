@@ -1,19 +1,19 @@
 import type { ApolloCache, OperationVariables } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
-import { orderAnswer } from '#/apollo/links/answerOrderingLink';
+import { orderAnswer } from '#apollo/links/answerOrderingLink';
 import {
   dependencyIdsOf,
   inputOnSurvivingRow,
   queuedSubject,
-} from '#/apollo/offlineQueue/queuedSubject';
-import type { RowAdoption } from '#/apollo/offlineQueue/types';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { returnedVersionOf, versionOf } from '#/apollo/utils/returnedVersion';
-import type { Settled } from '#/apollo/utils/settleMutation';
-import { errorService } from '#/services/errorService';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { generateId } from '#/utils/generateId';
-import { isRecord } from '#/utils/isRecord';
+} from '#apollo/offlineQueue/queuedSubject';
+import type { RowAdoption } from '#apollo/offlineQueue/types';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { returnedVersionOf, versionOf } from '#apollo/utils/returnedVersion';
+import type { Settled } from '#apollo/utils/settleMutation';
+import { errorService } from '#services/errorService';
+import { generateEntityId } from '#utils/generateEntityId';
+import { generateId } from '#utils/generateId';
+import { isRecord } from '#utils/isRecord';
 import { LOCAL_WRITES } from './localWriteRegistry';
 import { readFenceOf } from './readFence';
 import type {

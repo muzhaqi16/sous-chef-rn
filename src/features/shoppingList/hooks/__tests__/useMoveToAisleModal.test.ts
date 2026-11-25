@@ -6,7 +6,7 @@ import {
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { StoreDepartment } from '#/graphql/generated/schemaTypes';
+import { StoreDepartment } from '#graphql/generated/schemaTypes';
 import {
   UseMoveToAisleModal_ItemFragmentDoc,
   type UseMoveToAisleModal_ItemFragment,

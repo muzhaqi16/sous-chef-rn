@@ -8,30 +8,30 @@ import {
 } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { boolean, mixed, object, string, type ObjectSchema } from 'yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { CollapsibleChipPicker } from '#features/pantry/components/CollapsibleChipPicker';
 import { QuantityInputFeedback } from '#features/pantry/components/QuantityInputFeedback';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import { validateDeductionQuantity } from '#features/pantry/utils/validateDeductionQuantity';
 import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
-import { WasteReason } from '#/graphql/generated/schemaTypes';
-import { commonStyles } from '#/styles/commonStyles';
+import { WasteReason } from '#graphql/generated/schemaTypes';
+import { commonStyles } from '#styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import {
   PantryActionHeader,
   PantryActionModal,
 } from '#features/pantry/components/modals/PantryActionModal';
 import { Text } from '#components/atoms/Text';
-import { localizeNumericHint } from '#/utils/formatters/number';
+import { localizeNumericHint } from '#utils/formatters/number';
 import {
   formatQuantityForInput,
   resolveQuantityNotation,
-} from '#/utils/formatQuantity';
-import { reportValidationErrors } from '#/utils/validation/common';
+} from '#utils/formatQuantity';
+import { reportValidationErrors } from '#utils/validation/common';
 import type { PantryActionSharedState } from '#features/pantry/types';
 import { WASTE_REASON_OPTIONS } from '#features/pantry/utils/wasteReasons';
 

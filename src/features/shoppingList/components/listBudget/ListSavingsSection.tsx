@@ -1,14 +1,14 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslateFn } from '#/i18n';
+import { useTranslation, type TranslateFn } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
 import { Loading } from '#components/molecules/Loading';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
-import { commonStyles } from '#/styles/commonStyles';
-import { formatRelativeToNow } from '#/utils/formatters/date';
+import { commonStyles } from '#styles/commonStyles';
+import { formatRelativeToNow } from '#utils/formatters/date';
 import { StoreRow } from '#features/catalog/ui/StoreRow';
 import {
   useListSavings,

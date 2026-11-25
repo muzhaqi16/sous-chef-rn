@@ -3,9 +3,9 @@ import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Icon } from '#components/atoms/Icon';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
 interface SavedRecipeMetadataPanelProps {
   savedFolder: string | null;

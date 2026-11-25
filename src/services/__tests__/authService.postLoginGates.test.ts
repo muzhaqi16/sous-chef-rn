@@ -2,7 +2,7 @@
 // RememberMe fallback, or the app; and what it does with a stored fingerprint
 // sign-in the server may have revoked meanwhile.
 
-jest.mock('#/apollo/client', () => ({
+jest.mock('#apollo/client', () => ({
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -11,7 +11,7 @@ jest.mock('#native/storage/keychain', () =>
 );
 // Registering the device runs in the background over native device APIs;
 // `deviceRegistration.test.ts` covers it.
-jest.mock('#/services/device/deviceRegistration', () => ({
+jest.mock('#services/device/deviceRegistration', () => ({
   registerDeviceInBackground: jest.fn(),
 }));
 
@@ -20,14 +20,14 @@ import { recordMock, type MockDataFor } from '#/test-utils/apolloMockProvider';
 import { registerTestClient } from '#/test-utils/registeredClient';
 import { memoryKeychain } from '#/test-utils/memoryKeychain';
 import { useStore } from '#store';
-import { toastService } from '#/services/toastService';
-import { ensureDeviceId } from '#/services/auth/deviceId';
+import { toastService } from '#services/toastService';
+import { ensureDeviceId } from '#services/auth/deviceId';
 import {
   LoginDocument,
   MyDeviceCredentialsDocument,
 } from '#operations/auth/auth.generated';
-import { authService } from '#/services/authService';
-import { registerMobileSessionHost } from '#/app/mobileSessionHost';
+import { authService } from '#services/authService';
+import { registerMobileSessionHost } from '#app/mobileSessionHost';
 
 registerMobileSessionHost();
 

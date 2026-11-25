@@ -1,6 +1,6 @@
-import { makeCache } from '#/apollo/cache';
-import { createOfflineReadLink } from '#/apollo/links/offlineReadLink';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { makeCache } from '#apollo/cache';
+import { createOfflineReadLink } from '#apollo/links/offlineReadLink';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';

@@ -3,8 +3,8 @@ import { StatusBar } from 'react-native';
 import { UnistylesRuntime, useUnistyles } from 'react-native-unistyles';
 import { useIsHydrated, useTheme } from '#store/useAppStore';
 import { Telemetry } from '#services/telemetry';
-import { WindowBackground } from '#/native/WindowBackground';
-import { ThemePreference } from '#/store/slices/preferenceTypes';
+import { WindowBackground } from '#native/WindowBackground';
+import { ThemePreference } from '#store/slices/preferenceTypes';
 
 export const ThemedStatusBar = () => {
   const { rt } = useUnistyles();

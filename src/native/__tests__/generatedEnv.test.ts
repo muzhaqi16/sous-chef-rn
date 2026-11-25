@@ -1,4 +1,4 @@
-jest.mock('#/config/env.generated', () => ({
+jest.mock('#config/env.generated', () => ({
   RAW_ENV: {
     API_URL: '',
     WEB_SOCKET_URL: 'ws://localhost:4000/graphql',

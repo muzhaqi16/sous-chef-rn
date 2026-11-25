@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Loading } from '#components/molecules/Loading';
 import { ErrorState } from '#components/molecules/ErrorState';
 import {

@@ -1,9 +1,4 @@
-import {
-  isTranslationKey,
-  t,
-  type KeyUnder,
-  type TranslationKey,
-} from '#/i18n';
+import { isTranslationKey, t, type KeyUnder, type TranslationKey } from '#i18n';
 
 /**
  * Compiles only for a string the key type `T` refuses: if `T` ever widens to

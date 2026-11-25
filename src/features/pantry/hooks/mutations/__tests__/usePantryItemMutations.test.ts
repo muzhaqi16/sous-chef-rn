@@ -2,23 +2,23 @@
 
 import { gql } from '@apollo/client';
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { usePantryItemMutations } from '../usePantryItemMutations';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
-jest.mock('#/utils/generateId', () => ({
+jest.mock('#utils/generateId', () => ({
   generateId: () => 'mock-id',
 }));
 
-jest.mock('#/services/subscriptions/SubscriptionService', () => ({
+jest.mock('#services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     registerPendingDelete: jest.fn(),
     unregisterPendingDelete: jest.fn(),
@@ -131,7 +131,7 @@ describe('usePantryItemMutations', () => {
   it('removeItem registers pending delete before mutation', async () => {
     const {
       subscriptionService,
-    } = require('#/services/subscriptions/SubscriptionService');
+    } = require('#services/subscriptions/SubscriptionService');
     const m = deleteMock();
 
     const { result } = renderHookWithApollo(
@@ -155,7 +155,7 @@ describe('usePantryItemMutations', () => {
   it('removeItem unregisters pending delete after success', async () => {
     const {
       subscriptionService,
-    } = require('#/services/subscriptions/SubscriptionService');
+    } = require('#services/subscriptions/SubscriptionService');
     const m = deleteMock();
 
     const { result } = renderHookWithApollo(
@@ -193,7 +193,7 @@ describe('usePantryItemMutations', () => {
   it('removeItem unregisters pending delete on error', async () => {
     const {
       subscriptionService,
-    } = require('#/services/subscriptions/SubscriptionService');
+    } = require('#services/subscriptions/SubscriptionService');
     const m = deleteErrorMock();
 
     const { result } = renderHookWithApollo(
@@ -217,7 +217,7 @@ describe('usePantryItemMutations', () => {
   it('removeItem treats an item already gone as removed, not as a failure', async () => {
     // Another member deleted it first: the outcome asked for is the outcome
     // that exists, so there is nothing to restore and nothing to report.
-    const { alertService } = require('#/services/alertService');
+    const { alertService } = require('#services/alertService');
     const gone = recordMock(DeletePantryItemDocument, {
       data: {
         deletePantryItem: {
@@ -243,7 +243,7 @@ describe('usePantryItemMutations', () => {
   });
 
   it('removeItem treats a converged delete as removed, with nothing to restore', async () => {
-    const { alertService } = require('#/services/alertService');
+    const { alertService } = require('#services/alertService');
     const cache = seededCache(['item-1', 'item-2']);
     const m = convergedDeleteMock();
 

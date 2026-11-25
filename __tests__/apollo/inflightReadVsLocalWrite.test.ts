@@ -1,10 +1,10 @@
 import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { recordMock, testMockLink } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import { UsualStoreSource } from '#graphql/generated/schemaTypes';
 import {
   readUsualStores,
   writeUsualStores,

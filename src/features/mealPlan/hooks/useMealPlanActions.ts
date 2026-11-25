@@ -9,15 +9,15 @@ import type { CreatePlanInputs } from '#features/mealPlan/offline/localWrites';
 import type {
   CreateMealPlanInput,
   UpdateMealPlanInput,
-} from '#/graphql/generated/schemaTypes';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { readVersion } from '#/apollo/utils/entityWriteChain';
-import type { SettledFailure } from '#/apollo/utils/settleMutation';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { generateEntityId } from '#/utils/generateEntityId';
+} from '#graphql/generated/schemaTypes';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { readVersion } from '#apollo/utils/entityWriteChain';
+import type { SettledFailure } from '#apollo/utils/settleMutation';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
+import { generateEntityId } from '#utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
 
 /** A plan create as its caller acts on it; `failure` is what to show. */
 export type MealPlanCreateOutcome =

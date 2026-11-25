@@ -3,7 +3,7 @@ import { render } from '@testing-library/react-native';
 import { makeMutable } from 'react-native-reanimated';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { useAnimatedTheme as useUnistylesAnimatedTheme } from 'react-native-unistyles/reanimated';
-import { darkTheme, lightTheme } from '#/theme/themes';
+import { darkTheme, lightTheme } from '#theme/themes';
 import { useAnimatedTheme } from '../useAnimatedTheme';
 
 const getTheme = jest.mocked(UnistylesRuntime.getTheme);

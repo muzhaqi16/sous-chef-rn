@@ -1,9 +1,9 @@
 import React from 'react';
 import type { AccessibilityProps } from 'react-native';
-import { sizes } from '#/theme/foundations/sizes';
+import { sizes } from '#theme/foundations/sizes';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { withUnistyles } from 'react-native-unistyles';
-import type { Theme } from '#/theme/themes';
+import type { Theme } from '#theme/themes';
 import SortGlyph from '#assets/icons/svg/glyphs/sort.svg';
 
 type IoniconsIconName = React.ComponentProps<typeof Ionicons>['name'];

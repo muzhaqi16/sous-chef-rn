@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { Controller } from 'react-hook-form';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
@@ -14,7 +14,7 @@ import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreA
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/atoms/FieldRow';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import { CategoryType } from '#/graphql/generated/schemaTypes';
+import { CategoryType } from '#graphql/generated/schemaTypes';
 import {
   PRIORITY_OPTIONS,
   priorityValueOf,
@@ -23,10 +23,10 @@ import {
 } from '#features/shoppingList/utils/priority';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import { useAddShoppingItem } from '#features/shoppingList/hooks/mutations/useAddShoppingItem';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { alertService } from '#/services/alertService';
-import { localizeNumericHint } from '#/utils/formatters/number';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
+import { alertService } from '#services/alertService';
+import { localizeNumericHint } from '#utils/formatters/number';
+import { reportValidationErrors } from '#utils/validation/common';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useDiscardGuard } from '#hooks/ui/useDiscardGuard';

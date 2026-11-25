@@ -1,5 +1,5 @@
-import { makeCache } from '#/apollo/cache';
-import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
+import { UsualStoreSource } from '#graphql/generated/schemaTypes';
 import {
   keepUsualStores,
   localUsualStore,

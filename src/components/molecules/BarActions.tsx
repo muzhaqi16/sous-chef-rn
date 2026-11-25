@@ -10,7 +10,7 @@ import {
   type ActionVariant,
   type HeaderAction,
 } from '#components/molecules/HeaderActionIcon';
-import { hitSlop, sizes } from '#/theme/foundations/sizes';
+import { hitSlop, sizes } from '#theme/foundations/sizes';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 type MeasureHandler = NonNullable<HeaderAction['onMeasure']>;

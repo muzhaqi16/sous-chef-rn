@@ -1,5 +1,5 @@
-import { useTranslation } from '#/i18n';
-import { todayKey } from '#/utils/dateUtils';
+import { useTranslation } from '#i18n';
+import { todayKey } from '#utils/dateUtils';
 import { useApolloClient, useSubscription } from '@apollo/client/react';
 import type { ApolloClient } from '@apollo/client';
 import {
@@ -12,14 +12,14 @@ import {
   UseNotificationsOnLaunch_NotificationFragmentDoc,
   type UseNotificationsOnLaunch_NotificationFragment,
 } from './useNotificationsOnLaunch.generated';
-import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
+import { fetchEventEntity } from '#services/subscriptions/fetchEventEntity';
 import {
   NotificationType,
   NotificationCategory,
   NotificationSubtype,
   NotificationStatus,
   Priority,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
 import type { RootState } from '#store/index';
 import { requirePlatform } from '#platform/install';
@@ -37,11 +37,11 @@ import {
 } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotificationSettings } from './useNotificationSettings';
 import { useNotificationSync } from './useNotificationSync';
-import { useSubscriptionTransportRecovery } from '#/hooks/subscriptions/useSubscriptionTransportRecovery';
-import { logger } from '#/utils/environment';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
+import { logger } from '#utils/environment';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { registerSessionTeardown } from '#store/sessionTeardown';
-import { isNetworkError } from '#/utils/isNetworkError';
+import { isNetworkError } from '#utils/isNetworkError';
 
 // PERFORMANCE: Grouped selectors with useShallow keep store subscriptions low
 // The listener needs the signed-in user and nothing else from the store; the

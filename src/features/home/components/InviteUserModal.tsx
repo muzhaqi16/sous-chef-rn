@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
@@ -9,12 +9,12 @@ import {
   OnPrimaryActivityIndicator as ThemedActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import { Icon } from '#components/atoms/Icon';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { localizedErrorMessage } from '#/services/errorService';
-import type { Translate } from '#/i18n/types';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
+import { localizedErrorMessage } from '#services/errorService';
+import type { Translate } from '#i18n/types';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { reportValidationErrors } from '#utils/validation/common';

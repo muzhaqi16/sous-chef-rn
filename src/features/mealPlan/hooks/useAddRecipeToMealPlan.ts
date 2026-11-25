@@ -1,9 +1,9 @@
-import type { MealType } from '#/graphql/generated/schemaTypes';
+import type { MealType } from '#graphql/generated/schemaTypes';
 import { useMealPlanDisplay, useMealPlans } from './useMealPlans';
 import { useMealPlanItemActions } from './useMealPlanItemActions';
-import { toastService } from '#/services/toastService';
-import { t } from '#/i18n';
-import { toDateKey } from '#/utils/dateUtils';
+import { toastService } from '#services/toastService';
+import { t } from '#i18n';
+import { toDateKey } from '#utils/dateUtils';
 
 interface UseAddRecipeToMealPlanOptions {
   planId?: string | null;

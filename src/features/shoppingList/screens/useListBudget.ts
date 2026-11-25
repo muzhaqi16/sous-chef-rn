@@ -1,9 +1,9 @@
 import { useFragment, useQuery } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useUser } from '#store/useAppStore';
 import { useDataState } from '#hooks/data/useDataState';
-import { toastService } from '#/services/toastService';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { toastService } from '#services/toastService';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 import { useUpdateShoppingList } from '#features/shoppingList/hooks/mutations/useUpdateShoppingList';
 import { useShoppingListBudget } from '#features/shoppingList/hooks/mutations/useShoppingListBudget';
 import { listOwnershipOf } from '#features/shoppingList/utils/ownershipHelpers';

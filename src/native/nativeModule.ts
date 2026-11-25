@@ -1,5 +1,5 @@
 import { NativeModules } from 'react-native';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 /**
  * A native module's method bound to it, or null when the build lacks either.

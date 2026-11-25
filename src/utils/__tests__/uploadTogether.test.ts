@@ -1,7 +1,7 @@
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { uploadTogether } from '../uploadTogether';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 const options = { limitMs: 1000, operation: 'Upload test photo' };
 

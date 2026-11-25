@@ -8,9 +8,9 @@ import type {
 import { OperationTypeNode } from 'graphql';
 import type { DocumentNode } from 'graphql';
 import { createQueueLink } from '../queueLink';
-import { Telemetry } from '#/services/telemetry';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { generateId } from '#/utils/generateId';
+import { Telemetry } from '#services/telemetry';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
+import { generateId } from '#utils/generateId';
 import { queueStore } from '../queueStore';
 import { queueManager } from '../queueManager';
 import {
@@ -18,8 +18,8 @@ import {
   OfflineRejectedError,
 } from '../OfflineRejectedError';
 import { useStore } from '#store';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { isNetworkError } from '#utils/isNetworkError';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import {
   LoginDocument,
   RefreshTokenDocument,
@@ -30,9 +30,9 @@ import { UpdateItemDocument } from '#features/catalog/hooks/useSuggestItemEdit.g
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CreateRecipeReviewDocument } from '#features/recipes/graphql/recipeReview.generated';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 // Mock the store module
@@ -58,7 +58,7 @@ jest.mock('../queueStore', () => ({
   },
 }));
 
-jest.mock('#/apollo/pendingWrites/localWriteRegistry', () => ({
+jest.mock('#apollo/pendingWrites/localWriteRegistry', () => ({
   LOCAL_WRITES: {
     AddItem: {
       apply: jest.fn(),
@@ -83,7 +83,7 @@ jest.mock('../queueManager', () => ({
 }));
 
 // Mock generateId
-jest.mock('#/utils/generateId', () => ({
+jest.mock('#utils/generateId', () => ({
   generateId: jest.fn(() => 'test-uuid'),
 }));
 

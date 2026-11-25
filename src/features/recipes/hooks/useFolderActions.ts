@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { DeleteRecipeFolderDocument } from '#features/recipes/graphql/recipe.generated';
 import type { MoveFolderInputs } from '#features/recipes/offline/localWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { toastService } from '#/services/toastService';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { toastService } from '#services/toastService';
 
 /**
  * Rename and delete both go through `deleteRecipeFolder`: without `moveTo` its

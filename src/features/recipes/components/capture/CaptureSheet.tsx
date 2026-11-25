@@ -5,13 +5,13 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type ObjectSchema } from 'yup';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import { errorCopy } from '#/services/errorService';
+import { useTranslation } from '#i18n';
+import { errorCopy } from '#services/errorService';
 import { FormInput } from '#components/atoms/FormInput';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import type {
   CaptureRequest,
   CaptureStart,

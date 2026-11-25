@@ -3,10 +3,10 @@ import {
   VerifyEmailDocument,
   ResendVerificationEmailDocument,
 } from '#operations/auth/auth.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { useTranslation } from '#/i18n';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { useTranslation } from '#i18n';
 import { useUserId } from '#store/useAppStore';
 import { SignedInEmailVerificationDocument } from '#features/auth/hooks/useVerifyEmail.generated';
 

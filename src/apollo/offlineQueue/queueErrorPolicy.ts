@@ -7,19 +7,19 @@ import {
   ErrorCode,
   ErrorDisposition,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
-import { isAuthRefusalCode } from '#/utils/authErrorCodes';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { isVersionConflictCode } from '#/utils/errors/versionConflict';
-import { getRateLimitDetails } from '#/utils/errors/rateLimit';
-import { asDisposition, refusalEnvelopeOf } from '#/utils/errors/graphqlErrors';
+} from '#graphql/generated/schemaTypes';
+import { isAuthRefusalCode } from '#utils/authErrorCodes';
+import { isNetworkError } from '#utils/isNetworkError';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { isVersionConflictCode } from '#utils/errors/versionConflict';
+import { getRateLimitDetails } from '#utils/errors/rateLimit';
+import { asDisposition, refusalEnvelopeOf } from '#utils/errors/graphqlErrors';
 import {
   isErrorTypename,
   type MutationErrorTypename,
-} from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
-import { backoffDelay } from '#/utils/backoff';
+} from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
+import { backoffDelay } from '#utils/backoff';
 import type { QueueError } from './types';
 
 /**

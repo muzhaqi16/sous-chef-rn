@@ -1,5 +1,5 @@
-import { errorCopy } from '#/services/errorService';
-import { useTranslation } from '#/i18n';
+import { errorCopy } from '#services/errorService';
+import { useTranslation } from '#i18n';
 import type { ApolloClient } from '@apollo/client';
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
@@ -9,19 +9,19 @@ import {
   type UseRecipeData_RecipeFragment,
 } from './useRecipeData.generated';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { extractNodes } from '#/utils/connectionUtils';
+import { extractNodes } from '#utils/connectionUtils';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
-import { knownEntry } from '#/utils/closedEnum';
+import { knownEntry } from '#utils/closedEnum';
 import {
   Diet,
   ExternalSyncStatus,
   Intolerance,
   RecipeRevisionStatus,
   type RecipeStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { RecipeRowHint } from './useOpenCatalogRecipe';
 import type { RecipeNutritionFacts } from '#domain/nutrition';
-import type { DataAttributionValue } from '#/types/attribution';
+import type { DataAttributionValue } from '#types/attribution';
 
 export type MaterializedRecipe = UseRecipeData_RecipeFragment;
 

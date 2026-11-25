@@ -1,6 +1,6 @@
 import type { ApolloCache } from '@apollo/client';
-import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
-import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import { writeLocalEntity } from '#apollo/utils/writeLocalEntity';
+import { UsualStoreSource } from '#graphql/generated/schemaTypes';
 import {
   storeChoiceKey,
   storeChoiceOf,

@@ -2,7 +2,7 @@ import type { DocumentNode } from 'graphql';
 import { QueueStore } from '../queueStore';
 import type { QueueError, QueuedMutation } from '../types';
 import { QueueCapacityError, QueueStatus } from '../types';
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {

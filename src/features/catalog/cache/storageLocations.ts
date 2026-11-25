@@ -6,9 +6,9 @@ import {
   createRemoveFromQueryConnectionUpdater,
   isUnfilteredVariant,
   skipUnmatchedArgVariants,
-} from '#/apollo/utils/cacheUpdaters';
-import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
-import type { CreateStorageLocationInput } from '#/graphql/generated/schemaTypes';
+} from '#apollo/utils/cacheUpdaters';
+import { writeLocalEntity } from '#apollo/utils/writeLocalEntity';
+import type { CreateStorageLocationInput } from '#graphql/generated/schemaTypes';
 import { UseCreateStorageLocation_RowFragmentDoc } from '#features/catalog/hooks/useCreateStorageLocation.generated';
 import {
   NEUTRAL_LOCAL_STORAGE_LOCATION,

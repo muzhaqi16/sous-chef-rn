@@ -7,7 +7,7 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   type MockDataFor,
   recordMock,
@@ -21,14 +21,14 @@ import {
   seedPantry,
 } from '#/test-utils/fixtures/pantryFixtures';
 import { screenShows } from '#/test-utils/cacheWaits';
-import { t } from '#/i18n';
-import { todayKey } from '#/utils/dateUtils';
+import { t } from '#i18n';
+import { todayKey } from '#utils/dateUtils';
 import {
   ErrorCode,
   PantrySuggestionSource,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
+} from '#graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
 import {
   AutocompleteItemsDocument,
   MarkSuggestionDismissedDocument,

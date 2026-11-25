@@ -5,14 +5,14 @@ import {
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   BatchStatus,
   ExpiryKind,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { BatchListItem } from '../BatchListItem';
 import { BatchListItem_PantryItemFragmentDoc } from '../BatchListItem.generated';

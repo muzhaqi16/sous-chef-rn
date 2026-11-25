@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { SEVERITY_LABEL_KEYS } from '#domain/dietary';
-import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
+import { RestrictionSeverity } from '#graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { Sheet } from '#components/templates/Sheet';
 import { profileTestIDs } from '#features/profile/testIDs';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { AvoidFoodSearch } from '#features/profile/ui/AvoidFoodSearch';
 import { useOpening } from '#hooks/ui/useOpening';
 

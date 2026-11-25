@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
-import { StoreLineMatch, UnitSystem } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
+import { StoreLineMatch, UnitSystem } from '#graphql/generated/schemaTypes';
 import {
   recordMock,
   renderWithApollo,
@@ -21,13 +21,13 @@ import {
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
-import { formatMonthDay } from '#/utils/formatters/date';
+import { formatMonthDay } from '#utils/formatters/date';
 import { ListSavingsDocument } from '#features/shoppingList/hooks/useListSavings.generated';
 import { StoreSavingsItems } from '../StoreSavingsItems';
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
 // Its repeating diagnostics timer never drains: 0 is the hook's own off switch.

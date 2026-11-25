@@ -2,8 +2,8 @@
 import React from 'react';
 import { GraphQLError } from 'graphql';
 import { act, screen, userEvent } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
-import { t } from '#/i18n';
+import { makeCache } from '#apollo/cache';
+import { t } from '#i18n';
 import {
   renderWithApollo,
   type MockDataFor,
@@ -16,7 +16,7 @@ import {
   NotificationStatus,
   NotificationType,
   Priority,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   UseNotificationsOnLaunch_NotificationFragmentDoc,
   type UseNotificationsOnLaunch_NotificationFragment,
@@ -30,7 +30,7 @@ import { NotificationDetailScreen } from '../NotificationDetailScreen';
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
 const mockToRecipeDetail = jest.fn();

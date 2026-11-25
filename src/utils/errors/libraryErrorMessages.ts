@@ -5,7 +5,7 @@
  * message-branching` exempts this file alone.
  */
 
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 interface MessageBearer {
   message?: string;

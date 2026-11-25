@@ -7,18 +7,18 @@ import type {
   OperationVariables,
   Reference,
 } from '@apollo/client';
-import { rowBaseline } from '#/apollo/pendingWrites/conflictRead';
-import { inputIdOf } from '#/apollo/pendingWrites/inputId';
+import { rowBaseline } from '#apollo/pendingWrites/conflictRead';
+import { inputIdOf } from '#apollo/pendingWrites/inputId';
 import {
   entityFields,
   type EntityFieldsInputs,
-} from '#/apollo/pendingWrites/entityFields';
-import type { ConflictRead, LocalWrite } from '#/apollo/pendingWrites/types';
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
-import { ItemCondition } from '#/graphql/generated/schemaTypes';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
+} from '#apollo/pendingWrites/entityFields';
+import type { ConflictRead, LocalWrite } from '#apollo/pendingWrites/types';
+import { writeEntityFields } from '#apollo/utils/localFirstFields';
+import { isHeld } from '#apollo/utils/writeLocalEntity';
+import { ItemCondition } from '#graphql/generated/schemaTypes';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
 import {
   PantryItemConflict_PantryItemFragmentDoc,
   PantryItemForConflictDocument,

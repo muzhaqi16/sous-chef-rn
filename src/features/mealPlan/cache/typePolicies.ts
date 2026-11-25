@@ -2,7 +2,7 @@ import type { TypePolicies } from '@apollo/client';
 import {
   mergeConnectionByNodeId,
   readByIdFromCache,
-} from '#/apollo/cacheFieldPolicies';
+} from '#apollo/cacheFieldPolicies';
 
 /**
  * A plan's meals, its generated lists and a template's meals are each ONE list

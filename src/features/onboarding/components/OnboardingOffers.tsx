@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { shareUrl } from '#native/share';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';

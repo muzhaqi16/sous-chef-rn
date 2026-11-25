@@ -1,7 +1,7 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useEffect, useRef, useState, useImperativeHandle } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
-import { t } from '#/i18n';
+import { makeCache } from '#apollo/cache';
+import { t } from '#i18n';
 import {
   renderWithApollo,
   toFragmentRef,
@@ -15,7 +15,7 @@ import {
 import {
   MembershipRole,
   MembershipStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { HomeViewer } from '#features/home/utils/homePermissions';
 
 const member: HomeMemberCard_MemberFragment = {

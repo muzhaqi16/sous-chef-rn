@@ -12,7 +12,7 @@ import {
 import { drainTimers } from '#/test-utils/drainTimers';
 import { MarkExpirationActionDocument } from '#features/notifications/graphql/expirationNotificationMutations.generated';
 import { CreatePantryItemUsageDocument } from '#features/pantry/graphql/pantry.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { MarkNotificationAsReadDocument } from '#features/notifications/graphql/notificationMutations.generated';
 import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
 import {
@@ -24,9 +24,9 @@ import {
   Priority,
   UsagePurpose,
   WasteReason,
-} from '#/graphql/generated/schemaTypes';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { todayKey } from '#/utils/dateUtils';
+} from '#graphql/generated/schemaTypes';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { todayKey } from '#utils/dateUtils';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import type { DisplayNotification } from '#features/notifications/utils/toDisplayNotification';
 import { NotificationActionHandler } from '../NotificationActionHandler';

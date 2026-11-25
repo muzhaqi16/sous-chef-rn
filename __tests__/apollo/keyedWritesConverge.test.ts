@@ -8,7 +8,7 @@ import {
   type OperationDefinitionNode,
   type SelectionSetNode,
 } from 'graphql';
-import { LOCAL_WRITES } from '#/apollo/pendingWrites/localWriteRegistry';
+import { LOCAL_WRITES } from '#apollo/pendingWrites/localWriteRegistry';
 import { SRC, authoredMutations } from '#/test-utils/queueableOperations';
 
 /**

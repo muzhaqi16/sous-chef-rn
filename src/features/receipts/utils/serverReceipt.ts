@@ -1,8 +1,8 @@
 import {
   ReceiptParseStatus,
   ReceiptParseWarningCode,
-} from '#/graphql/generated/schemaTypes';
-import { todayKey } from '#/utils/dateUtils';
+} from '#graphql/generated/schemaTypes';
+import { todayKey } from '#utils/dateUtils';
 import {
   dailyAllowanceWait,
   isUpgradeRequired,

@@ -1,6 +1,6 @@
 import { act } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   type MockDataFor,
   recordMock,
@@ -13,16 +13,16 @@ import {
   asAbbreviation,
   readingAsAbbreviation,
 } from '#/test-utils/fixtures/unitLabels';
-import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { getDeviceDecimalSeparator } from '#utils/deviceLocale';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import { Telemetry } from '#services/telemetry';
 import {
   EntryImageSource,
   ErrorCode,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import {
@@ -32,8 +32,8 @@ import {
 import { useQuantityEditModal } from '../useQuantityEditModal';
 
 // The device's decimal separator is the device's.
-jest.mock('#/utils/deviceLocale', () => ({
-  ...jest.requireActual('#/utils/deviceLocale'),
+jest.mock('#utils/deviceLocale', () => ({
+  ...jest.requireActual('#utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
 

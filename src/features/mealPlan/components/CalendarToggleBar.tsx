@@ -1,9 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { hitSlop } from '#theme/foundations/sizes';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
 
 interface CalendarToggleBarProps {

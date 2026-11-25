@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import {
   renderWithApollo,
@@ -12,7 +12,7 @@ import { PantryItemCard } from '../PantryItemCard';
 import { StatusLine } from '#components/atoms/StatusLine';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
 import {
   makeQueuedMutation,
   queuedMutationFor,
@@ -24,7 +24,7 @@ import {
 import { useStore } from '#store';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { gql, type ApolloClient } from '@apollo/client';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   PantryItemCard_PantryItemFragmentDoc,
   type PantryItemCard_PantryItemFragment,
@@ -38,9 +38,9 @@ import {
   StorageState,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { toDateKey } from '#/utils/dateUtils';
-import { changeLanguage } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import { toDateKey } from '#utils/dateUtils';
+import { changeLanguage } from '#i18n';
 import {
   asAbbreviation,
   readingAsAbbreviation,
@@ -48,7 +48,7 @@ import {
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
 const defaultActions = {

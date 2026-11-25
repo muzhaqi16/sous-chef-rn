@@ -1,4 +1,4 @@
-import { AddedContext } from '#/graphql/generated/schemaTypes';
+import { AddedContext } from '#graphql/generated/schemaTypes';
 import {
   recipeShoppingRows,
   type RecipeIngredientLine,

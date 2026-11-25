@@ -3,17 +3,17 @@
  * layer. The server's answer writes its own rows; `commit` adds what it cannot
  * state.
  */
-import { inputIdOf } from '#/apollo/pendingWrites/inputId';
-import type { LocalWrite } from '#/apollo/pendingWrites/types';
+import { inputIdOf } from '#apollo/pendingWrites/inputId';
+import type { LocalWrite } from '#apollo/pendingWrites/types';
 import {
   TemplateCategory,
   type AddTemplateItemInput,
   type CreateMealPlanInput,
   type CreateMealPlanItemInput,
   type CreateMealTemplateInput,
-} from '#/graphql/generated/schemaTypes';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
+} from '#graphql/generated/schemaTypes';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
 import {
   addToMealPlans,
   hideMealPlan,

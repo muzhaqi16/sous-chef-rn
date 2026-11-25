@@ -1,10 +1,10 @@
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   registerApolloClient,
   clearApolloClient,
-} from '#/apollo/clientRegistry';
-import { refreshUnitVocabulary } from '#/apollo/offlineQueue/refreshUnitVocabulary';
+} from '#apollo/clientRegistry';
+import { refreshUnitVocabulary } from '#apollo/offlineQueue/refreshUnitVocabulary';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 

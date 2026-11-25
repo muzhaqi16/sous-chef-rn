@@ -1,8 +1,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { UnistylesRuntime } from 'react-native-unistyles';
-import { applyAppearanceToRuntime } from '#/theme/applyAppearance';
-import { lightTheme, type Theme } from '#/theme/themes';
+import { applyAppearanceToRuntime } from '#theme/applyAppearance';
+import { lightTheme, type Theme } from '#theme/themes';
 import { DensityPreference } from '#store/slices/preferenceTypes';
 import { Icon, type IconSizeName } from '../Icon';
 

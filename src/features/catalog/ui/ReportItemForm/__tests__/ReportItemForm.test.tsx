@@ -1,5 +1,5 @@
 import React from 'react';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { screen, userEvent } from '@testing-library/react-native';
 import {
   recordMock,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
@@ -15,7 +15,7 @@ import {
   acquisitionMethodLabelKey,
   type OfferedAcquisitionMethod,
 } from '#features/pantry/utils/itemEnumLabels';
-import { localizeNumericHint } from '#/utils/formatters/number';
+import { localizeNumericHint } from '#utils/formatters/number';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 

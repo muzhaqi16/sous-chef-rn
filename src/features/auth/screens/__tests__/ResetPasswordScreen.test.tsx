@@ -1,4 +1,4 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import React from 'react';
 import { screen, userEvent } from '@testing-library/react-native';
 import { useRoute } from '@react-navigation/native';
@@ -9,7 +9,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { useStore } from '#store';
-import { authService } from '#/services/authService';
+import { authService } from '#services/authService';
 import {
   ResetPasswordDocument,
   ValidatePasswordResetTokenDocument,
@@ -17,8 +17,8 @@ import {
 import {
   ErrorCode,
   PasswordActionStatus,
-} from '#/graphql/generated/schemaTypes';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+} from '#graphql/generated/schemaTypes';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { ResetPasswordScreen } from '../ResetPasswordScreen';
 
 // --- Mocks ---
@@ -52,7 +52,7 @@ jest.mock('#features/auth/screens/useAuthNavigation', () => ({
   }),
 }));
 
-jest.mock('#/utils/finallyHelpers');
+jest.mock('#utils/finallyHelpers');
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',

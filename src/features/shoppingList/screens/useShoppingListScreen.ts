@@ -6,7 +6,7 @@ import { requirePlatform } from '#platform/install';
 import { isShoppingListOwner } from '#features/shoppingList/utils/ownershipHelpers';
 import { canDeleteShoppingList } from '#features/shoppingList/utils/shoppingListPermissions';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { isResourceAccessLostError } from '#/utils/errors/graphqlErrors';
+import { isResourceAccessLostError } from '#utils/errors/graphqlErrors';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { useShoppingListsQuery } from '../hooks/useShoppingListsQuery';
 import { useShoppingListSelection } from '../hooks/useShoppingListSelection';

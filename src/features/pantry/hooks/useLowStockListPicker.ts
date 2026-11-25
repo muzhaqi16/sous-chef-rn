@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
-import { toastService } from '#/services/toastService';
-import { useTranslation } from '#/i18n';
+import { toastService } from '#services/toastService';
+import { useTranslation } from '#i18n';
 import type { AddToListOutcome } from '#features/pantry/hooks/useAddPantryItemToShoppingList';
 
 /** One low-stock row, in the shape `addToList` needs. */

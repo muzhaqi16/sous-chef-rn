@@ -1,8 +1,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { RecipeEnrichment } from '../RecipeEnrichment';
-import { RecipeStatus } from '#/graphql/generated/schemaTypes';
-import { lightTheme } from '#/theme/themes';
+import { RecipeStatus } from '#graphql/generated/schemaTypes';
+import { lightTheme } from '#theme/themes';
 
 const NUTRITION = {
   calories: 420,

@@ -5,7 +5,7 @@ import { RowCard } from '#components/atoms/RowCard';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import { HapticService } from '#services/haptic/HapticService';
 import { RIPPLE } from '#constants/ripple';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import type { BaseItemCardProps } from './types';
 
 // Slot-based swipeable row; `ItemCard` is the one with the standard

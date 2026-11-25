@@ -1,5 +1,5 @@
 import { createTestStore } from '#/test-utils/createTestStore';
-import { retryCooldownMs } from '#/utils/backoff';
+import { retryCooldownMs } from '#utils/backoff';
 import type { AuthUserInput } from '#store/slices/authSlice';
 import { registerTokenRefreshBridge } from '#store/tokenRefreshBridge';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';

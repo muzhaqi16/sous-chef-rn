@@ -1,7 +1,7 @@
 import {
   UnitType,
   type StockAmountInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { HeldUnit } from '#domain/stockAmount';
 import { resolveIntakeDraft, type IntakeFacts } from '#domain/intakeDraft';
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';

@@ -10,8 +10,8 @@ import {
   getCategoryLabel,
   type NutritionFactsValues,
 } from '#domain/nutrition';
-import type { NutrientCategory } from '#/types/nutrition';
-import { getI18n } from '#/i18n/config';
+import type { NutrientCategory } from '#types/nutrition';
+import { getI18n } from '#i18n/config';
 
 // The real instance, so the assertions read the copy in en.json.
 const t = getI18n().t;

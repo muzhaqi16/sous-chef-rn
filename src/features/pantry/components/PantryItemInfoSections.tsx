@@ -1,6 +1,6 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import { BatchStatus } from '#graphql/generated/schemaTypes';
 import { DetailSection } from '#components/molecules/DetailSection';
 import { currentReading, formatReading } from '#domain/measure';
 import { hasNutritionData, toShownNutrition } from '#domain/nutrition';

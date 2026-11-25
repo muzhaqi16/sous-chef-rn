@@ -2,8 +2,8 @@ import type {
   ItemType,
   NetWeightKind,
   StorageState,
-} from '#/graphql/generated/schemaTypes';
-import type { PhotoCreditValue } from '#/types/attribution';
+} from '#graphql/generated/schemaTypes';
+import type { PhotoCreditValue } from '#types/attribution';
 import type { ShownNutritionValues } from '#domain/nutrition';
 import type { PackageContents } from '#domain/stockAmount';
 import type { ItemByLookupQuery } from './hooks/useSearchResults.generated';

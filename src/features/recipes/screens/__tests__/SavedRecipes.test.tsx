@@ -11,9 +11,9 @@ import { operationLog } from '#/test-utils/operationLog';
 import { screenShows } from '#/test-utils/cacheWaits';
 import type { ApolloClient } from '@apollo/client';
 import { useStore } from '#store';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   RemoveRecipeFromFavoritesDocument,
   SavedRecipeFoldersDocument,

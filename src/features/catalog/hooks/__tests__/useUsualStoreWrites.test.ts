@@ -3,12 +3,12 @@ import { act, renderHook } from '@testing-library/react-native';
 import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
 import { ApolloProvider, useApolloClient } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { createQueueLink } from '#/apollo/offlineQueue/queueLink';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { createQueueLink } from '#apollo/offlineQueue/queueLink';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
 import { useStore } from '#store';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import {
   inputOf,
   recordMock,
@@ -21,8 +21,8 @@ import {
   makeQueuedMutation,
   queuedMutationFor,
 } from '#/test-utils/queuedMutation';
-import { ErrorCode, UsualStoreSource } from '#/graphql/generated/schemaTypes';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { ErrorCode, UsualStoreSource } from '#graphql/generated/schemaTypes';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
 import {
   listNewUsualStore,
   readUsualStores,
@@ -30,14 +30,14 @@ import {
   type UsualStoreEntry,
 } from '#features/catalog/cache/usualStores';
 import { storeChoiceName } from '#domain/stores';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   useUsualStores,
   type UsualStoreRow,
 } from '#features/catalog/hooks/useUsualStores';
 import { useUsualStoreWrites } from '#features/catalog/hooks/useUsualStoreWrites';
 import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import {
   AddUsualStoreDocument,
   RemoveUsualStoreDocument,
@@ -45,7 +45,7 @@ import {
 } from '#features/catalog/hooks/useUsualStoreWrites.generated';
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 
-jest.mock('#/apollo/offlineQueue/queueManager', () => ({
+jest.mock('#apollo/offlineQueue/queueManager', () => ({
   queueManager: {
     requestDrain: jest.fn(),
     drainAfterPass: jest.fn(),

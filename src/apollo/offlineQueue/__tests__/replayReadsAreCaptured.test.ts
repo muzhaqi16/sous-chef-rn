@@ -4,10 +4,10 @@
  * vocabulary repair may have retired.
  */
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { makeQueuedMutation } from '#/test-utils/queuedMutation';
-import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
-import { captureReplayInputs } from '#/apollo/offlineQueue/prepareReplay';
+import { REPLAY_PREPARATIONS } from '#apollo/offlineQueue/preparationRegistry';
+import { captureReplayInputs } from '#apollo/offlineQueue/prepareReplay';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 

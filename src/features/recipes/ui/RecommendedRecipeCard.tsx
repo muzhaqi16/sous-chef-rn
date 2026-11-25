@@ -1,7 +1,7 @@
 import React from 'react';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { ItemCard } from '#components/organisms/ItemCard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';

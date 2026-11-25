@@ -3,10 +3,10 @@ import { readPlanSource } from '#features/mealPlan/cache/derivationSources';
 import { duplicatePlan } from '#features/mealPlan/utils/duplicatePlan';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { useCreateMealPlanItem } from '#features/mealPlan/hooks/useCreateMealPlanItem';
-import { toastService } from '#/services/toastService';
-import { Telemetry } from '#/services/telemetry';
-import type { SettledFailure } from '#/apollo/utils/settleMutation';
-import { t } from '#/i18n';
+import { toastService } from '#services/toastService';
+import { Telemetry } from '#services/telemetry';
+import type { SettledFailure } from '#apollo/utils/settleMutation';
+import { t } from '#i18n';
 
 export interface DuplicateMealPlanOptions {
   mealPlanId: string;

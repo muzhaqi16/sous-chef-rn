@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
-import { type } from '#/theme/foundations/type';
+import { type } from '#theme/foundations/type';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { IngredientTileSkeleton } from '#features/recipes/components/recipeDetail/IngredientTile';
 

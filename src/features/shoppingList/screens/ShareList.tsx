@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
 
 import { useDataState } from '#hooks/data/useDataState';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -27,10 +27,10 @@ import { SubScreen } from '#components/templates/SubScreen';
 import {
   CollaboratorStatus,
   type CollaboratorRole,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { destructiveConfirm } from '#services/destructiveConfirm';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 
 /** Sharing is the owner's; a collaborator invites only as far as their own row allows. */
 function invitableRoles(

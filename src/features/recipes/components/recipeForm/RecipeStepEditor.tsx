@@ -3,14 +3,14 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type ObjectSchema } from 'yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
-import { generateId } from '#/utils/generateId';
-import { lazyMessage, reportValidationErrors } from '#/utils/validation/common';
+import { generateId } from '#utils/generateId';
+import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
 import type { StepFormState } from '#features/recipes/types';
 
 export interface RecipeStepEditorRef {

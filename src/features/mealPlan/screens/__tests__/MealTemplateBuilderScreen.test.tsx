@@ -5,7 +5,7 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   inputOf,
   recordMock,
@@ -17,8 +17,8 @@ import { operationLog } from '#/test-utils/operationLog';
 import { screenShows } from '#/test-utils/cacheWaits';
 import { recipeRead } from '#/test-utils/fixtures/recipeFixtures';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { MealType, TemplateCategory } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { MealType, TemplateCategory } from '#graphql/generated/schemaTypes';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { GetDietaryProfileDocument } from '#operations/user/user.generated';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';

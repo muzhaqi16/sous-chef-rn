@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { date, object, string, type ObjectSchema } from 'yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   MEAL_TYPE_LABEL_KEYS,
   TEMPLATE_CATEGORY_LABEL_KEYS,
@@ -23,14 +23,14 @@ import { useMealTemplate } from '#features/mealPlan/hooks/useMealTemplate';
 import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { useOpening } from '#hooks/ui/useOpening';
-import { toDateKey } from '#/utils/dateUtils';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
-import { lazyMessage, reportValidationErrors } from '#/utils/validation/common';
+import { toDateKey } from '#utils/dateUtils';
+import { destructiveConfirm } from '#services/destructiveConfirm';
+import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
 
 interface PlanFromTemplateFormValues {
   /** Blank takes the template's name. */

@@ -72,7 +72,7 @@ testRule('animated-node-takes-no-themed-style', {
     },
     {
       // Another file's stylesheet cannot be read from here.
-      code: `import { commonStyles } from '#/styles/commonStyles';\n${withStyles(
+      code: `import { commonStyles } from '#styles/commonStyles';\n${withStyles(
         ANIMATED,
         '<Animated.View style={[commonStyles.rowSurface, fade]} />',
         '{}',

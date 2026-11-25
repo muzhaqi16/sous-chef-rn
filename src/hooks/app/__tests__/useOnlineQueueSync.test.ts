@@ -13,8 +13,8 @@
  */
 import { renderHook } from '@testing-library/react-native';
 import { useOnlineQueueSync } from '../useOnlineQueueSync';
-import { queueManager } from '#/apollo/offlineQueue/queueManager';
-import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
+import { queueManager } from '#apollo/offlineQueue/queueManager';
+import { proactiveTokenRefresh } from '#apollo/links/refreshToken';
 
 let mockIsOnline = true;
 let mockUserId: string | undefined;
@@ -39,17 +39,17 @@ jest.mock('#store', () => ({
   },
 }));
 
-jest.mock('#/apollo/offlineQueue/queueManager', () => ({
+jest.mock('#apollo/offlineQueue/queueManager', () => ({
   queueManager: {
     onOnline: jest.fn(),
     onOffline: jest.fn(),
     onSessionToken: jest.fn(),
   },
 }));
-jest.mock('#/apollo/links/apiReachabilityBreaker', () => ({
+jest.mock('#apollo/links/apiReachabilityBreaker', () => ({
   apiReachabilityBreaker: { reset: jest.fn(), onDeviceOffline: jest.fn() },
 }));
-jest.mock('#/apollo/links/wsLink', () => ({
+jest.mock('#apollo/links/wsLink', () => ({
   resumeWebSocketAfterOnline: jest.fn(),
 }));
 const mockRefresh = jest

@@ -1,5 +1,5 @@
 import { setupGlobalErrorHandler } from '../globalErrorHandler';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 
 describe('globalErrorHandler', () => {
   const originalGetGlobalHandler = ErrorUtils.getGlobalHandler;

@@ -1,9 +1,9 @@
 import type { ApolloCache, NormalizedCacheObject } from '@apollo/client';
-import { storage } from '#/store/deviceStorage';
-import { Telemetry } from '#/services/telemetry';
-import { getResolvedLanguage } from '#/i18n';
-import { logger } from '#/utils/environment';
-import { scheduleIdle } from '#/utils/scheduleIdle';
+import { storage } from '#store/deviceStorage';
+import { Telemetry } from '#services/telemetry';
+import { getResolvedLanguage } from '#i18n';
+import { logger } from '#utils/environment';
+import { scheduleIdle } from '#utils/scheduleIdle';
 
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CACHE_VERSION_KEY = 'apollo-cache-version';

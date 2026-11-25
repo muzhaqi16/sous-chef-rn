@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { requirePlatform } from '#/platform/install';
+import { requirePlatform } from '#platform/install';
 
 /**
  * Where "Stores near me" stands: `explaining` while the host says what

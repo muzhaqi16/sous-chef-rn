@@ -10,8 +10,8 @@ import {
   GetBrandsDocument,
 } from '#operations/item/item.generated';
 import { GetStoresDocument } from '#operations/store/store.generated';
-import { CategoryType, UnitType } from '#/graphql/generated/schemaTypes';
-import { makeCache } from '#/apollo/cache';
+import { CategoryType, UnitType } from '#graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
 import { useDataPreloading } from '../useDataPreloading';
 import type { AppState } from '#store/slices/appSlice';
 

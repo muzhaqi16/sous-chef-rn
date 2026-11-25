@@ -10,24 +10,24 @@ import { drained, drainTimers } from '#/test-utils/drainTimers';
 import DocumentScanner, {
   ScanDocumentResponseStatus,
 } from 'react-native-document-scanner-plugin';
-import { TextRecognition } from '#/native/TextRecognition';
-import { ReceiptStructuring } from '#/native/ReceiptStructuring';
+import { TextRecognition } from '#native/TextRecognition';
+import { ReceiptStructuring } from '#native/ReceiptStructuring';
 import { LABELLING_TIMEOUT_MS } from '../../utils/onDeviceStructuring';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
-import { alertService } from '#/services/alertService';
-import { errorService } from '#/services/errorService';
-import { Telemetry } from '#/services/telemetry';
-import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import { errorService } from '#services/errorService';
+import { Telemetry } from '#services/telemetry';
+import { ImageUploadPurpose } from '#graphql/generated/schemaTypes';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
-import { toDateKey } from '#/utils/dateUtils';
+import { toDateKey } from '#utils/dateUtils';
 import { useStore } from '#store';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { useReceiptPhotoConsentStore } from '../../store/receiptPhotoConsentStore';
 import { useReceiptScan } from '../useReceiptScan';
-import type { RecognizedPage } from '#/types/textRecognition';
-import type { ReceiptLineLabels } from '#/types/receiptStructuring';
+import type { RecognizedPage } from '#types/textRecognition';
+import type { ReceiptLineLabels } from '#types/receiptStructuring';
 
-jest.mock('#/native/TextRecognition', () => ({
+jest.mock('#native/TextRecognition', () => ({
   TextRecognition: {
     recognizeAndDelete: jest.fn(),
     preparePhotos: jest.fn(),
@@ -48,7 +48,7 @@ jest.mock('#hooks/device/usePhotoCapture', () => ({
     pickPhoto: mockPickPhoto,
   }),
 }));
-jest.mock('#/native/ReceiptStructuring', () => ({
+jest.mock('#native/ReceiptStructuring', () => ({
   ReceiptStructuring: { availability: jest.fn(), labelLines: jest.fn() },
 }));
 jest.mock('@muzhaqi16/receipt-rules', () => ({

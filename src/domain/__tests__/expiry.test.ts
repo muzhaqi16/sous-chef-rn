@@ -1,7 +1,7 @@
-import { getI18n } from '#/i18n/config';
-import { t } from '#/i18n';
-import type { Translate } from '#/i18n/types';
-import { daysUntilExpiry, expiryLabel } from '#/domain/expiry';
+import { getI18n } from '#i18n/config';
+import { t } from '#i18n';
+import type { Translate } from '#i18n/types';
+import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
 
 describe('daysUntilExpiry', () => {
   const today = '2026-09-21';

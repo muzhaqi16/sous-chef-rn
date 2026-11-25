@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import {
   RestrictionSection,
   type RestrictionSectionItem,
@@ -13,11 +13,11 @@ import type {
   Diet,
   Intolerance,
   HealthGoal,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   RestrictionSeverity,
   type RestrictionKindInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   DIET_OPTIONS,
   HEALTH_GOAL_OPTIONS,
@@ -26,8 +26,8 @@ import {
   restrictionLabelKey,
   withDietPicked,
 } from '#domain/dietary';
-import { executeWriteWithFinally } from '#/utils/finallyHelpers';
-import { logger } from '#/utils/environment';
+import { executeWriteWithFinally } from '#utils/finallyHelpers';
+import { logger } from '#utils/environment';
 
 // Diets held one per group (an animal-food diet, an eating style) vs stackable
 // constraints, derived from the shared classification.

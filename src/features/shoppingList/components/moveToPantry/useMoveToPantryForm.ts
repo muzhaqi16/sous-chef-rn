@@ -1,22 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useTranslation } from '#/i18n';
-import { StorageState, type UnitType } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import { StorageState, type UnitType } from '#graphql/generated/schemaTypes';
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
 import type { MoveToPantryInput } from '#features/shoppingList/hooks/useMoveToPantry';
 import {
   shownUnitPrice,
   totalFromUnitPrice,
 } from '#features/shoppingList/utils/purchasePrice';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { formatQuantityForInput, unitLabel } from '#/utils/formatQuantity';
-import { formatNumberForInput } from '#/utils/formatters/number';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { formatQuantityForInput, unitLabel } from '#utils/formatQuantity';
+import { formatNumberForInput } from '#utils/formatters/number';
 import { isOwnKey } from '#utils/isOwnKey';
 import {
   parseMoneyInput,
   reportValidationErrors,
-} from '#/utils/validation/common';
+} from '#utils/validation/common';
 import { buildMoveToPantryInput } from './buildMoveToPantryInput';
 import {
   moveToPantryDefaults,

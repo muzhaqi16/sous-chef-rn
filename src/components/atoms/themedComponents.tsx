@@ -15,7 +15,7 @@ import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 
-import type { Theme } from '#/theme/themes';
+import type { Theme } from '#theme/themes';
 
 import { Icon } from '#components/atoms/Icon';
 import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';

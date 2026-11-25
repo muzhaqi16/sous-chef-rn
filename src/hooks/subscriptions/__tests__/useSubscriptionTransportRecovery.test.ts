@@ -6,9 +6,9 @@ import {
   RESTART_STABLE_MS,
   useSubscriptionTransportRecovery,
 } from '../useSubscriptionTransportRecovery';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 
 // Typed through the module mock rather than the factory, so the listener
 // argument is used rather than declared-and-ignored.
@@ -17,7 +17,7 @@ const mockOnWebSocketReconnected = jest.fn((listener: () => void) => {
   return jest.fn();
 });
 let capturedReconnectListener: (() => void) | undefined;
-jest.mock('#/apollo/links/wsLink', () => ({
+jest.mock('#apollo/links/wsLink', () => ({
   onWebSocketReconnected: (listener: () => void) =>
     mockOnWebSocketReconnected(listener),
 }));
@@ -28,7 +28,7 @@ jest.mock('#store/useAppStore', () => ({
   useIsOnline: () => mockIsOnline.value,
 }));
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 /**
  * The message shape `GraphQLWsLink` produces when a close ends a subscription.

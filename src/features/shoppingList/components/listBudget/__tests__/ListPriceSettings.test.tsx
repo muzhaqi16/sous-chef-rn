@@ -1,12 +1,12 @@
 import React, { type ComponentProps } from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { formatCurrency } from '#/utils/formatters/number';
+import { formatCurrency } from '#utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { settledInAct } from '#/test-utils/settledInAct';
 import { ListPriceSettings } from '../ListPriceSettings';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 type Props = ComponentProps<typeof ListPriceSettings>;
 

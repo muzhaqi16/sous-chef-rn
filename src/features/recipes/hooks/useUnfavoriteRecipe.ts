@@ -1,7 +1,7 @@
 import { RemoveRecipeFromFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
 import type { RemoveFavoriteInputs } from '#features/recipes/offline/localWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
 
 interface UnfavoriteOptions {
   /** The caller's copy for a failure nothing more specific describes. */

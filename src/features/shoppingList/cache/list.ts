@@ -18,12 +18,12 @@ import {
   createRemoveFromQueryConnectionUpdater,
   safeEvict,
   skipOtherHomeVariants,
-} from '#/apollo/utils/cacheUpdaters';
+} from '#apollo/utils/cacheUpdaters';
 import {
   hideEntity,
   isHeld,
   writeLocalEntity,
-} from '#/apollo/utils/writeLocalEntity';
+} from '#apollo/utils/writeLocalEntity';
 import { matchesFilter } from './connections';
 
 /** What a list's row holds, as far as the cache knows it. */

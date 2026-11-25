@@ -1,17 +1,17 @@
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   ErrorCode,
   type AddItemsToShoppingListInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { errorService } from '#/services/errorService';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { errorService } from '#services/errorService';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import { createShoppingListRow } from '../createShoppingListRow';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 const LIST = gql`
   fragment CreateShoppingListRowProbe on ShoppingList {

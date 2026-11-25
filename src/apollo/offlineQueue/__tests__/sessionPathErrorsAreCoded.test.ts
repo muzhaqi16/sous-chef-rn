@@ -1,8 +1,8 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { classifyError } from '../queueErrorPolicy';
-import { SessionError } from '#/utils/errors/sessionError';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { SessionError } from '#utils/errors/sessionError';
+import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 
 /**
  * The queue decides withdraw-vs-park from the error's CODE. A bare `Error`

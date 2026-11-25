@@ -2,9 +2,9 @@ import React from 'react';
 import type { ApolloClient } from '@apollo/client';
 import { FlashList } from '@shopify/flash-list';
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { useStore } from '#store';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import { kitTestIDs } from '#components/testIDs';
 import {
   recordMock,
@@ -18,7 +18,7 @@ import {
   NotificationStatus,
   NotificationType,
   Priority,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   GetNotificationsDocument,
   type NotificationSummaryQuery,

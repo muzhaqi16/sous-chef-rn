@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import type { MealType } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import type { MealType } from '#graphql/generated/schemaTypes';
 import { MonthCalendar } from '#components/atoms/MonthCalendar';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { CalendarToggleBar } from '#features/mealPlan/components/CalendarToggleBar';

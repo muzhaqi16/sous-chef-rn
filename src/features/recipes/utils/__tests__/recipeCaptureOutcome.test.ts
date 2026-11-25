@@ -3,7 +3,7 @@ import {
   RecipeCaptureFailure,
   RecipeCaptureStatus,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   captureOutcomeOf,
   classifyCaptureCreate,

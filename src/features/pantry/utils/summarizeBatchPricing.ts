@@ -1,4 +1,4 @@
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { BatchStatus } from '#graphql/generated/schemaTypes';
 import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
 
 /** What the batches say ABOUT the item's own money fields, never a substitute. */

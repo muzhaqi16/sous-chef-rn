@@ -1,6 +1,6 @@
 import type { FormattedExecutionResult } from 'graphql';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import {
   GraphQLNetworkError,
   getTopLevelGraphQLError,

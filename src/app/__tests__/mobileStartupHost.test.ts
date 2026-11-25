@@ -3,7 +3,7 @@ jest.mock('#native/storage/keychain', () =>
 );
 // Registering the device runs in the background over native device APIs;
 // `deviceRegistration.test.ts` covers it.
-jest.mock('#/services/device/deviceRegistration', () => ({
+jest.mock('#services/device/deviceRegistration', () => ({
   registerDeviceInBackground: jest.fn(),
 }));
 jest.mock('react-native-launch-arguments', () => ({
@@ -13,12 +13,12 @@ jest.mock('react-native-launch-arguments', () => ({
 import { renderHook } from '@testing-library/react-native';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { useStore } from '#store';
-import { Environment } from '#/utils/environment';
+import { Environment } from '#utils/environment';
 import { Telemetry } from '#services/telemetry';
 import { HapticService } from '#services/haptic/HapticService';
-import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
-import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
-import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
+import { NativePerformanceService } from '#services/performance/NativePerformanceService';
+import { MemoryMonitor } from '#services/performance/MemoryMonitor';
+import { registerDeviceInBackground } from '#services/device/deviceRegistration';
 import { memoryKeychain } from '#/test-utils/memoryKeychain';
 import { settledInAct } from '#/test-utils/settledInAct';
 import { saveLastBiometricEmail } from '#native/storage/keychain';

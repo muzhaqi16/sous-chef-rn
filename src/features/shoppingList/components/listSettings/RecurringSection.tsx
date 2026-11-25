@@ -3,10 +3,10 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
-import { commonStyles } from '#/styles/commonStyles';
+import { useTranslation } from '#i18n';
+import { commonStyles } from '#styles/commonStyles';
 import { InfoRow } from '#components/atoms/InfoRow';
-import type { RecurringPattern } from '#/graphql/generated/schemaTypes';
+import type { RecurringPattern } from '#graphql/generated/schemaTypes';
 import { listSettingsStyles as styles } from './styles';
 
 interface RecurringSectionProps {

@@ -7,7 +7,7 @@ import {
   userEvent,
 } from '@testing-library/react-native';
 import { StorageLocationForm } from '#features/catalog/ui/StorageLocationForm';
-import { StorageType } from '#/graphql/generated/schemaTypes';
+import { StorageType } from '#graphql/generated/schemaTypes';
 
 describe('StorageLocationForm', () => {
   const defaultProps = {

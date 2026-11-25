@@ -12,7 +12,7 @@ import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemL
 import { summarizeBatchPricing } from '#features/pantry/utils/summarizeBatchPricing';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { isResourceNotFoundError } from '#features/pantry/utils/notFound';
-import { isResourceAccessLostError } from '#/utils/errors/graphqlErrors';
+import { isResourceAccessLostError } from '#utils/errors/graphqlErrors';
 
 /** The detail screen's item, its batches, and what the server says about both. */
 export function usePantryItemDetailData(itemId: string) {

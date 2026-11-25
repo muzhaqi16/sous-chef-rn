@@ -5,7 +5,7 @@ import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { VerifyEmailDocument } from '#operations/auth/auth.generated';
 import { SignedInEmailVerificationDocument } from '#features/auth/hooks/useVerifyEmail.generated';
-import { UserRole, AppTheme, ErrorCode } from '#/graphql/generated/schemaTypes';
+import { UserRole, AppTheme, ErrorCode } from '#graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
 import { EmailVerificationDeepLinkScreen } from '../EmailVerificationDeepLinkScreen';
 

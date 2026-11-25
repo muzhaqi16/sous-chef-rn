@@ -1,14 +1,14 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
-import type { UnitSystem } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import type { UnitSystem } from '#graphql/generated/schemaTypes';
 import { RowCard } from '#components/atoms/RowCard';
 import { StatusLine, type StatusTone } from '#components/atoms/StatusLine';
 import { Text } from '#components/atoms/Text';
 import { ListItem } from '#components/molecules/ListItem';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
-import { rowType } from '#/theme/foundations/type';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { rowType } from '#theme/foundations/type';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 import { describeStoreOption, type FoundOption } from '#domain/stores';
 
 interface StoreRowProps {

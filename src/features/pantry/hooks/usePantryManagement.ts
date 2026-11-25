@@ -6,7 +6,7 @@
 import type {
   PantryItemFilters,
   PantryItemOrderBy,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { usePantryQuery, type PantryQueryOptions } from './usePantryQuery';
 import { usePantryStats } from './usePantryStats';
 import { usePantryItemMutations } from './mutations/usePantryItemMutations';

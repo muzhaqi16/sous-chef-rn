@@ -6,7 +6,7 @@ import {
 import { drained } from '#/test-utils/drainTimers';
 import { CreateHomeDocument } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useHomeMutations } from '../useHomeMutations';
 
 const mockStoreState = {
@@ -32,9 +32,9 @@ jest.mock('#store/useAppStore', () => ({
   })),
 }));
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
-jest.mock('#/utils/connectionUtils', () => ({
+jest.mock('#utils/connectionUtils', () => ({
   extractNodes: jest.fn(
     (conn?: { edges?: Array<{ node?: unknown } | null> | null } | null) =>
       conn?.edges ? conn.edges.map(e => e?.node).filter(Boolean) : [],

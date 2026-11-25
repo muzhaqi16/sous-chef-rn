@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { Chip } from '#components/molecules/Chip';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 export interface RestrictionSectionItem {
   id: string;

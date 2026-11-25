@@ -11,11 +11,11 @@
 import {
   CollaboratorRole,
   NotificationType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { NotificationCopyData } from '#features/notifications/types';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
-import type { Translate } from '#/i18n/types';
-import { todayKey } from '#/utils/dateUtils';
+import type { Translate } from '#i18n/types';
+import { todayKey } from '#utils/dateUtils';
 
 /**
  * A wire string is not an enum member, so a value this build predates has to

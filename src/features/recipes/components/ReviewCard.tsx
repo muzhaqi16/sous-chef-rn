@@ -1,7 +1,7 @@
 import React from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useFragment } from '@apollo/client/react';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -12,8 +12,8 @@ import {
   RecipeReviewFragmentDoc,
   type RecipeReviewFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
-import { formatRelativeToNow } from '#/utils/formatters/date';
-import { personName } from '#/utils/formatters/memberFormatters';
+import { formatRelativeToNow } from '#utils/formatters/date';
+import { personName } from '#utils/formatters/memberFormatters';
 import { useUser } from '#store/useAppStore';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 

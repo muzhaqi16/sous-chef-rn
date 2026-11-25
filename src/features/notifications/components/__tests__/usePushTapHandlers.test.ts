@@ -4,10 +4,10 @@ import { usePushTapHandlers } from '../usePushTapHandlers';
 const mockRegisterFcmTapHandlers = jest.fn(() => jest.fn());
 const mockRegisterIosPushTapHandlers = jest.fn(() => jest.fn());
 
-jest.mock('#/services/push/nativePushMessaging', () => ({
+jest.mock('#services/push/nativePushMessaging', () => ({
   registerFcmTapHandlers: () => mockRegisterFcmTapHandlers(),
 }));
-jest.mock('#/services/push/iosPushMessaging', () => ({
+jest.mock('#services/push/iosPushMessaging', () => ({
   registerIosPushTapHandlers: () => mockRegisterIosPushTapHandlers(),
 }));
 

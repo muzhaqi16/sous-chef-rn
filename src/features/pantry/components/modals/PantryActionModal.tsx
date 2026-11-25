@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
-import { errorService } from '#/services/errorService';
-import { alertService } from '#/services/alertService';
+import { errorService } from '#services/errorService';
+import { alertService } from '#services/alertService';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
@@ -15,9 +15,9 @@ import {
 } from '#features/pantry/hooks/useOperationUnits';
 import { useConvertAvailableQuantity } from '#features/pantry/hooks/useConvertAvailableQuantity';
 import { useOpening } from '#hooks/ui/useOpening';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { Text } from '#components/atoms/Text';
-import type { UnitLabelSource } from '#/utils/formatQuantity';
+import type { UnitLabelSource } from '#utils/formatQuantity';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { DataStateView } from '#components/organisms/DataStateView';
 import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';

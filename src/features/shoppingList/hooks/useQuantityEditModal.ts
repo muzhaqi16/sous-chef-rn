@@ -3,17 +3,17 @@ import { useFragment } from '@apollo/client/react';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UseQuantityEditModal_ItemFragmentDoc } from './useQuantityEditModal.generated';
-import { Telemetry } from '#/services/telemetry';
-import { useTranslation } from '#/i18n';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { Telemetry } from '#services/telemetry';
+import { useTranslation } from '#i18n';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { normalizeNumericTextForApi } from '#utils/parseDecimalInput';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { shownLineReading } from '#features/shoppingList/utils/lineReading';
-import { unitLabel, type UnitLabelSource } from '#/utils/formatQuantity';
+import { unitLabel, type UnitLabelSource } from '#utils/formatQuantity';
 
 export interface QuantityEditItem {
   id: string;

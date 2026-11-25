@@ -4,10 +4,10 @@ import {
   reportSubscriptionError,
 } from '../subscriptionErrorHandler';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { errorService } from '#/services/errorService';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { errorService } from '#services/errorService';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 // graphql-js's refusal of a subscription resolver that returns no event stream.
 const resolverError = new CombinedGraphQLErrors({

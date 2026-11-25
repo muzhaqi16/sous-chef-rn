@@ -1,9 +1,9 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import { formatQuantityForDisplay } from '#utils/formatQuantity';
 import { EmptyState } from '#components/molecules/EmptyState';
 
 interface DataItem {

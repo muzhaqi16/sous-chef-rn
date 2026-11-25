@@ -18,7 +18,7 @@ import {
 } from '#operations/home/home.generated';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useHomeManagement } from '../useHomeManagement';
 
 const mockStoreState = {
@@ -61,7 +61,7 @@ jest.mock('#store/useAppStore', () => ({
   })),
 }));
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 beforeEach(() => {
   jest.useFakeTimers();

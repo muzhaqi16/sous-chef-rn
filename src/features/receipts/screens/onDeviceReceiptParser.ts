@@ -1,5 +1,5 @@
-import { ReceiptStructuring } from '#/native/ReceiptStructuring';
-import { withinMs } from '#/utils/withinMs';
+import { ReceiptStructuring } from '#native/ReceiptStructuring';
+import { withinMs } from '#utils/withinMs';
 import { LABELLING_TIMEOUT_MS } from '../utils/onDeviceStructuring';
 import { linesThroughTotal, structureReceipt } from '../utils/structureReceipt';
 import type { ParsedReceipt } from '../utils/parsedReceipt';

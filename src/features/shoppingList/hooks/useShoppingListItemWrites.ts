@@ -14,11 +14,11 @@ import { ShoppingListItemForEditDocument } from './useShoppingListItemWrites.gen
 import type {
   ShoppingListItem,
   UpdateShoppingListItemInput,
-} from '#/graphql/generated/schemaTypes';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+} from '#graphql/generated/schemaTypes';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { localBrand, localUnit } from '#features/catalog/cache/localRefs';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { parseStoredQuantityText } from '#/utils/formatQuantity';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { parseStoredQuantityText } from '#utils/formatQuantity';
 import { UseShoppingListItemForm_ItemFragmentDoc } from '#features/shoppingList/hooks/useShoppingListItemForm.generated';
 import {
   createShoppingListRow,
@@ -27,9 +27,9 @@ import {
 } from '#features/shoppingList/cache/createShoppingListRow';
 import { useDataState } from '#hooks/data/useDataState';
 import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
-import { useTranslation } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
+import { useTranslation } from '#i18n';
 
 type LocalItemFields = Partial<
   Pick<

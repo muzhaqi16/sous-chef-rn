@@ -1,9 +1,9 @@
 import type { ApolloLink } from '@apollo/client';
 import { Observable } from '@apollo/client';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { Telemetry } from '#/services/telemetry';
-import { Environment } from '#/utils/environment';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { Telemetry } from '#services/telemetry';
+import { Environment } from '#utils/environment';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { NotificationEventsDocument } from '#features/notifications/graphql/notifications.generated';
 
 // Telemetry uses the shared mock from `src/services/telemetry/__mocks__/`
@@ -21,7 +21,7 @@ jest.mock('#store', () => ({
   },
 }));
 
-jest.mock('#/utils/errorSerialization', () => ({
+jest.mock('#utils/errorSerialization', () => ({
   serializeError: jest.fn(
     (err: { message?: string; name?: string; stack?: string } | null) => ({
       message: err?.message || 'Unknown',
@@ -32,7 +32,7 @@ jest.mock('#/utils/errorSerialization', () => ({
 }));
 
 import { createTelemetryLink } from '../telemetryLink';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
 
 const mockedEnvironment = Environment as jest.Mocked<typeof Environment>;
 const clockNow = jest.spyOn(performance, 'now');
@@ -185,7 +185,7 @@ describe('createTelemetryLink', () => {
     ): typeof createTelemetryLink => {
       let factory!: typeof createTelemetryLink;
       jest.isolateModules(() => {
-        jest.doMock('#/config/env', () => ({
+        jest.doMock('#config/env', () => ({
           env: { GRAPHQL_TELEMETRY_SAMPLE_RATE: rate },
         }));
         factory = require('../telemetryLink').createTelemetryLink;
@@ -195,7 +195,7 @@ describe('createTelemetryLink', () => {
 
     afterEach(() => {
       jest.spyOn(Math, 'random').mockRestore();
-      jest.dontMock('#/config/env');
+      jest.dontMock('#config/env');
     });
 
     it('skips telemetry in production when random exceeds a reduced sample rate', () => {

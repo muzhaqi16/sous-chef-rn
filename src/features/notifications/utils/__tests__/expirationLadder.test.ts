@@ -1,4 +1,4 @@
-import { ExpirationNotificationType } from '#/graphql/generated/schemaTypes';
+import { ExpirationNotificationType } from '#graphql/generated/schemaTypes';
 import {
   EXPIRATION_LADDER_RUNGS,
   EXPIRATION_THRESHOLD_DAYS,

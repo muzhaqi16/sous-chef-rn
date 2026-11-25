@@ -1,8 +1,8 @@
-import { PriceBasis } from '#/graphql/generated/schemaTypes';
-import type { Translate } from '#/i18n/types';
+import { PriceBasis } from '#graphql/generated/schemaTypes';
+import type { Translate } from '#i18n/types';
 import { useAppStore } from '#store/useAppStore';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { DEFAULT_CURRENCY, formatCurrency } from '#utils/formatters/number';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
 /**
  * The shape of every denominated field (`PantryItem.costCurrency`,

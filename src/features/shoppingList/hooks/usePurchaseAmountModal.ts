@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useFragment } from '@apollo/client/react';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UsePurchaseAmountModal_ItemFragmentDoc } from './usePurchaseAmountModal.generated';
-import { useTranslation } from '#/i18n';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { useTranslation } from '#i18n';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { unitPriceFromTotal } from '#features/shoppingList/utils/purchasePrice';
-import { unitLabel } from '#/utils/formatQuantity';
+import { unitLabel } from '#utils/formatQuantity';
 
 export interface PurchaseAmountItem {
   id: string;

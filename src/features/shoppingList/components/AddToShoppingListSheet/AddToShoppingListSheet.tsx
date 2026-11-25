@@ -1,14 +1,14 @@
 import React, { useRef, useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { ShoppingListSuggestionItem } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import {
   useShoppingListSuggestions,
   SHOPPING_SUGGESTIONS_LIMIT,
 } from '#features/shoppingList/hooks/useShoppingListSuggestions';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { useAddToShoppingList } from '#features/shoppingList/hooks/useAddToShoppingList';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
-import { SuggestionSurface } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
+import { SuggestionSurface } from '#graphql/generated/schemaTypes';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { useFirstShopTourContext } from '#features/shoppingList/context/FirstShopTourContext';

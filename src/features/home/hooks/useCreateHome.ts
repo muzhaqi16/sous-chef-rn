@@ -2,13 +2,13 @@ import { useApolloClient } from '@apollo/client/react';
 import { CreateHomeDocument } from '#operations/home/home.generated';
 import { holdsHomesList } from '#features/home/hooks/homeCacheUpdaters';
 import type { CreateHomeInputs } from '#features/home/offline/localWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import type { SettledFailure } from '#/apollo/utils/settleMutation';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { generateEntityId } from '#/utils/generateEntityId';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { SettledFailure } from '#apollo/utils/settleMutation';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
+import { generateEntityId } from '#utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
-import type { CreateHomeInput } from '#/graphql/generated/schemaTypes';
-import { useTranslation } from '#/i18n';
+import type { CreateHomeInput } from '#graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
 
 /** A create's verdict, plus the id it minted — the home's id, queued or not. */
 export type CreateHomeOutcome =

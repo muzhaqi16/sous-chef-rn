@@ -3,8 +3,8 @@ import { useUser } from '#store/useAppStore';
 import {
   heldFetchPolicy,
   type StandDownOptions,
-} from '#/hooks/apollo/standDownOptions';
-import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
+} from '#hooks/apollo/standDownOptions';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useDataState } from '#hooks/data/useDataState';
 import { skipToken, useQuery } from '@apollo/client/react';
 import {
@@ -20,14 +20,14 @@ import type {
   ReligiousDiet,
   RestrictionKindInput,
   RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+} from '#graphql/generated/schemaTypes';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type {
   AddRestrictionInputs,
   RemoveRestrictionInputs,
 } from '#features/profile/offline/localWrites';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { useTranslation } from '#/i18n';
+import { generateEntityId } from '#utils/generateEntityId';
+import { useTranslation } from '#i18n';
 
 export interface DietaryRestriction {
   id: string;

@@ -1,6 +1,6 @@
 import { UpdateHomeDocument } from '#operations/home/home.generated';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
 
 /** What a settings screen can change about a home through `updateHome`. */
 export type HomeFieldUpdates = {

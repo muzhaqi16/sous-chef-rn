@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   LinearTransition,
@@ -14,7 +14,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useHomeManagement } from '#features/home/hooks/useHomeManagement';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useInviteUserModal } from '#features/home/screens/useInviteUserModal';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { HomeStats } from '#features/home/components/HomeStats';
 import { CreateHomeForm } from '#features/home/components/CreateHomeForm';
 import { JoinHomeForm } from '#features/home/components/JoinHomeForm';
@@ -23,12 +23,12 @@ import {
   getInvitableRoles,
   canInviteToHome,
 } from '#features/home/utils/homePermissions';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useDataState } from '#hooks/data/useDataState';
-import { errorService } from '#/services/errorService';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { motion } from '#/theme/motion';
+import { errorService } from '#services/errorService';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
+import { motion } from '#theme/motion';
 import { SubScreen } from '#components/templates/SubScreen';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { homeTestIDs } from '#features/home/testIDs';

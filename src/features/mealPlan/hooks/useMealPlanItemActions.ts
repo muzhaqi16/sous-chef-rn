@@ -8,15 +8,15 @@ import {
   MealPlanItemActions_PlanBoundsFragmentDoc,
 } from './useMealPlanItemActions.generated';
 import { useCreateMealPlanItem } from './useCreateMealPlanItem';
-import type { CreateMealPlanItemInput } from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
+import type { CreateMealPlanItemInput } from '#graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
 import { MEAL_PLAN_ITEMS_FIELD } from '#features/mealPlan/cache/mealPlanItem';
 import type { RemovePlanItemInputs } from '#features/mealPlan/offline/localWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { useTranslation } from '#/i18n';
-import { keepDayInsidePlan } from '#/utils/dateUtils';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
+import { generateEntityId } from '#utils/generateEntityId';
+import { useTranslation } from '#i18n';
+import { keepDayInsidePlan } from '#utils/dateUtils';
 
 export function useMealPlanItemActions(mealPlanId: string | null) {
   const client = useApolloClient();

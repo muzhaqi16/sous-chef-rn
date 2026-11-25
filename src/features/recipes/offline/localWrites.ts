@@ -2,12 +2,12 @@
  * What each recipe write changes on the device, as a pending layer. The server's
  * answer writes its own rows; `commit` adds what it cannot state.
  */
-import type { LocalWrite } from '#/apollo/pendingWrites/types';
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
-import type { CreateRecipeInput } from '#/graphql/generated/schemaTypes';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
+import type { LocalWrite } from '#apollo/pendingWrites/types';
+import { writeEntityFields } from '#apollo/utils/localFirstFields';
+import { isHeld } from '#apollo/utils/writeLocalEntity';
+import type { CreateRecipeInput } from '#graphql/generated/schemaTypes';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
 import {
   dropFavorite,
   linkSavedFavorite,

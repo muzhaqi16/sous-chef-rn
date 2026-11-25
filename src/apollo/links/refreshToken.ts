@@ -1,19 +1,19 @@
 import { Observable } from '@apollo/client';
 import type { ApolloLink } from '@apollo/client/link';
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
-import { logger } from '#/utils/environment';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { backoffDelay, sleep } from '#/utils/backoff';
+import { logger } from '#utils/environment';
+import { isNetworkError } from '#utils/isNetworkError';
+import { backoffDelay, sleep } from '#utils/backoff';
 import {
   isSessionEndingAuthCode,
   isSupersededRefreshCode,
-} from '#/utils/authErrorCodes';
-import { SessionError } from '#/utils/errors/sessionError';
+} from '#utils/authErrorCodes';
+import { SessionError } from '#utils/errors/sessionError';
 import {
   ErrorCode,
   ErrorDisposition,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { isSessionEnding } from '#store/sessionEnding';
 import {
@@ -25,7 +25,7 @@ import {
   registerRefreshInFlightCheck,
   registerTokenRefresh,
 } from './wsLink';
-import { getApolloClient } from '#/apollo/clientRegistry';
+import { getApolloClient } from '#apollo/clientRegistry';
 
 // `refresh` returns a RefreshResult union, so a refusal resolves 200 with an
 // error member as DATA; this carries its code out of the success path so the

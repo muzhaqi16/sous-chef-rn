@@ -6,7 +6,7 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   inputOf,
   recordMock,
@@ -20,9 +20,9 @@ import {
 } from '#/test-utils/fixtures/catalogSearches';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { ErrorCode, UnitSystem } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { ErrorCode, UnitSystem } from '#graphql/generated/schemaTypes';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';

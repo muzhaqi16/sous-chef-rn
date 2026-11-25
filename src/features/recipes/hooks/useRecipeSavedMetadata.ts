@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useApolloClient } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { UpdateFavoriteRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import type { SavedFieldsInputs } from '#features/recipes/offline/localWrites';
 import { useUnfavoriteRecipe } from '#features/recipes/hooks/useUnfavoriteRecipe';
-import { toastService } from '#/services/toastService';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { toastService } from '#services/toastService';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import {
   UseRecipeSavedMetadata_RecipeFragmentDoc,
   type UseRecipeSavedMetadata_RecipeFragment,

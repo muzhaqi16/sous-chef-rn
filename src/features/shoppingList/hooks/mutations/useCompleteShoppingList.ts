@@ -4,13 +4,13 @@
  * idempotently. A failure reverts the write; a queued one keeps it.
  */
 
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   CompleteShoppingListDocument,
   MarkShoppingListActiveDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ListStatus } from '#/graphql/generated/schemaTypes';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { ListStatus } from '#graphql/generated/schemaTypes';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 
 export function useCompleteShoppingList() {
   const { t } = useTranslation();

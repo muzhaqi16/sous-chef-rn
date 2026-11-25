@@ -7,10 +7,10 @@ import {
   userEvent,
 } from '@testing-library/react-native';
 import { InviteUserModal } from '#features/home/components/InviteUserModal';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { useStore } from '#store';
-import { getI18n } from '#/i18n/config';
+import { getI18n } from '#i18n/config';
 
 beforeEach(() => {
   jest.useFakeTimers();

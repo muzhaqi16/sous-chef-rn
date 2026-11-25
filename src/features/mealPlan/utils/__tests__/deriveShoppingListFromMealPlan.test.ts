@@ -2,7 +2,7 @@ import {
   deriveShoppingListFromMealPlan,
   type PlannedMeal,
 } from '#features/mealPlan/utils/deriveShoppingListFromMealPlan';
-import { AddedContext } from '#/graphql/generated/schemaTypes';
+import { AddedContext } from '#graphql/generated/schemaTypes';
 
 /**
  * The rules here are the server's, read out of the retired

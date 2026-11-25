@@ -1,17 +1,17 @@
 import type { ApolloCache, ApolloClient } from '@apollo/client';
-import { requireApolloClient } from '#/apollo/clientRegistry';
-import { queueManager } from '#/apollo/offlineQueue/queueManager';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { requireApolloClient } from '#apollo/clientRegistry';
+import { queueManager } from '#apollo/offlineQueue/queueManager';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import {
   SyncPageStatus,
   SyncPokeKind,
   type SyncScopeKind,
-} from '#/graphql/generated/schemaTypes';
-import { getDeviceId } from '#/services/auth/deviceId';
-import { Telemetry } from '#/services/telemetry';
-import { registerSessionTeardown } from '#/store/sessionTeardown';
-import { getRateLimitDetails } from '#/utils/errors/rateLimit';
-import { logger } from '#/utils/environment';
+} from '#graphql/generated/schemaTypes';
+import { getDeviceId } from '#services/auth/deviceId';
+import { Telemetry } from '#services/telemetry';
+import { registerSessionTeardown } from '#store/sessionTeardown';
+import { getRateLimitDetails } from '#utils/errors/rateLimit';
+import { logger } from '#utils/environment';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import type { FeedPokesSubscription } from './feed.generated';

@@ -7,9 +7,9 @@ import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
   safeEvict,
-} from '#/apollo/utils/cacheUpdaters';
-import { isRecord } from '#/utils/isRecord';
-import { hideEntity, isHeld } from '#/apollo/utils/writeLocalEntity';
+} from '#apollo/utils/cacheUpdaters';
+import { isRecord } from '#utils/isRecord';
+import { hideEntity, isHeld } from '#apollo/utils/writeLocalEntity';
 import {
   writeLocalPantryItem,
   type LocalPantryItem,

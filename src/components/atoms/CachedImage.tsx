@@ -13,9 +13,9 @@ import type { StyleProp, ImageStyle, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Icon } from '#components/atoms/Icon';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 // The load handlers end the shimmer, so a caller reacts through `onError`.
 export interface CachedImageProps

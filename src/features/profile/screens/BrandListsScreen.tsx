@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { RowCard } from '#components/atoms/RowCard';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';

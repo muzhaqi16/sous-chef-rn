@@ -1,6 +1,6 @@
-import { getI18n } from '#/i18n/config';
-import { isTranslationKey } from '#/i18n';
-import { appConfig } from '#/config/appConfig';
+import { getI18n } from '#i18n/config';
+import { isTranslationKey } from '#i18n';
+import { appConfig } from '#config/appConfig';
 import { mergedLocale } from '#/test-utils/mergedLocales';
 
 const LOCALES = ['en', 'es', 'it', 'sq'];

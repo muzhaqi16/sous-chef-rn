@@ -1,7 +1,7 @@
 import { lazy, mixed, number, object, string, type InferType } from 'yup';
-import { StockCheckAnswer, WasteReason } from '#/graphql/generated/schemaTypes';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { lazyMessage } from '#/utils/validation/common';
+import { StockCheckAnswer, WasteReason } from '#graphql/generated/schemaTypes';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { lazyMessage } from '#utils/validation/common';
 import type {
   StockCheckChoice,
   StockCheckRow,

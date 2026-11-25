@@ -7,7 +7,7 @@
  */
 
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { writeLocalShoppingList } from '../list';
 import { List_RowFragmentDoc } from '../list.generated';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';

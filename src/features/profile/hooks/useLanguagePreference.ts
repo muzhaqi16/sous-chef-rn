@@ -1,4 +1,4 @@
-import { getResolvedLanguage } from '#/i18n';
+import { getResolvedLanguage } from '#i18n';
 import { useStore } from '#store';
 import { usePreferences } from '#store/useAppStore';
 import { useUpdateSettings } from '#hooks/settings/useUpdateSettings';

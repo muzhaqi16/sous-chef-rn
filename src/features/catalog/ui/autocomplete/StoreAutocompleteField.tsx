@@ -1,4 +1,4 @@
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import React from 'react';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';

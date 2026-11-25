@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
@@ -11,9 +11,9 @@ import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import type {
   Diet,
   RestrictionKindInput,
-} from '#/graphql/generated/schemaTypes';
-import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
-import { commonStyles } from '#/styles/commonStyles';
+} from '#graphql/generated/schemaTypes';
+import { RestrictionSeverity } from '#graphql/generated/schemaTypes';
+import { commonStyles } from '#styles/commonStyles';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { dietGroup } from '#domain/dietary';
 import { ReligiousDietPicker } from '#features/profile/ui/ReligiousDietPicker';
@@ -24,8 +24,8 @@ import { useDietarySharing } from '#features/profile/hooks/useDietarySharing';
 import { CookingPreferencesSheet } from '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet';
 import { MacroTargetsSheet } from '#features/profile/components/MacroTargetsSheet/MacroTargetsSheet';
 import { Text } from '#components/atoms/Text';
-import { errorService } from '#/services/errorService';
-import { motion } from '#/theme/motion';
+import { errorService } from '#services/errorService';
+import { motion } from '#theme/motion';
 import { DataStateView } from '#components/organisms/DataStateView';
 
 export const DietaryProfileScreen: React.FC = () => {

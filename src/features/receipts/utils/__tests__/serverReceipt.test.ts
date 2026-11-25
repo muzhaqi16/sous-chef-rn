@@ -5,16 +5,16 @@ import {
   ReceiptParseStatus,
   ReceiptParseWarningCode,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
-import type { ReceiptParseReadersFragment } from '#/graphql/readers/receiptParseReaders.generated';
-import { todayKey } from '#/utils/dateUtils';
+} from '#graphql/generated/schemaTypes';
+import type { ReceiptParseReadersFragment } from '#graphql/readers/receiptParseReaders.generated';
+import { todayKey } from '#utils/dateUtils';
 import { classifyCreateResult, outcomeOf } from '../serverReceipt';
 import { fromServerReceipt } from '../fromServerReceipt';
 import { receiptReviewLines, seedChoice } from '../receiptReviewLines';
 
 // The phone's day: a read purchase day is held to a window around it.
-jest.mock('#/utils/dateUtils', () => ({
-  ...jest.requireActual('#/utils/dateUtils'),
+jest.mock('#utils/dateUtils', () => ({
+  ...jest.requireActual('#utils/dateUtils'),
   todayKey: jest.fn(),
 }));
 

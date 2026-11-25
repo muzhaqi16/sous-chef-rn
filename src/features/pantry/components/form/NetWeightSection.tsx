@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { Controller, type Control } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
@@ -8,7 +8,7 @@ import { FormInput } from '#components/atoms/FormInput';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { FieldRow } from '#components/atoms/FieldRow';
 import type { PantryItemFormData } from './PantryItemForm';
-import { localizeNumericHint } from '#/utils/formatters/number';
+import { localizeNumericHint } from '#utils/formatters/number';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface NetWeightSectionProps {

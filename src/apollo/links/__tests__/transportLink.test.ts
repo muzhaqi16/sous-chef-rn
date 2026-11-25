@@ -9,7 +9,7 @@ import { ApolloClient, InMemoryCache } from '@apollo/client';
 import { sortTopLevelDefinitions } from '@apollo/persisted-query-lists';
 import { Kind, parse, print } from 'graphql';
 import type { DefinitionNode } from 'graphql';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { createTransportLink } from '../transportLink';
 
 interface MockSent {

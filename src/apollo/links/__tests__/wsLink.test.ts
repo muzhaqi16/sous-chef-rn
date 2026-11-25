@@ -19,7 +19,7 @@ jest.mock('#store', () => ({
 
 // Environment is auto-mocked via jest.setup.js. Override `getApiConfig` so
 // the WS link picks up the local test URL.
-import { Environment } from '#/utils/environment';
+import { Environment } from '#utils/environment';
 
 // graphql-ws's lifecycle handlers are passed as the `on` config to
 // createClient at module-import time. Capture that object reference in
@@ -57,14 +57,14 @@ beforeAll(() => {
 });
 
 // Mock errorSerialization
-jest.mock('#/utils/errorSerialization', () => ({
+jest.mock('#utils/errorSerialization', () => ({
   serializeError: jest.fn((e: unknown) =>
     e instanceof Error ? e.message : 'unknown',
   ),
 }));
 
 // Mock deviceId
-jest.mock('#/services/auth/deviceId', () => ({
+jest.mock('#services/auth/deviceId', () => ({
   getDeviceId: jest.fn(() => 'test-device-id'),
 }));
 
@@ -73,7 +73,7 @@ jest.mock('#/services/auth/deviceId', () => ({
 // proactiveTokenRefresh at module init). Tests register their own mock.
 
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 import { isLibraryFatalCloseCode } from '../wsCloseCodes';
 import { wsLink } from '../wsLink';
 import {

@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { feedEngine } from '#/apollo/feed/feedEngine';
-import { positionOf, subscribeToPositions } from '#/apollo/feed/feedPositions';
-import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
+import { feedEngine } from '#apollo/feed/feedEngine';
+import { positionOf, subscribeToPositions } from '#apollo/feed/feedPositions';
+import { SyncScopeKind } from '#graphql/generated/schemaTypes';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { holdListInMemory } from '../offline/listShards';
 

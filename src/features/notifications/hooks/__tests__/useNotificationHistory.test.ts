@@ -1,4 +1,4 @@
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -8,7 +8,7 @@ import { GetNotificationsDocument } from '#features/notifications/graphql/notifi
 import {
   NotificationCategory,
   NotificationStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { useNotificationHistory } from '../useNotificationHistory';
 

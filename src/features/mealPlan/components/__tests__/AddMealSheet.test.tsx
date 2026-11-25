@@ -141,9 +141,9 @@ import {
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { useStore } from '#store';
-import { Diet, ExternalSource } from '#/graphql/generated/schemaTypes';
+import { Diet, ExternalSource } from '#graphql/generated/schemaTypes';
 import { OpenCatalogRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { SearchRecipesDocument } from '#features/recipes/hooks/useRecipeSearch.generated';
 import type { FoundHit, FoundRecipe } from '#features/recipes/utils/recipeRows';
@@ -487,7 +487,7 @@ describe('AddMealSheet', () => {
     it('stays open with the reason when the API cannot open it', async () => {
       const { toastService } = jest.requireMock<{
         toastService: { error: jest.Mock };
-      }>('#/services/toastService');
+      }>('#services/toastService');
       const gone = recordMock(OpenCatalogRecipeDocument, {
         data: { upsertExternalRecipe: { __typename: 'NotFoundError' } },
       });

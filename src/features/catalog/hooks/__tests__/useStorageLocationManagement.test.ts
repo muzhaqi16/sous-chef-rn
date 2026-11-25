@@ -1,4 +1,4 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { GraphQLError } from 'graphql';
 ('use no memo');
 
@@ -21,7 +21,7 @@ globalThis.cancelIdleCallback = (handle: number): void => {
   }
 };
 
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { act } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
@@ -36,13 +36,13 @@ import {
   DeleteStorageLocationDocument,
   MarkStorageLocationAsDefaultDocument,
 } from '#features/catalog/graphql/storageLocation.generated';
-import { ErrorCode, StorageType } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, StorageType } from '#graphql/generated/schemaTypes';
 import { useStorageLocationManagement } from '#features/catalog/hooks/useStorageLocationManagement';
 import { storeApi } from '#store';
 
 type ManagementApi = ReturnType<typeof useStorageLocationManagement>;
 
-jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
+jest.mock('#hooks/apollo/usePreservedQueryData', () => ({
   // usePreservedNodes composes usePreservedQueryData internally — passthrough.
   usePreservedQueryData: jest.fn(
     <T>(data: T | undefined, initial: T): T => data ?? initial,
@@ -54,8 +54,8 @@ jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
 // executed nothing, so the suite was green on writes that never happened. The
 // factories are spied on top of the real implementations instead, which keeps
 // the call assertions AND exercises the cache.
-jest.mock('#/apollo/utils/cacheUpdaters', () =>
-  jest.requireActual('#/apollo/utils/cacheUpdaters'),
+jest.mock('#apollo/utils/cacheUpdaters', () =>
+  jest.requireActual('#apollo/utils/cacheUpdaters'),
 );
 
 const mockToastSuccess = jest.mocked(toastService.success);

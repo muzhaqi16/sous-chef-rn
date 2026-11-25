@@ -693,11 +693,11 @@ function generate(schema, target) {
       ? `import {\n${[...enumTypes]
           .sort()
           .map(t => `  ${t},`)
-          .join('\n')}\n} from '#/graphql/generated/schemaTypes';\n`
+          .join('\n')}\n} from '#graphql/generated/schemaTypes';\n`
       : '') +
     (target.unmasked
       ? "import type { Unmasked } from '@apollo/client/masking';\n" +
-        "import type { NeutralByType } from '#/apollo/utils/writeLocalEntity';\n"
+        "import type { NeutralByType } from '#apollo/utils/writeLocalEntity';\n"
       : '') +
     `import type {\n${typeNames.map(t => `  ${t},`).join('\n')}\n} from '${
       target.typesFrom

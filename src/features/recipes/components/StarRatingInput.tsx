@@ -3,7 +3,7 @@ import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { IconSizeName } from '#components/atoms/Icon';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 interface StarRatingInputProps {
   value: number;

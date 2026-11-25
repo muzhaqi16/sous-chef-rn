@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
@@ -17,7 +17,7 @@ import {
 } from '#features/recipes/components/recipeSearch/IngredientListItem';
 import type { useRecipeScreen } from '#features/recipes/screens/useRecipeScreen';
 import { Text } from '#components/atoms/Text';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { hitSlop } from '#theme/foundations/sizes';
 
 // ── Types ──
 

@@ -1,6 +1,6 @@
 import { GraphQLError } from 'graphql';
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { useStore } from '#store';
 import {
   recordMock,
@@ -12,7 +12,7 @@ import {
   StorePlaceCategory,
   ErrorCode,
   UsualStoreSource,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { writeUsualStores } from '#features/catalog/cache/usualStores';
 import {

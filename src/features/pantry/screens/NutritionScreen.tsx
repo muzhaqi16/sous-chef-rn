@@ -6,7 +6,7 @@ import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { NutritionDetailList } from '#features/pantry/components/NutritionDetailList';
 import { SubScreen } from '#components/templates/SubScreen';
 import type { NutritionFactsValues } from '#domain/nutrition';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 
 type NutritionScreenParams = {

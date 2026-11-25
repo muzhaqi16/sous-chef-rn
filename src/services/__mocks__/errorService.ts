@@ -1,7 +1,7 @@
 /**
- * Shared test mock for `#/services/errorService`.
+ * Shared test mock for `#services/errorService`.
  *
- * Activated per-suite via a bare `jest.mock('#/services/errorService')` (no
+ * Activated per-suite via a bare `jest.mock('#services/errorService')` (no
  * factory). Provides the COMPLETE module surface, generated from the real module
  * rather than transcribed, so adding an export to `errorService.ts` needs no
  * test edits.
@@ -18,12 +18,12 @@
  * failure's copy is chosen from. A suite asserting on an alert body needs both.
  *
  *   ```ts
- *   jest.mock('#/services/errorService');
+ *   jest.mock('#services/errorService');
  *   ```
  *
  *   ✅ DO — override per-suite where the value matters:
  *     ```ts
- *     import { localizedErrorMessage } from '#/services/errorService';
+ *     import { localizedErrorMessage } from '#services/errorService';
  *     jest.mocked(localizedErrorMessage).mockReturnValue('Offline');
  *     ```
  *

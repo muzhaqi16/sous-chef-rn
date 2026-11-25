@@ -6,12 +6,12 @@ import type { ApolloCache, OperationVariables } from '@apollo/client';
 import {
   rowBaseline,
   type RowFields,
-} from '#/apollo/pendingWrites/conflictRead';
-import type { ConflictRead, LocalWrite } from '#/apollo/pendingWrites/types';
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
+} from '#apollo/pendingWrites/conflictRead';
+import type { ConflictRead, LocalWrite } from '#apollo/pendingWrites/types';
+import { writeEntityFields } from '#apollo/utils/localFirstFields';
+import { isHeld } from '#apollo/utils/writeLocalEntity';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
 import {
   ShoppingListItemConflict_ShoppingListItemFragmentDoc,
   ShoppingListItemForConflictDocument,

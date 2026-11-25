@@ -1,6 +1,6 @@
 import { CompleteOnboardingDocument } from '#operations/auth/user.generated';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
 
 /** An absolute set, so a replay lands the same state; onboarding finishes offline. */
 export function useCompleteOnboarding(userId: string | undefined) {

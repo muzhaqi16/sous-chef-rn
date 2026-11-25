@@ -4,16 +4,16 @@ import {
   type InMemoryCache,
   type NormalizedCacheObject,
 } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { FeedEngine } from '#/apollo/feed/feedEngine';
-import { feedStorage } from '#/apollo/feed/feedStorage';
-import { heldScopes, positionOf } from '#/apollo/feed/feedPositions';
-import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { SyncPageStatus } from '#/graphql/generated/schemaTypes';
-import { Telemetry } from '#/services/telemetry';
-import { storage } from '#/store/deviceStorage';
+import { makeCache } from '#apollo/cache';
+import { FeedEngine } from '#apollo/feed/feedEngine';
+import { feedStorage } from '#apollo/feed/feedStorage';
+import { heldScopes, positionOf } from '#apollo/feed/feedPositions';
+import { apolloCachePersistence } from '#apollo/offline/ApolloCachePersistence';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
+import { SyncPageStatus } from '#graphql/generated/schemaTypes';
+import { Telemetry } from '#services/telemetry';
+import { storage } from '#store/deviceStorage';
 import {
   clientOver,
   line,
@@ -34,10 +34,10 @@ import {
 import { useStore } from '#store';
 import { forgetShardMemory, hydrateListShard } from '../listShards';
 
-jest.mock('#/services/auth/deviceId');
+jest.mock('#services/auth/deviceId');
 
 let mockClient: ApolloClient | null = null;
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useToday } from '#hooks/app/useToday';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -14,7 +14,7 @@ import { RecommendedRecipeList } from '#features/recipes/ui/RecommendedRecipeLis
 
 import type { StaticScreenProps } from '@react-navigation/native';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
-import { formatDateTimeLong } from '#/utils/formatters/date';
+import { formatDateTimeLong } from '#utils/formatters/date';
 
 export const NotificationDetailScreen: React.FC<
   // `notifications/:id` deep-links here with the id alone.

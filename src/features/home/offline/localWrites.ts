@@ -2,8 +2,8 @@
  * What each home write changes on the device, as a pending layer. The server's
  * answer writes its own rows; `commit` adds what it cannot state.
  */
-import type { LocalWrite } from '#/apollo/pendingWrites/types';
-import type { CreateHomeInput } from '#/graphql/generated/schemaTypes';
+import type { LocalWrite } from '#apollo/pendingWrites/types';
+import type { CreateHomeInput } from '#graphql/generated/schemaTypes';
 import {
   writeLocalHome,
   type HomeCreator,

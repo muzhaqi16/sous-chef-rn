@@ -5,7 +5,7 @@ import {
   renderHookWithApollo,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { UseDefaultHome_HomeFragmentDoc } from '../useDefaultHome.generated';
 import {
   GetHomesDocument,
@@ -13,7 +13,7 @@ import {
 } from '#operations/home/home.generated';
 import type { HomeCard_HomeFragment } from '#features/home/components/HomeCard.generated';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
 import { useDefaultHome } from '../useDefaultHome';
 
@@ -63,14 +63,14 @@ jest.mock('#store', () => ({
   },
 }));
 
-jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
+jest.mock('#hooks/apollo/usePreservedQueryData', () => ({
   // usePreservedNodes composes usePreservedQueryData internally — passthrough.
   usePreservedQueryData: jest.fn(
     <T>(data: T | undefined, initial: T): T => data ?? initial,
   ),
 }));
 
-jest.mock('#/utils/connectionUtils', () => {
+jest.mock('#utils/connectionUtils', () => {
   // normalizeHomes flattens each home's `pantriesConnection.edges[].node`
   // into a `pantries` array so the hook (which reads `home.pantries`
   // directly) doesn't need to know about the underlying connection shape.
@@ -98,8 +98,8 @@ jest.mock('#/utils/connectionUtils', () => {
 
 // We have to mock safeEvictMany since the hook calls it; it tries to access
 // real Apollo internals otherwise.
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
+jest.mock('#apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#apollo/utils/cacheUpdaters'),
   safeEvictMany: jest.fn(),
 }));
 
@@ -425,9 +425,7 @@ describe('useDefaultHome', () => {
 
       // Repointed, never evicted: that pantry is usually a live pantry of
       // another home, and evicting it empties THAT home's connection.
-      const { safeEvictMany } = jest.requireMock(
-        '#/apollo/utils/cacheUpdaters',
-      );
+      const { safeEvictMany } = jest.requireMock('#apollo/utils/cacheUpdaters');
       expect(safeEvictMany).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.arrayContaining([

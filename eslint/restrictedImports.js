@@ -121,12 +121,12 @@ const RESTRICTED_IMPORT_PATHS = [
     message:
       "Use `useAnimatedTheme` from '#hooks/ui/useAnimatedTheme'. Unistyles' own drops its listener while a paused screen is hidden and re-subscribes without re-reading the theme, so a screen revealed after a theme change keeps animating in the old one. See docs/verified-library-behaviour.md § Unistyles' useAnimatedTheme misses a theme change made while its screen is paused.",
   },
-  {
-    name: '#/i18n/config',
+  ...['#i18n/config', '#/i18n/config'].map(name => ({
+    name,
     importNames: ['getI18n'],
     message:
-      "Translate through `t` from '#/i18n' (aliased `tGlobal` in a .tsx), or `useTranslation()` in a component. The module-scope `t` IS `getI18n().t` with the fallback and options overloads in front of it, so reaching the instance loses the fallback form and bypasses the entry point that pins the namespace. Reaching it for something other than translating — changing the language, reading the current one — belongs in src/i18n or the store, which are exempt.",
-  },
+      "Translate through `t` from '#i18n' (aliased `tGlobal` in a .tsx), or `useTranslation()` in a component. The module-scope `t` IS `getI18n().t` with the fallback and options overloads in front of it, so reaching the instance loses the fallback form and bypasses the entry point that pins the namespace. Reaching it for something other than translating — changing the language, reading the current one — belongs in src/i18n or the store, which are exempt.",
+  })),
   {
     name: '#hooks/ui/useBottomSheetBackdropClaim',
     message:

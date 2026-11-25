@@ -1,4 +1,4 @@
-import { scrubLogExtra } from '#/services/telemetry/scrub';
+import { scrubLogExtra } from '#services/telemetry/scrub';
 import { serializeError } from '#utils/errorSerialization';
 
 /**

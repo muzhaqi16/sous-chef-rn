@@ -10,8 +10,8 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { ChangePantryItemItemDocument } from '#features/pantry/hooks/mutations/useMovePantryItem.generated';
 import { useMovePantryItem } from '#features/pantry/hooks/mutations/useMovePantryItem';
-import { alertService } from '#/services/alertService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 
 // The payload carries the whole stack, so the cache settles from it: these
 // read the stack back.

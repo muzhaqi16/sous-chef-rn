@@ -1,5 +1,5 @@
 import { reconcileReplaySuccess } from '../queueReplayReconcilers';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import {
   CreatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
@@ -10,7 +10,7 @@ import {
   MoveShoppingItemToPantryDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => ({ cache: {} }),
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),

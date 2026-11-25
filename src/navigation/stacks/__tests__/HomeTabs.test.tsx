@@ -13,9 +13,9 @@ import { act, render, screen } from '@testing-library/react-native';
 import {
   TabBarActionsProvider,
   useTabBarSetters,
-} from '#/context/TabBarActionsContext';
-import { RESYNC_SCOPE } from '#/apollo/scopedClient';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+} from '#context/TabBarActionsContext';
+import { RESYNC_SCOPE } from '#apollo/scopedClient';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 
 // Capture the config `HomeTabs` hands to react-navigation. Without this the
 // navigator factory swallows it, and the screen options below — the reason

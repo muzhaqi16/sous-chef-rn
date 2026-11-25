@@ -1,10 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 interface RecipeInstructionsProps {
   /** `[{ step, text }]`; a catalog recipe's groups arrive already flattened. */

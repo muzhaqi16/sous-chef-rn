@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
@@ -8,11 +8,11 @@ import { Button } from '#components/molecules/Button';
 import { Link } from '#components/atoms/Link';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { getWebAppUrl } from '#utils/environment';
-import { appAssets } from '#/assets/appAssets';
+import { appAssets } from '#assets/appAssets';
 import { Text } from '#components/atoms/Text';
 import { LocalImage } from '#components/atoms/LocalImage';
 import { authTestIDs } from '#features/auth/testIDs';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 const { damping, stiffness, mass } = motion.spring.GENTLE;
 const logoEntering = ZoomIn.springify()

@@ -16,7 +16,7 @@ jest.mock('#hooks/performance/useScreenTransition', () => ({
   useScreenTransition: jest.fn(),
 }));
 
-jest.mock('#/services/biometric/deviceCredential', () => ({
+jest.mock('#services/biometric/deviceCredential', () => ({
   biometricService: {
     getBiometricInfo: jest.fn(() =>
       Promise.resolve({ isAvailable: true, biometryType: 'Face ID' }),
@@ -28,10 +28,10 @@ jest.mock('#/services/biometric/deviceCredential', () => ({
 }));
 
 const { biometricService: mockBiometricService } = jest.requireMock(
-  '#/services/biometric/deviceCredential',
+  '#services/biometric/deviceCredential',
 );
 
-jest.mock('#/utils/finallyHelpers', () => ({
+jest.mock('#utils/finallyHelpers', () => ({
   executeWithLoadingState: async (
     fn: () => Promise<void>,
     setLoading: (v: boolean) => void,

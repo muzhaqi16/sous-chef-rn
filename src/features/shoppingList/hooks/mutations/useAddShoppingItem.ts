@@ -6,15 +6,15 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
 import type { ShoppingListItemInput } from './types';
 import {
   normalizeNumericTextForApi,
   parseDecimalInput,
-} from '#/utils/parseDecimalInput';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { refByIdOrName, typedItemRef } from '#/utils/refInput';
+} from '#utils/parseDecimalInput';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { refByIdOrName, typedItemRef } from '#utils/refInput';
 import { lineUnitFields } from '#features/shoppingList/utils/lineUnit';
 
 interface UseAddShoppingItemOptions {

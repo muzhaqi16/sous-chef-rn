@@ -5,7 +5,7 @@ import {
   userEvent,
   within,
 } from '@testing-library/react-native';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { RecordWastePantryItemModal } from '#features/pantry/components/modals/RecordWastePantryItemModal';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
@@ -15,9 +15,9 @@ import {
   rankedUnit,
 } from '#/test-utils/fixtures/pantryActionFixtures';
 import { ConsumptionUnitsForPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { UnitType, WasteReason } from '#/graphql/generated/schemaTypes';
-import { localizeNumericHint } from '#/utils/formatters/number';
-import { t } from '#/i18n';
+import { UnitType, WasteReason } from '#graphql/generated/schemaTypes';
+import { localizeNumericHint } from '#utils/formatters/number';
+import { t } from '#i18n';
 
 type Props = React.ComponentProps<typeof RecordWastePantryItemModal>;
 

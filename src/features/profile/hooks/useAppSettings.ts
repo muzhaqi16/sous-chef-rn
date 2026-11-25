@@ -1,10 +1,10 @@
 import { useMirroredSettings, useUser } from '#store/useAppStore';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
-import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
-import { MIRRORED_SETTINGS, type SettingValues } from '#/domain/serverSettings';
+import { AppTheme, UnitSystem } from '#graphql/generated/schemaTypes';
+import { MIRRORED_SETTINGS, type SettingValues } from '#domain/serverSettings';
 import { useUpdateSettings } from '#hooks/settings/useUpdateSettings';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 /** The screen's settings; language and the zone each have their own owner. */
 export type AppSettings = Omit<SettingValues, 'language' | 'timezone'>;

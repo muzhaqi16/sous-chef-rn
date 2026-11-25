@@ -8,8 +8,8 @@ import performance, {
 } from 'react-native-performance';
 import type { PerformanceEntry } from 'react-native-performance';
 import { AppState, type EventSubscription } from 'react-native';
-import { Telemetry } from '#/services/telemetry';
-import { StartupMark } from '#/native/StartupMark';
+import { Telemetry } from '#services/telemetry';
+import { StartupMark } from '#native/StartupMark';
 import {
   isStartupProfilerArmed,
   STARTUP_PROFILE_FILENAME,
@@ -19,7 +19,7 @@ import {
   captureStartupProfile,
   captureStartupProfileOnBackground,
 } from './startupProfileCapture';
-import { Environment, logger } from '#/utils/environment';
+import { Environment, logger } from '#utils/environment';
 
 let initialized = false;
 let nativeMarkObserver: InstanceType<typeof PerformanceObserver> | null = null;

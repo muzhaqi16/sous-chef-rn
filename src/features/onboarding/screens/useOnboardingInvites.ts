@@ -1,5 +1,5 @@
 import { skipToken, useQuery } from '@apollo/client/react';
-import { extractNodes } from '#/utils/connectionUtils';
+import { extractNodes } from '#utils/connectionUtils';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useDataState } from '#hooks/data/useDataState';
 import { useUser } from '#store/useAppStore';

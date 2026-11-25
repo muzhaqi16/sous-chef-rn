@@ -1,9 +1,9 @@
 import { useSyncExternalStore } from 'react';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { isRecord } from '#/utils/isRecord';
-import { formatQuantityWithUnit } from '#/utils/formatQuantity';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { isRecord } from '#utils/isRecord';
+import { formatQuantityWithUnit } from '#utils/formatQuantity';
 import { useAppStore } from '#store/useAppStore';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { CreatePantryItemUsageDocument } from '#features/pantry/graphql/pantry.generated';
 
 const USAGE = operationNameOf(CreatePantryItemUsageDocument);

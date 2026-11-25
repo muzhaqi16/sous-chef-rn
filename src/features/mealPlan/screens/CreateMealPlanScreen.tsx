@@ -3,10 +3,10 @@ import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
 import { Pressable } from '#components/atoms/themedComponents';
-import { alertService } from '#/services/alertService';
-import { localizedErrorMessage } from '#/services/errorService';
+import { alertService } from '#services/alertService';
+import { localizedErrorMessage } from '#services/errorService';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { MEAL_PLAN_TYPE_LABEL_KEYS } from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { Icon } from '#components/atoms/Icon';
 import { FormScreen } from '#components/templates/FormScreen';
@@ -26,11 +26,11 @@ import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useHomeQuery } from '#features/home/hooks/useHomeQuery';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { addDays, addWeeks, addMonths } from 'date-fns';
-import { MealPlanType } from '#/graphql/generated/schemaTypes';
+import { MealPlanType } from '#graphql/generated/schemaTypes';
 import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
-import type { Translate } from '#/i18n/types';
-import { reportValidationErrors } from '#/utils/validation/common';
+import type { Translate } from '#i18n/types';
+import { reportValidationErrors } from '#utils/validation/common';
 import {
   createMealPlanDefaults,
   DEFAULT_PLAN_SERVINGS,
@@ -39,7 +39,7 @@ import {
   type CreateMealPlanFormValues,
 } from './createMealPlanFormConfig';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
-import { toDateKey } from '#/utils/dateUtils';
+import { toDateKey } from '#utils/dateUtils';
 
 const PLAN_TYPES = [MealPlanType.Weekly, MealPlanType.Monthly];
 

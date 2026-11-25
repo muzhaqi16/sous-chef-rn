@@ -1,9 +1,9 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { act } from '@testing-library/react-native';
 import {
   ErrorCode,
   RecipeIngredientMatchKind,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   inputOf,
@@ -17,7 +17,7 @@ import {
   MatchRecipeIngredientsToPantryDocument,
   RecipeCookUsesDocument,
 } from '#features/recipes/graphql/recipe.generated';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import type { RootState } from '#store';
 import {
   useRecipeIngredientMatching,
@@ -75,7 +75,7 @@ const mockToastInfo = jest.mocked(toastService.info);
 const mockToastWarning = jest.mocked(toastService.warning);
 
 // Deterministic client-minted cooking-log id so we can assert the cook sends it.
-jest.mock('#/utils/generateEntityId', () => ({
+jest.mock('#utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'client-cooklog-1'),
 }));
 

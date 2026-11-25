@@ -1,7 +1,7 @@
 import {
   EntryImageSource,
   type EntryImage,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { galleryPhotos, MAX_GALLERY_PHOTOS } from '#utils/imageUtils';
 
 /** A household entry's photo, as its detail fragment selects it. */

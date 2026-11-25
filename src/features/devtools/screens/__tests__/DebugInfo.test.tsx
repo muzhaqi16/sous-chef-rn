@@ -31,7 +31,7 @@ jest.mock('#components/templates/SubScreen', () => ({
 
 // Environment is auto-mocked via jest.setup.js + src/utils/__mocks__/environment.ts.
 // We override specific return values per-test below.
-import { Environment } from '#/utils/environment';
+import { Environment } from '#utils/environment';
 
 // Set Platform.Version before importing the component
 beforeAll(() => {

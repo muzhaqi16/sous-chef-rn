@@ -1,15 +1,12 @@
 'use no memo';
 
 // Mock the fragment matcher JSON before importing the module under test
-jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
+jest.mock('#graphql/generated/fragmentMatcher.json', () => ({
   possibleTypes: {},
 }));
 
 import type { Unmasked } from '@apollo/client/masking';
-import {
-  AddedContext,
-  EntryImageSource,
-} from '#/graphql/generated/schemaTypes';
+import { AddedContext, EntryImageSource } from '#graphql/generated/schemaTypes';
 import { makeCache } from '../cache';
 import {
   ItemDetail_ShoppingListItemFragmentDoc,

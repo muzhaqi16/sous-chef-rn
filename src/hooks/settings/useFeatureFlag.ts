@@ -1,8 +1,8 @@
 import { skipToken, useQuery } from '@apollo/client/react';
-import { appConfig } from '#/config/appConfig';
-import { env } from '#/config/env';
-import { resolveFeatureFlags, type FeatureFlag } from '#/config/featureFlags';
-import { isServerOwned, serverFlagsOf } from '#/config/serverFeatureFlags';
+import { appConfig } from '#config/appConfig';
+import { env } from '#config/env';
+import { resolveFeatureFlags, type FeatureFlag } from '#config/featureFlags';
+import { isServerOwned, serverFlagsOf } from '#config/serverFeatureFlags';
 import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useUser } from '#store/useAppStore';

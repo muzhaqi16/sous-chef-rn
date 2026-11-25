@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { ErrorState } from '#components/molecules/ErrorState';
@@ -14,7 +14,7 @@ import {
   type ScannedPack,
 } from '#domain/items/suggestItemChanges';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
-import { presentFailure } from '#/utils/errors/presentFailure';
+import { presentFailure } from '#utils/errors/presentFailure';
 
 interface SuggestEditFormProps {
   itemId: string;

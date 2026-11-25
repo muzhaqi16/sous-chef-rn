@@ -1,11 +1,11 @@
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
-import { isRecord } from '#/utils/isRecord';
-import { describeValue } from '#/utils/errorSerialization';
+import { isRecord } from '#utils/isRecord';
+import { describeValue } from '#utils/errorSerialization';
 import {
   ErrorCode,
   ErrorDisposition,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 const DISPOSITIONS: readonly string[] = Object.values(ErrorDisposition);
 

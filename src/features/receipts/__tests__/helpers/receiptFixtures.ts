@@ -1,5 +1,5 @@
 import { inputOf, type MockDataFor } from '#/test-utils/apolloMockProvider';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import type { CreateReceiptCheckInDocument } from '../../hooks/useReceiptCheckIn.generated';
 import {
   useReceiptDraftStore,

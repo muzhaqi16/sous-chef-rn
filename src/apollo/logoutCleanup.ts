@@ -1,6 +1,6 @@
-import { getApolloClient } from '#/apollo/clientRegistry';
+import { getApolloClient } from '#apollo/clientRegistry';
 import type { InMemoryCache } from '@apollo/client';
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { pendingWritesOf } from './pendingWrites/pendingWrites';
 import { cancelTokenRefresh } from './links/tokenScheduler';
@@ -8,7 +8,7 @@ import { disposeWebSocket } from './links/wsLink';
 import { clearRefreshState } from './links/refreshToken';
 import { registerSessionTeardown } from '#store/sessionTeardown';
 import { isSessionEnding, resetSessionEndingGate } from '#store/sessionEnding';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import { operationNameOf } from './utils/documentOperation';
 import { forgetAnswersSinceSwitch } from './answeredSinceSwitch';

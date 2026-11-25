@@ -5,9 +5,9 @@ import type {
   ItemSuggestion,
   PluralForms,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { dedupeById } from '#utils/dedupeById';
-import { carriesLabelForms } from '#/utils/formatQuantity';
+import { carriesLabelForms } from '#utils/formatQuantity';
 
 /** A common unit as the device keeps it for offline search and resolution. */
 export interface CachedUnit {

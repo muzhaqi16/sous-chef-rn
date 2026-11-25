@@ -3,7 +3,7 @@
  */
 
 import type { ApolloCache } from '@apollo/client';
-import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { createAddToQueryConnectionUpdater } from '#apollo/utils/cacheUpdaters';
 
 // Cache updater utilities for homes
 // The connection write identifies the row by `__typename`.

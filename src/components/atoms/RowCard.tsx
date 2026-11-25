@@ -8,7 +8,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
 import { createValueContext } from '#hooks/utils/createValueContext';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 interface RowCardProps {
   children: React.ReactNode;

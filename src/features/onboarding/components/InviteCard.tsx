@@ -3,12 +3,12 @@ import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Card } from '#components/atoms/Card';
 import { Text } from '#components/atoms/Text';
 import { formatRole } from '#utils/formatters/roleFormatters';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { personName } from '#/utils/formatters/memberFormatters';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { personName } from '#utils/formatters/memberFormatters';
 import { InviteCard_InviteFragmentDoc } from './InviteCard.generated';
 
 /** A home invitation waiting for the new account, redeemed by its link. */

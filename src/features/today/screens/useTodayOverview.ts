@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { skipToken, useQuery } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import { fromDateKey } from '#/utils/dateUtils';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { useTranslation } from '#i18n';
+import { fromDateKey } from '#utils/dateUtils';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { useToday } from '#hooks/app/useToday';
 import type { StandDownOptions } from '#hooks/apollo/standDownOptions';
 import { useDayConfirmedRead } from '#hooks/apollo/useDayConfirmedRead';

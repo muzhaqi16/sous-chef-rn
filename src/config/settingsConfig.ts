@@ -3,8 +3,8 @@
  * this module is evaluated at import, before the stored language is applied.
  */
 
-import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
-import type { TranslationKey } from '#/i18n';
+import { ProfileVisibility } from '#graphql/generated/schemaTypes';
+import type { TranslationKey } from '#i18n';
 
 export interface SettingOptionConfig {
   labelKey: TranslationKey;

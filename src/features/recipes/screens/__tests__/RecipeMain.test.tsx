@@ -8,8 +8,8 @@ import {
   within,
 } from '@testing-library/react-native';
 import { FlashList } from '@shopify/flash-list';
-import { makeCache } from '#/apollo/cache';
-import { isRecord } from '#/utils/isRecord';
+import { makeCache } from '#apollo/cache';
+import { isRecord } from '#utils/isRecord';
 import {
   recordMock,
   renderWithApollo,
@@ -21,7 +21,7 @@ import { withDeadline } from '#/test-utils/cacheWaits';
 import { homesWithRole } from '#/test-utils/fixtures/homeFixtures';
 import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
 import { useStore } from '#store';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { Telemetry } from '#services/telemetry';
 import {
   Diet,
@@ -30,7 +30,7 @@ import {
   Intolerance,
   MembershipRole,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetDietaryProfileDocument } from '#operations/user/user.generated';
@@ -41,8 +41,8 @@ import {
 } from '#features/recipes/hooks/useCatalogDiscovery.generated';
 import { SearchRecipesDocument } from '#features/recipes/hooks/useRecipeSearch.generated';
 import { CombinedGraphQLErrors } from '@apollo/client';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import {
   MAX_CATALOG_INGREDIENTS,
   MAX_CATALOG_INGREDIENT_LENGTH,
@@ -58,7 +58,7 @@ import {
   useTabBarSetters,
   useTabBarState,
   type TabBarAddAction,
-} from '#/context/TabBarActionsContext';
+} from '#context/TabBarActionsContext';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { useRecipeCaptureStore } from '#features/recipes/store/recipeCaptureStore';
 import { RecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';

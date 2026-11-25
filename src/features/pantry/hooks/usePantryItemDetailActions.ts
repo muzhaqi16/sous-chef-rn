@@ -1,23 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
-import { t } from '#/i18n';
-import { errorService } from '#/services/errorService';
-import { typedItemRef } from '#/utils/refInput';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
+import { t } from '#i18n';
+import { errorService } from '#services/errorService';
+import { typedItemRef } from '#utils/refInput';
 import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPackageSize } from '#features/pantry/hooks/mutations/useCorrectPackageSize';
 import { useRecordPantryUsage } from '#features/pantry/hooks/mutations/useRecordPantryUsage';
-import type { SettleStatus } from '#/apollo/utils/settleMutation';
-import type { UsagePurpose } from '#/graphql/generated/schemaTypes';
+import type { SettleStatus } from '#apollo/utils/settleMutation';
+import type { UsagePurpose } from '#graphql/generated/schemaTypes';
 import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePantryItemMutations';
 import {
   formatQuantityForDisplay,
   resolveQuantityNotation,
   unitLabel,
-} from '#/utils/formatQuantity';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+} from '#utils/formatQuantity';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 import type {
   PackageSizeCorrectionInput,
   RecountUnits,

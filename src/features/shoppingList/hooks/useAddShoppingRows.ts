@@ -1,6 +1,6 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { BatchAddShoppingListItemInput } from '#/graphql/generated/schemaTypes';
-import { settledStatus } from '#/apollo/utils/settleMutation';
+import type { BatchAddShoppingListItemInput } from '#graphql/generated/schemaTypes';
+import { settledStatus } from '#apollo/utils/settleMutation';
 import {
   AddItemToShoppingListDocument,
   type AddItemToShoppingListMutation,

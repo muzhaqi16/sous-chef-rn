@@ -3,13 +3,13 @@ import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
-import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
+import { getCollaboratorDisplayName } from '#utils/formatters/memberFormatters';
 import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import type { Translate } from '#/i18n/types';
-import { formatShortDate } from '#/utils/formatters/date';
-import { CollaboratorStatus } from '#/graphql/generated/schemaTypes';
+import type { Translate } from '#i18n/types';
+import { formatShortDate } from '#utils/formatters/date';
+import { CollaboratorStatus } from '#graphql/generated/schemaTypes';
 
 type StatusVariant = 'active' | 'pending' | 'removed' | 'owner';
 

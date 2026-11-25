@@ -5,8 +5,8 @@ import type {
   TelemetryConfig,
 } from '../types';
 import { TransportSendError } from '../types';
-import { logger } from '#/utils/environment';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { logger } from '#utils/environment';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
 const HISTOGRAM_BOUNDS = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
 

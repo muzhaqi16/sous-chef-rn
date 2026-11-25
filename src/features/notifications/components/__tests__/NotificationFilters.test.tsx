@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { NotificationFilters } from '../NotificationFilters';
-import { NotificationCategory } from '#/graphql/generated/schemaTypes';
+import { NotificationCategory } from '#graphql/generated/schemaTypes';
 
 describe('NotificationFilters', () => {
   const defaultProps = {

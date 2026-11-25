@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
@@ -9,7 +9,7 @@ import {
 } from '#components/atoms/themedComponents';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 import { Text } from '#components/atoms/Text';
-import { localizeNumericHint } from '#/utils/formatters/number';
+import { localizeNumericHint } from '#utils/formatters/number';
 
 interface FractionInputProps {
   value: string;

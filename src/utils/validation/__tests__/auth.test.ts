@@ -6,7 +6,7 @@ import {
   resetPasswordSchema,
   changePasswordSchema,
 } from '../auth';
-import { changeLanguage } from '#/i18n/config';
+import { changeLanguage } from '#i18n/config';
 import { NEW_PASSWORD_RULES, newPasswordRule } from '../common';
 
 describe('loginSchema', () => {

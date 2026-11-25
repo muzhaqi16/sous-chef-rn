@@ -1,17 +1,17 @@
 import type { DocumentNode } from 'graphql';
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 import type { QueuedMutation, QueueError, QueueStats } from './types';
 import { QueueCapacityError, QueueStatus } from './types';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import {
   deletesItsSubject,
   dependencyIdsOf,
   holdsBack,
   queuedSubject,
 } from './queuedSubject';
-import { MUTATION_DOCUMENTS } from '#/graphql/generated/mutationDocuments.generated';
-import { isOwnKey } from '#/utils/isOwnKey';
-import type { PendingWrite } from '#/apollo/pendingWrites/types';
+import { MUTATION_DOCUMENTS } from '#graphql/generated/mutationDocuments.generated';
+import { isOwnKey } from '#utils/isOwnKey';
+import type { PendingWrite } from '#apollo/pendingWrites/types';
 import { replayWindowMs } from './replayWindow';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';

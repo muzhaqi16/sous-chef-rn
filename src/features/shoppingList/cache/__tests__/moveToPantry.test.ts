@@ -11,7 +11,7 @@ import {
   invokeFieldModifier,
 } from './helpers/mockCache';
 import type { MockRef } from './helpers/mockCache';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 describe('move-to-pantry unlink', () => {
   beforeEach(jest.clearAllMocks);

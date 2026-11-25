@@ -1,10 +1,10 @@
 import { string, ValidationError, type Schema } from 'yup';
 import type { FieldErrors, FieldValues } from 'react-hook-form';
 import { requirePlatform } from '#platform/install';
-import { logger } from '#/utils/environment';
-import { t, type TranslationKey } from '#/i18n';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { logger } from '#utils/environment';
+import { t, type TranslationKey } from '#i18n';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 
 /**
  * A rule's message. Schemas are built once at module scope, so a message

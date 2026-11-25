@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
@@ -15,12 +15,12 @@ import {
   filterByLocation,
 } from '#features/pantry/utils/pantryFilters';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { useDataState } from '#hooks/data/useDataState';
 import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import type { PantryItemsFailure } from '#features/pantry/components/pantryDisplay/types';
 import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
-import { StorageType } from '#/graphql/generated/schemaTypes';
+import { StorageType } from '#graphql/generated/schemaTypes';
 import type {
   PantrySortOption,
   PantrySortDirection,

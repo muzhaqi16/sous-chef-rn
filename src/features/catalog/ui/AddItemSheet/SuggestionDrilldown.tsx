@@ -9,7 +9,7 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '#components/atoms/Text';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import type { BaseSuggestionItem } from '#features/catalog/types';
 
 const CELL_LAYOUT = LinearTransition.duration(motion.timing.MODERATE);

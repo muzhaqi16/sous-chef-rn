@@ -3,7 +3,7 @@ import {
   HealthGoal,
   Intolerance,
   ReligiousDiet,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   INTOLERANCE_OPTIONS,
   INTOLERANCE_OPTIONS_MAJOR_FIRST,

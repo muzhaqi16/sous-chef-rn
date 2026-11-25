@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useTranslation } from '#/i18n';
-import { toastService } from '#/services/toastService';
+import { useTranslation } from '#i18n';
+import { toastService } from '#services/toastService';
 import { useLazyHomeData } from '#features/home/hooks/useLazyHomeData';
 import { useSetDefaultShoppingList } from '#features/shoppingList/hooks/mutations/useSetDefaultShoppingList';
 import { useShoppingListTemplate } from '#features/shoppingList/hooks/mutations/useShoppingListTemplate';

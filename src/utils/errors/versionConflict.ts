@@ -1,5 +1,5 @@
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 
 /**
  * The optimistic-lock failure, in both spellings the contract uses: the union

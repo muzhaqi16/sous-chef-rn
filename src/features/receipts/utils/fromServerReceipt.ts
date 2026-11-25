@@ -1,6 +1,6 @@
-import { ReceiptLineKind } from '#/graphql/generated/schemaTypes';
-import type { ReceiptParseReadersFragment } from '#/graphql/readers/receiptParseReaders.generated';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { ReceiptLineKind } from '#graphql/generated/schemaTypes';
+import type { ReceiptParseReadersFragment } from '#graphql/readers/receiptParseReaders.generated';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import type { PrintedStore } from '../store/receiptDraftStore';
 import type {
   ParsedLineKind,

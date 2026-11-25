@@ -2,14 +2,14 @@ import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import type { Client } from 'graphql-ws';
 import { createClient } from 'graphql-ws';
 import { requirePlatform } from '#platform/install';
-import { env } from '#/config/env';
+import { env } from '#config/env';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
-import { Telemetry } from '#/services/telemetry';
-import { Environment, logger } from '#/utils/environment';
-import { serializeError } from '#/utils/errorSerialization';
-import { backoffDelay, sleep } from '#/utils/backoff';
-import { getDeviceId } from '#/services/auth/deviceId';
+import { Telemetry } from '#services/telemetry';
+import { Environment, logger } from '#utils/environment';
+import { serializeError } from '#utils/errorSerialization';
+import { backoffDelay, sleep } from '#utils/backoff';
+import { getDeviceId } from '#services/auth/deviceId';
 import { CLIENT_NAME, clientVersion } from '../clientIdentity';
 import {
   isProtocolErrorCloseCode,

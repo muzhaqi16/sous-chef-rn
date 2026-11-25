@@ -11,11 +11,11 @@ import {
   renderWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { createOfflineReadLink } from '#/apollo/links/offlineReadLink';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { createOfflineReadLink } from '#apollo/links/offlineReadLink';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { useStore } from '#store';
 import { kitTestIDs } from '#components/testIDs';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -24,13 +24,13 @@ import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/gra
 import { GetShoppingListItemDocument } from '../useShoppingListItemDetail.generated';
 import { StoreShelfPricesDocument } from '#features/catalog/hooks/useStoreShelfPrices.generated';
 import { catalogTestIDs } from '#features/catalog/testIDs';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   EntryImageSource,
   ItemImageStatus,
-} from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
-import { AddedContext } from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
+import { AddedContext } from '#graphql/generated/schemaTypes';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#hooks/navigation/useAppNavigation');

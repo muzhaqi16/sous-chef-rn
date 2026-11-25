@@ -6,10 +6,10 @@
 
 import { AdjustPantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import type { SetStockInputs } from '#features/pantry/offline/localWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { useTranslation } from '#/i18n';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
 import type { RecountUnits } from '#features/pantry/types';
 
 interface UseAdjustPantryItemQuantityOptions {

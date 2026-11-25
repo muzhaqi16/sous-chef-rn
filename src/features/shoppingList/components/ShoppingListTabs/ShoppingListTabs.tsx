@@ -7,9 +7,9 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { TabView, type Route } from 'react-native-tab-view';
 import { FilterTabBar } from './FilterTabBar';
 import { useShoppingListItemPermissions } from '#features/shoppingList/context/ShoppingListPermissionsContext';

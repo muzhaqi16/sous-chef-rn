@@ -19,17 +19,17 @@ import type {
   SubscriptionEntry,
 } from './types';
 import { CacheStrategy, LogLevel } from './types';
-import { MutationType } from '#/graphql/generated/schemaTypes';
-import { serializeError } from '#/utils/errorSerialization';
-import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { isPermanentSubscriptionRejection } from '#/utils/subscriptionErrorHandler';
+import { MutationType } from '#graphql/generated/schemaTypes';
+import { serializeError } from '#utils/errorSerialization';
+import { safeEvict, type ConnectionData } from '#apollo/utils/cacheUpdaters';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { isPermanentSubscriptionRejection } from '#utils/subscriptionErrorHandler';
 import { markSubscriptionRejected } from './rejectedSubscriptions';
-import { errorService } from '#/services/errorService';
-import { logger } from '#/utils/environment';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { errorService } from '#services/errorService';
+import { logger } from '#utils/environment';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { SubscriptionSuppression } from './SubscriptionSuppression';
-import { isNetworkError } from '#/utils/isNetworkError';
+import { isNetworkError } from '#utils/isNetworkError';
 
 /** `StoreObject` (so `toReference` accepts it) plus the `id` the service reads. */
 type PayloadEntity = StoreObject & { id?: string };

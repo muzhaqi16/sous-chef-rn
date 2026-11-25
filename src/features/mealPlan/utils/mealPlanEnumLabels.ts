@@ -7,8 +7,8 @@ import {
   MealPlanType,
   MealType,
   TemplateCategory,
-} from '#/graphql/generated/schemaTypes';
-import type { TranslationKey } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import type { TranslationKey } from '#i18n';
 
 export const MEAL_TYPE_LABEL_KEYS: Record<MealType, TranslationKey> = {
   [MealType.Breakfast]: 'labels.breakfast',

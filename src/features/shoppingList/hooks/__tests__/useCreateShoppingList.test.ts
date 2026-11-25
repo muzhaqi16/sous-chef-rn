@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,

@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { useAppStore, useIsHydrated, useIsSignedIn } from '#store/useAppStore';
 import { useNavigationIntents } from '#platform/screen';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import type { DeepLinkAction } from '#store/slices/navigationSlice';
-import { toastService } from '#/services/toastService';
-import { t, type TranslationKey } from '#/i18n';
+import { toastService } from '#services/toastService';
+import { t, type TranslationKey } from '#i18n';
 
 const STALE_AFTER_MS = 5 * 60 * 1000;
 

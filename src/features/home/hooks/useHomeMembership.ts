@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import type { DocumentNode } from 'graphql';
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import {
   EnableHomeJoinLinkDocument,
   UpdateHomeJoinCodeDocument,
@@ -12,17 +12,17 @@ import {
   LeaveHomeDocument,
   DeleteHomeDocument,
 } from '#operations/home/home.generated';
-import type { UpdateMembershipInput } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
-import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import type { UpdateMembershipInput } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { createRemoveFromParentConnectionUpdater } from '#apollo/utils/cacheUpdaters';
 import {
   settleMutation,
   type SettleStatus,
-} from '#/apollo/utils/settleMutation';
-import { chainVersionedWrite } from '#/apollo/utils/entityWriteChain';
-import { appliedPayload, isAlreadyGone } from '#/utils/errors/mutationPayload';
+} from '#apollo/utils/settleMutation';
+import { chainVersionedWrite } from '#apollo/utils/entityWriteChain';
+import { appliedPayload, isAlreadyGone } from '#utils/errors/mutationPayload';
 import { useCrudOperations } from '#features/home/hooks/useCrudOperations';
-import { forgetHome } from '#/domain/forgetHome';
+import { forgetHome } from '#domain/forgetHome';
 import { useMarkHomeAsDefault } from './useMarkHomeAsDefault';
 
 const removeFromMembers = createRemoveFromParentConnectionUpdater(

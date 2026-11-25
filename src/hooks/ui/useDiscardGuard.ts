@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { BackHandler } from 'react-native';
-import { useTranslation } from '#/i18n';
-import type { Translate } from '#/i18n/types';
-import { alertService } from '#/services/alertService';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { useTranslation } from '#i18n';
+import type { Translate } from '#i18n/types';
+import { alertService } from '#services/alertService';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 interface DiscardGuardOptions {
   /** The form holds input the user typed. */

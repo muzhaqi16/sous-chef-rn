@@ -1,6 +1,6 @@
 import React from 'react';
 import { screen } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { useStore } from '#store';
 import { PantryEmptyState } from '../PantryEmptyState';

@@ -5,18 +5,18 @@ import type { AddStockInputs } from '#features/pantry/offline/localWrites';
 import { readStackUnit } from '#features/pantry/utils/pantryCacheReaders';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { resolveIntakeDraft } from '#domain/intakeDraft';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import type { SettleOptions } from '#/apollo/utils/settleMutation';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { SettleOptions } from '#apollo/utils/settleMutation';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
+import { useTranslation } from '#i18n';
 import type {
   PackageSizeInput,
   PantryItemSourceInput,
   RestockPantryItemInput,
   StockAmountInput,
-} from '#/graphql/generated/schemaTypes';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 
 /**
  * A restock's variables. `input.today` dates its default expiry; the key

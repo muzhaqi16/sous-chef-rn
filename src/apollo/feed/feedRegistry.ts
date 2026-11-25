@@ -2,7 +2,7 @@ import type { ApolloCache } from '@apollo/client';
 import { homeFeedAdapter } from '#features/home/offline/homeFeed';
 import { pantryFeedAdapter } from '#features/pantry/offline/pantryFeed';
 import { listFeedAdapter } from '#features/shoppingList/offline/listFeed';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import type { FeedAdapter } from './types';
 
 /** One entry per scope kind this build handles. */

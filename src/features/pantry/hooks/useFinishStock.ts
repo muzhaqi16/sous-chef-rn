@@ -1,14 +1,14 @@
 import { useApolloClient } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { CreatePantryItemUsageDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   ErrorCode,
   UsagePurpose,
   type WasteReason,
-} from '#/graphql/generated/schemaTypes';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
+} from '#graphql/generated/schemaTypes';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
 import { heldQuantityOf } from '#features/pantry/cache/stock';
 import type { DrawStockInputs } from '#features/pantry/offline/localWrites';
 

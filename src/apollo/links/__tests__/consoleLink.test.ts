@@ -6,7 +6,7 @@ import type {
 } from '@apollo/client';
 import { OperationTypeNode, parse } from 'graphql';
 
-jest.mock('#/utils/errorSerialization', () => ({
+jest.mock('#utils/errorSerialization', () => ({
   serializeError: jest.fn((err: { message?: string; name?: string }) => ({
     message: err?.message || 'Unknown',
     name: err?.name || 'Error',

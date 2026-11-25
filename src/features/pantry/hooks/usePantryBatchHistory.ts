@@ -6,9 +6,9 @@ import {
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
 } from '#features/pantry/graphql/pantryFragments.generated';
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { BatchStatus } from '#graphql/generated/schemaTypes';
 import { useDataState } from '#hooks/data/useDataState';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 
 const PAGE_SIZE = 30;
 

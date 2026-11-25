@@ -9,7 +9,7 @@ const mockClient = {
   clearStore: jest.fn(() => Promise.resolve()),
   cache: { gc: jest.fn(() => []) },
 };
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),
@@ -45,8 +45,8 @@ import { whileSessionEnds } from '#store/sessionEnding';
 import { LogoutCleanup } from '../logoutCleanup';
 import { cancelTokenRefresh } from '../links/tokenScheduler';
 import { apolloCachePersistence } from '../offline/ApolloCachePersistence';
-import { storage } from '#/store/deviceStorage';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { storage } from '#store/deviceStorage';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import { UpdateDeviceDocument } from '#operations/auth/device.generated';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';

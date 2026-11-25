@@ -2,8 +2,8 @@ import { ApolloLink } from '@apollo/client';
 import { SetContextLink } from '@apollo/client/link/context';
 import { OperationTypeNode } from 'graphql';
 import { tap } from 'rxjs';
-import { getResolvedLanguage } from '#/i18n';
-import { isRecord } from '#/utils/isRecord';
+import { getResolvedLanguage } from '#i18n';
+import { isRecord } from '#utils/isRecord';
 import { noteAnsweredInLanguage } from '../answeredSinceSwitch';
 
 /**

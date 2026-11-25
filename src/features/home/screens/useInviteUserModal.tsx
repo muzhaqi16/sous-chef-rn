@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { InviteUserModal } from '#features/home/components/InviteUserModal';
-import type { MembershipRole } from '#/graphql/generated/schemaTypes';
+import type { MembershipRole } from '#graphql/generated/schemaTypes';
 
 /** Resolves to the localized reason a refused invite was not sent, if any. */
 type InviteSubmit = (

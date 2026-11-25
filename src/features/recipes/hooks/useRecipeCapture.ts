@@ -1,17 +1,17 @@
 import { noteTipFact } from '#hooks/settings/useFeatureHint';
 import { useState } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { backoffDelay, sleep } from '#/utils/backoff';
-import { getDeviceLocale } from '#/utils/deviceLocale';
+import { useTranslation } from '#i18n';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { generateEntityId } from '#utils/generateEntityId';
+import { backoffDelay, sleep } from '#utils/backoff';
+import { getDeviceLocale } from '#utils/deviceLocale';
 import {
   RecipeCaptureReadersFragmentDoc,
   type RecipeCaptureReadersFragment,
-} from '#/graphql/readers/recipeCaptureReaders.generated';
-import type { CreateRecipeCaptureInput } from '#/graphql/generated/schemaTypes';
+} from '#graphql/readers/recipeCaptureReaders.generated';
+import type { CreateRecipeCaptureInput } from '#graphql/generated/schemaTypes';
 import { CreateRecipeCaptureDocument } from './useRecipeCapture.generated';
 import { useCaptureOutcomeReporter } from './useCaptureOutcomeReporter';
 import {

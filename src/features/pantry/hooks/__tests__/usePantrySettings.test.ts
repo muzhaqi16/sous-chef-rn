@@ -1,6 +1,6 @@
 import { gql } from '@apollo/client';
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type { MockDataFor, MockFor } from '#/test-utils/apolloMockProvider';
 import {
   inputOf,
@@ -15,13 +15,13 @@ import {
   MarkPantryAsDefaultDocument,
   UpdatePantryDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
-import { todayKey } from '#/utils/dateUtils';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import { todayKey } from '#utils/dateUtils';
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
 beforeEach(() => {

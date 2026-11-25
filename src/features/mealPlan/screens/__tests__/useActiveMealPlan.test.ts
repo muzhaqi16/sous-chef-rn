@@ -6,7 +6,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { useStore } from '#store';
 import { useActiveMealPlan } from '../useActiveMealPlan';
 import { MealPlanDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';

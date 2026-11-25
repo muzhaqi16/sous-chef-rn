@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import { Icon } from '#components/atoms/Icon';
 import { RowCard } from '#components/atoms/RowCard';
 import type { BadgeContent } from '#components/atoms/Badge';
 import { ListItem } from '#components/molecules/ListItem';
-import { formatRole } from '#/utils/formatters/roleFormatters';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { formatRole } from '#utils/formatters/roleFormatters';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 import type { MembershipPermissionKey } from '#features/home/types';
 import {
   canGrantFlag,
@@ -19,7 +19,7 @@ import {
 } from '#features/home/utils/homePermissions';
 import { HomeMemberCard_MemberFragmentDoc } from './HomeMemberCard.generated';
 import { MemberSettingsSheet } from './MemberSettingsSheet';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 
 const CHEVRON_SIZE = 20;
 

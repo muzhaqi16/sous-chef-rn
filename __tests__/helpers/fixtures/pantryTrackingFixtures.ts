@@ -1,4 +1,4 @@
-import { ExpiryKind, UnitType } from '#/graphql/generated/schemaTypes';
+import { ExpiryKind, UnitType } from '#graphql/generated/schemaTypes';
 
 /**
  * Shared acceptance facts for strengthen-pantry-tracking-and-consumption.

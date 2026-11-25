@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { act, screen, userEvent } from '@testing-library/react-native';
 import { addDays } from 'date-fns';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   inputOf,
   recordMock,
@@ -10,14 +10,14 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { toastService } from '#/services/toastService';
-import { toDateKey } from '#/utils/dateUtils';
+import { t } from '#i18n';
+import { toastService } from '#services/toastService';
+import { toDateKey } from '#utils/dateUtils';
 import {
   MealPlanType,
   MealType,
   MembershipRole,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   CreateMealPlanItemDocument,
   DeleteMealPlanDocument,
@@ -37,7 +37,7 @@ import {
   useTabBarSetters,
   useTabBarState,
   type TabBarAddAction,
-} from '#/context/TabBarActionsContext';
+} from '#context/TabBarActionsContext';
 import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import { MarkCookedModal } from '#features/recipes/ui/MarkCookedModal';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';

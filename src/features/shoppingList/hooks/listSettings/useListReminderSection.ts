@@ -1,5 +1,5 @@
 import { useShoppingListReminder } from '#features/shoppingList/hooks/mutations/useShoppingListReminder';
-import { dayAsInstant } from '#/utils/dateUtils';
+import { dayAsInstant } from '#utils/dateUtils';
 import type { SettingsList } from './types';
 
 /** The list's reminder: a picked date sets it, the clear action removes it. */

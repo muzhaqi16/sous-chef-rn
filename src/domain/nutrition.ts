@@ -7,14 +7,14 @@ import type {
   NutritionHighlight,
   NutrientEntry,
   NutrientCategory,
-} from '#/types/nutrition';
-import type { TranslationKey } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+} from '#types/nutrition';
+import type { TranslationKey } from '#i18n';
+import type { Translate } from '#i18n/types';
 import type {
   NutritionFacts,
   RecipeNutrition,
-} from '#/graphql/generated/schemaTypes';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+} from '#graphql/generated/schemaTypes';
+import { formatQuantityForDisplay } from '#utils/formatQuantity';
 import { isOwnKey } from '#utils/isOwnKey';
 
 /** A recipe's figures per serving, in `NutritionFacts`' names and units. */

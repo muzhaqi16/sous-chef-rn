@@ -1,8 +1,8 @@
 import { useApolloClient } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import { errorService } from '#/services/errorService';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import type { Settled } from '#/apollo/utils/settleMutation';
+import { useTranslation } from '#i18n';
+import { errorService } from '#services/errorService';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { Settled } from '#apollo/utils/settleMutation';
 import { storeChoiceTarget, type StoreChoice } from '#domain/stores';
 import type {
   PinUsualStoreInputs,

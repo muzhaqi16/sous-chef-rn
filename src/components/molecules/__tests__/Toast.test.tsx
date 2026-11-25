@@ -12,9 +12,9 @@ import type {
   ToastType,
 } from '#platform/presenters';
 import { toastHoldMs } from '#platform/presenters';
-import { TOAST } from '#/constants/animations';
+import { TOAST } from '#constants/animations';
 import { HapticService } from '#services/haptic/HapticService';
-import { _setToastsShowing } from '#/services/toastService';
+import { _setToastsShowing } from '#services/toastService';
 
 // `_setToastDispatch` is the ONLY way into the provider, so the mock captures
 // what it registers rather than discarding it; the helpers below fire through
@@ -28,7 +28,7 @@ const dispatchToast: ToastPresenter = opts => {
   if (registered) registered(opts);
   else pending.push(opts);
 };
-jest.mock('#/services/toastService', () => ({
+jest.mock('#services/toastService', () => ({
   _setToastDispatch: jest.fn((fn: ToastPresenter) => {
     registered = fn;
     while (pending.length) fn(pending.shift() as ToastOptions);

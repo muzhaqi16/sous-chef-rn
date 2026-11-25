@@ -7,9 +7,9 @@ import {
 } from '@testing-library/react-native';
 import { CommonActions } from '@react-navigation/native';
 import { withTiming } from 'react-native-reanimated';
-import { t } from '#/i18n';
-import { makeCache } from '#/apollo/cache';
-import { requirePlatform } from '#/platform/install';
+import { t } from '#i18n';
+import { makeCache } from '#apollo/cache';
+import { requirePlatform } from '#platform/install';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -23,7 +23,7 @@ import {
   ErrorCode,
   ErrorDisposition,
   UsualStoreSource,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { CompleteOnboardingDocument } from '#operations/auth/user.generated';
 import { EnableHomeJoinLinkDocument } from '#operations/home/home.generated';
 import {
@@ -35,7 +35,7 @@ import {
   type UsualStoreEntry,
 } from '#features/catalog/cache/usualStores';
 import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
-import { deviceRegion } from '#/domain/regionCurrency';
+import { deviceRegion } from '#domain/regionCurrency';
 import { shareUrl } from '#native/share';
 import {
   initialOnboardingProgress,
@@ -46,13 +46,13 @@ import {
   useTutorialSession,
 } from '#hooks/ui/tutorialSession';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import { OnboardingCompleteScreen } from '../OnboardingCompleteScreen';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#native/share');
-jest.mock('#/domain/regionCurrency', () => ({
-  ...jest.requireActual('#/domain/regionCurrency'),
+jest.mock('#domain/regionCurrency', () => ({
+  ...jest.requireActual('#domain/regionCurrency'),
   deviceRegion: jest.fn(),
 }));
 jest.mock('#features/onboarding/components/OnboardingStepScaffold', () =>

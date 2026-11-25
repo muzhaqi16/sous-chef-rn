@@ -4,20 +4,20 @@ import {
   type StockConfidence,
   type StockDoubtReason,
   type WasteReason,
-} from '#/graphql/generated/schemaTypes';
-import { errorService } from '#/services/errorService';
-import { isVersionConflictCode } from '#/utils/errors/versionConflict';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import type { SettleStatus } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { generateEntityId } from '#/utils/generateEntityId';
+} from '#graphql/generated/schemaTypes';
+import { errorService } from '#services/errorService';
+import { isVersionConflictCode } from '#utils/errors/versionConflict';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { SettleStatus } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { generateEntityId } from '#utils/generateEntityId';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { useToday } from '#hooks/app/useToday';
 import { useDayConfirmedRead } from '#hooks/apollo/useDayConfirmedRead';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { formatReading, readingOf } from '#domain/measure';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import type { StockCheckInputs } from '#features/pantry/offline/localWrites';
 import {

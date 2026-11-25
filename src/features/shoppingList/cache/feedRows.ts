@@ -1,7 +1,7 @@
 import type { ApolloCache } from '@apollo/client';
-import { safeEvict, safeEvictMany } from '#/apollo/utils/cacheUpdaters';
-import type { ConnectionData } from '#/apollo/utils/cacheUpdaters';
-import { isRecord } from '#/utils/isRecord';
+import { safeEvict, safeEvictMany } from '#apollo/utils/cacheUpdaters';
+import type { ConnectionData } from '#apollo/utils/cacheUpdaters';
+import { isRecord } from '#utils/isRecord';
 import {
   ListFeed_CollaboratorsFragmentDoc,
   ListFeed_ItemsFragmentDoc,

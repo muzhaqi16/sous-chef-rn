@@ -1,11 +1,11 @@
 import { skipToken, useQuery } from '@apollo/client/react';
-import { t as tGlobal, useTranslation } from '#/i18n';
-import { HomeType } from '#/graphql/generated/schemaTypes';
+import { t as tGlobal, useTranslation } from '#i18n';
+import { HomeType } from '#graphql/generated/schemaTypes';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { defaultPantryOf } from '#domain/homePantries';
-import { extractNodes } from '#/utils/connectionUtils';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { errorService } from '#/services/errorService';
+import { extractNodes } from '#utils/connectionUtils';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { errorService } from '#services/errorService';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useDataState } from '#hooks/data/useDataState';
 import {

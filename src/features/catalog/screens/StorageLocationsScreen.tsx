@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { useStorageLocationManagement } from '#features/catalog/hooks/useStorageLocationManagement';
 import { StorageLocationCard } from '#features/catalog/ui/StorageLocationCard';
@@ -17,9 +17,9 @@ import type { GetStorageLocationsQuery } from '#features/catalog/graphql/storage
 import { useSelectedPantryId } from '#store/useAppStore';
 import { StyleSheet } from 'react-native-unistyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { ModeTabs } from '#components/molecules/ModeTabs';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 const VIEW_MODES: ('flat' | 'tree')[] = ['flat', 'tree'];
 

@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GetHomesDocument } from '#operations/home/home.generated';
-import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
+import { usePreservedNodes } from '#hooks/apollo/usePreservedConnection';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { getConnectionTotalCount } from '#/utils/connectionUtils';
+import { getConnectionTotalCount } from '#utils/connectionUtils';
 
 /**
  * The client defaults supply the policies. Returns connection-shape nodes, so a

@@ -9,7 +9,7 @@ import {
   formatQuantityWithUnit,
   resolveQuantityNotation,
   type UnitLabelSource,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 
 export interface UseConversionPreviewOptions {
   pantryItemId: string | undefined;

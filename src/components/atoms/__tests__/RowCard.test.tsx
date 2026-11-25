@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { lightTheme } from '#/theme/themes';
-import { isRecord } from '#/utils/isRecord';
+import { lightTheme } from '#theme/themes';
+import { isRecord } from '#utils/isRecord';
 import { Text } from '#components/atoms/Text';
 import { RowCard } from '#components/atoms/RowCard';
 import { ListItem } from '#components/molecules/ListItem';

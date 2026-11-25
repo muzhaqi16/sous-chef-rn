@@ -11,8 +11,8 @@ import type { BadgeContent } from '#components/atoms/Badge';
 import { RowCard } from '#components/atoms/RowCard';
 import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
-import { SLIDE_PRESETS } from '#/constants/animations';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { SLIDE_PRESETS } from '#constants/animations';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 
 /**
  * The standard title/subtitle/badge row, with the slide-off-screen exit handled

@@ -1,14 +1,14 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { ActionMenuRow } from '#components/molecules/ActionMenuRow';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { Sheet } from '#components/templates/Sheet';
-import { formatRole } from '#/utils/formatters/roleFormatters';
-import type { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { formatRole } from '#utils/formatters/roleFormatters';
+import type { MembershipRole } from '#graphql/generated/schemaTypes';
 import type { MembershipPermissionKey } from '#features/home/types';
 
 const PERMISSION_ROWS: {

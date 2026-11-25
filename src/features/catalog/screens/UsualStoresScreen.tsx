@@ -1,8 +1,8 @@
 import React from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useTranslation, type TranslateFn, type TranslationKey } from '#/i18n';
-import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import { useTranslation, type TranslateFn, type TranslationKey } from '#i18n';
+import { UsualStoreSource } from '#graphql/generated/schemaTypes';
 import { SubScreen } from '#components/templates/SubScreen';
 import { deleteAction } from '#components/organisms/SwipeableItem/commonActions';
 import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
@@ -10,8 +10,8 @@ import { useDataState } from '#hooks/data/useDataState';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
-import { toastService } from '#/services/toastService';
-import { formatMonthDay } from '#/utils/formatters/date';
+import { toastService } from '#services/toastService';
+import { formatMonthDay } from '#utils/formatters/date';
 import { storeChoiceName } from '#domain/stores';
 import {
   useUsualStores,

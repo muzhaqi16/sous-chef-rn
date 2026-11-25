@@ -5,7 +5,7 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { InlineFolderChooser } from '../InlineFolderChooser';
 
 const onSelect = jest.fn();

@@ -26,14 +26,14 @@ import {
   ErrorCode,
   NotificationStatus,
   NotificationType,
-} from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+} from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotificationSync } from '../useNotificationSync';
 import { useMarkPushOpenedRead } from '../useMarkPushOpenedRead';
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 // Whether a notification is unread is read from the cache, which is also what
 // renders it, so the two cannot disagree. The store holds only the expiration

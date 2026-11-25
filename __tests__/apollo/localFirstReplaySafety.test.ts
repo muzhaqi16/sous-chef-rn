@@ -8,7 +8,7 @@ import {
   type GraphQLSchema,
   type OperationDefinitionNode,
 } from 'graphql';
-import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
+import { REPLAY_PREPARATIONS } from '#apollo/offlineQueue/preparationRegistry';
 import {
   SRC,
   authoredMutations,

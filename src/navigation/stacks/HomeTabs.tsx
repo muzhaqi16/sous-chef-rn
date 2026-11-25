@@ -16,9 +16,9 @@ import { ApolloProvider, useApolloClient } from '@apollo/client/react';
 import {
   TabBarActionsProvider,
   useTabBarState,
-} from '#/context/TabBarActionsContext';
+} from '#context/TabBarActionsContext';
 import { FloatingTabBar } from '#app/FloatingTabBar/FloatingTabBar';
-import { scopedClient } from '#/apollo/scopedClient';
+import { scopedClient } from '#apollo/scopedClient';
 
 function HomeTabsLayout({ children }: { children: React.ReactNode }) {
   return (

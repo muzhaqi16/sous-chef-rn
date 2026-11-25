@@ -7,7 +7,7 @@ import { Button } from '#components/molecules/Button';
 import type { IconName, IconSizeName } from '#components/atoms/Icon';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 export interface EmptyStateProps {
   /** Icon to display (can be IconName, emoji string, or React node) */

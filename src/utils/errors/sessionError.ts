@@ -1,4 +1,4 @@
-import type { ErrorDisposition } from '#/graphql/generated/schemaTypes';
+import type { ErrorDisposition } from '#graphql/generated/schemaTypes';
 
 /**
  * A session-path failure carrying its code, and its disposition where the code

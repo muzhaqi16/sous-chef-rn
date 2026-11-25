@@ -1,4 +1,4 @@
-import { restorePersistedCache } from '#/apollo/client';
+import { restorePersistedCache } from '#apollo/client';
 import { useIsHydrated } from '#store/useAppStore';
 
 /**

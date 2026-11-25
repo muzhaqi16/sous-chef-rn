@@ -1,5 +1,5 @@
 import { useQuery } from '@apollo/client/react';
-import { StoreRouteSource } from '#/graphql/generated/schemaTypes';
+import { StoreRouteSource } from '#graphql/generated/schemaTypes';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import type {

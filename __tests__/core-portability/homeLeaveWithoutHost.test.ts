@@ -15,8 +15,8 @@ import {
 } from '#operations/home/home.generated';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { useHomeMembership } from '#features/home/hooks/useHomeMembership';
-import { makeCache } from '#/apollo/cache';
-import { alertService } from '#/services/alertService';
+import { makeCache } from '#apollo/cache';
+import { alertService } from '#services/alertService';
 import { useStore } from '#store';
 import {
   createApolloTestWrapper,

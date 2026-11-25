@@ -1,7 +1,7 @@
 import React, { useRef, type RefObject } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { ActionMenuRow } from '#components/molecules/ActionMenuRow';

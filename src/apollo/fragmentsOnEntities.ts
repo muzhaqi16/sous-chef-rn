@@ -10,7 +10,7 @@ import {
   type SelectionSetNode,
   type ValueNode,
 } from 'graphql';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 // Which fragments a query's result holds on which entities, read from its
 // document and its data, masked or not: masking keeps a selection's own `id`

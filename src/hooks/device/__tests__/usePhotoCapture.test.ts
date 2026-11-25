@@ -1,12 +1,12 @@
 import { renderHook } from '@testing-library/react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import type { Asset, ImagePickerResponse } from 'react-native-image-picker';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { PermissionService } from '#services/permissions/PermissionService';
 import { MAX_IMAGE_SIZE, MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import { usePhotoCapture } from '../usePhotoCapture';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 jest.mock('react-native-image-picker', () => ({
   launchCamera: jest.fn(),

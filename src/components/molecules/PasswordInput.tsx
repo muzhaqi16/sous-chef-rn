@@ -5,8 +5,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { TextInputProps } from 'react-native';
 import type { BaseInputProps } from '#components/molecules/BaseInput/BaseInput';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
-import { useTranslation } from '#/i18n';
-import { NEW_PASSWORD_RULES } from '#/utils/validation/common';
+import { useTranslation } from '#i18n';
+import { NEW_PASSWORD_RULES } from '#utils/validation/common';
 
 /** Which password a field takes, so autofill offers the saved one or a new one. */
 type PasswordPurpose = 'current' | 'new';

@@ -3,9 +3,9 @@ import { act, renderHook } from '@testing-library/react-native';
 import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import {
   completeMockedResponse,
   recordMock,
@@ -14,12 +14,12 @@ import {
 import { drainTimers } from '#/test-utils/drainTimers';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { GetCurrenciesDocument } from '#features/profile/graphql/currency.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import type { AlertButton } from '#platform/presenters';
-import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
+import { DEFAULT_CURRENCY } from '#utils/formatters/number';
 import { useStore } from '#store';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { useCurrencyPreference } from '../useCurrencyPreference';
 
 const ACCOUNT = {

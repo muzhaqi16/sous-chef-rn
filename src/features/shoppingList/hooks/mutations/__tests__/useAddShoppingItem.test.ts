@@ -9,9 +9,9 @@ import {
   createLocalShoppingListItem,
 } from '#features/shoppingList/cache/items';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
-import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import { getDeviceDecimalSeparator } from '#utils/deviceLocale';
 
 // The response mirrors the real batch payload the hook reads
 // (`addItemsToShoppingList.results[0].item`) so it settles as a success. `variables: () => true` because
@@ -55,8 +55,8 @@ jest.mock('#features/shoppingList/cache/items', () => {
   };
 });
 
-jest.mock('#/utils/deviceLocale', () => ({
-  ...jest.requireActual('#/utils/deviceLocale'),
+jest.mock('#utils/deviceLocale', () => ({
+  ...jest.requireActual('#utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
 

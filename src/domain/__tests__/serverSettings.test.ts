@@ -3,8 +3,8 @@ import {
   mirroredFrom,
   refusedMirror,
   settingsInput,
-} from '#/domain/serverSettings';
-import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
+} from '#domain/serverSettings';
+import { AppTheme, UnitSystem } from '#graphql/generated/schemaTypes';
 
 describe('settingsInput', () => {
   it('puts each setting in the group updateSettings takes it in', () => {

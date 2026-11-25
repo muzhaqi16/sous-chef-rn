@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { useTranslation } from '#i18n';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { Pressable } from '#components/atoms/themedComponents';

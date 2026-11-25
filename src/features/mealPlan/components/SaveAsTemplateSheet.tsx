@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { mixed, object, string, type ObjectSchema } from 'yup';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import {
   ChipScrollRow,
   type ChipOption,
@@ -12,12 +12,12 @@ import {
 import { FormInput } from '#components/atoms/FormInput';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Text } from '#components/atoms/Text';
-import { TemplateCategory } from '#/graphql/generated/schemaTypes';
+import { TemplateCategory } from '#graphql/generated/schemaTypes';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
-import { lazyMessage, reportValidationErrors } from '#/utils/validation/common';
+import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
 
 const CATEGORY_OPTION_KEYS: {
   key: TemplateCategory;

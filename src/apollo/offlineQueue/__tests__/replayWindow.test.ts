@@ -1,11 +1,11 @@
-import { requireApolloClient } from '#/apollo/clientRegistry';
+import { requireApolloClient } from '#apollo/clientRegistry';
 import {
   readReplayWindow,
   replayWindowMs,
   resetReplayWindow,
 } from '../replayWindow';
 
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   requireApolloClient: jest.fn(),
 }));
 

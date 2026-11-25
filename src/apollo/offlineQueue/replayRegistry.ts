@@ -3,7 +3,7 @@
  * document declares. See {@link REPLAY_PREPARATIONS} for why this is a list
  * here rather than a manifest field.
  */
-import { byOperation } from '#/apollo/utils/documentOperation';
+import { byOperation } from '#apollo/utils/documentOperation';
 import {
   reconcileConvertExpiredReplay,
   reconcileCreatePantryItemReplay,

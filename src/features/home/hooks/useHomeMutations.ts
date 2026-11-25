@@ -1,14 +1,14 @@
 /** Creating a home. Renaming and deleting live in the detail screen's hooks. */
 
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { useApolloClient } from '@apollo/client/react';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { useCreateHome } from '#features/home/hooks/useCreateHome';
 import { useCreatePantry } from '#features/pantry/hooks/useCreatePantry';
 import { readDefaultPantryId } from '#features/home/utils/homePantries';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useHomeState, useHasUnverifiedEmail } from '#store/useAppStore';
-import { extractNodes } from '#/utils/connectionUtils';
+import { extractNodes } from '#utils/connectionUtils';
 
 interface UseHomeMutationsOptions {
   refetch: () => Promise<void>;

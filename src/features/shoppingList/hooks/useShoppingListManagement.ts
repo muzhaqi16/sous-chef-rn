@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { shoppingListItemSearch } from '#/utils/searchUtils';
+import { shoppingListItemSearch } from '#utils/searchUtils';
 import { useShoppingListItemsQuery } from './useShoppingListItemsQuery';
 import { usePaginatedShoppingItems } from './usePaginatedShoppingItems';
 import { useShoppingListItemMutations } from './mutations/useShoppingListItemMutations';

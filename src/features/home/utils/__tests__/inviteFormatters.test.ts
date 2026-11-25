@@ -1,10 +1,10 @@
-import { InviteStatus } from '#/graphql/generated/schemaTypes';
+import { InviteStatus } from '#graphql/generated/schemaTypes';
 import {
   formatInviteStatus,
   getInviteDisplayName,
   getInviteStatusKey,
 } from '#features/home/utils/inviteFormatters';
-import { getI18n } from '#/i18n/config';
+import { getI18n } from '#i18n/config';
 
 // The real instance, so the assertions read the copy in en.json.
 const t = getI18n().t;

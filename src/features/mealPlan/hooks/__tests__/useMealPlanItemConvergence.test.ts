@@ -1,13 +1,13 @@
 import { gql } from '@apollo/client';
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { MealType } from '#graphql/generated/schemaTypes';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
 
 const PLAN_ID = 'plan-1';

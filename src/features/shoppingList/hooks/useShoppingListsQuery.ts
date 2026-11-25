@@ -3,9 +3,9 @@ import {
   GetShoppingListsLiteDocument,
   type GetShoppingListsLiteQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { extractNodes } from '#/utils/connectionUtils';
+import { extractNodes } from '#utils/connectionUtils';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { isAbortError } from '#features/shoppingList/utils/abort';
 
 type ShoppingListEdge = NonNullable<

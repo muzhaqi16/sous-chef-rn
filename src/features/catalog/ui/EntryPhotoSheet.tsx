@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import type { IconName } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { ActionMenuRow } from '#components/molecules/ActionMenuRow';
@@ -10,7 +10,7 @@ import { Sheet } from '#components/templates/Sheet';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
 import type { useEntryPhoto } from '#features/catalog/hooks/useEntryPhoto';
 import { catalogTestIDs } from '#features/catalog/testIDs';
-import type { ImageFile } from '#/types/media';
+import type { ImageFile } from '#types/media';
 
 interface EntryPhotoSheetProps {
   visible: boolean;

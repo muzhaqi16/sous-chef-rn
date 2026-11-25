@@ -1,5 +1,5 @@
-import { t } from '#/i18n';
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { UnitSystem } from '#graphql/generated/schemaTypes';
 import {
   chainOption,
   describeStoreOption,

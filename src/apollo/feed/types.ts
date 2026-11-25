@@ -1,9 +1,9 @@
 import type { ApolloCache, ApolloClient } from '@apollo/client';
-import type { CacheShards } from '#/apollo/offline/ApolloCachePersistence';
+import type { CacheShards } from '#apollo/offline/ApolloCachePersistence';
 import type {
   SyncPageStatus,
   SyncScopeKind,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 export interface FeedScopeCursor {
   id: string;

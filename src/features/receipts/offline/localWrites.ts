@@ -2,9 +2,9 @@
  * What a receipt check-in changes on the device, as a pending layer. The
  * server's answer writes each line's rows and the totals; `commit` lists them.
  */
-import type { LocalWrite } from '#/apollo/pendingWrites/types';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
+import type { LocalWrite } from '#apollo/pendingWrites/types';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
 import {
   listNewUsualStore,
   type NewUsualStore,

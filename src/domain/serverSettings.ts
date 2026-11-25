@@ -1,7 +1,7 @@
 import type {
   UpdateSettingsInput,
   UserSettings,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /**
  * Every account setting the app writes, by the `updateSettings` input group

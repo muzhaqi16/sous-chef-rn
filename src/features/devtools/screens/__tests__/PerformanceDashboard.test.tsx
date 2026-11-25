@@ -7,15 +7,15 @@ import type {
 } from 'react-native-performance';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { useStore } from '#store';
-import { alertService } from '#/services/alertService';
-import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
-import { usePerformanceStore } from '#/services/performance/performanceStore';
+import { alertService } from '#services/alertService';
+import { MemoryMonitor } from '#services/performance/MemoryMonitor';
+import { usePerformanceStore } from '#services/performance/performanceStore';
 import type {
   MemorySnapshot,
   RenderMetrics,
   ScreenMetrics,
-} from '#/services/performance/types';
-import { Environment } from '#/utils/environment';
+} from '#services/performance/types';
+import { Environment } from '#utils/environment';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useFPSMonitor } from '#features/devtools/hooks/useFPSMonitor';
 import { withDeadline } from '#/test-utils/cacheWaits';

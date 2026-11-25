@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslateFn } from '#/i18n';
+import { useTranslation, type TranslateFn } from '#i18n';
 import { Icon, type IconName } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import {
@@ -10,7 +10,7 @@ import {
 } from '#components/atoms/themedComponents';
 import type { RecipeDetailState } from '#features/recipes/screens/RecipeDetail/useRecipeDetail';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { formatMonthDayYear } from '#/utils/formatters/date';
+import { formatMonthDayYear } from '#utils/formatters/date';
 
 /** The cooking history in one line, or the offer to mark a first cook. */
 function cookedSummary(

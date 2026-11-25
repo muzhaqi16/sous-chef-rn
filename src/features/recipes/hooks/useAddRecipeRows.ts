@@ -1,6 +1,6 @@
-import { CreateOutcome } from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { CreateOutcome } from '#graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
+import { appliedPayload } from '#utils/errors/mutationPayload';
 import {
   useAddShoppingRows,
   type AddedBatch,

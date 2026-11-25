@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
 import type { DeepLinkAction } from '#store/slices/navigationSlice';
 import { useDeepLinkRouter } from '../useDeepLinkRouter';
-import { getI18n } from '#/i18n/config';
+import { getI18n } from '#i18n/config';
 import { memoryIntents } from '#/test-utils/memoryPlatform';
 
 const mockToJoinHomeByCode = jest.spyOn(memoryIntents(), 'toJoinHomeByCode');
@@ -74,7 +74,7 @@ describe('useDeepLinkRouter', () => {
   });
 
   it('discards a stale action with localized copy', () => {
-    const { toastService } = jest.requireMock('#/services/toastService');
+    const { toastService } = jest.requireMock('#services/toastService');
     mockPending = {
       type: 'join_home',
       code: 'HOME123',

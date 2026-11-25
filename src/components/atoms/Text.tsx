@@ -6,8 +6,8 @@ import {
   type StyleProp,
 } from 'react-native';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import type { TypeRoleName } from '#/theme/foundations/type';
-import type { ThemeColors } from '#/theme/themes';
+import type { TypeRoleName } from '#theme/foundations/type';
+import type { ThemeColors } from '#theme/themes';
 
 export type TextRole = TypeRoleName;
 

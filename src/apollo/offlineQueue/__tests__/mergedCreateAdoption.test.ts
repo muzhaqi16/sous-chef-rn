@@ -3,8 +3,8 @@
  * the version an edit returned, and the row a merged create survives as. Both
  * are written to the queue itself, so a restart mid-drain keeps them.
  */
-import { makeCache } from '#/apollo/cache';
-import { storage } from '#/store/deviceStorage';
+import { makeCache } from '#apollo/cache';
+import { storage } from '#store/deviceStorage';
 import { useStore } from '#store';
 import {
   makeQueuedMutation,
@@ -28,11 +28,11 @@ import {
   DeleteMealPlanItemDocument,
   UpdateMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
-import { t } from '#/i18n';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
+import { t } from '#i18n';
 import { handleQueueFailure } from '../queueFailureHandler';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
 import { QueueStatus } from '../types';
@@ -51,7 +51,7 @@ const mockClient = {
   refetchQueries: jest.fn(() => Promise.resolve([])),
   cache: makeCache(),
 };
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),

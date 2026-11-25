@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import type { Control } from 'react-hook-form';
 import { Controller } from 'react-hook-form';
@@ -10,7 +10,7 @@ import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAut
 import { FieldRow } from '#components/atoms/FieldRow';
 import type { PantryItemFormData } from './PantryItemForm';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
+import type { UnitType } from '#graphql/generated/schemaTypes';
 
 interface QuantitySectionProps {
   control: Control<PantryItemFormData>;

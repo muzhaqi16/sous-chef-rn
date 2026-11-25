@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, screen, userEvent, within } from '@testing-library/react-native';
 import { usePreventRemove } from '@react-navigation/native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   inputOf,
   recordMock,
@@ -16,8 +16,8 @@ import {
 } from '#/test-utils/fixtures/recipeFixtures';
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import { requirePlatform } from '#platform/install';
 import {
   Diet,
@@ -25,7 +25,7 @@ import {
   ErrorDisposition,
   FeatureFlagName,
   RecipeCaptureStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   MAX_RECIPE_INGREDIENTS,
   RECIPE_INGREDIENTS_PAGE_SIZE,

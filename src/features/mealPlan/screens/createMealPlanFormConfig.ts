@@ -1,6 +1,6 @@
 import { boolean, date, mixed, object, string, type ObjectSchema } from 'yup';
-import { lazyMessage } from '#/utils/validation/common';
-import { MealPlanType } from '#/graphql/generated/schemaTypes';
+import { lazyMessage } from '#utils/validation/common';
+import { MealPlanType } from '#graphql/generated/schemaTypes';
 import { startingServings } from '#domain/servings';
 
 export const PERSONAL_VALUE = '__personal__';

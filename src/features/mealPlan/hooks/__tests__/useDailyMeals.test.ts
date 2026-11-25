@@ -11,7 +11,7 @@ import {
   DailyMeals_ItemFragmentDoc,
   type DailyMeals_ItemFragment,
 } from '../useDailyMeals.generated';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { MealType } from '#graphql/generated/schemaTypes';
 
 const today = new Date(2025, 5, 15); // June 15, 2025
 // A meal's day is a `LocalDate` key: the day itself, never an instant.

@@ -4,9 +4,9 @@ import { Text } from '#components/atoms/Text';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Icon } from '#components/atoms/Icon';
-import { localizedErrorMessage } from '#/services/errorService';
+import { localizedErrorMessage } from '#services/errorService';
 import { PasswordInput } from '#components/molecules/PasswordInput';
 import { Button } from '#components/molecules/Button';
 import {
@@ -16,7 +16,7 @@ import {
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { changePasswordSchema } from '#utils/validation/auth';
 import { reportValidationErrors } from '#utils/validation/common';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { SubScreen } from '#components/templates/SubScreen';
 import { toastService } from '#services/toastService';
 

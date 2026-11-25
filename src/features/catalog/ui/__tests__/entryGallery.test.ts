@@ -1,4 +1,4 @@
-import { EntryImageSource } from '#/graphql/generated/schemaTypes';
+import { EntryImageSource } from '#graphql/generated/schemaTypes';
 import { entryGallery } from '#features/catalog/ui/entryGallery';
 import { MAX_GALLERY_PHOTOS } from '#utils/imageUtils';
 

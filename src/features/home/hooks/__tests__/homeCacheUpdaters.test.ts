@@ -1,5 +1,5 @@
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
+jest.mock('#apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#apollo/utils/cacheUpdaters'),
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
@@ -8,7 +8,7 @@ import { addToHomesCache } from '../homeCacheUpdaters';
 
 // Access mock fns AFTER module-level code has executed
 const { createAddToQueryConnectionUpdater } = jest.requireMock(
-  '#/apollo/utils/cacheUpdaters',
+  '#apollo/utils/cacheUpdaters',
 );
 
 describe('home hooks utils', () => {

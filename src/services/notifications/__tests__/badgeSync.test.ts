@@ -8,10 +8,10 @@
  */
 import notifee from '@notifee/react-native';
 import type { InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
-import { NotificationSummaryReadersFragmentDoc } from '#/graphql/readers/notificationSummaryReaders.generated';
-import { logger } from '#/utils/environment';
+import { NotificationSummaryReadersFragmentDoc } from '#graphql/readers/notificationSummaryReaders.generated';
+import { logger } from '#utils/environment';
 
 jest.mock('@notifee/react-native', () => ({
   __esModule: true,
@@ -22,7 +22,7 @@ jest.mock('@notifee/react-native', () => ({
 // load time, which is before `mockCache` is assigned. Reading it lazily is what
 // lets each test start from a fresh cache.
 let mockCache: InMemoryCache;
-jest.mock('#/app/apolloClient', () => ({
+jest.mock('#app/apolloClient', () => ({
   get client() {
     return { cache: mockCache };
   },

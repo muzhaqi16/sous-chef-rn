@@ -1,7 +1,7 @@
 import React from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
 import type { IconName, IconTone, IconSizeName } from '#components/atoms/Icon';

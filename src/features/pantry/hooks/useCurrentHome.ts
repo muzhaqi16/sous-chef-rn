@@ -1,7 +1,7 @@
 import { useQuery } from '@apollo/client/react';
 import { useSelectedHomeId, useIsHomeSelectionReady } from '#store/useAppStore';
 import { GetHomesDocument } from '#operations/home/home.generated';
-import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
+import { usePreservedNodes } from '#hooks/apollo/usePreservedConnection';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { heldFetchPolicy } from '#hooks/apollo/standDownOptions';
 

@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useMoney } from '#/domain/money';
+import { useMoney } from '#domain/money';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { formatNetWeightDisplay, unitLabel } from '#utils/formatQuantity';
 import { useShoppingListItemDetail } from './useShoppingListItemDetail';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -37,14 +37,14 @@ import {
 } from '#features/shoppingList/utils/priority';
 import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
 import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
-import { formatMonthDayYear } from '#/utils/formatters/date';
-import { purchaseDay } from '#/utils/dateUtils';
+import { formatMonthDayYear } from '#utils/formatters/date';
+import { purchaseDay } from '#utils/dateUtils';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useReportPhotoHeaderAction } from '#features/catalog/ui/useReportPhotoHeaderAction';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { personName } from '#/utils/formatters/memberFormatters';
-import { AddedContext } from '#/graphql/generated/schemaTypes';
-import type { TranslationKey } from '#/i18n';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { personName } from '#utils/formatters/memberFormatters';
+import { AddedContext } from '#graphql/generated/schemaTypes';
+import type { TranslationKey } from '#i18n';
 
 /**
  * The flow that put a line on the list. Null for a line someone typed, for a

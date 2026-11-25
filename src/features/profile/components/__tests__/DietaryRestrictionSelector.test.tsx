@@ -1,13 +1,13 @@
 'use no memo';
 import React from 'react';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import {
   Diet,
   Intolerance,
   HealthGoal,
   RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { RestrictionSectionProps } from '#features/profile/components/RestrictionSection/RestrictionSection';
 import type { MultiSelectChipSheetProps } from '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet';
 import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';

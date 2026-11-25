@@ -2,7 +2,7 @@ import { act } from '@testing-library/react-native';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
 import { gql, type InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   type MockDataFor,
   recordMock,
@@ -12,17 +12,17 @@ import {
 import { operationLog } from '#/test-utils/operationLog';
 import { seedPantry } from '#/test-utils/fixtures/pantryFixtures';
 import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
-import { t } from '#/i18n';
-import { todayKey } from '#/utils/dateUtils';
-import { isRecord } from '#/utils/isRecord';
+import { t } from '#i18n';
+import { todayKey } from '#utils/dateUtils';
+import { isRecord } from '#utils/isRecord';
 import {
   BatchStatus,
   ErrorCode,
   UnitType,
   UsagePurpose,
-} from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+} from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import {
   AdjustPantryItemQuantityDocument,
   ConvertExpiredToWasteDocument,

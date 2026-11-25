@@ -1,15 +1,15 @@
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { PendingWrites } from '#/apollo/pendingWrites/pendingWrites';
-import { readFenceOf } from '#/apollo/pendingWrites/readFence';
-import type { PendingWrite } from '#/apollo/pendingWrites/types';
+import { makeCache } from '#apollo/cache';
+import { PendingWrites } from '#apollo/pendingWrites/pendingWrites';
+import { readFenceOf } from '#apollo/pendingWrites/readFence';
+import type { PendingWrite } from '#apollo/pendingWrites/types';
 import {
   completeSeed,
   seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { cacheShows } from '#/test-utils/cacheWaits';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import {
   AddItemToShoppingListDocument,

@@ -2,14 +2,14 @@ import {
   adoptServerEntityId,
   createAddToParentConnectionUpdater,
   type ConnectionData,
-} from '#/apollo/utils/cacheUpdaters';
+} from '#apollo/utils/cacheUpdaters';
 import type { ApolloCache, Reference } from '@apollo/client';
 import type { ModifierDetails } from '@apollo/client/cache';
 import {
   SavedRecipeFoldersDocument,
   type SavedRecipeFoldersQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import { writeLocalEntity } from '#apollo/utils/writeLocalEntity';
 import {
   Favorites_RowFragmentDoc,
   Favorites_SavedDetailsFragmentDoc,

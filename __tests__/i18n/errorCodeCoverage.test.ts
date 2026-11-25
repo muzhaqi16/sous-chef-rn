@@ -1,6 +1,6 @@
 import { mergedLocale } from '#/test-utils/mergedLocales';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { errorService } from '#/services/errorService';
+import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
+import { errorService } from '#services/errorService';
 
 /**
  * Every error code the schema declares resolves to localized copy.

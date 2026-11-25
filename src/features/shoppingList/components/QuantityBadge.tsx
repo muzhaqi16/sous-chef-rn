@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 // RNGH's Pressable, not the themed RN re-export: nested inside the row's RNGH
 // Swipeable, only RNGH's native button captures the tap. An RN Pressable is in a
@@ -11,9 +11,9 @@ import {
   formatQuantityForDisplay,
   formatQuantityWithUnit,
   type QuantityNotation,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { hitSlop } from '#theme/foundations/sizes';
 
 /**
  * Tall enough for the touch floor; on the right, half the 4 dp gap to the row's

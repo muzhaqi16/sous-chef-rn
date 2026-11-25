@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
@@ -9,7 +9,7 @@ import { Text } from '#components/atoms/Text';
 import {
   InviteStatus,
   type MembershipRole,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { MembershipPermissionKey } from '#features/home/types';
 import {
   canManageHome,

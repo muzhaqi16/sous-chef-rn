@@ -1,7 +1,7 @@
 import { DeleteRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import type { RemoveRecipeInputs } from '#features/recipes/offline/localWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
 
 export function useDeleteRecipe() {
   const { t } = useTranslation();

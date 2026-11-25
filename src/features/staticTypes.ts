@@ -1,4 +1,4 @@
-import type { SupportedLanguage } from '#/i18n/config';
+import type { SupportedLanguage } from '#i18n/config';
 
 /** One feature's copy, one tree per supported language. */
 export type FeatureLocales = Record<SupportedLanguage, Record<string, unknown>>;

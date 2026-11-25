@@ -3,7 +3,7 @@ import {
   moveToPantryDefaults,
   moveToPantrySchema,
 } from '../moveToPantryFormConfig';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState } from '#graphql/generated/schemaTypes';
 
 /**
  * A field the person can fix is reported ON the field: an alert covers the form

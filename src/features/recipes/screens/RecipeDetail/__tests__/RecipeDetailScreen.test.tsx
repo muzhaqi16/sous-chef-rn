@@ -7,7 +7,7 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   inputOf,
   recordMock,
@@ -28,8 +28,8 @@ import {
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
 import { recordOpenedCatalogRecipe } from '#features/recipes/store/openedCatalogRecipes';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import {
   Diet,
   DietaryAlertState,
@@ -37,9 +37,9 @@ import {
   ExternalSyncStatus,
   MembershipRole,
   RecipeStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { hasTipFact } from '#hooks/settings/useFeatureHint';
-import { formatMonthDayYear } from '#/utils/formatters/date';
+import { formatMonthDayYear } from '#utils/formatters/date';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetDietaryProfileDocument } from '#operations/user/user.generated';
 import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
@@ -63,7 +63,7 @@ import { RecipeSubstitutesDocument } from '#features/recipes/hooks/useRecipeSubs
 import { MySavedRecipesDocument } from '#features/recipes/screens/useSavedRecipes.generated';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { RecipeMissingIngredientsDocument } from '#features/recipes/hooks/useRecipeMissingIngredients.generated';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import { kitTestIDs } from '#components/testIDs';
 import { RecipeDetail } from '../index';
 

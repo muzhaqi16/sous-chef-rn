@@ -1,5 +1,5 @@
-import { Cuisine } from '#/graphql/generated/schemaTypes';
-import type { TranslationKey } from '#/i18n';
+import { Cuisine } from '#graphql/generated/schemaTypes';
+import type { TranslationKey } from '#i18n';
 
 export interface PopularCuisine {
   /** i18n key path — resolved by the consumer, which has the hook. */

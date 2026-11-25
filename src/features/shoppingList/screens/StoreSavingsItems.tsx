@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslateFn } from '#/i18n';
+import { useTranslation, type TranslateFn } from '#i18n';
 import type { BadgeContent } from '#components/atoms/Badge';
 import { StatusLine } from '#components/atoms/StatusLine';
 import { Text } from '#components/atoms/Text';
@@ -12,8 +12,8 @@ import { useDataState } from '#hooks/data/useDataState';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
-import { rowType } from '#/theme/foundations/type';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { rowType } from '#theme/foundations/type';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 import { describeStoreOption } from '#domain/stores';
 import {
   useStoreSavingsLines,

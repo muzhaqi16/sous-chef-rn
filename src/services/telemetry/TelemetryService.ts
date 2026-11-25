@@ -10,14 +10,14 @@ import { TransportSendError, defaultTelemetryConfig } from './types';
 import { ConsoleTransport } from './transports/ConsoleTransport';
 import { HttpTransport } from './transports/HttpTransport';
 import { scrubLogExtra, scrubString } from './scrub';
-import { logger } from '#/utils/environment';
-import { serializeError } from '#/utils/errorSerialization';
-import { getDeviceId } from '#/services/auth/deviceId';
-import { generateId } from '#/utils/generateId';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { backoffDelay } from '#/utils/backoff';
+import { logger } from '#utils/environment';
+import { serializeError } from '#utils/errorSerialization';
+import { getDeviceId } from '#services/auth/deviceId';
+import { generateId } from '#utils/generateId';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { backoffDelay } from '#utils/backoff';
 import { requirePlatform } from '#platform/install';
-import { env as buildEnv } from '#/config/env';
+import { env as buildEnv } from '#config/env';
 import {
   isTelemetryDeviceOffline,
   onTelemetryConsentKnown,

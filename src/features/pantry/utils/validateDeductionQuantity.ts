@@ -1,11 +1,11 @@
-import { t } from '#/i18n';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { t } from '#i18n';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import {
   formatQuantityForDisplay,
   formatQuantityForInput,
   resolveQuantityNotation,
   unitLabel,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import { inCountedUnit } from '#features/pantry/utils/stockDisplay';
 import type {
   PantryActionSharedState,

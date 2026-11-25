@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
-import { unitLabel } from '#/utils/formatQuantity';
+import { useTranslation } from '#i18n';
+import { unitLabel } from '#utils/formatQuantity';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 
 import { Text } from '#components/atoms/Text';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
+import type { UnitType } from '#graphql/generated/schemaTypes';
 import { MutedActivityIndicator } from '#components/atoms/themedComponents';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import type { PickableUnit } from '#features/pantry/types';
 
 export interface PickableUnitGroup {

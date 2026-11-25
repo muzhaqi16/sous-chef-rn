@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { drainPendingRevocations } from '#/services/auth/refreshTokenRevocation';
+import { drainPendingRevocations } from '#services/auth/refreshTokenRevocation';
 
 /**
  * Revokes the sessions that ended while the API was out of reach, on launch

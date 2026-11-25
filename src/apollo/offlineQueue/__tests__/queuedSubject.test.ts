@@ -6,7 +6,7 @@ import {
 import type {
   PantryItem,
   ShoppingListItem,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   AddRecipeToFavoritesDocument,
   ForkRecipeDocument,

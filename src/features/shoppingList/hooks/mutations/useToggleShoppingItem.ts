@@ -11,18 +11,18 @@ import {
   type GetShoppingListItemsFilteredQuery,
   type GetShoppingListItemsFilteredQueryVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
-import { errorService } from '#/services/errorService';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { errorService } from '#services/errorService';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
 import {
   UseToggleShoppingItem_ItemFragmentDoc,
   type UseToggleShoppingItem_ItemFragment,
 } from './useToggleShoppingItem.generated';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { appliedPayload } from '#utils/errors/mutationPayload';
 import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
-import type { PurchasedItemInput } from '#/graphql/generated/schemaTypes';
+import type { PurchasedItemInput } from '#graphql/generated/schemaTypes';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;

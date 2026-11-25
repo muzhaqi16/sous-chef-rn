@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRoute } from '@react-navigation/native';
 import { useNavigationIntents } from '#platform/screen';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import { sleep } from '#/utils/backoff';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
+import { sleep } from '#utils/backoff';
 import { catalogKey } from '#domain/catalogRecipes';
 import { useOpenedRecipeId } from '#features/recipes/store/openedCatalogRecipes';
 import { useRecipeData } from '../../hooks/useRecipeData';

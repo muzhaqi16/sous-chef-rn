@@ -3,9 +3,9 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { InfoRow } from '#components/atoms/InfoRow';
-import { useTranslation } from '#/i18n';
-import { commonStyles } from '#/styles/commonStyles';
-import { formatCurrency } from '#/utils/formatters/number';
+import { useTranslation } from '#i18n';
+import { commonStyles } from '#styles/commonStyles';
+import { formatCurrency } from '#utils/formatters/number';
 import {
   formatCostToGo,
   type ListCostToGo,

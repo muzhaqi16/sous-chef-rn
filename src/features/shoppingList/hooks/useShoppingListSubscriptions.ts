@@ -7,8 +7,8 @@
 
 import type { ApolloCache, Reference } from '@apollo/client';
 import type { ModifierDetails } from '@apollo/client/cache';
-import type { ConnectionData } from '#/apollo/utils/cacheUpdaters';
-import { useFeedKeeps } from '#/hooks/subscriptions/useChangeFeed';
+import type { ConnectionData } from '#apollo/utils/cacheUpdaters';
+import { useFeedKeeps } from '#hooks/subscriptions/useChangeFeed';
 import { useSelectedShoppingListId } from '#store/useAppStore';
 import { useSubscription } from '@apollo/client/react';
 import {
@@ -20,21 +20,21 @@ import {
   MutationType,
   ShoppingListSubtype,
   SyncScopeKind,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   ShoppingListItemsForEventsDocument,
   ShoppingListSummaryForEventDocument,
   UseShoppingListSubscriptions_ListRefFragmentDoc,
 } from './useShoppingListSubscriptions.generated';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
-import { batchedEventRead } from '#/services/subscriptions/batchedEventRead';
-import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
-import { useSubscriptionRejected } from '#/services/subscriptions/rejectedSubscriptions';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
+import { fetchEventEntity } from '#services/subscriptions/fetchEventEntity';
+import { batchedEventRead } from '#services/subscriptions/batchedEventRead';
+import { isSelfEcho } from '#services/subscriptions/isSelfEcho';
+import { useSubscriptionRejected } from '#services/subscriptions/rejectedSubscriptions';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
-} from '#/services/subscriptions/types';
+} from '#services/subscriptions/types';
 
 type MyShoppingListsEventsPayload =
   MyShoppingListsEventsSubscription['myShoppingListsEvents'];
@@ -45,11 +45,11 @@ import {
   clearAllPurchasedItemsFromCache,
   addNewItemToShoppingListCache,
 } from '#features/shoppingList/cache/connections';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { Telemetry } from '#/services/telemetry';
-import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { logger } from '#/utils/environment';
-import { errorService } from '#/services/errorService';
+import { safeEvict } from '#apollo/utils/cacheUpdaters';
+import { Telemetry } from '#services/telemetry';
+import { createRemoveFromParentConnectionUpdater } from '#apollo/utils/cacheUpdaters';
+import { logger } from '#utils/environment';
+import { errorService } from '#services/errorService';
 import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
 
 // The connection as `cache.modify` sees it: edges wrap normalized node refs, so

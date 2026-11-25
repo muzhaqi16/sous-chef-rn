@@ -1,4 +1,4 @@
-import { isOwnKey } from '#/utils/isOwnKey';
+import { isOwnKey } from '#utils/isOwnKey';
 
 /**
  * Keyed on REGION, never language: languages and the API's currencies map

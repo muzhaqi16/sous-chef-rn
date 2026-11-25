@@ -4,10 +4,10 @@ import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { GetCurrenciesDocument } from '#features/profile/graphql/currency.generated';
 import { useAppStore, useUpdateUser } from '#store/useAppStore';
-import { usePreferredCurrency } from '#/domain/money';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { usePreferredCurrency } from '#domain/money';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
 
 export interface CurrencyOption {
   value: string;

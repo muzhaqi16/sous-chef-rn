@@ -1,12 +1,12 @@
 import type { InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   Diet,
   ExternalSource,
   ExternalSyncStatus,
   Intolerance,
   RecipeRevisionStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,

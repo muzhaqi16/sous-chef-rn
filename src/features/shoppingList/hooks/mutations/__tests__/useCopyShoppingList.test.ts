@@ -8,11 +8,11 @@ import {
   AddItemToShoppingListDocument,
   CreateShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import type { DerivedList } from '#features/shoppingList/utils/listFromTemplate';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { useStore } from '#store';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import { useCopyShoppingList } from '../useCopyShoppingList';
 
 const USER = {

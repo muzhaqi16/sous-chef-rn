@@ -4,15 +4,15 @@
  * marking the same home twice is idempotent.
  */
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
-import type { SettledFailure } from '#/apollo/utils/settleMutation';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { errorService } from '#/services/errorService';
-import { useTranslation } from '#/i18n';
+import type { SettledFailure } from '#apollo/utils/settleMutation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { errorService } from '#services/errorService';
+import { useTranslation } from '#i18n';
 import type { MarkDefaultHomeInputs } from '#features/home/offline/localWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useDefaultHomeSyncStore } from '#features/home/store/useDefaultHomeSyncStore';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 
 interface MarkHomeAsDefaultResult {
   /** `refused`: the server ruled against it. `failed`: it never ruled. */

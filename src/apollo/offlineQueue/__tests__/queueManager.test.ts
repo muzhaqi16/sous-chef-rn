@@ -13,16 +13,16 @@ import {
   calculateRetryDelay,
   ReplayRejectedError,
 } from '../queueErrorPolicy';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   AddedContext,
   ErrorCode,
   type MealPlanItem,
-} from '#/graphql/generated/schemaTypes';
-import { Telemetry } from '#/services/telemetry';
-import { SessionError } from '#/utils/errors/sessionError';
-import { TimeoutError } from '#/utils/errors/timeoutError';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+} from '#graphql/generated/schemaTypes';
+import { Telemetry } from '#services/telemetry';
+import { SessionError } from '#utils/errors/sessionError';
+import { TimeoutError } from '#utils/errors/timeoutError';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import {
   AddRecipeToFavoritesDocument,
@@ -55,7 +55,7 @@ import {
   CreateHomeDocument,
   UpdateHomeDocument,
 } from '#operations/home/home.generated';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -87,7 +87,7 @@ const mockClient = {
     extract: jest.fn(() => ({})),
   },
 };
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),
@@ -100,7 +100,7 @@ const mockPendingWrites = {
   drop: jest.fn(),
   restore: jest.fn(),
 };
-jest.mock('#/apollo/pendingWrites/pendingWrites', () => ({
+jest.mock('#apollo/pendingWrites/pendingWrites', () => ({
   pendingWritesOf: () => mockPendingWrites,
 }));
 
@@ -136,7 +136,7 @@ jest.mock('../queueStore', () => ({
 }));
 
 // Mock generateId
-jest.mock('#/utils/generateId', () => ({
+jest.mock('#utils/generateId', () => ({
   generateId: jest.fn(() => 'gen-id'),
 }));
 
@@ -2755,7 +2755,7 @@ describe('QueueManager', () => {
     });
 
     it('catches and logs handler errors without crashing', () => {
-      const { logger } = require('#/utils/environment');
+      const { logger } = require('#utils/environment');
       const throwingHandler = jest.fn(() => {
         throw new Error('handler boom');
       });

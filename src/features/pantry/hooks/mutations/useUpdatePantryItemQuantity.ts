@@ -4,21 +4,21 @@
  */
 
 import { useApolloClient } from '@apollo/client/react';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   UseUpdatePantryItemQuantity_RowFragmentDoc,
   type UseUpdatePantryItemQuantity_RowFragment,
 } from './useUpdatePantryItemQuantity.generated';
-import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { logger } from '#/utils/environment';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { normalizeNumericTextForApi } from '#utils/parseDecimalInput';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { logger } from '#utils/environment';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
 import type { writeHeldStock } from '#features/pantry/cache/stock';
 import type { SetStockInputs } from '#features/pantry/offline/localWrites';
-import { todayKey } from '#/utils/dateUtils';
-import { statedAmount } from '#/utils/formatQuantity';
+import { todayKey } from '#utils/dateUtils';
+import { statedAmount } from '#utils/formatQuantity';
 
 interface UseUpdatePantryItemQuantityOptions {
   refetch?: () => void;

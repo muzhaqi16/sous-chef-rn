@@ -4,15 +4,15 @@ import {
   renderHookWithApollo,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
-import { t } from '#/i18n';
+import { makeCache } from '#apollo/cache';
+import { t } from '#i18n';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   ErrorCode,
   StockCheckAnswer,
   StockConfidence,
   WasteReason,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { pantryTrackingContext as context } from '#/test-utils/fixtures/pantryTrackingFixtures';
 import { useStore } from '#store';
 import { useStockCheck } from '../useStockCheck';

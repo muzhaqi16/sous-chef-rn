@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { IconButton } from '#components/atoms/IconButton';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   View,
   type GestureResponderEvent,
@@ -12,11 +12,11 @@ import {
 } from '#components/atoms/themedComponents';
 import { assignRef, type FocusableInputRef } from '#components/atoms/inputRef';
 import { StyleSheet } from 'react-native-unistyles';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import {
   formatQuantityForInput,
   type QuantityNotation,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import { Label } from '#components/atoms/Label';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import { Text } from '#components/atoms/Text';

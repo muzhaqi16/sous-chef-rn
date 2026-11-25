@@ -21,10 +21,10 @@ import {
   isUnreadStatus,
   readNotificationStatus,
 } from '#features/notifications/utils/notificationCacheWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { isGoneCode } from '#/apollo/utils/settleMutation';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { isGoneCode } from '#apollo/utils/settleMutation';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
 
 export function useNotificationSync() {
   const client = useApolloClient();

@@ -1,4 +1,4 @@
-import { LOCAL_WRITES } from '#/apollo/pendingWrites/localWriteRegistry';
+import { LOCAL_WRITES } from '#apollo/pendingWrites/localWriteRegistry';
 import {
   authoredMutations,
   localFirstOperationNames,

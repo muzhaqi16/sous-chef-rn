@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import type { ErrorLike } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { onWebSocketReconnected } from '#/apollo/links/wsLink';
-import { errorService } from '#/services/errorService';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { onWebSocketReconnected } from '#apollo/links/wsLink';
+import { errorService } from '#services/errorService';
 import { useIsOnline } from '#store/useAppStore';
-import { logger } from '#/utils/environment';
-import { backoffDelay } from '#/utils/backoff';
+import { logger } from '#utils/environment';
+import { backoffDelay } from '#utils/backoff';
 import {
   classifyTransportTermination,
   isPermanentSubscriptionRejection,
   isRetryableServerEnd,
-} from '#/utils/subscriptionErrorHandler';
+} from '#utils/subscriptionErrorHandler';
 
 /**
  * Re-subscribes when the TRANSPORT ends a subscription: Apollo never restarts an

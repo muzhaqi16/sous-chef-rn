@@ -6,9 +6,9 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import { MealPlanType, MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MealPlanType, MembershipRole } from '#graphql/generated/schemaTypes';
 import { DuplicatePlanSheet } from '../DuplicatePlanSheet';
 
 jest.mock('#components/atoms/Icon', () => ({

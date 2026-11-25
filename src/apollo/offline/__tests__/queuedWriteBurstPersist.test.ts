@@ -1,5 +1,5 @@
 import type { NormalizedCacheObject } from '@apollo/client';
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 import { apolloCachePersistence } from '../ApolloCachePersistence';
 
 const storageSet = jest.spyOn(storage, 'set');

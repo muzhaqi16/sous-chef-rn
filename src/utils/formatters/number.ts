@@ -4,8 +4,8 @@
  * its keypad does not offer. Both follow the DEVICE, because the keypad does
  * (see `deviceLocale`). `Intl` is treated as possibly-absent throughout.
  */
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
-import type { Translate } from '#/i18n/types';
+import { UnitSystem } from '#graphql/generated/schemaTypes';
+import type { Translate } from '#i18n/types';
 import { getDeviceDecimalSeparator } from '../deviceLocale';
 
 /**

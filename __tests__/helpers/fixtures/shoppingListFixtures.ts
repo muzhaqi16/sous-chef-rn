@@ -7,7 +7,7 @@ import {
   CollaboratorStatus,
   MembershipRole,
   type StoreDepartment,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   GetShoppingListDetailsDocument,
   GetShoppingListItemsFilteredDocument,

@@ -1,4 +1,4 @@
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import { getMealTemplatePermissions } from '../mealTemplatePermissions';
 
 const homeTemplate = (role: MembershipRole | null, creatorId = 'creator') => ({

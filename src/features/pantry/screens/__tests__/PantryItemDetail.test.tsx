@@ -3,7 +3,7 @@
 import React from 'react';
 import { GraphQLError } from 'graphql';
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type { ApolloClient, InMemoryCache } from '@apollo/client';
 import {
   type MockDataFor,
@@ -26,10 +26,10 @@ import {
   asAbbreviation,
   readingAsAbbreviation,
 } from '#/test-utils/fixtures/unitLabels';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { toDateKey, todayKey } from '#/utils/dateUtils';
+import { t } from '#i18n';
+import { toDateKey, todayKey } from '#utils/dateUtils';
 import {
   ExpiryKind,
   BatchStatus,
@@ -41,7 +41,7 @@ import {
   MembershipRole,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { kitTestIDs } from '#components/testIDs';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
@@ -56,7 +56,7 @@ import { PantryItemDetail } from '../PantryItemDetail';
 
 // The day stays fixed: the hook's midnight timer re-arms itself.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 jest.mock('#hooks/navigation/useAppNavigation');
 // Navigation is the boundary: with no navigator, the screen is focused while

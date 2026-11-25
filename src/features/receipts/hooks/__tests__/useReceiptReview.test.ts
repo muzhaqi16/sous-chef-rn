@@ -2,7 +2,7 @@
 
 import { act } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   readUsualStores,
   writeUsualStores,
@@ -35,9 +35,9 @@ import {
   ReceiptParser,
   UnitType,
   UsualStoreSource,
-} from '#/graphql/generated/schemaTypes';
-import { toDateKey } from '#/utils/dateUtils';
-import { t } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import { toDateKey } from '#utils/dateUtils';
+import { t } from '#i18n';
 import {
   useReceiptDraftStore,
   type ReceiptDraft,
@@ -56,7 +56,7 @@ import { useReceiptReview } from '../useReceiptReview';
 import { UseReceiptReview_StoreFragmentDoc } from '../useReceiptReview.generated';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import { CreateStoreFromPlaceDocument } from '#features/catalog/hooks/useCreateStoreFromPlace.generated';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { RemoveUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { ResolveReceiptLinesDocument } from '../useReceiptMatches.generated';
@@ -68,10 +68,10 @@ import {
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 interface CurrentPantry {
   pantry: { id: string; name: string } | null;
   currentHome: { id: string } | null;

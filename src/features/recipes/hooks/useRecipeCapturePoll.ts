@@ -12,7 +12,7 @@ import {
 import { RecipeCaptureDocument } from './useRecipeCapture.generated';
 import { useCaptureOutcomeReporter } from './useCaptureOutcomeReporter';
 import { useIsLiveChannelOpen } from '#hooks/subscriptions/useIsLiveChannelOpen';
-import { onWorkSettled } from '#/services/subscriptions/settledWork';
+import { onWorkSettled } from '#services/subscriptions/settledWork';
 
 /** A structured page answers in seconds; a model read takes longer. */
 const FAST_POLL_MS = 2000;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { ReceiptLineSheet } from '../ReceiptLineSheet';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { receiptsTestIDs } from '../../testIDs';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { seedChoice } from '../../utils/receiptReviewLines';
@@ -76,8 +76,8 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
 // The units the device holds: "lb", "fl oz" and "carton" resolve, anything else does not.
 jest.mock('#features/catalog/hooks/useResolveUnit', () => {
   const { UnitType } = jest.requireActual<
-    typeof import('#/graphql/generated/schemaTypes')
-  >('#/graphql/generated/schemaTypes');
+    typeof import('#graphql/generated/schemaTypes')
+  >('#graphql/generated/schemaTypes');
   const held = new Map([
     ['lb', { id: 'unit-lb', type: UnitType.Weight }],
     ['fl oz', { id: 'unit-floz', type: UnitType.Volume }],

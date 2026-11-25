@@ -3,7 +3,7 @@ import React from 'react';
 import { fireEvent, screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GenerateShoppingListSheet } from '../GenerateShoppingListSheet';
 

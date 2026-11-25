@@ -6,7 +6,7 @@
  * what the cache does with it.
  */
 import { gql, type Cache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { writePurchaseInfo } from '../purchase';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 

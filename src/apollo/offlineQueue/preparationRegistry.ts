@@ -1,4 +1,4 @@
-import { byOperation } from '#/apollo/utils/documentOperation';
+import { byOperation } from '#apollo/utils/documentOperation';
 import { preparePantryItemCreate } from '#features/pantry/offline/replayPreparers';
 import {
   CreatePantryItemDocument,

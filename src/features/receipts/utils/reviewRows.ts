@@ -1,8 +1,8 @@
-import type { TranslateFn } from '#/i18n';
+import type { TranslateFn } from '#i18n';
 import {
   formatQuantityDisplay,
   type UnitLabelSource,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import type {
   ReceiptReviewRow,
   ReceiptRowStatus,

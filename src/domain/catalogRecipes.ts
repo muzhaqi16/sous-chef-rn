@@ -1,4 +1,4 @@
-import type { ExternalSource } from '#/graphql/generated/schemaTypes';
+import type { ExternalSource } from '#graphql/generated/schemaTypes';
 
 /** `catalogRecipesByIngredients` refuses a request naming more. */
 export const MAX_CATALOG_INGREDIENTS = 20;

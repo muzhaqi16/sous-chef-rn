@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { ApolloCache } from '@apollo/client';
 import { skipToken, useApolloClient, useQuery } from '@apollo/client/react';
-import { safeEvictMany } from '#/apollo/utils/cacheUpdaters';
+import { safeEvictMany } from '#apollo/utils/cacheUpdaters';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import {
   usePantryState,
@@ -11,9 +11,9 @@ import {
 } from '#store/useAppStore';
 import { useStore } from '#store';
 import { holdsSessionTokens } from '#store/slices/authSlice';
-import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
+import { usePreservedNodes } from '#hooks/apollo/usePreservedConnection';
 import { pantriesOf, defaultPantryOf } from '#domain/homePantries';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { UseDefaultHome_HomeFragmentDoc } from './useDefaultHome.generated';
 
 /**

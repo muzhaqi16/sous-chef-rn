@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import { t, type TranslationKey } from '#/i18n';
+import { t, type TranslationKey } from '#i18n';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
@@ -7,13 +7,13 @@ import {
   JoinHomeByCodeDocument,
   ResolveShareLinkDocument,
 } from '#operations/home/home.generated';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import {
   ErrorCode,
   MembershipRole,
   MembershipStatus,
   ShareLinkTargetType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useHomeInvitations } from '../useHomeInvitations';
 
 type HomeInvitationsApi = ReturnType<typeof useHomeInvitations>;
@@ -30,14 +30,14 @@ type PreviewResult = Awaited<
   ReturnType<HomeInvitationsApi['previewHomeByCode']>
 >;
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
-jest.mock('#/utils/connectionUtils', () => ({
+jest.mock('#utils/connectionUtils', () => ({
   normalizeHome: jest.fn((home: unknown) => home),
 }));
 
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
+jest.mock('#apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#apollo/utils/cacheUpdaters'),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 

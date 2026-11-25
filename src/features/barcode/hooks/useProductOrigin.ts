@@ -1,9 +1,9 @@
 import { useFragment, useQuery } from '@apollo/client/react';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { useTranslation, type TranslationKey } from '#/i18n';
-import type { Translate } from '#/i18n/types';
-import { ExternalSource } from '#/graphql/generated/schemaTypes';
-import { formatCountryName } from '#/utils/formatters/region';
+import { useTranslation, type TranslationKey } from '#i18n';
+import type { Translate } from '#i18n/types';
+import { ExternalSource } from '#graphql/generated/schemaTypes';
+import { formatCountryName } from '#utils/formatters/region';
 import {
   ProductOriginDocument,
   UseProductOrigin_ItemFragmentDoc,

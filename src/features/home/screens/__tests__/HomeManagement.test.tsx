@@ -16,14 +16,14 @@ import { operationLog } from '#/test-utils/operationLog';
 import { homesData } from '#/test-utils/fixtures/homeFixtures';
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import {
   ErrorCode,
   ErrorDisposition,
   MembershipRole,
   ShareLinkTargetType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   CreateHomeDocument,
   GetHomesDocument,

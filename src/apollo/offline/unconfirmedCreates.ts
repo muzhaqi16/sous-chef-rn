@@ -1,4 +1,4 @@
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
 
 /**
  * Client-minted ids whose create the server has not acknowledged. A local-first

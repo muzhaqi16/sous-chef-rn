@@ -3,8 +3,8 @@ import { enUS } from 'date-fns/locale/en-US';
 import { es } from 'date-fns/locale/es';
 import { it } from 'date-fns/locale/it';
 import { sq } from 'date-fns/locale/sq';
-import { getResolvedLanguage } from '#/i18n';
-import type { SupportedLanguage } from '#/i18n/config';
+import { getResolvedLanguage } from '#i18n';
+import type { SupportedLanguage } from '#i18n/config';
 
 // Anything the app does not ship (or a region-suffixed tag like `en-US`) falls
 // back to en-US.

@@ -5,20 +5,20 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { PantryUnitChangeResolution } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { isVersionConflictCode } from '#/utils/errors/versionConflict';
-import { errorService } from '#/services/errorService';
-import { useTranslation } from '#/i18n';
+import type { PantryUnitChangeResolution } from '#graphql/generated/schemaTypes';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { isVersionConflictCode } from '#utils/errors/versionConflict';
+import { errorService } from '#services/errorService';
+import { useTranslation } from '#i18n';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { writeRestatedBatches } from '#features/pantry/cache/restatedStack';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { appliedPayload } from '#utils/errors/mutationPayload';
 import {
   ChangePantryItemUnitDocument,
   PreviewPantryItemUnitChangeDocument,
   type PreviewPantryItemUnitChangeQuery,
 } from './usePantryUnitChange.generated';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 
 export type UnitChangePreview =
   PreviewPantryItemUnitChangeQuery['previewPantryItemUnitChange'];

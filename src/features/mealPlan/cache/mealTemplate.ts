@@ -3,16 +3,16 @@ import {
   TemplateCategory,
   type CreateMealTemplateInput,
   type MealTemplate,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   createAddToQueryConnectionUpdater,
   skipUnmatchedFilterVariants,
-} from '#/apollo/utils/cacheUpdaters';
+} from '#apollo/utils/cacheUpdaters';
 import {
   hideEntity,
   isHeld,
   writeLocalEntity,
-} from '#/apollo/utils/writeLocalEntity';
+} from '#apollo/utils/writeLocalEntity';
 import { MealTemplate_RowFragmentDoc } from './mealTemplate.generated';
 import {
   NEUTRAL_LOCAL_MEAL_TEMPLATE,

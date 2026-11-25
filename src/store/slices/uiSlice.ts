@@ -4,7 +4,7 @@
 
 import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
-import type { ImageFile } from '#/types/media';
+import type { ImageFile } from '#types/media';
 
 /** An add another tab asked a tab to start when it next gains focus. */
 export interface PendingTabAdd {

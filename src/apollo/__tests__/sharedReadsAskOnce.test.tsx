@@ -5,10 +5,10 @@ import { act, renderHook } from '@testing-library/react-native';
 import type { DocumentNode } from 'graphql';
 import { createElement, type ReactNode } from 'react';
 import { Subject } from 'rxjs';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { createRefetchEventManager } from '#/apollo/refetchEvents';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { createRefetchEventManager } from '#apollo/refetchEvents';
 import {
   completeMockedResponse,
   recordMock,

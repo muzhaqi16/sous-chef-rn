@@ -1,4 +1,4 @@
-import { RecipeStatus } from '#/graphql/generated/schemaTypes';
+import { RecipeStatus } from '#graphql/generated/schemaTypes';
 import type {
   Cuisine,
   CreateRecipeInput,
@@ -8,7 +8,7 @@ import type {
   Intolerance,
   RecipeCategory,
   RecipeIngredientInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /**
  * One ingredient of the recipe being forked, as `useRecipeFormWrites_recipe`

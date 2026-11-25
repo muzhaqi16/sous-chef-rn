@@ -13,15 +13,15 @@ import {
 import {
   ExpirationFrequency,
   type UpdateNotificationPreferencesInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { ApolloCache } from '@apollo/client';
-import type { LocalWriteSend } from '#/apollo/pendingWrites/pendingWrites';
-import { sendLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import type { FieldsEntityRef } from '#/apollo/utils/localFirstFields';
+import type { LocalWriteSend } from '#apollo/pendingWrites/pendingWrites';
+import { sendLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { FieldsEntityRef } from '#apollo/utils/localFirstFields';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { computeIsQuietTime } from '#features/notifications/utils/quietHours';
-import { logger } from '#/utils/environment';
-import { t } from '#/i18n';
+import { logger } from '#utils/environment';
+import { t } from '#i18n';
 
 export interface NotificationSettings {
   // Core toggles

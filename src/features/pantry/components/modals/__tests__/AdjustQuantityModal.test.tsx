@@ -8,8 +8,8 @@ import {
   asAbbreviation,
   readingAsAbbreviation,
 } from '#/test-utils/fixtures/unitLabels';
-import { t } from '#/i18n';
-import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { UnitSystem, UnitType } from '#graphql/generated/schemaTypes';
 
 type Props = React.ComponentProps<typeof AdjustQuantityModal>;
 

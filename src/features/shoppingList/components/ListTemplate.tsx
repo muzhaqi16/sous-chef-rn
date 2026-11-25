@@ -1,6 +1,6 @@
 import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ItemList } from '#components/organisms/ItemList';

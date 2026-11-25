@@ -1,5 +1,5 @@
 import type { DataState } from '#hooks/data/useDataState';
-import type { ImageFile } from '#/types/media';
+import type { ImageFile } from '#types/media';
 import type { AddItemFormData } from '#domain/items/createItemMapping';
 
 /** A server refusal the user can fix, shown on the form field it names. */

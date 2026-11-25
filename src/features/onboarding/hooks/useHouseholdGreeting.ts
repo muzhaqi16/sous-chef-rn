@@ -1,5 +1,5 @@
 import { skipToken, useQuery } from '@apollo/client/react';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { useUpdateHomeFields } from '#features/home/hooks/useUpdateHomeFields';

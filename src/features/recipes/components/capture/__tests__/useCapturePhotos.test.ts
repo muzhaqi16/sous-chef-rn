@@ -1,10 +1,10 @@
 import { act, renderHook } from '@testing-library/react-native';
 import DocumentScanner from 'react-native-document-scanner-plugin';
-import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
-import { TextRecognition } from '#/native/TextRecognition';
+import { ImageUploadPurpose } from '#graphql/generated/schemaTypes';
+import { TextRecognition } from '#native/TextRecognition';
 import { useCapturePhotos, MAX_CAPTURE_PHOTOS } from '../useCapturePhotos';
 
-jest.mock('#/native/TextRecognition', () => ({
+jest.mock('#native/TextRecognition', () => ({
   TextRecognition: {
     preparePhotos: jest.fn(),
     deletePhotos: jest.fn(() => Promise.resolve()),

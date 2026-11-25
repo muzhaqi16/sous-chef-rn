@@ -1,17 +1,17 @@
 import { act } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import {
   type MockDataFor,
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { t } from '#/i18n';
-import { toastService } from '#/services/toastService';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { toastService } from '#services/toastService';
+import { alertService } from '#services/alertService';
 import { Telemetry } from '#services/telemetry';
-import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
+import { askForReviewAfterSuccess } from '#domain/reviewPrompt';
 import { onTutorialEvent } from '#domain/tutorialEvents';
 import { MovePurchasedItemsToPantryDocument } from '../useBatchMoveToPantry.generated';
 import {
@@ -22,7 +22,7 @@ import { useBatchMoveToPantry } from '../useBatchMoveToPantry';
 
 // The OS review sheet waits out four seconds of quiet toasts, a clock this
 // test does not run; `reviewPrompt.test.ts` holds that wait.
-jest.mock('#/domain/reviewPrompt');
+jest.mock('#domain/reviewPrompt');
 
 type Payload = NonNullable<
   MockDataFor<

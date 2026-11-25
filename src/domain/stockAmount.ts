@@ -3,8 +3,8 @@ import {
   type MeasurementProfileInput,
   type PackageSizeInput,
   type StockAmountInput,
-} from '#/graphql/generated/schemaTypes';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+} from '#graphql/generated/schemaTypes';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 
 interface StockAmountOptions {
   /** Records `quantity` as that many whole packages, not an amount in a unit. */

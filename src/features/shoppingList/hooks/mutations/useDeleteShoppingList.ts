@@ -4,8 +4,8 @@
  */
 
 import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
 import { useStore } from '#store';
 
 export function useDeleteShoppingList() {

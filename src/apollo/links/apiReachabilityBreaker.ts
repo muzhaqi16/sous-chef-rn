@@ -2,8 +2,8 @@ import { requirePlatform } from '#platform/install';
 import { useStore } from '#store';
 import { queueManager } from '../offlineQueue/queueManager';
 import { probeApiHealth } from './apiHealthProbe';
-import { logger } from '#/utils/environment';
-import { backoffDelay } from '#/utils/backoff';
+import { logger } from '#utils/environment';
+import { backoffDelay } from '#utils/backoff';
 
 /**
  * API reachability, distinct from device internet. Recovery probes `/health`,

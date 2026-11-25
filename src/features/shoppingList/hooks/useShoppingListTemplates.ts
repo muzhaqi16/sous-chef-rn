@@ -8,8 +8,8 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { GetShoppingListTemplatesDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { COPYABLE_ITEM_LIMIT } from '#features/shoppingList/cache/copySource';
-import { extractNodes } from '#/utils/connectionUtils';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { extractNodes } from '#utils/connectionUtils';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 
 export interface ShoppingListTemplateOption {

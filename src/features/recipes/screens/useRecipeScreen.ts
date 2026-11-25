@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
-import { t as tGlobal } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
+import { t as tGlobal } from '#i18n';
 import { useDeferredSearch } from '#features/recipes/hooks/useDeferredSearch';
 import { pantryItemSearch } from '#utils/searchUtils';
 import { useRecipeDiscovery } from '#features/recipes/hooks/useRecipeDiscovery';
@@ -16,7 +16,7 @@ import {
   type SearchOutcome,
 } from '#features/recipes/hooks/useRecipeSearch';
 import type { IconName } from '#components/atoms/Icon';
-import type { Intolerance } from '#/graphql/generated/schemaTypes';
+import type { Intolerance } from '#graphql/generated/schemaTypes';
 import type { RecipeFilters } from '#features/recipes/utils/recipeFilterOptions';
 import { oneDietPerGroup } from '#domain/dietary';
 import {

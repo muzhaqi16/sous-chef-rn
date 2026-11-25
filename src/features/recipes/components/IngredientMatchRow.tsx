@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
@@ -15,8 +15,8 @@ import { Text } from '#components/atoms/Text';
 import { Badge, type BadgeVariant } from '#components/atoms/Badge';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { formatQuantityForInput, unitLabel } from '#/utils/formatQuantity';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+import { formatQuantityForInput, unitLabel } from '#utils/formatQuantity';
 import { formatAmountLeft } from '#features/pantry/hooks/usePantryItemTransformation';
 import type { ReadingSystem } from '#domain/measure';
 

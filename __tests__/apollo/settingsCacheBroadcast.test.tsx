@@ -10,12 +10,12 @@
  */
 import { useQuery } from '@apollo/client/react';
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { GetNotificationPreferencesDocument } from '#operations/user/user.generated';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
+import { writeEntityFields } from '#apollo/utils/localFirstFields';
 
 beforeEach(() => {
   jest.useFakeTimers();

@@ -5,7 +5,7 @@
  * the notification list asks too.
  */
 
-import NavigationService from '#/services/NavigationService';
+import NavigationService from '#services/NavigationService';
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { notificationDestination } from './notificationDestination';
 

@@ -1,7 +1,7 @@
 import type { ApolloCache, OperationVariables } from '@apollo/client';
-import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
-import { extractMutationPayload } from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
+import type { ReplayReconcilerTable } from '#apollo/offlineQueue/types';
+import { extractMutationPayload } from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
 import {
   useReceiptDraftStore,
   type CheckInLineOutcome,

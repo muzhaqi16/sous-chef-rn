@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   RestrictionSeverity,
   type Diet,
   type ReligiousDiet,
   type Intolerance,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { Reveal } from '#components/atoms/Reveal';
 import { ReligiousDietPicker } from '#features/profile/ui/ReligiousDietPicker';
 import { Text } from '#components/atoms/Text';

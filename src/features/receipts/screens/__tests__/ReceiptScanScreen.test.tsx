@@ -3,8 +3,8 @@
 import React from 'react';
 import { fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { alertService } from '#/services/alertService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import type { ReceiptDraft } from '../../store/receiptDraftStore';
 import type { ReceiptScanStatus } from '../useReceiptScan';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';

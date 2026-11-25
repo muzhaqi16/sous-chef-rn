@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 interface OfflineGateProps {
   children: React.ReactNode;

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useTranslation } from '#/i18n';
-import { toastService } from '#/services/toastService';
+import { useTranslation } from '#i18n';
+import { toastService } from '#services/toastService';
 import { useUser } from '#store/useAppStore';
 import {
   isAisleHeader,

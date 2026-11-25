@@ -1,9 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { useUser } from '#store/useAppStore';
-import { formatRole } from '#/utils/formatters/roleFormatters';
+import { formatRole } from '#utils/formatters/roleFormatters';
 import {
   formatInviteStatus,
   getInviteDisplayName,
@@ -13,10 +13,10 @@ import { INVITE_STATUS_TONE } from './inviteStatusTone';
 import {
   getMemberDisplayName,
   type Member,
-} from '#/utils/formatters/memberFormatters';
+} from '#utils/formatters/memberFormatters';
 import { Text } from '#components/atoms/Text';
 import { IconButton } from '#components/atoms/IconButton';
-import type { MembershipRole } from '#/graphql/generated/schemaTypes';
+import type { MembershipRole } from '#graphql/generated/schemaTypes';
 import type { HomeCard_HomeFragment } from './HomeCard.generated';
 
 type ListInvite =

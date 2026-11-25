@@ -1,26 +1,26 @@
-import type { StorageState } from '#/graphql/generated/schemaTypes';
+import type { StorageState } from '#graphql/generated/schemaTypes';
 import {
   type AcquisitionMethod,
   ItemCondition,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   acquisitionMethodLabelKey,
   conditionLabelKey,
 } from '#features/pantry/utils/itemEnumLabels';
-import { isTranslationKey } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import { isTranslationKey } from '#i18n';
+import type { Translate } from '#i18n/types';
 import {
   daysUntilExpiry,
   EXPIRING_SOON_DAYS,
   expiryLabel,
 } from '#domain/expiry';
-import { formatCurrency as formatMoney } from '#/utils/formatters/number';
-import { formatMonthDayYear } from '#/utils/formatters/date';
+import { formatCurrency as formatMoney } from '#utils/formatters/number';
+import { formatMonthDayYear } from '#utils/formatters/date';
 import {
   formatQuantityForDisplay,
   unitLabel,
   type UnitLabelSource,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import {
   currentReading,
   formatReading,

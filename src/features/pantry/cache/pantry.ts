@@ -6,8 +6,8 @@
 
 import type { ApolloCache } from '@apollo/client';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
-import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
-import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import { safeEvict, type ConnectionData } from '#apollo/utils/cacheUpdaters';
+import { writeLocalEntity } from '#apollo/utils/writeLocalEntity';
 import { Pantry_RowFragmentDoc } from './pantry.generated';
 import {
   NEUTRAL_LOCAL_PANTRY,

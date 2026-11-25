@@ -1,9 +1,9 @@
-import { byOperation } from '#/apollo/utils/documentOperation';
+import { byOperation } from '#apollo/utils/documentOperation';
 import {
   MarkSuggestionActiveDocument,
   MarkSuggestionDismissedDocument,
 } from '#operations/item/item.generated';
-import { settingsFields } from '#/apollo/utils/unitSystemAnswers';
+import { settingsFields } from '#apollo/utils/unitSystemAnswers';
 import {
   CompleteOnboardingDocument,
   UpdateUserPreferencesDocument,

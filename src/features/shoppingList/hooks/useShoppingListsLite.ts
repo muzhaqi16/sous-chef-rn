@@ -1,6 +1,6 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
+import { usePreservedNodes } from '#hooks/apollo/usePreservedConnection';
 import { useDataState } from '#hooks/data/useDataState';
 import {
   heldFetchPolicy,

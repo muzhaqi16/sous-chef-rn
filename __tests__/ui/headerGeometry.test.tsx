@@ -11,7 +11,7 @@ import {
 } from '#components/templates/CollapsingHeroDetail';
 import { kitTestIDs } from '#components/testIDs';
 import { Screen } from '#components/templates/Screen';
-import { lightTheme } from '#/theme/themes';
+import { lightTheme } from '#theme/themes';
 
 /**
  * Every bar puts its back glyph where the page content starts, so moving

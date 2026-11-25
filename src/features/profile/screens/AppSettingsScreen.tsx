@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { SettingsSection } from '#components/organisms/SettingsSection';
@@ -10,7 +10,7 @@ import {
   useAppSettings,
   type AppSettings,
 } from '#features/profile/hooks/useAppSettings';
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import { UnitSystem } from '#graphql/generated/schemaTypes';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AppPressable } from '#components/atoms/AppPressable';
 import {
@@ -23,14 +23,14 @@ import { replayTipsFor } from '#hooks/settings/useFeatureHint';
 import { tutorialSession } from '#hooks/ui/tutorialSession';
 import { useUserPreferences } from '#hooks/settings/useUserPreferences';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
-import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
+import { executeAsyncWithCleanup } from '#utils/finallyHelpers';
 import { Telemetry } from '#services/telemetry';
 import { Text } from '#components/atoms/Text';
 import { useDataState } from '#hooks/data/useDataState';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { profileTestIDs } from '#features/profile/testIDs';
 import { useReceiptPhotoConsent } from '#features/receipts/hooks/useReceiptPhotoConsent';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 export const AppSettingsScreen: React.FC = () => {
   const { t } = useTranslation();

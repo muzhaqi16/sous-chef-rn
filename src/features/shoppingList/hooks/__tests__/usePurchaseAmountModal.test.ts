@@ -1,6 +1,6 @@
 import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { usePurchaseAmountModal } from '../usePurchaseAmountModal';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';

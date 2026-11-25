@@ -4,8 +4,8 @@
  */
 
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { StoreDepartment } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
+import { StoreDepartment } from '#graphql/generated/schemaTypes';
 import {
   addLocalShoppingListItem,
   createLocalShoppingListItem,

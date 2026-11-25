@@ -1,10 +1,10 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { detectScanType } from './fields';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 
 interface BarcodeInfoProps {

@@ -6,14 +6,14 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import type { StepFormState } from '#features/recipes/types';
 import {
   RecipeStepEditor,
   type RecipeStepEditorRef,
 } from '../RecipeStepEditor';
 
-jest.mock('#/utils/generateId', () => ({ generateId: () => 'test-id' }));
+jest.mock('#utils/generateId', () => ({ generateId: () => 'test-id' }));
 
 const onSave = jest.fn();
 

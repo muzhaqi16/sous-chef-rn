@@ -3,7 +3,7 @@ import {
   useStorageLocationAutocomplete,
   type StorageLocationOption,
 } from '#features/catalog/hooks/useStorageLocationAutocomplete';
-import { StorageType } from '#/graphql/generated/schemaTypes';
+import { StorageType } from '#graphql/generated/schemaTypes';
 
 const makeLocation = (
   overrides: Partial<StorageLocationOption> = {},

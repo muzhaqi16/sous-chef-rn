@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
 import { useShoppingListItemWrites } from '#features/shoppingList/hooks/useShoppingListItemWrites';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
-import { CategoryType } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
+import { CategoryType } from '#graphql/generated/schemaTypes';
 import { FormScreen } from '#components/templates/FormScreen';
 import { SubScreen } from '#components/templates/SubScreen';
 import { DataStateView } from '#components/organisms/DataStateView';
@@ -25,18 +25,18 @@ import {
 } from '#features/shoppingList/utils/priority';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Controller } from 'react-hook-form';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import {
   normalizeNumericTextForApi,
   parseDecimalInput,
-} from '#/utils/parseDecimalInput';
-import { localizeNumericHint } from '#/utils/formatters/number';
+} from '#utils/parseDecimalInput';
+import { localizeNumericHint } from '#utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
-import { refByIdOrName, typedItemRef } from '#/utils/refInput';
-import { unitLabel } from '#/utils/formatQuantity';
+import { refByIdOrName, typedItemRef } from '#utils/refInput';
+import { unitLabel } from '#utils/formatQuantity';
 
 type RouteParams = {
   listId: string;

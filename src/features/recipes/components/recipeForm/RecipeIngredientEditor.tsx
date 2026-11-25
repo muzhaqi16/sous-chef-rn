@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { boolean, object, string, type ObjectSchema } from 'yup';
@@ -9,7 +9,7 @@ import { DropdownStack } from '#components/atoms/DropdownStack';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
-import { lazyMessage, reportValidationErrors } from '#/utils/validation/common';
+import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
@@ -18,13 +18,13 @@ import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/atoms/FieldRow';
 import { Chip } from '#components/molecules/Chip';
 import { SheetHeader } from '#components/templates/SheetHeader';
-import { generateId } from '#/utils/generateId';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import { generateId } from '#utils/generateId';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
 import type { IngredientFormState } from '#features/recipes/types';
 import { Text } from '#components/atoms/Text';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import type { CaptureCandidate } from '#features/recipes/hooks/useCaptureReview';
-import { formatQuantityForInput, unitLabel } from '#/utils/formatQuantity';
+import { formatQuantityForInput, unitLabel } from '#utils/formatQuantity';
 
 export interface RecipeIngredientEditorRef {
   open: (ingredient?: IngredientFormState) => void;

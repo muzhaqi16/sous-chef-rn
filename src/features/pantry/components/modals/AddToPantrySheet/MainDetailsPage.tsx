@@ -6,7 +6,7 @@ import {
   type UseFormSetFocus,
 } from 'react-hook-form';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
@@ -16,7 +16,7 @@ import { BrandAutocompleteField } from '#features/catalog/ui/autocomplete/BrandA
 import { CategoryAutocompleteField } from '#features/catalog/ui/autocomplete/CategoryAutocompleteField';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState } from '#graphql/generated/schemaTypes';
 import type { AddPantryItemFormData } from '#features/pantry/types';
 
 const STORAGE_STATES = Object.values(StorageState);

@@ -1,10 +1,10 @@
 import { ApolloClient } from '@apollo/client';
 import { MockLink } from '@apollo/client/testing';
 import { GraphQLError } from 'graphql';
-import { makeCache } from '#/apollo/cache';
-import { FeedScopesDocument } from '#/apollo/feed/feed.generated';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { SyncPageStatus, SyncScopeKind } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
+import { FeedScopesDocument } from '#apollo/feed/feed.generated';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { SyncPageStatus, SyncScopeKind } from '#graphql/generated/schemaTypes';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   ListFeedChangesDocument,

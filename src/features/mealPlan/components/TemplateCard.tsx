@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { TEMPLATE_CATEGORY_LABEL_KEYS } from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { RowCard } from '#components/atoms/RowCard';
 import { ListItem } from '#components/molecules/ListItem';

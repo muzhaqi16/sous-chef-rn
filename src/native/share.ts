@@ -1,5 +1,5 @@
 import { Platform, Share, type ShareContent } from 'react-native';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 /**
  * iOS renders `url` as a rich preview, so text stays in `message` to avoid

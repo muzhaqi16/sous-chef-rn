@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useTranslation, type TranslateFn } from '#/i18n';
+import { useTranslation, type TranslateFn } from '#i18n';
 import { useApolloClient, useLazyQuery } from '@apollo/client/react';
 import {
   MatchRecipeIngredientsToPantryDocument,
@@ -11,34 +11,34 @@ import {
   RecipeIngredientFragmentDoc,
   type RecipeIngredientFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
-import { RecipeIngredientMatchKind } from '#/graphql/generated/schemaTypes';
+import { RecipeIngredientMatchKind } from '#graphql/generated/schemaTypes';
 import {
   cookOutcome,
   type CookDraw,
   type CookOutcome,
   type RecordedUse,
 } from '#features/recipes/utils/cookOutcome';
-import { cappedNames } from '#/utils/cappedNames';
+import { cappedNames } from '#utils/cappedNames';
 import { useSelectedHomeId, useSelectedPantryId } from '#store/useAppStore';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
-import { formatQuantityWithUnit } from '#/utils/formatQuantity';
+import { formatQuantityWithUnit } from '#utils/formatQuantity';
 import {
   RecipeSubstitutesDocument,
   type RecipeSubstitutesQuery,
 } from './useRecipeSubstitutes.generated';
-import { toastService } from '#/services/toastService';
-import { Telemetry } from '#/services/telemetry';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { toastService } from '#services/toastService';
+import { Telemetry } from '#services/telemetry';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { inTrackingUnit } from '#features/pantry/cache/stock';
 import type {
   CookDrawInputs,
   CookRecipeInputs,
 } from '#features/recipes/offline/localWrites';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { logger } from '#/utils/environment';
-import { errorService } from '#/services/errorService';
+import { generateEntityId } from '#utils/generateEntityId';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { logger } from '#utils/environment';
+import { errorService } from '#services/errorService';
 
 type IngredientMatch =
   MatchRecipeIngredientsToPantryQuery['matchRecipeIngredientsToPantry'][number];

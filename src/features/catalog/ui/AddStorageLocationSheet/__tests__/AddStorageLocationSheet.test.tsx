@@ -5,8 +5,8 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { t } from '#/i18n';
-import { StorageType } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { StorageType } from '#graphql/generated/schemaTypes';
 import { AddStorageLocationSheet } from '../AddStorageLocationSheet';
 
 const onClose = jest.fn();

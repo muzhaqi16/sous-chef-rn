@@ -5,8 +5,8 @@
  */
 
 import type { ApolloCache } from '@apollo/client';
-import { type ConnectionData, safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { logger } from '#/utils/environment';
+import { type ConnectionData, safeEvict } from '#apollo/utils/cacheUpdaters';
+import { logger } from '#utils/environment';
 import { matchesFilter, moveShoppingListItemToPurchased } from './connections';
 import { writePurchaseInfo } from './purchase';
 

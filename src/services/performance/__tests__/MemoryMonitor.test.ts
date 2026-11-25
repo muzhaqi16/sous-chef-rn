@@ -1,14 +1,14 @@
 import { getUsedMemory, getTotalMemory } from 'react-native-device-info';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 import { MemoryMonitor } from '../MemoryMonitor';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 jest.mock('react-native-device-info', () => ({
   getUsedMemory: jest.fn(),
   getTotalMemory: jest.fn(),
 }));
 
-jest.mock('#/services/performance/performanceStore', () => ({
+jest.mock('#services/performance/performanceStore', () => ({
   usePerformanceStore: {
     getState: jest.fn(() => ({
       addMemorySnapshot: jest.fn(),

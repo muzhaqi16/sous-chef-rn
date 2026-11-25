@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
@@ -15,11 +15,11 @@ import {
 import {
   DENSITY_META,
   FONT_SCALE_META,
-} from '#/theme/foundations/appearanceConfig';
-import { brand } from '#/theme/foundations/brand';
+} from '#theme/foundations/appearanceConfig';
+import { brand } from '#theme/foundations/brand';
 import { Text } from '#components/atoms/Text';
 import { SubScreen } from '#components/templates/SubScreen';
-import { colors } from '#/theme/foundations/colors';
+import { colors } from '#theme/foundations/colors';
 
 const APP_COLORS: {
   labelKey: TranslationKey;

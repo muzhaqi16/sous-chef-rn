@@ -20,16 +20,16 @@ import {
   UnitType,
   UsagePurpose,
   WasteReason,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { RestockContents } from '#domain/stockAmount';
-import { alertService } from '#/services/alertService';
-import { errorService } from '#/services/errorService';
+import { alertService } from '#services/alertService';
+import { errorService } from '#services/errorService';
 import { Telemetry } from '#services/telemetry';
-import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
-import { t } from '#/i18n';
-import { changeLanguage } from '#/i18n/config';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { todayKey } from '#/utils/dateUtils';
+import { getVersionConflictMessage } from '#utils/errors/versionConflict';
+import { t } from '#i18n';
+import { changeLanguage } from '#i18n/config';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { todayKey } from '#utils/dateUtils';
 import { usePantryItemActions } from '../usePantryItemActions';
 import {
   InTrackingUnit_EnteredUnitFragmentDoc,
@@ -41,11 +41,11 @@ import {
 import { UsePantryItemActions_IdFragmentDoc } from '../usePantryItemActions.generated';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
-jest.mock('#/utils/isNetworkError', () => ({
+jest.mock('#utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 /** What a stock write moves and a refusal restores. */
 const STOCK = gql`

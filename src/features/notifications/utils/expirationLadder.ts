@@ -1,4 +1,4 @@
-import { ExpirationNotificationType } from '#/graphql/generated/schemaTypes';
+import { ExpirationNotificationType } from '#graphql/generated/schemaTypes';
 
 /**
  * Days before expiry that each rung of the API's expiration ladder fires. The

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { registerFcmTapHandlers } from '#/services/push/nativePushMessaging';
-import { registerIosPushTapHandlers } from '#/services/push/iosPushMessaging';
+import { registerFcmTapHandlers } from '#services/push/nativePushMessaging';
+import { registerIosPushTapHandlers } from '#services/push/iosPushMessaging';
 
 /**
  * Taps on OS-displayed pushes; data-only pushes go through Notifee. Gated on a

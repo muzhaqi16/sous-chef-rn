@@ -4,7 +4,7 @@ import {
   HapticFeedbackTypes,
 } from 'react-native-haptic-feedback';
 import { useStore } from '#store';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 /**
  * iOS produces real haptics; Android falls back to vibration patterns when the

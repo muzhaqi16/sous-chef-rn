@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';

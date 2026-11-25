@@ -1,11 +1,11 @@
 import React, { useRef } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   StorageLocationForm,
   type StorageLocationFormRef,
   type StorageLocationFormValues,
 } from '#features/catalog/ui/StorageLocationForm';
-import type { StorageLocation } from '#/graphql/generated/schemaTypes';
+import type { StorageLocation } from '#graphql/generated/schemaTypes';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 

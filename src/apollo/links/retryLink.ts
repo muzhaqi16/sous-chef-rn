@@ -1,6 +1,6 @@
 import { RetryLink } from '@apollo/client/link/retry';
 import type { ApolloLink } from '@apollo/client/link';
-import { isNetworkError } from '#/utils/isNetworkError';
+import { isNetworkError } from '#utils/isNetworkError';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { Kind, OperationTypeNode } from 'graphql';
 

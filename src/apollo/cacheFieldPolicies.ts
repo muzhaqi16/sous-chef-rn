@@ -11,8 +11,8 @@ import type {
   FieldPolicy,
   Reference,
 } from '@apollo/client';
-import { logger } from '#/utils/environment';
-import { isRecord } from '#/utils/isRecord';
+import { logger } from '#utils/environment';
+import { isRecord } from '#utils/isRecord';
 
 // Minimal shape of a Relay-style connection as it lives in the normalized
 // cache: edges wrap normalized node references, plus pagination metadata.

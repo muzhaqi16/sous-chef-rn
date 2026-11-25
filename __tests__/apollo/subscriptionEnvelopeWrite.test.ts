@@ -27,8 +27,8 @@ import {
   MutationType,
   PantrySubtype,
   ShoppingListSubtype,
-} from '#/graphql/generated/schemaTypes';
-import { makeCache } from '#/apollo/cache';
+} from '#graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
 import {
   GetPantryDocument,
   PantryEventsDocument,
@@ -39,7 +39,7 @@ import {
   MyShoppingListsEventsDocument,
   type GetShoppingListItemsFilteredQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { safeEvict } from '#apollo/utils/cacheUpdaters';
 import { removeFromShoppingListItemsConnection } from '#features/shoppingList/cache/connections';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 

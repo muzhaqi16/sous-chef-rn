@@ -9,15 +9,15 @@ import {
   type MockFor,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { t } from '#/i18n';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import { storeApi } from '#store';
 import { profileTestIDs } from '#features/profile/testIDs';
 import {
   CommonlyAvoidedFoodsDocument,
   SearchAvoidableFoodsDocument,
 } from '#features/profile/ui/useAvoidFoodSearch.generated';
-import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
+import { RestrictionSeverity } from '#graphql/generated/schemaTypes';
 import { AvoidFoodSheet } from '../AvoidFoodSheet';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({

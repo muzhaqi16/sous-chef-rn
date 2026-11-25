@@ -2,7 +2,7 @@ import {
   AcquisitionMethod,
   type StockAmountInput,
   type StorageState,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { localQuantity, packagesNeedSizing } from '#domain/stockAmount';
 import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 import { unitPriceFromTotal } from '../utils/purchasePrice';

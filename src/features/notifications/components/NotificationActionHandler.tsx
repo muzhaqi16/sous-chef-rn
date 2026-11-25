@@ -1,17 +1,17 @@
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
-import { errorService } from '#/services/errorService';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
+import { errorService } from '#services/errorService';
 import {
   ExpirationAction,
   NotificationSourceType,
   UsagePurpose,
   WasteReason,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { daysUntilExpiry } from '#domain/expiry';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 import { useFinishStock } from '#features/pantry/hooks/useFinishStock';
 import { InvitationAcceptanceModal } from './InvitationAcceptanceModal';
 import type { InvitationData } from '#features/notifications/types';
@@ -22,7 +22,7 @@ import { useAppStore } from '#store/useAppStore';
 import { useNotificationActionData } from '#features/notifications/hooks/useNotificationActionData';
 import { useExpirationNotificationSync } from '#features/notifications/hooks/useExpirationNotificationSync';
 import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
 /** What answering an invite reads from its notification; null for any other. */
 const readInvite = (data: NotificationItem['data']) => {

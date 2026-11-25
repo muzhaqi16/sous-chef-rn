@@ -7,18 +7,18 @@ import {
   isWholeWhenSized,
   packageContentsFields,
 } from '#features/pantry/ui/packageContentsRules';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 import {
   itemNameText,
   lazyMessage,
   parseMoneyInput,
   quantityRule,
-} from '#/utils/validation/common';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { formatQuantityForInput } from '#/utils/formatQuantity';
-import { formatNumberForInput } from '#/utils/formatters/number';
-import { isRecord } from '#/utils/isRecord';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
+} from '#utils/validation/common';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { formatQuantityForInput } from '#utils/formatQuantity';
+import { formatNumberForInput } from '#utils/formatters/number';
+import { isRecord } from '#utils/isRecord';
+import type { UnitType } from '#graphql/generated/schemaTypes';
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
 import {
   seedChoice,

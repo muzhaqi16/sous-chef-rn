@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 import { ActionMenuRow } from '#components/molecules/ActionMenuRow';
 import {
@@ -15,10 +15,10 @@ import { useConfigurableSettings } from '#features/profile/screens/useConfigurab
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#components/templates/ActionTray/types';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 import { useEffect } from 'react';
-import { Environment } from '#/utils/environment';
-import { DEVELOPER_SECTION_ID } from '#/config/settingsConfig';
+import { Environment } from '#utils/environment';
+import { DEVELOPER_SECTION_ID } from '#config/settingsConfig';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { ProfileSkeleton } from '#features/profile/components/ProfileSkeleton';
 import {
@@ -29,7 +29,7 @@ import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useChangesNotSaved } from '#features/profile/hooks/useChangesNotSaved';
 import { SubScreen } from '#components/templates/SubScreen';
 import { profileTestIDs } from '#features/profile/testIDs';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
 export const ProfileScreen = () => {
   const { t } = useTranslation();

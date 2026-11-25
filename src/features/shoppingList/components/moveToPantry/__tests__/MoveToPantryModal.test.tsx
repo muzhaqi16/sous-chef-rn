@@ -15,7 +15,7 @@ import {
   MoveToPantryModal_ShoppingListItemFragmentDoc,
   MoveToPantryPurchaseInfoDocument,
 } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 

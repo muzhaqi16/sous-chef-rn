@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';

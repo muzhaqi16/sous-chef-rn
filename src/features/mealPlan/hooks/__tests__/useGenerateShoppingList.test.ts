@@ -28,17 +28,17 @@ import {
 import type { Unmasked } from '@apollo/client/masking';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GenerateShoppingListPlanDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { seedCache } from '#/test-utils/apolloMockProvider';
 import { UseGenerateShoppingList_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { useStore } from '#store';
-import { AddedContext, ErrorCode } from '#/graphql/generated/schemaTypes';
+import { AddedContext, ErrorCode } from '#graphql/generated/schemaTypes';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import {
   MAX_RECIPE_INGREDIENTS,
   RECIPE_INGREDIENTS_PAGE_SIZE,
 } from '#domain/recipeIngredientsPaging';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { act } from '@testing-library/react-native';
 import { useGenerateShoppingList } from '../useGenerateShoppingList';
 

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { requirePlatform } from '#platform/install';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 
 const listeners = new Set<() => void>();
 let stopWatching: (() => void) | null = null;

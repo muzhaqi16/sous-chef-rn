@@ -1,5 +1,5 @@
-import { getApolloClient } from '#/apollo/clientRegistry';
-import { rootFieldOf } from '#/apollo/utils/documentOperation';
+import { getApolloClient } from '#apollo/clientRegistry';
+import { rootFieldOf } from '#apollo/utils/documentOperation';
 import {
   GetCommonUnitsDocument,
   GetUnitBySymbolDocument,
@@ -10,7 +10,7 @@ import {
   RestockUnitsForPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import { useStore } from '#store';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 /** Root fields that answer with `Unit` rows, and so cache retired ones. */
 const UNIT_ROOT_FIELDS = [

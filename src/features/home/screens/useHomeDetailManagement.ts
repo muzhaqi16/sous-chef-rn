@@ -1,4 +1,4 @@
-import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useDataState } from '#hooks/data/useDataState';
 import { useFragment, useQuery } from '@apollo/client/react';
 import { useUpdateHomeFields } from '#features/home/hooks/useUpdateHomeFields';
@@ -6,10 +6,10 @@ import { useHomeMembership } from '#features/home/hooks/useHomeMembership';
 import type { MembershipPermissionKey } from '#features/home/types';
 import { HomeDetailScreen_HomeFragmentDoc } from '#features/home/screens/HomeDetailScreen.generated';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
-import type { MembershipRole } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import type { MembershipRole } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
-import { cleanName } from '#/utils/validation/common';
+import { cleanName } from '#utils/validation/common';
 
 /**
  * Custom hook for HomeDetailScreen business logic

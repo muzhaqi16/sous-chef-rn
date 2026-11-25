@@ -1,10 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { Chip } from '#components/molecules/Chip';
-import type { ReligiousDiet } from '#/graphql/generated/schemaTypes';
+import type { ReligiousDiet } from '#graphql/generated/schemaTypes';
 import { RELIGIOUS_DIET_OPTIONS } from '#domain/dietary';
 
 interface ReligiousDietPickerProps {

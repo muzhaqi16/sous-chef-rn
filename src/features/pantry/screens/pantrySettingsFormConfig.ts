@@ -1,5 +1,5 @@
 import { boolean, object, string, type ObjectSchema } from 'yup';
-import { lazyMessage } from '#/utils/validation/common';
+import { lazyMessage } from '#utils/validation/common';
 
 // The API's bounds (createPantrySchema, updatePantrySchema): a name of 1-255
 // characters and a description of at most 500, both trimmed.

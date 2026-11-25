@@ -9,7 +9,7 @@ import {
   deviceRegion,
   deviceRegionCurrency,
   isUnchosenCurrency,
-} from '#/domain/regionCurrency';
+} from '#domain/regionCurrency';
 
 const withLocale = (locale: string | null, run: () => void) => {
   const spy = jest.spyOn(Intl, 'DateTimeFormat').mockImplementation(

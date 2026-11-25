@@ -10,9 +10,9 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import type { SubscriptionConfig } from '#/services/subscriptions/types';
-import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
+import type { SubscriptionConfig } from '#services/subscriptions/types';
+import { MealPlanSubtype, MutationType } from '#graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSubscriptions';
 import { MealPlanEventsDocument } from '#features/mealPlan/graphql/mealPlan.generated';
@@ -23,7 +23,7 @@ const mockRegister = jest.fn().mockReturnValue({});
 const mockIsPendingDelete = jest.fn().mockReturnValue(false);
 const mockHasPendingDeletes = jest.fn(() => false);
 
-jest.mock('#/services/subscriptions/SubscriptionService', () => ({
+jest.mock('#services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     register: (config: SubscriptionConfig) => mockRegister(config),
     isPendingDelete: (id: string) => mockIsPendingDelete(id),
@@ -39,12 +39,12 @@ const mockRemoveFromMealTemplates = jest.fn();
 // arguments: a plan's meals and a template's are edges of a connection.
 const mockAddEdge = jest.fn();
 const mockRemoveEdge = jest.fn();
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
+jest.mock('#apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#apollo/utils/cacheUpdaters'),
   // The updater factories are stubbed so each call site can be asserted, but
   // the pure helpers keep their real behaviour — a fully-partial factory drops
   // whatever the module gains next.
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
+  ...jest.requireActual('#apollo/utils/cacheUpdaters'),
   createAddToQueryConnectionUpdater: (fieldName: string) =>
     fieldName === 'mealPlans'
       ? (...args: unknown[]) => mockAddToMealPlans(...args)

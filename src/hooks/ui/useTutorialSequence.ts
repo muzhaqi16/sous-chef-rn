@@ -13,7 +13,7 @@ import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 import {
   hasFeatureHintBeenShown,
   markFeatureHintShown,
-} from '#/hooks/settings/useFeatureHint';
+} from '#hooks/settings/useFeatureHint';
 import { Telemetry } from '#services/telemetry';
 import { storeApi } from '#store';
 import { onTutorialEvent, type TutorialEvent } from '#domain/tutorialEvents';

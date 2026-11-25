@@ -12,7 +12,7 @@ import {
   type ReplayContext,
 } from './replayPreparation';
 import type { QueuedMutation, ReplayInputs } from './types';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 
 /**
  * queueLink's "replay-safe without an explicit `context.localFirst` opt-in"

@@ -56,6 +56,7 @@ const ALLOWED_DROPS: Record<string, string[]> = {
   '**/__tests__/**/*.{ts,tsx}': [
     'react-native#TextInput',
     'react-native#ActivityIndicator',
+    '#i18n/config#getI18n',
     '#/i18n/config#getI18n',
     'react-native-permissions#*',
     'react-native-turbo-image#*',

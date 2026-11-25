@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import type { AlertButton } from '#platform/presenters';
 import { useStore } from '#store';
 import { useExpiryPushAsk } from '../useExpiryPushAsk';

@@ -3,12 +3,12 @@ import { View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useRoute } from '@react-navigation/native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Screen } from '#components/templates/Screen';
 import { Text } from '#components/atoms/Text';
 import { ProgressBar } from '#components/atoms/ProgressBar';
 import { Button } from '#components/molecules/Button';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import {
   onboardingProgress,
   useOnboardingStepContext,

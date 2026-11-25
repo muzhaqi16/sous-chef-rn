@@ -41,11 +41,11 @@ import {
   MealType,
   UnitType,
   type CreateRecipeInput,
-} from '#/graphql/generated/schemaTypes';
-import { MealPlanReadersFragmentDoc } from '#/graphql/readers/mealPlanReaders.generated';
-import { MealPlanItemReadersFragmentDoc } from '#/graphql/readers/mealPlanItemReaders.generated';
-import { MealTemplateReadersFragmentDoc } from '#/graphql/readers/mealTemplateReaders.generated';
-import { MealTemplateItemReadersFragmentDoc } from '#/graphql/readers/mealTemplateItemReaders.generated';
+} from '#graphql/generated/schemaTypes';
+import { MealPlanReadersFragmentDoc } from '#graphql/readers/mealPlanReaders.generated';
+import { MealPlanItemReadersFragmentDoc } from '#graphql/readers/mealPlanItemReaders.generated';
+import { MealTemplateReadersFragmentDoc } from '#graphql/readers/mealTemplateReaders.generated';
+import { MealTemplateItemReadersFragmentDoc } from '#graphql/readers/mealTemplateItemReaders.generated';
 import { writeLocalMealPlan } from '#features/mealPlan/cache/mealPlan';
 import { showLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
 import { writeLocalMealTemplate } from '#features/mealPlan/cache/mealTemplate';
@@ -54,7 +54,7 @@ import {
   localTemplateItem,
 } from '#features/mealPlan/cache/mealTemplateItem';
 import { writeLocalFavorite } from '#features/recipes/cache/favorites';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   GetMealPlansDocument,
   MealPlanForEventDocument,
@@ -83,7 +83,7 @@ import { UseGenerateShoppingList_MealPlanFragmentDoc } from '#features/mealPlan/
 import { UseDuplicateMealPlan_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
-import * as cacheUpdaters from '#/apollo/utils/cacheUpdaters';
+import * as cacheUpdaters from '#apollo/utils/cacheUpdaters';
 import {
   GetPantryDocument,
   GetPantryItemBatchesDocument,
@@ -153,7 +153,7 @@ import {
 } from '#features/shoppingList/cache/items';
 import { writeLocalShoppingList } from '#features/shoppingList/cache/list';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const NOW = '2026-10-30T10:00:00.000Z';

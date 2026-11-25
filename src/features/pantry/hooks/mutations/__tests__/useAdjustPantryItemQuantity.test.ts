@@ -1,11 +1,11 @@
 import { renderHook, act } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { alertService } from '#/services/alertService';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
-import { t } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
+import { getVersionConflictMessage } from '#utils/errors/versionConflict';
+import { t } from '#i18n';
 import { AdjustPantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
-import type { AdjustPantryItemQuantityInput } from '#/graphql/generated/schemaTypes';
+import type { AdjustPantryItemQuantityInput } from '#graphql/generated/schemaTypes';
 import {
   createApolloTestWrapper,
   recordMock,
@@ -17,7 +17,7 @@ import { UseAdjustPantryItemQuantity_PantryItemFragmentDoc } from '../useAdjustP
 import { useAdjustPantryItemQuantity } from '../useAdjustPantryItemQuantity';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 const successMock = (variables: {
   input: AdjustPantryItemQuantityInput;

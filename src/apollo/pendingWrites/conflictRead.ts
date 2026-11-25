@@ -1,7 +1,7 @@
 import type { ApolloCache, ApolloClient } from '@apollo/client';
 import type { OperationVariables } from '@apollo/client';
-import { fromServer } from '#/apollo/utils/fromServer';
-import { isRecord } from '#/utils/isRecord';
+import { fromServer } from '#apollo/utils/fromServer';
+import { isRecord } from '#utils/isRecord';
 import type { ConflictRead } from './types';
 
 export type RowFields = Readonly<Record<string, unknown>>;

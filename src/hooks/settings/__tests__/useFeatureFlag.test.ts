@@ -4,7 +4,7 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
-import { FeatureFlagName } from '#/graphql/generated/schemaTypes';
+import { FeatureFlagName } from '#graphql/generated/schemaTypes';
 import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
 import { useUser } from '#store/useAppStore';
 import { useFeatureFlag } from '../useFeatureFlag';

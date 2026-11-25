@@ -6,7 +6,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 // A loop's period is longer than the motion scale, so it stays a literal.
 const SWEEP: CSSAnimationProperties = {

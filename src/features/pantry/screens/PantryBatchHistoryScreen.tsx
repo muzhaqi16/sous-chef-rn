@@ -1,9 +1,9 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { StaticScreenProps } from '@react-navigation/native';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
 import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { BatchStatus } from '#graphql/generated/schemaTypes';
 import { usePantryBatchHistory } from '#features/pantry/hooks/usePantryBatchHistory';
 import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistoryScreen';
 import { Text } from '#components/atoms/Text';

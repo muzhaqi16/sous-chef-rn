@@ -6,7 +6,7 @@ import type {
   Diet,
   HealthGoal,
   Intolerance,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 export interface IngredientFormState {
   id: string; // local temp id

@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
-import { createAnswerOrderingLink } from '#/apollo/links/answerOrderingLink';
-import { createLocalWritePrecedenceLink } from '#/apollo/links/localWritePrecedenceLink';
+import { makeCache } from '#apollo/cache';
+import { createAnswerOrderingLink } from '#apollo/links/answerOrderingLink';
+import { createLocalWritePrecedenceLink } from '#apollo/links/localWritePrecedenceLink';
 import {
   recordMock,
   renderHookWithApollo,

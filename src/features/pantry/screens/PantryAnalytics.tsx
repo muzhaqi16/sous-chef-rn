@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { ModeTabs } from '#components/molecules/ModeTabs';
 import { DateRangeFilter } from '#features/pantry/components/analytics/DateRangeFilter';
 import type { StaticScreenProps } from '@react-navigation/native';

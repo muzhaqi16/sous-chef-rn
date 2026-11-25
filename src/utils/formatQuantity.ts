@@ -1,8 +1,8 @@
 import Fraction from 'fraction.js';
-import { formatNumberForInput } from '#/utils/formatters/number';
-import type { PluralForms } from '#/graphql/generated/schemaTypes';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { getResolvedLanguage } from '#/i18n';
+import { formatNumberForInput } from '#utils/formatters/number';
+import type { PluralForms } from '#graphql/generated/schemaTypes';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { getResolvedLanguage } from '#i18n';
 
 /** Every quantity the app renders or seeds is at most this precise: 1/8 is 0.125. */
 const MAX_DECIMALS = 3;

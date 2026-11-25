@@ -6,18 +6,18 @@
  * stands only until the write's response states the summary.
  */
 import type { ApolloCache } from '@apollo/client';
-import type { NotificationCategory } from '#/graphql/generated/schemaTypes';
-import { NotificationStatus } from '#/graphql/generated/schemaTypes';
+import type { NotificationCategory } from '#graphql/generated/schemaTypes';
+import { NotificationStatus } from '#graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
   skipUnmatchedFilterVariants,
-} from '#/apollo/utils/cacheUpdaters';
-import { hideEntity } from '#/apollo/utils/writeLocalEntity';
+} from '#apollo/utils/cacheUpdaters';
+import { hideEntity } from '#apollo/utils/writeLocalEntity';
 import {
   adjustUnreadNotificationCount,
   clearUnreadNotificationCount,
 } from './notificationBadgeCacheUpdaters';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 /** A notification is awaiting the user only while PENDING or SENT. */
 export const isUnreadStatus = (s: unknown): boolean =>

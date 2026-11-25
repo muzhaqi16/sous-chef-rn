@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -8,7 +8,7 @@ import { Icon } from '#components/atoms/Icon';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
 import { ImagePickerSheet } from '#features/catalog/components/ImagePickerSheet';
 import { Text } from '#components/atoms/Text';
-import type { ImageFile } from '#/types/media';
+import type { ImageFile } from '#types/media';
 
 interface ImagePickerProps {
   onImageSelected: (image: ImageFile) => void;

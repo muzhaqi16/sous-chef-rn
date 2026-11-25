@@ -15,12 +15,12 @@ import {
   StorageState,
   StorageType,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   GetPantryDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 import { seedQuery } from '../apolloMockProvider';
 import { asAbbreviation, readingAsAbbreviation } from './unitLabels';
 

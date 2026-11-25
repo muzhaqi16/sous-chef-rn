@@ -5,7 +5,7 @@ import {
   type GetShoppingListSuggestionsQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   putSuggestionBack,
   takeSuggestion,

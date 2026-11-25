@@ -4,9 +4,9 @@ import {
   mergeConnectionByNodeId,
   itemsConnectionFieldPolicy,
   readByIdFromCache,
-} from '#/apollo/cacheFieldPolicies';
-import type { CachedConnection, CachedEdge } from '#/apollo/cacheFieldPolicies';
-import { isRecord } from '#/utils/isRecord';
+} from '#apollo/cacheFieldPolicies';
+import type { CachedConnection, CachedEdge } from '#apollo/cacheFieldPolicies';
+import { isRecord } from '#utils/isRecord';
 
 /**
  * The pantry's cache shape: windowed item connections keyed on what partitions

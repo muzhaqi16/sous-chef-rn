@@ -17,8 +17,8 @@ import {
 import { useUser } from '#store/useAppStore';
 import { applyAccountSettings } from '#hooks/settings/useUpdateSettings';
 import { getDeviceTimezone } from '#features/notifications/utils/quietHours';
-import { logger } from '#/utils/environment';
-import { t } from '#/i18n';
+import { logger } from '#utils/environment';
+import { t } from '#i18n';
 import {
   applySettingsUpdate,
   type NotificationSettings,

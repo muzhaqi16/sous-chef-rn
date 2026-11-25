@@ -1,8 +1,8 @@
 import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import type { CreatePlanItemInputs } from '#features/mealPlan/offline/localWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import type { CreateMealPlanItemInput } from '#/graphql/generated/schemaTypes';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { CreateMealPlanItemInput } from '#graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
 
 /**
  * The one meal create. Its minted id is the row's PK, so a replay converges on

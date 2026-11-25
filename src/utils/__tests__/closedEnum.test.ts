@@ -1,7 +1,7 @@
-import type { MembershipRole } from '#/graphql/generated/schemaTypes';
+import type { MembershipRole } from '#graphql/generated/schemaTypes';
 import { knownEntry } from '../closedEnum';
 import { formatRole } from '../formatters/roleFormatters';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 
 /** Server and app ship separately, so a closed enum can grow under a build. */
 describe('a member this build has never heard of', () => {

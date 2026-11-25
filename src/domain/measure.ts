@@ -1,9 +1,9 @@
-import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitSystem, UnitType } from '#graphql/generated/schemaTypes';
 import {
   formatQuantityWithUnit,
   resolveQuantityNotation,
   type QuantityNotation,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 
 /** A unit system an amount is shown in: SYSTEM resolved to one of these. */
 export type ReadingSystem =

@@ -1,8 +1,8 @@
 import React from 'react';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { StyleSheet } from 'react-native-unistyles';
-import { DateRange } from '#/graphql/generated/schemaTypes';
+import { DateRange } from '#graphql/generated/schemaTypes';
 
 interface DateRangeOption {
   value: DateRange;

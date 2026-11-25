@@ -6,7 +6,7 @@ import type {
   UnitType,
   StorageState,
   ItemCondition,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 export interface UnitSelection {
   id: string | null;

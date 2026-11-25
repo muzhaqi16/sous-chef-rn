@@ -1,7 +1,7 @@
 import { ApolloClient, ApolloLink, Observable, gql } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { createAnswerOrderingLink } from '../answerOrderingLink';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 

@@ -1,4 +1,4 @@
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
 // 'image/jpg' is accepted from pickers (some Android providers report it) but
 // is NOT a valid upload mime — the API accepts only jpeg/png/webp. Normalize

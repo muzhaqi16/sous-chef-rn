@@ -7,7 +7,7 @@ import {
 } from '@testing-library/react-native';
 import { ConsumePantryItemModal } from '../ConsumePantryItemModal';
 import { renderWithApollo, recordMock } from '#/test-utils/apolloMockProvider';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import {
   ACTION_ITEM_ID,
@@ -15,10 +15,10 @@ import {
   rankedUnit,
 } from '#/test-utils/fixtures/pantryActionFixtures';
 import { ConsumptionUnitsForPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { UnitType, UsagePurpose } from '#/graphql/generated/schemaTypes';
+import { UnitType, UsagePurpose } from '#graphql/generated/schemaTypes';
 import { operationLog } from '#/test-utils/operationLog';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 
 it('waits for settlement and retains entered quantity after a refusal', async () => {
   let settle!: (outcome: string) => void;

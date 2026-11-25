@@ -1,5 +1,5 @@
 import type { ApolloCache } from '@apollo/client';
-import { announceHouseholdLeft } from '#/apollo/refetchEvents';
+import { announceHouseholdLeft } from '#apollo/refetchEvents';
 import { dropHome } from './dropHome';
 
 /**

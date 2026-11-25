@@ -1,9 +1,9 @@
 import { requirePlatform } from '#platform/install';
-import { toastService } from '#/services/toastService';
-import { Telemetry } from '#/services/telemetry';
+import { toastService } from '#services/toastService';
+import { Telemetry } from '#services/telemetry';
 import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
 import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 
 interface UseShoppingListActionsOptions {
   currentListId: string | undefined;

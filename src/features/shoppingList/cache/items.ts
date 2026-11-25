@@ -11,9 +11,9 @@ import {
   NEUTRAL_LOCAL_SHOPPING_LIST_ITEM,
   NEUTRAL_LOCAL_SHOPPING_LIST_ITEM_BY_TYPE,
 } from './shoppingListItemRowNeutral.generated';
-import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
-import { StoreDepartment } from '#/graphql/generated/schemaTypes';
-import { isRecord } from '#/utils/isRecord';
+import { isHeld, writeLocalEntity } from '#apollo/utils/writeLocalEntity';
+import { StoreDepartment } from '#graphql/generated/schemaTypes';
+import { isRecord } from '#utils/isRecord';
 import { addNewItemToShoppingListCache, readListCounters } from './connections';
 
 export interface OptimisticShoppingListItemFields {

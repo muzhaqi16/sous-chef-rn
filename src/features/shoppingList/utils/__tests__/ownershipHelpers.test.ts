@@ -11,8 +11,8 @@ import {
 import {
   CollaboratorRole,
   MembershipRole,
-} from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 
 const makeOwnership = (userId: string, profile?: Record<string, unknown>) => ({
   userId,

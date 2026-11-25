@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -24,19 +24,19 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
   executeRefreshWithFinally,
   executeWriteWithFinally,
-} from '#/utils/finallyHelpers';
-import { logger } from '#/utils/environment';
+} from '#utils/finallyHelpers';
+import { logger } from '#utils/environment';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { Text } from '#components/atoms/Text';
 import { getInviteDisplayName } from '#features/home/utils/inviteFormatters';
-import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
-import { buildJoinHomeUrl } from '#/utils/deepLinkUrls';
+import { getMemberDisplayName } from '#utils/formatters/memberFormatters';
+import { buildJoinHomeUrl } from '#utils/deepLinkUrls';
 import { shareUrl } from '#native/share';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import { canManageHome } from '#features/home/utils/homePermissions';
 import { homeTestIDs } from '#features/home/testIDs';
-import { fieldError, homeNameRule } from '#/utils/validation/common';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { fieldError, homeNameRule } from '#utils/validation/common';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 type RouteParams = {
   homeId: string;

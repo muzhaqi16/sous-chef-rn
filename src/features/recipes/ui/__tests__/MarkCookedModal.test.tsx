@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { settledInAct } from '#/test-utils/settledInAct';
 import { MarkCookedModal } from '../MarkCookedModal';

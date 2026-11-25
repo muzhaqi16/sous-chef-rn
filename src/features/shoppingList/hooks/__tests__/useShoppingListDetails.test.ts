@@ -1,4 +1,4 @@
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
@@ -11,10 +11,10 @@ import {
   CollaboratorStatus,
   ListStatus,
   MembershipRole,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useShoppingListDetails } from '../useShoppingListDetails';
 
-jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
+jest.mock('#hooks/apollo/usePreservedQueryData', () => ({
   usePreservedQueryData: <T>(data: T | undefined, fallback: T): T =>
     data ?? fallback,
 }));

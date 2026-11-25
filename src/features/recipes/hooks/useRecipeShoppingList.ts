@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { MaterializedRecipe, DisplayIngredient } from './useRecipeData';
 import { useAddRecipeRows } from './useAddRecipeRows';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { useActiveShoppingListId } from '#features/shoppingList/hooks/useActiveShoppingListId';
 import { useAppStore } from '#store/useAppStore';
-import { toastService } from '#/services/toastService';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { toastService } from '#services/toastService';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { recipeShoppingRows } from '#features/recipes/utils/recipeShoppingRows';
 import { useRecipeMissingIngredients } from './useRecipeMissingIngredients';
 import { useOpenListLinesFor } from '#features/shoppingList/hooks/useOpenListLinesFor';

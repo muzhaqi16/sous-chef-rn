@@ -1,10 +1,10 @@
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
-import { isNetworkError } from '#/utils/isNetworkError';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
+import { isNetworkError } from '#utils/isNetworkError';
 import { requirePlatform } from '#platform/install';
-import { DeviceType } from '#/graphql/generated/schemaTypes';
-import { Environment } from '#/utils/environment';
+import { DeviceType } from '#graphql/generated/schemaTypes';
+import { Environment } from '#utils/environment';
 import { createHttpLink } from '../httpLink';
 
 const httpLink = createHttpLink();

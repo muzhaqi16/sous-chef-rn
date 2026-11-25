@@ -4,7 +4,7 @@ import type {
   PhotoMask,
   RecognizedLine,
   RecognizedPage,
-} from '#/types/textRecognition';
+} from '#types/textRecognition';
 
 // One printed row per entry, a line pitch apart, each its own recognised line.
 const ROW = 0.04;

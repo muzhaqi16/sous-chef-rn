@@ -1,9 +1,9 @@
-import { useTranslation } from '#/i18n';
-import { ListStatus } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { toastService } from '#/services/toastService';
+import { useTranslation } from '#i18n';
+import { ListStatus } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import { destructiveConfirm } from '#services/destructiveConfirm';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
+import { toastService } from '#services/toastService';
 import { useCompleteShoppingList } from '#features/shoppingList/hooks/mutations/useCompleteShoppingList';
 import { useDeleteShoppingList } from '#features/shoppingList/hooks/mutations/useDeleteShoppingList';
 import { useUpdateShoppingList } from '#features/shoppingList/hooks/mutations/useUpdateShoppingList';

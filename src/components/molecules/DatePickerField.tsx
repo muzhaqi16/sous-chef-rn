@@ -10,8 +10,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
-import { formatMonthDayYear } from '#/utils/formatters/date';
-import { useTranslation } from '#/i18n';
+import { formatMonthDayYear } from '#utils/formatters/date';
+import { useTranslation } from '#i18n';
 import { kitTestIDs } from '#components/testIDs';
 
 interface DatePickerFieldProps {

@@ -36,11 +36,11 @@ jest.mock('#native/storage/keychain', () => ({
   clearCredentials: jest.fn(() => Promise.resolve()),
 }));
 
-jest.mock('#/apollo/client', () => ({
+jest.mock('#apollo/client', () => ({
   client: { clearStore: jest.fn(() => Promise.resolve()) },
 }));
 
-jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
+jest.mock('#apollo/offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: { clear: jest.fn() },
 }));
 

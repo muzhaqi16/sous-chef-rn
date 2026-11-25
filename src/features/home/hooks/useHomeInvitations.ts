@@ -1,7 +1,7 @@
 /** Invite, preview-by-code, and join-by-code mutations. */
 
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import { useLazyQuery, useMutation } from '@apollo/client/react';
 import {
   InviteToHomeDocument,
@@ -10,12 +10,12 @@ import {
   type GetHomesQuery,
 } from '#operations/home/home.generated';
 import { homeLink } from '#features/home/utils/shareLink';
-import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { t } from '#/i18n';
-import { errorService, localizedErrorMessage } from '#/services/errorService';
+import { ErrorCode, MembershipRole } from '#graphql/generated/schemaTypes';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { createAddToParentConnectionUpdater } from '#apollo/utils/cacheUpdaters';
+import { t } from '#i18n';
+import { errorService, localizedErrorMessage } from '#services/errorService';
 
 const addInviteToHomeCache = createAddToParentConnectionUpdater(
   'Home',

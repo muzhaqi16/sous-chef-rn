@@ -5,13 +5,13 @@
  */
 
 import { useApolloClient } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { UpdateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
-import { RecipeStatus } from '#/graphql/generated/schemaTypes';
+import { RecipeStatus } from '#graphql/generated/schemaTypes';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { readVersion } from '#/apollo/utils/entityWriteChain';
-import { alertService } from '#/services/alertService';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { readVersion } from '#apollo/utils/entityWriteChain';
+import { alertService } from '#services/alertService';
 
 export function usePublishRecipe() {
   const { t } = useTranslation();

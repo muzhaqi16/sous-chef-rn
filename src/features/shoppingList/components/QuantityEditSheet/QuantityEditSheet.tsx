@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
@@ -17,10 +17,10 @@ import {
   formatQuantityForInput,
   unitLabel,
   type UnitLabelSource,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { localizeNumericHint } from '#/utils/formatters/number';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { localizeNumericHint } from '#utils/formatters/number';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useOpening } from '#hooks/ui/useOpening';

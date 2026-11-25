@@ -44,7 +44,7 @@ import {
 import { SpotlightTooltip } from './SpotlightTooltip';
 import { GestureDemo } from './GestureDemo';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 
 export interface TargetRect {

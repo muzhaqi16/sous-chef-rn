@@ -6,7 +6,7 @@
 
 import { useSyncExternalStore } from 'react';
 import type { DocumentNode } from 'graphql';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 
 const rejected = new Set<string>();
 const listeners = new Set<() => void>();

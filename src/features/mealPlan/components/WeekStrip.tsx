@@ -5,9 +5,9 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { isSameDay, isToday, isBefore, isAfter, startOfDay } from 'date-fns';
 import { Text } from '#components/atoms/Text';
-import { formatDayOfMonth, formatWeekdayShort } from '#/utils/formatters/date';
-import { toDateKey } from '#/utils/dateUtils';
-import { useTranslation } from '#/i18n';
+import { formatDayOfMonth, formatWeekdayShort } from '#utils/formatters/date';
+import { toDateKey } from '#utils/dateUtils';
+import { useTranslation } from '#i18n';
 
 interface WeekStripProps {
   weekDays: Date[];

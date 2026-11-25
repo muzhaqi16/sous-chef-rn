@@ -1,5 +1,5 @@
 import { TONE_TO_COLOR } from '#components/atoms/Icon';
-import { lightTheme, darkTheme } from '#/theme/themes';
+import { lightTheme, darkTheme } from '#theme/themes';
 
 /**
  * `IconTone` is `keyof typeof TONE_TO_COLOR`. Annotating the map

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { formatTime } from '#features/devtools/utils/formatMetrics';
 import type { StartupMetrics } from '#features/devtools/screens/usePerformanceDashboard';

@@ -1,7 +1,7 @@
 import { testTypedRule } from '#/test-utils/eslintRuleTester';
 
 const ENUM =
-  "import { InviteStatus } from '#/graphql/generated/schemaTypes';\n";
+  "import { InviteStatus } from '#graphql/generated/schemaTypes';\n";
 
 testTypedRule('no-unchecked-domain-literal', {
   valid: [

@@ -6,7 +6,7 @@ import {
   resolveQuantityNotation,
   unitLabel,
   type UnitLabelSource,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 
 interface QuantityDisplayProps {
   quantity: number | null | undefined;

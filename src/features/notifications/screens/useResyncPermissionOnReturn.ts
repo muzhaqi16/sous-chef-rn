@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
-import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
+import { registerDeviceInBackground } from '#services/device/deviceRegistration';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 
 /**

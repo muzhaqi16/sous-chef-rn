@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CardContentProps } from './types';
 import { Text } from '#components/atoms/Text';
-import { rowType } from '#/theme/foundations/type';
+import { rowType } from '#theme/foundations/type';
 
 /**
  * Content slot component for BaseItemCard

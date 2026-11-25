@@ -8,7 +8,7 @@ import {
   Cuisine,
   Difficulty,
   RecipeStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 jest.mock('#components/molecules/Chip', () => ({
   Chip: ({ label, onPress }: { label?: string; onPress?: () => void }) => {

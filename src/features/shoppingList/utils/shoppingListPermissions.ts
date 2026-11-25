@@ -2,7 +2,7 @@ import {
   CollaboratorRole,
   MembershipRole,
   CollaboratorStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /**
  * What the caller may do to a shopping list and its items

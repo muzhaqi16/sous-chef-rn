@@ -9,8 +9,8 @@ import {
   CreateStorageLocationDocument,
   GetStorageLocationsDocument,
 } from '#features/catalog/graphql/storageLocation.generated';
-import { makeCache } from '#/apollo/cache';
-import { StorageType } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
+import { StorageType } from '#graphql/generated/schemaTypes';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 
 const HOME_ID = 'home-1';

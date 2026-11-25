@@ -1,7 +1,7 @@
 import { mixed, object, string, type ObjectSchema } from 'yup';
-import { NetWeightKind, UnitType } from '#/graphql/generated/schemaTypes';
-import { lazyMessage, quantityRule } from '#/utils/validation/common';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { NetWeightKind, UnitType } from '#graphql/generated/schemaTypes';
+import { lazyMessage, quantityRule } from '#utils/validation/common';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import {
   formatQuantityForInput,
   type QuantityDisplayOptions,

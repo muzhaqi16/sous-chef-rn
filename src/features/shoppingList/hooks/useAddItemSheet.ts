@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 
 export interface UseAddItemSheetOptions {
   currentListId: string | undefined;

@@ -1,11 +1,11 @@
 import { ApolloLink, Observable, type DefaultContext } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { Kind, OperationTypeNode, type DocumentNode } from 'graphql';
-import { generateId } from '#/utils/generateId';
-import { logger } from '#/utils/environment';
-import { Telemetry } from '#/services/telemetry';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { isGatewayFault, isServerFault } from '#/utils/isServerFault';
+import { generateId } from '#utils/generateId';
+import { logger } from '#utils/environment';
+import { Telemetry } from '#services/telemetry';
+import { isNetworkError } from '#utils/isNetworkError';
+import { isGatewayFault, isServerFault } from '#utils/isServerFault';
 import { useStore } from '#store';
 import { shouldTreatAsOffline } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
@@ -16,12 +16,12 @@ import { OfflineRejectedError } from './OfflineRejectedError';
 import { QUEUE_FULL_CODE, QueueCapacityError } from './types';
 import type { QueuedMutation } from './types';
 import { QueueStatus } from './types';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { scopesNamedBy } from '#/apollo/feed/feedRegistry';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { scopesNamedBy } from '#apollo/feed/feedRegistry';
 import {
   pendingWritesOf,
   type PendingWrites,
-} from '#/apollo/pendingWrites/pendingWrites';
+} from '#apollo/pendingWrites/pendingWrites';
 import {
   LoginDocument,
   RefreshTokenDocument,

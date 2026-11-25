@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';

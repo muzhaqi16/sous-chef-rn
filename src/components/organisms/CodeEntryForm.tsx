@@ -4,10 +4,10 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type ObjectSchema } from 'yup';
-import type { TranslationKey } from '#/i18n';
+import type { TranslationKey } from '#i18n';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Button } from '#components/molecules/Button';
-import { lazyMessage, reportValidationErrors } from '#/utils/validation/common';
+import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
 
 interface CodeEntryFormValues {
   code: string;

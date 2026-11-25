@@ -1,6 +1,6 @@
 import { jwtDecode } from 'jwt-decode';
 import { useStore } from '#store';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 interface TokenPayload {
   exp: number;

@@ -1,13 +1,13 @@
-import { generateEntityId } from '#/utils/generateEntityId';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { addDaysToKey } from '#/utils/dateUtils';
+import { generateEntityId } from '#utils/generateEntityId';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { addDaysToKey } from '#utils/dateUtils';
 import { mealReferenceOf } from '#features/mealPlan/utils/mealReference';
 import type {
   CreateMealPlanInput,
   CreateMealPlanItemInput,
   MealPlanType,
   MealType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /** The template a plan is built from, as the cache holds it. */
 export interface TemplateToPlan {

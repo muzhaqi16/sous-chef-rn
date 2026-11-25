@@ -6,10 +6,10 @@
 
 import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
 import type { DiscardExpiredInputs } from '#features/pantry/offline/localWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { useTranslation } from '#/i18n';
-import { todayKey } from '#/utils/dateUtils';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { generateEntityId } from '#utils/generateEntityId';
+import { useTranslation } from '#i18n';
+import { todayKey } from '#utils/dateUtils';
 
 interface UseConvertExpiredToWasteOptions {
   onSuccess?: (wasted: { hasBatches: boolean }) => void;

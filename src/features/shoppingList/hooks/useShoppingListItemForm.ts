@@ -11,19 +11,19 @@ import type { UseShoppingListItemForm_ItemFragment } from './useShoppingListItem
 import type {
   BatchAddShoppingListItemInput,
   UpdateShoppingListItemInput,
-} from '#/graphql/generated/schemaTypes';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+} from '#graphql/generated/schemaTypes';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import {
   normalizeNumericTextForApi,
   parseDecimalInput,
-} from '#/utils/parseDecimalInput';
-import { formatNumberForInput } from '#/utils/formatters/number';
+} from '#utils/parseDecimalInput';
+import { formatNumberForInput } from '#utils/formatters/number';
 import {
   formatQuantityForInput,
   parseStoredQuantityText,
   unitLabel,
-} from '#/utils/formatQuantity';
-import { refByIdOrName } from '#/utils/refInput';
+} from '#utils/formatQuantity';
+import { refByIdOrName } from '#utils/refInput';
 import { lineUnitFields } from '#features/shoppingList/utils/lineUnit';
 import {
   shoppingItemSchema,

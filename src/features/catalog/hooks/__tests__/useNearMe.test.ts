@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { requirePlatform } from '#/platform/install';
+import { requirePlatform } from '#platform/install';
 import { useNearMe } from '#features/catalog/hooks/useNearMe';
 
 const port = () => requirePlatform('approximateLocation');

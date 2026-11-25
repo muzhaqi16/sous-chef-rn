@@ -7,8 +7,8 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
-import { usePreferredCurrency } from '#/domain/money';
-import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
+import { usePreferredCurrency } from '#domain/money';
+import { DEFAULT_CURRENCY } from '#utils/formatters/number';
 import { useStore } from '#store';
 import { useAccountCurrencySync } from '../useAccountCurrencySync';
 

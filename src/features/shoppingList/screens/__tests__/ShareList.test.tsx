@@ -6,7 +6,7 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import {
@@ -18,14 +18,14 @@ import {
   type ShoppingListNode,
 } from '#/test-utils/fixtures/shoppingListFixtures';
 import { useStore } from '#store';
-import { t, type TranslationKey } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t, type TranslationKey } from '#i18n';
+import { alertService } from '#services/alertService';
 import {
   CollaboratorRole,
   CollaboratorStatus,
   ErrorCode,
   MembershipRole,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   GetShoppingListDetailsDocument,
   RemoveCollaboratorDocument,

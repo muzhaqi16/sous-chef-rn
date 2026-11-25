@@ -4,9 +4,9 @@ import notifee, {
   EventType,
 } from '@notifee/react-native';
 import { Platform } from 'react-native';
-import { errorService } from '#/services/errorService';
-import { routeNotificationTap } from '#/services/push/pushNotificationRouting';
-import { getResolvedLanguage, onLanguageChanged, t } from '#/i18n';
+import { errorService } from '#services/errorService';
+import { routeNotificationTap } from '#services/push/pushNotificationRouting';
+import { getResolvedLanguage, onLanguageChanged, t } from '#i18n';
 
 interface LocalNotificationParams {
   id?: string;

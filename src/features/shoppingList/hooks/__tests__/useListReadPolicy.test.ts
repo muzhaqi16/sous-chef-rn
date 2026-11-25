@@ -1,12 +1,12 @@
 import { renderHook } from '@testing-library/react-native';
-import { feedEngine } from '#/apollo/feed/feedEngine';
-import { clearPositions, holdPosition } from '#/apollo/feed/feedPositions';
-import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
+import { feedEngine } from '#apollo/feed/feedEngine';
+import { clearPositions, holdPosition } from '#apollo/feed/feedPositions';
+import { SyncScopeKind } from '#graphql/generated/schemaTypes';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { holdListInMemory } from '../../offline/listShards';
 import { useListReadPolicy } from '../useListReadPolicy';
 
-jest.mock('#/apollo/feed/feedEngine', () => ({
+jest.mock('#apollo/feed/feedEngine', () => ({
   feedEngine: { refresh: jest.fn() },
 }));
 jest.mock('#hooks/settings/useFeatureFlag', () => ({

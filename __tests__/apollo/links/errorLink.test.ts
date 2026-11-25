@@ -1,21 +1,21 @@
 'use no memo';
 
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { logger } from '#/utils/environment';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { logger } from '#utils/environment';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
-import { OfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
-import type { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { OfflineRejectedError } from '#apollo/offlineQueue/OfflineRejectedError';
+import type { NetworkRequestError } from '#utils/errors/networkRequestError';
 
 // --- Mocks must be defined before imports ---
 
 const {
   attemptTokenRefresh: mockAttemptTokenRefresh,
   getRefreshState: mockGetRefreshState,
-} = jest.requireMock('#/apollo/links/refreshToken');
+} = jest.requireMock('#apollo/links/refreshToken');
 
 const mockIsInLogoutProcess = jest.fn(() => false);
-jest.mock('#/apollo/logoutCleanup', () => ({
+jest.mock('#apollo/logoutCleanup', () => ({
   LogoutCleanup: {
     isInLogoutProcess: () => mockIsInLogoutProcess(),
   },
@@ -69,11 +69,11 @@ describe('errorLink.ts', () => {
             }
           },
         }));
-        require('#/apollo/links/errorLink');
+        require('#apollo/links/errorLink');
         ({ NetworkRequestError: IsolatedNetworkRequestError } =
           jest.requireActual<
-            typeof import('#/utils/errors/networkRequestError')
-          >('#/utils/errors/networkRequestError'));
+            typeof import('#utils/errors/networkRequestError')
+          >('#utils/errors/networkRequestError'));
       });
     });
 

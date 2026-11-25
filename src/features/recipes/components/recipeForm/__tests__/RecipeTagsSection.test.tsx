@@ -7,7 +7,7 @@ import type {
   Diet,
   HealthGoal,
   Intolerance,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 jest.mock(
   '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet',

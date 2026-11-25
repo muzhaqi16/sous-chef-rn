@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Screen } from '#components/templates/Screen';
 import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
 import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';

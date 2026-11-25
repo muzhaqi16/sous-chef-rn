@@ -1,5 +1,5 @@
 import type { ValidationError } from 'yup';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import {
   correctWeightDefaults,
   correctWeightSchema,

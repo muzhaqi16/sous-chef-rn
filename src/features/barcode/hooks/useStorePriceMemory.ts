@@ -1,14 +1,14 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { useTranslation } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import { useTranslation } from '#i18n';
+import type { Translate } from '#i18n/types';
 import {
   type PriceBasis,
   PriceComparisonScope,
-} from '#/graphql/generated/schemaTypes';
-import { pricePerBasis } from '#/domain/money';
-import { formatCurrency } from '#/utils/formatters/number';
-import { formatMonthDay } from '#/utils/formatters/date';
+} from '#graphql/generated/schemaTypes';
+import { pricePerBasis } from '#domain/money';
+import { formatCurrency } from '#utils/formatters/number';
+import { formatMonthDay } from '#utils/formatters/date';
 import { useSelectedHomeId } from '#store/useAppStore';
 import {
   HouseholdUsualUnitPriceDocument,
@@ -16,7 +16,7 @@ import {
   UseStorePriceMemory_ItemFragmentDoc,
   UseStorePriceMemory_ListFragmentDoc,
 } from './useStorePriceMemory.generated';
-import { unitLabel } from '#/utils/formatQuantity';
+import { unitLabel } from '#utils/formatQuantity';
 
 /** The newest price the household paid, worded for the card. */
 export interface LastPaidLine {

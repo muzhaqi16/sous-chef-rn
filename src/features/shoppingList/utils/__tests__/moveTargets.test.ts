@@ -1,4 +1,4 @@
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import { initialMoveTarget, moveTargets } from '../moveTargets';
 
 const home = (

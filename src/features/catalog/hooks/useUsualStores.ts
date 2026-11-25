@@ -1,5 +1,5 @@
 import { skipToken, useQuery } from '@apollo/client/react';
-import type { UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import type { UsualStoreSource } from '#graphql/generated/schemaTypes';
 import { chainOption, storeOption, type StoreOption } from '#domain/stores';
 import type { UsualStoreEntry } from '#features/catalog/cache/usualStores';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';

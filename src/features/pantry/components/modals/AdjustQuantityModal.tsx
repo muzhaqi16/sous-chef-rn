@@ -3,21 +3,21 @@ import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useFragment } from '@apollo/client/react';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
 import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 import { AdjustQuantityModal_PantryItemFragmentDoc } from './AdjustQuantityModal.generated';
-import { localizeNumericHint } from '#/utils/formatters/number';
+import { localizeNumericHint } from '#utils/formatters/number';
 import {
   formatNetWeightDisplay,
   formatQuantityForInput,
   isUnchangedQuantity,
   resolveQuantityNotation,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import { Sheet } from '#components/templates/Sheet';
 import {
   adjustQuantitySchema,
@@ -26,7 +26,7 @@ import {
   parseRemainingWeight,
   type AdjustQuantityFormValues,
 } from './adjustQuantityFormConfig';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import {
   currentReading,
   formatReading,

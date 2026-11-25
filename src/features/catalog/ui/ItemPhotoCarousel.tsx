@@ -8,7 +8,7 @@ import {
   type NativeSyntheticEvent,
   type ViewStyle,
 } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';

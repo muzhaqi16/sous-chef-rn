@@ -1,13 +1,13 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { RecipeCaptureStatus } from '#/graphql/generated/schemaTypes';
+import { RecipeCaptureStatus } from '#graphql/generated/schemaTypes';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { announceWorkSettled } from '#/services/subscriptions/settledWork';
+import { announceWorkSettled } from '#services/subscriptions/settledWork';
 import { RecipeCaptureDocument } from '../useRecipeCapture.generated';
 import { useRecipeCapturePoll } from '../useRecipeCapturePoll';
 import {

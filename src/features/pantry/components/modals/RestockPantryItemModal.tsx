@@ -8,7 +8,7 @@ import {
 } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { date, object, string, type ObjectSchema } from 'yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
@@ -23,11 +23,11 @@ import {
   packageContentsFields,
 } from '#features/pantry/ui/packageContentsRules';
 import { pantryTestIDs } from '#features/pantry/testIDs';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import {
   formatQuantityForInput,
   formatQuantityWithUnit,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import { useConversionPreview } from '#features/pantry/hooks/useConversionPreview';
 import { actionConversionOptions } from '#features/pantry/hooks/useQuantityFeedback';
 import { inCountedUnit } from '#features/pantry/utils/stockDisplay';
@@ -37,22 +37,22 @@ import {
   type PackageContentsValues,
   type RestockContents,
 } from '#domain/stockAmount';
-import { UnitType } from '#/graphql/generated/schemaTypes';
-import { commonStyles } from '#/styles/commonStyles';
+import { UnitType } from '#graphql/generated/schemaTypes';
+import { commonStyles } from '#styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import {
   PantryActionHeader,
   PantryActionModal,
 } from '#features/pantry/components/modals/PantryActionModal';
 import { Text } from '#components/atoms/Text';
-import { localizeNumericHint } from '#/utils/formatters/number';
+import { localizeNumericHint } from '#utils/formatters/number';
 import {
   lazyMessage,
   optionalMoneyRule,
   parseMoneyInput,
   quantityRule,
   reportValidationErrors,
-} from '#/utils/validation/common';
+} from '#utils/validation/common';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import type {
   PantryActionSharedState,

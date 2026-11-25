@@ -4,7 +4,7 @@ import {
   ReligiousDiet,
   Intolerance,
   RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useOnboardingProgressStore } from '#features/onboarding/store/onboardingProgressStore';
 import { useDietaryIntake, type DietarySelection } from '../useDietaryIntake';
 

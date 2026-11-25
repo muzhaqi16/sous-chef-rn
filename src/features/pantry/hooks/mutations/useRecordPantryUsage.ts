@@ -1,18 +1,18 @@
 import { useApolloClient } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import { errorService } from '#/services/errorService';
-import { alertService } from '#/services/alertService';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import type { SettleStatus } from '#/apollo/utils/settleMutation';
+import { useTranslation } from '#i18n';
+import { errorService } from '#services/errorService';
+import { alertService } from '#services/alertService';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { SettleStatus } from '#apollo/utils/settleMutation';
 import { CreatePantryItemUsageDocument } from '#features/pantry/graphql/pantry.generated';
 import { dropRankedUnits } from '#features/pantry/cache/rankedUnits';
 import {
   TopLevelErrorCode,
   UsagePurpose,
   type CreatePantryItemUsageInput,
-} from '#/graphql/generated/schemaTypes';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
+} from '#graphql/generated/schemaTypes';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
 import { inTrackingUnit } from '#features/pantry/cache/stock';
 import type { DrawStockInputs } from '#features/pantry/offline/localWrites';
 

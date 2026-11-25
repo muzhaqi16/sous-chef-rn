@@ -1,7 +1,7 @@
 /**
  * Shared test mock for `Environment`.
  *
- * Applied globally via `jest.setup.js` (`jest.mock('#/utils/environment')`),
+ * Applied globally via `jest.setup.js` (`jest.mock('#utils/environment')`),
  * so any test that transitively pulls in `Environment` — through the store,
  * `telemetrySlice`, `IconButton → HapticService`, or anywhere else — gets a
  * complete `jest.fn()` surface with sensible defaults instead of crashing
@@ -11,7 +11,7 @@
  *
  *   ✅ DO — override individual return values per-suite:
  *     ```ts
- *     import { Environment } from '#/utils/environment';
+ *     import { Environment } from '#utils/environment';
  *     beforeEach(() => {
  *       (Environment.isDevelopment as jest.Mock).mockReturnValue(false);
  *     });
@@ -19,12 +19,12 @@
  *
  *   ✅ DO — opt out entirely when testing the real Environment class:
  *     ```ts
- *     jest.unmock('#/utils/environment');
+ *     jest.unmock('#utils/environment');
  *     import { Environment } from '../environment';
  *     ```
  *
  *   ❌ DON'T — provide a per-suite factory like
- *     `jest.mock('#/utils/environment', () => ({ Environment: {...partial...} }))`.
+ *     `jest.mock('#utils/environment', () => ({ Environment: {...partial...} }))`.
  *     Partial factories REPLACE this shared mock and re-introduce the
  *     "missing method" fragility the shared mock exists to prevent.
  *

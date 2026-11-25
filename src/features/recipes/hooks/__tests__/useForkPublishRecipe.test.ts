@@ -13,14 +13,14 @@ import { UseRecipeFormWrites_RecipeFragmentDoc } from '#features/recipes/hooks/u
 import { useForkRecipe } from '../useForkRecipe';
 import { usePublishRecipe } from '../usePublishRecipe';
 import { useStore } from '#store';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
-import { ErrorCode, RecipeStatus } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
+import { ErrorCode, RecipeStatus } from '#graphql/generated/schemaTypes';
 import {
   MAX_RECIPE_INGREDIENTS,
   RECIPE_INGREDIENTS_PAGE_SIZE,
 } from '#domain/recipeIngredientsPaging';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   recipeFormFragment,
   recipeFormIngredient,

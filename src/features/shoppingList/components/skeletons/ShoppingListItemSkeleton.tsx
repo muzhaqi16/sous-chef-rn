@@ -6,8 +6,8 @@ import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
 import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 import { SkeletonRectangle } from '#components/atoms/Skeleton/SkeletonRectangle';
 import { ListItem } from '#components/molecules/ListItem';
-import { commonStyles } from '#/styles/commonStyles';
-import { type, rowType } from '#/theme/foundations/type';
+import { commonStyles } from '#styles/commonStyles';
+import { type, rowType } from '#theme/foundations/type';
 
 // The bars stand in for the row's own text, so they take their heights from the
 // roles that text uses.

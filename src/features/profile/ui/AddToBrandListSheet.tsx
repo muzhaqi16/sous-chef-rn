@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { RowCard } from '#components/atoms/RowCard';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
@@ -11,7 +11,7 @@ import { DataStateView } from '#components/organisms/DataStateView';
 import { Sheet } from '#components/templates/Sheet';
 import type { BrandListView } from '#features/profile/hooks/useBrandLists';
 import { profileTestIDs } from '#features/profile/testIDs';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 
 interface AddToBrandListSheetProps {
   visible: boolean;

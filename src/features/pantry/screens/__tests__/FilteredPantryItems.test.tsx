@@ -4,7 +4,7 @@ import React from 'react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
 import { fireEvent, screen, userEvent } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   type MockDataFor,
   recordMock,
@@ -13,14 +13,14 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { homesData } from '#/test-utils/fixtures/homeFixtures';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { toDateKey, todayKey } from '#/utils/dateUtils';
+import { t } from '#i18n';
+import { toDateKey, todayKey } from '#utils/dateUtils';
 import { EXPIRING_SOON_DAYS } from '#domain/expiry';
-import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { ErrorCode, MembershipRole } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import { kitTestIDs } from '#components/testIDs';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
@@ -36,7 +36,7 @@ import {
 
 // The day stays fixed: the hook's midnight timer re-arms itself.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 jest.mock('#hooks/navigation/useAppNavigation');
 // Navigation is the boundary: with no navigator, the screen is focused while

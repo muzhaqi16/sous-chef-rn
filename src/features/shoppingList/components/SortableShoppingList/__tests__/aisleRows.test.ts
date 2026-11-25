@@ -1,4 +1,4 @@
-import { StoreDepartment } from '#/graphql/generated/schemaTypes';
+import { StoreDepartment } from '#graphql/generated/schemaTypes';
 import { shoppingListRowItem } from '#/test-utils/fixtures/shoppingListRowItem';
 import { groupByAisle, linesInAisle } from '../aisleRows';
 

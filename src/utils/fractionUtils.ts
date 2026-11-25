@@ -1,5 +1,5 @@
 import Fraction from 'fraction.js';
-import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
+import { normalizeNumericTextForApi } from '#utils/parseDecimalInput';
 
 /**
  * Parses "3", "1.5", "1,5", "3/4" and "1 1/4"; null on invalid input. Behind

@@ -1,17 +1,17 @@
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import type { AlertButton } from '#platform/presenters';
-import { toastService } from '#/services/toastService';
-import { errorService } from '#/services/errorService';
+import { toastService } from '#services/toastService';
+import { errorService } from '#services/errorService';
 import { storeApi } from '#store';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   ErrorCode,
   ErrorDisposition,
   TopLevelErrorCode,
   UnitDenial,
-} from '#/graphql/generated/schemaTypes';
-import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
+} from '#graphql/generated/schemaTypes';
+import { getVersionConflictMessage } from '#utils/errors/versionConflict';
 import {
   CreatePantryItemDocument,
   CreatePantryItemUsageDocument,
@@ -21,11 +21,11 @@ import {
   type DeletePantryItemMutation,
 } from '#features/pantry/graphql/pantry.generated';
 import { operationNameOf } from '../documentOperation';
-import { presentFailure } from '#/utils/errors/presentFailure';
+import { presentFailure } from '#utils/errors/presentFailure';
 import { settleMutation, settledStatus } from '../settleMutation';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
-import { OfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
-import { Telemetry } from '#/services/telemetry';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
+import { OfflineRejectedError } from '#apollo/offlineQueue/OfflineRejectedError';
+import { Telemetry } from '#services/telemetry';
 
 // A payload member, its typename checked against the operation's result union.
 type Member<T extends { __typename: string }> = {

@@ -1,11 +1,11 @@
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetPantryItemBatchHistoryDocument } from '#features/pantry/graphql/pantry.generated';
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { BatchStatus } from '#graphql/generated/schemaTypes';
 import { usePantryBatchHistory } from '../usePantryBatchHistory';
 
 async function loadHistory() {

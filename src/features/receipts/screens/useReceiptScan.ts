@@ -10,17 +10,17 @@ import DocumentScanner, {
   ScanDocumentResponseStatus,
   type ScanDocumentResponse,
 } from 'react-native-document-scanner-plugin';
-import { TextRecognition } from '#/native/TextRecognition';
-import { alertService } from '#/services/alertService';
-import { errorService } from '#/services/errorService';
-import { useTranslation } from '#/i18n';
-import { Telemetry } from '#/services/telemetry';
+import { TextRecognition } from '#native/TextRecognition';
+import { alertService } from '#services/alertService';
+import { errorService } from '#services/errorService';
+import { useTranslation } from '#i18n';
+import { Telemetry } from '#services/telemetry';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
 import { useImageUpload } from '#hooks/data/useImageUpload';
-import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
+import { ImageUploadPurpose } from '#graphql/generated/schemaTypes';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import type { ImageFile } from '#/types/media';
+import type { ImageFile } from '#types/media';
 import { hasItemLines } from '../utils/hasItemLines';
 import { printedTimeOf } from '../utils/receiptDate';
 import { MAX_PHOTOS, receiptText } from '../utils/receiptText';
@@ -29,7 +29,7 @@ import {
   readOnPhone,
   type PhoneReading,
 } from '../utils/phoneReading';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 import { parseReceiptOnDevice } from './onDeviceReceiptParser';
 import { forgetReceipt } from '../utils/forgetReceipt';
 import {
@@ -41,9 +41,9 @@ import {
   useReceiptDraftActions,
   type ReceiptDraft,
 } from '../store/receiptDraftStore';
-import { uploadTogether } from '#/utils/uploadTogether';
-import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
-import type { PhotoMask, PreparedPhoto } from '#/types/textRecognition';
+import { uploadTogether } from '#utils/uploadTogether';
+import { executeAsyncWithCleanup } from '#utils/finallyHelpers';
+import type { PhotoMask, PreparedPhoto } from '#types/textRecognition';
 
 const dropPhotos = (uris: readonly string[]) => {
   if (uris.length === 0) return;

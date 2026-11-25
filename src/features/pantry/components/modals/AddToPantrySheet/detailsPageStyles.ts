@@ -1,5 +1,5 @@
 import type { DimensionValue } from 'react-native';
-import type { Theme } from '#/theme/themes';
+import type { Theme } from '#theme/themes';
 
 // Typed so the percentage keeps its `DimensionValue` type instead of widening
 // to `string` when returned from the factory below.

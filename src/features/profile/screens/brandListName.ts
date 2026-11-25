@@ -1,5 +1,5 @@
 import { object, string } from 'yup';
-import { lazyMessage } from '#/utils/validation/common';
+import { lazyMessage } from '#utils/validation/common';
 
 /** A brand list's name, as the API takes it: 1 to 100 characters. */
 export const brandListNameSchema = object({

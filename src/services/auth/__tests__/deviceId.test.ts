@@ -1,4 +1,4 @@
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 import { requirePlatform } from '#platform/install';
 
 const storageReady = jest.spyOn(storage, 'isReady');
@@ -22,9 +22,9 @@ const mockSave = jest.spyOn(secureStore, 'saveDeviceId');
 
 // The module memoizes, so each case re-imports it to start from a cold cache.
 const loadModule = () => {
-  let mod!: typeof import('#/services/auth/deviceId');
+  let mod!: typeof import('#services/auth/deviceId');
   jest.isolateModules(() => {
-    mod = require('#/services/auth/deviceId');
+    mod = require('#services/auth/deviceId');
   });
   return mod;
 };

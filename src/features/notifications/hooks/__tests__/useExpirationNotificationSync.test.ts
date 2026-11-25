@@ -12,7 +12,7 @@ import {
   ExpirationAction,
   NotificationStatus,
   NotificationType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useExpirationNotificationSync } from '../useExpirationNotificationSync';
 

@@ -1,4 +1,4 @@
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { BatchStatus } from '#graphql/generated/schemaTypes';
 import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { summarizeBatchPricing } from '#features/pantry/utils/summarizeBatchPricing';
 

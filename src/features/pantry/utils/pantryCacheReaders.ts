@@ -4,8 +4,8 @@
  * answer at all, and its refusal carries no usable ids on the replay path.
  */
 import type { ApolloCache } from '@apollo/client';
-import { logger } from '#/utils/environment';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { logger } from '#utils/environment';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import {
   FindCachedPantryItemDuplicate_PantryFragmentDoc,
   ReadStackUnit_PantryItemFragmentDoc,

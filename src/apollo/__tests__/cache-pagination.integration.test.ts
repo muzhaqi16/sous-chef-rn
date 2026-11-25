@@ -1,6 +1,6 @@
 'use no memo';
 
-jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
+jest.mock('#graphql/generated/fragmentMatcher.json', () => ({
   possibleTypes: {},
 }));
 

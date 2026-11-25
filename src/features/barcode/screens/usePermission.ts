@@ -4,8 +4,8 @@ import {
   PermissionService,
   type AppPermission,
   type PermissionStatus,
-} from '#/services/permissions/PermissionService';
-import { logger } from '#/utils/environment';
+} from '#services/permissions/PermissionService';
+import { logger } from '#utils/environment';
 
 export function usePermission(permission: AppPermission) {
   const [status, setStatus] = useState<PermissionStatus>('undetermined');

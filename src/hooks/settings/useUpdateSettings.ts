@@ -11,14 +11,14 @@ import {
   refusedMirror,
   settingsInput,
   type SettingValues,
-} from '#/domain/serverSettings';
+} from '#domain/serverSettings';
 import {
   sendLocalWrite,
   type WriteSettle,
-} from '#/apollo/pendingWrites/useLocalWrite';
-import type { LocalWriteSend } from '#/apollo/pendingWrites/pendingWrites';
-import { snapshotFields } from '#/apollo/utils/localFirstFields';
-import { useTranslation } from '#/i18n';
+} from '#apollo/pendingWrites/useLocalWrite';
+import type { LocalWriteSend } from '#apollo/pendingWrites/pendingWrites';
+import { snapshotFields } from '#apollo/utils/localFirstFields';
+import { useTranslation } from '#i18n';
 
 /**
  * The one writer of the account's settings: applied to the cache and the

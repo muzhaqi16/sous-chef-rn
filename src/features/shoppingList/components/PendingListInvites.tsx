@@ -2,11 +2,11 @@ import React from 'react';
 import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
-import { commonStyles } from '#/styles/commonStyles';
-import { rowType } from '#/theme/foundations/type';
+import { commonStyles } from '#styles/commonStyles';
+import { rowType } from '#theme/foundations/type';
 import { ROLE_PERMISSIONS } from '#features/shoppingList/components/collaboratorRoles';
 import {
   usePendingListInvites,

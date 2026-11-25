@@ -1,6 +1,6 @@
 import { buildDirtyUpdateInput } from '../utils';
 import type { FormDataInput } from '../types';
-import type { StorageState } from '#/graphql/generated/schemaTypes';
+import type { StorageState } from '#graphql/generated/schemaTypes';
 
 describe('pantry mutations utils', () => {
   describe('buildDirtyUpdateInput', () => {

@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { toastService } from '#/services/toastService';
-import type { TabBarAddAction } from '#/context/TabBarActionsContext';
+import { toastService } from '#services/toastService';
+import type { TabBarAddAction } from '#context/TabBarActionsContext';
 import { useStore } from '#store';
 import { useTabBarAddMenu } from '../useTabBarAddMenu';
 
@@ -17,7 +17,7 @@ jest.mock('@react-navigation/native', () => ({
   useIsFocused: () => mockIsFocused,
 }));
 
-jest.mock('#/context/TabBarActionsContext', () => ({
+jest.mock('#context/TabBarActionsContext', () => ({
   useTabBarSetters: () => ({
     setAddMenu: mockSetAddMenu,
     setAddMenuOpen: mockSetAddMenuOpen,

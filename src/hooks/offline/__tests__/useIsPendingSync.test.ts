@@ -9,9 +9,9 @@
  */
 import { renderHook } from '@testing-library/react-native';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
 
-jest.mock('#/apollo/offlineQueue/queueStore', () => ({
+jest.mock('#apollo/offlineQueue/queueStore', () => ({
   queueStore: {
     subscribe: jest.fn(() => () => {}),
     getPendingClientIds: jest.fn(() => new Set<string>()),

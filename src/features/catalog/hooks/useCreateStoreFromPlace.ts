@@ -1,7 +1,7 @@
 import { useMutation } from '@apollo/client/react';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { useTranslation } from '#/i18n';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { useTranslation } from '#i18n';
 import type { CreatedStore } from './useCreateStore';
 import { CreateStoreFromPlaceDocument } from './useCreateStoreFromPlace.generated';
 

@@ -1,5 +1,5 @@
-import { makeCache } from '#/apollo/cache';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { makeCache } from '#apollo/cache';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import { UpdateHomeDocument } from '#operations/home/home.generated';
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 

@@ -4,8 +4,8 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
-import { toastService } from '#/services/toastService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import {
   DietarySharingHomesDocument,
   UpdateDietarySharingDocument,

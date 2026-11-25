@@ -5,7 +5,7 @@ import {
   newPasswordRule,
   passwordRule,
 } from './common';
-import type { KeyUnder } from '#/i18n';
+import type { KeyUnder } from '#i18n';
 
 const msg = (key: KeyUnder<'auth'>, options?: Record<string, unknown>) =>
   lazyMessage(`auth.${key}`, options);

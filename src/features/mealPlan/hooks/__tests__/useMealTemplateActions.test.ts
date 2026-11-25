@@ -1,7 +1,7 @@
 'use no memo';
 
 import { gql, type InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -27,8 +27,8 @@ import {
   MealPlanType,
   MealType,
   TemplateCategory,
-} from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
+} from '#graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
 import { useStore } from '#store';
 import {
   planSource,

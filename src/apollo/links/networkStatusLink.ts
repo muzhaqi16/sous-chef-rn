@@ -1,10 +1,10 @@
 import { ApolloLink, Observable } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { Kind, OperationTypeNode } from 'graphql';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { isGatewayFault } from '#/utils/isServerFault';
+import { isNetworkError } from '#utils/isNetworkError';
+import { isGatewayFault } from '#utils/isServerFault';
 import { noteCleanAnswer } from '../offlineQueue/serverAnswers';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { isOfflineRejectedError } from '../offlineQueue/OfflineRejectedError';

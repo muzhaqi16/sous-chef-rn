@@ -13,14 +13,14 @@ import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.genera
 import { UNFILTERED_PLANS_VARIABLES } from '#features/mealPlan/hooks/useMealPlans';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { pantryQueryVariables } from '#features/pantry/hooks/usePantryQuery';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 import { useStore } from '#store';
-import { scheduleIdle } from '#/utils/scheduleIdle';
+import { scheduleIdle } from '#utils/scheduleIdle';
 import { useAppStore, useIsPantryQueryComplete } from '#store/useAppStore';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { errorService } from '#/services/errorService';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { positionOf } from '#/apollo/feed/feedPositions';
+import { errorService } from '#services/errorService';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { positionOf } from '#apollo/feed/feedPositions';
 
 /**
  * Warms sibling tabs' queries into the cache. `HomeTabs` is lazy, so an

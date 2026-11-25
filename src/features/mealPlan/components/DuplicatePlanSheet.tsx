@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { Controller, useController, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { number, object, string, type ObjectSchema } from 'yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
@@ -18,10 +18,10 @@ import {
   formatMonthDay,
   formatMonthDayYear,
   formatWeekdayMonthDay,
-} from '#/utils/formatters/date';
-import { toDateKey } from '#/utils/dateUtils';
+} from '#utils/formatters/date';
+import { toDateKey } from '#utils/dateUtils';
 import { useOpening } from '#hooks/ui/useOpening';
-import { lazyMessage, reportValidationErrors } from '#/utils/validation/common';
+import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
 
 interface DuplicatePlanFormValues {
   name: string;

@@ -16,7 +16,7 @@
 import { readFileSync, readdirSync } from 'fs';
 import { resolve } from 'path';
 import { parse, Kind, type SelectionSetNode, type DocumentNode } from 'graphql';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { OPERATION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 

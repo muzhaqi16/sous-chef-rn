@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { StaticScreenProps } from '@react-navigation/native';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
 import {
@@ -9,21 +9,21 @@ import {
 } from '#features/shoppingList/hooks/useItemPurchaseHistory';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 
 import { Text } from '#components/atoms/Text';
 import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistoryScreen';
-import { formatCurrency, UNKNOWN_AMOUNT } from '#/utils/formatters/number';
+import { formatCurrency, UNKNOWN_AMOUNT } from '#utils/formatters/number';
 import {
   moneyByCurrency,
   resolveCurrency,
   usePreferredCurrency,
   type FigureCurrency,
-} from '#/domain/money';
-import { formatDateTime, formatMonthDayYear } from '#/utils/formatters/date';
-import { isCalendarDayInstant, purchaseDay } from '#/utils/dateUtils';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
-import { personName } from '#/utils/formatters/memberFormatters';
+} from '#domain/money';
+import { formatDateTime, formatMonthDayYear } from '#utils/formatters/date';
+import { isCalendarDayInstant, purchaseDay } from '#utils/dateUtils';
+import { formatQuantityForDisplay } from '#utils/formatQuantity';
+import { personName } from '#utils/formatters/memberFormatters';
 import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 

@@ -2,9 +2,9 @@ import {
   GetPantryDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import { extractNodes } from '#/utils/connectionUtils';
+import { extractNodes } from '#utils/connectionUtils';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
-import { pantryItemSearch } from '#/utils/searchUtils';
+import { pantryItemSearch } from '#utils/searchUtils';
 import {
   useHybridSearch,
   type UseHybridSearchConfig,

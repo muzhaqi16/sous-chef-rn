@@ -9,7 +9,7 @@ import {
   NotificationCategory,
   NotificationType,
   Priority,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 const mockSyncDelete = jest.fn();
 jest.mock('#features/notifications/hooks/useNotificationSync', () => ({

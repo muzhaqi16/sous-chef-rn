@@ -1,4 +1,4 @@
-import type { FeatureFlag } from '#/config/featureFlags';
+import type { FeatureFlag } from '#config/featureFlags';
 import { accountPredates } from '#domain/accountAge';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useUser } from '#store/useAppStore';

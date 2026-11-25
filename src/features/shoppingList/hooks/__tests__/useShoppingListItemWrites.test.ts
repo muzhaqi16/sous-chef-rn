@@ -9,23 +9,23 @@ import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   ErrorCode,
   type UpdateShoppingListItemInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   AddItemToShoppingListDocument,
   UpdateShoppingListItemDocument,
   type AddItemToShoppingListMutationVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ShoppingListItemForEditDocument } from '../useShoppingListItemWrites.generated';
-import { toastService } from '#/services/toastService';
-import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+import { toastService } from '#services/toastService';
+import { getDeviceDecimalSeparator } from '#utils/deviceLocale';
 import { useShoppingListItemWrites } from '../useShoppingListItemWrites';
 
-jest.mock('#/utils/deviceLocale', () => ({
-  ...jest.requireActual('#/utils/deviceLocale'),
+jest.mock('#utils/deviceLocale', () => ({
+  ...jest.requireActual('#utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 const ITEM = gql`
   fragment ItemWritesProbe on ShoppingListItem {

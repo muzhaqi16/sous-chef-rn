@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 
 interface RowThumbnailProps {
   uri?: string | null;

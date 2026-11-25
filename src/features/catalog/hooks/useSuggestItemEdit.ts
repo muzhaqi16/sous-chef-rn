@@ -1,27 +1,27 @@
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useMutation } from '@apollo/client/react';
 import {
   CreateItemSuggestionDocument,
   UpdateItemDocument,
 } from '#features/catalog/hooks/useSuggestItemEdit.generated';
 import { useImageUpload } from '#hooks/data/useImageUpload';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import {
   settleMutation,
   type SettledFailure,
-} from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+} from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import {
   buildSuggestibleItemChanges,
   type EditableItemSnapshot,
 } from '#domain/items/suggestItemChanges';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
 import type { AddItemSubmitPayload } from '#features/catalog/types';
-import { errorService } from '#/services/errorService';
-import { isVersionConflictCode } from '#/utils/errors/versionConflict';
-import { presentFailure } from '#/utils/errors/presentFailure';
+import { errorService } from '#services/errorService';
+import { isVersionConflictCode } from '#utils/errors/versionConflict';
+import { presentFailure } from '#utils/errors/presentFailure';
 
 export type ItemEditResult =
   | { status: 'suggested' }

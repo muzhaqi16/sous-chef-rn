@@ -1,4 +1,4 @@
-import { getApolloClient, requireApolloClient } from '#/apollo/clientRegistry';
+import { getApolloClient, requireApolloClient } from '#apollo/clientRegistry';
 import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
@@ -19,7 +19,7 @@ import {
   type RowAdoption,
 } from './types';
 import { prepareReplay } from './prepareReplay';
-import type { FeedApplied } from '#/apollo/feed/types';
+import type { FeedApplied } from '#apollo/feed/types';
 import { PROMISED_WINDOW_MS, readReplayWindow } from './replayWindow';
 import { lastCleanAnswerAt } from './serverAnswers';
 import {
@@ -55,21 +55,21 @@ import {
 import {
   extractMutationPayload,
   isErrorTypename,
-} from '#/utils/errors/mutationPayload';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { logger } from '#/utils/environment';
-import { TimeoutError } from '#/utils/errors/timeoutError';
-import { withinMs } from '#/utils/withinMs';
-import { sleep } from '#/utils/backoff';
-import { Telemetry } from '#/services/telemetry';
+} from '#utils/errors/mutationPayload';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { logger } from '#utils/environment';
+import { TimeoutError } from '#utils/errors/timeoutError';
+import { withinMs } from '#utils/withinMs';
+import { sleep } from '#utils/backoff';
+import { Telemetry } from '#services/telemetry';
 import { registerSessionTeardown } from '#store/sessionTeardown';
-import { isRecord } from '#/utils/isRecord';
-import { returnedVersionOf, versionOf } from '#/apollo/utils/returnedVersion';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { isRecord } from '#utils/isRecord';
+import { returnedVersionOf, versionOf } from '#apollo/utils/returnedVersion';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import {
   conflictOutcome,
   readServerRow,
-} from '#/apollo/pendingWrites/conflictRead';
+} from '#apollo/pendingWrites/conflictRead';
 
 const DEFAULT_CONFIG: QueueConfig = {
   retryDelayMs: 1000,

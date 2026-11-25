@@ -5,7 +5,7 @@ import {
   runSessionTeardown,
   clearSessionTeardown,
 } from '../sessionTeardown';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 describe('sessionTeardown', () => {
   beforeEach(() => {

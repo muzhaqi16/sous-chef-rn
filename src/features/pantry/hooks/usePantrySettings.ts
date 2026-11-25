@@ -11,11 +11,11 @@ import {
   type PantryWriteOutcome,
 } from '#features/pantry/hooks/useCreatePantry';
 import { useToday } from '#hooks/app/useToday';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { readVersion } from '#/apollo/utils/entityWriteChain';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
-import { todayKey } from '#/utils/dateUtils';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { readVersion } from '#apollo/utils/entityWriteChain';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
+import { todayKey } from '#utils/dateUtils';
 
 interface UsePantrySettingsArgs {
   pantryId: string | undefined;

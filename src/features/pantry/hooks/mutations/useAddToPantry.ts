@@ -8,7 +8,7 @@ import {
 import { findCachedPantryItemDuplicate } from '#features/pantry/utils/pantryCacheReaders';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
-import { extractNodes } from '#/utils/connectionUtils';
+import { extractNodes } from '#utils/connectionUtils';
 import {
   putSuggestionBack,
   takeSuggestion,

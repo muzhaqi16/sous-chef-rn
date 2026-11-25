@@ -1,8 +1,8 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { act } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { makeCache } from '#/apollo/cache';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -10,7 +10,7 @@ import {
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { DeleteRecipeFolderDocument } from '#features/recipes/graphql/recipe.generated';
-import { getNotFoundMessage } from '#/utils/errors/notFoundMessage';
+import { getNotFoundMessage } from '#utils/errors/notFoundMessage';
 import { useFolderActions } from '../useFolderActions';
 
 // Inline fragments on the Error interface require possibleTypes for the

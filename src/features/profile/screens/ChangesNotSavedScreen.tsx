@@ -1,9 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslationKey } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { useTranslation, type TranslationKey } from '#i18n';
+import { alertService } from '#services/alertService';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 import { RowCard } from '#components/atoms/RowCard';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';

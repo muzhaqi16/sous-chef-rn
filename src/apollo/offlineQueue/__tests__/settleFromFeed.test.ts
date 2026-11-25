@@ -1,7 +1,7 @@
 import { ApolloClient, ApolloLink } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import {
   makeQueuedMutation,
   queuedMutationFor,
@@ -11,13 +11,13 @@ import {
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
 import { QueueStatus } from '../types';
 
 let mockClient: ApolloClient | null = null;
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),

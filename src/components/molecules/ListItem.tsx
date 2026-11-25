@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRowsOnCardFill } from '#components/atoms/RowCard';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { ThemedIcon } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -9,9 +9,9 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Badge, BadgeStack, type BadgeContent } from '#components/atoms/Badge';
 import type { RowThemeColors } from '#components/atoms/rowTheme';
 import { Text } from '#components/atoms/Text';
-import { commonStyles } from '#/styles/commonStyles';
-import { rowType } from '#/theme/foundations/type';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { commonStyles } from '#styles/commonStyles';
+import { rowType } from '#theme/foundations/type';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 
 interface ListItemProps {
   children?: React.ReactNode;

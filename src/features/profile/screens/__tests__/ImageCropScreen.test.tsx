@@ -27,7 +27,7 @@ jest.mock('@react-native-community/image-editor', () => ({
   default: { cropImage: jest.fn().mockResolvedValue({ uri: 'cropped-uri' }) },
 }));
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 jest
   .spyOn(Image, 'getSize')

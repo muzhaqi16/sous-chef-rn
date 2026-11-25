@@ -1,4 +1,4 @@
-import type { ReceiptMerchantInput } from '#/graphql/generated/schemaTypes';
+import type { ReceiptMerchantInput } from '#graphql/generated/schemaTypes';
 import type { PrintedStore } from '../store/receiptDraftStore';
 
 // The API refuses a longer value, which would refuse the whole request.

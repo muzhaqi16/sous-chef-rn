@@ -5,8 +5,8 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import { DIETARY_LIMITS } from '#domain/dietary';
 import { CookingPreferencesSheet } from '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet';
 

@@ -1,6 +1,6 @@
 import React, { type ComponentProps } from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { formatCurrency } from '#/utils/formatters/number';
+import { formatCurrency } from '#utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import type { ListCostToGo } from '#features/shoppingList/hooks/useListCostToGo';
 import { CostSummary } from '../CostSummary';

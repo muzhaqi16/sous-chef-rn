@@ -1,6 +1,6 @@
-import { useTranslation } from '#/i18n';
-import { formatCountryName } from '#/utils/formatters/region';
-import { MeasurementRegionBasis } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import { formatCountryName } from '#utils/formatters/region';
+import { MeasurementRegionBasis } from '#graphql/generated/schemaTypes';
 import { useHeldCaptureId } from '#features/recipes/store/recipeCaptureStore';
 import {
   CAPTURE_WARNING_KEY,

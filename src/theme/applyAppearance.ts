@@ -25,7 +25,7 @@ import {
   ThemePreference,
 } from '#store/slices/preferenceTypes';
 import type { AppearanceSettings } from '#platform/ports';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { DENSITY_META, FONT_SCALE_META } from './foundations/appearanceConfig';
 
 /** Scales every role's size and leading, leaving weight and tracking alone. */

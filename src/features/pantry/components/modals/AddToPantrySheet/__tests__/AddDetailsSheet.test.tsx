@@ -9,14 +9,14 @@ import {
 import { operationLog } from '#/test-utils/operationLog';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { useStore } from '#store';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { requirePlatform } from '#platform/install';
 import {
   StorageState,
   StorageType,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+} from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { SearchUnitsDocument } from '#operations/item/unit.generated';
 import { pantryTestIDs } from '#features/pantry/testIDs';

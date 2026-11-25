@@ -1,4 +1,4 @@
-import type { MealRefInput } from '#/graphql/generated/schemaTypes';
+import type { MealRefInput } from '#graphql/generated/schemaTypes';
 
 export interface MealNaming {
   customMealName?: string | null;

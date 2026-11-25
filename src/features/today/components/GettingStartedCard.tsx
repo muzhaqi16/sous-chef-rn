@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { Card } from '#components/atoms/Card';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';

@@ -1,20 +1,20 @@
 import type {
   RegisterDeviceInput,
   UpdateDeviceInput,
-} from '#/graphql/generated/schemaTypes';
-import { requireApolloClient } from '#/apollo/clientRegistry';
-import { logger } from '#/utils/environment';
+} from '#graphql/generated/schemaTypes';
+import { requireApolloClient } from '#apollo/clientRegistry';
+import { logger } from '#utils/environment';
 import {
   RegisterDeviceDocument,
   UpdateDeviceDocument,
   type UpdateDeviceMutation,
 } from '#operations/auth/device.generated';
-import { PermissionService } from '#/services/permissions/PermissionService';
+import { PermissionService } from '#services/permissions/PermissionService';
 import {
   acquirePushToken,
   getPushTokenProvider,
   onPushTokenRefresh,
-} from '#/services/push/pushTokenProvider';
+} from '#services/push/pushTokenProvider';
 import {
   collectDeviceInformation,
   validateDeviceInformation,
@@ -23,15 +23,15 @@ import {
   clearRegisteredLocale,
   ensureDeviceId,
   recordRegisteredLocale,
-} from '#/services/auth/deviceId';
+} from '#services/auth/deviceId';
 import {
   dropUnitSystemAnswers,
   refreshDeviceUnitSystem,
-} from '#/apollo/utils/unitSystemAnswers';
+} from '#apollo/utils/unitSystemAnswers';
 import { useStore } from '#store';
 import { holdsSessionTokens } from '#store/slices/authSlice';
-import { backoffDelay, sleep } from '#/utils/backoff';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { backoffDelay, sleep } from '#utils/backoff';
+import { appliedPayload } from '#utils/errors/mutationPayload';
 
 // Fire-and-forget: a failure never blocks a sign-in. A session end leaves the
 // push token: the server pushes only to a live session bound to the device, so

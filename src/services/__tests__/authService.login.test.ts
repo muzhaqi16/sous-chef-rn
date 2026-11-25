@@ -13,7 +13,7 @@
 // point of routing union members through the same table as top-level errors.
 
 const mockMutate = jest.fn();
-jest.mock('#/apollo/client', () => ({
+jest.mock('#apollo/client', () => ({
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -32,7 +32,7 @@ jest.mock('#store', () => ({
 const mockClearCredentials = jest.fn().mockResolvedValue(undefined);
 const mockHasCredentials = jest.fn().mockResolvedValue(true);
 const mockLoadCredentials = jest.fn();
-jest.mock('#/services/auth/deviceId');
+jest.mock('#services/auth/deviceId');
 
 jest.mock('#native/storage/keychain', () => ({
   clearCredentials: (...args: unknown[]) => mockClearCredentials(...args),
@@ -45,11 +45,11 @@ jest.mock('#native/storage/keychain', () => ({
 
 const mockToastError = jest.mocked(toastService.error);
 
-import { registerApolloClient } from '#/apollo/clientRegistry';
+import { registerApolloClient } from '#apollo/clientRegistry';
 import type { ApolloClient } from '@apollo/client';
-import { toastService } from '#/services/toastService';
-import { authService } from '#/services/authService';
-import { biometricService } from '#/services/biometric/deviceCredential';
+import { toastService } from '#services/toastService';
+import { authService } from '#services/authService';
+import { biometricService } from '#services/biometric/deviceCredential';
 
 // The client the code under test reads from the registry.
 registerApolloClient({
@@ -164,7 +164,7 @@ describe('authService.login — LoginResult union', () => {
 // sends the id it already holds — null on a cold identity.
 describe('authService.login — device binding', () => {
   it('resolves the device id before the session is minted', async () => {
-    const { ensureDeviceId } = require('#/services/auth/deviceId');
+    const { ensureDeviceId } = require('#services/auth/deviceId');
     const order: string[] = [];
     (ensureDeviceId as jest.Mock).mockImplementationOnce(() => {
       order.push('ensureDeviceId');

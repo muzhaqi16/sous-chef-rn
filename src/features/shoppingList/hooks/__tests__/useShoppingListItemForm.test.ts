@@ -5,7 +5,7 @@ import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { drainTimers } from '#/test-utils/drainTimers';
 
 // Mock parseFractionalInput
-jest.mock('#/utils/fractionUtils', () => ({
+jest.mock('#utils/fractionUtils', () => ({
   parseFractionalInput: jest.fn((input: string) => {
     const trimmed = input.trim();
     if (!trimmed) return null;

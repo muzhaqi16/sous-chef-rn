@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
@@ -8,14 +8,14 @@ import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-import { formatQuantityForInput } from '#/utils/formatQuantity';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { formatQuantityForInput } from '#utils/formatQuantity';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 import {
   currencySymbol,
   formatCurrency,
   formatNumberForInput,
   localizeNumericHint,
-} from '#/utils/formatters/number';
+} from '#utils/formatters/number';
 import {
   shownUnitPrice,
   totalFromUnitPrice,
@@ -24,7 +24,7 @@ import {
 import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { parseMoneyInput } from '#/utils/validation/common';
+import { parseMoneyInput } from '#utils/validation/common';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 interface PurchaseAmountSheetItem {

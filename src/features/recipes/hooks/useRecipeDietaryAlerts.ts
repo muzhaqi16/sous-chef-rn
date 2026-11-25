@@ -1,5 +1,5 @@
 import { skipToken, useQuery } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   householdCheckOf,
   toHouseholdAlert,

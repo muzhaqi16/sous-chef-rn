@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -10,9 +10,9 @@ import {
   OnPrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { Icon } from '#components/atoms/Icon';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import {
   useInvitationActions,
   type InvitationFailure,
@@ -21,10 +21,10 @@ import { useUser } from '#store/useAppStore';
 import type { InvitationData } from '#features/notifications/types';
 import { useToday } from '#hooks/app/useToday';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
-import { ErrorCode, NotificationType } from '#/graphql/generated/schemaTypes';
-import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
+import { ErrorCode, NotificationType } from '#graphql/generated/schemaTypes';
+import { executeAsyncWithCleanup } from '#utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 interface InvitationAcceptanceModalProps {
   visible: boolean;

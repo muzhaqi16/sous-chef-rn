@@ -1,7 +1,7 @@
 /**
  * Shared test mock for the `Telemetry` facade.
  *
- * Applied globally via `jest.setup.js` (`jest.mock('#/services/telemetry')`).
+ * Applied globally via `jest.setup.js` (`jest.mock('#services/telemetry')`).
  *
  * Without it the real facade runs under jest: `Environment` is auto-mocked to
  * development mode, so `enabled`/`enableMetrics` are true, and
@@ -16,7 +16,7 @@
  *
  *   ✅ DO — assert on the shared spies directly:
  *     ```ts
- *     import { Telemetry } from '#/services/telemetry';
+ *     import { Telemetry } from '#services/telemetry';
  *     expect(Telemetry.increment).toHaveBeenCalledWith('pantry_errors_total');
  *     ```
  *
@@ -27,7 +27,7 @@
  *
  *   ❌ DON'T — write a per-suite partial factory:
  *     ```ts
- *     jest.mock('#/services/telemetry', () => ({
+ *     jest.mock('#services/telemetry', () => ({
  *       Telemetry: { error: jest.fn() },  // missing every other method
  *     }));
  *     ```

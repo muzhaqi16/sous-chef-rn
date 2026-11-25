@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useKeepAwake } from '@sayem314/react-native-keep-awake';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { SubScreen } from '#components/templates/SubScreen';
 import type { BarAction } from '#components/molecules/BarActions';
@@ -13,7 +13,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { SortableShoppingList } from '#features/shoppingList/components/SortableShoppingList/SortableList';
 import { StoreModeHeader } from '#features/shoppingList/components/storeMode/StoreModeHeader';
 import { ShoppingListPermissionsProvider } from '#features/shoppingList/context/ShoppingListPermissionsContext';

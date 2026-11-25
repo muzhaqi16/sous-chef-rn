@@ -1,9 +1,9 @@
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
 import { writeLocalPantryItem } from '../writeLocalPantryItem';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
-import { ExpiryKind, StorageType } from '#/graphql/generated/schemaTypes';
+import { ExpiryKind, StorageType } from '#graphql/generated/schemaTypes';
 import { LocalRefs_StorageLocationFragmentDoc } from '#features/catalog/cache/localRefs.generated';
 import { UseUpdatePantryItem_PantryItemFragmentDoc } from '#features/pantry/hooks/mutations/useUpdatePantryItem.generated';
 

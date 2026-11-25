@@ -1,7 +1,7 @@
 import { ApolloLink, type OperationVariables } from '@apollo/client';
 import { isQueryOperation } from '@apollo/client/utilities';
 import { tap } from 'rxjs';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 export type AnswerNote = (
   data: Readonly<Record<string, unknown>>,

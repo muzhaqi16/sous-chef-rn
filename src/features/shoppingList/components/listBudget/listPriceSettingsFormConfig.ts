@@ -1,5 +1,5 @@
 import { object, string, type ObjectSchema } from 'yup';
-import { lazyMessage } from '#/utils/validation/common';
+import { lazyMessage } from '#utils/validation/common';
 import { isBudgetInput } from '#features/shoppingList/screens/useListBudget';
 
 export interface ListPriceSettingsValues {

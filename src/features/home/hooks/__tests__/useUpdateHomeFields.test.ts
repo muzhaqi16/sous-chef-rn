@@ -6,8 +6,8 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { UpdateHomeDocument } from '#operations/home/home.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import { useUpdateHomeFields } from '../useUpdateHomeFields';
 
 const FALLBACK = 'Failed to update home';

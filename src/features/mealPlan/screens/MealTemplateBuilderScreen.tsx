@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   MEAL_TYPE_LABEL_KEYS,
   MEAL_TYPE_ORDER,
@@ -23,12 +23,12 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMealTemplateEditor } from '#features/mealPlan/hooks/useMealTemplateEditor';
 import { useMealTemplateForEdit } from '#features/mealPlan/hooks/useMealTemplateForEdit';
 import { useCooksFor } from '#features/profile/hooks/useCooksFor';
-import { TemplateCategory, MealType } from '#/graphql/generated/schemaTypes';
-import { generateId } from '#/utils/generateId';
+import { TemplateCategory, MealType } from '#graphql/generated/schemaTypes';
+import { generateId } from '#utils/generateId';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import {
   changedMealRef,

@@ -1,4 +1,4 @@
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 
 /**
  * Auth refusal codes across both channels: a `*Result` member's `code` and a

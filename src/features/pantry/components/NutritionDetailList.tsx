@@ -1,9 +1,9 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { ViewStyle } from 'react-native';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import type { NutrientCategory } from '#/types/nutrition';
+import type { NutrientCategory } from '#types/nutrition';
 import {
   type NutritionFactsValues,
   getNutrientEntries,

@@ -1,7 +1,7 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import type { InMemoryCache } from '@apollo/client';
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type {
   MockDataFor,
   MockedResponse,
@@ -26,10 +26,10 @@ import {
   MealType,
   TopLevelErrorCode,
   type CreateMealPlanItemInput,
-} from '#/graphql/generated/schemaTypes';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
-import { t } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
+import { getVersionConflictMessage } from '#utils/errors/versionConflict';
+import { t } from '#i18n';
 import { readPlanSource } from '#features/mealPlan/cache/derivationSources';
 import { MEAL_PLAN_ITEMS_FIELD } from '#features/mealPlan/cache/mealPlanItem';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';

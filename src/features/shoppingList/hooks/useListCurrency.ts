@@ -1,6 +1,6 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { resolveCurrency, usePreferredCurrency } from '#/domain/money';
+import { resolveCurrency, usePreferredCurrency } from '#domain/money';
 import {
   ListCurrencyDocument,
   UseListCurrency_ListFragmentDoc,

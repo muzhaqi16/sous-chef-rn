@@ -4,15 +4,15 @@
  */
 
 import { useApolloClient } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   UpdateMealTemplateDocument,
   AddTemplateItemDocument,
   UpdateTemplateItemDocument,
   RemoveTemplateItemDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { generateEntityId } from '#/utils/generateEntityId';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { generateEntityId } from '#utils/generateEntityId';
 import { readRecipeRef } from '#features/mealPlan/cache/mealTemplateItem';
 import { useCreateMealTemplate } from '#features/mealPlan/hooks/useCreateMealTemplate';
 import type {
@@ -24,7 +24,7 @@ import type {
   UpdateMealTemplateInput,
   AddTemplateItemInput,
   UpdateTemplateItemInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 export function useMealTemplateEditor() {
   const { t } = useTranslation();

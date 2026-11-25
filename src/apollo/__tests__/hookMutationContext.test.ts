@@ -3,8 +3,8 @@ import { act, renderHook } from '@testing-library/react-native';
 import { ApolloClient, ApolloLink } from '@apollo/client';
 import { ApolloProvider, useMutation } from '@apollo/client/react';
 import { of } from 'rxjs';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
 
 /**

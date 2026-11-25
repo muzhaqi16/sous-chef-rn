@@ -1,12 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import type { BadgeVariant } from '#components/atoms/Badge';
 import { Icon, type IconName, type IconTone } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { rowType } from '#/theme/foundations/type';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { rowType } from '#theme/foundations/type';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 import { useReceiptMoney } from '../hooks/useReceiptCurrency';
 import type {
   ReceiptReviewRow,

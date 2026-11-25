@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react-native';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useScannerSetup, type ScannerContext } from '../useScannerSetup';
 
 type ScannerOptions = Parameters<typeof useScannerSetup>[0];
@@ -10,7 +10,7 @@ const mockSetScannerProps = jest.fn((handler?: () => void) => {
   capturedHandler = handler;
 });
 
-jest.mock('#/context/TabBarActionsContext', () => ({
+jest.mock('#context/TabBarActionsContext', () => ({
   useTabBarSetters: () => ({ setScannerProps: mockSetScannerProps }),
 }));
 

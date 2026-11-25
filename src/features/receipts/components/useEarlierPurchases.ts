@@ -2,8 +2,8 @@ import { skipToken, useQuery } from '@apollo/client/react';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useUserId } from '#store/useAppStore';
-import { formatShortDate } from '#/utils/formatters/date';
-import { formatQuantityWithUnit } from '#/utils/formatQuantity';
+import { formatShortDate } from '#utils/formatters/date';
+import { formatQuantityWithUnit } from '#utils/formatQuantity';
 import { useReceiptDraft } from '../store/receiptDraftStore';
 import { EarlierPurchasesOfItemDocument } from './useEarlierPurchases.generated';
 

@@ -4,10 +4,10 @@ import {
   seedCache,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { ErrorCode, ItemImageStatus } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, ItemImageStatus } from '#graphql/generated/schemaTypes';
 import { MarkPrimaryItemImageDocument } from '#features/catalog/hooks/useMarkPrimaryItemImage.generated';
 import { useMarkPrimaryItemImage } from '#features/catalog/hooks/useMarkPrimaryItemImage';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { ItemPhotoCarousel_ItemPhotoFragmentDoc } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 

@@ -3,8 +3,8 @@ import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
-import { commonStyles } from '#/styles/commonStyles';
-import { rowType } from '#/theme/foundations/type';
+import { commonStyles } from '#styles/commonStyles';
+import { rowType } from '#theme/foundations/type';
 
 /** Uses the same row surface and slots as MealPlanItemCard. */
 export const MealPlanItemCardSkeleton: React.FC = () => (

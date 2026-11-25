@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import type { DocumentNode } from 'graphql';
 import { InvariantError } from '@apollo/client/utilities/invariant';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { Telemetry } from '#/services/telemetry';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { Telemetry } from '#services/telemetry';
 import { storeApi } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 // Apollo raises its own faults as `InvariantError`: a cache write its type
 // policies refuse, a store cleared under an in-flight query. Release builds

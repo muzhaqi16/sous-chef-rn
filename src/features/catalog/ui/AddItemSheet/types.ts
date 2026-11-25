@@ -1,5 +1,5 @@
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
-import type { TranslationKey } from '#/i18n';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
+import type { TranslationKey } from '#i18n';
 import type {
   BaseSuggestionItem,
   SuggestionsHookResult,

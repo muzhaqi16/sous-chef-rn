@@ -1,5 +1,5 @@
 import React from 'react';
-import type { NotificationRecommendedRecipe } from '#/graphql/generated/schemaTypes';
+import type { NotificationRecommendedRecipe } from '#graphql/generated/schemaTypes';
 import { RecommendedRecipeCard } from './RecommendedRecipeCard';
 import {
   RECOMMENDED_RECIPES_SHOWN,

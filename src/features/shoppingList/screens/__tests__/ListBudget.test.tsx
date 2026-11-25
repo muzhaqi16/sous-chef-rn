@@ -7,7 +7,7 @@ import {
   seedCache,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { formatCurrency } from '#/utils/formatters/number';
+import { formatCurrency } from '#utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useStore } from '#store';
 import { ListBudget } from '../ListBudget';

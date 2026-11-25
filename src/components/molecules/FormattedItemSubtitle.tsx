@@ -1,10 +1,10 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { QuantityDisplay } from '#components/atoms/QuantityDisplay';
 import { Text } from '#components/atoms/Text';
-import { unitLabel, type UnitLabelSource } from '#/utils/formatQuantity';
+import { unitLabel, type UnitLabelSource } from '#utils/formatQuantity';
 
 interface FormattedItemSubtitleProps {
   quantity?: number | null;

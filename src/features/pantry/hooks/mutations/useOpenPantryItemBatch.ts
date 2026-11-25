@@ -3,10 +3,10 @@
  */
 
 import { OpenPantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { useTranslation } from '#/i18n';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
 
 interface UseOpenPantryItemBatchOptions {
   onSuccess?: () => void;

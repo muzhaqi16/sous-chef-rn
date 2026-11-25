@@ -3,7 +3,7 @@ import { Linking } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { DataAttributionNotices } from '#features/recipes/components/DataAttributionNotices';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import { ExternalSource } from '#graphql/generated/schemaTypes';
 
 const OFF = {
   source: ExternalSource.Openfoodfacts,

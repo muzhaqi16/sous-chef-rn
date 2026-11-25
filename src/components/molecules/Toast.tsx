@@ -21,14 +21,14 @@ import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { _setToastDispatch, _setToastsShowing } from '#/services/toastService';
+import { _setToastDispatch, _setToastsShowing } from '#services/toastService';
 import { HapticService } from '#services/haptic/HapticService';
-import { TOAST } from '#/constants/animations';
+import { TOAST } from '#constants/animations';
 import { Text } from '#components/atoms/Text';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 import {
   toastHoldMs,
   type ToastOptions,

@@ -1,21 +1,21 @@
-import { requireApolloClient } from '#/apollo/clientRegistry';
-import { feedEngine } from '#/apollo/feed/feedEngine';
+import { requireApolloClient } from '#apollo/clientRegistry';
+import { feedEngine } from '#apollo/feed/feedEngine';
 import {
   queueManager,
   type DrainedBy,
-} from '#/apollo/offlineQueue/queueManager';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { toastService } from '#/services/toastService';
-import { errorService } from '#/services/errorService';
-import { isTranslationKey, t } from '#/i18n';
-import { logger } from '#/utils/environment';
+} from '#apollo/offlineQueue/queueManager';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
+import { safeEvict } from '#apollo/utils/cacheUpdaters';
+import { toastService } from '#services/toastService';
+import { errorService } from '#services/errorService';
+import { isTranslationKey, t } from '#i18n';
+import { logger } from '#utils/environment';
 import {
   QUEUE_FULL_CODE,
   type FailedMutationInfo,
   type QueueError,
-} from '#/apollo/offlineQueue/types';
+} from '#apollo/offlineQueue/types';
 
 let openChangesNotSaved: (() => void) | undefined;
 

@@ -1,10 +1,10 @@
 import type {
   UnitSystem,
   UsualStoreTargetInput,
-} from '#/graphql/generated/schemaTypes';
-import type { Translate } from '#/i18n/types';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { formatDistance } from '#/utils/formatters/number';
+} from '#graphql/generated/schemaTypes';
+import type { Translate } from '#i18n/types';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { formatDistance } from '#utils/formatters/number';
 
 /** A store, or a whole chain ("any ALDI"), as a household picks or keeps one. */
 export type StoreChoice =

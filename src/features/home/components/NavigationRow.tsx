@@ -6,7 +6,7 @@ import { Icon } from '#components/atoms/Icon';
 import type { Icon as IconType } from '#components/atoms/Icon';
 import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 interface NavigationRowProps {
   icon: React.ComponentProps<typeof IconType>['name'];

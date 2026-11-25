@@ -5,8 +5,8 @@
 
 import { RemoveItemFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { RemoveRowsInputs } from '#features/shoppingList/offline/localWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
 
 interface UseRemoveShoppingItemOptions {
   listId: string | null | undefined;

@@ -1,7 +1,7 @@
 import { requirePlatform } from '#platform/install';
-import { changeLanguage, deviceAppLanguage, getResolvedLanguage } from '#/i18n';
+import { changeLanguage, deviceAppLanguage, getResolvedLanguage } from '#i18n';
 import { useStore } from '#store';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 /**
  * A user who never picked a language takes the device's again on each return

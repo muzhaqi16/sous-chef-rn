@@ -1,13 +1,13 @@
 import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
 import type { Unmasked } from '@apollo/client/masking';
-import { makeCache } from '#/apollo/cache';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { makeCache } from '#apollo/cache';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import {
   dropUnitSystemAnswers,
   settingsFields,
   refreshDeviceUnitSystem,
-} from '#/apollo/utils/unitSystemAnswers';
+} from '#apollo/utils/unitSystemAnswers';
 import {
   completeMockedResponse,
   seedQuery,
@@ -17,7 +17,7 @@ import {
   UpdateUserPreferencesDocument,
   type GetUserSettingsQuery,
 } from '#operations/auth/user.generated';
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import { UnitSystem } from '#graphql/generated/schemaTypes';
 
 const rootFields = (cache: ReturnType<typeof makeCache>) =>
   Object.keys(cache.extract().ROOT_QUERY ?? {});

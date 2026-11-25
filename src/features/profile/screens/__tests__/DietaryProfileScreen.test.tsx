@@ -8,13 +8,13 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import {
   Diet,
   ReligiousDiet,
   RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   AddDietaryRestrictionDocument,
   GetDietaryProfileDocument,

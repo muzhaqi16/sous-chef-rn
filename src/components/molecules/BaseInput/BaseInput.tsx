@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { TextInputProps, StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
@@ -21,7 +21,7 @@ import {
   type ThemedTextInputRef,
   type ThemedBottomSheetTextInputRef,
 } from '#components/atoms/themedComponents';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 import { useFieldAccessibility } from '#hooks/ui/useFieldAccessibility';
 

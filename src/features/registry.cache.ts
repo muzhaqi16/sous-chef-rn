@@ -1,5 +1,5 @@
 import type { TypePolicies } from '@apollo/client';
-import type { AnswerNote } from '#/apollo/links/answerNotesLink';
+import type { AnswerNote } from '#apollo/links/answerNotesLink';
 import { noteCatalogAnswer } from './recipes/cache/catalogAnswerNote';
 import { pantryTypePolicies } from './pantry/cache/typePolicies';
 import { shoppingListTypePolicies } from './shoppingList/cache/typePolicies';

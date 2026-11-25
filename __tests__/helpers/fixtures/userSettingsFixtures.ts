@@ -1,6 +1,6 @@
 import type { ApolloCache } from '@apollo/client';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
-import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
+import { AppTheme, UnitSystem } from '#graphql/generated/schemaTypes';
 import type { QueryDataFor } from '../apolloMockProvider';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { useFPSMonitor } from '#features/devtools/hooks/useFPSMonitor';
 import { MetricCard, MetricPanel, MetricRow } from './MetricCard';

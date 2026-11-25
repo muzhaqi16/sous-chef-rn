@@ -1,5 +1,5 @@
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
-import type { UnitLabelSource } from '#/utils/formatQuantity';
+import type { UnitLabelSource } from '#utils/formatQuantity';
 import type { ParsedPackages, ParsedReceipt } from './parsedReceipt';
 import { toCents } from './money';
 

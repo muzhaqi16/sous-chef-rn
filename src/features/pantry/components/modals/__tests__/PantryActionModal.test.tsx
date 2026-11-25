@@ -15,9 +15,9 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { UnitSystem, UnitType } from '#graphql/generated/schemaTypes';
 import { ConsumptionUnitsForPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryActionItemDocument } from '#features/pantry/components/modals/PantryActionModal.generated';
 import type { PantryActionSharedState } from '#features/pantry/types';
@@ -28,7 +28,7 @@ import {
   rankedUnit,
   type RankedActionUnit,
 } from '#/test-utils/fixtures/pantryActionFixtures';
-import { unitLabel } from '#/utils/formatQuantity';
+import { unitLabel } from '#utils/formatQuantity';
 
 const PANTRY_ITEM_ID = ACTION_ITEM_ID;
 const stockedCache = actionItemCache;

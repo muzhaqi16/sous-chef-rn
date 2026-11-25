@@ -10,8 +10,8 @@ import {
   ErrorCode,
   StockCheckAnswer,
   StockConfidence,
-} from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import {
   RecordPantryStockCheckDocument,
   StockToConfirmDocument,

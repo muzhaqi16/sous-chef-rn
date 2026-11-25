@@ -1,5 +1,5 @@
-import { isTranslationKey } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import { isTranslationKey } from '#i18n';
+import type { Translate } from '#i18n/types';
 
 /**
  * A country code as its name in the reader's language, else the code. The

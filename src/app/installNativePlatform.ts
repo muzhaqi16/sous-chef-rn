@@ -9,9 +9,9 @@ import { keychainSecureStore } from '#native/storage/secureStore';
 import {
   applyAppearanceToRuntime,
   applyThemeToRuntime,
-} from '#/theme/applyAppearance';
+} from '#theme/applyAppearance';
 import { preloadImages } from '#components/atoms/CachedImage';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { presentNativeAlert } from '#native/nativeAlert';
 import { reactNavigationScreenHooks } from '#hooks/navigation/screenHooks';
 import { streamedFileParts } from '#native/fileParts';

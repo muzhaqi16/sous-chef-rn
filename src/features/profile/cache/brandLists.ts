@@ -1,6 +1,6 @@
 import type { ApolloCache } from '@apollo/client';
 import type { Unmasked } from '@apollo/client/masking';
-import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import { writeLocalEntity } from '#apollo/utils/writeLocalEntity';
 import {
   BrandListsDocument,
   UseBrandLists_HeldBrandFragmentDoc,

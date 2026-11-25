@@ -1,21 +1,21 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
-import type { MovePurchasedItemsToPantryInput } from '#/graphql/generated/schemaTypes';
+import type { MovePurchasedItemsToPantryInput } from '#graphql/generated/schemaTypes';
 import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.generated';
 import {
   readMovedToPantryAt,
   writePurchaseInfo,
 } from '#features/shoppingList/cache/purchase';
-import { toastService } from '#/services/toastService';
-import { Telemetry } from '#/services/telemetry';
+import { toastService } from '#services/toastService';
+import { Telemetry } from '#services/telemetry';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { useTranslation } from '#/i18n';
-import { errorService } from '#/services/errorService';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { askForReviewAfterSuccess } from '#domain/reviewPrompt';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { useTranslation } from '#i18n';
+import { errorService } from '#services/errorService';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
 
 /**
  * Mark moved lines as stocked so their rows stop offering a no-op action. The

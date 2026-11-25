@@ -104,7 +104,7 @@ jest.mock('../mutations/useShoppingListItemMutations', () => ({
   }),
 }));
 
-jest.mock('#/utils/searchUtils', () => ({
+jest.mock('#utils/searchUtils', () => ({
   shoppingListItemSearch: jest.fn((item: { itemName: string }, query: string) =>
     item.itemName.toLowerCase().includes(query.toLowerCase()),
   ),

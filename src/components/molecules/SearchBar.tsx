@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 import type { StyleProp, ViewStyle, TextInputProps } from 'react-native';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import type {
@@ -17,8 +17,8 @@ import type {
 } from '#components/atoms/themedComponents';
 import { CountBadge } from '#components/atoms/CountBadge';
 import { Pressable } from '#components/atoms/themedComponents';
-import { hitSlop } from '#/theme/foundations/sizes';
-import { commonStyles } from '#/styles/commonStyles';
+import { hitSlop } from '#theme/foundations/sizes';
+import { commonStyles } from '#styles/commonStyles';
 import { Icon, type IconName } from '#components/atoms/Icon';
 
 export interface SearchBarAction {

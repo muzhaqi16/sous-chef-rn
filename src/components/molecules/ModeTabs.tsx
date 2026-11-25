@@ -11,7 +11,7 @@ import { Text } from '#components/atoms/Text';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 import { HapticService } from '#services/haptic/HapticService';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 /** A view's on-screen rect. */
 type TabRect = { x: number; y: number; width: number; height: number };

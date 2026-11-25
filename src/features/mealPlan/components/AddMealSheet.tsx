@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import {
@@ -17,7 +17,7 @@ import { SheetHeader } from '#components/templates/SheetHeader';
 import { useOpening } from '#hooks/ui/useOpening';
 import { Icon } from '#components/atoms/Icon';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { MealType } from '#graphql/generated/schemaTypes';
 import {
   MEAL_TYPE_LABEL_KEYS,
   MEAL_TYPE_ORDER,
@@ -37,8 +37,8 @@ import {
   type PickerDietTag,
   type PickerRecipe,
 } from '#features/recipes/hooks/useRecipeTextSearch';
-import { toastService } from '#/services/toastService';
-import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
+import { toastService } from '#services/toastService';
+import { executeAsyncWithCleanup } from '#utils/finallyHelpers';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
 import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { SectionHeader } from '#components/atoms/SectionHeader';

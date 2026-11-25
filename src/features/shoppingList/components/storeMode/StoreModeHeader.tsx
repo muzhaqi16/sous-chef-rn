@@ -9,7 +9,7 @@ import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreA
 import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import { Icon, type IconName } from '#components/atoms/Icon';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { AisleHeaderRow } from '#features/shoppingList/components/SortableShoppingList/types';
 import type { AisleRouteNote } from '#features/shoppingList/screens/useAisleView';
 import type {

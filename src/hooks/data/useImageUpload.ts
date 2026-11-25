@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
 import {
   validateImageFile,
   getMimeTypeFromUri,
@@ -15,9 +15,9 @@ import {
   ConfirmItemImageUploadDocument,
 } from '#operations/image/imageUpload.generated';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
-import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
+import { ImageUploadPurpose } from '#graphql/generated/schemaTypes';
 import { toImagePerspective } from '#utils/imageUtils';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 import {
   MAX_IMAGE_SIZE,
   MAX_PROFILE_SIZE,
@@ -25,22 +25,19 @@ import {
 } from '#utils/imageValidation';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
-import {
-  isRateLimitError,
-  getRateLimitMessage,
-} from '#/utils/errors/rateLimit';
-import { logger } from '#/utils/environment';
-import { TimeoutError } from '#/utils/errors/timeoutError';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { isRateLimitError, getRateLimitMessage } from '#utils/errors/rateLimit';
+import { logger } from '#utils/environment';
+import { TimeoutError } from '#utils/errors/timeoutError';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
 import {
   appliedPayload,
   validationFieldName,
-} from '#/utils/errors/mutationPayload';
-import type { Translate } from '#/i18n/types';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import type { ImageFile } from '#/types/media';
+} from '#utils/errors/mutationPayload';
+import type { Translate } from '#i18n/types';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import type { ImageFile } from '#types/media';
 import { requirePlatform } from '#platform/install';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { settleMutation } from '#apollo/utils/settleMutation';
 
 /**
  * An upload failure whose message is already localized and safe to show. Used

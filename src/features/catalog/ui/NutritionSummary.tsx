@@ -1,11 +1,11 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { ViewStyle } from 'react-native';
 import { View, ScrollView } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
-import type { NutritionHighlight } from '#/types/nutrition';
+import type { NutritionHighlight } from '#types/nutrition';
 import {
   type NutritionSummaryFacts,
   extractMacroSummary,

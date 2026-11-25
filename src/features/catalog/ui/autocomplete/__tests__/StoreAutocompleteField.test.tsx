@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
-import { CreateOutcome } from '#/graphql/generated/schemaTypes';
+import { CreateOutcome } from '#graphql/generated/schemaTypes';
 import {
   inputOf,
   recordMock,
@@ -15,7 +15,7 @@ import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.gene
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { StoreAutocompleteField } from '../StoreAutocompleteField';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 // Spied, not replaced: the picker's `visible` is what the person sees, and the
 // gorhom mock renders the sheet's content whether it is presented or not.
 jest.mock('#hooks/ui/useStandardBottomSheet', () => {

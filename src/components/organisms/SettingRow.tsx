@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { StyleSheet } from 'react-native-unistyles';
 import { ValueText } from '../atoms/ValueText';
@@ -13,7 +13,7 @@ import { Text } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
 import { kitTestIDs } from '#components/testIDs';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
 /** A single option for a `modal`/`radio` setting row. */
 export interface SettingOption {

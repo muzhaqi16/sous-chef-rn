@@ -1,9 +1,9 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { SettingsSection } from '#components/organisms/SettingsSection';
-import { usePerformanceStore } from '#/services/performance/performanceStore';
-import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
+import { usePerformanceStore } from '#services/performance/performanceStore';
+import { MemoryMonitor } from '#services/performance/MemoryMonitor';
 
 /**
  * The four tracking toggles. Owns the `MemoryMonitor` wiring, which is the one

@@ -1,13 +1,13 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import { useTurnOnPush } from '../useTurnOnPush';
 
-jest.mock('#/services/device/deviceRegistration', () => ({
+jest.mock('#services/device/deviceRegistration', () => ({
   registerDeviceInBackground: jest.fn(),
 }));
 const { registerDeviceInBackground } = jest.requireMock(
-  '#/services/device/deviceRegistration',
+  '#services/device/deviceRegistration',
 );
 
 const mockRequestPermissions = jest.fn();

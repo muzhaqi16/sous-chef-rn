@@ -1,10 +1,10 @@
-import type { TranslationKey } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import type { TranslationKey } from '#i18n';
+import type { Translate } from '#i18n/types';
 import {
   CollaboratorRole,
   MembershipRole,
-} from '#/graphql/generated/schemaTypes';
-import { personName } from '#/utils/formatters/memberFormatters';
+} from '#graphql/generated/schemaTypes';
+import { personName } from '#utils/formatters/memberFormatters';
 /**
  * Ownership, roles and user info for shopping lists and homes. An owner is
  * named by `personName`, so `OwnerInfo.name` can be undefined: `user.email`
@@ -45,7 +45,7 @@ export interface ShoppingListWithOwnership {
   } | null;
 }
 
-import { extractNodes } from '#/utils/connectionUtils';
+import { extractNodes } from '#utils/connectionUtils';
 
 /**
  * Home Types (matching GraphQL schema)

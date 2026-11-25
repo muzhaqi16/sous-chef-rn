@@ -1,14 +1,14 @@
 import { useSyncExternalStore } from 'react';
-import { isPastSyncWindow, queueStore } from '#/apollo/offlineQueue/queueStore';
+import { isPastSyncWindow, queueStore } from '#apollo/offlineQueue/queueStore';
 import {
   discardRefusedChange,
   namesNoRow,
   retryRefusedChange,
-} from '#/apollo/offlineQueue/refusedChanges';
-import type { QueuedMutation } from '#/apollo/offlineQueue/types';
-import { isTranslationKey, useTranslation } from '#/i18n';
-import { formatQuantity } from '#/utils/formatQuantity';
-import { isRecord } from '#/utils/isRecord';
+} from '#apollo/offlineQueue/refusedChanges';
+import type { QueuedMutation } from '#apollo/offlineQueue/types';
+import { isTranslationKey, useTranslation } from '#i18n';
+import { formatQuantity } from '#utils/formatQuantity';
+import { isRecord } from '#utils/isRecord';
 
 export type NotSavedReason = 'conflict' | 'expired' | 'gone' | 'refused';
 

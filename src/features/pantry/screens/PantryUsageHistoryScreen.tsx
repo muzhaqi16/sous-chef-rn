@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { StaticScreenProps } from '@react-navigation/native';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
 import { usePantryUsageHistory } from '#features/pantry/hooks/usePantryUsageHistory';

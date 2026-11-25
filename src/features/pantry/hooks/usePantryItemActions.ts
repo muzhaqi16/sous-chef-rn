@@ -1,17 +1,17 @@
 import { useRef, useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useApolloClient } from '@apollo/client/react';
-import { errorService } from '#/services/errorService';
-import type { SettleStatus } from '#/apollo/utils/settleMutation';
+import { errorService } from '#services/errorService';
+import type { SettleStatus } from '#apollo/utils/settleMutation';
 import { dropRankedUnits } from '#features/pantry/cache/rankedUnits';
-import type { WasteReason } from '#/graphql/generated/schemaTypes';
+import type { WasteReason } from '#graphql/generated/schemaTypes';
 import {
   TopLevelErrorCode,
   UsagePurpose,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { Telemetry } from '#services/telemetry';
 import { UsePantryItemActions_IdFragmentDoc } from './usePantryItemActions.generated';
-import { toDateKey } from '#/utils/dateUtils';
+import { toDateKey } from '#utils/dateUtils';
 import { stockAmountOf, type RestockContents } from '#domain/stockAmount';
 import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
 import {

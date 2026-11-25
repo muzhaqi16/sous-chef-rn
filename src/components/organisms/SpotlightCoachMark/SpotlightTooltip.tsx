@@ -12,7 +12,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Button } from '#components/molecules/Button';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { requirePlatform } from '#platform/install';
 import { ARROW_SIZE } from './spotlightConstants';

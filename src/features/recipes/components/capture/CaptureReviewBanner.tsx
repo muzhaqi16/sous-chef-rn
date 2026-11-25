@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useCaptureReview } from '#features/recipes/hooks/useCaptureReview';
 import { recipesTestIDs } from '#features/recipes/testIDs';

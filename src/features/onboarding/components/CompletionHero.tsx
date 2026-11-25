@@ -8,9 +8,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { requirePlatform } from '#platform/install';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { Text } from '#components/atoms/Text';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useFirstName } from '#features/onboarding/hooks/useFirstName';

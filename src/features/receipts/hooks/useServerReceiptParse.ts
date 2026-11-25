@@ -5,19 +5,19 @@ import {
   useMutation,
   useQuery,
 } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { getDeviceLocale } from '#/utils/deviceLocale';
-import { backoffDelay } from '#/utils/backoff';
+import { useTranslation } from '#i18n';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { generateEntityId } from '#utils/generateEntityId';
+import { getDeviceLocale } from '#utils/deviceLocale';
+import { backoffDelay } from '#utils/backoff';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 import {
   ReceiptParseReadersFragmentDoc,
   type ReceiptParseReadersFragment,
-} from '#/graphql/readers/receiptParseReaders.generated';
+} from '#graphql/readers/receiptParseReaders.generated';
 import {
   useReceiptDraft,
   useReceiptDraftActions,
@@ -25,7 +25,7 @@ import {
 } from '../store/receiptDraftStore';
 import { classifyCreateResult, outcomeOf } from '../utils/serverReceipt';
 import { useIsLiveChannelOpen } from '#hooks/subscriptions/useIsLiveChannelOpen';
-import { onWorkSettled } from '#/services/subscriptions/settledWork';
+import { onWorkSettled } from '#services/subscriptions/settledWork';
 import {
   CreateReceiptParseDocument,
   ReceiptParseDocument,

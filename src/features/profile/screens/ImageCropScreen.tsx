@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { logger } from '#/utils/environment';
-import { useTranslation } from '#/i18n';
+import { logger } from '#utils/environment';
+import { useTranslation } from '#i18n';
 import { View, Image, Dimensions } from 'react-native';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import {
   usePanGesture,
   usePinchGesture,
@@ -22,14 +22,14 @@ import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
 import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import ImageEditor from '@react-native-community/image-editor';
-import type { ImageFile } from '#/types/media';
-import { errorService } from '#/services/errorService';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import type { ImageFile } from '#types/media';
+import { errorService } from '#services/errorService';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 import { useStore } from '#store';
 import { LocalImage } from '#components/atoms/LocalImage';
 import { Screen } from '#components/templates/Screen';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CROP_SIZE = Math.min(screenWidth * 0.8, 300);

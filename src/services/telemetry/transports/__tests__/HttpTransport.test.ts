@@ -2,7 +2,7 @@ import { HttpTransport } from '../HttpTransport';
 import type { TelemetryConfig, LogEntry, MetricEntry } from '../../types';
 import { TransportSendError } from '../../types';
 
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 const mockFetch = jest.fn();
 global.fetch = mockFetch;

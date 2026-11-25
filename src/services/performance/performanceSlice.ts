@@ -3,8 +3,8 @@ import type {
   RenderMetrics,
   ScreenMetrics,
   MemorySnapshot,
-} from '#/services/performance/types';
-import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
+} from '#services/performance/types';
+import { DEFAULT_PERFORMANCE_CONFIG } from '#services/performance/types';
 
 export interface PerformanceState {
   // Configuration

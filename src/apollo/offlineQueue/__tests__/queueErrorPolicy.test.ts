@@ -14,8 +14,8 @@ import {
   ErrorCode,
   ErrorDisposition,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
-import { SessionError } from '#/utils/errors/sessionError';
+} from '#graphql/generated/schemaTypes';
+import { SessionError } from '#utils/errors/sessionError';
 
 describe('classifyReplayResult', () => {
   it('returns applied for a success payload', () => {

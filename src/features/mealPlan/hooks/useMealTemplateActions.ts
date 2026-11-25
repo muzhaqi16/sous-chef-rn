@@ -9,16 +9,16 @@ import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions'
 import {
   MealPlanType,
   type TemplateCategory,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   readPlanSource,
   readTemplateSource,
 } from '#features/mealPlan/cache/derivationSources';
-import { toastService } from '#/services/toastService';
-import { Telemetry } from '#/services/telemetry';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import type { SettledFailure } from '#/apollo/utils/settleMutation';
-import { useTranslation } from '#/i18n';
+import { toastService } from '#services/toastService';
+import { Telemetry } from '#services/telemetry';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { SettledFailure } from '#apollo/utils/settleMutation';
+import { useTranslation } from '#i18n';
 
 /** What a plan made from a template states; its meals come from the cache. */
 export interface PlanFromTemplateInput {

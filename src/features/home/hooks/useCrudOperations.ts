@@ -4,14 +4,14 @@
  * reported and shown exactly once whichever form it arrives in.
  */
 
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import type { DocumentNode } from 'graphql';
 import {
   settleMutation,
   type SettleOptions,
-} from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { t } from '#/i18n';
+} from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { t } from '#i18n';
 
 /** What the builder reads off a mutate call: `data`, and a resolved `error`. */
 type MutateResultLike<TResult> = {

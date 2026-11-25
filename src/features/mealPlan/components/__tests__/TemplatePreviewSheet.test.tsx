@@ -6,13 +6,13 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import {
   MembershipRole,
   TemplateCategory,
-} from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+} from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { useMealTemplate } from '#features/mealPlan/hooks/useMealTemplate';
 import { TemplatePreviewSheet } from '../TemplatePreviewSheet';

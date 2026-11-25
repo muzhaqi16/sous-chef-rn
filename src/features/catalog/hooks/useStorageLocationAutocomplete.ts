@@ -1,7 +1,4 @@
-import type {
-  StorageState,
-  StorageType,
-} from '#/graphql/generated/schemaTypes';
+import type { StorageState, StorageType } from '#graphql/generated/schemaTypes';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
 
 /** What the storage-location picker reads off a location, and hands back on select. */

@@ -5,8 +5,8 @@
  */
 
 import type { DeepPartial } from '@apollo/client/utilities';
-import type { PriceSuggestion } from '#/graphql/generated/schemaTypes';
-import { formatCurrency } from '#/utils/formatters/number';
+import type { PriceSuggestion } from '#graphql/generated/schemaTypes';
+import { formatCurrency } from '#utils/formatters/number';
 
 /**
  * Deliberately NOT rounded to cents: the server rounds the product, not the

@@ -2,7 +2,7 @@ import {
   BaseDimension,
   ItemType,
   StorageState,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 // These enum namespaces are split across the two features that own the
 // entities: `itemType` is the catalog's, `storageState` / `baseDimension` are
 // the pantry's. Imported and spread rather than read from the merged tree so a

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   SpotlightCoachMark,
   type TargetRect,
 } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
-import { useTabBarState } from '#/context/TabBarActionsContext';
+import { useTabBarState } from '#context/TabBarActionsContext';
 import { GUIDE_TOURS } from '#domain/guides';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
 import { useTutorialSession } from '#hooks/ui/tutorialSession';

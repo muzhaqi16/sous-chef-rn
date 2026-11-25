@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { BatchStatus } from '#graphql/generated/schemaTypes';
 import { BatchListItem } from './BatchListItem';
 import { useOpenPantryItemBatch } from '#features/pantry/hooks/mutations/useOpenPantryItemBatch';
 import { useWastePantryItemBatch } from '#features/pantry/hooks/mutations/useWastePantryItemBatch';

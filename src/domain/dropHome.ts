@@ -1,7 +1,7 @@
 import type { ApolloCache } from '@apollo/client';
 import { GetHomesDocument } from '#operations/home/home.generated';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { extractNodes } from '#/utils/connectionUtils';
+import { safeEvict } from '#apollo/utils/cacheUpdaters';
+import { extractNodes } from '#utils/connectionUtils';
 import { useStore } from '#store/index';
 
 /**

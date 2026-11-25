@@ -1,6 +1,6 @@
 import React from 'react';
 import { IconButton } from '#components/atoms/IconButton';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { InfoRow } from '#components/atoms/InfoRow';
@@ -17,7 +17,7 @@ import {
   PantryDetailInfo_PantryItemFragmentDoc,
   type PantryDetailInfo_PantryItemFragment,
 } from './PantryDetailInfo.generated';
-import { resolveCurrency, usePreferredCurrency } from '#/domain/money';
+import { resolveCurrency, usePreferredCurrency } from '#domain/money';
 import {
   formatCondition,
   formatAcquisitionMethod,
@@ -26,7 +26,7 @@ import {
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import type { BatchPricingSummary } from '#features/pantry/utils/summarizeBatchPricing';
-import { ItemCondition } from '#/graphql/generated/schemaTypes';
+import { ItemCondition } from '#graphql/generated/schemaTypes';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 interface PantryDetailInfoProps {

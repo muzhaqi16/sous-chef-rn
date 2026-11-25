@@ -1,7 +1,7 @@
 import type { ApolloCache } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import type { DocumentNode } from 'graphql';
-import { invitationRefusalCopy } from '#/domain/invitationRefusal';
+import { invitationRefusalCopy } from '#domain/invitationRefusal';
 import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
@@ -15,20 +15,20 @@ import {
   createAddToQueryConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
   safeEvict,
-} from '#/apollo/utils/cacheUpdaters';
+} from '#apollo/utils/cacheUpdaters';
 import {
   settleMutation,
   type Settled,
   type SettledFailure,
   type SettleOptions,
-} from '#/apollo/utils/settleMutation';
+} from '#apollo/utils/settleMutation';
 import {
   appliedPayload,
   extractMutationPayload,
-} from '#/utils/errors/mutationPayload';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { useTranslation } from '#/i18n';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+} from '#utils/errors/mutationPayload';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { useTranslation } from '#i18n';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 
 const addToHomes = createAddToQueryConnectionUpdater('homes', 'Home');
 const removePendingHomeInvite = createRemoveFromParentConnectionUpdater(

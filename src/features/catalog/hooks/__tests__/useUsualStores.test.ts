@@ -1,12 +1,12 @@
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import { UsualStoreSource } from '#graphql/generated/schemaTypes';
 import { storeChoiceName } from '#domain/stores';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { writeUsualStores } from '#features/catalog/cache/usualStores';
 import { useUsualStores } from '#features/catalog/hooks/useUsualStores';
 import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';

@@ -15,11 +15,11 @@ jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/utils/deviceLocale', () => ({
-  ...jest.requireActual('#/utils/deviceLocale'),
+jest.mock('#utils/deviceLocale', () => ({
+  ...jest.requireActual('#utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
-const { getDeviceDecimalSeparator } = jest.requireMock('#/utils/deviceLocale');
+const { getDeviceDecimalSeparator } = jest.requireMock('#utils/deviceLocale');
 
 jest.mock('#features/catalog/components/MultiImagePicker', () => ({
   MultiImagePicker: () => null,

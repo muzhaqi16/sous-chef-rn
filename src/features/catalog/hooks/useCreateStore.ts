@@ -1,8 +1,8 @@
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { useTranslation } from '#/i18n';
-import type { CreateStoreInput } from '#/graphql/generated/schemaTypes';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { generateEntityId } from '#utils/generateEntityId';
+import { useTranslation } from '#i18n';
+import type { CreateStoreInput } from '#graphql/generated/schemaTypes';
 import type { CreateStoreInputs } from '#features/catalog/offline/localWrites';
 import { CreateStoreDocument } from './useCreateStore.generated';
 

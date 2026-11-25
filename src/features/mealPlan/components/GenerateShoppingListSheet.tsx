@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Controller, useController, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { boolean, mixed, object, string, type ObjectSchema } from 'yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   Pressable,
   PrimaryActivityIndicator,
@@ -20,7 +20,7 @@ import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingLi
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { useOpening } from '#hooks/ui/useOpening';
-import { lazyMessage, reportValidationErrors } from '#/utils/validation/common';
+import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
 
 type Destination = 'new' | 'existing';
 

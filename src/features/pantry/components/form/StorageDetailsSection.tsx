@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { Control, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
 import type { FieldDef } from '#components/molecules/DynamicFormFields';
@@ -11,16 +11,16 @@ import {
   type ChipOption,
 } from '#components/molecules/ChipScrollRow';
 import { DatePickerField } from '#components/molecules/DatePickerField';
-import type { ItemCondition } from '#/graphql/generated/schemaTypes';
+import type { ItemCondition } from '#graphql/generated/schemaTypes';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState } from '#graphql/generated/schemaTypes';
 import { Label } from '#components/atoms/Label';
 import type { PantryItemFormData } from './PantryItemForm';
 import {
   ITEM_CONDITION_OPTIONS,
   conditionLabelKey,
 } from '#features/pantry/utils/itemEnumLabels';
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 
 // A function, not a const: at import time these labels would freeze whichever

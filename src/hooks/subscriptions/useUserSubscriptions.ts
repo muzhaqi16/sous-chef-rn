@@ -5,28 +5,28 @@
  */
 
 import { useApolloClient, useSubscription } from '@apollo/client/react';
-import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
+import { isSelfEcho } from '#services/subscriptions/isSelfEcho';
 import {
   UserEventsDocument,
   type UserEventsSubscription,
 } from '#operations/auth/user.generated';
 import { GetHomesDocument } from '#operations/home/home.generated';
-import { forgetHome } from '#/domain/forgetHome';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { announceWorkSettled } from '#/services/subscriptions/settledWork';
+import { forgetHome } from '#domain/forgetHome';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
+import { announceWorkSettled } from '#services/subscriptions/settledWork';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
-} from '#/services/subscriptions/types';
+} from '#services/subscriptions/types';
 import {
   ModerationReasonCode,
   UserSubtype,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { t } from '#/i18n';
-import { toastService } from '#/services/toastService';
-import { authService } from '#/services/authService';
+import { safeEvict } from '#apollo/utils/cacheUpdaters';
+import { t } from '#i18n';
+import { toastService } from '#services/toastService';
+import { authService } from '#services/authService';
 import { useSubscriptionTransportRecovery } from './useSubscriptionTransportRecovery';
 
 type UserEventPayload = UserEventsSubscription['userEvents'];

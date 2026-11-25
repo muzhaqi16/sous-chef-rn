@@ -1,7 +1,7 @@
-import { toastService } from '#/services/toastService';
-import { t } from '#/i18n';
-import { storage } from '#/store/deviceStorage';
-import { logger } from '#/utils/environment';
+import { toastService } from '#services/toastService';
+import { t } from '#i18n';
+import { storage } from '#store/deviceStorage';
+import { logger } from '#utils/environment';
 import { clientVersion } from './clientIdentity';
 
 /**

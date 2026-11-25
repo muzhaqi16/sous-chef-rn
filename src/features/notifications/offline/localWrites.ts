@@ -4,9 +4,9 @@
  * normalization, so a local delta lasts only as long as its layer.
  */
 import type { OperationVariables } from '@apollo/client';
-import type { LocalWrite } from '#/apollo/pendingWrites/types';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
+import type { LocalWrite } from '#apollo/pendingWrites/types';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
 import {
   applyAllNotificationsRead,
   applyNotificationRead,

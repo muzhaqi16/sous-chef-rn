@@ -3,19 +3,19 @@ import { View } from 'react-native';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { useShareShoppingList } from '#features/shoppingList/hooks/useShareShoppingList';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
-import { getFormAnimationPreset } from '#/constants/animations';
-import { buildJoinListUrl } from '#/utils/deepLinkUrls';
+import { getFormAnimationPreset } from '#constants/animations';
+import { buildJoinListUrl } from '#utils/deepLinkUrls';
 import { shareUrl } from '#native/share';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 interface ShareCodeSectionProps {
   listId: string;

@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react-native';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import type { getMealPlanPermissions } from '#features/mealPlan/utils/mealPlanPermissions';
 import { useMealPlanPermissions } from '../useMealPlanPermissions';
 

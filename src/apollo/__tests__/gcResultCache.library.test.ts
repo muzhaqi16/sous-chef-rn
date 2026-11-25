@@ -15,8 +15,8 @@ import {
   type ObservableQuery,
   type TypedDocumentNode,
 } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 type ListData = {

@@ -1,4 +1,4 @@
-import { appConfig } from '#/config/appConfig';
+import { appConfig } from '#config/appConfig';
 import { derivePalette, type DerivedPalette } from './derivePalette';
 import { colors } from './colors';
 

@@ -1,4 +1,4 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { useDataState } from '#hooks/data/useDataState';
 import { skipToken, useQuery } from '@apollo/client/react';
 import {
@@ -12,11 +12,11 @@ import type {
   LocationFieldsInputs,
   RemoveLocationInputs,
 } from '#features/catalog/offline/localWrites';
-import type { UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
-import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import type { UpdateStorageLocationInput } from '#graphql/generated/schemaTypes';
+import { usePreservedNodes } from '#hooks/apollo/usePreservedConnection';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 /** Flat storage-location node as returned by `GetStorageLocations`. */
 type FlatStorageLocation =

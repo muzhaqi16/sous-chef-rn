@@ -6,13 +6,13 @@ import {
   userEvent,
   within,
 } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   Diet,
   ReligiousDiet,
   Intolerance,
   RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { DietaryStepScreen } from '../DietaryStepScreen';
 import { drainTimers } from '#/test-utils/drainTimers';

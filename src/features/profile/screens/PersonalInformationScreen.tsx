@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import type { SettingItem } from '#components/organisms/SettingRow';
 import { SubScreen } from '#components/templates/SubScreen';
@@ -9,11 +9,11 @@ import {
   PERSONAL_INFO_CONFIG,
   type SettingItemConfig,
   type SettingOptionConfig,
-} from '#/config/settingsConfig';
+} from '#config/settingsConfig';
 import { useUpdateProfile } from '#features/profile/hooks/useUpdateProfile';
-import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import { ProfileVisibility } from '#graphql/generated/schemaTypes';
 import { extractDateString } from '#utils/dateUtils';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { useDataState } from '#hooks/data/useDataState';
 import { DataStateView } from '#components/organisms/DataStateView';
 

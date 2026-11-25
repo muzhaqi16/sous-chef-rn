@@ -2,9 +2,9 @@ import { LaunchArguments } from 'react-native-launch-arguments';
 import {
   reconnectWebSocket,
   type WebSocketTransport,
-} from '#/apollo/links/wsLink';
-import { env } from '#/config/env';
-import { getResolvedLanguage, onLanguageChanged } from '#/i18n';
+} from '#apollo/links/wsLink';
+import { env } from '#config/env';
+import { getResolvedLanguage, onLanguageChanged } from '#i18n';
 
 // RN's WebSocket takes a third `options` argument that graphql-ws, which
 // constructs the socket as `new Impl(url, protocols)`, never passes.

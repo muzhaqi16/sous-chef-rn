@@ -1,4 +1,4 @@
-import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import { ExternalSource } from '#graphql/generated/schemaTypes';
 import {
   MAX_CATALOG_INGREDIENTS,
   MAX_CATALOG_INGREDIENT_LENGTH,

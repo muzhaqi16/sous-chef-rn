@@ -12,7 +12,7 @@ import {
   type CorrectPackageSizeModal_BatchFragment,
   type CorrectPackageSizeModal_PantryItemFragment,
 } from '#features/pantry/components/modals/CorrectPackageSizeModal.generated';
-import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitSystem, UnitType } from '#graphql/generated/schemaTypes';
 import {
   asAbbreviation,
   readingAsAbbreviation,

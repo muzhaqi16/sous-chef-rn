@@ -15,14 +15,14 @@
  * Telemetry is what surfaces it (`app_apollo_restore_ms{outcome="empty"}`
  * beside a 79KB write).
  */
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 
 const mockIsStorageReady = jest.fn<boolean, []>();
 const mockLoad = jest.fn();
 
 jest.spyOn(storage, 'isReady').mockImplementation(() => mockIsStorageReady());
 
-jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
+jest.mock('#apollo/offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: {
     load: () => mockLoad(),
     scheduleExtractAndSave: jest.fn(),
@@ -33,8 +33,8 @@ jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
   },
 }));
 
-function loadClient(): typeof import('#/apollo/client') {
-  return require('#/apollo/client');
+function loadClient(): typeof import('#apollo/client') {
+  return require('#apollo/client');
 }
 
 describe('persisted Apollo cache restore', () => {

@@ -2,7 +2,7 @@
 
 import { renderHook } from '@testing-library/react-native';
 import { useFPSMonitor } from '#features/devtools/hooks/useFPSMonitor';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 // __DEV__ is true in test env by default
 describe('useFPSMonitor', () => {

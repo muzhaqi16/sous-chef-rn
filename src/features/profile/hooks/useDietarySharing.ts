@@ -1,9 +1,9 @@
 import { useQuery } from '@apollo/client/react';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { useTranslation } from '#/i18n';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { errorService } from '#/services/errorService';
+import { useTranslation } from '#i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { generateEntityId } from '#utils/generateEntityId';
+import { errorService } from '#services/errorService';
 import {
   DietarySharingHomesDocument,
   UpdateDietarySharingDocument,

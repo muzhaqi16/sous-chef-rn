@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type ObjectSchema } from 'yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   OnPrimaryActivityIndicator,
   Pressable,
@@ -17,7 +17,7 @@ import { DataStateView } from '#components/organisms/DataStateView';
 import type { DataState } from '#hooks/data/useDataState';
 import type { SelectorConfig } from '#components/organisms/AnimatedItemSelector/types';
 import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
-import { lazyMessage, reportValidationErrors } from '#/utils/validation/common';
+import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
 
 interface ShoppingList {
   id: string;

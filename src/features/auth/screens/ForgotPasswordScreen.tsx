@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AuthFormTemplate } from '#features/auth/components/AuthFormTemplate';
 import { EmailInput } from '#components/molecules/EmailInput';
 import { Text } from '#components/atoms/Text';
@@ -11,7 +11,7 @@ import { AuthWrapper } from '#features/auth/components/AuthWrapper';
 import { useRequestPasswordReset } from '#features/auth/hooks/useRequestPasswordReset';
 import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
 import { useResendBackoff } from '#features/auth/hooks/useResendBackoff';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { toastService } from '#services/toastService';
 import { authTestIDs } from '#features/auth/testIDs';
 

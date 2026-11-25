@@ -1,7 +1,7 @@
 'use no memo';
 
 import { usePantryStats } from '../usePantryStats';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState } from '#graphql/generated/schemaTypes';
 
 type PantryStatsItem = NonNullable<
   Parameters<typeof usePantryStats>[0]['pantryItems']

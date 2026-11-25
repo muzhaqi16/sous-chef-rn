@@ -7,7 +7,7 @@ import { drainTimers } from '#/test-utils/drainTimers';
 import {
   StoreDepartment,
   StoreRouteSource,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { shoppingListRowItem } from '#/test-utils/fixtures/shoppingListRowItem';
 import { AisleViewRouteDocument } from '../useAisleView.generated';

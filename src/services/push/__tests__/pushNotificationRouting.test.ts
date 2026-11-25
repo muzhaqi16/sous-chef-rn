@@ -1,8 +1,8 @@
 import { routeNotificationTap } from '../pushNotificationRouting';
-import NavigationService from '#/services/NavigationService';
+import NavigationService from '#services/NavigationService';
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 
-jest.mock('#/services/NavigationService', () => ({
+jest.mock('#services/NavigationService', () => ({
   __esModule: true,
   default: { navigate: jest.fn() },
 }));

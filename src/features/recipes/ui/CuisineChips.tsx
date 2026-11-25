@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Chip } from '#components/molecules/Chip';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
-import type { Cuisine } from '#/graphql/generated/schemaTypes';
+import type { Cuisine } from '#graphql/generated/schemaTypes';
 import {
   POPULAR_CUISINES,
   getAllCuisineOptions,

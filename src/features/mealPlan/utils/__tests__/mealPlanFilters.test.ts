@@ -1,4 +1,4 @@
-import { MealPlanType } from '#/graphql/generated/schemaTypes';
+import { MealPlanType } from '#graphql/generated/schemaTypes';
 import {
   EMPTY_MEAL_PLAN_FILTERS,
   filterMealPlans,

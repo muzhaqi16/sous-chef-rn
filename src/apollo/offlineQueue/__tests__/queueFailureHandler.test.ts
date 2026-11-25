@@ -4,20 +4,20 @@ import {
   setChangesNotSavedOpener,
 } from '../queueFailureHandler';
 import { queueManager } from '../queueManager';
-import { feedEngine } from '#/apollo/feed/feedEngine';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { toastService } from '#/services/toastService';
-import { t } from '#/i18n';
+import { feedEngine } from '#apollo/feed/feedEngine';
+import { safeEvict } from '#apollo/utils/cacheUpdaters';
+import { toastService } from '#services/toastService';
+import { t } from '#i18n';
 import { queueStore } from '../queueStore';
 import type { FailedMutationInfo } from '../types';
 import { classifyError } from '../queueErrorPolicy';
 import { subjectTypeOf } from '../queuedSubject';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import type { ApolloClient } from '@apollo/client';
-import type { LocalWriteTable } from '#/apollo/pendingWrites/types';
-import { registerApolloClient } from '#/apollo/clientRegistry';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import type { LocalWriteTable } from '#apollo/pendingWrites/types';
+import { registerApolloClient } from '#apollo/clientRegistry';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -28,7 +28,7 @@ const client = {
   refetchQueries: jest.fn(() => Promise.resolve([])),
 } as unknown as jest.Mocked<ApolloClient>;
 registerApolloClient(client);
-jest.mock('#/services/errorService', () => ({
+jest.mock('#services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
 jest.mock('#features/receipts/offline/receiptCheckIn', () => ({
@@ -40,10 +40,10 @@ jest.mock('#features/receipts/offline/receiptCheckIn', () => ({
 // updaters, which `queueManager` reaches through `queueReplayReconcilers`. A
 // factory omitting one makes this suite fail to LOAD, not fail an assertion —
 // so each returns a jest.fn() rather than being left undefined.
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+jest.mock('#apollo/utils/cacheUpdaters', () => ({
   // Real for what this suite does not assert on, so an updater a module in the
   // queue's import graph builds at load exists.
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
+  ...jest.requireActual('#apollo/utils/cacheUpdaters'),
   safeEvict: jest.fn(),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
@@ -54,13 +54,13 @@ jest.mock('#features/shoppingList/cache/purchase', () => ({
   writePurchaseInfo: jest.fn(),
 }));
 const mockRefuse = jest.fn();
-jest.mock('#/apollo/pendingWrites/pendingWrites', () => ({
+jest.mock('#apollo/pendingWrites/pendingWrites', () => ({
   pendingWritesOf: () => ({
     refuse: mockRefuse,
     keepsRefusal: (operationName: string) => {
       const { LOCAL_WRITES } = jest.requireActual<{
         LOCAL_WRITES: LocalWriteTable;
-      }>('#/apollo/pendingWrites/localWriteRegistry');
+      }>('#apollo/pendingWrites/localWriteRegistry');
       return LOCAL_WRITES[operationName]?.recoverable !== false;
     },
   }),

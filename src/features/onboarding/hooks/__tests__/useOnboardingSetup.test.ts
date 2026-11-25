@@ -1,6 +1,6 @@
 'use no memo';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 import {
   recordMock,

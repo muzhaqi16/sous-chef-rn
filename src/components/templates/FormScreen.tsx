@@ -2,9 +2,9 @@ import React from 'react';
 import { View } from 'react-native';
 import { usePreventRemove } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Screen } from './Screen';
 

@@ -11,19 +11,19 @@ import {
   type UseUpdatePantryItem_PantryItemFragment,
   type UseUpdatePantryItem_RowFragment,
 } from './useUpdatePantryItem.generated';
-import { alertService } from '#/services/alertService';
-import type { StorageType } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import type { StorageType } from '#graphql/generated/schemaTypes';
 import {
   localBrand,
   localStorageLocation,
 } from '#features/catalog/cache/localRefs';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
 import { buildDirtyUpdateInput } from './utils';
 import type { DirtyFieldFlags, FormDataInput } from './types';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { logger } from '#/utils/environment';
-import { toDateKey, todayKey } from '#/utils/dateUtils';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+import { logger } from '#utils/environment';
+import { toDateKey, todayKey } from '#utils/dateUtils';
 
 interface UseUpdatePantryItemOptions {
   refetch?: () => void;

@@ -9,8 +9,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
 import { Button } from '#components/molecules/Button';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
-import { appConfig } from '#/config/appConfig';
+import { useTranslation } from '#i18n';
+import { appConfig } from '#config/appConfig';
 import { openWebUrl } from '#native/externalUrl';
 import { useIsClientUpgradeRequired } from '#store/useAppStore';
 

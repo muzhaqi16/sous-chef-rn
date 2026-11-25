@@ -1,7 +1,7 @@
 import type {
   MealPlanFilters,
   MealPlanType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { matchesTerm } from '#hooks/search/useLocalSearch';
 
 export interface MealPlanFilterState {

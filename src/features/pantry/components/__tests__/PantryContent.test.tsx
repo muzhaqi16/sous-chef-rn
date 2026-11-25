@@ -2,14 +2,14 @@
 
 import React from 'react';
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   pantryRows,
   seedPantry,
   type PantryItemFixture,
 } from '#/test-utils/fixtures/pantryFixtures';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 
 import {
   PantrySortDirection,

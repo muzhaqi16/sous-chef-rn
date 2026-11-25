@@ -1,7 +1,7 @@
 import React from 'react';
 import type { StyleProp, TextStyle } from 'react-native';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 interface PerUnitHintProps {
   /** Already formatted in its currency. */

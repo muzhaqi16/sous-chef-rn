@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles/commonStyles';
-import { useTranslation } from '#/i18n';
+import { commonStyles } from '#styles/commonStyles';
+import { useTranslation } from '#i18n';
 import { Header } from '#components/organisms/Header';
 
 interface SheetConfirm {

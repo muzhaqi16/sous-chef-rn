@@ -1,4 +1,4 @@
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { useQuery, useFragment } from '@apollo/client/react';
 import {
   GetItemForEditDocument,

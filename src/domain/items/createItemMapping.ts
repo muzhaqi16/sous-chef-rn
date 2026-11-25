@@ -5,11 +5,11 @@ import type {
   ItemType,
   ItemUnitInput,
   StorageState,
-} from '#/graphql/generated/schemaTypes';
-import type { ImageFile } from '#/types/media';
+} from '#graphql/generated/schemaTypes';
+import type { ImageFile } from '#types/media';
 import { useStore } from '#store';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { refByIdOrName } from '#/utils/refInput';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { refByIdOrName } from '#utils/refInput';
 
 /** A net-weight row as the form collects it: a picked unit's id, or a typed name. */
 export interface NetWeightRow {

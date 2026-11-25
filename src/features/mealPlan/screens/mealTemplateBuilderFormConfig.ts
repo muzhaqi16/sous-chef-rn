@@ -1,10 +1,10 @@
 import { mixed, object, string, type ObjectSchema } from 'yup';
-import { lazyMessage } from '#/utils/validation/common';
+import { lazyMessage } from '#utils/validation/common';
 import {
   MealType,
   TemplateCategory,
   type MealRefInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { startingServings } from '#domain/servings';
 import { DEFAULT_PLAN_SERVINGS } from './createMealPlanFormConfig';
 

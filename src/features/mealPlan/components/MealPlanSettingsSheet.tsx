@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
-import { useMoney } from '#/domain/money';
-import { useTranslation } from '#/i18n';
+import { useMoney } from '#domain/money';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
@@ -19,12 +19,12 @@ import type { MealPlanPermissions } from '#features/mealPlan/utils/mealPlanPermi
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { Text } from '#components/atoms/Text';
-import { formatDateRangeWithYear } from '#/utils/formatters/date';
+import { formatDateRangeWithYear } from '#utils/formatters/date';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
-import { personName } from '#/utils/formatters/memberFormatters';
+import { destructiveConfirm } from '#services/destructiveConfirm';
+import { personName } from '#utils/formatters/memberFormatters';
 
 interface MealPlanSettingsSheetProps {
   visible: boolean;

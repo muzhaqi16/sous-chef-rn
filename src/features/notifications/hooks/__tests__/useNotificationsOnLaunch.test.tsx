@@ -3,13 +3,13 @@ import { ApolloClient, ApolloLink } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
 import { act, renderHook } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import {
   connectResyncSources,
   createRefetchEventManager,
-} from '#/apollo/refetchEvents';
+} from '#apollo/refetchEvents';
 import { useStore } from '#store';
 import {
   completeMockedResponse,
@@ -19,7 +19,7 @@ import { drainTimers } from '#/test-utils/drainTimers';
 import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import { useNotificationsOnLaunch } from '../useNotificationsOnLaunch';
 
-jest.mock('#/apollo/offlineQueue/queueManager', () => ({
+jest.mock('#apollo/offlineQueue/queueManager', () => ({
   queueManager: { whenIdle: jest.fn(async () => {}) },
 }));
 

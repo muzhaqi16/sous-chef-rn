@@ -11,18 +11,18 @@ import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useReceiptFlowExits } from './receiptFlowExits';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
-import { alertService } from '#/services/alertService';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { useReceiptScan } from './useReceiptScan';
 import {
   useServerReceiptParse,
   type ServerReadingStatus,
 } from '../hooks/useServerReceiptParse';
-import { formatDateTime } from '#/utils/formatters/date';
+import { formatDateTime } from '#utils/formatters/date';
 import { receiptReviewLines } from '../utils/receiptReviewLines';
 import type { ReceiptDraft } from '../store/receiptDraftStore';
 import { receiptsTestIDs } from '../testIDs';
-import { cappedNames } from '#/utils/cappedNames';
+import { cappedNames } from '#utils/cappedNames';
 
 interface BannerCopy {
   title: TranslationKey;

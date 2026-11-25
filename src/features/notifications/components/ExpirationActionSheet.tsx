@@ -4,19 +4,19 @@
  */
 
 import React from 'react';
-import { useTranslation, type TranslationKey } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import { useTranslation, type TranslationKey } from '#i18n';
+import type { Translate } from '#i18n/types';
 import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { ExpirationAction } from '#/graphql/generated/schemaTypes';
+import { ExpirationAction } from '#graphql/generated/schemaTypes';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { Icon, type IconName } from '#components/atoms/Icon';
 import { Title } from '#components/atoms/Title';
 import { Text } from '#components/atoms/Text';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { useToday } from '#hooks/app/useToday';
 
 interface ExpirationActionSheetProps {

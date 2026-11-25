@@ -5,18 +5,18 @@
  * The first 50 lines it is made with ride the create and show with it.
  */
 
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ADD_ITEMS_BATCH_LIMIT } from '#features/shoppingList/cache/createShoppingListRow';
 import type { LocalShoppingListItem } from '#features/shoppingList/cache/items';
 import type { CreateListInputs } from '#features/shoppingList/offline/localWrites';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { generateEntityId } from '#/utils/generateEntityId';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { generateEntityId } from '#utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import type {
   BatchAddShoppingListItemInput,
   CreateShoppingListInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /** Lines a new list is made with, each under the id minted for it. */
 export interface StartingLines<TItem extends BatchAddShoppingListItemInput> {

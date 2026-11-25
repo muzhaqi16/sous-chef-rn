@@ -7,10 +7,10 @@ import {
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { ProfileVisibility } from '#graphql/generated/schemaTypes';
 import {
   GetUserProfileDocument,
   UpdateUserProfileDocument,

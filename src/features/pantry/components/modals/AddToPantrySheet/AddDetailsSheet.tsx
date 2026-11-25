@@ -3,7 +3,7 @@ import React, { useState, useRef } from 'react';
 import { useForm, useWatch, type Path, type PathValue } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PagerView, { type PagerViewRef } from 'react-native-pager-view';
 import { StyleSheet } from 'react-native-unistyles';
@@ -11,7 +11,7 @@ import { usePantryItemSubmission } from '#features/pantry/hooks/usePantryItemSub
 import {
   StorageState,
   type ItemCondition,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { OfferedAcquisitionMethod } from '#features/pantry/utils/itemEnumLabels';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 
@@ -22,8 +22,8 @@ import { StockSettingsPage } from './StockSettingsPage';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { takesContents } from '#domain/stockAmount';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
-import { reportValidationErrors } from '#/utils/validation/common';
+import type { UnitType } from '#graphql/generated/schemaTypes';
+import { reportValidationErrors } from '#utils/validation/common';
 import { useDiscardGuard } from '#hooks/ui/useDiscardGuard';
 import { isOwnKey } from '#utils/isOwnKey';
 import {

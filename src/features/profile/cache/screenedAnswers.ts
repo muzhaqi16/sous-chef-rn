@@ -1,5 +1,5 @@
 import type { ApolloCache } from '@apollo/client';
-import type { Query } from '#/graphql/generated/schemaTypes';
+import type { Query } from '#graphql/generated/schemaTypes';
 
 /** The root fields the server screens by every restriction the caller holds. */
 const SCREENED_BY_HELD_RESTRICTIONS = [

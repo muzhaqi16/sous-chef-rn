@@ -4,8 +4,8 @@
  * landing signed out would otherwise leave the sampler running all session,
  * perturbing every later measurement, silently in release.
  */
-import { StartupMark } from '#/native/StartupMark';
-import { logger } from '#/utils/environment';
+import { StartupMark } from '#native/StartupMark';
+import { logger } from '#utils/environment';
 
 import {
   isStartupProfilerArmed,

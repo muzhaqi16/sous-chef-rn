@@ -1,14 +1,14 @@
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 
 // The mocks are referenced through `mock*` bindings declared here rather than
 // through the imported module objects, so they survive the `jest.resetModules()`
 // that `freshLaunch()` uses — a re-registered factory closes over the same spies.
 const mockToast = jest.fn();
 
-jest.mock('#/services/toastService', () => ({
+jest.mock('#services/toastService', () => ({
   toastService: { info: mockToast },
 }));
-jest.mock('#/i18n', () => ({
+jest.mock('#i18n', () => ({
   t: jest.fn((key: string) => key),
 }));
 jest.mock('../clientIdentity', () => ({

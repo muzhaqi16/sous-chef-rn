@@ -2,7 +2,7 @@
 
 import { captureOnData } from '#/test-utils/subscriptionCapture';
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { useShoppingListSubscriptions } from '#features/shoppingList/hooks/useShoppingListSubscriptions';
@@ -10,8 +10,8 @@ import { MyShoppingListsEventsDocument } from '#features/shoppingList/graphql/sh
 import {
   MutationType,
   ShoppingListSubtype,
-} from '#/graphql/generated/schemaTypes';
-import type { SubscriptionConfig } from '#/services/subscriptions/types';
+} from '#graphql/generated/schemaTypes';
+import type { SubscriptionConfig } from '#services/subscriptions/types';
 import type { RootState } from '#store/index';
 
 type MockBatchCache = {
@@ -20,14 +20,14 @@ type MockBatchCache = {
 
 const mockRegister = jest.fn().mockReturnValue({});
 const mockIsParentDeleting = jest.fn().mockReturnValue(false);
-jest.mock('#/services/subscriptions/SubscriptionService', () => ({
+jest.mock('#services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     register: (config: SubscriptionConfig) => mockRegister(config),
     isParentDeleting: (entityId: string) => mockIsParentDeleting(entityId),
   },
 }));
 
-jest.mock('#/services/subscriptions/types', () => ({
+jest.mock('#services/subscriptions/types', () => ({
   CacheStrategy: { NONE: 'NONE' },
 }));
 
@@ -55,8 +55,8 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
   addNewItemToShoppingListCache: jest.fn(),
 }));
 
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
+jest.mock('#apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#apollo/utils/cacheUpdaters'),
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
@@ -320,7 +320,7 @@ describe('useShoppingListSubscriptions', () => {
       mockClient,
     );
 
-    const { safeEvict } = require('#/apollo/utils/cacheUpdaters');
+    const { safeEvict } = require('#apollo/utils/cacheUpdaters');
     expect(safeEvict).toHaveBeenCalledWith(mockCache, 'ShoppingList', 'list-1');
   });
 
@@ -367,7 +367,7 @@ describe('useShoppingListSubscriptions: another device toggles a row twice', () 
       moveShoppingListItemToPurchased,
       moveShoppingListItemToUnpurchased,
     } = require('#features/shoppingList/cache/connections');
-    const fetchModule = require('#/services/subscriptions/fetchEventEntity');
+    const fetchModule = require('#services/subscriptions/fetchEventEntity');
     const fetchSpy = jest
       .spyOn(fetchModule, 'fetchEventEntity')
       .mockResolvedValue({ shoppingListItemsByIds: [{ id: 'i1' }] });

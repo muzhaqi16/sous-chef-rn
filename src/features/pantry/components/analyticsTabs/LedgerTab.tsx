@@ -1,21 +1,21 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
-import { moneyByCurrency } from '#/domain/money';
-import { useTranslation } from '#/i18n';
+import { UNKNOWN_AMOUNT } from '#utils/formatters/number';
+import { moneyByCurrency } from '#domain/money';
+import { useTranslation } from '#i18n';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { ChartSection } from '#features/pantry/components/analytics/ChartSection';
-import { PeriodGranularity } from '#/graphql/generated/schemaTypes';
+import { PeriodGranularity } from '#graphql/generated/schemaTypes';
 import { safeParseDate } from '#utils/dateUtils';
-import { formatMonthDay, formatMonthYear } from '#/utils/formatters/date';
+import { formatMonthDay, formatMonthYear } from '#utils/formatters/date';
 import {
   formatQuantityDisplay,
   formatQuantityForDisplay,
   unitLabel,
   type UnitLabelSource,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import {
   AnalyticsSummaryCard,
   GranularityButton,

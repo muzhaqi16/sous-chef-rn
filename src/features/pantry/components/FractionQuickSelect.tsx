@@ -5,7 +5,7 @@ import {
   formatQuantityAsFraction,
   unitLabel,
   type UnitLabelSource,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import { Chip } from '#components/molecules/Chip';
 
 interface FractionQuickSelectProps {

@@ -1,8 +1,8 @@
 import {
   withCurrentUnits,
   type ReplayPreparer,
-} from '#/apollo/offlineQueue/replayPreparation';
-import { isRecord } from '#/utils/isRecord';
+} from '#apollo/offlineQueue/replayPreparation';
+import { isRecord } from '#utils/isRecord';
 
 /**
  * A queued create replays with `forceAdd`: a stack for the same item and unit

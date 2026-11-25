@@ -2,7 +2,7 @@ import type { FieldPolicy, StoreObject, TypePolicies } from '@apollo/client';
 import {
   mergeConnectionByNodeId,
   readByIdFromCache,
-} from '#/apollo/cacheFieldPolicies';
+} from '#apollo/cacheFieldPolicies';
 
 /**
  * A catalog page: one answered without the catalog never replaces a complete

@@ -4,7 +4,7 @@ import {
   totalFromUnitPrice,
   unitPriceFromTotal,
 } from '#features/shoppingList/utils/purchasePrice';
-import { formatCurrency } from '#/utils/formatters/number';
+import { formatCurrency } from '#utils/formatters/number';
 
 describe('unitPriceFromTotal', () => {
   it('divides the total paid by the quantity', () => {

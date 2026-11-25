@@ -1,10 +1,10 @@
 import { ApolloClient, gql } from '@apollo/client';
 import { MockLink } from '@apollo/client/testing';
 import { print } from 'graphql';
-import { makeCache } from '#/apollo/cache';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { storage } from '#/store/deviceStorage';
+import { makeCache } from '#apollo/cache';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { storage } from '#store/deviceStorage';
 import {
   completeMockedResponse,
   recordMock,
@@ -28,7 +28,7 @@ import { QueueStore } from '../queueStore';
  */
 
 let mockClient: ApolloClient | null = null;
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),

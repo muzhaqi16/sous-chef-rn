@@ -1,5 +1,5 @@
 import { createTestStore } from '#/test-utils/createTestStore';
-import type { ImageFile } from '#/types/media';
+import type { ImageFile } from '#types/media';
 
 const image: ImageFile = {
   uri: 'file:///cropped.jpg',

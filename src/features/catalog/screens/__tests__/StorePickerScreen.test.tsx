@@ -4,12 +4,12 @@ import { GraphQLError } from 'graphql';
 import type { ApolloLink } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { useStore } from '#store';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
-import { requirePlatform } from '#/platform/install';
+import { requirePlatform } from '#platform/install';
 import {
   inputOf,
   recordMock,
@@ -24,9 +24,9 @@ import {
   CreateOutcome,
   ErrorCode,
   UsualStoreSource,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { SearchStoresDocument } from '#operations/store/store.generated';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import {
   readUsualStores,
   writeUsualStores,

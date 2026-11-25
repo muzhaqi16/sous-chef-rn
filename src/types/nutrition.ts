@@ -2,7 +2,7 @@
  * Display shapes derived from an item's `NutritionFacts`
  */
 
-import type { TranslationKey } from '#/i18n';
+import type { TranslationKey } from '#i18n';
 
 // =============================================================================
 // NUTRITION TYPES

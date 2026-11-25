@@ -1,4 +1,4 @@
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import type { MembershipPermissionKey } from '#features/home/types';
 
 /** The viewer's own membership, as `myMembership` selects it. */

@@ -1,13 +1,13 @@
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import {
   GONE_REPLAYS,
   MERGE_REPORTERS,
   MERGED_QUANTITY_OVERWRITES,
   REPLAY_RECONCILERS,
 } from './replayRegistry';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import type { OperationVariables } from '@apollo/client';
-import { getApolloClient } from '#/apollo/clientRegistry';
+import { getApolloClient } from '#apollo/clientRegistry';
 import type { ReplayReconcilerTable, RowAdoption } from './types';
 
 /**

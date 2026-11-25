@@ -8,7 +8,7 @@ import { resolveImageUrl } from '#utils/imageUtils';
 import { requirePlatform } from '#platform/install';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useDataState } from '#hooks/data/useDataState';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import type { SuggestionsHookResult } from '#features/catalog/types';
 
 /**

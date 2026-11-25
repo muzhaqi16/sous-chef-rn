@@ -22,13 +22,13 @@ jest.mock('#store', () => ({
 // isDevelopment defaults to true) — no per-suite override needed.
 
 // Mock isNetworkError
-jest.mock('#/utils/isNetworkError', () => ({
+jest.mock('#utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
 
 // A retry waits a backoff first; the wait itself is not under test.
-jest.mock('#/utils/backoff', () => ({
-  ...jest.requireActual('#/utils/backoff'),
+jest.mock('#utils/backoff', () => ({
+  ...jest.requireActual('#utils/backoff'),
   sleep: () => Promise.resolve(),
 }));
 
@@ -49,12 +49,12 @@ import {
 } from '../refreshToken';
 import { useStore } from '#store';
 import type { ApolloClient } from '@apollo/client';
-import { isNetworkError } from '#/utils/isNetworkError';
+import { isNetworkError } from '#utils/isNetworkError';
 import { reconnectWebSocket } from '../wsLink';
-import { registerApolloClient } from '#/apollo/clientRegistry';
-import { isAuthRefusalCode } from '#/utils/authErrorCodes';
-import { classifyError } from '#/apollo/offlineQueue/queueErrorPolicy';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { registerApolloClient } from '#apollo/clientRegistry';
+import { isAuthRefusalCode } from '#utils/authErrorCodes';
+import { classifyError } from '#apollo/offlineQueue/queueErrorPolicy';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
 
 const mockedClient = {

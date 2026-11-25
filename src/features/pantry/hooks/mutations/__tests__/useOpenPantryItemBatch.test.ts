@@ -1,12 +1,12 @@
 import { act } from '@testing-library/react-native';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { gql } from '@apollo/client';
 import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { OpenPantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useOpenPantryItemBatch } from '../useOpenPantryItemBatch';
 
 beforeEach(() => jest.clearAllMocks());

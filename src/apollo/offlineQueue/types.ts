@@ -4,7 +4,7 @@ import type {
   DefaultContext,
   OperationVariables,
 } from '@apollo/client';
-import type { LocalInputs } from '#/apollo/pendingWrites/types';
+import type { LocalInputs } from '#apollo/pendingWrites/types';
 
 export enum QueueStatus {
   PENDING = 'pending',

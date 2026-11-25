@@ -2,7 +2,7 @@ import React from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { ListItem } from '#components/molecules/ListItem';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';

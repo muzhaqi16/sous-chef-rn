@@ -3,7 +3,7 @@ import { GraphQLError } from 'graphql';
 import {
   ExternalSource,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,

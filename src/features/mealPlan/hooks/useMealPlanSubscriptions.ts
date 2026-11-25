@@ -24,22 +24,22 @@ import { MealTemplateItemsForEventDocument } from './useMealPlanSubscriptions.ge
 import { removeFromMealPlanItems } from '#features/mealPlan/cache/mealPlanItem';
 import { removeTemplateItemFromCache } from '#features/mealPlan/cache/mealTemplateItem';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
-import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
+import { fetchEventEntity } from '#services/subscriptions/fetchEventEntity';
+import { isSelfEcho } from '#services/subscriptions/isSelfEcho';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
-} from '#/services/subscriptions/types';
-import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
+} from '#services/subscriptions/types';
+import { MealPlanSubtype, MutationType } from '#graphql/generated/schemaTypes';
 import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
   skipUnmatchedFilterVariants,
-} from '#/apollo/utils/cacheUpdaters';
+} from '#apollo/utils/cacheUpdaters';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { useStore } from '#store/index';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
 import { useEntitySubscriptionSkip } from '#hooks/subscriptions/useEntitySubscriptionSkip';
 

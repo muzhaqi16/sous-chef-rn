@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 
 const subscribe = (onStoreChange: () => void) =>
   unconfirmedCreates.subscribe(onStoreChange);

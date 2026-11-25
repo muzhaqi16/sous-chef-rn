@@ -20,14 +20,14 @@ import {
 import type {
   BatchAddShoppingListItemInput,
   CreateShoppingListInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { usePantryQuery } from '#features/pantry/hooks/usePantryQuery';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { toastService } from '#/services/toastService';
-import { Telemetry } from '#/services/telemetry';
-import { t as tGlobal, useTranslation } from '#/i18n';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { toastService } from '#services/toastService';
+import { Telemetry } from '#services/telemetry';
+import { t as tGlobal, useTranslation } from '#i18n';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import {
   MAX_RECIPE_INGREDIENTS,

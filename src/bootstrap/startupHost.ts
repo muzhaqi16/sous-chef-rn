@@ -1,4 +1,4 @@
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 
 /**
  * What a host adds to start-up. The core starts the same under every host; a

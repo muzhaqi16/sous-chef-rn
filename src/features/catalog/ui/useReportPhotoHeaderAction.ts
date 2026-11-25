@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   EntryImageSource,
   ItemImageStatus,
-} from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
+} from '#graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { useReportWrongPhoto } from '#features/catalog/hooks/useReportWrongPhoto';
 import type { EntryImageRead } from '#features/catalog/ui/entryGallery';

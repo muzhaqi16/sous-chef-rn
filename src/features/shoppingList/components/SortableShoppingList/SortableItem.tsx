@@ -2,13 +2,13 @@ import React, { useEffect } from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { RowCard } from '#components/atoms/RowCard';
 import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 // RNGH's Pressable (not AppPressable/RN) for the archive button: it's nested in
 // the row's RNGH Swipeable, so RNGH's native button captures the tap and it
 // doesn't also fire the row's onPress (which would navigate to details).
 import { useFragment } from '@apollo/client/react';
-import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport';
+import { useIncompleteCellReport } from '#hooks/apollo/useIncompleteCellReport';
 import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
@@ -16,8 +16,8 @@ import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem
 import { ListItem } from '#components/molecules/ListItem';
 import { AnimatedCheckbox } from '#features/shoppingList/components/AnimatedCheckbox';
 import { QuantityBadge } from '#features/shoppingList/components/QuantityBadge';
-import { formatQuantityWithUnit, unitLabel } from '#/utils/formatQuantity';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { formatQuantityWithUnit, unitLabel } from '#utils/formatQuantity';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
@@ -27,7 +27,7 @@ import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
 import { useFirstShopRowTargets } from '#features/shoppingList/context/FirstShopTourContext';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { shownLineReading } from '#features/shoppingList/utils/lineReading';
 import { readingNotation } from '#domain/measure';
 import { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
@@ -39,7 +39,7 @@ import {
   useSortableListTheme,
 } from './SortableListThemeContext';
 import type { ShoppingListRowItem } from './types';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { suggestedLineCost } from '#features/shoppingList/utils/purchasePrice';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';

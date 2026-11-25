@@ -10,11 +10,11 @@ import {
   seedCache,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useToggleShoppingItem } from '../useToggleShoppingItem';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 const TOTAL = 3;
 

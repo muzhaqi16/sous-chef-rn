@@ -1,6 +1,6 @@
-import { FeatureFlagName } from '#/graphql/generated/schemaTypes';
-import { resolveFeatureFlags } from '#/config/featureFlags';
-import { isServerOwned, serverFlagsOf } from '#/config/serverFeatureFlags';
+import { FeatureFlagName } from '#graphql/generated/schemaTypes';
+import { resolveFeatureFlags } from '#config/featureFlags';
+import { isServerOwned, serverFlagsOf } from '#config/serverFeatureFlags';
 
 describe('resolveFeatureFlags', () => {
   // The server decides per user; the build only allows.

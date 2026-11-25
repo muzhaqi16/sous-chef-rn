@@ -1,14 +1,14 @@
 import { act } from '@testing-library/react-native';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   renderHookWithApollo,
   type MockDataFor,
   type MockFor,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import type { ScannedItem } from '#features/barcode/types';
 import { useAddScannedItem } from '../useAddScannedItem';
 import { UseToggleShoppingItem_ItemFragmentDoc } from '#features/shoppingList/hooks/mutations/useToggleShoppingItem.generated';

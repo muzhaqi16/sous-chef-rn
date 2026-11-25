@@ -1,9 +1,9 @@
 import React from 'react';
 import { act, render, screen, userEvent } from '@testing-library/react-native';
-import { alertService } from '#/services/alertService';
-import { authService } from '#/services/authService';
-import { biometricService } from '#/services/biometric/deviceCredential';
-import { toastService } from '#/services/toastService';
+import { alertService } from '#services/alertService';
+import { authService } from '#services/authService';
+import { biometricService } from '#services/biometric/deviceCredential';
+import { toastService } from '#services/toastService';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { LoginScreen } from '../LoginScreen';
@@ -145,12 +145,12 @@ jest.mock('#components/atoms/Icon', () => ({
 // the refusal tests below. Permissive because the mocked AuthFormTemplate
 // renders no inputs to type into; the login rules themselves are covered by
 // `utils/validation/__tests__/auth`.
-jest.mock('#/utils/validation/auth', () => {
+jest.mock('#utils/validation/auth', () => {
   const yup = jest.requireActual('yup');
   return {
     // Spread, not replace: the screen this routes to on a refusal builds its
     // own schema from the same module.
-    ...jest.requireActual('#/utils/validation/auth'),
+    ...jest.requireActual('#utils/validation/auth'),
     loginSchema: yup.object({}),
   };
 });
@@ -354,7 +354,7 @@ describe('LoginScreen remembering the sign-in', () => {
 
   it('says so when the sign-in could not be saved, and still enters the app', async () => {
     jest
-      .spyOn(jest.requireActual('#/services/auth/deviceId'), 'ensureDeviceId')
+      .spyOn(jest.requireActual('#services/auth/deviceId'), 'ensureDeviceId')
       .mockResolvedValue(null);
     const alert = jest.mocked(alertService.alert);
     useStore.getState().setPostLoginCredentials({ email: 'chef@example.com' });

@@ -595,6 +595,7 @@ const overrides = [
       'no-restricted-imports': restrictedImports({
         allow: {
           'react-native': ['TextInput', 'ActivityIndicator'],
+          '#i18n/config': ['getI18n'],
           '#/i18n/config': ['getI18n'],
           'react-native-permissions': true,
           'react-native-turbo-image': true,

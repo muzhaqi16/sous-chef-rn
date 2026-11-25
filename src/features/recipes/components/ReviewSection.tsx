@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { Icon } from '#components/atoms/Icon';
 import { RatingBreakdown } from './RatingBreakdown';
 import { ReviewCard } from './ReviewCard';
@@ -13,12 +13,12 @@ import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { DataStateView } from '#components/organisms/DataStateView';
 import type { DataState } from '#hooks/data/useDataState';
-import { ModerationContentType } from '#/graphql/generated/schemaTypes';
+import { ModerationContentType } from '#graphql/generated/schemaTypes';
 import {
   ReportContentSheet,
   type ReportTarget,
 } from '#features/profile/ui/ReportContentSheet';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 interface ReviewSectionProps {
   reviews: RecipeReviewFragment[];

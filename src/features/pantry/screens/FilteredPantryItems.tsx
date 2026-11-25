@@ -5,13 +5,13 @@ import { PantryActionsProvider } from '#features/pantry/components/PantryActions
 import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, useWindowDimensions } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 // RNGH's Pressable for the cart button: nested in the row's RNGH Swipeable, its
 // native button captures the tap so the row's onPress does not also fire.
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -22,7 +22,7 @@ import { PartialDataNote } from '#components/molecules/PartialDataNote';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
-import type { PantryItemFilters } from '#/graphql/generated/schemaTypes';
+import type { PantryItemFilters } from '#graphql/generated/schemaTypes';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
@@ -32,7 +32,7 @@ import { useLowStockListPicker } from '#features/pantry/hooks/useLowStockListPic
 import { useSelectedShoppingListId, useUser } from '#store/useAppStore';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
 import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { useAddPantryItemToShoppingList } from '#features/pantry/hooks/useAddPantryItemToShoppingList';
 import {
   useTutorialSequence,
@@ -46,7 +46,7 @@ import {
   FilteredItemsActionsProvider,
   useFilteredItemsActions,
 } from '#features/pantry/context/FilteredItemsActionsContext';
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 import { daysUntilExpiry, EXPIRING_SOON_DAYS } from '#domain/expiry';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { SubScreen } from '#components/templates/SubScreen';

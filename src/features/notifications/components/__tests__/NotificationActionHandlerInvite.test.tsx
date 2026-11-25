@@ -13,7 +13,7 @@ import {
   NotificationCategory,
   NotificationType,
   Priority,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { NotificationActionHandler } from '../NotificationActionHandler';
 

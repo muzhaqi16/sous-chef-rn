@@ -1,8 +1,8 @@
 import type { ApolloCache } from '@apollo/client';
 import type { Unmasked } from '@apollo/client/masking';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
-import { BatchStatus, ExpiryKind } from '#/graphql/generated/schemaTypes';
-import { isRecord } from '#/utils/isRecord';
+import { BatchStatus, ExpiryKind } from '#graphql/generated/schemaTypes';
+import { isRecord } from '#utils/isRecord';
 import type { WriteRestatedBatches_PageFragment } from './restatedStack.generated';
 
 /**

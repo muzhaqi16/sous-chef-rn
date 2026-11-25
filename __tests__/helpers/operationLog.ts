@@ -2,7 +2,7 @@ import { ApolloLink } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
 import { Observable } from 'rxjs';
 import { act } from '@testing-library/react-native';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { withDeadline } from './cacheWaits';
 
 type Stage = 'requested' | 'answered';

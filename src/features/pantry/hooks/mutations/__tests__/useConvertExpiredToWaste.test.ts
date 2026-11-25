@@ -1,6 +1,6 @@
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import React, { type ReactNode } from 'react';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { renderHook, act } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import { gql, ApolloClient, ApolloLink } from '@apollo/client';
@@ -19,10 +19,10 @@ import {
   ConvertExpiredToWasteDocument,
   GetPantryItemBatchesDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { ItemCondition, ErrorCode } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
-import { todayKey } from '#/utils/dateUtils';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { ItemCondition, ErrorCode } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import { todayKey } from '#utils/dateUtils';
 import { useConvertExpiredToWaste } from '../useConvertExpiredToWaste';
 
 beforeEach(() => {

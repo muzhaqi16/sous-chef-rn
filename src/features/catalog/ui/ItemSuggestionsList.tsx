@@ -8,8 +8,8 @@ import { Text } from '#components/atoms/Text';
 import { ListItem } from '#components/molecules/ListItem';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
-import { useTranslation } from '#/i18n';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
 import { QuickAddButton } from '#features/catalog/components/QuickAddButton';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 

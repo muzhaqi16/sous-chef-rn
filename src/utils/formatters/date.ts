@@ -1,5 +1,5 @@
 import { format, formatDistanceToNow } from 'date-fns';
-import { getDateFnsLocale } from '#/utils/dateLocale';
+import { getDateFnsLocale } from '#utils/dateLocale';
 
 /**
  * Display dates in the INTERFACE language. `format(date, 'MMM d')` with no

@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 import { RowCard } from '#components/atoms/RowCard';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
@@ -15,10 +15,10 @@ import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
 import { useMovePantryItem } from '#features/pantry/hooks/mutations/useMovePantryItem';
 import { pantryTestIDs } from '#features/pantry/testIDs';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 
 interface RelinkItemSheetProps {
   visible: boolean;

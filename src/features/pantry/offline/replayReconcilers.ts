@@ -2,9 +2,9 @@
  * A pantry replay the server answered with a row other than the one it named:
  * the writes queued behind it move onto that row. The rest is `commit`.
  */
-import { extractMutationPayload } from '#/utils/errors/mutationPayload';
-import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
-import { isRecord } from '#/utils/isRecord';
+import { extractMutationPayload } from '#utils/errors/mutationPayload';
+import type { ReplayReconcilerTable } from '#apollo/offlineQueue/types';
+import { isRecord } from '#utils/isRecord';
 import { answeredStack } from './localWrites';
 
 type Reconciler = ReplayReconcilerTable[string];

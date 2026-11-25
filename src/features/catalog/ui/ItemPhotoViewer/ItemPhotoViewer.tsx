@@ -8,7 +8,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { Modal } from '#components/atoms/themedComponents';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   GestureDetector,
@@ -30,7 +30,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { ItemImageStatus } from '#/graphql/generated/schemaTypes';
+import { ItemImageStatus } from '#graphql/generated/schemaTypes';
 import { photoDisplayUrl, getPerspectiveLabel } from '#utils/imageUtils';
 import {
   useItemPhoto,

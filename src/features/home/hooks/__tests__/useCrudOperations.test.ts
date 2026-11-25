@@ -1,16 +1,16 @@
 'use no memo';
 
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import type { AlertButton } from '#platform/presenters';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { useCrudOperations } from '../useCrudOperations';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 // These tests assert WHICH code was looked up, so the lookup has to be visible
 // in its result rather than collapsing to the caller's fallback.
@@ -320,8 +320,8 @@ describe('useCrudOperations', () => {
     describe('onRemoved', () => {
       // A top-level code is read by the real parser; the module mock returns none.
       beforeEach(() => {
-        const actual: typeof import('#/services/errorService') =
-          jest.requireActual('#/services/errorService');
+        const actual: typeof import('#services/errorService') =
+          jest.requireActual('#services/errorService');
         jest
           .mocked(errorService.parseApolloError)
           .mockImplementation((...args) =>

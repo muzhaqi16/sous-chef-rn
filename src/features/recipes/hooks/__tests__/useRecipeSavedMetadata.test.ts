@@ -11,11 +11,11 @@ import {
   seedCache,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { toastService } from '#/services/toastService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { getNotFoundMessage } from '#/utils/errors/notFoundMessage';
-import { Telemetry } from '#/services/telemetry';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { toastService } from '#services/toastService';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { getNotFoundMessage } from '#utils/errors/notFoundMessage';
+import { Telemetry } from '#services/telemetry';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { useRecipeSavedMetadata } from '../useRecipeSavedMetadata';
 
 // Reads just enough off the cached Recipe to assert the optimistic un-save.

@@ -1,5 +1,5 @@
 // The persisted cache lives on the device's disk.
-jest.mock('#/apollo/client', () => ({
+jest.mock('#apollo/client', () => ({
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -8,7 +8,7 @@ jest.mock('#native/storage/keychain', () =>
 );
 // Registering the device runs in the background over native device APIs;
 // `deviceRegistration.test.ts` covers it.
-jest.mock('#/services/device/deviceRegistration', () => ({
+jest.mock('#services/device/deviceRegistration', () => ({
   registerDeviceInBackground: jest.fn(),
 }));
 jest.mock('#hooks/navigation/useAppNavigation');
@@ -28,10 +28,10 @@ jest.mock('#native/mailApp', () => ({
 import React from 'react';
 import { ApolloProvider } from '@apollo/client/react';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { useStore } from '#store';
-import { toastService } from '#/services/toastService';
-import { ErrorCode, ErrorDisposition } from '#/graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
+import { ErrorCode, ErrorDisposition } from '#graphql/generated/schemaTypes';
 import {
   LoginDocument,
   RegisterDocument,
@@ -41,7 +41,7 @@ import { recordMock, type RecordedMock } from '#/test-utils/apolloMockProvider';
 import { registerTestClient } from '#/test-utils/registeredClient';
 import { memoryKeychain } from '#/test-utils/memoryKeychain';
 import { operationLog } from '#/test-utils/operationLog';
-import { registerMobileSessionHost } from '#/app/mobileSessionHost';
+import { registerMobileSessionHost } from '#app/mobileSessionHost';
 import { authTestIDs } from '#features/auth/testIDs';
 import { SignUpScreen } from '../SignUpScreen';
 

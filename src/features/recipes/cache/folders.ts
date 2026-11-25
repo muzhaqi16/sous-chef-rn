@@ -3,7 +3,7 @@ import {
   SavedRecipeFoldersDocument,
   type SavedRecipeFoldersQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 function readFolders(cache: ApolloCache): string[] | undefined {
   return (

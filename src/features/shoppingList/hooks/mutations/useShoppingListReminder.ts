@@ -4,12 +4,12 @@
  * the pre-change snapshot and alerts.
  */
 
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   UpdateShoppingListReminderDocument,
   DeleteShoppingListReminderDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 
 export function useShoppingListReminder() {
   const { t } = useTranslation();

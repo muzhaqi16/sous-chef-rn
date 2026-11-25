@@ -1,7 +1,7 @@
 import React from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { useToday } from '#hooks/app/useToday';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Icon } from '#components/atoms/Icon';
 import type { DisplayNotification as NotificationType } from '#features/notifications/utils/toDisplayNotification';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
@@ -11,7 +11,7 @@ import { safeParseDate } from '#utils/dateUtils';
 import { RowCard } from '#components/atoms/RowCard';
 import { ListItem } from '#components/molecules/ListItem';
 import { Text } from '#components/atoms/Text';
-import { formatRelativeToNow } from '#/utils/formatters/date';
+import { formatRelativeToNow } from '#utils/formatters/date';
 
 interface NotificationItemProps {
   notification: NotificationType;

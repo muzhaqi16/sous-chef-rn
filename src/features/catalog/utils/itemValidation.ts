@@ -3,14 +3,14 @@ import {
   itemNameText,
   lazyMessage,
   normalizeSmartPunctuation,
-} from '#/utils/validation/common';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import type { KeyUnder } from '#/i18n';
+} from '#utils/validation/common';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+import type { KeyUnder } from '#i18n';
 import {
   BaseDimension,
   ItemType,
   StorageState,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 const msg = (
   key: KeyUnder<'itemValidation'>,

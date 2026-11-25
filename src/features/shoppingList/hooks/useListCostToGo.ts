@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useFragment, useQuery } from '@apollo/client/react';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { logger } from '#/utils/environment';
-import { formatCurrency } from '#/utils/formatters/number';
+import { logger } from '#utils/environment';
+import { formatCurrency } from '#utils/formatters/number';
 import {
   ListCostToGoDocument,
   UseListCostToGo_ListFragmentDoc,

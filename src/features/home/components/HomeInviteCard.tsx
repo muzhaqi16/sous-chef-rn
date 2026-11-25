@@ -11,9 +11,9 @@ import {
 } from '#features/home/utils/inviteFormatters';
 import { INVITE_STATUS_TONE } from './inviteStatusTone';
 import { Text, type TextTone } from '#components/atoms/Text';
-import { InviteStatus } from '#/graphql/generated/schemaTypes';
+import { InviteStatus } from '#graphql/generated/schemaTypes';
 import { HomeInviteCard_InviteFragmentDoc } from './HomeInviteCard.generated';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 interface HomeInviteCardProps {
   inviteRef: FragmentType<typeof HomeInviteCard_InviteFragmentDoc>;

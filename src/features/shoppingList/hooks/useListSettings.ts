@@ -1,14 +1,14 @@
 import { useRef, useState } from 'react';
-import { useTranslation } from '#/i18n';
-import { toastService } from '#/services/toastService';
+import { useTranslation } from '#i18n';
+import { toastService } from '#services/toastService';
 import { useNavigationIntents } from '#platform/screen';
 import { useDataState } from '#hooks/data/useDataState';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
 import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
 import { canDeleteShoppingList } from '#features/shoppingList/utils/shoppingListPermissions';
 import { useAppStore, useUser } from '#store/useAppStore';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { formatMonthDayYear } from '#/utils/formatters/date';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
+import { formatMonthDayYear } from '#utils/formatters/date';
 import { useListArchiveSection } from './listSettings/useListArchiveSection';
 import { useListDetailsSection } from './listSettings/useListDetailsSection';
 import { useListMembershipSection } from './listSettings/useListMembershipSection';

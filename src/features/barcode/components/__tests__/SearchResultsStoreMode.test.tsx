@@ -7,14 +7,14 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   ErrorCode,
   PriceBasis,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+} from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
 import {
@@ -54,8 +54,8 @@ import {
 import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import { UseListAsksPrice_ListFragmentDoc } from '#features/shoppingList/hooks/useListAsksPrice.generated';
 import { UseListCurrency_ListFragmentDoc } from '#features/shoppingList/hooks/useListCurrency.generated';
-import { localizeNumericHint } from '#/utils/formatters/number';
-import { isRecord } from '#/utils/isRecord';
+import { localizeNumericHint } from '#utils/formatters/number';
+import { isRecord } from '#utils/isRecord';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 
 let log = operationLog();

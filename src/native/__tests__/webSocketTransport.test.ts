@@ -1,10 +1,10 @@
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { createNativeWebSocketTransport } from '../webSocketTransport';
 
-jest.mock('#/config/env', () => ({ env: { API_KEY: 'client-key' } }));
+jest.mock('#config/env', () => ({ env: { API_KEY: 'client-key' } }));
 const mockLanguage = jest.fn(() => 'es');
 const mockLanguageListeners: Array<() => void> = [];
-jest.mock('#/i18n', () => ({
+jest.mock('#i18n', () => ({
   getResolvedLanguage: () => mockLanguage(),
   onLanguageChanged: (listener: () => void) => {
     mockLanguageListeners.push(listener);
@@ -12,7 +12,7 @@ jest.mock('#/i18n', () => ({
   },
 }));
 const mockReconnect = jest.fn();
-jest.mock('#/apollo/links/wsLink', () => ({
+jest.mock('#apollo/links/wsLink', () => ({
   reconnectWebSocket: () => mockReconnect(),
 }));
 jest.mock('react-native-launch-arguments', () => ({

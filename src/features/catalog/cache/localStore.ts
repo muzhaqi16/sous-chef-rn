@@ -1,5 +1,5 @@
 import type { ApolloCache } from '@apollo/client';
-import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import { writeLocalEntity } from '#apollo/utils/writeLocalEntity';
 import { UseCreateStore_RowFragmentDoc } from '#features/catalog/hooks/useCreateStore.generated';
 import {
   NEUTRAL_LOCAL_STORE,

@@ -1,6 +1,6 @@
 import type { ApolloCache } from '@apollo/client';
-import { StorageType, UnitType } from '#/graphql/generated/schemaTypes';
-import { generateEntityId } from '#/utils/generateEntityId';
+import { StorageType, UnitType } from '#graphql/generated/schemaTypes';
+import { generateEntityId } from '#utils/generateEntityId';
 import {
   LocalRefs_BrandFragmentDoc,
   LocalRefs_StorageLocationFragmentDoc,

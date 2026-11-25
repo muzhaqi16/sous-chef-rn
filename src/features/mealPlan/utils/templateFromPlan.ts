@@ -1,11 +1,11 @@
-import { generateEntityId } from '#/utils/generateEntityId';
-import { daysBetweenKeys } from '#/utils/dateUtils';
+import { generateEntityId } from '#utils/generateEntityId';
+import { daysBetweenKeys } from '#utils/dateUtils';
 import { mealReferenceOf } from '#features/mealPlan/utils/mealReference';
 import type {
   CreateMealTemplateInput,
   MealType,
   TemplateCategory,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /** The plan a template is cut from, as the cache holds it. */
 export interface PlanToTemplate {

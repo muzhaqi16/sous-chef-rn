@@ -6,8 +6,8 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { useRemoveShoppingItem } from '../useRemoveShoppingItem';
 import { RemoveItemFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { alertService } from '#/services/alertService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 
 const removeMock = () =>
   recordMock(RemoveItemFromShoppingListDocument, {

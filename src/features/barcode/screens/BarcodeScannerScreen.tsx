@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   Camera,
@@ -21,8 +21,8 @@ import { HapticService } from '#services/haptic/HapticService';
 
 import type { BarcodeSource } from '#features/barcode/types';
 import { Text } from '#components/atoms/Text';
-import { logger } from '#/utils/environment';
-import { motion } from '#/theme/motion';
+import { logger } from '#utils/environment';
+import { motion } from '#theme/motion';
 
 export const BarcodeScannerScreen: React.FC<
   StaticScreenProps<

@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { errorService } from '#/services/errorService';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { errorService } from '#services/errorService';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
 import { ProductResultCard } from './ProductResultCard';
 import { ActionButtons } from './ActionButtons';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAddScannedItem } from '#features/barcode/hooks/useAddScannedItem';
 import { useAppStore } from '#store/useAppStore';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import type {
   BarcodeSource,
   ScanAmount,
@@ -20,7 +20,7 @@ import { useCachedUnits } from '#store/useAppStore';
 import { formatAmountLeft } from '#features/pantry/hooks/usePantryItemTransformation';
 import { useHeldStacks } from '#features/pantry/hooks/useHeldStacks';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import { ScanAmountSection } from './ScanAmountSection';
 import { ScanNutritionSection } from './ScanNutritionSection';
 import {

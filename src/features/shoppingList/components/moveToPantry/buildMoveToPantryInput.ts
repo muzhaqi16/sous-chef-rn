@@ -1,11 +1,11 @@
-import type { TranslationKey } from '#/i18n';
+import type { TranslationKey } from '#i18n';
 import { resolveIntakeDraft, type IntakeField } from '#domain/intakeDraft';
 import { contentsOf } from '#domain/stockAmount';
 import type { MoveToPantryInput } from '#features/shoppingList/hooks/useMoveToPantry';
-import { toDateKey } from '#/utils/dateUtils';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { parseMoneyInput } from '#/utils/validation/common';
+import { toDateKey } from '#utils/dateUtils';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+import { parseMoneyInput } from '#utils/validation/common';
 import {
   statesPackagesAsSize,
   type MoveToPantryFormValues,

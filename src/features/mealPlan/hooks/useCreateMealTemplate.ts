@@ -1,10 +1,10 @@
 import { CreateMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import type { CreateTemplateInputs } from '#features/mealPlan/offline/localWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import type { CreateMealTemplateInput } from '#/graphql/generated/schemaTypes';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { CreateMealTemplateInput } from '#graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
 import { useUser } from '#store/useAppStore';
-import { generateEntityId } from '#/utils/generateEntityId';
+import { generateEntityId } from '#utils/generateEntityId';
 
 /**
  * The one template create. Its minted id is the row's PK, so a replay converges

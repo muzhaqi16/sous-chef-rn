@@ -1,6 +1,6 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,

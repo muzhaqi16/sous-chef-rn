@@ -1,10 +1,10 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { act } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import {
   ErrorCode,
   RecipeIngredientMatchKind,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   inputOf,
   recordMock,
@@ -21,10 +21,10 @@ import { UseRecipeData_RecipeFragmentDoc } from '#features/recipes/hooks/useReci
 import type { RootState } from '#store';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { useRecipeCookingActions } from '../useRecipeCookingActions';
-import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
+import { askForReviewAfterSuccess } from '#domain/reviewPrompt';
 import { onTutorialEvent, type TutorialEvent } from '#domain/tutorialEvents';
 
-jest.mock('#/domain/reviewPrompt');
+jest.mock('#domain/reviewPrompt');
 
 // useRecipeIngredientMatching (used internally) reads the selected pantry id.
 let mockIsOnline = true;
@@ -46,7 +46,7 @@ const mockToastInfo = jest.mocked(toastService.info);
 
 // Deterministic client-minted cooking-log id so we can assert the mutation
 // sends it.
-jest.mock('#/utils/generateEntityId', () => ({
+jest.mock('#utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'client-cooklog-1'),
 }));
 

@@ -5,8 +5,8 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { TemplateCategory } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import { TemplateCategory } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import { SaveAsTemplateSheet } from '#features/mealPlan/components/SaveAsTemplateSheet';
 
 type SheetProps = React.ComponentProps<typeof SaveAsTemplateSheet>;

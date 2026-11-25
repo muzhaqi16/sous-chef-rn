@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 import { Pressable } from '#components/atoms/themedComponents';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';

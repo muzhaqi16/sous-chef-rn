@@ -1,5 +1,5 @@
 import { gql, type TypedDocumentNode } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   renderHookWithApollo,
   seedCache,
@@ -14,7 +14,7 @@ import {
   GetMealTemplateForEditDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
-import { TemplateCategory, MealType } from '#/graphql/generated/schemaTypes';
+import { TemplateCategory, MealType } from '#graphql/generated/schemaTypes';
 import { useMealTemplateEditor } from '../useMealTemplateEditor';
 
 const TEMPLATE = {

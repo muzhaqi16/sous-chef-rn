@@ -3,7 +3,7 @@ jest.mock('#native/storage/keychain', () =>
 );
 // Registering the device runs in the background over native device APIs;
 // `deviceRegistration.test.ts` covers it.
-jest.mock('#/services/device/deviceRegistration', () => ({
+jest.mock('#services/device/deviceRegistration', () => ({
   registerDeviceInBackground: jest.fn(),
 }));
 jest.mock('react-native-launch-arguments', () => ({
@@ -13,13 +13,13 @@ jest.mock('react-native-launch-arguments', () => ({
 import { act, renderHook } from '@testing-library/react-native';
 import { LaunchArguments } from 'react-native-launch-arguments';
 import { useStore } from '#store';
-import { Environment } from '#/utils/environment';
+import { Environment } from '#utils/environment';
 import { Telemetry } from '#services/telemetry';
 import { HapticService } from '#services/haptic/HapticService';
-import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
-import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
-import * as deviceIdentity from '#/services/auth/deviceId';
-import * as queueFailures from '#/apollo/offlineQueue/queueFailureHandler';
+import { NativePerformanceService } from '#services/performance/NativePerformanceService';
+import { registerDeviceInBackground } from '#services/device/deviceRegistration';
+import * as deviceIdentity from '#services/auth/deviceId';
+import * as queueFailures from '#apollo/offlineQueue/queueFailureHandler';
 import * as keychain from '#native/storage/keychain';
 import { useCoreStartup } from '#bootstrap/useCoreStartup';
 import { useMobileStartupHost } from '../mobileStartupHost';

@@ -1,5 +1,5 @@
-import { Cuisine } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import { Cuisine } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import {
   POPULAR_CUISINES,
   cuisineLabelKey,

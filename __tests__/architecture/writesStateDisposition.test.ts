@@ -1,5 +1,5 @@
 import { Kind, visit, type DocumentNode, type SelectionSetNode } from 'graphql';
-import { MUTATION_DOCUMENTS } from '#/graphql/generated/mutationDocuments.generated';
+import { MUTATION_DOCUMENTS } from '#graphql/generated/mutationDocuments.generated';
 
 /**
  * The queue settles a refusal from its `disposition`, so a code newer than the

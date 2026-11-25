@@ -4,11 +4,11 @@ import type {
   FeedPage,
   FeedScopeCursor,
   FeedSnapshot,
-} from '#/apollo/feed/types';
-import { readWholeScope } from '#/apollo/feed/readWholeScope';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
-import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
+} from '#apollo/feed/types';
+import { readWholeScope } from '#apollo/feed/readWholeScope';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { isHeld } from '#apollo/utils/writeLocalEntity';
+import { SyncScopeKind } from '#graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { removeCollaboratorFromShoppingListCache } from '../cache/collaborators';
 import {
@@ -25,7 +25,7 @@ import {
   addShoppingListToQueryCache,
   removeShoppingListFromCache,
 } from '../cache/list';
-import { scopeStorage } from '#/apollo/offline/ApolloCachePersistence';
+import { scopeStorage } from '#apollo/offline/ApolloCachePersistence';
 import {
   discardListShard,
   hydrateListShard,

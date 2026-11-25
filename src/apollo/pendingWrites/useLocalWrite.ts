@@ -9,7 +9,7 @@ import {
   settleMutation,
   type Settled,
   type SettleOptions,
-} from '#/apollo/utils/settleMutation';
+} from '#apollo/utils/settleMutation';
 import type { EntityFieldsInputs } from './entityFields';
 import { pendingWritesOf, type LocalWriteSend } from './pendingWrites';
 import type { LocalInputs } from './types';

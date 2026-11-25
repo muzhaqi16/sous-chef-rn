@@ -1,10 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Chip } from '#components/molecules/Chip';
-import { MealPlanType } from '#/graphql/generated/schemaTypes';
+import { MealPlanType } from '#graphql/generated/schemaTypes';
 import type { MealPlanFilterState } from '#features/mealPlan/utils/mealPlanFilters';
 
 interface MealPlanFilterBarProps {

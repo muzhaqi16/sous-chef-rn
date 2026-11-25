@@ -1,5 +1,5 @@
 import { skipToken, useQuery } from '@apollo/client/react';
-import { ItemLevel, ItemType } from '#/graphql/generated/schemaTypes';
+import { ItemLevel, ItemType } from '#graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useSelectedHomeId, useUser } from '#store/useAppStore';
 import { GetOnboardingItemsDocument } from './useOnboardingItems.generated';

@@ -1,6 +1,6 @@
 'use no memo';
-import { toastService } from '#/services/toastService';
-import { authService } from '#/services/authService';
+import { toastService } from '#services/toastService';
+import { authService } from '#services/authService';
 import React from 'react';
 import { screen, userEvent } from '@testing-library/react-native';
 import {
@@ -12,8 +12,8 @@ import { ChangePasswordDocument } from '#operations/auth/auth.generated';
 import {
   ErrorCode,
   PasswordActionStatus,
-} from '#/graphql/generated/schemaTypes';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+} from '#graphql/generated/schemaTypes';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { useStore } from '#store';
 import type { Header } from '#components/organisms/Header';
 import type { PasswordInputProps } from '#components/molecules/PasswordInput';
@@ -30,7 +30,7 @@ const mockNav = jest
   .requireMock('#hooks/navigation/useAppNavigation')
   .useAppNavigation();
 
-jest.mock('#/utils/finallyHelpers');
+jest.mock('#utils/finallyHelpers');
 
 jest.mock('#utils/validation/auth', () => ({
   changePasswordSchema: {

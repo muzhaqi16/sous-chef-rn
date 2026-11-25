@@ -5,16 +5,16 @@ import type {
   ReceiptRefInput,
   StockAmountInput,
   StorageState,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { Telemetry } from '#/services/telemetry';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { Telemetry } from '#services/telemetry';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { localMoveRow } from '#features/shoppingList/cache/localMove';
 import type { MoveToPantryInputs } from '#features/shoppingList/offline/localWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { useTranslation } from '#/i18n';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
 
 export interface MoveToPantryInput {

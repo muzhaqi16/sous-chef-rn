@@ -12,8 +12,8 @@ import {
   ErrorDisposition,
   NetWeightKind,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { makeCache } from '#/apollo/cache';
+} from '#graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
 import {
   UseHeldStacks_PantryFragmentDoc,
   UseHeldStacks_PantryItemFragmentDoc,
@@ -32,13 +32,13 @@ import {
   AddBrandToListDocument,
   BrandListsDocument,
 } from '#features/profile/hooks/useBrandLists.generated';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import { StoreShelfPricesDocument } from '#features/catalog/hooks/useStoreShelfPrices.generated';
 import { AddToBrandListSheet } from '#features/profile/ui/AddToBrandListSheet';
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 import {
   asAbbreviation,

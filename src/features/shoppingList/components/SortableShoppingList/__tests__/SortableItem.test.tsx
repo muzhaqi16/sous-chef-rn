@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   renderWithApollo,
   seedFragment,
@@ -12,10 +12,10 @@ import {
   readingAsAbbreviation,
 } from '#/test-utils/fixtures/unitLabels';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { QueueStatus } from '#/apollo/offlineQueue/types';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { QueueStatus } from '#apollo/offlineQueue/types';
 import { useStore } from '#store';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { Telemetry } from '#services/telemetry';
 import { markFeatureHintShown } from '#hooks/settings/useFeatureHint';
 import {
@@ -28,7 +28,7 @@ import {
   EntryImageSource,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   deleteAction,
   editAction,

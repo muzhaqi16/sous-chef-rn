@@ -4,7 +4,7 @@
  * `store → resetManager → apollo/client → links → store`; each Apollo module
  * registers its step at module init, pulled in by the link chain.
  */
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 type TeardownStep = () => void | Promise<void>;
 

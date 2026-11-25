@@ -3,11 +3,11 @@ import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Chip } from '#components/molecules/Chip';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Sheet } from '#components/templates/Sheet';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import type { Diet } from '#/graphql/generated/schemaTypes';
+import type { Diet } from '#graphql/generated/schemaTypes';
 import { withDietPicked } from '#domain/dietary';
 import {
   type RecipeFilters,

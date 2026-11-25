@@ -1,4 +1,4 @@
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { useLazyQuery } from '@apollo/client/react';
 import { SearchBrandsDocument } from '#operations/item/item.generated';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';

@@ -1,4 +1,4 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
@@ -6,8 +6,8 @@ import {
   AddedContext,
   CreateOutcome,
   ErrorCode,
-} from '#/graphql/generated/schemaTypes';
-import { makeCache } from '#/apollo/cache';
+} from '#graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
 import type { MockDataFor, MockFor } from '#/test-utils/apolloMockProvider';
 import {
@@ -21,7 +21,7 @@ import {
 import { operationLog } from '#/test-utils/operationLog';
 import { recipeRead } from '#/test-utils/fixtures/recipeFixtures';
 import { useStore } from '#store';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { UseRecipeData_RecipeFragmentDoc } from '#features/recipes/hooks/useRecipeData.generated';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
@@ -31,13 +31,13 @@ import {
   GetShoppingListsLiteDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { RecipeMissingIngredientsDocument } from '#features/recipes/hooks/useRecipeMissingIngredients.generated';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import type { DisplayIngredient, MaterializedRecipe } from '../useRecipeData';
 import { useRecipeShoppingList } from '../useRecipeShoppingList';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
-import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
-import { withCurrentUnits } from '#/apollo/offlineQueue/replayPreparation';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { REPLAY_PREPARATIONS } from '#apollo/offlineQueue/preparationRegistry';
+import { withCurrentUnits } from '#apollo/offlineQueue/replayPreparation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 
 const mockToastSuccess = jest.mocked(toastService.success);
 const mockToastError = jest.mocked(toastService.error);
@@ -46,7 +46,7 @@ const mockToastInfo = jest.mocked(toastService.info);
 // `gen-id-1`, `gen-id-2`, … in the order they are minted: a batch mints one id
 // per row, and a constant would fold every row onto one cache record.
 let mockMinted = 0;
-jest.mock('#/utils/generateEntityId', () => ({
+jest.mock('#utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => {
     mockMinted += 1;
     return `gen-id-${mockMinted}`;

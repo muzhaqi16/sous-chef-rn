@@ -1,4 +1,4 @@
-import { NotificationCategory } from '#/graphql/generated/schemaTypes';
+import { NotificationCategory } from '#graphql/generated/schemaTypes';
 import { STATIC_FEATURE_REGISTRY } from '#features/registry.static';
 
 /**

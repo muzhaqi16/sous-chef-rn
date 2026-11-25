@@ -1,9 +1,9 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import React from 'react';
 import {
   ErrorCode,
   PasswordActionStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { act, screen, userEvent } from '@testing-library/react-native';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo, recordMock } from '#/test-utils/apolloMockProvider';
@@ -24,7 +24,7 @@ jest.mock('#features/auth/screens/useAuthNavigation', () => ({
 }));
 
 const mockToastError = jest.mocked(toastService.error);
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 // A real (permissive) schema, not `{}` — yupResolver has to be able to run it,
 // or handleSubmit routes every press to the validation-error branch and the

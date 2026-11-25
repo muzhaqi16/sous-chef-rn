@@ -1,7 +1,7 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';

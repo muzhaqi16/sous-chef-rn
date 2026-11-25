@@ -1,12 +1,12 @@
 import { useMutation } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { OpenCatalogRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   type ExternalSource,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload, isAlreadyGone } from '#/utils/errors/mutationPayload';
+} from '#graphql/generated/schemaTypes';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload, isAlreadyGone } from '#utils/errors/mutationPayload';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { recordOpenedCatalogRecipe } from '#features/recipes/store/openedCatalogRecipes';
 

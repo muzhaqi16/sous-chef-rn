@@ -1,7 +1,7 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { act } from '@testing-library/react-native';
 import { gql, type InMemoryCache } from '@apollo/client';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -20,7 +20,7 @@ import {
   type MySavedRecipesQuery,
 } from '#features/recipes/screens/useSavedRecipes.generated';
 import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { useRecipeFavoriteState } from '../useRecipeFavoriteState';
 
 const mockToastSuccess = jest.mocked(toastService.success);
@@ -30,7 +30,7 @@ const mockToastError = jest.mocked(toastService.error);
 // assertions name it.
 const SAVED_RECIPE_ID = 'client-saved-1';
 const SERVER_SAVED_ID = 'server-saved-2';
-jest.mock('#/utils/generateEntityId', () => ({
+jest.mock('#utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'client-saved-1'),
 }));
 

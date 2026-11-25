@@ -8,14 +8,14 @@
  */
 import type { Unmasked } from '@apollo/client/masking';
 import type { GetPantryItemQuery } from '#features/pantry/screens/usePantryItemDetailData.generated';
-import type { ExpiryKind } from '#/graphql/generated/schemaTypes';
+import type { ExpiryKind } from '#graphql/generated/schemaTypes';
 import {
   StorageState,
   StorageType,
   ItemCondition,
   AcquisitionMethod,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { asAbbreviation, readingAsAbbreviation } from './unitLabels';
 
 // Test fixtures need the fully unmasked shape so they can specify nested

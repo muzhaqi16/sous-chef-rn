@@ -5,33 +5,30 @@ import {
   ErrorDisposition,
   TopLevelErrorCode,
   UnitDenial,
-} from '#/graphql/generated/schemaTypes';
-import { errorService, isTransportFailure } from '#/services/errorService';
-import { isTranslationKey, t, type TranslationKey } from '#/i18n';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+} from '#graphql/generated/schemaTypes';
+import { errorService, isTransportFailure } from '#services/errorService';
+import { isTranslationKey, t, type TranslationKey } from '#i18n';
+import { formatQuantityForDisplay } from '#utils/formatQuantity';
 import {
   extractMutationPayload,
   isErrorTypename,
-} from '#/utils/errors/mutationPayload';
+} from '#utils/errors/mutationPayload';
 import {
   getVersionConflictMessage,
   isVersionConflictCode,
-} from '#/utils/errors/versionConflict';
-import { getNotFoundMessage } from '#/utils/errors/notFoundMessage';
-import { presentFailure } from '#/utils/errors/presentFailure';
+} from '#utils/errors/versionConflict';
+import { getNotFoundMessage } from '#utils/errors/notFoundMessage';
+import { presentFailure } from '#utils/errors/presentFailure';
 import {
   asDisposition,
   getTopLevelGraphQLError,
-} from '#/utils/errors/graphqlErrors';
-import {
-  getRateLimitMessage,
-  isRateLimitError,
-} from '#/utils/errors/rateLimit';
-import { Telemetry } from '#/services/telemetry';
+} from '#utils/errors/graphqlErrors';
+import { getRateLimitMessage, isRateLimitError } from '#utils/errors/rateLimit';
+import { Telemetry } from '#services/telemetry';
 import { operationNameOf } from './documentOperation';
-import { toastService } from '#/services/toastService';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { isOfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
+import { toastService } from '#services/toastService';
+import { isNetworkError } from '#utils/isNetworkError';
+import { isOfflineRejectedError } from '#apollo/offlineQueue/OfflineRejectedError';
 import { storeApi } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 

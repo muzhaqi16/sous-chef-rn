@@ -6,12 +6,12 @@
 
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { useMutation } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { MarkExpirationActionDocument } from '#features/notifications/graphql/expirationNotificationMutations.generated';
-import type { ExpirationAction } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { toastService } from '#/services/toastService';
-import { todayKey } from '#/utils/dateUtils';
+import type { ExpirationAction } from '#graphql/generated/schemaTypes';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { toastService } from '#services/toastService';
+import { todayKey } from '#utils/dateUtils';
 
 export function useExpirationNotificationSync() {
   const { t } = useTranslation();

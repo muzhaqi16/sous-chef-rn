@@ -1,8 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 import i18next from 'i18next';
-import { getI18n } from '#/i18n/config';
-import { isTranslationKey } from '#/i18n';
+import { getI18n } from '#i18n/config';
+import { isTranslationKey } from '#i18n';
 
 /**
  * Every plural key resolves in every category its locale actually needs.
@@ -203,7 +203,7 @@ describe('i18n config on an engine without Intl.PluralRules', () => {
     // `require`, not dynamic `import()` — this Jest config runs without
     // --experimental-vm-modules, so `import()` rejects rather than loading.
     const config =
-      jest.requireActual<typeof import('#/i18n/config')>('#/i18n/config');
+      jest.requireActual<typeof import('#i18n/config')>('#i18n/config');
 
     // Reaching here at all is the assertion: the import must not throw.
     expect(typeof config.getI18n().t('labels.error')).toBe('string');

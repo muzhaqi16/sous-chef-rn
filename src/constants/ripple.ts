@@ -1,4 +1,4 @@
-import { colors } from '#/theme/foundations/colors';
+import { colors } from '#theme/foundations/colors';
 
 /**
  * Ripples render natively, so press feedback survives a busy JS thread. iOS

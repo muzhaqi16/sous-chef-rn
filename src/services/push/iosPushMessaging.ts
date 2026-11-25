@@ -9,7 +9,7 @@ import { NativeModules, Platform } from 'react-native';
 import PushNotificationIOS, {
   type PushNotification,
 } from '@react-native-community/push-notification-ios';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { routeNotificationTap } from './pushNotificationRouting';
 
 // One-shot native cache of the tap that launched a killed app (see

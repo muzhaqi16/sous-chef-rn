@@ -1,9 +1,9 @@
 import { getOperationAST, type DocumentNode } from 'graphql';
-import { inputTypeNameOf } from '#/apollo/utils/documentOperation';
-import { LOCAL_WRITES } from '#/apollo/pendingWrites/localWriteRegistry';
-import type { WriteSubject } from '#/apollo/pendingWrites/types';
+import { inputTypeNameOf } from '#apollo/utils/documentOperation';
+import { LOCAL_WRITES } from '#apollo/pendingWrites/localWriteRegistry';
+import type { WriteSubject } from '#apollo/pendingWrites/types';
 import type { QueuedMutation, RowAdoption } from './types';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 export interface QueuedSubject {
   /** What the write creates or changes: its withdrawal target and pending ids. */

@@ -1,8 +1,8 @@
 'use no memo';
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { MealType } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import { MealType } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import { useMealPlans } from '#features/mealPlan/hooks/useMealPlans';
 import { AddToMealPlanSheet } from '../AddToMealPlanSheet';
 

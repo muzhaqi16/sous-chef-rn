@@ -1,6 +1,6 @@
 import React from 'react';
 import type { SvgProps } from 'react-native-svg';
-import { StorageType } from '#/graphql/generated/schemaTypes';
+import { StorageType } from '#graphql/generated/schemaTypes';
 import Refrigerator from '#assets/icons/svg/storageLocations/refrigerator.svg';
 import Freezer from '#assets/icons/svg/storageLocations/freezer.svg';
 import PantryShelf from '#assets/icons/svg/storageLocations/pantry-shelf.svg';

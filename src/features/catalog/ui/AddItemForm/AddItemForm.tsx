@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { AddItemFieldRefusal } from '#features/catalog/types';
-import { useTranslation } from '#/i18n';
-import { errorService } from '#/services/errorService';
+import { useTranslation } from '#i18n';
+import { errorService } from '#services/errorService';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
@@ -16,7 +16,7 @@ import {
   BaseDimension,
   StorageState,
   ItemType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { MultiImagePicker } from '#features/catalog/components/MultiImagePicker';
 import type {
   AddItemSubmitPayload,
@@ -38,9 +38,9 @@ import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { Text } from '#components/atoms/Text';
 import { reportValidationErrors } from '#utils/validation/common';
 import { BarcodeInfo } from './BarcodeInfo';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { formatNumberForInput } from '#/utils/formatters/number';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+import { formatNumberForInput } from '#utils/formatters/number';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import {
   type PageName,
   PAGES,

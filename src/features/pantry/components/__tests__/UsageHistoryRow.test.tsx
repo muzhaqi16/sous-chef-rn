@@ -6,8 +6,8 @@ import {
   UnitSystem,
   UnitType,
   UsagePurpose,
-} from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import { UsageHistoryRow } from '#features/pantry/components/UsageHistoryRow';
 import type { UsageRecord } from '#features/pantry/types';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';

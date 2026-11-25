@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -9,9 +9,9 @@ import {
   GetUserSettingsDocument,
   UpdateUserPreferencesDocument,
 } from '#operations/auth/user.generated';
-import { ErrorCode, UnitSystem } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, UnitSystem } from '#graphql/generated/schemaTypes';
 import { useStore } from '#store';
-import { MIRRORED_SETTINGS } from '#/domain/serverSettings';
+import { MIRRORED_SETTINGS } from '#domain/serverSettings';
 import { useUpdateSettings } from '../useUpdateSettings';
 
 /** What the offline queue resolves a held write with: no payload, no error. */

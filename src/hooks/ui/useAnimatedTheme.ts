@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { useAnimatedTheme as useUnistylesAnimatedTheme } from 'react-native-unistyles/reanimated';
-import type { Theme } from '#/theme/themes';
+import type { Theme } from '#theme/themes';
 
 /**
  * Unistyles' animated theme drops its listener while a paused screen is hidden

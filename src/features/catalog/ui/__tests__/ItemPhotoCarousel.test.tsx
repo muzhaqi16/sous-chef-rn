@@ -6,7 +6,7 @@ import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { ItemPhotoCarousel } from '#features/catalog/ui/ItemPhotoCarousel';
 import { CachedImage } from '#components/atoms/CachedImage';
 import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
-import { ImageKind, ItemImageStatus } from '#/graphql/generated/schemaTypes';
+import { ImageKind, ItemImageStatus } from '#graphql/generated/schemaTypes';
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,

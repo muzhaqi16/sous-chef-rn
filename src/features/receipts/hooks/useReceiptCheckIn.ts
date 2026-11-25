@@ -4,20 +4,20 @@ import {
   ErrorCode,
   type CreateReceiptCheckInInput,
   type ReceiptCheckInLineInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { ShoppingListItemNode } from '#features/shoppingList/hooks/usePaginatedShoppingItems';
 import type { NewUsualStore } from '#features/catalog/cache/usualStores';
 import { localIntakeRow } from '#features/pantry/cache/localIntake';
 import { localMoveRow } from '#features/shoppingList/cache/localMove';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { todayKey } from '#/utils/dateUtils';
-import { errorService } from '#/services/errorService';
-import { toastService } from '#/services/toastService';
-import { Telemetry } from '#/services/telemetry';
-import { useTranslation } from '#/i18n';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { askForReviewAfterSuccess } from '#domain/reviewPrompt';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { todayKey } from '#utils/dateUtils';
+import { errorService } from '#services/errorService';
+import { toastService } from '#services/toastService';
+import { Telemetry } from '#services/telemetry';
+import { useTranslation } from '#i18n';
 import { useReceiptDraftActions } from '../store/receiptDraftStore';
 import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 import type { CheckInInputs, LocalCheckInLine } from '../offline/localWrites';
@@ -27,7 +27,7 @@ import {
   type CheckInLineResult,
 } from '../offline/receiptCheckIn';
 import { CreateReceiptCheckInDocument } from './useReceiptCheckIn.generated';
-import { cappedNames } from '#/utils/cappedNames';
+import { cappedNames } from '#utils/cappedNames';
 
 /** The API's cap on one check-in: a longer receipt goes as several. */
 export const LINES_PER_CHECK_IN = 100;

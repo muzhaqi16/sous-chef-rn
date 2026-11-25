@@ -1,8 +1,8 @@
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import { useDataState } from '#hooks/data/useDataState';
-import { useTranslation } from '#/i18n';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { generateEntityId } from '#/utils/generateEntityId';
+import { useTranslation } from '#i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { generateEntityId } from '#utils/generateEntityId';
 import {
   heldBrandVersion,
   readBrandList,

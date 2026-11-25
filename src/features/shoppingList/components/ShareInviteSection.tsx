@@ -6,23 +6,23 @@ import { Text } from '#components/atoms/Text';
 import { OnPrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Icon } from '#components/atoms/Icon';
 import { EmailInput } from '#components/molecules/EmailInput';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { useInviteCollaborator } from '#features/shoppingList/hooks/useInviteCollaborator';
-import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
+import { CollaboratorRole } from '#graphql/generated/schemaTypes';
 import { ROLE_PERMISSIONS } from '#features/shoppingList/components/collaboratorRoles';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
-import type { Translate } from '#/i18n/types';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import type { Translate } from '#i18n/types';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import {
   shareInviteSchema,
   shareInviteDefaults,
   type ShareInviteFormValues,
 } from './shareInviteFormConfig';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 
 const buildRoleOptions = (t: Translate, roles: readonly CollaboratorRole[]) =>
   roles.map(role => ({

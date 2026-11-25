@@ -3,7 +3,7 @@ import {
   ItemType,
   NetWeightKind,
   StorageState,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   buildInitialDataFromSnapshot,
   buildSuggestibleItemChanges,

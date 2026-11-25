@@ -1,4 +1,4 @@
-import { getI18n } from '#/i18n/config';
+import { getI18n } from '#i18n/config';
 import {
   formatDateRange,
   formatDayOfMonth,
@@ -15,7 +15,7 @@ import {
  * assertions are the difference: they read the LIVE language, so a date shown
  * to a Spanish reader is Spanish.
  */
-jest.mock('#/i18n/config', () => ({ getI18n: jest.fn() }));
+jest.mock('#i18n/config', () => ({ getI18n: jest.fn() }));
 
 const speak = (language: string) =>
   (getI18n as jest.Mock).mockReturnValue({

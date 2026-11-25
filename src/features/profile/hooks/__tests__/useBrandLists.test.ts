@@ -1,12 +1,12 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
-import { toastService } from '#/services/toastService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import {
   AddBrandToListDocument,
   BrandListsDocument,
@@ -17,7 +17,7 @@ import {
 } from '../useBrandLists.generated';
 import { useBrandLists } from '../useBrandLists';
 
-jest.mock('#/utils/generateEntityId', () => ({
+jest.mock('#utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'minted-1'),
 }));
 

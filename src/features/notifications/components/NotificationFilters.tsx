@@ -1,10 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
-import { NotificationCategory } from '#/graphql/generated/schemaTypes';
+import { NotificationCategory } from '#graphql/generated/schemaTypes';
 import { NOTIFICATION_CATEGORIES } from '#features/notifications/types';
 import { notificationsTestIDs } from '#features/notifications/testIDs';
 

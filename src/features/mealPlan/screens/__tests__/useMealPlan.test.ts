@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -12,7 +12,7 @@ import {
   MealPlanMain_ItemFragmentDoc,
   MealPlanMain_MealPlanFragmentDoc,
 } from '#features/mealPlan/screens/MealPlanMain.generated';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { useMealPlan } from '../useMealPlan';

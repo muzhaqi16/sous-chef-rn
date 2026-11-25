@@ -1,5 +1,5 @@
 import { boolean, object, type ObjectSchema } from 'yup';
-import { homeNameRule } from '#/utils/validation/common';
+import { homeNameRule } from '#utils/validation/common';
 
 export interface CreateHomeFormValues {
   name: string;

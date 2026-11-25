@@ -5,24 +5,24 @@ import { useRoute } from '@react-navigation/native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Icon } from '#components/atoms/Icon';
 import { PasswordInput } from '#components/molecules/PasswordInput';
 import { Button } from '#components/molecules/Button';
 import { Loading } from '#components/molecules/Loading';
 import { useStore } from '#store';
 import { holdsSessionTokens } from '#store/slices/authSlice';
-import { authService } from '#/services/authService';
+import { authService } from '#services/authService';
 import {
   useResetPassword,
   type ResetPasswordFn,
 } from '#features/auth/hooks/useResetPassword';
-import { logger } from '#/utils/environment';
-import { localizedErrorMessage } from '#/services/errorService';
-import { reportValidationErrors } from '#/utils/validation/common';
-import { resetPasswordSchema } from '#/utils/validation/auth';
+import { logger } from '#utils/environment';
+import { localizedErrorMessage } from '#services/errorService';
+import { reportValidationErrors } from '#utils/validation/common';
+import { resetPasswordSchema } from '#utils/validation/auth';
 import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';

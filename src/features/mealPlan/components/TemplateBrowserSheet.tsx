@@ -1,7 +1,7 @@
 import React from 'react';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { FlashList } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { Sheet } from '#components/templates/Sheet';
@@ -22,7 +22,7 @@ import {
   useMealTemplates,
   type MealTemplateRef,
 } from '#features/mealPlan/hooks/useMealTemplates';
-import { TemplateCategory } from '#/graphql/generated/schemaTypes';
+import { TemplateCategory } from '#graphql/generated/schemaTypes';
 import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';

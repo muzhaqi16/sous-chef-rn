@@ -4,15 +4,15 @@ import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryIte
 import { localIntakeRow } from '#features/pantry/cache/localIntake';
 import type { CreateItemInputs } from '#features/pantry/offline/localWrites';
 import { readHeldStackUnit } from '#features/pantry/utils/pantryCacheReaders';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
+import { useTranslation } from '#i18n';
 import type {
   CreatePantryItemInput,
   PantryItemSourceInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /**
  * A typed item goes under an id minted here, which the row names at once: the

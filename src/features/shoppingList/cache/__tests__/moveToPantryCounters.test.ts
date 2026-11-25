@@ -13,7 +13,7 @@
  *    revert.
  */
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { removeItemFromShoppingListForMoveToPantry } from '../moveToPantry';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 

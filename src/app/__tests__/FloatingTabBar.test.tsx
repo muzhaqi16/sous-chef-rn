@@ -32,7 +32,7 @@ jest.mock('#components/atoms/Icon', () => {
   };
 });
 
-jest.mock('#/constants/animations', () => ({}));
+jest.mock('#constants/animations', () => ({}));
 
 // Patch useAnimatedReaction which is missing from the global jest.setup.js reanimated mock
 const reanimated = require('react-native-reanimated');

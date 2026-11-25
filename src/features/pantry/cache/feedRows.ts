@@ -5,8 +5,8 @@ import {
   safeEvictMany,
   skipUnmatchedArgVariants,
   type ConnectionData,
-} from '#/apollo/utils/cacheUpdaters';
-import { isRecord } from '#/utils/isRecord';
+} from '#apollo/utils/cacheUpdaters';
+import { isRecord } from '#utils/isRecord';
 import {
   PantryFeed_ItemsFragmentDoc,
   type PantryFeed_ItemsFragment,

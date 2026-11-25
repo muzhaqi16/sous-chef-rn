@@ -6,15 +6,15 @@
  */
 
 import { useApolloClient } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   UseShoppingListBudget_ListFragmentDoc,
   type UseShoppingListBudget_ListFragment,
 } from './useShoppingListBudget.generated';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { toastService } from '#/services/toastService';
-import type { UpdateShoppingListInput } from '#/graphql/generated/schemaTypes';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { toastService } from '#services/toastService';
+import type { UpdateShoppingListInput } from '#graphql/generated/schemaTypes';
 
 export function useShoppingListBudget() {
   const { t } = useTranslation();

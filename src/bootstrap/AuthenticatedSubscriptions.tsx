@@ -4,8 +4,8 @@ import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscrip
 import { useHomeSubscriptions } from '#features/home/hooks/useHomeSubscriptions';
 import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSubscriptions';
 
-import { useChangeFeed } from '#/hooks/subscriptions/useChangeFeed';
-import { useUserSubscriptions } from '#/hooks/subscriptions/useUserSubscriptions';
+import { useChangeFeed } from '#hooks/subscriptions/useChangeFeed';
+import { useUserSubscriptions } from '#hooks/subscriptions/useUserSubscriptions';
 import { useDeviceTimezoneSync } from '#features/notifications/hooks/useDeviceTimezoneSync';
 import { useMarkPushOpenedRead } from '#features/notifications/hooks/useMarkPushOpenedRead';
 import { useAccountCurrencySync } from '#features/profile/hooks/useAccountCurrencySync';

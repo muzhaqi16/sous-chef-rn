@@ -2,7 +2,7 @@ import type { TypePolicies } from '@apollo/client';
 import {
   mergeConnectionByNodeId,
   readByIdFromCache,
-} from '#/apollo/cacheFieldPolicies';
+} from '#apollo/cacheFieldPolicies';
 
 /**
  * A home's connections merge by node id, so `fetchMore` appends. `makeCache()`

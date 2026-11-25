@@ -2,7 +2,7 @@ import { CommonActions, StackActions } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { storeApi } from '#store';
 import { useSelectedPantryId } from '#store/useAppStore';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import type { OnboardingStackParams } from '#navigation/stacks/OnboardingStack';
 import {
   recordReachedStep,

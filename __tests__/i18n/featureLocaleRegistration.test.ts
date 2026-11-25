@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { FEATURE_LOCALES } from '#/i18n/featureLocales';
+import { FEATURE_LOCALES } from '#i18n/featureLocales';
 import { featureLocaleDirs } from '#/test-utils/mergedLocales';
 
 /**

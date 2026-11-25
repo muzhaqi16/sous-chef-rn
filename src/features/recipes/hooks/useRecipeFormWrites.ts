@@ -12,22 +12,22 @@ import {
 import type {
   CreateRecipeInput,
   UpdateRecipeInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { CreateRecipeInputs } from '#features/recipes/offline/localWrites';
 import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
 import {
   useLocalWrite,
   type WriteSettle,
-} from '#/apollo/pendingWrites/useLocalWrite';
+} from '#apollo/pendingWrites/useLocalWrite';
 import {
   settleMutation,
   type SettledFailure,
-} from '#/apollo/utils/settleMutation';
-import { generateEntityId } from '#/utils/generateEntityId';
+} from '#apollo/utils/settleMutation';
+import { generateEntityId } from '#utils/generateEntityId';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useDataState } from '#hooks/data/useDataState';
-import { UnreadVersionError } from '#/apollo/utils/entityWriteChain';
-import { useTranslation } from '#/i18n';
+import { UnreadVersionError } from '#apollo/utils/entityWriteChain';
+import { useTranslation } from '#i18n';
 import {
   MAX_RECIPE_INGREDIENTS,
   RECIPE_INGREDIENTS_PAGE_SIZE,

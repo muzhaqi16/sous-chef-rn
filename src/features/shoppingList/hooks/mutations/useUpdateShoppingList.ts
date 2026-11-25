@@ -14,13 +14,13 @@ import {
   UseUpdateShoppingList_ListFragmentDoc,
   type UseUpdateShoppingList_ListFragment,
 } from './useUpdateShoppingList.generated';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { GraphQLNetworkError } from '#utils/errors/graphqlErrors';
+import { appliedPayload } from '#utils/errors/mutationPayload';
 import type {
   ListStatus,
   ShoppingListPlanningInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 interface ShoppingListSettingsUpdate {
   name?: string;

@@ -3,8 +3,8 @@ import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
 import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/atoms/FormInput';
@@ -16,7 +16,7 @@ import {
   type MacroTargetUpdates,
   type MacroTargetsFormValues,
 } from './macroTargetsFormConfig';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 
 interface MacroTargetsSheetProps {
   visible: boolean;

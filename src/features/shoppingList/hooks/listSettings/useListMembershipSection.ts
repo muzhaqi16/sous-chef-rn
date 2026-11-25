@@ -1,7 +1,7 @@
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
-import { toastService } from '#/services/toastService';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
+import { destructiveConfirm } from '#services/destructiveConfirm';
+import { toastService } from '#services/toastService';
 import { useScreenFocusEffect } from '#platform/screen';
 import { useRemoveCollaborator } from '#features/shoppingList/hooks/useRemoveCollaborator';
 import type { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';

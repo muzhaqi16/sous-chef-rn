@@ -7,7 +7,7 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 type Tone = 'accent' | 'success' | 'warning' | 'error' | 'rating';
 

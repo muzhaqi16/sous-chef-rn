@@ -1,4 +1,4 @@
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import React from 'react';
 import {
   useUnitAutocomplete,
@@ -6,8 +6,8 @@ import {
 } from '#features/catalog/hooks/useUnitAutocomplete';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
-import { unitLabel } from '#/utils/formatQuantity';
+import type { UnitType } from '#graphql/generated/schemaTypes';
+import { unitLabel } from '#utils/formatQuantity';
 
 interface UnitAutocompleteFieldProps {
   variant: 'inline' | 'modal';

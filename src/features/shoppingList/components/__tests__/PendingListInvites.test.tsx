@@ -9,11 +9,11 @@ import { drainTimers } from '#/test-utils/drainTimers';
 import {
   CollaboratorRole,
   CollaboratorStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { AcceptShoppingListInviteDocument } from '#features/shoppingList/graphql/collaboration.generated';
 import { GetPendingListInvitesDocument } from '#features/shoppingList/hooks/usePendingListInvites.generated';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useStore } from '#store';
 import { PendingListInvites } from '../PendingListInvites';
 

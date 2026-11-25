@@ -1,8 +1,8 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { useStore } from '#store';
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import { UnitSystem } from '#graphql/generated/schemaTypes';
 import {
   recordMock,
   renderWithApollo,

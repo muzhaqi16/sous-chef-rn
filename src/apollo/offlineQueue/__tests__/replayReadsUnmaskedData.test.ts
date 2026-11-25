@@ -1,7 +1,7 @@
 import { ApolloClient, gql } from '@apollo/client';
 import { MockLink } from '@apollo/client/testing';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import {
   completeMockedResponse,
   seedFragment,
@@ -11,8 +11,8 @@ import {
   queuedMutationFor,
 } from '#/test-utils/queuedMutation';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
+import { isHeld } from '#apollo/utils/writeLocalEntity';
 import { QueueManager } from '../queueManager';
 import { BatchRowRefusedError } from '../queueErrorPolicy';
 import { queueStore } from '../queueStore';
@@ -24,7 +24,7 @@ import { queueStore } from '../queueStore';
  */
 
 let mockClient: ApolloClient | null = null;
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),

@@ -3,30 +3,30 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { Icon } from '#components/atoms/Icon';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { Loading } from '#components/molecules/Loading';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { usePantrySettings } from '#features/pantry/hooks/usePantrySettings';
 import { useSelectedHomeId, useSetSelectedPantryId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { errorService } from '#/services/errorService';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { errorService } from '#services/errorService';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
 import {
   executeWithLoadingState,
   executeAsyncWithCleanup,
-} from '#/utils/finallyHelpers';
+} from '#utils/finallyHelpers';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
 import { SubScreen } from '#components/templates/SubScreen';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { destructiveConfirm } from '#services/destructiveConfirm';
+import { reportValidationErrors } from '#utils/validation/common';
 import {
   EMPTY_PANTRY_SETTINGS,
   MAX_PANTRY_DESCRIPTION_LENGTH,

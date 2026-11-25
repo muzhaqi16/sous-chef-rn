@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 
 interface PartialDataNoteProps {

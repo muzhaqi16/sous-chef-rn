@@ -1,5 +1,5 @@
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { applyDefaultHome } from '../defaultHomeCacheWrites';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 

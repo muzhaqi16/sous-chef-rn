@@ -8,7 +8,7 @@
  * Verified: #cachemodify-cannot-add-a-field
  */
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 describe('cache.modify on a field the store object lacks', () => {

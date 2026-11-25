@@ -7,7 +7,7 @@ import CollaboratorPermissionsBottomSheet, {
 import {
   CollaboratorRole,
   CollaboratorStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UpdateCollaboratorPermissionsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';

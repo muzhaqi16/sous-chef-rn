@@ -16,13 +16,13 @@ import {
   type UseCorrectPackageSize_BatchFragment,
   type UseCorrectPackageSize_StackFragment,
 } from './useCorrectPackageSize.generated';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { localUnit } from '#features/catalog/cache/localRefs';
-import { UnitType } from '#/graphql/generated/schemaTypes';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { errorService } from '#/services/errorService';
-import { useTranslation } from '#/i18n';
-import { todayKey } from '#/utils/dateUtils';
+import { UnitType } from '#graphql/generated/schemaTypes';
+import { generateEntityId } from '#utils/generateEntityId';
+import { errorService } from '#services/errorService';
+import { useTranslation } from '#i18n';
+import { todayKey } from '#utils/dateUtils';
 import type { PackageSizeCorrectionInput } from '#features/pantry/types';
 
 export interface PackageSizeCorrection extends PackageSizeCorrectionInput {

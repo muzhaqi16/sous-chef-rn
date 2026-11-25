@@ -2,16 +2,16 @@ import type { ScanAmount, ScannedItem } from '#features/barcode/types';
 import {
   AcquisitionMethod,
   type StockAmountInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
 import {
   usePantryIntake,
   type AddPantryItemOutcome,
 } from '#features/pantry/hooks/usePantryIntake';
-import { refByIdOrName } from '#/utils/refInput';
+import { refByIdOrName } from '#utils/refInput';
 import { contentsOf } from '#domain/stockAmount';
 import { resolveIntakeDraft } from '#domain/intakeDraft';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 /** A list line from a scan is one container: the per-container weight is separate. */
 const SCANNED_QUANTITY = 1;

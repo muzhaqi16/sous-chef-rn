@@ -1,6 +1,6 @@
 import { isReference, type ApolloCache } from '@apollo/client';
 import type { ModifierDetails } from '@apollo/client/cache';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 /** The row whose `suggestions` a surface reads. */
 export type SuggestionParent = {

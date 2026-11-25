@@ -1,9 +1,9 @@
 import { ApolloClient, ApolloLink, Observable, gql } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { createAnswerOrderingLink } from '#/apollo/links/answerOrderingLink';
-import type { Settled } from '#/apollo/utils/settleMutation';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { createAnswerOrderingLink } from '#apollo/links/answerOrderingLink';
+import type { Settled } from '#apollo/utils/settleMutation';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { PendingWrites, type LocalWriteSend } from '../pendingWrites';
 import type { LocalWriteTable } from '../types';

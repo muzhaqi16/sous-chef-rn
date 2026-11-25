@@ -4,7 +4,7 @@
  * `instrumentViewManagerConstants()` has to run before anything pulls in
  * BridgelessUIManager, which captures the global it wraps at evaluation time.
  */
-import { StartupMark } from '#/native/StartupMark';
+import { StartupMark } from '#native/StartupMark';
 
 import {
   HERMES_PROFILE_STARTUP,

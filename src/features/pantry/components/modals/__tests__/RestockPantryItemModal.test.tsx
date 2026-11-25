@@ -22,10 +22,10 @@ import {
 } from '#/test-utils/fixtures/pantryActionFixtures';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { localizeNumericHint } from '#/utils/formatters/number';
-import { UnitType } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { localizeNumericHint } from '#utils/formatters/number';
+import { UnitType } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import { RestockUnitsForPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { SearchUnitsDocument } from '#operations/item/unit.generated';
 import { pantryTestIDs } from '#features/pantry/testIDs';

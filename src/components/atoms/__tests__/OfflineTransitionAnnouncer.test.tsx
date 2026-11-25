@@ -3,7 +3,7 @@ import { AccessibilityInfo } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { OfflineTransitionAnnouncer } from '../OfflineTransitionAnnouncer';
 import { useOfflineStatus } from '#hooks/ui/useOfflineStatus';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 
 jest.mock('#hooks/ui/useOfflineStatus');
 

@@ -1,6 +1,6 @@
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import type { SettleOptions } from '#/apollo/utils/settleMutation';
-import { t } from '#/i18n';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import type { SettleOptions } from '#apollo/utils/settleMutation';
+import { t } from '#i18n';
 
 /**
  * The copy for an accept/decline refusal, by the code its member carries. The

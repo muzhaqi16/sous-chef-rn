@@ -1,4 +1,4 @@
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { useReceiptDraftStore } from '../receiptDraftStore';
 import {
   parsedReceipt,

@@ -1,5 +1,5 @@
-import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
-import type { TranslationKey } from '#/i18n';
+import { CollaboratorRole } from '#graphql/generated/schemaTypes';
+import type { TranslationKey } from '#i18n';
 import type { IconName } from '#components/atoms/Icon';
 
 /**

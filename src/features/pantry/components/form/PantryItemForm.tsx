@@ -1,6 +1,6 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { Text } from '#components/atoms/Text';
@@ -15,7 +15,7 @@ import {
   ItemCondition,
   type StorageType,
   type UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useUpdatePantryItem } from '#features/pantry/hooks/mutations/useUpdatePantryItem';
 import { useUpdatePantryItemQuantity } from '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity';
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
@@ -49,13 +49,13 @@ import {
   PAGE_LABEL_KEYS,
   type PageName,
 } from '#features/catalog/ui/AddItemForm/fields';
-import { formatNumberForInput } from '#/utils/formatters/number';
-import { formatQuantityForInput, unitLabel } from '#/utils/formatQuantity';
+import { formatNumberForInput } from '#utils/formatters/number';
+import { formatQuantityForInput, unitLabel } from '#utils/formatQuantity';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
-import { fromDateKey } from '#/utils/dateUtils';
+import { fromDateKey } from '#utils/dateUtils';
 
 export interface PantryItemFormData {
   itemName?: string;

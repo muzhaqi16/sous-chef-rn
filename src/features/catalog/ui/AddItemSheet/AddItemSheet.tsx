@@ -1,13 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { LayoutAnimationConfig } from 'react-native-reanimated';
 import { Sheet } from '#components/templates/Sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
 import { ItemSuggestionsList } from '#features/catalog/ui/ItemSuggestionsList';
 import { ReportItemForm } from '#features/catalog/ui/ReportItemForm/ReportItemForm';
 import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
@@ -21,7 +21,7 @@ import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { catalogTestIDs } from '#features/catalog/testIDs';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { hitSlop } from '#theme/foundations/sizes';
 import type { BaseSuggestionItem } from '#features/catalog/types';
 import { useOpening } from '#hooks/ui/useOpening';
 

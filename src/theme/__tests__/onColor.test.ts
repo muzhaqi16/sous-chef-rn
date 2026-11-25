@@ -1,5 +1,5 @@
 import chroma from 'chroma-js';
-import { appConfig } from '#/config/appConfig';
+import { appConfig } from '#config/appConfig';
 import { onColor } from '../foundations/derivePalette';
 import { lightTheme, darkTheme } from '../themes';
 

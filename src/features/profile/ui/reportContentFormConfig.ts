@@ -1,6 +1,6 @@
 import { mixed, object, string, type ObjectSchema } from 'yup';
-import { ReportType } from '#/graphql/generated/schemaTypes';
-import { lazyMessage } from '#/utils/validation/common';
+import { ReportType } from '#graphql/generated/schemaTypes';
+import { lazyMessage } from '#utils/validation/common';
 
 export interface ReportContentFormValues {
   /** Null until a reason is picked. */

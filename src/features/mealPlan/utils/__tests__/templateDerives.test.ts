@@ -5,7 +5,7 @@ import {
   MealPlanType,
   MealType,
   TemplateCategory,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   leftoversLunch,
   planSource,

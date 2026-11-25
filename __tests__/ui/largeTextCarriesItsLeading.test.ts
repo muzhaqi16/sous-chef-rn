@@ -20,7 +20,7 @@
 import { readFileSync } from 'fs';
 import { globSync } from 'glob';
 import { resolve } from 'path';
-import { typography } from '#/theme/foundations/typography';
+import { typography } from '#theme/foundations/typography';
 
 const ROOT = resolve(__dirname, '..', '..');
 

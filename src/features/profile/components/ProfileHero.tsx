@@ -8,8 +8,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
-import { useTranslation } from '#/i18n';
-import { logger } from '#/utils/environment';
+import { useTranslation } from '#i18n';
+import { logger } from '#utils/environment';
 import { Icon } from '#components/atoms/Icon';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { CachedImage } from '#components/atoms/CachedImage';

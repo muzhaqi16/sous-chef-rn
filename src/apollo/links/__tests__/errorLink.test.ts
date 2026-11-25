@@ -2,7 +2,7 @@
 
 // --- Mocks (must be before imports) ---
 
-jest.mock('#/utils/isNetworkError', () => ({
+jest.mock('#utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
 jest.mock('../../logoutCleanup', () => ({
@@ -30,17 +30,17 @@ jest.mock('#store', () => ({
 
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
 import type { DocumentNode } from '@apollo/client';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { Observable } from 'rxjs';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import type { FormattedExecutionResult } from 'graphql';
 import { errorLink } from '../errorLink';
 import { LogoutCleanup } from '../../logoutCleanup';
 import { attemptTokenRefresh } from '../refreshToken';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { logger } from '#/utils/environment';
+import { isNetworkError } from '#utils/isNetworkError';
+import { logger } from '#utils/environment';
 import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 
 const query = gql`
   query TestOp {

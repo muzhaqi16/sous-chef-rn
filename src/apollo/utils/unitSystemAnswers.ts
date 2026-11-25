@@ -1,13 +1,13 @@
 import type { ApolloCache, ApolloClient } from '@apollo/client';
-import type { Query } from '#/graphql/generated/schemaTypes';
+import type { Query } from '#graphql/generated/schemaTypes';
 import {
   entityFields,
   type EntityFieldsInputs,
-} from '#/apollo/pendingWrites/entityFields';
-import type { LocalWrite } from '#/apollo/pendingWrites/types';
+} from '#apollo/pendingWrites/entityFields';
+import type { LocalWrite } from '#apollo/pendingWrites/types';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
-import { isRecord } from '#/utils/isRecord';
-import { logger } from '#/utils/environment';
+import { isRecord } from '#utils/isRecord';
+import { logger } from '#utils/environment';
 
 /**
  * The root fields the server answers in the caller's unit system (see

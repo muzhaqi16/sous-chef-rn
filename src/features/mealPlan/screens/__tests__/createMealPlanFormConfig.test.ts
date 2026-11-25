@@ -4,7 +4,7 @@ import {
   createMealPlanSchema,
   PERSONAL_VALUE,
 } from '../createMealPlanFormConfig';
-import { MealPlanType } from '#/graphql/generated/schemaTypes';
+import { MealPlanType } from '#graphql/generated/schemaTypes';
 
 /**
  * A field the person can fix is reported ON the field: an alert covers the form

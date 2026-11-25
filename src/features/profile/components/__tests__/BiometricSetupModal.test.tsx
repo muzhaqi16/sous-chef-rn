@@ -9,15 +9,15 @@ import {
   userEvent,
 } from '@testing-library/react-native';
 import { BiometricSetupModal } from '#features/profile/components/BiometricSetupModal';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/services/biometric/deviceCredential', () => ({
+jest.mock('#services/biometric/deviceCredential', () => ({
   biometricService: {
     getBiometricInfo: jest.fn(),
     enrolDeviceCredential: jest.fn(),
@@ -28,7 +28,7 @@ jest.mock('#/services/biometric/deviceCredential', () => ({
 
 // Get references to mock functions after the module mock is created
 const { biometricService: mockBiometricService } = jest.requireMock(
-  '#/services/biometric/deviceCredential',
+  '#services/biometric/deviceCredential',
 );
 const mockGetBiometricInfo = mockBiometricService.getBiometricInfo;
 const mockEnrol = mockBiometricService.enrolDeviceCredential;

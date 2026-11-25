@@ -1,4 +1,4 @@
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 import type { BadgeContent } from '#components/atoms/Badge';
 import { READY_COVERAGE } from '#features/recipes/utils/recipeCoverage';
 

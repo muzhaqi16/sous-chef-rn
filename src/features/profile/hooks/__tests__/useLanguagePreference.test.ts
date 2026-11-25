@@ -4,8 +4,8 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import { useStore } from '#store';
 import { useLanguagePreference } from '../useLanguagePreference';
 

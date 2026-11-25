@@ -10,13 +10,13 @@ import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 import {
   type PantryItemOrderBy,
   SortOrder,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
 import { usePantryQuery } from '../usePantryQuery';
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
 type MockEdge = { node?: { id?: string } | null } | null;
@@ -29,7 +29,7 @@ jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
 }));
 
-jest.mock('#/utils/connectionUtils', () => ({
+jest.mock('#utils/connectionUtils', () => ({
   extractNodes: jest.fn((connection: MockConnection) => {
     if (!connection?.edges) return [];
     return connection.edges
@@ -43,7 +43,7 @@ jest.mock('#/utils/connectionUtils', () => ({
   }),
 }));
 
-jest.mock('#/hooks/utils/usePagination', () => ({
+jest.mock('#hooks/utils/usePagination', () => ({
   usePagination: jest.fn(() => ({
     hasMore: false,
     loadMore: jest.fn(),
@@ -54,11 +54,11 @@ jest.mock('#/hooks/utils/usePagination', () => ({
 // The pantry query does not touch subscriptionService — pending-delete
 // echoes are filtered at the subscription-handler layer instead. The mock is
 // registered empty so any accidental call fails loudly.
-jest.mock('#/services/subscriptions/SubscriptionService', () => ({
+jest.mock('#services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {},
 }));
 
-jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
+jest.mock('#hooks/apollo/usePreservedQueryData', () => ({
   usePreservedQueryData: <T>(data: T | undefined, initial: T) =>
     data !== undefined ? data : initial,
 }));

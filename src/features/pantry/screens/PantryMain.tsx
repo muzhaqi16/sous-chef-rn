@@ -5,12 +5,12 @@ import {
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
-import type { TabBarAddAction } from '#/context/TabBarActionsContext';
+import type { TabBarAddAction } from '#context/TabBarActionsContext';
 import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePantrySelectorConfig } from '#features/pantry/screens/usePantrySelectorConfig';
@@ -19,7 +19,7 @@ import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import {
   useTabBarSetters,
   useTabBarState,
-} from '#/context/TabBarActionsContext';
+} from '#context/TabBarActionsContext';
 import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import {
@@ -52,7 +52,7 @@ import { PantryScreenSkeleton } from '#features/pantry/components/skeletons/Pant
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 import { Screen } from '#components/templates/Screen';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';

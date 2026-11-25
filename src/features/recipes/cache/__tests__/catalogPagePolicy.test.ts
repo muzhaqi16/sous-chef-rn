@@ -1,5 +1,5 @@
-import { makeCache } from '#/apollo/cache';
-import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
+import { ExternalSource } from '#graphql/generated/schemaTypes';
 import {
   RandomCatalogRecipesDocument,
   type RandomCatalogRecipesQuery,

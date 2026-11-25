@@ -3,21 +3,21 @@ import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { alertService } from '#/services/alertService';
-import { localizedErrorMessage } from '#/services/errorService';
+import { alertService } from '#services/alertService';
+import { localizedErrorMessage } from '#services/errorService';
 import { Sheet } from '#components/templates/Sheet';
 import { Icon } from '#components/atoms/Icon';
-import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
+import { CollaboratorRole } from '#graphql/generated/schemaTypes';
 import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import {
   useCollaboratorPermissions,
   type CollabPermissions,
 } from '#features/shoppingList/hooks/useCollaboratorPermissions';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { ROLE_PERMISSIONS } from '#features/shoppingList/components/collaboratorRoles';
-import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
+import { getCollaboratorDisplayName } from '#utils/formatters/memberFormatters';
 import { Text } from '#components/atoms/Text';
 
 interface CollaboratorPermissionsBottomSheetProps {

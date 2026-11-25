@@ -1,7 +1,7 @@
-import type { KeyUnder } from '#/i18n';
-import type { Translate } from '#/i18n/types';
-import { StorageState, StorageType } from '#/graphql/generated/schemaTypes';
-import { colors } from '#/theme/foundations/colors';
+import type { KeyUnder } from '#i18n';
+import type { Translate } from '#i18n/types';
+import { StorageState, StorageType } from '#graphql/generated/schemaTypes';
+import { colors } from '#theme/foundations/colors';
 
 type FormKey = KeyUnder<'storageLocationForm'>;
 

@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import { changeLanguage } from '#/i18n';
+import { changeLanguage } from '#i18n';
 import { requirePlatform } from '#platform/install';
 import { PREFERENCE_DEFAULTS, type ThemePreference } from './preferenceTypes';
 import type {
@@ -9,11 +9,11 @@ import type {
   PantrySortDirection,
 } from './preferenceTypes';
 import type { RootState } from '../index';
-import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
+import { DEFAULT_CURRENCY } from '#utils/formatters/number';
 import {
   MIRRORED_SETTINGS,
   type MirroredSettings,
-} from '#/domain/serverSettings';
+} from '#domain/serverSettings';
 
 // Per-user preferences (keyed by userId)
 export interface UserPreferences {

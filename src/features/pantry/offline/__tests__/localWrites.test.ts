@@ -1,9 +1,9 @@
 import type { Unmasked } from '@apollo/client/masking';
-import { makeCache } from '#/apollo/cache';
-import { PendingWrites } from '#/apollo/pendingWrites/pendingWrites';
-import { readFenceOf } from '#/apollo/pendingWrites/readFence';
-import type { PendingWrite } from '#/apollo/pendingWrites/types';
-import type { EntityFieldsInputs } from '#/apollo/pendingWrites/entityFields';
+import { makeCache } from '#apollo/cache';
+import { PendingWrites } from '#apollo/pendingWrites/pendingWrites';
+import { readFenceOf } from '#apollo/pendingWrites/readFence';
+import type { PendingWrite } from '#apollo/pendingWrites/types';
+import type { EntityFieldsInputs } from '#apollo/pendingWrites/entityFields';
 import {
   completeSeed,
   seedFragment,
@@ -19,13 +19,13 @@ import {
 } from '#/test-utils/fixtures/pantryFixtures';
 import { cacheShows } from '#/test-utils/cacheWaits';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import {
   BatchStatus,
   ExpiryKind,
   ItemCondition,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   HomePantries_HomeFragmentDoc,
   type HomePantries_HomeFragment,

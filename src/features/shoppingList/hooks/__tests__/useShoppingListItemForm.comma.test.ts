@@ -3,12 +3,12 @@
  * suite stubs `parseFractionalInput` with a period-only reader.
  */
 import { renderHook, act } from '@testing-library/react-native';
-import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+import { getDeviceDecimalSeparator } from '#utils/deviceLocale';
 import { useShoppingListItemForm } from '../useShoppingListItemForm';
 import type { UseShoppingListItemForm_ItemFragment } from '../useShoppingListItemForm.generated';
 
-jest.mock('#/utils/deviceLocale', () => ({
-  ...jest.requireActual('#/utils/deviceLocale'),
+jest.mock('#utils/deviceLocale', () => ({
+  ...jest.requireActual('#utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => ','),
 }));
 

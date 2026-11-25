@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
 import { useApolloClient, useFragment } from '@apollo/client/react';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { useToday } from '#hooks/app/useToday';
-import { errorService } from '#/services/errorService';
-import { isVersionConflictCode } from '#/utils/errors/versionConflict';
-import { toastService } from '#/services/toastService';
+import { errorService } from '#services/errorService';
+import { isVersionConflictCode } from '#utils/errors/versionConflict';
+import { toastService } from '#services/toastService';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
@@ -31,7 +31,7 @@ import {
 import {
   formatQuantityDisplay,
   type UnitLabelSource,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import { forgetReceipt } from '../utils/forgetReceipt';
 import {
   linkReceiptLines,
@@ -65,8 +65,8 @@ import {
   storeChoiceName,
   type StoreChoice,
 } from '#domain/stores';
-import { toDateKey } from '#/utils/dateUtils';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { toDateKey } from '#utils/dateUtils';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { useReceiptCurrency } from './useReceiptCurrency';
 
 // The chain and its store number print above the items (`ALDI` / `Store #027`).

@@ -20,7 +20,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
-import { hitSlopFor } from '#/theme/touchTarget';
+import { hitSlopFor } from '#theme/touchTarget';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { BarActions } from '#components/molecules/BarActions';
@@ -33,7 +33,7 @@ import {
 import { useSheetBackdropOpacity } from '#hooks/ui/useSheetBackdropOpacity';
 import { ActionTrayScrollContext } from './ActionTrayScrollContext';
 import type { ActionTrayProps, ActionTrayRef } from './types';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 // Detached sheets float this far above the screen bottom. The pinned footer takes
 // NO `bottomInset` of its own — the detached container already lifts the whole

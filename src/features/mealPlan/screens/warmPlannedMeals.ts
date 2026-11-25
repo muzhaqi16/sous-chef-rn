@@ -1,6 +1,6 @@
 import type { ApolloClient } from '@apollo/client';
 import { useStore } from '#store';
-import { addDaysToKey, todayKey } from '#/utils/dateUtils';
+import { addDaysToKey, todayKey } from '#utils/dateUtils';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { UNFILTERED_PLANS_VARIABLES } from '#features/mealPlan/hooks/useMealPlans';

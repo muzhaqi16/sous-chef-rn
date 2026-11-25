@@ -1,10 +1,10 @@
 import React from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
-import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport';
+import { useIncompleteCellReport } from '#hooks/apollo/useIncompleteCellReport';
 
 import { Icon } from '#components/atoms/Icon';
 import { MembersList } from './MembersList';

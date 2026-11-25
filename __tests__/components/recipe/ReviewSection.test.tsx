@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import type { DataState } from '#hooks/data/useDataState';
 import { ReviewSection } from '../../../src/features/recipes/components/ReviewSection';
 import type { RecipeReviewFragment } from '../../../src/features/recipes/graphql/recipeFragments.generated';

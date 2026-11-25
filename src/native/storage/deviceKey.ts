@@ -7,8 +7,8 @@ import {
   getGenericPassword,
   resetGenericPassword,
 } from 'react-native-keychain';
-import { logger } from '#/utils/environment';
-import { backoffDelay, sleep } from '#/utils/backoff';
+import { logger } from '#utils/environment';
+import { backoffDelay, sleep } from '#utils/backoff';
 const DEVICE_KEY_SERVICE = 'dev.souschef.app.devicekey';
 const DEVICE_KEY_USERNAME = 'device_key';
 

@@ -10,10 +10,7 @@ import {
   GetNotificationPreferencesDocument,
   UpdateNotificationPreferencesDocument,
 } from '#operations/user/user.generated';
-import {
-  ErrorCode,
-  ExpirationFrequency,
-} from '#/graphql/generated/schemaTypes';
+import { ErrorCode, ExpirationFrequency } from '#graphql/generated/schemaTypes';
 import { useNotificationSettings } from '../useNotificationSettings';
 
 jest.mock('#store/useAppStore', () => {
@@ -59,7 +56,7 @@ const mockPreferencesData: StoredPreferences = {
   quietHoursTimezone: 'America/New_York',
 };
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),

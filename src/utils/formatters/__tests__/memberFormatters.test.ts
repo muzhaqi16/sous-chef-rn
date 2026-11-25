@@ -1,14 +1,14 @@
 import {
   MembershipRole,
   MembershipStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { CollaboratorDisplayShape, Member } from '../memberFormatters';
 import {
   getCollaboratorDisplayName,
   getMemberDisplayName,
   personName,
 } from '../memberFormatters';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 
 function makeMember(overrides: Partial<Member> = {}): Member {
   return {

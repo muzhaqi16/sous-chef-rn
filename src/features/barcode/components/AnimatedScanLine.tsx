@@ -8,7 +8,7 @@ import Animated, {
   type CSSAnimationProperties,
 } from 'react-native-reanimated';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 /** Down the frame and back, for as long as the scanner shows. */
 const sweep = (travel: number, duration: number): CSSAnimationProperties => ({

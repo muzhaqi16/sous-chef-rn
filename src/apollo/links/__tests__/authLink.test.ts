@@ -1,15 +1,15 @@
 // Mock other dependencies that authLink imports
-jest.mock('#/config/env', () => ({
+jest.mock('#config/env', () => ({
   env: { API_KEY: 'test-api-key' },
 }));
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { Observable, of } from 'rxjs';
 import { authLink } from '../authLink';
 import { proactiveTokenRefresh } from '../refreshToken';
-import * as deviceIdentity from '#/services/auth/deviceId';
+import * as deviceIdentity from '#services/auth/deviceId';
 import { useStore } from '#store';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import { withDeadline } from '#/test-utils/cacheWaits';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
 import {
@@ -24,7 +24,7 @@ import { GetNotificationsDocument } from '#features/notifications/graphql/notifi
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import type { DocumentNode } from 'graphql';
 
 const mockedProactiveRefresh = jest.mocked(proactiveTokenRefresh);

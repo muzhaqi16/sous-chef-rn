@@ -1,8 +1,8 @@
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import {
   TopLevelErrorCode,
   type Mutation,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /**
  * The two structural rules every errors-as-data reader depends on: which field

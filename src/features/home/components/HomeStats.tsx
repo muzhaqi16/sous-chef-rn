@@ -1,12 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { Icon, type IconName } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { Card } from '#components/atoms/Card';
 
 interface HomeStatsProps {

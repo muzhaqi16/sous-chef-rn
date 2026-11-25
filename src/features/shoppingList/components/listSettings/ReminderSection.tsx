@@ -3,8 +3,8 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
-import { commonStyles } from '#/styles/commonStyles';
+import { useTranslation } from '#i18n';
+import { commonStyles } from '#styles/commonStyles';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { listSettingsStyles as styles } from './styles';
 

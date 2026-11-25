@@ -65,7 +65,7 @@ require('./src/i18n/config');
 // mock provides safe defaults; a test that needs bespoke values overrides
 // one with `(Environment.x as jest.Mock).mockReturnValue(...)`, never a factory.
 // ---------------------------------------------------------------------------
-jest.mock('#/utils/environment');
+jest.mock('#utils/environment');
 
 // ---------------------------------------------------------------------------
 // Telemetry — apply the shared mock from `src/services/telemetry/__mocks__/`
@@ -77,16 +77,16 @@ jest.mock('#/utils/environment');
 // the telemetry internals import `TelemetryService` / `HttpTransport`
 // directly and are unaffected.
 // ---------------------------------------------------------------------------
-jest.mock('#/services/telemetry');
+jest.mock('#services/telemetry');
 
 // Toasts, alerts and token refresh are auto-mocked for every suite (the token
 // modules from `src/apollo/links/__mocks__/`); a suite asserts with
 // `jest.mocked(toastService.error)`, and one that needs the real module calls
 // `jest.unmock`.
-jest.mock('#/services/toastService');
-jest.mock('#/services/alertService');
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
+jest.mock('#services/toastService');
+jest.mock('#services/alertService');
+jest.mock('#apollo/links/tokenScheduler');
+jest.mock('#apollo/links/refreshToken');
 
 // ---------------------------------------------------------------------------
 // @react-native-firebase/messaging (FCM) — native module, absent under jest.

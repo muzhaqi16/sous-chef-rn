@@ -3,10 +3,10 @@ import { act, renderHook } from '@testing-library/react-native';
 import { ApolloClient, ApolloLink } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { createQueueLink } from '#/apollo/offlineQueue/queueLink';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { createQueueLink } from '#apollo/offlineQueue/queueLink';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
 import { useStore } from '#store';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
@@ -19,13 +19,13 @@ import {
   renderHookWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
-import { errorService } from '#/services/errorService';
-import { Telemetry } from '#/services/telemetry';
-import { t } from '#/i18n';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
+import { errorService } from '#services/errorService';
+import { Telemetry } from '#services/telemetry';
+import { t } from '#i18n';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import {
   checkInAnswer,
@@ -38,9 +38,9 @@ import {
   type CheckInLineToSend,
   type ReceiptToCheckIn,
 } from '../useReceiptCheckIn';
-import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
+import { askForReviewAfterSuccess } from '#domain/reviewPrompt';
 
-jest.mock('#/domain/reviewPrompt');
+jest.mock('#domain/reviewPrompt');
 
 const PANTRY_ID = 'pantry-1';
 

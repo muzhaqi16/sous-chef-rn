@@ -8,10 +8,10 @@ import {
   Intolerance,
   MembershipRole,
   RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { HomeDietaryNeedsDocument } from '../useHomeDietaryNeeds.generated';
 import { useHomeDietaryNeeds } from '../useHomeDietaryNeeds';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 
 const needsMock = (
   dietaryNeeds: {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { Sheet } from '#components/templates/Sheet';

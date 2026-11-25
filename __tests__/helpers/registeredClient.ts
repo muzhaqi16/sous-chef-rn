@@ -1,7 +1,7 @@
 import { ApolloClient, ApolloLink } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { registerApolloClient } from '#/apollo/clientRegistry';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { registerApolloClient } from '#apollo/clientRegistry';
 import {
   servedMocks,
   testMockLink,

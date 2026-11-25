@@ -5,7 +5,7 @@
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { seedCache } from '#/test-utils/apolloMockProvider';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
+import type { UnitType } from '#graphql/generated/schemaTypes';
 import { PantryActionModal_PantryItemFragmentDoc } from '#features/pantry/components/modals/PantryActionModal.generated';
 import type { ConsumptionUnitsForPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 

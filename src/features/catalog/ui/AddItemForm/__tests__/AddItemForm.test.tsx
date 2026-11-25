@@ -6,7 +6,7 @@ import {
   userEvent,
 } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { FieldRendererProvider } from '#components/molecules/fieldRenderers';
 import { catalogFieldRenderers } from '#features/catalog/ui/catalogFieldRenderers';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';

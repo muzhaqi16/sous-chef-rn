@@ -13,13 +13,13 @@ import {
 import {
   RecipeStatus,
   type CreateRecipeInput,
-} from '#/graphql/generated/schemaTypes';
-import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+} from '#graphql/generated/schemaTypes';
+import { writeLocalEntity } from '#apollo/utils/writeLocalEntity';
 import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
   skipUnmatchedFilterVariants,
-} from '#/apollo/utils/cacheUpdaters';
+} from '#apollo/utils/cacheUpdaters';
 
 const addToMyRecipes = createAddToQueryConnectionUpdater('recipes', 'Recipe');
 const removeFromMyRecipes = createRemoveFromQueryConnectionUpdater(

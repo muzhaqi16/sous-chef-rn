@@ -11,13 +11,13 @@ const mockMutate = jest.fn();
 // `unmaskAuthPayload` reads the LoginUser back out of the cache the mutation
 // just wrote, so the double has to answer that read for the login to complete.
 const mockReadFragment = jest.fn();
-jest.mock('#/apollo/client', () => ({
+jest.mock('#apollo/client', () => ({
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
 
 const mockDeviceRegionCurrency = jest.fn();
-jest.mock('#/domain/regionCurrency', () => ({
+jest.mock('#domain/regionCurrency', () => ({
   deviceRegionCurrency: () => mockDeviceRegionCurrency(),
   isUnchosenCurrency: (code: string | null | undefined) => !code,
 }));
@@ -51,7 +51,7 @@ const mockStore: MockStore = {
 };
 jest.mock('#store', () => ({ useStore: { getState: () => mockStore } }));
 
-jest.mock('#/services/auth/deviceId');
+jest.mock('#services/auth/deviceId');
 jest.mock('#native/storage/keychain', () => ({
   clearCredentials: jest.fn(),
   hasCredentials: jest.fn().mockResolvedValue(false),
@@ -61,9 +61,9 @@ jest.mock('#native/storage/keychain', () => ({
   getBiometricCapability: jest.fn().mockResolvedValue({ isAvailable: false }),
 }));
 
-import { registerApolloClient } from '#/apollo/clientRegistry';
+import { registerApolloClient } from '#apollo/clientRegistry';
 import type { ApolloClient } from '@apollo/client';
-import { authService } from '#/services/authService';
+import { authService } from '#services/authService';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 
 // The client the code under test reads from the registry.

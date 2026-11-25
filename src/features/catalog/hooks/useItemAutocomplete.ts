@@ -1,4 +1,4 @@
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { useEffect, useState } from 'react';
 import { useLazyQuery } from '@apollo/client/react';
 import type { SearchItemsSemanticQuery } from '#operations/item/item.generated';
@@ -6,7 +6,7 @@ import {
   AutocompleteItemsDocument,
   SearchItemsSemanticDocument,
 } from '#operations/item/item.generated';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { useAppStore } from '#store/useAppStore';
 import { filterByName } from '#features/catalog/utils/arrayUtils';

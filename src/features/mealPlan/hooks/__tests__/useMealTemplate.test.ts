@@ -1,4 +1,4 @@
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -15,7 +15,7 @@ import {
   MealTemplateItemFragmentDoc,
   type MealTemplateItemFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { MealType } from '#graphql/generated/schemaTypes';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { useMealTemplate } from '../useMealTemplate';
 import { useMealTemplateForEdit } from '../useMealTemplateForEdit';

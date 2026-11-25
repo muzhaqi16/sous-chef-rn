@@ -11,16 +11,16 @@ import { mixed, object, string, type ObjectSchema } from 'yup';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Button } from '#components/molecules/Button';
 import { pantryTestIDs } from '#features/pantry/testIDs';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
 import { CollapsibleChipPicker } from '#features/pantry/components/CollapsibleChipPicker';
 import { QuantityInputFeedback } from '#features/pantry/components/QuantityInputFeedback';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import { validateDeductionQuantity } from '#features/pantry/utils/validateDeductionQuantity';
 import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
-import { UsagePurpose } from '#/graphql/generated/schemaTypes';
-import { commonStyles } from '#/styles/commonStyles';
+import { UsagePurpose } from '#graphql/generated/schemaTypes';
+import { commonStyles } from '#styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import {
   PantryActionHeader,
@@ -28,9 +28,9 @@ import {
 } from '#features/pantry/components/modals/PantryActionModal';
 import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { Text } from '#components/atoms/Text';
-import { localizeNumericHint } from '#/utils/formatters/number';
-import { formatQuantityForInput, unitLabel } from '#/utils/formatQuantity';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { localizeNumericHint } from '#utils/formatters/number';
+import { formatQuantityForInput, unitLabel } from '#utils/formatQuantity';
+import { reportValidationErrors } from '#utils/validation/common';
 import type { PantryActionSharedState } from '#features/pantry/types';
 
 interface ConsumePantryItemModalProps {

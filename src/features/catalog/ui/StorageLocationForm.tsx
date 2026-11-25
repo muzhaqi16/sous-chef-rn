@@ -1,15 +1,15 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import {
   ThemedTextInput,
   OnPrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles/commonStyles';
-import { StorageState, StorageType } from '#/graphql/generated/schemaTypes';
+import { commonStyles } from '#styles/commonStyles';
+import { StorageState, StorageType } from '#graphql/generated/schemaTypes';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
 import { Text } from '#components/atoms/Text';
@@ -19,9 +19,9 @@ import {
   COLOR_PRESETS,
 } from '#features/catalog/components/storageLocationFormConfig';
 import { StorageLocationAdvancedSection } from '#features/catalog/components/StorageLocationAdvancedSection';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { formatNumberForInput } from '#/utils/formatters/number';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+import { formatNumberForInput } from '#utils/formatters/number';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
 export interface StorageLocationFormRef {
   submit: () => void;

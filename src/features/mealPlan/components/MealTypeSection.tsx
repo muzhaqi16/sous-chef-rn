@@ -4,11 +4,11 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { MealPlanItemCard } from '#features/mealPlan/ui/MealPlanItemCard';
 import { Text } from '#components/atoms/Text';
-import type { MealType } from '#/graphql/generated/schemaTypes';
+import type { MealType } from '#graphql/generated/schemaTypes';
 import type { FragmentType } from '@apollo/client/masking';
 import type { MealPlanItemCard_ItemFragmentDoc } from '#features/mealPlan/ui/MealPlanItemCard.generated';
 import type { SwipeableRef } from '#components/organisms/SwipeableItem/types';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 /** A plan's item as its query holds it; the card reads its fields. */
 export type MealPlanItemRef = FragmentType<

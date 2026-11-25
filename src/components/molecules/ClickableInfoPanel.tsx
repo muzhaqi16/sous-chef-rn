@@ -1,9 +1,9 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 import { Pressable } from '#components/atoms/themedComponents';
 import { EmptyState } from '#components/molecules/EmptyState';

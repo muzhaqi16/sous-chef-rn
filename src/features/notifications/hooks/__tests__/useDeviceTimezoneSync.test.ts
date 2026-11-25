@@ -1,6 +1,6 @@
 import { act } from '@testing-library/react-native';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import {
@@ -15,10 +15,10 @@ import {
   GetUserSettingsDocument,
   UpdateUserPreferencesDocument,
 } from '#operations/auth/user.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { useDeviceTimezoneSync } from '../useDeviceTimezoneSync';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 jest.mock('#store/useAppStore', () => {
   const getState = () => ({ user: { id: 'user-1' } });

@@ -7,12 +7,9 @@ import { Text } from '#components/atoms/Text';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
-import { useTranslation } from '#/i18n';
-import { commonStyles } from '#/styles/commonStyles';
-import {
-  formatCurrency,
-  formatNumberForInput,
-} from '#/utils/formatters/number';
+import { useTranslation } from '#i18n';
+import { commonStyles } from '#styles/commonStyles';
+import { formatCurrency, formatNumberForInput } from '#utils/formatters/number';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import {

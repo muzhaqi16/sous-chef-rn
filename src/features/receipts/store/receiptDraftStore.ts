@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
-import { zustandStorage } from '#/store/deviceStorage';
+import { zustandStorage } from '#store/deviceStorage';
 import { hydrateWhenStarted } from '#store/persistedStores';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { generateEntityId } from '#utils/generateEntityId';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import type { ParsedReceipt, ReceiptTotalsGap } from '../utils/parsedReceipt';
 
 /** What one receipt line becomes in the pantry. */

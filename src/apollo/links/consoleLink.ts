@@ -1,6 +1,6 @@
 import { ApolloLink, Observable } from '@apollo/client';
 import { Kind } from 'graphql';
-import { serializeError, safeStringifyError } from '#/utils/errorSerialization';
+import { serializeError, safeStringifyError } from '#utils/errorSerialization';
 
 // Enable detailed logging only in development
 const isDevelopment = __DEV__;

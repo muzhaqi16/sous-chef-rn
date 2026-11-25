@@ -1,11 +1,11 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   renderWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { CorrectPackageSizeModal } from '../CorrectPackageSizeModal';
 import {

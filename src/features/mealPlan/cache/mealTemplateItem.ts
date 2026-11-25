@@ -1,15 +1,15 @@
 import type { ApolloCache } from '@apollo/client';
 import type { MealTemplateItemFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import type { MealTemplateItemInput } from '#/graphql/generated/schemaTypes';
+import type { MealTemplateItemInput } from '#graphql/generated/schemaTypes';
 import {
   hideEntity,
   isHeld,
   writeLocalEntity,
-} from '#/apollo/utils/writeLocalEntity';
+} from '#apollo/utils/writeLocalEntity';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
-} from '#/apollo/utils/cacheUpdaters';
+} from '#apollo/utils/cacheUpdaters';
 import {
   MealTemplateItem_RecipeRefFragmentDoc,
   MealTemplateItem_RowFragmentDoc,

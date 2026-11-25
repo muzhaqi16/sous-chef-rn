@@ -33,12 +33,12 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import type { ReactNode } from 'react';
 import React from 'react';
 import { isDeepStrictEqual } from 'node:util';
 import { ApolloClient, type InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { ApolloProvider } from '@apollo/client/react';
 import {
   completeMockedResponse,
@@ -59,10 +59,10 @@ import { useToggleShoppingItem } from '#features/shoppingList/hooks/mutations/us
 // Peripheral mocks — dependencies of the SUT that have nothing to do with
 // the cache seam under test. Stubbing them keeps the assertion focused on
 // the optimistic + cache-update behavior.
-jest.mock('#/utils/isNetworkError', () => ({
+jest.mock('#utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
-jest.mock('#/utils/generateEntityId', () => ({
+jest.mock('#utils/generateEntityId', () => ({
   generateEntityId: () => 'tick-key',
 }));
 

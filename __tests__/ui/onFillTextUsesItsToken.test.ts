@@ -3,7 +3,7 @@ import { globSync } from 'fs';
 import { relative } from 'path';
 import chroma from 'chroma-js';
 
-import { colors } from '#/theme/foundations/colors';
+import { colors } from '#theme/foundations/colors';
 
 /**
  * Text on a `primary`/`danger` fill must read the matching `on*` token. The

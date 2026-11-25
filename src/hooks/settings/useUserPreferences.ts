@@ -2,7 +2,7 @@ import { useAppStore, useUserId } from '#store/useAppStore';
 import {
   defaultUserPreferences,
   type UserPreferences,
-} from '#/store/slices/preferencesSlice';
+} from '#store/slices/preferencesSlice';
 
 /**
  * Per-user preferences, keyed by userId; the defaults when signed out or unset.

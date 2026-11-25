@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { registerQueueFailureHandler } from '#/apollo/offlineQueue/queueFailureHandler';
-import { ensureDeviceId } from '#/services/auth/deviceId';
+import { registerQueueFailureHandler } from '#apollo/offlineQueue/queueFailureHandler';
+import { ensureDeviceId } from '#services/auth/deviceId';
 import { Telemetry } from '#services/telemetry';
 import { useAppStore, useIsHydrated } from '#store/useAppStore';
-import { scheduleIdle } from '#/utils/scheduleIdle';
+import { scheduleIdle } from '#utils/scheduleIdle';
 import { guardedStartupHost, type StartupHost } from './startupHost';
 
 /** One-shot guard for `app_startup_duration_ms` across Fast Refresh remounts. */

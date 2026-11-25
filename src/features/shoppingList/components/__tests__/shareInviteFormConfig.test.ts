@@ -3,7 +3,7 @@ import {
   shareInviteDefaults,
   shareInviteSchema,
 } from '../shareInviteFormConfig';
-import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
+import { CollaboratorRole } from '#graphql/generated/schemaTypes';
 
 /**
  * The address is a field the person can fix, so its refusal renders under the

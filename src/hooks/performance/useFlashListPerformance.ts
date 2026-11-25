@@ -7,13 +7,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FlashListRef } from '@shopify/flash-list';
 import type ViewToken from '@shopify/flash-list/dist/recyclerview/viewability/ViewToken';
-import { FlashListDiagnostics } from '#/services/performance/FlashListDiagnostics';
-import { Telemetry } from '#/services/telemetry';
-import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
+import { FlashListDiagnostics } from '#services/performance/FlashListDiagnostics';
+import { Telemetry } from '#services/telemetry';
+import { NativePerformanceService } from '#services/performance/NativePerformanceService';
 import {
   DEFAULT_PERFORMANCE_CONFIG,
   type ScrollFrameMetric,
-} from '#/services/performance/types';
+} from '#services/performance/types';
 import {
   createMountedCellRenderer,
   PlainAnimatedCellRenderer,

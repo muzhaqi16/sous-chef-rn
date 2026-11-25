@@ -7,7 +7,7 @@ import {
   mergeConnectionByNodeId,
   itemsConnectionFieldPolicy,
   readByIdFromCache,
-} from '#/apollo/cacheFieldPolicies';
+} from '#apollo/cacheFieldPolicies';
 
 /**
  * The shopping list's cache shape: an item merges field-wise, its purchase info

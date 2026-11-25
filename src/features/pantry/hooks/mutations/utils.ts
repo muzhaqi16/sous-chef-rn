@@ -7,11 +7,11 @@ import type {
   StorageDetailsInput,
   InventoryThresholdsInput,
   NetWeightInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { DirtyFieldFlags, FormDataInput } from './types';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { toDateKey } from '#/utils/dateUtils';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { toDateKey } from '#utils/dateUtils';
 
 // Cache updater for adding items to Pantry.itemsConnection
 

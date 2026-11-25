@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import type { DietarySharingHome } from '#features/profile/hooks/useDietarySharing';

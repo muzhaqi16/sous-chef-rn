@@ -1,13 +1,13 @@
 import { act } from '@testing-library/react-native';
 import { CombinedGraphQLErrors } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useStore } from '#store';
 import {
   Diet,
@@ -15,7 +15,7 @@ import {
   Intolerance,
   RecipeCategory,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { DEFAULT_FILTERS } from '#features/recipes/utils/recipeFilterOptions';
 import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 import { useRecipeSearch, type SearchOutcome } from '../useRecipeSearch';

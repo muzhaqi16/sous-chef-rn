@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useTranslation } from '#/i18n';
-import { RecurringPattern } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import { RecurringPattern } from '#graphql/generated/schemaTypes';
 import { useRecurringShoppingList } from '#features/shoppingList/hooks/mutations/useRecurringShoppingList';
 import type { SettingsList } from './types';
 

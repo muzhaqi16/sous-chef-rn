@@ -1,7 +1,7 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
-import type { MealType } from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
+import { useTranslation } from '#i18n';
+import type { MealType } from '#graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
 import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import { DuplicatePlanSheet } from '#features/mealPlan/components/DuplicatePlanSheet';
 import { GenerateShoppingListSheet } from '#features/mealPlan/components/GenerateShoppingListSheet';

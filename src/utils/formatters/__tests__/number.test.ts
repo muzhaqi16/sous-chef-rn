@@ -1,5 +1,5 @@
-import { t } from '#/i18n';
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { UnitSystem } from '#graphql/generated/schemaTypes';
 import {
   currencySymbol,
   formatApproximateCurrency,
@@ -10,8 +10,8 @@ import {
   formatNumberForInput,
   resetNumberFormatterCache,
 } from '../number';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { resetDeviceLocaleCache } from '#/utils/deviceLocale';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+import { resetDeviceLocaleCache } from '#utils/deviceLocale';
 
 const realNumberFormat = Intl.NumberFormat;
 

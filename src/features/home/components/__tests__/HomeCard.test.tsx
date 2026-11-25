@@ -1,5 +1,5 @@
 import React from 'react';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { screen, userEvent } from '@testing-library/react-native';
 import {
   renderWithApollo,
@@ -10,8 +10,8 @@ import {
   HomeCard_HomeFragmentDoc,
   type HomeCard_HomeFragment,
 } from '../HomeCard.generated';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',

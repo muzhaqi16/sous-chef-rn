@@ -1,10 +1,10 @@
 import { act } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   EntryImageSource,
   ItemImageStatus,
-} from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
+} from '#graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 import { useReportPhotoHeaderAction } from '../useReportPhotoHeaderAction';

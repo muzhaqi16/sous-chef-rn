@@ -1,12 +1,12 @@
-import { generateEntityId } from '#/utils/generateEntityId';
-import { addDaysToKey, daysBetweenKeys } from '#/utils/dateUtils';
+import { generateEntityId } from '#utils/generateEntityId';
+import { addDaysToKey, daysBetweenKeys } from '#utils/dateUtils';
 import { mealReferenceOf } from '#features/mealPlan/utils/mealReference';
 import type {
   CreateMealPlanInput,
   CreateMealPlanItemInput,
   MealPlanType,
   MealType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /** The source plan, as `useDuplicateMealPlan_mealPlan` caches it. */
 export interface SourcePlan {

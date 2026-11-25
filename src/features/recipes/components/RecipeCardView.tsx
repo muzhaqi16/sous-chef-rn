@@ -2,14 +2,14 @@ import React from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import type { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { rowType } from '#/theme/foundations/type';
+import { rowType } from '#theme/foundations/type';
 
 /** A trailing icon button on a recipe row. */
 export interface RecipeCardAction {

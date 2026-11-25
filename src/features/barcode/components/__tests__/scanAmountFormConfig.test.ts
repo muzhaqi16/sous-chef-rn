@@ -3,7 +3,7 @@ import {
   NetWeightKind,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { ScannedItem } from '#features/barcode/types';
 import {
   isMultipack,

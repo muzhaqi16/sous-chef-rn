@@ -10,13 +10,13 @@ import {
 import { operationLog } from '#/test-utils/operationLog';
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
-import { t, type TranslationKey } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t, type TranslationKey } from '#i18n';
+import { alertService } from '#services/alertService';
 import {
   ErrorCode,
   ErrorDisposition,
   StorageType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   CreateStorageLocationDocument,
   DeleteStorageLocationDocument,

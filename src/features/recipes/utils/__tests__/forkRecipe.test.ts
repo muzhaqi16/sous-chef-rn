@@ -6,7 +6,7 @@ import {
   Intolerance,
   RecipeCategory,
   RecipeStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { forkRecipe, type ForkableRecipe } from '../forkRecipe';
 
 /**

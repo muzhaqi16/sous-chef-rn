@@ -1,11 +1,11 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { RecipeStatus } from '#/graphql/generated/schemaTypes';
+import { RecipeStatus } from '#graphql/generated/schemaTypes';
 import type { RecipeNutritionFacts } from '#domain/nutrition';
 
 type MacroField = Exclude<keyof RecipeNutritionFacts, 'calories'>;

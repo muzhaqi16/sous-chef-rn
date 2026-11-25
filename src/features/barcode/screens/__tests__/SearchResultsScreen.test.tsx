@@ -6,10 +6,10 @@ import {
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { ItemByLookupDocument } from '#features/barcode/hooks/useSearchResults.generated';
 import { useBarcodeScannerStore } from '#features/barcode/store/barcodeScannerStore';
 import { barcodeTestIDs } from '#features/barcode/testIDs';

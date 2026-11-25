@@ -5,9 +5,9 @@
  * stale one clears when the response lands — a brief two-defaults flash.
  */
 
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { MarkShoppingListAsDefaultDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 
 export function useSetDefaultShoppingList() {
   const { t } = useTranslation();

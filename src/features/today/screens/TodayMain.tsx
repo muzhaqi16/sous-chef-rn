@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Screen } from '#components/templates/Screen';
 import type { BarAction } from '#components/molecules/BarActions';
 import type { EmptyStateProps } from '#components/molecules/EmptyState';
@@ -21,7 +21,7 @@ import {
   type TargetRect,
 } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { kitTestIDs } from '#components/testIDs';
-import { useTabBarState } from '#/context/TabBarActionsContext';
+import { useTabBarState } from '#context/TabBarActionsContext';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';

@@ -12,7 +12,7 @@ import {
   type FragmentDefinitionNode,
   type SelectionSetNode,
 } from 'graphql';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 type Row = Record<string, unknown>;
 type Unmasked<TData> = GraphQLCodegenDataMasking.Unmasked<TData>;

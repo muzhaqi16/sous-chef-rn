@@ -1,4 +1,4 @@
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {

@@ -8,9 +8,9 @@
  */
 import { act, renderHook } from '@testing-library/react-native';
 import { useFlashListPerformance } from '../useFlashListPerformance';
-import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
+import { NativePerformanceService } from '#services/performance/NativePerformanceService';
 
-jest.mock('#/services/performance/NativePerformanceService', () => ({
+jest.mock('#services/performance/NativePerformanceService', () => ({
   NativePerformanceService: { markFullyDrawn: jest.fn() },
 }));
 

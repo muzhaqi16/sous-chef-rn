@@ -9,7 +9,7 @@ import {
   packagesStarted,
   shownStock,
 } from '#features/pantry/utils/stockDisplay';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import {
   InTrackingUnit_EnteredUnitFragmentDoc,
   InTrackingUnit_PantryItemFragmentDoc,
@@ -33,7 +33,7 @@ import {
   resolveQuantityNotation,
   statedAmount,
   unitLabel,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 
 type ShownAmount = WriteHeldStock_PantryItemFragment['displayAmount'];
 type CountedIn = WriteHeldStock_PantryItemFragment['unit'];

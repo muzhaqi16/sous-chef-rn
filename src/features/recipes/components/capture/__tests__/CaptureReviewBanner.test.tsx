@@ -5,7 +5,7 @@ import { drainTimers } from '#/test-utils/drainTimers';
 import {
   MeasurementRegionBasis,
   RecipeCaptureWarningCode,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { RecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';
 import { useRecipeCaptureStore } from '#features/recipes/store/recipeCaptureStore';
 import { recipesTestIDs } from '#features/recipes/testIDs';

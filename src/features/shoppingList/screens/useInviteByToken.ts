@@ -4,12 +4,12 @@ import {
   type InvitationWriteResult,
 } from '#features/notifications/hooks/useInvitationActions';
 import { useUserId } from '#store/useAppStore';
-import { presentFailure } from '#/utils/errors/presentFailure';
+import { presentFailure } from '#utils/errors/presentFailure';
 import { useDataState } from '#hooks/data/useDataState';
 import {
   CollaboratorStatus,
   InviteStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   AcceptInvite_ShoppingListInviteFragmentDoc,
   AcceptInvite_HomeInviteFragmentDoc,

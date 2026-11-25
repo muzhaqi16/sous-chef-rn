@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
@@ -18,7 +18,7 @@ import type {
 } from './types';
 import { Text } from '#components/atoms/Text';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 

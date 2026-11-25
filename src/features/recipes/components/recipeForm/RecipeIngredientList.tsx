@@ -1,7 +1,7 @@
 import React from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
@@ -9,7 +9,7 @@ import type { IngredientFormState } from '#features/recipes/types';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { formatQuantityDisplay } from '#/utils/formatQuantity';
+import { formatQuantityDisplay } from '#utils/formatQuantity';
 
 interface RecipeIngredientListProps {
   ingredients: IngredientFormState[];

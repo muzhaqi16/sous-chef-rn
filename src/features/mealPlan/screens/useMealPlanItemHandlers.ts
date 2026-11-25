@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import type { MealType } from '#/graphql/generated/schemaTypes';
+import type { MealType } from '#graphql/generated/schemaTypes';
 import type { MealPlanSheet } from '#features/mealPlan/components/MealPlanSheets';
 import type { PlannedCook } from '#features/mealPlan/components/PlannedMealCook';
 import { useMealPlanItemActions } from '#features/mealPlan/hooks/useMealPlanItemActions';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { ActiveSheet } from '#hooks/ui/useActiveSheet';
-import { toDateKey } from '#/utils/dateUtils';
+import { toDateKey } from '#utils/dateUtils';
 import type { ActiveMealPlan } from './useActiveMealPlan';
 
 interface UseMealPlanItemHandlersOptions {

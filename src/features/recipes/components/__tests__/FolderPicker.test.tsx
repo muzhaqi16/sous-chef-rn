@@ -6,7 +6,7 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { FolderPicker } from '#features/recipes/components/FolderPicker';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({

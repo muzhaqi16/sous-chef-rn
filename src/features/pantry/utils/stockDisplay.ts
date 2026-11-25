@@ -1,4 +1,4 @@
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 
 type UnitShape = { __typename?: 'Unit'; id: string; symbol: string };
 

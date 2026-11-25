@@ -6,10 +6,10 @@
 
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import type { RemoveItemInputs } from '#features/pantry/offline/localWrites';
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { todayKey } from '#/utils/dateUtils';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { todayKey } from '#utils/dateUtils';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
+import { useTranslation } from '#i18n';
 
 interface UsePantryItemMutationsOptions {
   pantryId: string | undefined;

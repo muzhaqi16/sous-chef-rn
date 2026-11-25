@@ -3,10 +3,10 @@
  * writes queued behind it move onto that row, and a delete of a meal the server
  * does not have is settled. The rest is `commit`.
  */
-import { extractMutationPayload } from '#/utils/errors/mutationPayload';
-import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
-import { isRecord } from '#/utils/isRecord';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { extractMutationPayload } from '#utils/errors/mutationPayload';
+import type { ReplayReconcilerTable } from '#apollo/offlineQueue/types';
+import { isRecord } from '#utils/isRecord';
+import { safeEvict } from '#apollo/utils/cacheUpdaters';
 
 /**
  * A replayed recipe meal converges on the (plan, date, meal type, recipe) key,

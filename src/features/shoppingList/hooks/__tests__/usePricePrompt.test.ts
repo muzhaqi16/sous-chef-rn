@@ -3,14 +3,14 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { writeUserSettings } from '#/test-utils/fixtures/userSettingsFixtures';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useStore } from '#store';
-import { MIRRORED_SETTINGS } from '#/domain/serverSettings';
+import { MIRRORED_SETTINGS } from '#domain/serverSettings';
 import type { AlertButton } from '#platform/presenters';
 import { usePricePrompt } from '../usePricePrompt';
 import { PricePromptReadinessDocument } from '../usePricePrompt.generated';
