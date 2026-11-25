@@ -80,10 +80,6 @@ const TagPickerContent: React.FC<TagPickerContentProps> = ({
 
   return (
     <>
-      <View style={styles.header}>
-        <Text role="heading">{t('tagPicker.filterByTags')}</Text>
-      </View>
-
       {/* Search Input */}
       {tags.length > 5 && (
         <SearchBar
@@ -161,6 +157,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   onCancel,
   ...content
 }) => {
+  const { t } = useTranslation();
   const opening = useOpening(visible);
 
   return (
@@ -168,6 +165,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
       mode="view"
       visible={visible}
       onDismiss={onCancel}
+      title={t('tagPicker.filterByTags')}
       snapPoints={['55%', '70%']}
       contentContainerStyle={styles.bottomSheetContent}
     >
@@ -179,10 +177,6 @@ export const TagPicker: React.FC<TagPickerProps> = ({
 const styles = StyleSheet.create(theme => ({
   bottomSheetContent: {
     padding: theme.spacing.mdPlus,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
   },
   selectionRow: {
     flexDirection: 'row',

@@ -14,7 +14,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { ExpirationAction } from '#graphql/generated/schemaTypes';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { Icon, type IconName } from '#components/atoms/Icon';
-import { Title } from '#components/atoms/Title';
 import { Text } from '#components/atoms/Text';
 import { firstNonBlank } from '#utils/firstNonBlank';
 import { useToday } from '#hooks/app/useToday';
@@ -130,12 +129,10 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
       visible={visible}
       onDismiss={onDismiss}
       snapPoints={['50%']}
+      title={t('expirationAction.title', { itemName })}
       style={styles.scrollView}
       contentContainerStyle={styles.contentContainer}
     >
-      <Title style={styles.title}>
-        {t('expirationAction.title', { itemName })}
-      </Title>
       <Text role="caption" tone="secondary" style={styles.subtitle}>
         {subtitle}
       </Text>
@@ -164,10 +161,6 @@ const styles = StyleSheet.create(theme => ({
 
   contentContainer: {
     padding: theme.spacing.md,
-  },
-
-  title: {
-    marginBottom: theme.spacing.xs,
   },
 
   subtitle: {
