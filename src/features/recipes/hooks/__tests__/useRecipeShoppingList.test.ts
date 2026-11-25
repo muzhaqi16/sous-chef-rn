@@ -1059,18 +1059,6 @@ describe('useRecipeShoppingList — handleCreateListAndAddIngredients', () => {
       }),
     });
 
-  it('refuses a blank name, creating nothing', async () => {
-    const created = createdList();
-    const { result } = await renderShopping(created.mock);
-
-    await act(async () => {
-      result.current.handleCreateListAndAddIngredients('   ');
-    });
-
-    expect(created.fired).toEqual([]);
-    expect(toasts()).toEqual(failed('List name cannot be empty'));
-  });
-
   it('makes the new list the selected one, and adds the recipe to it', async () => {
     const add = queuedAdd();
     const { result } = await renderShopping(add.mock, {

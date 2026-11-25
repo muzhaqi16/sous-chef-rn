@@ -71,11 +71,8 @@ export function useLowStockListPicker({ addToList, rows, homeId }: Options) {
   };
 
   const handleCreateListAndAdd = (name: string) => {
+    // The picker's schema refuses a blank name on its field.
     const trimmed = name.trim();
-    if (!trimmed) {
-      toastService.error(t('errors.listNameEmpty'));
-      return;
-    }
     const picked = target;
     setTarget(null);
     if (!picked) return;

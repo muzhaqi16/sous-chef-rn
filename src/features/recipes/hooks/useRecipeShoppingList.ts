@@ -231,13 +231,9 @@ export function useRecipeShoppingList({
     setPendingAction(null);
   };
 
-  // Create a new shopping list and route the pending action into it.
+  // Create a new shopping list and route the pending action into it. The
+  // picker's schema refuses a blank name on its field.
   const handleCreateListAndAddIngredients = (name: string) => {
-    if (!name.trim()) {
-      toastService.error(t('errors.listNameEmpty'));
-      return;
-    }
-
     const currentPendingAction = pendingAction;
 
     void executeWithLoadingState(
