@@ -29,7 +29,7 @@ import {
 import { toastService } from '#services/toastService';
 import { Telemetry } from '#services/telemetry';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
-import { inTrackingUnit } from '#features/pantry/cache/stock';
+import { inTrackingUnit } from '#entities/pantryItem/stock';
 import type {
   CookDrawInputs,
   CookRecipeInputs,

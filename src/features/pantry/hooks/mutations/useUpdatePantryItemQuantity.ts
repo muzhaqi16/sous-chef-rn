@@ -15,7 +15,7 @@ import { parseFractionalInput } from '#utils/fractionUtils';
 import { logger } from '#utils/environment';
 import { alertService } from '#services/alertService';
 import { useTranslation } from '#i18n';
-import type { writeHeldStock } from '#features/pantry/cache/stock';
+import type { writeHeldStock } from '#entities/pantryItem/stock';
 import type { SetStockInputs } from '#features/pantry/offline/localWrites';
 import { todayKey } from '#utils/dateUtils';
 import { statedAmount } from '#utils/formatQuantity';

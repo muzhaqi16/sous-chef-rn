@@ -35,7 +35,7 @@ import {
   priorityOptionOf,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
-import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
+import { totalFromUnitPrice } from '#entities/shoppingList/purchasePrice';
 import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { formatMonthDayYear } from '#utils/formatters/date';
 import { purchaseDay } from '#utils/dateUtils';

@@ -103,7 +103,7 @@ const SHARED_LOCAL_WRITES = [
     reconciles: 'listAnsweredPantryItem(',
   },
   {
-    file: 'src/features/shoppingList/offline/localWrites.ts',
+    file: 'src/entities/shoppingList/localWrites.ts',
     publishes: 'showLocalPantryItem(',
     reconciles: 'listAnsweredPantryItem(',
   },

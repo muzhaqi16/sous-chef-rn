@@ -4,13 +4,13 @@
  * `moveToPantryCounters.test.ts`, against the real cache.
  */
 
-import { removeItemFromShoppingListForMoveToPantry } from '../moveToPantry';
+import { removeItemFromShoppingListForMoveToPantry } from '#entities/shoppingList/moveToPantry';
 import {
   createFieldHelpers,
   createMockCache,
   invokeFieldModifier,
-} from './helpers/mockCache';
-import type { MockRef } from './helpers/mockCache';
+} from '#features/shoppingList/cache/__tests__/helpers/mockCache';
+import type { MockRef } from '#features/shoppingList/cache/__tests__/helpers/mockCache';
 import { logger } from '#utils/environment';
 
 describe('move-to-pantry unlink', () => {

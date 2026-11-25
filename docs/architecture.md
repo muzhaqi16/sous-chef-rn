@@ -66,6 +66,7 @@ react-native-web, is [`web-host-decision.md`](web-host-decision.md).
 | apollo                | core   | `apollo/**`                                                                                                                              |
 | bootstrap             | core   | `bootstrap/**`                                                                                                                           |
 | domain                | core   | `domain/**`                                                                                                                              |
+| entities              | core   | `entities/**`                                                                                                                            |
 | graphql               | core   | `graphql/**`                                                                                                                             |
 | i18n                  | core   | `i18n/**`                                                                                                                                |
 | config                | core   | `config/**`                                                                                                                              |
@@ -352,6 +353,12 @@ belongs to pantry too. A module with a single consumer is one to move.
 `src/domain/` is the exception the rule needed: logic several features share, in
 neither a domain-free kit nor one feature's internals. Admission is by the same
 consumer count — two or more features, or it belongs in the one that uses it.
+
+`src/entities/<entity>/` holds an entity several features write: its cache
+writers, its local-first write descriptors and the documents they write to
+(`shoppingList`, `pantryItem`, `store`, `catalog`). Every feature may import it;
+it imports no feature (`eslint/boundaries.js`). Admission is the same consumer
+count.
 
 Every feature has the same shape:
 `manifest.ts` (whose `id` equals its directory name), `screens/`, `hooks/` and
@@ -946,6 +953,8 @@ src/
 ├── context/         App-level React context
 ├── domain/          Domain logic SEVERAL features share — neither kit nor one
 │                    feature's internals; admission is by consumer count
+├── entities/        The cache writers, write descriptors and documents of an
+│                    entity several features write; imports no feature
 ├── features/        The fourteen feature modules (see above), registry.ts for
 │                    navigation and registry.static.ts for the app shell
 ├── graphql/         Shared operations, generated schema + types

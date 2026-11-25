@@ -7,7 +7,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
-import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import { GetPantryItemDocument } from '../usePantryItemDetailData.generated';
 import {
   BatchStatus,

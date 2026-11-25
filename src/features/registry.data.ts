@@ -178,7 +178,7 @@ import {
   removeList,
   removeRows,
   updateRow,
-} from './shoppingList/offline/localWrites';
+} from '#entities/shoppingList/localWrites';
 import { entityFields } from '#apollo/pendingWrites/entityFields';
 import type { LocalWrite } from '#apollo/pendingWrites/types';
 import {

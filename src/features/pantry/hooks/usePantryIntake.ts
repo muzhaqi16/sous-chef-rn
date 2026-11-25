@@ -1,7 +1,7 @@
 import { useApolloClient } from '@apollo/client/react';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
-import { localIntakeRow } from '#features/pantry/cache/localIntake';
+import type { LocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
+import { localIntakeRow } from '#entities/pantryItem/localIntake';
 import type { CreateItemInputs } from '#features/pantry/offline/localWrites';
 import { readHeldStackUnit } from '#features/pantry/utils/pantryCacheReaders';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';

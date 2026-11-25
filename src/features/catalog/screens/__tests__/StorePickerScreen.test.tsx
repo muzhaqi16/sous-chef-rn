@@ -31,7 +31,7 @@ import {
   readUsualStores,
   writeUsualStores,
   type UsualStoreEntry,
-} from '#features/catalog/cache/usualStores';
+} from '#entities/store/usualStores';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import { CreateStoreFromPlaceDocument } from '#features/catalog/hooks/useCreateStoreFromPlace.generated';
 import {

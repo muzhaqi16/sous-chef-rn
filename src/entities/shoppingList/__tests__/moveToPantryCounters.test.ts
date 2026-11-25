@@ -14,7 +14,7 @@
  */
 import { gql } from '@apollo/client';
 import { makeCache } from '#apollo/cache';
-import { removeItemFromShoppingListForMoveToPantry } from '../moveToPantry';
+import { removeItemFromShoppingListForMoveToPantry } from '#entities/shoppingList/moveToPantry';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const LIST_COUNTS = gql`

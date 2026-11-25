@@ -10,9 +10,9 @@ import {
   createShoppingListRow,
   type ShoppingRowFields,
   type ShoppingRowLine,
-} from '#features/shoppingList/cache/createShoppingListRow';
-import { isListedToBuy } from '#features/shoppingList/cache/connections';
-import type { LocalShoppingListItem } from '#features/shoppingList/cache/items';
+} from '#entities/shoppingList/createShoppingListRow';
+import { isListedToBuy } from '#entities/shoppingList/connections';
+import type { LocalShoppingListItem } from '#entities/shoppingList/items';
 
 /** What an add-to-list answers, for a surface that reads it. */
 export type AddShoppingRowsAnswer = AddItemToShoppingListMutation;

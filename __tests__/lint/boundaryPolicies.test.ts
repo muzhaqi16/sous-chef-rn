@@ -46,7 +46,7 @@ const CASES: Case[] = [
     // The allowance that replaced a per-feature `except` list.
     label: "another feature's generated fragment, imported as a TYPE",
     filePath: RECIPES_HOOK,
-    code: "import type { X } from '#features/pantry/graphql/pantryFragments.generated';\nexport type Y = X;\n",
+    code: "import type { X } from '#entities/pantryItem/batches.generated';\nexport type Y = X;\n",
     blocked: false,
   },
   {
@@ -73,6 +73,18 @@ const CASES: Case[] = [
     label: 'the offline queue importing a feature’s replay preparers',
     filePath: 'src/apollo/offlineQueue/preparationRegistry.ts',
     code: `import { x } from '#features/pantry/offline/replayPreparers';\n${VALUE_USE}`,
+    blocked: false,
+  },
+  {
+    label: 'an entity reaching into a feature',
+    filePath: 'src/entities/shoppingList/localMove.ts',
+    code: `import { x } from '#features/pantry/utils/hybridSort';\n${VALUE_USE}`,
+    blocked: true,
+  },
+  {
+    label: 'a feature writing through an entity',
+    filePath: 'src/features/receipts/hooks/useReceiptCheckIn.ts',
+    code: `import { x } from '#entities/shoppingList/localMove';\n${VALUE_USE}`,
     blocked: false,
   },
   {

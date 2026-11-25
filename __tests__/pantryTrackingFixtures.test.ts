@@ -1,7 +1,7 @@
 import {
   amountLeftOf,
   fullPackagesAfter,
-} from '#features/pantry/utils/stockDisplay';
+} from '#entities/pantryItem/stockDisplay';
 import {
   pantryTrackingContext as context,
   pantryTrackingExamples as examples,

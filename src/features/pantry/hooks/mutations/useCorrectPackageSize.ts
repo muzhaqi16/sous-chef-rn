@@ -17,7 +17,7 @@ import {
   type UseCorrectPackageSize_StackFragment,
 } from './useCorrectPackageSize.generated';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
-import { localUnit } from '#features/catalog/cache/localRefs';
+import { localUnit } from '#entities/catalog/localRefs';
 import { UnitType } from '#graphql/generated/schemaTypes';
 import { generateEntityId } from '#utils/generateEntityId';
 import { errorService } from '#services/errorService';

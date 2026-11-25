@@ -101,18 +101,11 @@ const ENUM_DEFAULTS = {
  */
 const TARGETS = [
   {
-    graphql: fromRoot(
-      'src',
-      'features',
-      'shoppingList',
-      'cache',
-      'items.graphql',
-    ),
+    graphql: fromRoot('src', 'entities', 'shoppingList', 'items.graphql'),
     out: fromRoot(
       'src',
-      'features',
+      'entities',
       'shoppingList',
-      'cache',
       'shoppingListItemRowNeutral.generated.ts',
     ),
     typesFrom: './items.generated',
@@ -167,18 +160,11 @@ const TARGETS = [
     },
   },
   {
-    graphql: fromRoot(
-      'src',
-      'features',
-      'catalog',
-      'cache',
-      'usualStores.graphql',
-    ),
+    graphql: fromRoot('src', 'entities', 'store', 'usualStores.graphql'),
     out: fromRoot(
       'src',
-      'features',
-      'catalog',
-      'cache',
+      'entities',
+      'store',
       'usualStoreRowNeutral.generated.ts',
     ),
     typesFrom: './usualStores.generated',
@@ -205,16 +191,14 @@ const TARGETS = [
   {
     graphql: fromRoot(
       'src',
-      'features',
-      'pantry',
-      'cache',
+      'entities',
+      'pantryItem',
       'writeLocalPantryItem.graphql',
     ),
     out: fromRoot(
       'src',
-      'features',
-      'pantry',
-      'cache',
+      'entities',
+      'pantryItem',
       'writeLocalPantryItemNeutral.generated.ts',
     ),
     typesFrom: './writeLocalPantryItem.generated',
@@ -246,18 +230,11 @@ const TARGETS = [
     },
   },
   {
-    graphql: fromRoot(
-      'src',
-      'features',
-      'shoppingList',
-      'cache',
-      'list.graphql',
-    ),
+    graphql: fromRoot('src', 'entities', 'shoppingList', 'list.graphql'),
     out: fromRoot(
       'src',
-      'features',
+      'entities',
       'shoppingList',
-      'cache',
       'shoppingListRowNeutral.generated.ts',
     ),
     typesFrom: './list.generated',

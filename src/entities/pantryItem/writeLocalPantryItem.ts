@@ -8,7 +8,7 @@ import {
 } from '#graphql/generated/schemaTypes';
 import { writeLocalEntity } from '#apollo/utils/writeLocalEntity';
 import { firstNonBlank } from '#utils/firstNonBlank';
-import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from './batches.generated';
 import { localAmountLeft } from './stock';
 import { typedExpiryKind } from './restatedStack';
 import { WriteLocalPantryItem_RowFragmentDoc } from './writeLocalPantryItem.generated';

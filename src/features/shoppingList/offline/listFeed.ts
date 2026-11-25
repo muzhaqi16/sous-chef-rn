@@ -14,7 +14,7 @@ import {
   dropShoppingListRows,
   moveAnsweredShoppingListItem,
   sortShoppingListRows,
-} from '../cache/connections';
+} from '#entities/shoppingList/connections';
 import {
   attachCollaborator,
   evictListRows,
@@ -23,7 +23,7 @@ import {
 import {
   addShoppingListToQueryCache,
   removeShoppingListFromCache,
-} from '../cache/list';
+} from '#entities/shoppingList/list';
 import { scopeStorage } from '#apollo/offline/ApolloCachePersistence';
 import {
   discardListShard,

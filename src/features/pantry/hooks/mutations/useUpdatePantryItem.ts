@@ -13,10 +13,7 @@ import {
 } from './useUpdatePantryItem.generated';
 import { alertService } from '#services/alertService';
 import type { StorageType } from '#graphql/generated/schemaTypes';
-import {
-  localBrand,
-  localStorageLocation,
-} from '#features/catalog/cache/localRefs';
+import { localBrand, localStorageLocation } from '#entities/catalog/localRefs';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#i18n';
 import { buildDirtyUpdateInput } from './utils';

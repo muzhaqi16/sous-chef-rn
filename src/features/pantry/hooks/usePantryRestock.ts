@@ -1,6 +1,6 @@
 import { useApolloClient } from '@apollo/client/react';
 import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { inTrackingUnit } from '#features/pantry/cache/stock';
+import { inTrackingUnit } from '#entities/pantryItem/stock';
 import type { AddStockInputs } from '#features/pantry/offline/localWrites';
 import { readStackUnit } from '#features/pantry/utils/pantryCacheReaders';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';

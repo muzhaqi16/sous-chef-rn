@@ -4,7 +4,7 @@
  */
 
 import { RemoveItemFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import type { RemoveRowsInputs } from '#features/shoppingList/offline/localWrites';
+import type { RemoveRowsInputs } from '#entities/shoppingList/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#i18n';
 

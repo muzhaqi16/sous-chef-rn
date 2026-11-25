@@ -27,6 +27,8 @@
       "#config/*": ["./src/config/*"],
       "#context": ["./src/context"],
       "#domain": ["./src/domain"],
+      "#entities": ["./src/entities"],
+      "#entities/*": ["./src/entities/*"],
       "#domain/*": ["./src/domain/*"],
       "#context/*": ["./src/context/*"],
       "#features": ["./src/features"],

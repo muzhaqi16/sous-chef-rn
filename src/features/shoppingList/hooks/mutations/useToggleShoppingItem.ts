@@ -12,7 +12,7 @@ import {
   type GetShoppingListItemsFilteredQueryVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
-import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
+import type { UpdateRowInputs } from '#entities/shoppingList/localWrites';
 import { errorService } from '#services/errorService';
 import { alertService } from '#services/alertService';
 import { useTranslation } from '#i18n';

@@ -7,9 +7,9 @@
 
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ADD_ITEMS_BATCH_LIMIT } from '#features/shoppingList/cache/createShoppingListRow';
-import type { LocalShoppingListItem } from '#features/shoppingList/cache/items';
-import type { CreateListInputs } from '#features/shoppingList/offline/localWrites';
+import { ADD_ITEMS_BATCH_LIMIT } from '#entities/shoppingList/createShoppingListRow';
+import type { LocalShoppingListItem } from '#entities/shoppingList/items';
+import type { CreateListInputs } from '#entities/shoppingList/localWrites';
 import { appliedPayload } from '#utils/errors/mutationPayload';
 import { generateEntityId } from '#utils/generateEntityId';
 import { useUser } from '#store/useAppStore';

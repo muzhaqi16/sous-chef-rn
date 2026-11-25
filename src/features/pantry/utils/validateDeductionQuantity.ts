@@ -6,7 +6,7 @@ import {
   resolveQuantityNotation,
   unitLabel,
 } from '#utils/formatQuantity';
-import { inCountedUnit } from '#features/pantry/utils/stockDisplay';
+import { inCountedUnit } from '#entities/pantryItem/stockDisplay';
 import type {
   PantryActionSharedState,
   ShownQuantity,

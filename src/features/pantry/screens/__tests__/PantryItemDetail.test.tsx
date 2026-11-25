@@ -47,7 +47,7 @@ import { catalogTestIDs } from '#features/catalog/testIDs';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
-import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import { CatalogRecipesForItemDocument } from '#features/pantry/hooks/useRecipeSuggestionsForItem.generated';
 import { pantryTestIDs } from '#features/pantry/testIDs';

@@ -8,7 +8,7 @@ import {
   inCountedUnit,
   packagesStarted,
   shownStock,
-} from '#features/pantry/utils/stockDisplay';
+} from './stockDisplay';
 import { UnitType } from '#graphql/generated/schemaTypes';
 import {
   InTrackingUnit_EnteredUnitFragmentDoc,

@@ -29,8 +29,8 @@ import {
   CorrectPantryItemPackageSizeDocument,
   CreatePantryItemUsageDocument,
   DeletePantryItemDocument,
-  GetPantryItemBatchesDocument,
 } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
 import { usePantryItemDetailActions } from '../usePantryItemDetailActions';
 

@@ -31,7 +31,7 @@ import {
   localUsualStore,
   replaceUsualStore,
   writeUsualStores,
-} from '#features/catalog/cache/usualStores';
+} from '#entities/store/usualStores';
 import {
   hideSuggestion,
   putSuggestionsBack,

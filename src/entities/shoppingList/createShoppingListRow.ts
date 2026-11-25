@@ -19,7 +19,7 @@ import { generateEntityId } from '#utils/generateEntityId';
 import { isRecord } from '#utils/isRecord';
 import { itemIdOf, type SentItemRef } from '#utils/refInput';
 import { t } from '#i18n';
-import type { AddRowsInputs } from '#features/shoppingList/offline/localWrites';
+import type { AddRowsInputs } from './localWrites';
 import {
   createLocalShoppingListItem,
   type LocalShoppingListItem,

@@ -9,8 +9,8 @@ import type {
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#services/telemetry';
 import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
-import { localMoveRow } from '#features/shoppingList/cache/localMove';
-import type { MoveToPantryInputs } from '#features/shoppingList/offline/localWrites';
+import { localMoveRow } from '#entities/shoppingList/localMove';
+import type { MoveToPantryInputs } from '#entities/shoppingList/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#i18n';
 import { generateEntityId } from '#utils/generateEntityId';

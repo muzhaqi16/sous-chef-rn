@@ -8,7 +8,7 @@ import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/sh
 import { errorService } from '#services/errorService';
 import { operationNameOf } from '#apollo/utils/documentOperation';
 import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
-import { createShoppingListRow } from '../createShoppingListRow';
+import { createShoppingListRow } from '#entities/shoppingList/createShoppingListRow';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 jest.mock('#services/errorService');

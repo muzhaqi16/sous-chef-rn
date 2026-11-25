@@ -2,14 +2,20 @@ import {
   AcquisitionMethod,
   type StockAmountInput,
   type StorageState,
+  type UnitType,
 } from '#graphql/generated/schemaTypes';
 import { localQuantity, packagesNeedSizing } from '#domain/stockAmount';
-import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
-import { unitPriceFromTotal } from '../utils/purchasePrice';
-import type { ShoppingListItemDisplayFragment } from '../graphql/shoppingListFragments.generated';
+import type { LocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
+import { unitPriceFromTotal } from './purchasePrice';
+/** What a move reads of the list line it takes off the list. */
+interface MovedLine {
+  itemName?: string | null;
+  item?: { id: string } | null;
+  unit?: { id: string; type: UnitType } | null;
+}
 
 export interface LocalMoveArgs {
-  item: ShoppingListItemDisplayFragment;
+  item: MovedLine;
   pantryId: string;
   /** The minted id the move sends, so the cached row and the server's are one. */
   pantryItemId: string;

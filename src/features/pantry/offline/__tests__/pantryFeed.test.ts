@@ -11,10 +11,8 @@ import {
   summaries,
   wholeList,
 } from '#/test-utils/feedServer';
-import {
-  GetPantryDocument,
-  GetPantryItemBatchesDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import { useStore } from '#store';
 import { replacePantryStacks } from '#features/pantry/cache/feedRows';
 

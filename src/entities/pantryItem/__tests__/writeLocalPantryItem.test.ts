@@ -1,10 +1,10 @@
 import { gql } from '@apollo/client';
 import { makeCache } from '#apollo/cache';
 import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
-import { writeLocalPantryItem } from '../writeLocalPantryItem';
+import { writeLocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 import { ExpiryKind, StorageType } from '#graphql/generated/schemaTypes';
-import { LocalRefs_StorageLocationFragmentDoc } from '#features/catalog/cache/localRefs.generated';
+import { LocalRefs_StorageLocationFragmentDoc } from '#entities/catalog/localRefs.generated';
 import { UseUpdatePantryItem_PantryItemFragmentDoc } from '#features/pantry/hooks/mutations/useUpdatePantryItem.generated';
 
 const NOW = '2026-10-30T10:00:00.000Z';

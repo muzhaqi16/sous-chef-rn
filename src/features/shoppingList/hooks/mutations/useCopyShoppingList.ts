@@ -8,8 +8,8 @@
 import { toastService } from '#services/toastService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { addItemsInSlices } from '#features/shoppingList/cache/createShoppingListRow';
-import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
+import { addItemsInSlices } from '#entities/shoppingList/createShoppingListRow';
+import { createLocalShoppingListItem } from '#entities/shoppingList/items';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import type { DerivedList } from '#features/shoppingList/utils/listFromTemplate';
 import { t } from '#i18n';

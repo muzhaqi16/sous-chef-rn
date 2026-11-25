@@ -12,9 +12,9 @@ import {
 import {
   ConsumptionUnitsForPantryItemDocument,
   CreatePantryItemUsageDocument,
-  GetPantryItemBatchesDocument,
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import {
   ErrorCode,
   UnitType,
@@ -37,7 +37,7 @@ import {
   WriteHeldStock_InsideFragmentDoc,
   WriteHeldStock_PantryItemFragmentDoc,
   WriteHeldStock_ShownInFragmentDoc,
-} from '#features/pantry/cache/stock.generated';
+} from '#entities/pantryItem/stock.generated';
 import { UsePantryItemActions_IdFragmentDoc } from '../usePantryItemActions.generated';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 

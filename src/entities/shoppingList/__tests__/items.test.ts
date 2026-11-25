@@ -9,8 +9,8 @@ import { StoreDepartment } from '#graphql/generated/schemaTypes';
 import {
   addLocalShoppingListItem,
   createLocalShoppingListItem,
-} from '../items';
-import { Items_RowFragmentDoc } from '../items.generated';
+} from '#entities/shoppingList/items';
+import { Items_RowFragmentDoc } from '#entities/shoppingList/items.generated';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 

@@ -13,8 +13,8 @@ import {
   readUsualStores,
   writeUsualStores,
   type UsualStoreEntry,
-} from '#features/catalog/cache/usualStores';
-import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
+} from '#entities/store/usualStores';
+import { UsualStoresDocument } from '#entities/store/usualStores.generated';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { seedDraft } from '../../__tests__/helpers/receiptFixtures';
 import { CreateReceiptCheckInDocument } from '../../hooks/useReceiptCheckIn.generated';

@@ -1,12 +1,12 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import { GetPantryItemDocument } from './usePantryItemDetailData.generated';
 import {
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
-} from '#features/pantry/graphql/pantryFragments.generated';
+} from '#entities/pantryItem/batches.generated';
 import { PantryItemDetail_PantryItemFragmentDoc } from './PantryItemDetail.generated';
 import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import { summarizeBatchPricing } from '#features/pantry/utils/summarizeBatchPricing';

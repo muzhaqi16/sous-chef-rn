@@ -11,7 +11,7 @@ import {
   addToPantryItemsCache,
   adjustPantryItemCount,
   removeFromPantryItemsCache,
-} from '../items';
+} from '#entities/pantryItem/items';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,

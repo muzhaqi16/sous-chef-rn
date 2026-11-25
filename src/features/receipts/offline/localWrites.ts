@@ -8,18 +8,18 @@ import { isRecord } from '#utils/isRecord';
 import {
   listNewUsualStore,
   type NewUsualStore,
-} from '#features/catalog/cache/usualStores';
+} from '#entities/store/usualStores';
 import {
   listAnsweredPantryItem,
   showLocalPantryItem,
   type PantryItemRef,
-} from '#features/pantry/cache/items';
-import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
+} from '#entities/pantryItem/items';
+import type { LocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
 import {
   stampItemBoughtOnList,
   stampItemKeptOnListAfterMoveToPantry,
-} from '#features/shoppingList/cache/moveToPantry';
-import { readIsPurchased } from '#features/shoppingList/cache/purchase';
+} from '#entities/shoppingList/moveToPantry';
+import { readIsPurchased } from '#entities/shoppingList/purchase';
 import { refuseReceiptCheckIn, resultsOf } from './receiptCheckIn';
 
 /** What one line shows until the server answers. */

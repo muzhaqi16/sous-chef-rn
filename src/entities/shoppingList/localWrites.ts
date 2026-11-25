@@ -19,8 +19,8 @@ import {
 import {
   listAnsweredPantryItem,
   showLocalPantryItem,
-} from '#features/pantry/cache/items';
-import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
+} from '#entities/pantryItem/items';
+import type { LocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
 import {
   addNewItemToShoppingListCache,
   dropShoppingListRows,
@@ -28,26 +28,23 @@ import {
   moveAnsweredShoppingListItem,
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
-} from '#features/shoppingList/cache/connections';
+} from './connections';
 import {
   addLocalShoppingListItem,
   carriesListTotals,
   type LocalShoppingListItem,
-} from '#features/shoppingList/cache/items';
+} from './items';
 import {
   hideShoppingList,
   linkCreatedShoppingList,
   removeShoppingListFromCache,
   writeLocalShoppingList,
-} from '#features/shoppingList/cache/list';
+} from './list';
 import {
   removeItemFromShoppingListForMoveToPantry,
   stampItemKeptOnListAfterMoveToPantry,
-} from '#features/shoppingList/cache/moveToPantry';
-import {
-  readIsPurchased,
-  writePurchaseInfo,
-} from '#features/shoppingList/cache/purchase';
+} from './moveToPantry';
+import { readIsPurchased, writePurchaseInfo } from './purchase';
 
 export type AddRowsInputs = {
   listId: string;

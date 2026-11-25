@@ -8,8 +8,8 @@
 
 import { gql } from '@apollo/client';
 import { makeCache } from '#apollo/cache';
-import { writeLocalShoppingList } from '../list';
-import { List_RowFragmentDoc } from '../list.generated';
+import { writeLocalShoppingList } from '#entities/shoppingList/list';
+import { List_RowFragmentDoc } from '#entities/shoppingList/list.generated';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const LISTS_OVERVIEW_QUERY = gql`

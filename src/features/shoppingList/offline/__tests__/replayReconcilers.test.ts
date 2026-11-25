@@ -5,7 +5,7 @@
 
 import { gql, type InMemoryCache } from '@apollo/client';
 import { makeCache } from '#apollo/cache';
-import { removeFromShoppingListItemsConnection } from '#features/shoppingList/cache/connections';
+import { removeFromShoppingListItemsConnection } from '#entities/shoppingList/connections';
 import {
   reconcileShoppingAddReplay,
   reconcileShoppingCreateReplay,

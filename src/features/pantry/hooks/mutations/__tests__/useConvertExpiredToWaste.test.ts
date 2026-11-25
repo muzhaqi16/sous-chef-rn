@@ -15,10 +15,8 @@ import {
   recordMock,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
-import {
-  ConvertExpiredToWasteDocument,
-  GetPantryItemBatchesDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import { operationNameOf } from '#apollo/utils/documentOperation';
 import { ItemCondition, ErrorCode } from '#graphql/generated/schemaTypes';
 import { alertService } from '#services/alertService';

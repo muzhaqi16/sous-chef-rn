@@ -7,7 +7,7 @@ import { useAddShoppingItem } from '../useAddShoppingItem';
 import {
   addLocalShoppingListItem,
   createLocalShoppingListItem,
-} from '#features/shoppingList/cache/items';
+} from '#entities/shoppingList/items';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { alertService } from '#services/alertService';
@@ -31,14 +31,14 @@ const addItemMock = () =>
     },
   });
 
-jest.mock('#features/shoppingList/cache/connections', () => ({
-  ...jest.requireActual('#features/shoppingList/cache/connections'),
+jest.mock('#entities/shoppingList/connections', () => ({
+  ...jest.requireActual('#entities/shoppingList/connections'),
   // A leaf cache writer, stubbed so the hook runs without a live cache.
   addNewItemToShoppingListCache: jest.fn(),
 }));
 
-jest.mock('#features/shoppingList/cache/items', () => {
-  const actual = jest.requireActual('#features/shoppingList/cache/items');
+jest.mock('#entities/shoppingList/items', () => {
+  const actual = jest.requireActual('#entities/shoppingList/items');
   return {
     ...actual,
     // Leaf cache writers are stubbed so the hook runs without a live cache;

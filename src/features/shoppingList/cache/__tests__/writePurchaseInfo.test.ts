@@ -7,7 +7,7 @@
  */
 import { gql, type Cache } from '@apollo/client';
 import { makeCache } from '#apollo/cache';
-import { writePurchaseInfo } from '../purchase';
+import { writePurchaseInfo } from '#entities/shoppingList/purchase';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 const ROW = gql`

@@ -22,7 +22,7 @@ import {
   type AcceptShoppingListInviteMutation,
   type DeclineShoppingListInviteMutation,
 } from '#features/shoppingList/graphql/collaboration.generated';
-import { addShoppingListToQueryCache } from '#features/shoppingList/cache/list';
+import { addShoppingListToQueryCache } from '#entities/shoppingList/list';
 
 const removePendingInvite = createRemoveFromParentConnectionUpdater(
   'User',

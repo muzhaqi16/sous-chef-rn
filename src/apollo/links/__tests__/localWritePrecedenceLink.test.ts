@@ -19,8 +19,8 @@ import {
   readUsualStores,
   writeUsualStores,
   type UsualStoreEntry,
-} from '#features/catalog/cache/usualStores';
-import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
+} from '#entities/store/usualStores';
+import { UsualStoresDocument } from '#entities/store/usualStores.generated';
 import { UpdateUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
 import type { PinUsualStoreInputs } from '#features/catalog/offline/localWrites';
 import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';

@@ -20,7 +20,7 @@ import {
   shownUnitPrice,
   totalFromUnitPrice,
   unitPriceFromTotal,
-} from '#features/shoppingList/utils/purchasePrice';
+} from '#entities/shoppingList/purchasePrice';
 import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';

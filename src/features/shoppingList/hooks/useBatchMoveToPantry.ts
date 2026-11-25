@@ -5,7 +5,7 @@ import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.gener
 import {
   readMovedToPantryAt,
   writePurchaseInfo,
-} from '#features/shoppingList/cache/purchase';
+} from '#entities/shoppingList/purchase';
 import { toastService } from '#services/toastService';
 import { Telemetry } from '#services/telemetry';
 import { emitTutorialEvent } from '#domain/tutorialEvents';

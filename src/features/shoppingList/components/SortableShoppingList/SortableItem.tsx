@@ -41,7 +41,7 @@ import {
 import type { ShoppingListRowItem } from './types';
 import { motion } from '#theme/motion';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { suggestedLineCost } from '#features/shoppingList/utils/purchasePrice';
+import { suggestedLineCost } from '#entities/shoppingList/purchasePrice';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 /**

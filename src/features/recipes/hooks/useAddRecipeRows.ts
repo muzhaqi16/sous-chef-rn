@@ -5,7 +5,7 @@ import {
   useAddShoppingRows,
   type AddedBatch,
 } from '#features/shoppingList/hooks/useAddShoppingRows';
-import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
+import { createLocalShoppingListItem } from '#entities/shoppingList/items';
 import type { RecipeShoppingRow } from '#features/recipes/utils/recipeShoppingRows';
 
 /** What became of the rows sent: every row is added, updated or refused. */

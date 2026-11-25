@@ -32,7 +32,7 @@ import {
   listAnsweredPantryItem,
   showLocalPantryItem,
   type PantryItemRef,
-} from '#features/pantry/cache/items';
+} from '#entities/pantryItem/items';
 import {
   addPantryToHomeCache,
   removeOptimisticPantry,
@@ -44,7 +44,7 @@ import {
   typedExpiryKind,
   isBatchesPage,
   writeRestatedBatches,
-} from '#features/pantry/cache/restatedStack';
+} from '#entities/pantryItem/restatedStack';
 import {
   bumpStock,
   countNewBatch,
@@ -52,8 +52,8 @@ import {
   moveContentsTo,
   rememberConsumeUnit,
   writeHeldStock,
-} from '#features/pantry/cache/stock';
-import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
+} from '#entities/pantryItem/stock';
+import type { LocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
 
 const stackRef = (id: string): PantryItemRef => ({
   __typename: 'PantryItem',

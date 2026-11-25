@@ -8,7 +8,7 @@ import type { MoveToPantryInput } from '#features/shoppingList/hooks/useMoveToPa
 import {
   shownUnitPrice,
   totalFromUnitPrice,
-} from '#features/shoppingList/utils/purchasePrice';
+} from '#entities/shoppingList/purchasePrice';
 import { parseFractionalInput } from '#utils/fractionUtils';
 import { formatQuantityForInput, unitLabel } from '#utils/formatQuantity';
 import { formatNumberForInput } from '#utils/formatters/number';

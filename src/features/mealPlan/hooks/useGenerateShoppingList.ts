@@ -12,7 +12,7 @@ import {
   type PantryStock,
 } from '#features/mealPlan/utils/deriveShoppingListFromMealPlan';
 import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
-import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
+import { createLocalShoppingListItem } from '#entities/shoppingList/items';
 import {
   useCreateShoppingList,
   type StartingLines,

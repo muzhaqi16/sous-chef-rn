@@ -13,7 +13,7 @@ import {
   UnitType,
 } from '#graphql/generated/schemaTypes';
 import { t } from '#i18n';
-import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
+import type { PantryItemBatchFragment } from '#entities/pantryItem/batches.generated';
 import { BatchListItem } from '../BatchListItem';
 import { BatchListItem_PantryItemFragmentDoc } from '../BatchListItem.generated';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';

@@ -60,6 +60,14 @@ const BOUNDARY_ELEMENTS = [
       'src/(components|hooks|screens|apollo|utils|store|services|navigation)/**',
     partialMatch: false,
   },
+  // An entity several features write: importable by every feature, below all
+  // of them.
+  {
+    type: 'entity',
+    pattern: 'src/entities/*/**',
+    capture: ['entityName'],
+    partialMatch: false,
+  },
 ];
 
 const FEATURE_INTERNALS = [
@@ -95,6 +103,14 @@ const BOUNDARY_POLICIES = [
     },
     message:
       "Shared code must not import {{ to.element.captured.featureName }}'s internals (context/, hooks/mutations/, utils/, components/). A hook or component two features want belongs in src/hooks/ or src/components/; one feature's belongs in that feature. The catalog's PUBLIC UI is src/features/catalog/ui/.",
+  },
+  {
+    from: { element: { type: 'entity' } },
+    disallow: {
+      to: { element: { types: { anyOf: ['feature', ...FEATURE_INTERNALS] } } },
+    },
+    message:
+      "An entity imports no feature: every feature that writes it sits above it. Move what it needs into the entity, or into src/domain/ when it is not the entity's own.",
   },
 ];
 

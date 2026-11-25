@@ -1,6 +1,6 @@
 # Canonical shape for a PantryItemBatch in the cache.
-# Spread by: pantry.graphql (GetPantryItemBatches), PantryItemDetail.graphql,
-#   useOpenPantryItemBatch.graphql
+# Spread by: GetPantryItemBatches (below), restatedStack.graphql,
+#   PantryItemDetail.graphql, useOpenPantryItemBatch.graphql
 # Read via useFragment by: BatchListItem.tsx, usePantryItemDetailData.ts,
 #   usePantryBatchHistory.ts
 # Kept shared — all 6 consumers need the identical write-back shape.
@@ -89,4 +89,33 @@ fragment PantryItemBatchFragment on PantryItemBatch {
   updatedAt
   wasteReason
   pantryItemId
+}
+
+query GetPantryItemBatches(
+  $pantryItemId: ID!
+  $status: BatchStatus
+  $batchesFirst: Int = 100
+) {
+  pantryItemBatchesConnection(
+    pantryItemId: $pantryItemId
+    status: $status
+    first: $batchesFirst
+  ) {
+    totalCount
+    # Shares a cache field with GetPantryItemBatchHistory (keyArgs is
+    # pantryItemId + status, and neither passes a status). Without `pageInfo`
+    # here, `mergeAuthoritativeFirstPage` reads a missing `hasNextPage` as
+    # "covers the whole list" and this write strips the cursor the history
+    # screen's selection requires — leaving that screen's cache read incomplete.
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      node {
+        id
+        ...PantryItemBatchFragment
+      }
+    }
+  }
 }

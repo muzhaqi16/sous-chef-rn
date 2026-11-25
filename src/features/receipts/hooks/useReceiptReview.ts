@@ -59,7 +59,7 @@ import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
 import { useCreateStoreFromPlace } from '#features/catalog/hooks/useCreateStoreFromPlace';
 import { useUsualStores } from '#features/catalog/hooks/useUsualStores';
 import { useUsualStoreWrites } from '#features/catalog/hooks/useUsualStoreWrites';
-import type { NewUsualStore } from '#features/catalog/cache/usualStores';
+import type { NewUsualStore } from '#entities/store/usualStores';
 import {
   storeChoiceKey,
   storeChoiceName,

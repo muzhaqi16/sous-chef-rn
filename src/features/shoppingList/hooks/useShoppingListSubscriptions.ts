@@ -44,7 +44,7 @@ import {
   moveShoppingListItemToUnpurchased,
   clearAllPurchasedItemsFromCache,
   addNewItemToShoppingListCache,
-} from '#features/shoppingList/cache/connections';
+} from '#entities/shoppingList/connections';
 import { safeEvict } from '#apollo/utils/cacheUpdaters';
 import { Telemetry } from '#services/telemetry';
 import { createRemoveFromParentConnectionUpdater } from '#apollo/utils/cacheUpdaters';

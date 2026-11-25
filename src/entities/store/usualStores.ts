@@ -9,7 +9,7 @@ import {
 import {
   UsualStoresDocument,
   type UsualStoresQuery,
-} from '#features/catalog/hooks/useUsualStores.generated';
+} from './usualStores.generated';
 import { UsualStores_RowFragmentDoc } from './usualStores.generated';
 import {
   NEUTRAL_LOCAL_USUAL_STORE,

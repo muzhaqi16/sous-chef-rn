@@ -13,7 +13,7 @@ import {
 } from '#graphql/generated/schemaTypes';
 import { generateEntityId } from '#utils/generateEntityId';
 import { todayKey } from '#utils/dateUtils';
-import { inTrackingUnit } from '#features/pantry/cache/stock';
+import { inTrackingUnit } from '#entities/pantryItem/stock';
 import type { DrawStockInputs } from '#features/pantry/offline/localWrites';
 
 /** The uses whose unit the server remembers: not waste, a transfer or a gift. */

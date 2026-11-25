@@ -3,7 +3,7 @@ import {
   suggestedLineCost,
   totalFromUnitPrice,
   unitPriceFromTotal,
-} from '#features/shoppingList/utils/purchasePrice';
+} from '#entities/shoppingList/purchasePrice';
 import { formatCurrency } from '#utils/formatters/number';
 
 describe('unitPriceFromTotal', () => {

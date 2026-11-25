@@ -5,7 +5,7 @@ import {
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
+import { createLocalShoppingListItem } from '#entities/shoppingList/items';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useUser } from '#store/useAppStore';
 import { useCreateShoppingList } from '../useCreateShoppingList';

@@ -80,6 +80,8 @@ Map and reasoning: `docs/architecture.md`.
   molecules, organisms, templates, providers, performance), placed by what a
   component RENDERS (`atoms/README.md`). Review holds "no domain-named kit file" and "no kernel
   module named after a feature" (navigation stacks exempt).
+- `src/entities/<entity>/` is an entity 2+ features write (its cache writers,
+  write descriptors and the documents they write to); it imports no feature.
 - `src/domain/` is logic 2+ features share; `src/app/` is the composition root;
   `src/bootstrap/` (core) is what every host runs to start the core.
 - **Two layers, by folder** (`scripts/lib/layers.js`): **core** runs without

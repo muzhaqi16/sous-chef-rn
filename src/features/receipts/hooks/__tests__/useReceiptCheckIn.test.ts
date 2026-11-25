@@ -9,10 +9,7 @@ import { createQueueLink } from '#apollo/offlineQueue/queueLink';
 import { queueStore } from '#apollo/offlineQueue/queueStore';
 import { useStore } from '#store';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
-import {
-  readUsualStores,
-  writeUsualStores,
-} from '#features/catalog/cache/usualStores';
+import { readUsualStores, writeUsualStores } from '#entities/store/usualStores';
 import {
   inputOf,
   recordMock,

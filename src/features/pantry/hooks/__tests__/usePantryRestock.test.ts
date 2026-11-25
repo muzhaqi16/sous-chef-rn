@@ -12,9 +12,9 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import {
   CreatePantryItemDocument,
-  GetPantryItemBatchesDocument,
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import { usePantryRestock } from '../usePantryRestock';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';

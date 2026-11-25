@@ -8,7 +8,7 @@ import {
 import { drained } from '#/test-utils/drainTimers';
 import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { List_EmptyItemsVariantFragmentDoc } from '#features/shoppingList/cache/list.generated';
+import { List_EmptyItemsVariantFragmentDoc } from '#entities/shoppingList/list.generated';
 import { useDeleteShoppingList } from '../useDeleteShoppingList';
 import { toastService } from '#services/toastService';
 

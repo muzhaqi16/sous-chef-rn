@@ -10,7 +10,7 @@ import {
   type ScannedProductRef,
 } from '#features/shoppingList/utils/matchScannedLine';
 import { useToggleShoppingItem } from './mutations/useToggleShoppingItem';
-import { unitPriceFromTotal } from '#features/shoppingList/utils/purchasePrice';
+import { unitPriceFromTotal } from '#entities/shoppingList/purchasePrice';
 import type { PurchaseAmountItem } from './usePurchaseAmountModal';
 import type { PurchasedItemInput } from '#graphql/generated/schemaTypes';
 import { useListCurrency } from './useListCurrency';

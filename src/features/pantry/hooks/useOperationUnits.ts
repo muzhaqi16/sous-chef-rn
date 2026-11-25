@@ -10,7 +10,7 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import type { UnitRole } from '#graphql/generated/schemaTypes';
 import { UnitType, type UnitSource } from '#graphql/generated/schemaTypes';
-import { countFactorOver } from '#features/pantry/utils/stockDisplay';
+import { countFactorOver } from '#entities/pantryItem/stockDisplay';
 import type { PickableUnit } from '#features/pantry/types';
 import type { UnitLabelSource } from '#utils/formatQuantity';
 

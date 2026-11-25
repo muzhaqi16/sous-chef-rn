@@ -1,5 +1,5 @@
 import { UnitType } from '#graphql/generated/schemaTypes';
-import { shownStock } from '#features/pantry/utils/stockDisplay';
+import { shownStock } from '#entities/pantryItem/stockDisplay';
 import type { PantryActionSharedState } from '#features/pantry/types';
 
 const CUP = { symbol: 'cup' };

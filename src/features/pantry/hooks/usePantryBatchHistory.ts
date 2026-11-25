@@ -5,7 +5,7 @@ import { GetPantryItemBatchHistoryDocument } from '#features/pantry/graphql/pant
 import {
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
-} from '#features/pantry/graphql/pantryFragments.generated';
+} from '#entities/pantryItem/batches.generated';
 import { BatchStatus } from '#graphql/generated/schemaTypes';
 import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#services/errorService';

@@ -6,9 +6,9 @@ import {
   type ReceiptCheckInLineInput,
 } from '#graphql/generated/schemaTypes';
 import type { ShoppingListItemNode } from '#features/shoppingList/hooks/usePaginatedShoppingItems';
-import type { NewUsualStore } from '#features/catalog/cache/usualStores';
-import { localIntakeRow } from '#features/pantry/cache/localIntake';
-import { localMoveRow } from '#features/shoppingList/cache/localMove';
+import type { NewUsualStore } from '#entities/store/usualStores';
+import { localIntakeRow } from '#entities/pantryItem/localIntake';
+import { localMoveRow } from '#entities/shoppingList/localMove';
 import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { askForReviewAfterSuccess } from '#domain/reviewPrompt';
@@ -19,7 +19,7 @@ import { toastService } from '#services/toastService';
 import { Telemetry } from '#services/telemetry';
 import { useTranslation } from '#i18n';
 import { useReceiptDraftActions } from '../store/receiptDraftStore';
-import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
+import type { LocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
 import type { CheckInInputs, LocalCheckInLine } from '../offline/localWrites';
 import {
   receiptLineOutcomes,

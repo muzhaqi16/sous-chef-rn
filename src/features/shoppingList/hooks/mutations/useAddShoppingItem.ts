@@ -5,7 +5,7 @@
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
+import { createShoppingListRow } from '#entities/shoppingList/createShoppingListRow';
 import { alertService } from '#services/alertService';
 import { useTranslation } from '#i18n';
 import type { ShoppingListItemInput } from './types';

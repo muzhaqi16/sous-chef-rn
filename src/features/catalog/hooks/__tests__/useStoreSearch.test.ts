@@ -14,7 +14,7 @@ import {
   UsualStoreSource,
 } from '#graphql/generated/schemaTypes';
 import { SearchStoresDocument } from '#operations/store/store.generated';
-import { writeUsualStores } from '#features/catalog/cache/usualStores';
+import { writeUsualStores } from '#entities/store/usualStores';
 import {
   useStoreSearch,
   type StoreSearchPlace,

@@ -26,7 +26,7 @@ import {
   amountLeftOf,
   fullPackagesAfter,
   shownStock,
-} from '#features/pantry/utils/stockDisplay';
+} from '#entities/pantryItem/stockDisplay';
 import { formatAmountLeft } from '#features/pantry/hooks/usePantryItemTransformation';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import type {

@@ -1,9 +1,9 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import type { UsualStoreSource } from '#graphql/generated/schemaTypes';
 import { chainOption, storeOption, type StoreOption } from '#domain/stores';
-import type { UsualStoreEntry } from '#features/catalog/cache/usualStores';
+import type { UsualStoreEntry } from '#entities/store/usualStores';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
-import { UsualStoresDocument } from './useUsualStores.generated';
+import { UsualStoresDocument } from '#entities/store/usualStores.generated';
 
 /** A usual store as a row shows it. */
 export interface UsualStoreRow extends StoreOption {

@@ -36,6 +36,11 @@ const LAYERS = [
     patterns: ['src/domain/**'],
   },
   {
+    name: 'entities',
+    layer: 'core',
+    patterns: ['src/entities/**'],
+  },
+  {
     name: 'graphql',
     layer: 'core',
     patterns: ['src/graphql/**'],

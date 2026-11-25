@@ -4,7 +4,7 @@ import { StoreDepartment } from '#graphql/generated/schemaTypes';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { knownDepartment } from '#features/shoppingList/utils/aisles';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
-import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
+import type { UpdateRowInputs } from '#entities/shoppingList/localWrites';
 import { useTranslation } from '#i18n';
 import { UseMoveToAisleModal_ItemFragmentDoc } from './useMoveToAisleModal.generated';
 

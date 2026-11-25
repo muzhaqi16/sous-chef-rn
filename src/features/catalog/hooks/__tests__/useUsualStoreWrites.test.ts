@@ -28,7 +28,7 @@ import {
   readUsualStores,
   writeUsualStores,
   type UsualStoreEntry,
-} from '#features/catalog/cache/usualStores';
+} from '#entities/store/usualStores';
 import { storeChoiceName } from '#domain/stores';
 import { t } from '#i18n';
 import {
@@ -36,7 +36,7 @@ import {
   type UsualStoreRow,
 } from '#features/catalog/hooks/useUsualStores';
 import { useUsualStoreWrites } from '#features/catalog/hooks/useUsualStoreWrites';
-import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
+import { UsualStoresDocument } from '#entities/store/usualStores.generated';
 import { operationNameOf } from '#apollo/utils/documentOperation';
 import {
   AddUsualStoreDocument,

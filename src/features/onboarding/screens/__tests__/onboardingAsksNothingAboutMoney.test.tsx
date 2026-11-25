@@ -5,7 +5,7 @@ import { alertService } from '#services/alertService';
 import { useStore } from '#store';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { UsualStoreSource } from '#graphql/generated/schemaTypes';
-import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
+import { UsualStoresDocument } from '#entities/store/usualStores.generated';
 import { OnboardingCompleteScreen } from '../OnboardingCompleteScreen';
 import { HouseholdStepScreen } from '../HouseholdStepScreen';
 import { DietaryStepScreen } from '../DietaryStepScreen';

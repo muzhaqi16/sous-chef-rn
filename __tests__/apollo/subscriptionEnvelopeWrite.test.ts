@@ -40,7 +40,7 @@ import {
   type GetShoppingListItemsFilteredQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { safeEvict } from '#apollo/utils/cacheUpdaters';
-import { removeFromShoppingListItemsConnection } from '#features/shoppingList/cache/connections';
+import { removeFromShoppingListItemsConnection } from '#entities/shoppingList/connections';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const mockedSchema = addMocksToSchema({

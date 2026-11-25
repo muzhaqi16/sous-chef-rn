@@ -16,7 +16,7 @@ import {
   type SaveToFavoritesOptions,
 } from '#features/recipes/cache/favorites';
 import { moveSavedFolder } from '#features/recipes/cache/folders';
-import { bumpStock, drawInside } from '#features/pantry/cache/stock';
+import { bumpStock, drawInside } from '#entities/pantryItem/stock';
 import {
   removeMyRecipesEdge,
   upsertMyRecipesEdge,

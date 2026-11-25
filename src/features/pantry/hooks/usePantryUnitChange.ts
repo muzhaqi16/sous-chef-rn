@@ -11,7 +11,7 @@ import { isVersionConflictCode } from '#utils/errors/versionConflict';
 import { errorService } from '#services/errorService';
 import { useTranslation } from '#i18n';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { writeRestatedBatches } from '#features/pantry/cache/restatedStack';
+import { writeRestatedBatches } from '#entities/pantryItem/restatedStack';
 import { appliedPayload } from '#utils/errors/mutationPayload';
 import {
   ChangePantryItemUnitDocument,

@@ -10,8 +10,8 @@ import { UsualStoreSource } from '#graphql/generated/schemaTypes';
 import {
   writeUsualStores,
   type UsualStoreEntry,
-} from '#features/catalog/cache/usualStores';
-import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
+} from '#entities/store/usualStores';
+import { UsualStoresDocument } from '#entities/store/usualStores.generated';
 import {
   AddUsualStoreDocument,
   RemoveUsualStoreDocument,

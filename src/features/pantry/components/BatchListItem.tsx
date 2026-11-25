@@ -12,12 +12,12 @@ import { BatchStatus, UnitType } from '#graphql/generated/schemaTypes';
 import {
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
-} from '#features/pantry/graphql/pantryFragments.generated';
+} from '#entities/pantryItem/batches.generated';
 import {
   formatQuantityForDisplay,
   formatQuantityWithUnit,
 } from '#utils/formatQuantity';
-import { shownStock } from '#features/pantry/utils/stockDisplay';
+import { shownStock } from '#entities/pantryItem/stockDisplay';
 import { currentReading, formatReading } from '#domain/measure';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';

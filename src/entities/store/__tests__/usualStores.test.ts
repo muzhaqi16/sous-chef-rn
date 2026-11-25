@@ -6,7 +6,7 @@ import {
   readUsualStores,
   writeUsualStores,
   type UsualStoreEntry,
-} from '../usualStores';
+} from '#entities/store/usualStores';
 
 const NOW = '2026-10-30T10:00:00.000Z';
 

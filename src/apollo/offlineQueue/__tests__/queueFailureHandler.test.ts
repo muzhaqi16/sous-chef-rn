@@ -50,7 +50,7 @@ jest.mock('#apollo/utils/cacheUpdaters', () => ({
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
 }));
-jest.mock('#features/shoppingList/cache/purchase', () => ({
+jest.mock('#entities/shoppingList/purchase', () => ({
   writePurchaseInfo: jest.fn(),
 }));
 const mockRefuse = jest.fn();

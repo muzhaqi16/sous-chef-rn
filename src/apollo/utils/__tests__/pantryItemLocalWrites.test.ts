@@ -15,7 +15,7 @@ import {
   addPantryItemLocally,
   removePantryItemLocally,
   type PantryItemRef,
-} from '#features/pantry/cache/items';
+} from '#entities/pantryItem/items';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const PANTRY = gql`

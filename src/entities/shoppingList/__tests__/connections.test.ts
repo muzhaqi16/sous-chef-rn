@@ -9,13 +9,13 @@ import {
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
   removeFromShoppingListItemsConnection,
-} from '../connections';
+} from '#entities/shoppingList/connections';
 import {
   createFieldHelpers,
   createMockCache,
   invokeFieldModifier,
-} from './helpers/mockCache';
-import type { MockRef } from './helpers/mockCache';
+} from '#features/shoppingList/cache/__tests__/helpers/mockCache';
+import type { MockRef } from '#features/shoppingList/cache/__tests__/helpers/mockCache';
 import { logger } from '#utils/environment';
 
 describe('removeFromShoppingListItemsConnection', () => {

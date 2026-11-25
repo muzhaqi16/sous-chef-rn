@@ -5,7 +5,7 @@ import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
-import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { t } from '#i18n';
 import {

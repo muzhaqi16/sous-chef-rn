@@ -47,7 +47,7 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-jest.mock('#features/shoppingList/cache/connections', () => ({
+jest.mock('#entities/shoppingList/connections', () => ({
   removeFromShoppingListItemsConnection: jest.fn(),
   moveShoppingListItemToPurchased: jest.fn(),
   moveShoppingListItemToUnpurchased: jest.fn(),
@@ -126,7 +126,7 @@ describe('useShoppingListSubscriptions', () => {
   it('reads a created item back before adding it', async () => {
     const {
       addNewItemToShoppingListCache,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -174,7 +174,7 @@ describe('useShoppingListSubscriptions', () => {
   it('skips self-echo for MyShoppingListsEvents item changes', () => {
     const {
       addNewItemToShoppingListCache,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -197,7 +197,7 @@ describe('useShoppingListSubscriptions', () => {
   it('ignores item events for lists other than the selected one', () => {
     const {
       addNewItemToShoppingListCache,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -220,7 +220,7 @@ describe('useShoppingListSubscriptions', () => {
   it('handles Deleted mutation without animation', () => {
     const {
       removeFromShoppingListItemsConnection,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -250,7 +250,7 @@ describe('useShoppingListSubscriptions', () => {
   it('handles ITEMS_BATCH_CLEARED payload', () => {
     const {
       clearAllPurchasedItemsFromCache,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -276,7 +276,7 @@ describe('useShoppingListSubscriptions', () => {
   it('ignores ITEMS_BATCH_CLEARED for lists other than the selected one', () => {
     const {
       clearAllPurchasedItemsFromCache,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -327,7 +327,7 @@ describe('useShoppingListSubscriptions', () => {
   it('removes a deleted item as the event arrives, with no deferral', () => {
     const {
       removeFromShoppingListItemsConnection,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -366,7 +366,7 @@ describe('useShoppingListSubscriptions: another device toggles a row twice', () 
     const {
       moveShoppingListItemToPurchased,
       moveShoppingListItemToUnpurchased,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
     const fetchModule = require('#services/subscriptions/fetchEventEntity');
     const fetchSpy = jest
       .spyOn(fetchModule, 'fetchEventEntity')

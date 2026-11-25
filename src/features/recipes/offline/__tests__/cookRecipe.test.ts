@@ -7,7 +7,7 @@ import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.gen
 import {
   WriteHeldStock_InsideFragmentDoc,
   WriteHeldStock_PantryItemFragmentDoc,
-} from '#features/pantry/cache/stock.generated';
+} from '#entities/pantryItem/stock.generated';
 import { pantryTrackingExamples } from '#/test-utils/fixtures/pantryTrackingFixtures';
 import { cookRecipe, type CookRecipeInputs } from '../localWrites';
 

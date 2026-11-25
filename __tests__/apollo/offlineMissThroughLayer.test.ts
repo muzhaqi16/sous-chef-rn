@@ -5,7 +5,7 @@ import { drainTimers } from '#/test-utils/drainTimers';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { usePaginatedShoppingItems } from '#features/shoppingList/hooks/usePaginatedShoppingItems';
-import type { CreateListInputs } from '#features/shoppingList/offline/localWrites';
+import type { CreateListInputs } from '#entities/shoppingList/localWrites';
 import { useStore } from '#store';
 
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({

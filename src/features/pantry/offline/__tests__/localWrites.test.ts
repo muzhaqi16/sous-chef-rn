@@ -30,7 +30,7 @@ import {
   HomePantries_HomeFragmentDoc,
   type HomePantries_HomeFragment,
 } from '#features/home/utils/homePantries.generated';
-import { LocalRefs_UnitFragmentDoc } from '#features/catalog/cache/localRefs.generated';
+import { LocalRefs_UnitFragmentDoc } from '#entities/catalog/localRefs.generated';
 import { UseWastePantryItemBatch_PantryItemFragmentDoc } from '#features/pantry/hooks/mutations/useWastePantryItemBatch.generated';
 import {
   ConvertExpiredToWasteDocument,
@@ -40,12 +40,12 @@ import {
   DeletePantryDocument,
   DeletePantryItemDocument,
   GetPantryDocument,
-  GetPantryItemBatchesDocument,
   RestockPantryItemDocument,
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import {
   addStock,
   createItem,

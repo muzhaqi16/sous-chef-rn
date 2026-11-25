@@ -3,10 +3,7 @@
 import { act } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
 import { makeCache } from '#apollo/cache';
-import {
-  readUsualStores,
-  writeUsualStores,
-} from '#features/catalog/cache/usualStores';
+import { readUsualStores, writeUsualStores } from '#entities/store/usualStores';
 import {
   inputOf,
   recordMock,

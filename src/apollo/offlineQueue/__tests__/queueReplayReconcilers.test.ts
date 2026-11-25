@@ -15,8 +15,8 @@ jest.mock('#apollo/clientRegistry', () => ({
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
 }));
-jest.mock('#features/shoppingList/cache/connections', () => ({
-  ...jest.requireActual('#features/shoppingList/cache/connections'),
+jest.mock('#entities/shoppingList/connections', () => ({
+  ...jest.requireActual('#entities/shoppingList/connections'),
   addNewItemToShoppingListCache: jest.fn(),
 }));
 

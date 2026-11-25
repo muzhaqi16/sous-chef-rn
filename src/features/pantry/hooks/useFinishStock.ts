@@ -9,7 +9,7 @@ import {
 } from '#graphql/generated/schemaTypes';
 import { generateEntityId } from '#utils/generateEntityId';
 import { todayKey } from '#utils/dateUtils';
-import { heldQuantityOf } from '#features/pantry/cache/stock';
+import { heldQuantityOf } from '#entities/pantryItem/stock';
 import type { DrawStockInputs } from '#features/pantry/offline/localWrites';
 
 interface FinishStock {

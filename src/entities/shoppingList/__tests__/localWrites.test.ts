@@ -21,7 +21,7 @@ import {
   RemoveItemsFromShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { Items_RowFragmentDoc } from '#features/shoppingList/cache/items.generated';
+import { Items_RowFragmentDoc } from '#entities/shoppingList/items.generated';
 import {
   addRows,
   createList,
@@ -34,7 +34,7 @@ import {
   type MoveToPantryInputs,
   type RemoveRowsInputs,
   type UpdateRowInputs,
-} from '../localWrites';
+} from '#entities/shoppingList/localWrites';
 
 const NOW = '2026-10-30T10:00:00.000Z';
 const listVariables = { id: 'list-1', first: 20, isPurchased: false };

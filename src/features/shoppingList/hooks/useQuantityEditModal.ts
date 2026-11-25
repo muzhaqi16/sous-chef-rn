@@ -9,7 +9,7 @@ import { firstNonBlank } from '#utils/firstNonBlank';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { normalizeNumericTextForApi } from '#utils/parseDecimalInput';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
-import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
+import type { UpdateRowInputs } from '#entities/shoppingList/localWrites';
 import { parseFractionalInput } from '#utils/fractionUtils';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { shownLineReading } from '#features/shoppingList/utils/lineReading';
