@@ -31,7 +31,9 @@ runs:
           !src/config/env.generated.ts
           src/graphql/generated/schemaTypes.ts
           src/graphql/generated/fragmentMatcher.json
-        key: ${{ runner.os }}-codegen-${{ hashFiles('src/**/*.graphql', 'src/graphql/generated/schema.graphql', 'codegen.ts', 'scripts/lib/mutationDocumentsPlugin.js') }}
+        # Every input of `npm run codegen`, its generator scripts included: a
+        # generator change with its outputs restored from cache reads as stale.
+        key: ${{ runner.os }}-codegen-${{ hashFiles('src/**/*.graphql', 'src/graphql/generated/schema.graphql', 'codegen.ts', 'scripts/lib/mutationDocumentsPlugin.js', 'scripts/generate-readers-fragments.mjs', 'scripts/generate-optimistic-fillers.mjs', 'scripts/generate-versioned-types.mjs') }}
 
     - name: Generate GraphQL types
       if: steps.cache-codegen.outputs.cache-hit != 'true'
