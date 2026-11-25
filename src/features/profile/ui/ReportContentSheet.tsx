@@ -12,7 +12,6 @@ import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
 import { AlertBanner } from '#components/molecules/AlertBanner';
-import { Button } from '#components/molecules/Button';
 import { RadioRow } from '#components/molecules/RadioRow';
 import { toastService } from '#services/toastService';
 import { firstNonBlank } from '#utils/firstNonBlank';
@@ -88,7 +87,18 @@ const ReportContentForm: React.FC<ReportContentFormProps> = ({
   return (
     <>
       <SheetHeaderSlot>
-        <SheetHeader title={t('reports.sheetTitle')} onClose={onClose} />
+        <SheetHeader
+          title={t('reports.sheetTitle')}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void send();
+            },
+            accessibilityLabel: t('reports.send'),
+            loading: sending,
+            testID: profileTestIDs.reportSendButton,
+          }}
+        />
       </SheetHeaderSlot>
 
       <Controller
@@ -147,16 +157,6 @@ const ReportContentForm: React.FC<ReportContentFormProps> = ({
           testID={profileTestIDs.reportFailure}
         />
       )}
-
-      <Button
-        onPress={() => {
-          void send();
-        }}
-        loading={sending}
-        testID={profileTestIDs.reportSendButton}
-      >
-        {t('reports.send')}
-      </Button>
     </>
   );
 };
