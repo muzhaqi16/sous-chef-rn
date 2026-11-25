@@ -89,6 +89,8 @@ describe('the i18n launch path', () => {
     ['the offline queue store', 'src/apollo/offlineQueue/queueStore.ts'],
     ['the cache field policies', 'src/apollo/cacheFieldPolicies.ts'],
     ['the replay registry', 'src/apollo/offlineQueue/preparationRegistry.ts'],
+    ['the write registry', 'src/features/registry.data.ts'],
+    ['the feed registry', 'src/features/registry.feed.ts'],
     ['device locale probing', 'src/utils/deviceLocale.ts'],
   ])('does not reach %s', (_label, rel) => {
     expect(reaches(rel)).toBe(false);

@@ -7,17 +7,17 @@ const REGISTRY = path.join(
   '..',
   '..',
   'src',
-  'apollo',
-  'offlineQueue',
-  'preparationRegistry.ts',
+  'features',
+  'registry.data.ts',
 );
+const LIST = 'FEATURE_REPLAY_PREPARATIONS';
 
 let documents;
 
 /**
- * The generated document identifiers `REPLAY_PREPARATIONS` maps, read from its
- * own source. The queue takes any of these offline whether or not the caller
- * asked.
+ * The generated document identifiers `REPLAY_PREPARATIONS` maps, read from the
+ * feature list it is keyed from. The queue takes any of these offline whether
+ * or not the caller asked.
  */
 function readReplayPreparationDocuments() {
   if (documents) return documents;
@@ -34,7 +34,7 @@ function readReplayPreparationDocuments() {
     if (
       ts.isVariableDeclaration(node) &&
       ts.isIdentifier(node.name) &&
-      node.name.text === 'REPLAY_PREPARATIONS'
+      node.name.text === LIST
     ) {
       node.forEachChild(function collect(child) {
         if (
@@ -58,7 +58,7 @@ function readReplayPreparationDocuments() {
 
   // Fail closed: an empty set would make the rule pass on every call site.
   if (documents.size === 0) {
-    throw new Error(`No documents found in REPLAY_PREPARATIONS (${REGISTRY}).`);
+    throw new Error(`No documents found in ${LIST} (${REGISTRY}).`);
   }
   return documents;
 }

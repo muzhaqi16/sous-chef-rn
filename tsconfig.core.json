@@ -70,6 +70,8 @@
     "src/features/*/pushCopy.ts",
     "src/features/registry.static.ts",
     "src/features/registry.cache.ts",
+    "src/features/registry.data.ts",
+    "src/features/registry.feed.ts",
     "src/features/staticTypes.ts"
   ],
   "exclude": [

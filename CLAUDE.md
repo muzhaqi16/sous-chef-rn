@@ -66,8 +66,9 @@ Map and reasoning: `docs/architecture.md`.
   `components/`, colocated `.graphql`.
 - **The registry split is load-bearing.** Navigation iterates `registry.ts`;
   launch-path code reads `registry.static.ts` (i18n, push routes) and
-  `registry.cache.ts` (type policies). Shell wiring goes in `manifest.static.ts`,
-  never an import of `registry.ts` — § Three registries.
+  `registry.cache.ts` (type policies); the write kernel reads `registry.data.ts`
+  and the feed engine `registry.feed.ts`. Shell wiring goes in
+  `manifest.static.ts`, never an import of `registry.ts` — § Five registries.
 - **Feature API boundary** (`boundaries/dependencies`; `BOUNDARY_ELEMENTS` in
   `eslint/boundaries.js` is the one statement): a feature's `context/`,
   `utils/`, `components/`, `hooks/mutations/`, `offline/` and `graphql/` are

@@ -60,33 +60,33 @@ Every production file in `src/` belongs to one of two layers:
 What the core is for, and why a web host would run this app on
 react-native-web, is [`web-host-decision.md`](web-host-decision.md).
 
-| Entry                 | Layer  | Paths under `src/`                                                                                                  |
-| --------------------- | ------ | ------------------------------------------------------------------------------------------------------------------- |
-| platform              | core   | `platform/**`                                                                                                       |
-| apollo                | core   | `apollo/**`                                                                                                         |
-| bootstrap             | core   | `bootstrap/**`                                                                                                      |
-| domain                | core   | `domain/**`                                                                                                         |
-| graphql               | core   | `graphql/**`                                                                                                        |
-| i18n                  | core   | `i18n/**`                                                                                                           |
-| config                | core   | `config/**`                                                                                                         |
-| store                 | core   | `store/**`                                                                                                          |
-| types                 | core   | `types/**`                                                                                                          |
-| utils                 | core   | `utils/**`                                                                                                          |
-| services/auth         | core   | `services/auth/**`, `services/authService.ts`                                                                       |
-| services              | core   | `services/{subscriptions,telemetry}/**`, `services/{alertService,destructiveConfirm,errorService,toastService}.ts`  |
-| hooks                 | core   | `hooks/{apollo,auth,data,deepLink,search,settings,utils}/**`                                                        |
-| hooks/session         | core   | `hooks/{app,offline,subscriptions}/**`                                                                              |
-| theme/foundations     | core   | `theme/foundations/**`                                                                                              |
-| features/utils        | core   | `features/*/utils/**`                                                                                               |
-| features/graphql      | core   | `features/*/graphql/**`                                                                                             |
-| features/cache        | core   | `features/*/cache/**`                                                                                               |
-| features/data         | core   | `features/*/{hooks,offline,store,locales,constants}/**`                                                             |
-| features/declarations | core   | `features/*/{manifest.static,types,pushCopy}.ts`, `features/{registry.static,registry.cache,staticTypes}.ts`        |
-| app shell             | mobile | `{app,assets,components,constants,context,native,navigation,screens,styles}/**`                                     |
-| services (device)     | mobile | `services/{push,permissions,haptic,notifications,performance,biometric,device}/**`, `services/NavigationService.ts` |
-| hooks (UI and device) | mobile | `hooks/{ui,animations,navigation,permissions,performance,device}/**`                                                |
-| theme runtime         | mobile | `theme/*.ts`                                                                                                        |
-| features (UI)         | mobile | `features/*/{screens,components,ui,context}/**`, `features/*/{manifest,testIDs}.ts`, `features/{registry,types}.ts` |
+| Entry                 | Layer  | Paths under `src/`                                                                                                                       |
+| --------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| platform              | core   | `platform/**`                                                                                                                            |
+| apollo                | core   | `apollo/**`                                                                                                                              |
+| bootstrap             | core   | `bootstrap/**`                                                                                                                           |
+| domain                | core   | `domain/**`                                                                                                                              |
+| graphql               | core   | `graphql/**`                                                                                                                             |
+| i18n                  | core   | `i18n/**`                                                                                                                                |
+| config                | core   | `config/**`                                                                                                                              |
+| store                 | core   | `store/**`                                                                                                                               |
+| types                 | core   | `types/**`                                                                                                                               |
+| utils                 | core   | `utils/**`                                                                                                                               |
+| services/auth         | core   | `services/auth/**`, `services/authService.ts`                                                                                            |
+| services              | core   | `services/{subscriptions,telemetry}/**`, `services/{alertService,destructiveConfirm,errorService,toastService}.ts`                       |
+| hooks                 | core   | `hooks/{apollo,auth,data,deepLink,search,settings,utils}/**`                                                                             |
+| hooks/session         | core   | `hooks/{app,offline,subscriptions}/**`                                                                                                   |
+| theme/foundations     | core   | `theme/foundations/**`                                                                                                                   |
+| features/utils        | core   | `features/*/utils/**`                                                                                                                    |
+| features/graphql      | core   | `features/*/graphql/**`                                                                                                                  |
+| features/cache        | core   | `features/*/cache/**`                                                                                                                    |
+| features/data         | core   | `features/*/{hooks,offline,store,locales,constants}/**`                                                                                  |
+| features/declarations | core   | `features/*/{manifest.static,types,pushCopy}.ts`, `features/{registry.static,registry.cache,registry.data,registry.feed,staticTypes}.ts` |
+| app shell             | mobile | `{app,assets,components,constants,context,native,navigation,screens,styles}/**`                                                          |
+| services (device)     | mobile | `services/{push,permissions,haptic,notifications,performance,biometric,device}/**`, `services/NavigationService.ts`                      |
+| hooks (UI and device) | mobile | `hooks/{ui,animations,navigation,permissions,performance,device}/**`                                                                     |
+| theme runtime         | mobile | `theme/*.ts`                                                                                                                             |
+| features (UI)         | mobile | `features/*/{screens,components,ui,context}/**`, `features/*/{manifest,testIDs}.ts`, `features/{registry,types}.ts`                      |
 
 **Classify by folder; move only what mixes.** A file takes its layer from where
 it sits, so a new file needs no registration, and a file that would need an
@@ -222,9 +222,9 @@ There are fourteen: `today`, `pantry`, `shoppingList`, `recipes`, `mealPlan`,
 reached from headers, buttons, push taps or the root navigator's groups. Removing a feature
 from a fork is deleting its folder and its registry entries.
 
-### Three registries
+### Five registries
 
-The feature list exists three times, split by who reads it and when:
+The feature list exists five times, split by who reads it and when:
 
 - `registry.ts` (`FEATURE_REGISTRY`) — the screen-bearing manifests navigation
   iterates.
@@ -239,6 +239,14 @@ The feature list exists three times, split by who reads it and when:
   manifest field, because policies on a static manifest drag the queue store,
   the Zustand store and `apollo/client` into i18n init;
   `launchPathWeight.test.ts` holds that line.
+- `registry.data.ts` — each feature's part in the write kernel: its local-first
+  writes and how the queue restates and settles its replays, keyed by operation
+  in `localWriteRegistry`, `preparationRegistry` and `replayRegistry`.
+- `registry.feed.ts` — each feature's feed adapter, read by `feedRegistry`.
+  Apart from `registry.data.ts` because a feed reads the write kernel: one
+  module holding both loads in a cycle (`npm run check:import-cycles`).
+
+The kernel (`src/apollo`) reads features only through these registries.
 
 A feature that needs shell wiring adds to its `manifest.static.ts`; it never
 adds an import of the screen-bearing registry to a launch-path module.

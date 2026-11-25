@@ -5,10 +5,7 @@ import {
   GetUnitBySymbolDocument,
   SearchUnitsDocument,
 } from '#operations/item/unit.generated';
-import {
-  ConsumptionUnitsForPantryItemDocument,
-  RestockUnitsForPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { FEATURE_UNIT_QUERIES } from '#features/registry.data';
 import { useStore } from '#store';
 import { logger } from '#utils/environment';
 
@@ -17,8 +14,7 @@ const UNIT_ROOT_FIELDS = [
   GetCommonUnitsDocument,
   GetUnitBySymbolDocument,
   SearchUnitsDocument,
-  ConsumptionUnitsForPantryItemDocument,
-  RestockUnitsForPantryItemDocument,
+  ...FEATURE_UNIT_QUERIES,
 ].map(rootFieldOf);
 
 /**

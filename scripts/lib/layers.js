@@ -104,7 +104,7 @@ const LAYERS = [
     layer: 'core',
     patterns: [
       'src/features/*/{manifest.static,types,pushCopy}.ts',
-      'src/features/{registry.static,registry.cache,staticTypes}.ts',
+      'src/features/{registry.static,registry.cache,registry.data,registry.feed,staticTypes}.ts',
     ],
   },
 

@@ -1,100 +1,30 @@
 /**
  * Every feature that settles its own replay, keyed by the operation its
  * document declares. See {@link REPLAY_PREPARATIONS} for why this is a list
- * here rather than a manifest field.
+ * rather than a manifest field.
  */
 import { byOperation } from '#apollo/utils/documentOperation';
 import {
-  reconcileConvertExpiredReplay,
-  reconcileCreatePantryItemReplay,
-  reconcileMoveToPantryReplay,
-  reconcilePantryUsageReplay,
-  reconcileRestockReplay,
-} from '#features/pantry/offline/replayReconcilers';
-import {
-  AdjustPantryItemQuantityDocument,
-  ConvertExpiredToWasteDocument,
-  CreatePantryItemDocument,
-  CreatePantryItemUsageDocument,
-  RestockPantryItemDocument,
-  UpdatePantryItemDocument,
-  UpdatePantryItemQuantityDocument,
-} from '#features/pantry/graphql/pantry.generated';
-import { ChangePantryItemUnitDocument } from '#features/pantry/hooks/usePantryUnitChange.generated';
-import {
-  reconcileShoppingAddReplay,
-  reconcileShoppingCreateReplay,
-} from '#features/shoppingList/offline/replayReconcilers';
-import {
-  AddItemToShoppingListDocument,
-  CreateShoppingListDocument,
-  MoveShoppingItemToPantryDocument,
-  UpdateShoppingListItemDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  CreateMealPlanItemDocument,
-  DeleteMealPlanItemDocument,
-} from '#features/mealPlan/graphql/mealPlan.generated';
-import {
-  reconcileCreateMealPlanItemReplay,
-  settleGoneMealPlanItem,
-} from '#features/mealPlan/offline/replayReconcilers';
-import { removeGoneNotification } from '#features/notifications/offline/replayReconcilers';
-import { reconcileReceiptCheckInReplay } from '#features/receipts/offline/receiptCheckIn';
-import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
-import {
-  DeleteNotificationDocument,
-  MarkNotificationAsReadDocument,
-} from '#features/notifications/graphql/notificationMutations.generated';
+  FEATURE_GONE_REPLAYS,
+  FEATURE_MERGE_REPORTERS,
+  FEATURE_QUANTITY_OVERWRITES,
+  FEATURE_SETTLED_REPLAYS,
+} from '#features/registry.data';
 import type { ReplayReconcilerTable } from './types';
 
-export const MERGE_REPORTERS: ReplayReconcilerTable = byOperation([
-  [CreateMealPlanItemDocument, reconcileCreateMealPlanItemReplay],
-  [MoveShoppingItemToPantryDocument, reconcileMoveToPantryReplay],
-  [CreatePantryItemDocument, reconcileCreatePantryItemReplay],
-  // A delta against a stack merged since lands on the survivor (USM-3).
-  [CreatePantryItemUsageDocument, reconcilePantryUsageReplay],
-  [RestockPantryItemDocument, reconcileRestockReplay],
-  [ConvertExpiredToWasteDocument, reconcileConvertExpiredReplay],
-  [AddItemToShoppingListDocument, reconcileShoppingAddReplay],
-  [CreateShoppingListDocument, reconcileShoppingCreateReplay],
-]);
+export const MERGE_REPORTERS: ReplayReconcilerTable = byOperation(
+  FEATURE_MERGE_REPORTERS,
+);
 
 export const REPLAY_RECONCILERS: ReplayReconcilerTable = {
   ...MERGE_REPORTERS,
-  // Also settles the receipt's lines, which a check-in's own answer does online.
-  ...byOperation([
-    [CreateReceiptCheckInDocument, reconcileReceiptCheckInReplay],
-  ]),
+  ...byOperation(FEATURE_SETTLED_REPLAYS),
 };
 
-/**
- * Replays a `NotFoundError` makes moot: the entry dequeues as settled and the
- * handler removes the gone row, with no withdrawal toast. A removal the server
- * already applied answers `converged` as a success and never reaches here.
- */
-export const GONE_REPLAYS: ReplayReconcilerTable = byOperation([
-  [MarkNotificationAsReadDocument, removeGoneNotification],
-  [DeleteNotificationDocument, removeGoneNotification],
-  [DeleteMealPlanItemDocument, settleGoneMealPlanItem],
-]);
+export const GONE_REPLAYS: ReplayReconcilerTable =
+  byOperation(FEATURE_GONE_REPLAYS);
 
-const always = (): boolean => true;
-const setsQuantityOrUnit = (input: Record<string, unknown>): boolean =>
-  input.quantity !== undefined || input.unit !== undefined;
-
-/**
- * Writes that overwrite the quantity a merged create combined. Moved onto the
- * surviving entry they would replace amounts the person never saw, so they are
- * withdrawn as conflicts instead; a delta (a usage, a restock) is not listed.
- */
 export const MERGED_QUANTITY_OVERWRITES: Record<
   string,
   (input: Record<string, unknown>) => boolean
-> = byOperation([
-  [UpdatePantryItemQuantityDocument, always],
-  [AdjustPantryItemQuantityDocument, always],
-  [ChangePantryItemUnitDocument, always],
-  [UpdatePantryItemDocument, setsQuantityOrUnit],
-  [UpdateShoppingListItemDocument, setsQuantityOrUnit],
-]);
+> = byOperation(FEATURE_QUANTITY_OVERWRITES);
