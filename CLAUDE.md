@@ -69,6 +69,8 @@ Map and reasoning: `docs/architecture.md`.
   `registry.cache.ts` (type policies); the write kernel reads `registry.data.ts`
   and the feed engine `registry.feed.ts`. Shell wiring goes in
   `manifest.static.ts`, never an import of `registry.ts` — § Five registries.
+  Its gates hold it (`staticFeatureRegistry.test.ts`, `launchPathWeight.test.ts`,
+  the layer policies, `check:import-cycles`), not a measured launch time.
 - **Feature API boundary** (`boundaries/dependencies`; `BOUNDARY_ELEMENTS` in
   `eslint/boundaries.js` is the one statement): a feature's `context/`,
   `utils/`, `components/`, `hooks/mutations/`, `offline/` and `graphql/` are

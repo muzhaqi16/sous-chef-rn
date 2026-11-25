@@ -249,6 +249,13 @@ The feature list exists five times, split by who reads it and when:
 
 The kernel (`src/apollo`) reads features only through these registries.
 
+What holds the split is its gates, not a measured launch time:
+`staticFeatureRegistry.test.ts` (no static manifest reaches a screen or a
+component), `launchPathWeight.test.ts` (the module graph i18n init reaches),
+the layer policies (`coreLoadsWithNothingInstalled.test.ts` and
+`boundaries/dependencies`), and `npm run check:import-cycles` (the data and
+feed registries kept apart).
+
 A feature that needs shell wiring adds to its `manifest.static.ts`; it never
 adds an import of the screen-bearing registry to a launch-path module.
 
