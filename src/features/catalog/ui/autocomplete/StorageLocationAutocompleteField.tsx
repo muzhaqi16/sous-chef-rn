@@ -78,7 +78,7 @@ export const StorageLocationAutocompleteField: React.FC<
 
   const renderItem = (item: StorageLocationOption) => (
     <AutocompleteRow
-      iconElement={<StorageLocationIcon type={item.type} size={24} />}
+      iconElement={<StorageLocationIcon type={item.type} />}
       title={item.name}
       subtitle={
         item.parentLocation

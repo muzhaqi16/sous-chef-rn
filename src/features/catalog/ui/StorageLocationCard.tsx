@@ -106,7 +106,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             disabled={!onPress}
           >
             <View style={styles.headerRow}>
-              <StorageLocationIcon type={location.type} size={20} />
+              <StorageLocationIcon type={location.type} size="sm" />
               <View style={styles.info}>
                 <View style={commonStyles.rowSpaceBetween}>
                   <Text role="heading">{location.name}</Text>

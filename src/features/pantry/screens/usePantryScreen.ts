@@ -131,7 +131,7 @@ export function usePantryScreen() {
   const { createLocation, creating: creatingLocation } =
     useCreateStorageLocation(selectedHomeId ?? undefined, pantry?.id);
 
-  const tabIconSize = 16;
+  const tabIconSize = 'xs';
   const defaultTabs: FilterTabConfig<LocationFilter>[] = [
     { id: 'all', label: t('pantryScreen.tabAll') },
     {

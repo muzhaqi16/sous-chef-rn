@@ -209,7 +209,7 @@ export const StorageLocationForm: React.FC<StorageLocationFormProps> = ({
                   setValue('type', option.value, { shouldDirty: true })
                 }
               >
-                <StorageLocationIcon type={option.value} size={28} />
+                <StorageLocationIcon type={option.value} size="lg" />
                 <Text
                   role="label"
                   style={
