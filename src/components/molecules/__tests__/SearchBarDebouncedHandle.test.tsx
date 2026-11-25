@@ -1,5 +1,5 @@
 import React, { createRef } from 'react';
-import { render } from '@testing-library/react-native';
+import { act, render } from '@testing-library/react-native';
 import { SearchBar, type SearchBarRef } from '../SearchBar';
 
 let lastProps: Record<string, unknown> = {};
@@ -37,16 +37,15 @@ describe('SearchBar debounced mode, imperative handle', () => {
       />,
     );
 
-    const clear = jest.fn();
     const focus = jest.fn();
     const plainRef = lastProps.ref as React.RefObject<unknown>;
-    plainRef.current = { clear, focus, setNativeProps: jest.fn() };
+    plainRef.current = { focus };
 
     searchRef.current?.focus();
     expect(focus).toHaveBeenCalledTimes(1);
 
-    searchRef.current?.clear();
-    expect(clear).toHaveBeenCalledTimes(1);
+    act(() => searchRef.current?.clear());
+    expect(lastProps.value).toBe('');
     expect(onChangeText).toHaveBeenCalledWith('');
   });
 

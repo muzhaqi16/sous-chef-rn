@@ -101,7 +101,7 @@ export const RelinkItemSheet: React.FC<RelinkItemSheetProps> = ({
         <SearchBar
           testID={pantryTestIDs.relinkSearchInput}
           placeholder={t('relinkItem.searchPlaceholder')}
-          defaultValue={stack.itemName}
+          value={stack.itemName}
           onChangeText={handleSearchTermChange}
           debounceMs={250}
           autoCapitalize="words"

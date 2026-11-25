@@ -28,29 +28,29 @@ export interface SearchBarAction {
   testID?: string;
 }
 
-/**
- * Imperative surface for the DEBOUNCED mode, where the field is uncontrolled.
- */
+/** The field's handle: it reaches the input inside a sheet or out. */
 export interface SearchBarRef {
   clear: () => void;
   focus: () => void;
   blur: () => void;
+  /** What the field shows, which a debounce may not have reported yet. */
   getValue: () => string;
-  setValue: (value: string) => void;
 }
 
-type SearchBarProps = Omit<TextInputProps, 'style'> & {
+type SearchBarProps = Omit<
+  TextInputProps,
+  'style' | 'value' | 'defaultValue'
+> & {
   /**
-   * CONTROLLED mode; omit it when passing `debounceMs`, where the field owns its
-   * text: a controlled field re-renders per keystroke and its cursor jumps to
-   * the end while the debounce is in flight.
+   * The text to show: read when the field mounts, and again whenever it
+   * changes to something the field did not report, as a reset from outside.
+   * An echo of what was typed changes nothing.
    */
   value?: string;
+  /** What was typed, after `debounceMs` of quiet; a clear reports at once. */
   onChangeText: (text: string) => void;
-  /** Debounced (uncontrolled) mode: milliseconds to wait before reporting. */
+  /** Milliseconds of quiet before a change is reported; 0 reports each one. */
   debounceMs?: number;
-  /** Debounced mode: the text to seed and to re-seed on change. */
-  defaultValue?: string;
   /** Shows a spinner in the field while a search is in flight. */
   isLoading?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
@@ -91,8 +91,7 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
     {
       value,
       onChangeText,
-      debounceMs,
-      defaultValue,
+      debounceMs = 0,
       isLoading = false,
       placeholder,
       containerStyle,
@@ -106,86 +105,67 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
     const { t } = useTranslation();
     const resolvedPlaceholder = placeholder ?? t('searchBar.placeholder');
 
-    const debounced = debounceMs !== undefined;
-    // A debounced SearchBar is uncontrolled: only its input shows the text.
     const inputRef = useRef<ThemedTextInputRef>(null);
-    const liveInput = () => inputRef.current;
-    const textRef = useRef('');
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const [hasText, setHasText] = useState(false);
-
-    useImperativeHandle(searchRef, () => ({
-      clear: () => {
-        liveInput()?.clear();
-        textRef.current = '';
-        setHasText(false);
-        onChangeText('');
-        onClear?.();
-      },
-      focus: () => liveInput()?.focus(),
-      blur: () => liveInput()?.blur(),
-      getValue: () => textRef.current,
-      setValue: (next: string) => {
-        textRef.current = next;
-        liveInput()?.setNativeProps({ text: next });
-        setHasText(next.length > 0);
-      },
-    }));
-
-    const [prevDefault, setPrevDefault] = useState(defaultValue);
-    if (defaultValue !== prevDefault) {
-      setPrevDefault(defaultValue);
-      if (defaultValue !== undefined) setHasText(defaultValue.length > 0);
+    const [text, setText] = useState(value ?? '');
+    // What the caller was last told, so its echo is not read as a reset.
+    const [reported, setReported] = useState(value ?? '');
+    const [seenValue, setSeenValue] = useState(value);
+    if (value !== seenValue) {
+      setSeenValue(value);
+      if (value !== undefined && value !== reported) {
+        setText(value);
+        setReported(value);
+      }
     }
 
-    useEffect(() => {
-      if (defaultValue === undefined || defaultValue === textRef.current)
-        return;
-      textRef.current = defaultValue;
-      liveInput()?.setNativeProps({ text: defaultValue });
-      onChangeText(defaultValue);
-    }, [defaultValue, onChangeText]);
-
-    useEffect(
-      () => () => {
-        if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      },
-      [],
-    );
-
-    const handleChangeText = (text: string) => {
-      if (!debounced) {
-        onChangeText(text);
-        return;
-      }
-      textRef.current = text;
-      setHasText(text.length > 0);
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      debounceTimer.current = setTimeout(() => onChangeText(text), debounceMs);
+    const report = (next: string) => {
+      setReported(next);
+      onChangeText(next);
     };
 
-    const handleClear = () => {
-      if (debounced) {
-        liveInput()?.clear();
-        textRef.current = '';
-        setHasText(false);
-        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    const cancelPending = () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      debounceTimer.current = null;
+    };
+
+    useEffect(() => cancelPending, []);
+
+    const handleChangeText = (next: string) => {
+      setText(next);
+      cancelPending();
+      if (debounceMs <= 0) {
+        report(next);
+        return;
       }
-      onChangeText('');
+      debounceTimer.current = setTimeout(() => report(next), debounceMs);
+    };
+
+    // Empties the field and the filter it drives, at once.
+    const handleClear = () => {
+      cancelPending();
+      setText('');
+      report('');
       onClear?.();
     };
+
+    useImperativeHandle(searchRef, () => ({
+      clear: handleClear,
+      focus: () => inputRef.current?.focus(),
+      blur: () => inputRef.current?.blur(),
+      getValue: () => text,
+    }));
 
     return (
       <View style={[styles.container, containerStyle]}>
         <BaseInput
-          value={debounced ? undefined : value}
-          defaultValue={debounced ? defaultValue : undefined}
+          value={text}
           ref={inputRef}
           onChangeText={handleChangeText}
           placeholder={resolvedPlaceholder}
           style={inputStyle}
           containerStyle={[styles.inputContainer, commonStyles.shadow]}
-          showClearIcon={debounced ? hasText : true}
+          showClearIcon={text.length > 0}
           isLoading={isLoading}
           onClear={handleClear}
           // Every search field shows it, so every one reads as the same field.

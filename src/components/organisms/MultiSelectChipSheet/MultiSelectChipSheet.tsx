@@ -75,7 +75,7 @@ function MultiSelectChipContent<T extends string>({
       {!!showSearch && (
         <SearchBar
           placeholder={t('multiSelectChipSheet.searchPlaceholder')}
-          defaultValue={searchQuery}
+          value={searchQuery}
           onChangeText={setSearchQuery}
           autoCapitalize="none"
           containerStyle={styles.search}

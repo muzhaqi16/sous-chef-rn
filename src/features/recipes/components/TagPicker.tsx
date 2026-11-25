@@ -88,7 +88,7 @@ const TagPickerContent: React.FC<TagPickerContentProps> = ({
       {tags.length > 5 && (
         <SearchBar
           placeholder={t('tagPicker.searchPlaceholder')}
-          defaultValue={searchQuery}
+          value={searchQuery}
           onChangeText={setSearchQuery}
           autoCapitalize="none"
           containerStyle={styles.search}

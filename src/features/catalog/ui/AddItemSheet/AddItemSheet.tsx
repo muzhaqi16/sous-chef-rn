@@ -70,7 +70,7 @@ function AddItemSheetContent<T extends BaseSuggestionItem>({
   const goBackToSearch = () => {
     setStep('search');
   };
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const deferRender = config.deferFetch;
   const [shouldRenderSuggestions, setShouldRenderSuggestions] = useState(
     !deferRender,
@@ -84,6 +84,10 @@ function AddItemSheetContent<T extends BaseSuggestionItem>({
   // Autocomplete search — debounceMs: 0 because the search bar already debounces
   const autocomplete = useItemAutocomplete({ debounceMs: 0 });
   const { handleSearchTermChange, reset: resetAutocomplete } = autocomplete;
+  // Opened on a search, it runs as a typed one does; the field only shows it.
+  useEffect(() => {
+    if (initialSearchQuery) handleSearchTermChange(initialSearchQuery);
+  }, [initialSearchQuery, handleSearchTermChange]);
 
   // Drill-down view state: when set, the sheet shows one source's full list
   // instead of the multi-section overview.
@@ -251,7 +255,7 @@ function AddItemSheetContent<T extends BaseSuggestionItem>({
             placeholder={t(config.searchPlaceholderKey)}
             onChangeText={handleSearchChange}
             onClear={() => setSearchQuery('')}
-            defaultValue={initialSearchQuery}
+            value={initialSearchQuery}
             debounceMs={250}
             autoCapitalize="words"
             returnKeyType="search"

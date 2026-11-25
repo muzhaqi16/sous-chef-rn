@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
 import { MultiSelectChipSheet } from '../MultiSelectChipSheet';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
@@ -100,5 +105,44 @@ describe('MultiSelectChipSheet', () => {
   it('shows empty state when no items match', () => {
     render(<MultiSelectChipSheet {...defaultProps} items={[]} />);
     expect(screen.getByText('No items available')).toBeTruthy();
+  });
+
+  describe('its search', () => {
+    // Nine items, so the sheet offers a search.
+    const many = [
+      'Alpha',
+      'Beta',
+      'Charlie',
+      'Delta',
+      'Echo',
+      'Foxtrot',
+      'Golf',
+      'Hotel',
+      'India',
+    ].map(label => ({ id: label, label }));
+
+    it('clears the field and its filter with the ✕', () => {
+      render(<MultiSelectChipSheet {...defaultProps} items={many} />);
+      fireEvent.changeText(screen.getByPlaceholderText('Search...'), 'alp');
+      expect(screen.queryByText('Beta')).toBeNull();
+
+      fireEvent.press(screen.getByLabelText('Clear input'));
+
+      expect(screen.getByText('Beta')).toBeOnTheScreen();
+    });
+
+    it('opens again with no search', () => {
+      const view = render(
+        <MultiSelectChipSheet {...defaultProps} items={many} />,
+      );
+      fireEvent.changeText(screen.getByPlaceholderText('Search...'), 'alp');
+
+      view.rerender(
+        <MultiSelectChipSheet {...defaultProps} items={many} visible={false} />,
+      );
+      view.rerender(<MultiSelectChipSheet {...defaultProps} items={many} />);
+
+      expect(screen.getByText('Beta')).toBeOnTheScreen();
+    });
   });
 });

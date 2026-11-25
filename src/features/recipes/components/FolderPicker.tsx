@@ -202,7 +202,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           {folders.length > 5 && (
             <SearchBar
               placeholder={t('folderPicker.searchPlaceholder')}
-              defaultValue={searchQuery}
+              value={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"
               containerStyle={styles.search}

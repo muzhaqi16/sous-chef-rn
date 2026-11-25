@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { TagPicker } from '#features/recipes/components/TagPicker';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
@@ -74,5 +74,30 @@ describe('TagPicker', () => {
   it('shows No tags available when tags list is empty', () => {
     render(<TagPicker {...defaultProps} tags={[]} />);
     expect(screen.getByText('No tags available')).toBeTruthy();
+  });
+
+  // The ✕ empties the field and the filter it drives, at once.
+  it('clears its search and its filter with the ✕', () => {
+    render(<TagPicker {...defaultProps} />);
+    fireEvent.changeText(screen.getByPlaceholderText('Search tags...'), 'dai');
+    expect(screen.queryByText('Meat')).toBeNull();
+
+    fireEvent.press(screen.getByLabelText('Clear input'));
+
+    expect(screen.getByText('Meat')).toBeOnTheScreen();
+    expect(screen.queryByLabelText('Clear input')).toBeNull();
+  });
+
+  it('opens again with no search', () => {
+    const view = render(<TagPicker {...defaultProps} />);
+    fireEvent.changeText(screen.getByPlaceholderText('Search tags...'), 'dai');
+
+    view.rerender(<TagPicker {...defaultProps} visible={false} />);
+    view.rerender(<TagPicker {...defaultProps} />);
+
+    expect(screen.getByText('Meat')).toBeOnTheScreen();
+    expect(screen.getByPlaceholderText('Search tags...')).toHaveDisplayValue(
+      '',
+    );
   });
 });

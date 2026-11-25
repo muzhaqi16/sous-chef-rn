@@ -552,4 +552,25 @@ describe('FolderPicker protected folders', () => {
     // the type makes a caller offering these actions state one.
     expect(screen.getByText('Manage Folder')).toBeTruthy();
   });
+
+  it('clears its search and its filter with the ✕', () => {
+    const folders = [
+      'Breakfast',
+      'Lunch',
+      'Dinner',
+      'Snacks',
+      'Drinks',
+      'Sweets',
+    ];
+    render(<FolderPicker {...defaultProps} folders={folders} />);
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Search folders...'),
+      'bre',
+    );
+    expect(screen.queryByText('Lunch')).toBeNull();
+
+    fireEvent.press(screen.getByLabelText('Clear input'));
+
+    expect(screen.getByText('Lunch')).toBeOnTheScreen();
+  });
 });

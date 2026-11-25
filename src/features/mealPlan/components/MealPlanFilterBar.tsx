@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { ThemedTextInput } from '#components/atoms/themedComponents';
+import { SearchBar } from '#components/molecules/SearchBar';
 import { Chip } from '#components/molecules/Chip';
 import { MealPlanType } from '#graphql/generated/schemaTypes';
 import type { MealPlanFilterState } from '#features/mealPlan/utils/mealPlanFilters';
@@ -26,11 +26,10 @@ export const MealPlanFilterBar: React.FC<MealPlanFilterBarProps> = ({
 
   return (
     <View style={styles.container}>
-      <ThemedTextInput
+      <SearchBar
         value={filters.search}
         onChangeText={search => onChange({ ...filters, search })}
         placeholder={t('mealPlanSelector.searchPlaceholder')}
-        style={styles.search}
       />
       <View style={styles.chipRow}>
         <Chip
@@ -59,17 +58,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     gap: theme.spacing.sm,
     paddingBottom: theme.spacing.sm,
-  },
-  search: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    color: theme.colors.textPrimary,
-    ...theme.type.body,
   },
   chipRow: {
     flexDirection: 'row',
