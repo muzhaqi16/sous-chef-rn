@@ -20,9 +20,11 @@ const opensDetail = (id: string) =>
     { screen: 'NotificationDetail', params: { id } },
     { pop: true },
   );
-const opensFeed = CommonActions.navigate('Notifications', undefined, {
-  pop: true,
-});
+const opensFeed = CommonActions.navigate(
+  'Notifications',
+  { screen: 'NotificationList' },
+  { pop: true },
+);
 
 describe('routeNotificationTap', () => {
   beforeEach(() => {

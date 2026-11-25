@@ -49,7 +49,7 @@ describe('NavigationService', () => {
 
   // A cold-launch push tap arrives before onReady.
   it('holds an action until the container is ready, then dispatches it once', () => {
-    const action = rootNavigate('Notifications');
+    const action = rootNavigate('ChangesNotSaved');
     NavigationService.dispatch(action);
     expect(dispatched()).not.toHaveBeenCalled();
 
@@ -63,7 +63,11 @@ describe('NavigationService', () => {
 
   it('keeps only the latest action requested before ready', () => {
     NavigationService.navigate('ChangesNotSaved');
-    const latest = rootNavigate('Notifications');
+    const latest = rootNavigate(
+      'Notifications',
+      { screen: 'NotificationList' },
+      { pop: true },
+    );
     NavigationService.dispatch(latest);
 
     ready(true);

@@ -25,5 +25,10 @@ export type RootNavigateArgs<Name extends RootRoute = RootRoute> =
 /** A navigate action to a root route, its params checked against the route. */
 export const rootNavigate = (...args: RootNavigateArgs): NavigationAction => {
   const [name, params, options] = args;
-  return CommonActions.navigate(name, params, options);
+  // A screen declared without params types them `unknown`, and passes none.
+  return CommonActions.navigate(
+    name,
+    typeof params === 'object' && params !== null ? params : undefined,
+    options,
+  );
 };

@@ -48,6 +48,10 @@ export function notificationDestinationAction(
         { pop: true },
       );
     case 'feed':
-      return rootNavigate('Notifications', undefined, { pop: true });
+      return rootNavigate(
+        'Notifications',
+        { screen: 'NotificationList' },
+        { pop: true },
+      );
   }
 }
