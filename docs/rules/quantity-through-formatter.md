@@ -42,4 +42,4 @@ A stored quantity is a float: the API echoes 1/3 back as `0.33333334`, and a con
 - A number-typed prop the child renders raw: review's.
 - Test files and files without type information.
 
-Source: [`eslint/plugin/rules/quantity-through-formatter.js`](../../eslint/plugin/rules/quantity-through-formatter.js) · spec: [`__tests__/lint/rules/quantity-through-formatter.test.ts`](../../__tests__/lint/rules/quantity-through-formatter.test.ts)
+Source: [`eslint/plugin/rules/quantity-through-formatter.js`](../../eslint/plugin/rules/quantity-through-formatter.js) · spec: [`__tests__/lint/typedRules/quantity-through-formatter.ts`](../../__tests__/lint/typedRules/quantity-through-formatter.ts)

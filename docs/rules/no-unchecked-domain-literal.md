@@ -34,4 +34,4 @@ A plain `string` accepts a renamed or removed enum value and a misspelled one, s
 - A typename-spelled string compared to something not named like `__typename` (`route.name === 'Home'`).
 - Files without type information.
 
-Source: [`eslint/plugin/rules/no-unchecked-domain-literal.js`](../../eslint/plugin/rules/no-unchecked-domain-literal.js) · spec: [`__tests__/lint/rules/no-unchecked-domain-literal.test.ts`](../../__tests__/lint/rules/no-unchecked-domain-literal.test.ts)
+Source: [`eslint/plugin/rules/no-unchecked-domain-literal.js`](../../eslint/plugin/rules/no-unchecked-domain-literal.js) · spec: [`__tests__/lint/typedRules/no-unchecked-domain-literal.ts`](../../__tests__/lint/typedRules/no-unchecked-domain-literal.ts)

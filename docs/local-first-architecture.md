@@ -291,13 +291,13 @@ fully-offline create. Two shared writers keep this DRY:
   (`context/`, `hooks/mutations/`, `utils/`, `components/`, `offline/`, `graphql/`), so add surfaces in
   other features
   (barcode, pantry-detail, filtered-pantry) build the same entity from it.
-- **`writeLocalPantryItem(cache, id, row)`** (`src/features/pantry/cache/writeLocalPantryItem.ts`) —
+- **`writeLocalPantryItem(cache, id, row)`** (`src/entities/pantryItem/writeLocalPantryItem.ts`) —
   writes the row complete for every query reading a pantry item (list and detail), through
   `writeLocalEntity`: what the create knows, else what the cache holds per field, else the SDL-derived
   neutral value. An incomplete row makes a list cell report `complete: false` and blank it.
 
 **A pantry use moves the amount a person reads.** `amountLeft` is the server's, and `amountLeftOf`
-(`src/features/pantry/utils/stockDisplay.ts`) is the client's copy of its rule for the moments before an answer, so
+(`src/entities/pantryItem/stockDisplay.ts`) is the client's copy of its rule for the moments before an answer, so
 `writeHeldStock` writes it beside `displayAmount` and a screen never computes one. A use goes in by
 same-unit subtraction: the tracking unit, a dozen of it, the portion unit, or the net-weight unit on a
 stack with no portions. A use in any other unit keeps the row where it is until the server answers, the
@@ -842,8 +842,8 @@ were queueable. Areas, with what is worth knowing beyond the pattern:
   their items. An item create that collides on (mealPlanId, date, mealType, recipeId) returns the
   existing row.
 - **Recipes:** create, fork, publish, delete, favorites (add, remove, saved metadata, folders),
-  `MarkRecipeAsCooked`, ingredient matching, add-to-list from a recipe (`AddItemsToShoppingListFromRecipe`,
-  rows written locally). `UpdateRecipe` from the form is queued but writes nothing local: the detail
+  `MarkRecipeAsCooked`, ingredient matching, add-to-list from a recipe (through
+  `useAddShoppingRows`, rows written locally). `UpdateRecipe` from the form is queued but writes nothing local: the detail
   catches up when the replay lands.
 - **Receipts:** check-in (`useReceiptCheckIn`), which stamps list lines, moves and intakes locally.
 - **Settings, profile, notifications:** field edits through `useLocalWrite(...).sendFields`

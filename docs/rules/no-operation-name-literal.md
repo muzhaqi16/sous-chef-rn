@@ -28,4 +28,4 @@ A renamed or deleted operation leaves a string that still compiles and silently 
 - A slot not named like an operation: a screen or component label may share an operation's spelling (`useScreenTransition('MyRecipes')`).
 - Files without type information (`.js`, `.graphql`).
 
-Source: [`eslint/plugin/rules/no-operation-name-literal.js`](../../eslint/plugin/rules/no-operation-name-literal.js) · spec: [`__tests__/lint/rules/no-operation-name-literal.test.ts`](../../__tests__/lint/rules/no-operation-name-literal.test.ts)
+Source: [`eslint/plugin/rules/no-operation-name-literal.js`](../../eslint/plugin/rules/no-operation-name-literal.js) · spec: [`__tests__/lint/typedRules/no-operation-name-literal.ts`](../../__tests__/lint/typedRules/no-operation-name-literal.ts)

@@ -91,6 +91,10 @@ fragment PantryItemBatchFragment on PantryItemBatch {
   pantryItemId
 }
 
+# The detail screen's read: a generous `first` because it derives from the WHOLE
+# active set (cost dilution, expired batches) while showing only the first few.
+# `totalCount` is what its "view all" affordance counts, so a stack past this
+# page still names its real size instead of silently reading 100.
 query GetPantryItemBatches(
   $pantryItemId: ID!
   $status: BatchStatus

@@ -35,4 +35,4 @@ A `string` key accepts a key the table never had. A misspelled or removed key co
 
 Related: `sous-chef/no-unchecked-domain-literal` reports a `string`-keyed table whose keys are all values of one generated schema enum.
 
-Source: [`eslint/plugin/rules/no-string-keyed-lookup.js`](../../eslint/plugin/rules/no-string-keyed-lookup.js) · spec: [`__tests__/lint/rules/no-string-keyed-lookup.test.ts`](../../__tests__/lint/rules/no-string-keyed-lookup.test.ts)
+Source: [`eslint/plugin/rules/no-string-keyed-lookup.js`](../../eslint/plugin/rules/no-string-keyed-lookup.js) · spec: [`__tests__/lint/typedRules/no-string-keyed-lookup.ts`](../../__tests__/lint/typedRules/no-string-keyed-lookup.ts)

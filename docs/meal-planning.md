@@ -100,8 +100,8 @@ by name.
 `UpdateMealTemplate`, `DeleteMealTemplate`, `AddTemplateItem`, `UpdateTemplateItem`,
 `RemoveTemplateItem`.
 
-**`hooks/useGenerateShoppingList.graphql`** — `AddDerivedItemsToShoppingList`,
-`LinkDerivedListToMealPlan`.
+**`hooks/useGenerateShoppingList.graphql`** — `GenerateShoppingListPlan`, the plan's
+ingredients; the rows go through `useAddShoppingRows`.
 
 Mutations return result unions (e.g. `CreateMealPlanItemResult = ConflictError |
 CreateMealPlanItemPayload | ForbiddenError | NotFoundError | ValidationError`); each
@@ -275,8 +275,8 @@ save each refuse it and say so, the generator naming the recipe.
 `Recipe.ingredientsConnection` is one cached list per recipe
 (`features/recipes/cache/typePolicies.ts`), whichever selection filled it.
 
-It then creates the list, writes optimistic rows, sends `AddDerivedItemsToShoppingList`,
-and for a new list `LinkDerivedListToMealPlan` — all local-first.
+It then creates the list, linked to the plan by its `mealPlanId`, and adds the rows
+through `useAddShoppingRows` — all local-first.
 
 ### Templates
 

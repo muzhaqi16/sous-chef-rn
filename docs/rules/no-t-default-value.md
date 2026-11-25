@@ -21,4 +21,4 @@ A fallback renders only when the key is missing, so it is English in every local
 
 Test files and `.graphql` documents.
 
-Source: [`eslint/plugin/rules/no-t-default-value.js`](../../eslint/plugin/rules/no-t-default-value.js) · spec: [`__tests__/lint/rules/no-t-default-value.test.ts`](../../__tests__/lint/rules/no-t-default-value.test.ts)
+Source: [`eslint/plugin/rules/no-t-default-value.js`](../../eslint/plugin/rules/no-t-default-value.js) · spec: [`__tests__/lint/typedRules/no-t-default-value.ts`](../../__tests__/lint/typedRules/no-t-default-value.ts)
