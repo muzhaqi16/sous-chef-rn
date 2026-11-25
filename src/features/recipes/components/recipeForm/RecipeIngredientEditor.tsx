@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useState } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#i18n';
@@ -32,12 +32,11 @@ import type { CaptureCandidate } from '#features/recipes/hooks/useCaptureReview'
 import { formatQuantityForInput, unitLabel } from '#utils/formatQuantity';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
-export interface RecipeIngredientEditorRef {
-  open: (ingredient?: IngredientFormState) => void;
-  close: () => void;
-}
-
 interface RecipeIngredientEditorProps {
+  visible: boolean;
+  /** The ingredient being edited; absent, a new one. */
+  ingredient?: IngredientFormState;
+  onDismiss: () => void;
   onSave: (ingredient: IngredientFormState) => void;
   /** Items a capture proposed for a line it did not link, by the line as written. */
   candidatesFor?: (
@@ -100,7 +99,10 @@ const valuesOf = (
         isOptional: false,
       };
 
-type IngredientFormProps = Omit<RecipeIngredientEditorProps, 'onSave'> & {
+type IngredientFormProps = Pick<
+  RecipeIngredientEditorProps,
+  'candidatesFor'
+> & {
   /** The ingredient being edited; absent for a new one. */
   ingredient: IngredientFormState | undefined;
   onSave: RecipeIngredientEditorProps['onSave'];
@@ -323,30 +325,21 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
   );
 };
 
-export const RecipeIngredientEditor = forwardRef<
-  RecipeIngredientEditorRef,
-  RecipeIngredientEditorProps
->(({ onSave, candidatesFor }, ref) => {
-  // The screen opens it through the ref; what opens it is held here.
-  const [request, setRequest] = useState<{
-    visible: boolean;
-    ingredient?: IngredientFormState;
-  }>({ visible: false });
-  const opening = useOpening(request.visible, request.ingredient);
-  const close = () => setRequest(prev => ({ ...prev, visible: false }));
-
-  useImperativeHandle(ref, () => ({
-    open: (ingredient?: IngredientFormState) =>
-      setRequest({ visible: true, ingredient }),
-    close,
-  }));
+export const RecipeIngredientEditor: React.FC<RecipeIngredientEditorProps> = ({
+  visible,
+  ingredient,
+  onDismiss,
+  onSave,
+  candidatesFor,
+}) => {
+  const opening = useOpening(visible, ingredient);
 
   return (
     <Sheet
       mode="form"
       headerFromContent
-      visible={request.visible}
-      onDismiss={close}
+      visible={visible}
+      onDismiss={onDismiss}
       snapPoints={['80%']}
       enableDynamicSizing={false}
       contentContainerStyle={styles.content}
@@ -356,13 +349,13 @@ export const RecipeIngredientEditor = forwardRef<
           key={opening.id}
           ingredient={opening.payload}
           onSave={onSave}
-          onClose={close}
+          onClose={onDismiss}
           candidatesFor={candidatesFor}
         />
       ) : null}
     </Sheet>
   );
-});
+};
 
 RecipeIngredientEditor.displayName = 'RecipeIngredientEditor';
 

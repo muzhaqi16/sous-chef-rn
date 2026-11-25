@@ -1,9 +1,8 @@
-import React, { useRef, type RefObject } from 'react';
+import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#i18n';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
-import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { ActionMenuRow } from '#components/molecules/ActionMenuRow';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import type { BarAction } from '#components/molecules/BarActions';
@@ -51,35 +50,37 @@ export function splitBarActions<A extends BarAction>(
  */
 export function useHeaderOverflow<A extends BarAction>(actions: readonly A[]) {
   const { t } = useTranslation();
-  const menuRef = useRef<ActionTrayRef>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { shown, overflow } = splitBarActions(actions);
   const more: HeaderAction = {
     icon: 'ellipsis-vertical',
-    onPress: () => menuRef.current?.open(),
+    onPress: () => setMenuOpen(true),
     accessibilityLabel: t('labels.moreOptions'),
     testID: kitTestIDs.headerMoreButton,
   };
   return {
     barActions: overflow.length > 0 ? [...shown, more] : shown,
-    menuRef,
+    menu: { open: menuOpen, setOpen: setMenuOpen },
     overflow,
   };
 }
 
 interface HeaderActionMenuProps {
-  menuRef: RefObject<ActionTrayRef | null>;
+  /** Whether the tray shows, and how it is closed. */
+  menu: { open: boolean; setOpen: (open: boolean) => void };
   actions: readonly HeaderAction[];
 }
 
 /** A bar's overflow: each action as a row, run once the tray has closed. */
 export const HeaderActionMenu: React.FC<HeaderActionMenuProps> = ({
-  menuRef,
+  menu,
   actions,
 }) => {
   // Run after the close, so an action that opens its own sheet does not stack
   // it on a tray still animating out.
   const pending = useRef<HeaderAction | null>(null);
   const handleClose = () => {
+    menu.setOpen(false);
     const action = pending.current;
     pending.current = null;
     action?.onPress();
@@ -88,7 +89,7 @@ export const HeaderActionMenu: React.FC<HeaderActionMenuProps> = ({
   if (actions.length === 0) return null;
 
   return (
-    <ActionTray ref={menuRef} onClose={handleClose}>
+    <ActionTray visible={menu.open} onDismiss={handleClose}>
       <View style={styles.menu}>
         {actions.map((action, index) => (
           <ActionMenuRow
@@ -101,7 +102,7 @@ export const HeaderActionMenu: React.FC<HeaderActionMenuProps> = ({
             testID={action.testID}
             onPress={() => {
               pending.current = action;
-              menuRef.current?.close();
+              menu.setOpen(false);
             }}
           />
         ))}

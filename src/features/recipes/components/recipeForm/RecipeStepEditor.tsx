@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useState } from 'react';
+import React from 'react';
 import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -14,12 +14,11 @@ import { lazyMessage, reportValidationErrors } from '#utils/validation/common';
 import type { StepFormState } from '#features/recipes/types';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
-export interface RecipeStepEditorRef {
-  open: (step?: StepFormState) => void;
-  close: () => void;
-}
-
 interface RecipeStepEditorProps {
+  visible: boolean;
+  /** The step being edited; absent, a new one. */
+  step?: StepFormState;
+  onDismiss: () => void;
   onSave: (step: StepFormState) => void;
 }
 
@@ -94,29 +93,20 @@ const StepForm: React.FC<StepFormProps> = ({ step, onSave, onClose }) => {
   );
 };
 
-export const RecipeStepEditor = forwardRef<
-  RecipeStepEditorRef,
-  RecipeStepEditorProps
->(({ onSave }, ref) => {
-  // The screen opens it through the ref; what opens it is held here.
-  const [request, setRequest] = useState<{
-    visible: boolean;
-    step?: StepFormState;
-  }>({ visible: false });
-  const opening = useOpening(request.visible, request.step);
-  const close = () => setRequest(prev => ({ ...prev, visible: false }));
-
-  useImperativeHandle(ref, () => ({
-    open: (step?: StepFormState) => setRequest({ visible: true, step }),
-    close,
-  }));
+export const RecipeStepEditor: React.FC<RecipeStepEditorProps> = ({
+  visible,
+  step,
+  onDismiss,
+  onSave,
+}) => {
+  const opening = useOpening(visible, step);
 
   return (
     <Sheet
       mode="form"
       headerFromContent
-      visible={request.visible}
-      onDismiss={close}
+      visible={visible}
+      onDismiss={onDismiss}
       snapPoints={['50%']}
       contentContainerStyle={styles.content}
     >
@@ -125,14 +115,12 @@ export const RecipeStepEditor = forwardRef<
           key={opening.id}
           step={opening.payload}
           onSave={onSave}
-          onClose={close}
+          onClose={onDismiss}
         />
       ) : null}
     </Sheet>
   );
-});
-
-RecipeStepEditor.displayName = 'RecipeStepEditor';
+};
 
 const styles = StyleSheet.create(theme => ({
   content: {

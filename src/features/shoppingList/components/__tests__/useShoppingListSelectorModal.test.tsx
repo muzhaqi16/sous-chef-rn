@@ -459,8 +459,11 @@ describe('deleting from the switcher', () => {
     await openSwitcher();
     longPress('Groceries');
 
+    // gorhom's modal, which the mock renders carrying its props: a close is
+    // gorhom's to report.
     const [tray] = screen.UNSAFE_root.findAll(
       node =>
+        node.props.detached === true &&
         typeof node.props.onDismiss === 'function' &&
         node.findAll(
           child =>

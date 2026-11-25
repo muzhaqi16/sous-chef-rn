@@ -130,7 +130,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { barActions, menuRef, overflow } = useHeaderOverflow(actions);
+  const { barActions, menu, overflow } = useHeaderOverflow(actions);
   const showsState = !!state && state.value !== 'ready';
   const hasHero = !!renderHero && !showsState;
   const heroHeight = HERO_IMAGE_HEIGHT + insets.top;
@@ -310,7 +310,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
           </View>
         </View>
       </View>
-      <HeaderActionMenu menuRef={menuRef} actions={overflow} />
+      <HeaderActionMenu menu={menu} actions={overflow} />
 
       {/* iOS draws a pull's own spinner at the scroll view's top edge, which an
           edge-to-edge hero puts under the status bar; this one sits centred

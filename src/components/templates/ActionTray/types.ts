@@ -3,9 +3,12 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import type { BarAction } from '#components/molecules/BarActions';
 
 export interface ActionTrayProps {
+  /** Presents the tray; false takes it away, animating out. */
+  visible: boolean;
   children?: ReactNode;
   style?: StyleProp<ViewStyle>;
-  onClose?: () => void;
+  /** Every close: the header's, the backdrop's, Back, a drag, or navigation. */
+  onDismiss: () => void;
   onOpen?: () => void;
   title?: string;
   /** Actions beside the title, icon or text; the close control follows them. */
@@ -25,11 +28,4 @@ export interface ActionTrayProps {
    * handling the `onChange(-1)`-without-`onDismiss` case that 'switch' emits.
    */
   stackBehavior?: 'push' | 'switch' | 'replace';
-}
-
-export interface ActionTrayRef {
-  open: () => void;
-  close: () => void;
-  isActive: () => boolean;
-  toggle: () => void;
 }

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#i18n';
 
@@ -14,7 +14,6 @@ import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { useConfigurableSettings } from '#features/profile/screens/useConfigurableSettings';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
-import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { Telemetry } from '#services/telemetry';
 import { useEffect } from 'react';
 import { Environment } from '#utils/environment';
@@ -46,7 +45,7 @@ export const ProfileScreen = () => {
   const changesNotSaved = useChangesNotSaved().changes.length;
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal, logout } = useConfigurableSettings();
-  const actionTrayRef = useRef<ActionTrayRef>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: event => {
@@ -69,18 +68,18 @@ export const ProfileScreen = () => {
 
   const handleLogout = () => {
     Telemetry.trackEvent('logout_clicked', { source: 'ProfileScreen' });
-    actionTrayRef.current?.close();
+    setMoreOpen(false);
     logout();
   };
 
   const handleMorePress = () => {
     Telemetry.trackEvent('profile_more_menu_opened');
-    actionTrayRef.current?.open();
+    setMoreOpen(true);
   };
 
   const handleDeleteAccount = () => {
     Telemetry.trackEvent('delete_account_clicked');
-    actionTrayRef.current?.close();
+    setMoreOpen(false);
     toDeleteAccount();
   };
 
@@ -174,7 +173,7 @@ export const ProfileScreen = () => {
         ]}
       />
       {BiometricModal}
-      <ActionTray ref={actionTrayRef}>
+      <ActionTray visible={moreOpen} onDismiss={() => setMoreOpen(false)}>
         <View style={styles.menu}>
           <ActionMenuRow
             icon="log-out-outline"

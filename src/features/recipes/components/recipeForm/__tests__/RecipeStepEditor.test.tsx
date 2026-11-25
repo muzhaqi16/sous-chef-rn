@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  act,
   fireEvent,
   render,
   screen,
@@ -8,21 +7,21 @@ import {
 } from '@testing-library/react-native';
 import { t } from '#i18n';
 import type { StepFormState } from '#features/recipes/types';
-import {
-  RecipeStepEditor,
-  type RecipeStepEditorRef,
-} from '../RecipeStepEditor';
+import { RecipeStepEditor } from '../RecipeStepEditor';
 
 jest.mock('#utils/generateId', () => ({ generateId: () => 'test-id' }));
 
 const onSave = jest.fn();
 
-const renderEditor = (step?: StepFormState) => {
-  const ref = React.createRef<RecipeStepEditorRef>();
-  render(<RecipeStepEditor ref={ref} onSave={onSave} />);
-  act(() => ref.current?.open(step));
-  return ref;
-};
+const editor = (visible: boolean, step?: StepFormState) => (
+  <RecipeStepEditor
+    visible={visible}
+    step={step}
+    onDismiss={jest.fn()}
+    onSave={onSave}
+  />
+);
+const renderEditor = (step?: StepFormState) => render(editor(true, step));
 
 const instruction = () =>
   screen.getByPlaceholderText(t('recipes.stepInstructionPlaceholder'));
@@ -70,15 +69,15 @@ describe('RecipeStepEditor', () => {
   });
 
   it('opens fresh: what was typed and its error go with the closing', async () => {
-    const ref = renderEditor();
+    const view = renderEditor();
     fireEvent.changeText(instruction(), '  ');
     await save();
     expect(
       screen.getByText(t('recipes.instructionRequired')),
     ).toBeOnTheScreen();
 
-    act(() => ref.current?.close());
-    act(() => ref.current?.open());
+    view.rerender(editor(false));
+    view.rerender(editor(true));
 
     expect(instruction()).toHaveDisplayValue('');
     expect(screen.queryByText(t('recipes.instructionRequired'))).toBeNull();

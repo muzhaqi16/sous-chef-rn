@@ -53,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const { t } = useTranslation();
   const variantStyles = styles.useVariants({ borderless });
-  const { barActions, menuRef, overflow } = useHeaderOverflow(rightActions);
+  const { barActions, menu, overflow } = useHeaderOverflow(rightActions);
 
   const showTitle = title !== undefined && title !== '';
   const leading: BarAction[] = onClose
@@ -144,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({
         actions={barActions}
         onLayout={trackSide('right')}
       />
-      <HeaderActionMenu menuRef={menuRef} actions={overflow} />
+      <HeaderActionMenu menu={menu} actions={overflow} />
     </View>
   );
 };

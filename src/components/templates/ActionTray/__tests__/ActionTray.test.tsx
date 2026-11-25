@@ -10,7 +10,7 @@ import { Text } from '#components/atoms/Text';
 import { useBackdropClaim } from '#components/providers/OverlayBackdropProvider';
 import { useBottomSheetBackHandler } from '#hooks/ui/useBottomSheetBackHandler';
 import { ActionTray } from '../ActionTray';
-import type { ActionTrayRef } from '../types';
+import type { ActionTrayProps } from '../types';
 
 // The backdrop is claimed declaratively: `useBackdropClaim(mounted &&
 // enableBackdrop, { opacity })` ties the slot's lifecycle to React state, so
@@ -31,104 +31,53 @@ describe('ActionTray', () => {
     (useBottomSheetBackHandler as jest.Mock).mockClear();
   });
 
+  const tray = (
+    visible: boolean,
+    props: Partial<Omit<ActionTrayProps, 'visible'>> = {},
+  ) => (
+    <ActionTray visible={visible} onDismiss={jest.fn()} {...props}>
+      <Text>Content</Text>
+    </ActionTray>
+  );
+  const shown = () => screen.queryByText('Content') !== null;
+
   // Render an opened tray and capture gorhom's prop handlers. The mock renders
   // BottomSheetModal as a View carrying all props; `detached` uniquely
   // identifies it. Capture the handlers up front — gorhom holds the functions,
   // and the element unmounts as soon as the first close signal lands.
-  const openTray = (handlers?: { onClose?: () => void }) => {
-    const ref = React.createRef<ActionTrayRef>();
-    render(
-      <ActionTray ref={ref} onClose={handlers?.onClose}>
-        <Text>Content</Text>
-      </ActionTray>,
-    );
-    act(() => {
-      ref.current!.open();
-    });
+  const openTray = (onDismiss: () => void = jest.fn()) => {
+    const view = render(tray(false, { onDismiss }));
+    view.rerender(tray(true, { onDismiss }));
     const modal = screen.UNSAFE_getByProps({ detached: true });
-    const { onChange, onDismiss, animatedIndex } = modal.props as {
+    const handlers = modal.props as {
       onChange: (index: number) => void;
       onDismiss: () => void;
       animatedIndex: { value: number };
     };
-    return { ref, onChange, onDismiss, animatedIndex };
+    return { view, ...handlers };
   };
 
   it('renders nothing when not opened', () => {
-    const { toJSON } = render(
-      <ActionTray>
-        <Text>Tray content</Text>
-      </ActionTray>,
-    );
+    const { toJSON } = render(tray(false));
     expect(toJSON()).toBeNull();
   });
 
-  it('renders children after open', () => {
-    const ref = React.createRef<ActionTrayRef>();
-    render(
-      <ActionTray ref={ref}>
-        <Text>Tray content</Text>
-      </ActionTray>,
-    );
-    act(() => {
-      ref.current!.open();
-    });
-    expect(screen.getByText('Tray content')).toBeTruthy();
-  });
-
-  it('renders with title after open', () => {
-    const ref = React.createRef<ActionTrayRef>();
-    render(
-      <ActionTray ref={ref} title="Actions">
-        <Text>Content</Text>
-      </ActionTray>,
-    );
-    act(() => {
-      ref.current!.open();
-    });
+  it('renders its content and title once visible', () => {
+    const view = render(tray(false, { title: 'Actions' }));
+    view.rerender(tray(true, { title: 'Actions' }));
+    expect(screen.getByText('Content')).toBeTruthy();
     expect(screen.getByText('Actions')).toBeTruthy();
   });
 
-  it('exposes ref methods', () => {
-    const ref = React.createRef<ActionTrayRef>();
-    render(
-      <ActionTray ref={ref}>
-        <Text>Content</Text>
-      </ActionTray>,
-    );
-    expect(ref.current).toBeTruthy();
-    expect(ref.current!.open).toBeDefined();
-    expect(ref.current!.close).toBeDefined();
-    expect(ref.current!.toggle).toBeDefined();
-    expect(ref.current!.isActive).toBeDefined();
-  });
-
-  it('isActive returns false initially', () => {
-    const ref = React.createRef<ActionTrayRef>();
-    render(
-      <ActionTray ref={ref}>
-        <Text>Content</Text>
-      </ActionTray>,
-    );
-    expect(ref.current!.isActive()).toBe(false);
-  });
-
   it('enables the Android back handler only while the tray is open', () => {
-    const ref = React.createRef<ActionTrayRef>();
-    render(
-      <ActionTray ref={ref}>
-        <Text>Content</Text>
-      </ActionTray>,
-    );
+    const view = render(tray(false));
     // Closed: back handler disabled so hardware back navigates normally.
     expect(useBottomSheetBackHandler).toHaveBeenLastCalledWith(
       expect.anything(),
       false,
     );
 
-    act(() => {
-      ref.current!.open();
-    });
+    view.rerender(tray(true));
     // Open: back handler enabled so hardware back dismisses the tray.
     expect(useBottomSheetBackHandler).toHaveBeenLastCalledWith(
       expect.anything(),
@@ -154,52 +103,24 @@ describe('ActionTray', () => {
     } as MockNavigation;
     const emit = (event: string) => listeners[event]?.forEach(cb => cb());
 
-    const onClose = jest.fn();
-    const ref = React.createRef<ActionTrayRef>();
-    render(
+    const onDismiss = jest.fn();
+    const inNavigation = (visible: boolean) => (
       <NavigationContext.Provider
         value={navigation as NavigationProp<ParamListBase>}
       >
-        <ActionTray ref={ref} onClose={onClose}>
-          <Text>Content</Text>
-        </ActionTray>
-      </NavigationContext.Provider>,
+        {tray(visible, { onDismiss })}
+      </NavigationContext.Provider>
     );
-
-    act(() => {
-      ref.current!.open();
-    });
-    expect(ref.current!.isActive()).toBe(true);
+    const view = render(inNavigation(false));
+    view.rerender(inNavigation(true));
+    expect(shown()).toBe(true);
 
     // Navigating away (e.g. programmatic nav) fires 'blur' → tray tears down.
     act(() => {
       emit('blur');
     });
-    expect(ref.current!.isActive()).toBe(false);
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('isActive returns true after open', () => {
-    const ref = React.createRef<ActionTrayRef>();
-    render(
-      <ActionTray ref={ref}>
-        <Text>Content</Text>
-      </ActionTray>,
-    );
-    act(() => {
-      ref.current!.open();
-    });
-    expect(ref.current!.isActive()).toBe(true);
-  });
-
-  it('close() does not throw when called while not open', () => {
-    const ref = React.createRef<ActionTrayRef>();
-    render(
-      <ActionTray ref={ref}>
-        <Text>Content</Text>
-      </ActionTray>,
-    );
-    expect(() => ref.current!.close()).not.toThrow();
+    expect(shown()).toBe(false);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
   // Gorhom skips onChange(-1) entirely when a close interrupts an open
@@ -209,9 +130,9 @@ describe('ActionTray', () => {
   // onChange(-1) alone leaked the backdrop claim — `mounted` stayed true and
   // the global dim stuck at full opacity.
   describe('dismissal cleanup', () => {
-    it('releases the backdrop claim and notifies onClose when gorhom fires only onDismiss (skipped onChange)', () => {
-      const onClose = jest.fn();
-      const { ref, onDismiss, animatedIndex } = openTray({ onClose });
+    it('releases the backdrop claim and tells its owner when gorhom fires only onDismiss (skipped onChange)', () => {
+      const owner = jest.fn();
+      const { onDismiss, animatedIndex } = openTray(owner);
 
       // Lockstep backdrop wired: the sheet's animatedIndex SV drives the dim.
       expect(animatedIndex).toBeDefined();
@@ -225,8 +146,8 @@ describe('ActionTray', () => {
         onDismiss();
       });
 
-      expect(ref.current!.isActive()).toBe(false);
-      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(shown()).toBe(false);
+      expect(owner).toHaveBeenCalledTimes(1);
       // Slot released (active false) — tied to React state, not gorhom events.
       expect(useBackdropClaim).toHaveBeenLastCalledWith(
         false,
@@ -234,9 +155,9 @@ describe('ActionTray', () => {
       );
     });
 
-    it('notifies onClose exactly once when onChange(-1) and onDismiss both fire (normal close)', () => {
-      const onClose = jest.fn();
-      const { ref, onChange, onDismiss } = openTray({ onClose });
+    it('tells its owner exactly once when onChange(-1) and onDismiss both fire (normal close)', () => {
+      const owner = jest.fn();
+      const { onChange, onDismiss } = openTray(owner);
 
       act(() => {
         onChange(-1);
@@ -247,38 +168,36 @@ describe('ActionTray', () => {
         onDismiss();
       });
 
-      expect(ref.current!.isActive()).toBe(false);
-      expect(onClose).toHaveBeenCalledTimes(1);
-      // Slot released (active false) once cleanup runs.
+      expect(shown()).toBe(false);
+      expect(owner).toHaveBeenCalledTimes(1);
       expect(useBackdropClaim).toHaveBeenLastCalledWith(
         false,
         expect.objectContaining({ opacity: expect.anything() }),
       );
     });
 
-    it('re-arms the dedupe on reopen so the next close notifies again', () => {
-      const onClose = jest.fn();
-      const { ref, onDismiss } = openTray({ onClose });
+    it('re-arms the dedupe on reopen so the next close tells its owner again', () => {
+      const owner = jest.fn();
+      const { view, onDismiss } = openTray(owner);
 
       act(() => {
         onDismiss();
       });
-      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(owner).toHaveBeenCalledTimes(1);
 
-      act(() => {
-        ref.current!.open();
-      });
+      view.rerender(tray(false, { onDismiss: owner }));
+      view.rerender(tray(true, { onDismiss: owner }));
       const reopened = screen.UNSAFE_getByProps({ detached: true });
       const reopenedOnChange = reopened.props.onChange as (
         index: number,
       ) => void;
-      expect(ref.current!.isActive()).toBe(true);
+      expect(shown()).toBe(true);
 
       act(() => {
         reopenedOnChange(-1);
       });
-      expect(onClose).toHaveBeenCalledTimes(2);
-      expect(ref.current!.isActive()).toBe(false);
+      expect(owner).toHaveBeenCalledTimes(2);
+      expect(shown()).toBe(false);
     });
   });
 });
