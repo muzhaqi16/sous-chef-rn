@@ -152,8 +152,13 @@ const StockCheckForm: React.FC<StockCheckFormProps> = ({
         ]),
       ),
     });
+    // On the amount when one was counted, as that is what is checked again.
     for (const { pantryItemId, message } of refused) {
-      setError(`rows.${pantryItemId}.answer`, { message });
+      const counted =
+        values.rows[pantryItemId]?.answer === StockCheckAnswer.SomeLeft;
+      setError(`rows.${pantryItemId}.${counted ? 'left' : 'answer'}`, {
+        message,
+      });
     }
   };
 
@@ -213,7 +218,7 @@ const StockCheckForm: React.FC<StockCheckFormProps> = ({
                 setValue(`rows.${row.id}.answer`, next);
                 setValue(`rows.${row.id}.seen`, row.version);
                 clearErrors('root.noneAnswered');
-                clearErrors(`rows.${row.id}.answer`);
+                clearErrors([`rows.${row.id}.answer`, `rows.${row.id}.left`]);
               }}
               edgeFadeColor="surface"
             />

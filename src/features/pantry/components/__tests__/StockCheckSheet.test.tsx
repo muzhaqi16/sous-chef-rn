@@ -6,6 +6,7 @@ import {
   renderWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
+import { kitTestIDs } from '#components/testIDs';
 import {
   ErrorCode,
   StockCheckAnswer,
@@ -128,6 +129,45 @@ it("keeps a refused row's answer open and says why", async () => {
     ),
   ).toBeSelected();
   expect(onDismiss).not.toHaveBeenCalled();
+});
+
+it('says why a counted row was refused on its amount, the field checked again', async () => {
+  const recorded = recordMock(RecordPantryStockCheckDocument, {
+    data: {
+      recordPantryStockCheck: {
+        __typename: 'RecordPantryStockCheckPayload',
+        results: [
+          {
+            pantryItemId: 'eggs',
+            success: false,
+            failure: { code: ErrorCode.VersionConflict },
+            pantryItem: null,
+          },
+        ],
+      },
+    },
+  });
+  renderWithApollo(<StockCheckSheet visible onDismiss={jest.fn()} />, {
+    operationMocks: [toCheck(stack('eggs', 4)).mock, recorded.mock],
+  });
+  await drainTimers();
+
+  pick('eggs', StockCheckAnswer.SomeLeft);
+  fireEvent.changeText(
+    screen.getByTestId(pantryTestIDs.stockCheckLeft('eggs')),
+    '6',
+  );
+  await save();
+
+  expect(
+    screen.getByTestId(
+      kitTestIDs.inputError(pantryTestIDs.stockCheckLeft('eggs')),
+    ),
+  ).toHaveTextContent(t('pantryScreen.stockCheckStale'));
+  expect(screen.getByTestId(pantryTestIDs.stockCheckLeft('eggs'))).toHaveProp(
+    'value',
+    '6',
+  );
 });
 
 it('refuses an amount left it cannot read on the field, and sends nothing', async () => {
