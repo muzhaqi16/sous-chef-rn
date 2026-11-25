@@ -5,6 +5,7 @@ import { Chip } from '#components/molecules/Chip';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#i18n';
 import { Sheet } from '#components/templates/Sheet';
+import { useOpening } from '#hooks/ui/useOpening';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import type { Diet } from '#graphql/generated/schemaTypes';
@@ -44,12 +45,27 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
   isIngredientSearch = false,
 }) => {
   const { t } = useTranslation();
-  // Lazy mount: don't render filter content until sheet opens for the first time
-  const [mounted, setMounted] = useState(false);
+  // Null until the first opening, so nothing renders before one.
+  const opening = useOpening(visible);
 
-  // Local draft state — chip toggles stay local, committed only on sheet close
-  const [draftFilters, setDraftFilters] =
-    useState<RecipeFilters>(activeFilters);
+  // Chip toggles stay local, committed on close. The draft belongs to one
+  // opening: the next starts from the committed filters, while a snap change
+  // keeps it.
+  const [draft, setDraft] = useState<{
+    opening: number;
+    filters: RecipeFilters;
+  } | null>(null);
+  const draftFilters =
+    draft && draft.opening === opening?.id ? draft.filters : activeFilters;
+  const setDraftFilters = (
+    next: RecipeFilters | ((prev: RecipeFilters) => RecipeFilters),
+  ) => {
+    if (!opening) return;
+    setDraft({
+      opening: opening.id,
+      filters: typeof next === 'function' ? next(draftFilters) : next,
+    });
+  };
 
   const hasDraftChanges =
     draftFilters.diet.length !== activeFilters.diet.length ||
@@ -62,14 +78,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
     );
 
   const handleChange = (index: number) => {
-    if (index >= 0) {
-      // Sheet opening — sync draft from parent's committed filters
-      if (!mounted) setMounted(true);
-      setDraftFilters(activeFilters);
-    } else {
-      // Sheet closing — commit a changed draft to parent
-      if (hasDraftChanges) onApplyFilters(draftFilters);
-    }
+    if (index < 0 && hasDraftChanges) onApplyFilters(draftFilters);
     onSheetChange(index);
   };
 
@@ -109,7 +118,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
         },
       ]}
     >
-      {mounted ? (
+      {opening ? (
         <>
           {isIngredientSearch ? (
             <View style={styles.infoBanner}>
