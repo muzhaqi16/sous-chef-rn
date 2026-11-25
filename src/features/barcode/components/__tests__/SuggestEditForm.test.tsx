@@ -17,6 +17,7 @@ import {
   StorageState,
 } from '#graphql/generated/schemaTypes';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { InFormSheet } from '#/test-utils/inFormSheet';
 
 // AddItemForm drags in the whole form stack (react-hook-form, autocompletes,
 // image picker). This suite is about what SuggestEditForm renders *around* it.
@@ -86,9 +87,14 @@ const SCANNED_PACK = {
 };
 
 const renderForm = (operationMocks: MockedResponse[]) =>
-  renderWithApollo(<SuggestEditForm itemId="item-1" onClose={jest.fn()} />, {
-    operationMocks,
-  });
+  renderWithApollo(
+    <InFormSheet>
+      <SuggestEditForm itemId="item-1" onClose={jest.fn()} />
+    </InFormSheet>,
+    {
+      operationMocks,
+    },
+  );
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -188,11 +194,13 @@ describe('SuggestEditForm', () => {
   it('opens a suggestion on the scanned pack', async () => {
     const { mock } = recordMock(GetItemForEditDocument, { data: itemData() });
     renderWithApollo(
-      <SuggestEditForm
-        itemId="item-1"
-        scan={SCANNED_PACK}
-        onClose={jest.fn()}
-      />,
+      <InFormSheet>
+        <SuggestEditForm
+          itemId="item-1"
+          scan={SCANNED_PACK}
+          onClose={jest.fn()}
+        />
+      </InFormSheet>,
       { operationMocks: [mock] },
     );
 
@@ -206,11 +214,13 @@ describe('SuggestEditForm', () => {
       data: itemData({ canEdit: true, canSuggest: false }),
     });
     renderWithApollo(
-      <SuggestEditForm
-        itemId="item-1"
-        scan={SCANNED_PACK}
-        onClose={jest.fn()}
-      />,
+      <InFormSheet>
+        <SuggestEditForm
+          itemId="item-1"
+          scan={SCANNED_PACK}
+          onClose={jest.fn()}
+        />
+      </InFormSheet>,
       { operationMocks: [mock] },
     );
 

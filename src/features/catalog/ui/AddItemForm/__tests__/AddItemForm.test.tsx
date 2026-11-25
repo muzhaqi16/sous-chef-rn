@@ -15,6 +15,7 @@ import type {
   AddItemSubmitPayload,
 } from '#features/catalog/types';
 import AddItemForm from '../AddItemForm';
+import { InFormSheet } from '#/test-utils/inFormSheet';
 
 const onSubmit = jest.fn<
   Promise<AddItemFieldRefusal | void>,
@@ -27,7 +28,9 @@ type FormProps = Partial<React.ComponentProps<typeof AddItemForm>>;
 const openForm = (props: FormProps = {}) =>
   renderWithApollo(
     <FieldRendererProvider renderers={catalogFieldRenderers}>
-      <AddItemForm onSubmit={onSubmit} onClose={onClose} {...props} />
+      <InFormSheet>
+        <AddItemForm onSubmit={onSubmit} onClose={onClose} {...props} />
+      </InFormSheet>
     </FieldRendererProvider>,
   );
 
@@ -40,7 +43,7 @@ const named = (name: string) => {
 
 /** Presses save and lets the form's validation and submit run out. */
 const save = async (label = t('labels.addItem')) => {
-  await userEvent.setup().press(screen.getByText(label));
+  await userEvent.setup().press(screen.getByLabelText(label));
   await act(async () => undefined);
 };
 
@@ -186,13 +189,10 @@ describe('the form', () => {
     ).toBeTruthy();
   });
 
-  it('closes on cancel', async () => {
+  it('closes from its bar when nothing was typed', async () => {
     openForm();
 
-    // The brand picker's own Cancel renders above the form's buttons.
-    const cancel = screen.getAllByText(t('labels.cancel')).at(-1);
-    if (!cancel) throw new Error('no cancel');
-    await userEvent.setup().press(cancel);
+    await userEvent.setup().press(screen.getByTestId('header-close-button'));
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });

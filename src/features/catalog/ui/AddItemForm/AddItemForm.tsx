@@ -4,7 +4,6 @@ import { useTranslation } from '#i18n';
 import { errorService } from '#services/errorService';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Button } from '#components/molecules/Button';
 import { useForm, type FieldErrors, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import type { CreateItemFormData } from '#features/catalog/utils/itemValidation';
@@ -52,6 +51,9 @@ import {
   MODE_CONFIG,
 } from './fields';
 import { catalogTestIDs } from '#features/catalog/testIDs';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 /**
  * `edit` proposes changes for admin review (createItemSuggestion); `directEdit`
@@ -269,7 +271,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     handleSubmit,
     setValue,
     setError,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<CreateItemFormData>({
     // Only the review path mandates a note — see `requiresEditNote`.
     resolver: yupResolver(
@@ -278,6 +280,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     defaultValues: getInitialValues(),
     mode: 'onChange',
   });
+  useSheetUnsavedInput(isDirty);
 
   useEffect(() => {
     if (initialData?.upc) {
@@ -292,12 +295,16 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     setNetWeightEntries(entries);
     setValue('netWeights', toNetWeightInputs(entries), {
       shouldValidate: true,
+      shouldDirty: true,
     });
   };
 
   const handleUnitEntriesChanged = (entries: UnitEntry[]) => {
     setUnitEntries(entries);
-    setValue('units', toUnitInputs(entries), { shouldValidate: true });
+    setValue('units', toUnitInputs(entries), {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
   };
 
   const netWeightsError = firstMessage(errors.netWeights);
@@ -412,10 +419,21 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
   return (
     <>
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={t(modeConfig.title)}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void handleSubmit(handleFormSubmit, handleInvalid)();
+            },
+            accessibilityLabel: t(modeConfig.buttonLabel),
+            loading,
+            testID: catalogTestIDs.addItemFormSubmit,
+          }}
+        />
+      </SheetHeaderSlot>
       <View style={styles.header}>
-        <Text role="title" style={styles.title}>
-          {t(modeConfig.title)}
-        </Text>
         <Text
           role="caption"
           tone="secondary"
@@ -521,26 +539,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           </CollapsibleSection>
         )}
       </View>
-
-      <View style={styles.buttonContainer}>
-        <Button
-          variant="primary"
-          fullWidth
-          loading={loading}
-          onPress={handleSubmit(handleFormSubmit, handleInvalid)}
-        >
-          {t(modeConfig.buttonLabel)}
-        </Button>
-
-        <Button
-          variant="secondary"
-          fullWidth
-          disabled={loading}
-          onPress={onClose}
-        >
-          {t('labels.cancel')}
-        </Button>
-      </View>
     </>
   );
 };
@@ -548,9 +546,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 const styles = StyleSheet.create(theme => ({
   header: {
     marginBottom: theme.spacing.lg,
-  },
-  title: {
-    marginBottom: theme.spacing.sm,
   },
   form: {
     marginBottom: theme.spacing.lg,
@@ -568,10 +563,6 @@ const styles = StyleSheet.create(theme => ({
   },
   advancedContent: {
     paddingTop: theme.spacing.md,
-  },
-  buttonContainer: {
-    gap: theme.spacing.base,
-    paddingBottom: theme.spacing.lg,
   },
 }));
 

@@ -206,6 +206,8 @@ export const SearchResultsScreen: React.FC<
 
       <Sheet
         mode="form"
+        // The form shown owns the bar, with its own confirm.
+        headerFromContent
         visible={scannerSheetVisible}
         onDismiss={hideBottomSheet}
         snapPoints={['50%', '65%', '85%']}
