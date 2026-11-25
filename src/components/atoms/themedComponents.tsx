@@ -58,11 +58,16 @@ const inputProps = (
   themeName?: string,
 ): Pick<
   TextInputProps,
-  'placeholderTextColor' | 'keyboardAppearance' | 'cursorColor'
+  | 'placeholderTextColor'
+  | 'keyboardAppearance'
+  | 'cursorColor'
+  | 'maxFontSizeMultiplier'
 > => ({
   placeholderTextColor: theme.colors.inputPlaceholder,
   keyboardAppearance: themeName === 'dark' ? 'dark' : 'light',
   cursorColor: theme.colors.primaryText,
+  // The same ceiling `Text` takes: a field's text never outgrows its label.
+  maxFontSizeMultiplier: theme.maxFontScaleMultiplier,
 });
 
 const UniTextInput = withUnistyles(TextInput, (theme, rt) =>
