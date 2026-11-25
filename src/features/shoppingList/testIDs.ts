@@ -92,6 +92,7 @@ export const shoppingListTestIDs = {
   quantityEditValue: 'quantity-edit-value',
   quantityEditInput: 'quantity-edit-input',
   quantityEditFormatHint: 'quantity-edit-format-hint',
+  quantityEditError: 'quantity-edit-error',
 
   purchaseQuantityInput: 'purchase-quantity-input',
   purchaseQuantityError: 'purchase-quantity-error',

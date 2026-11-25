@@ -24,6 +24,7 @@ import { localizeNumericHint } from '#utils/formatters/number';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useOpening } from '#hooks/ui/useOpening';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface ItemUnit {
   id: string;
@@ -112,6 +113,8 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
   // Focus state only. The text lives in `quantityInput`, the one value save
   // reads, so typing and saving without leaving the field loses nothing.
   const [isEditing, setIsEditing] = useState(false);
+  // Set by a save the quantity refused; cleared once the field reads.
+  const [refused, setRefused] = useState(false);
   const inputRef = useRef<ThemedBottomSheetTextInputRef>(null);
 
   // Sorted preferred first, then default, then alphabetically.
@@ -176,16 +179,27 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
     }
   };
 
-  const handleSave = () => {
-    onSave(quantityInput, unitId);
-  };
-
   const hasChanges =
     quantityInput !== seedText(item) || unitName !== item.unitName;
+  useSheetUnsavedInput(hasChanges);
 
   // The server parses this string itself and rejects anything it can't read,
   // which offline would surface only once the queue replayed. Catch it here.
   const quantityIsValid = parsedQuantity !== null && parsedQuantity >= 0;
+
+  // Never greyed out: a quantity it cannot read is said on the field, and
+  // nothing changed has nothing to save.
+  const handleSave = () => {
+    if (!quantityIsValid) {
+      setRefused(true);
+      return;
+    }
+    if (!hasChanges) {
+      onClose();
+      return;
+    }
+    onSave(quantityInput, unitId);
+  };
 
   // Both buttons refuse the same state, rather than `-` refusing it and `+`
   // silently rewriting the field.
@@ -201,7 +215,6 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
           onClose={onClose}
           confirm={{
             onPress: handleSave,
-            disabled: !hasChanges || !quantityIsValid,
             loading,
             testID: shoppingListTestIDs.quantityEditSaveButton,
           }}
@@ -265,8 +278,18 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
               style={variantStyles.incrementButton}
             />
           </View>
-          {/* An empty field is "nothing typed yet", not a malformed quantity —
-              the save button is disabled either way. */}
+          {refused && !quantityIsValid ? (
+            <Text
+              role="error"
+              tone="error"
+              align="center"
+              style={variantStyles.quantityHint}
+              testID={shoppingListTestIDs.quantityEditError}
+            >
+              {t('errors.invalidQuantity')}
+            </Text>
+          ) : null}
+          {/* An empty field is "nothing typed yet", not a malformed quantity. */}
           {quantityInput.trim() !== '' && !quantityIsValid && (
             <Text
               role="error"

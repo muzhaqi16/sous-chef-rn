@@ -9,6 +9,7 @@ import {
 import { QuantityEditSheet } from '../QuantityEditSheet';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { getDeviceDecimalSeparator } from '#utils/deviceLocale';
+import { t } from '#i18n';
 
 type QuantityEditSheetProps = React.ComponentProps<typeof QuantityEditSheet>;
 type QuantityEditSheetItem = NonNullable<QuantityEditSheetProps['item']>;
@@ -340,7 +341,7 @@ describe('QuantityEditSheet', () => {
     // The seed is rounded to three places, so the text is an APPROXIMATION of
     // the stored value. Writing it back would store the approximation, and
     // repeating that drifts the quantity on a value the user never edited.
-    it('cannot be saved, so the seeded approximation never reaches the server', async () => {
+    it('closes without saving, so the seeded approximation never reaches the server', async () => {
       const user = userEvent.setup();
       // 0.3334 is within three places of 1/3, so it seeds the field as "1/3".
       renderWithInit({
@@ -352,6 +353,7 @@ describe('QuantityEditSheet', () => {
       await user.press(screen.getByTestId('header-action-0'));
 
       expect(defaultProps.onSave).not.toHaveBeenCalled();
+      expect(defaultProps.onClose).toHaveBeenCalled();
     });
 
     it('becomes saveable once the user changes it, and sends what they typed', async () => {
@@ -405,7 +407,7 @@ describe('QuantityEditSheet', () => {
     );
   });
 
-  it('blocks saving an unparseable quantity and shows the format hint', async () => {
+  it('refuses an unparseable quantity on the field, with the format hint', async () => {
     const user = userEvent.setup();
     renderWithInit();
     await user.press(screen.getByTestId('quantity-edit-value'));
@@ -413,6 +415,19 @@ describe('QuantityEditSheet', () => {
     expect(screen.getByTestId('quantity-edit-format-hint')).toBeTruthy();
     await user.press(screen.getByTestId('header-action-0'));
     expect(defaultProps.onSave).not.toHaveBeenCalled();
+    expect(screen.getByTestId('quantity-edit-error')).toHaveTextContent(
+      t('errors.invalidQuantity'),
+    );
+  });
+
+  it('refuses an emptied quantity on the field rather than greying out Save', async () => {
+    const user = userEvent.setup();
+    renderWithInit();
+    await user.press(screen.getByTestId('quantity-edit-value'));
+    fireEvent.changeText(screen.getByTestId('quantity-edit-input'), '');
+    await user.press(screen.getByTestId('header-action-0'));
+    expect(defaultProps.onSave).not.toHaveBeenCalled();
+    expect(screen.getByTestId('quantity-edit-error')).toBeTruthy();
   });
 
   // Stepping formats a number back into the field, so on text it cannot read it
