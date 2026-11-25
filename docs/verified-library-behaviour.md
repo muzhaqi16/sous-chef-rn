@@ -112,6 +112,62 @@ grep -n "useBottomSheetInternal" node_modules/@gorhom/bottom-sheet/src/index.ts*
 sed -n 1,30p node_modules/@gorhom/bottom-sheet/src/hooks/useBottomSheetInternal.ts
 ```
 
+### gorhom types its text input's ref as RNGH's TextInput
+
+**Claim:** `BottomSheetTextInput` is `forwardRef<TextInput | undefined, …>`
+over react-native-gesture-handler's `TextInput`, which the strict React Native
+types read as a component rather than an instance. What reaches the ref at
+runtime is React Native's `TextInput` instance, so `themedComponents.tsx`
+types gorhom's input with RN's `TextInputInstance`, the one place it does.
+
+**Verified against `@gorhom/bottom-sheet@5.2.14`** with
+`react-native-gesture-handler@3.5.0`: the component imports `TextInput` from
+RNGH for its ref type and renders RN's.
+
+Re-check:
+
+```
+sed -n 1,30p node_modules/@gorhom/bottom-sheet/src/components/bottomSheetTextInput/BottomSheetTextInput.tsx
+```
+
+### React Native never extends a touch past the parent's bounds
+
+**Claim:** `hitSlop` grows a view's touch area only inside its parent: a touch
+outside the parent never reaches the child. So a control's touch target is a
+layout box at the platform floor (44 pt iOS, 48 dp Android), and `hitSlop`
+past the parent does nothing. A StyleSheet cannot scale `hitSlop` either.
+
+**Verified against `react-native@0.87.1`:** the prop's doc says so
+(`ViewPropTypes.js`, "The touch area never extends past the parent view
+bounds"). On iOS Fabric, `RCTViewComponentView`'s `hitTest` returns nil
+outside a clipping container's bounds. On Android, `TouchTargetHelper` tests
+children only inside the parent.
+
+Re-check:
+
+```
+grep -n "never extends past the parent" node_modules/react-native/Libraries/Components/View/ViewPropTypes.js
+grep -n "clipsToBounds && !isPointInside" node_modules/react-native/React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm
+```
+
+### An RNGH v3 button takes a touch its children do not claim
+
+**Claim:** RNGH's button (`RectButton`, RNGH `Pressable`) overrides `hitTest`
+and walks up from the touched view to the first one that is a `UIControl` or
+carries RNGH gesture recognizers. A React Native `Pressable` inside it is
+neither, so the button takes the tap and the inner control never fires. That
+is why a row's trailing controls sit beside its press surface, never inside
+it, and why `IconButton` switches to RNGH's `Pressable` inside a gesture row.
+
+**Verified against `react-native-gesture-handler@3.5.0`** (iOS,
+`apple/RNGestureHandlerButton.mm`).
+
+Re-check:
+
+```
+grep -n "hitTest:(CGPoint)point withEvent" -A32 node_modules/react-native-gesture-handler/apple/RNGestureHandlerButton.mm
+```
+
 ### keyboard-controller bottomOffset measures input bottom
 
 **Claim:** `KeyboardAwareScrollView`'s `bottomOffset` is measured from the
