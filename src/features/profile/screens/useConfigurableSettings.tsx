@@ -12,7 +12,7 @@ import type { SettingItem } from '#components/organisms/SettingRow';
 import {
   PROFILE_SETTINGS_CONFIG,
   type SettingItemConfig,
-} from '#config/settingsConfig';
+} from './settingsConfig';
 import { SUPPORTED_LANGUAGES } from '#i18n/config';
 import { BiometricSetupModal } from '#features/profile/components/BiometricSetupModal';
 import { authoritativeBiometryName } from '#components/organisms/biometric/biometryLabel';
@@ -142,11 +142,7 @@ export const useConfigurableSettings = () => {
 
   const createSettingItem = (config: SettingItemConfig): SettingItem => {
     // Row ids are assigned by `ProfileScreen`, beside the handlers it wires.
-    const baseItem: SettingItem = {
-      key: config.key,
-      label: t(config.labelKey),
-      type: config.type,
-    };
+    const base = { key: config.key, label: t(config.labelKey) };
 
     // Map configuration keys to actual implementation
     switch (config.key) {
@@ -157,7 +153,8 @@ export const useConfigurableSettings = () => {
       case 'language':
         if (config.type === 'modal') {
           return {
-            ...baseItem,
+            ...base,
+            type: 'modal',
             // Unpicked, the app follows the device: show what it is in.
             value: language ?? getResolvedLanguage(),
             options: [...SUPPORTED_LANGUAGES],
@@ -171,7 +168,8 @@ export const useConfigurableSettings = () => {
       case 'currency':
         if (config.type === 'modal') {
           return {
-            ...baseItem,
+            ...base,
+            type: 'modal',
             value: preferredCurrency,
             valueLabel: currencyLabel,
             subtitle: t('settings.currencySubtitle'),
@@ -213,7 +211,8 @@ export const useConfigurableSettings = () => {
           }
 
           return {
-            ...baseItem,
+            ...base,
+            type: 'switch',
             value: biometricEnabled,
             disabled: biometricLoading || !biometricAvailable,
             subtitle,
@@ -238,33 +237,34 @@ export const useConfigurableSettings = () => {
 
       // Navigation items: each row carries its own destination.
       case 'personalInformation':
-        return { ...baseItem, onPress: toPersonalInformation };
+        return { ...base, type: 'navigation', onPress: toPersonalInformation };
       case 'notifications':
-        return { ...baseItem, onPress: toNotificationSettings };
+        return { ...base, type: 'navigation', onPress: toNotificationSettings };
       case 'dietaryProfile':
-        return { ...baseItem, onPress: toDietaryProfile };
+        return { ...base, type: 'navigation', onPress: toDietaryProfile };
       case 'appSettings':
-        return { ...baseItem, onPress: toAppSettings };
+        return { ...base, type: 'navigation', onPress: toAppSettings };
       case 'dataSources':
-        return { ...baseItem, onPress: toDataSources };
+        return { ...base, type: 'navigation', onPress: toDataSources };
       case 'myReports':
-        return { ...baseItem, onPress: toMyReports };
+        return { ...base, type: 'navigation', onPress: toMyReports };
       case 'brandLists':
-        return { ...baseItem, onPress: toBrandLists };
+        return { ...base, type: 'navigation', onPress: toBrandLists };
       case 'appearance':
-        return { ...baseItem, onPress: toAppearance };
+        return { ...base, type: 'navigation', onPress: toAppearance };
       case 'debugInfo':
-        return { ...baseItem, onPress: toDebugInfo };
+        return { ...base, type: 'navigation', onPress: toDebugInfo };
       case 'performanceDashboard':
-        return { ...baseItem, onPress: toPerformanceDashboard };
+        return { ...base, type: 'navigation', onPress: toPerformanceDashboard };
       case 'changePassword':
-        return { ...baseItem, onPress: toChangePassword };
+        return { ...base, type: 'navigation', onPress: toChangePassword };
 
       default:
         logger.warn(`Unhandled setting key: ${config.key}`);
     }
 
-    return baseItem;
+    // An unknown key shows its label and does nothing.
+    return { ...base, type: 'info' };
   };
 
   const logout = () => {

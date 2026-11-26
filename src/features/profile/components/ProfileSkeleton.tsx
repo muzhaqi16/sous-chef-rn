@@ -8,7 +8,7 @@ import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 
 const AVATAR_SIZE = 80; // matches ProfileHero.AVATAR_SIZE
 
-// Mirrors `PROFILE_SETTINGS_CONFIG` in `src/config/settingsConfig.ts`, minus the
+// Mirrors `PROFILE_SETTINGS_CONFIG` in `screens/settingsConfig.ts`, minus the
 // Developer section that `Environment.shouldEnableDebugFeatures()` gates out.
 const SECTION_ROWS: readonly number[] = [
   1, // Personal Information

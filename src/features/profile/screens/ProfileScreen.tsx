@@ -17,7 +17,7 @@ import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import { Telemetry } from '#services/telemetry';
 import { useEffect } from 'react';
 import { Environment } from '#utils/environment';
-import { DEVELOPER_SECTION_ID } from '#config/settingsConfig';
+import { DEVELOPER_SECTION_ID } from './settingsConfig';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { ProfileSkeleton } from '#features/profile/components/ProfileSkeleton';
 import {

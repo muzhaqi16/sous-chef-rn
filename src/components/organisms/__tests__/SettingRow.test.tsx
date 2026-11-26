@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { SettingRow } from '../SettingRow';
+import { object, string } from 'yup';
+import { SettingRow, type SettingItem } from '../SettingRow';
 import { Text } from '#components/atoms/Text';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
@@ -13,10 +14,12 @@ jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: { children?: React.ReactNode }) => children,
 }));
 
+const mockTextEditSheet = jest.fn<null, [Record<string, unknown>]>(() => null);
 jest.mock(
   '#components/organisms/TextEditBottomSheet/TextEditBottomSheet',
   () => ({
-    TextEditBottomSheet: () => null,
+    TextEditBottomSheet: (props: Record<string, unknown>) =>
+      mockTextEditSheet(props),
   }),
 );
 
@@ -26,7 +29,7 @@ describe('SettingRow', () => {
   });
 
   it('renders label for info type item', () => {
-    const item = {
+    const item: SettingItem = {
       key: 'email',
       label: 'Email',
       type: 'info',
@@ -38,7 +41,7 @@ describe('SettingRow', () => {
   });
 
   it('displays value for info type item', () => {
-    const item = {
+    const item: SettingItem = {
       key: 'email',
       label: 'Email',
       type: 'info',
@@ -50,7 +53,7 @@ describe('SettingRow', () => {
   });
 
   it('renders switch for switch type item', () => {
-    const item = {
+    const item: SettingItem = {
       key: 'notifications',
       label: 'Notifications',
       type: 'switch',
@@ -65,7 +68,7 @@ describe('SettingRow', () => {
   it('calls onPress for action type item', async () => {
     const user = userEvent.setup();
     const onPress = jest.fn();
-    const item = {
+    const item: SettingItem = {
       key: 'logout',
       label: 'Log Out',
       type: 'action',
@@ -82,7 +85,7 @@ describe('SettingRow', () => {
   it("does not run a disabled row's action when its label is pressed", async () => {
     const user = userEvent.setup();
     const onPress = jest.fn();
-    const item = {
+    const item: SettingItem = {
       key: 'biometricAuthentication',
       label: 'Face ID',
       type: 'switch',
@@ -101,7 +104,7 @@ describe('SettingRow', () => {
   it('runs the action once the row is no longer disabled', async () => {
     const user = userEvent.setup();
     const onPress = jest.fn();
-    const item = {
+    const item: SettingItem = {
       key: 'biometricAuthentication',
       label: 'Face ID',
       type: 'action',
@@ -117,7 +120,7 @@ describe('SettingRow', () => {
   });
 
   it('renders modal type with selected option label', () => {
-    const item = {
+    const item: SettingItem = {
       key: 'theme',
       label: 'Theme',
       type: 'modal',
@@ -137,7 +140,7 @@ describe('SettingRow', () => {
 
   // An action runs where it is (Log Out), so it promises no screen to open.
   it('gives an action row no "Tap to open" hint', () => {
-    const item = {
+    const item: SettingItem = {
       key: 'logout',
       label: 'Log Out',
       type: 'action',
@@ -151,7 +154,7 @@ describe('SettingRow', () => {
   });
 
   it('tells a navigation row it opens a screen', () => {
-    const item = {
+    const item: SettingItem = {
       key: 'profile',
       label: 'Profile',
       type: 'navigation',
@@ -165,7 +168,7 @@ describe('SettingRow', () => {
   });
 
   it('renders navigation type with chevron', () => {
-    const item = {
+    const item: SettingItem = {
       key: 'profile',
       label: 'Profile',
       type: 'navigation',
@@ -177,7 +180,7 @@ describe('SettingRow', () => {
   });
 
   it('renders accessibility label for switch type', () => {
-    const item = {
+    const item: SettingItem = {
       key: 'notifications',
       label: 'Notifications',
       type: 'switch',
@@ -191,7 +194,7 @@ describe('SettingRow', () => {
 
   // The row's label stands in for everything inside it, the subtitle too.
   it('reads its subtitle in its label, leaving the hint to what a tap does', () => {
-    const item = {
+    const item: SettingItem = {
       key: 'phone',
       label: 'Phone',
       type: 'text',
@@ -206,8 +209,32 @@ describe('SettingRow', () => {
     expect(row.props.accessibilityHint).toBe('Tap to edit');
   });
 
+  it('hands its edit sheet the keypad, lines and schema the row states', () => {
+    const schema = object({ phone: string() });
+    const item: SettingItem = {
+      key: 'phone',
+      label: 'Phone',
+      type: 'text',
+      value: '',
+      keyboardType: 'phone-pad',
+      multiline: false,
+      validationSchema: schema,
+      onSave: jest.fn(),
+    };
+    render(<SettingRow item={item} isFirst={true} isLast={true} />);
+
+    expect(mockTextEditSheet.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        fieldKey: 'phone',
+        keyboardType: 'phone-pad',
+        multiline: false,
+        validationSchema: schema,
+      }),
+    );
+  });
+
   it('renders text type with pencil edit indicator', () => {
-    const item = {
+    const item: SettingItem = {
       key: 'name',
       label: 'Name',
       type: 'text',

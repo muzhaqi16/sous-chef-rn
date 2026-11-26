@@ -40,7 +40,7 @@ const ALLOWED = [
   // FIELD_LABEL_KEYS / ITEM_LABEL_KEYS / OPTION_LABEL_KEYS map *by that text*,
   // and the config value is what survives a locale switch for filtering.
   // Verified: 0 of 22 key/label pairs reach the screen untranslated.
-  'config/settingsConfig.ts',
+  'features/profile/screens/settingsConfig.ts',
   'features/profile/hooks/useConfigurableSettings.tsx',
   // Developer-facing fallback for a socket error with no message; never
   // rendered as copy.

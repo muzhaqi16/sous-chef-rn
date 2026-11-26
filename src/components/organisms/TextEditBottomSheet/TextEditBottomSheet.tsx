@@ -14,6 +14,14 @@ import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { useOpening } from '#hooks/ui/useOpening';
 import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
+/** The keypads a one-field edit offers. */
+export type TextEditKeyboardType =
+  | 'default'
+  | 'email-address'
+  | 'numeric'
+  | 'phone-pad'
+  | 'decimal-pad';
+
 interface TextEditBottomSheetProps {
   visible: boolean;
   title: string;
@@ -26,12 +34,7 @@ interface TextEditBottomSheetProps {
   onClose: () => void;
   multiline?: boolean;
   maxLength?: number;
-  keyboardType?:
-    | 'default'
-    | 'email-address'
-    | 'numeric'
-    | 'phone-pad'
-    | 'decimal-pad';
+  keyboardType?: TextEditKeyboardType;
 }
 
 /** Bottom sheet for editing a single text field, validated by a yup schema. */
