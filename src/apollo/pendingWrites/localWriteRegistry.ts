@@ -9,13 +9,13 @@ import { UpdateNotificationPreferencesDocument } from '#operations/user/user.gen
 import { UpdateHomeDocument } from '#operations/home/home.generated';
 import { FEATURE_LOCAL_WRITES } from '#features/registry.data';
 import { entityFields } from './entityFields';
-import type { LocalWrite, LocalWriteTable } from './types';
+import type { LocalWriteTable, RegisteredWrite } from './types';
 
 /**
  * Every local write, keyed by the operation its document declares: the
  * kernel's own over the shared documents, then each feature's.
  */
-export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
+export const LOCAL_WRITES: LocalWriteTable = byOperation<RegisteredWrite>([
   [UpdateHomeDocument, entityFields],
   [UpdateUserPreferencesDocument, settingsFields],
   [UpdateNotificationPreferencesDocument, entityFields],

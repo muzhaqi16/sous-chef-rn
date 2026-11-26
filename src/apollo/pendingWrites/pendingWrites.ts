@@ -19,7 +19,7 @@ import { isRecord } from '#utils/isRecord';
 import { LOCAL_WRITES } from './localWriteRegistry';
 import { readFenceOf } from './readFence';
 import type {
-  ConflictRead,
+  RegisteredConflict,
   LocalInputs,
   LocalWriteTable,
   PendingWrite,
@@ -279,7 +279,7 @@ export class PendingWrites {
     return this.table[operationName]?.recoverable !== false;
   }
 
-  conflictOf(operationName: string): ConflictRead | undefined {
+  conflictOf(operationName: string): RegisteredConflict | undefined {
     return this.table[operationName]?.conflict;
   }
 

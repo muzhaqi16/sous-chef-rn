@@ -2,7 +2,7 @@ import type { ApolloCache, ApolloClient } from '@apollo/client';
 import type { OperationVariables } from '@apollo/client';
 import { fromServer } from '#apollo/utils/fromServer';
 import { isRecord } from '#utils/isRecord';
-import type { ConflictRead } from './types';
+import type { ConflictRow } from './types';
 
 export type RowFields = Readonly<Record<string, unknown>>;
 
@@ -34,7 +34,7 @@ function sameValue(mine: unknown, theirs: unknown): boolean {
 
 function readRow(
   cache: ApolloCache,
-  { typename, fragment }: ConflictRead,
+  { typename, fragment }: ConflictRow,
   id: string,
   optimistic: boolean,
 ): RowFields | null {
@@ -49,7 +49,7 @@ function readRow(
 /** The row as the person saw it, for `capture`, before the write's layer. */
 export function rowBaseline(
   cache: ApolloCache,
-  conflict: ConflictRead,
+  conflict: ConflictRow,
   variables: OperationVariables,
 ): RowFields | undefined {
   const input: unknown = variables.input;
@@ -60,7 +60,7 @@ export function rowBaseline(
 /** The row as the server holds it now, or `undefined` if it cannot be asked. */
 export async function readServerRow(
   client: ApolloClient,
-  conflict: ConflictRead,
+  conflict: ConflictRow,
   id: string,
 ): Promise<RowFields | undefined> {
   try {

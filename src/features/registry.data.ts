@@ -182,7 +182,7 @@ import {
   updateRow,
 } from '#entities/shoppingList/localWrites';
 import { entityFields } from '#apollo/pendingWrites/entityFields';
-import type { LocalWrite } from '#apollo/pendingWrites/types';
+import type { RegisteredWrite } from '#apollo/pendingWrites/types';
 import {
   keepRefusedStockCheckRows,
   reconcileConvertExpiredReplay,
@@ -219,7 +219,7 @@ import {
 type ByOperation<T> = ReadonlyArray<readonly [DocumentNode, T]>;
 
 /** Each feature's local-first writes; the kernel adds its own. */
-export const FEATURE_LOCAL_WRITES: ByOperation<LocalWrite> = [
+export const FEATURE_LOCAL_WRITES: ByOperation<RegisteredWrite> = [
   [
     AddItemToShoppingListDocument,
     { ...addRows, subject: { key: 'items', mints: true } },
