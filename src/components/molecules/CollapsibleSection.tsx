@@ -3,7 +3,6 @@ import React from 'react';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
-import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
 
 interface CollapsibleSectionProps {
@@ -43,7 +42,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         </Text>
         <ExpandChevron expanded={expanded} />
       </AppPressable>
-      {!!expanded && <CurrentThemeScope>{children}</CurrentThemeScope>}
+      {!!expanded && children}
     </>
   );
 };

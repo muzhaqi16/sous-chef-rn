@@ -13,7 +13,6 @@ import { NavigationContext } from '@react-navigation/native';
 import { useSharedBottomSheetConfigs } from '#hooks/ui/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/ui/useBottomSheetBackHandler';
 import { useBottomSheetBackdropClaim } from '#hooks/ui/useBottomSheetBackdropClaim';
-import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
 
 // gorhom's default background and handle are each an "adjustable" TalkBack
 // stop ("Bottom Sheet", "Bottom sheet handle") ahead of the content; these paint
@@ -45,8 +44,7 @@ type ThemedBottomSheetModalProps = Omit<
 
 /**
  * Theme-reactive `BottomSheetModal`, re-exported under the gorhom name so only
- * the import source changes at a call site. Content mounts on every present,
- * so it sits in `CurrentThemeScope`.
+ * the import source changes at a call site.
  */
 const ThemedBottomSheetModal = ({
   children,
@@ -71,7 +69,7 @@ const ThemedBottomSheetModal = ({
       onAnimate?.(fromIndex, toIndex, fromPosition, toPosition);
     }}
   >
-    <CurrentThemeScope>{children}</CurrentThemeScope>
+    {children}
   </ThemedModalShell>
 );
 

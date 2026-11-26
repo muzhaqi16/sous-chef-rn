@@ -389,26 +389,30 @@ then reports `dot` / `heroInner` mismatches. In source:
 grep -n -B 3 "getHasBeenPromoted" node_modules/react-native-unistyles/cxx/hybridObjects/HybridShadowRegistry.cpp
 ```
 
-### A Unistyles reader inside a ScopedTheme ignores theme events
+### Unistyles draws a kept element that mounts late in the current theme
 
-**Claim:** a `withUnistyles` or `useUnistyles` reader mounted inside a
-`ScopedTheme` never follows a theme event: not a switch to another theme, and
-not `UnistylesRuntime.updateTheme` giving the scoped theme itself new values.
-A view styled by `StyleSheet.create` is updated natively and does follow.
+**Claim:** an element the React Compiler kept from before a theme change, which
+first mounts after it (a sheet's or `Modal`'s content, an expanded section),
+shows the current theme. Its `styles.x` snapshot is stale, and Unistyles
+corrects it at mount.
 
-**Verified against `react-native-unistyles@3.9.0` (2026-11-25, in source; on
-an Android emulator on 3.5.2).** `useProxifiedUnistyles` builds its listener
-with `updateTheme: () => { if (scopedTheme) return; … }`, and inside a scope
-`scopedTheme` is the scope's name.
+**Verified against `react-native-unistyles@3.9.0` (2026-11-25, iOS
+simulator)** with `CurrentThemeScope`, the scope this replaced, rendering its
+children bare: Mark Cooked opened on a recipe after light to dark (the case the
+scope was added for), 0 of 269 views stale; the same sheet left open through
+dark to light, 0 of 269, its content not remounted; an alert's `Modal` raised
+after a change, 0 of 256; a pantry item's batches expanded after one, 0 of 337.
+Fixed upstream in 3.9.0 (#1394, closing #1386): `HybridShadowRegistry` compares
+each style's revision when a view links. Before it, the stale colours stuck
+until the next theme change, and a `ScopedTheme` keyed on every theme commit
+was the workaround. Its readers ignore theme events, which is why it had to
+remount.
 
-The fix: `CurrentThemeScope` keys its `ScopedTheme` on the theme name and the
-theme epoch, so every theme commit remounts the children. Guarded by
-`src/components/atoms/__tests__/CurrentThemeScope.test.tsx`.
-
-Re-check:
+Re-check: on a recipe's detail, `setTheme('DARK')` with the cook sheet closed,
+open it, and read `UnistylesShadowRegistry.verify()`. In source:
 
 ```
-grep -n -A 6 "updateTheme: () =>" node_modules/react-native-unistyles/src/core/useProxifiedUnistyles/useProxifiedUnistyles.ts
+grep -n "hasOutdatedStyles" node_modules/react-native-unistyles/cxx/hybridObjects/HybridShadowRegistry.cpp
 ```
 
 ### Unistyles' useAnimatedTheme misses a theme change made while its screen is paused

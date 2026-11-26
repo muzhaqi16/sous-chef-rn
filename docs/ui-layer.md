@@ -340,21 +340,13 @@ they read it.
   and `useVariants` returns a new object per call, so the compiler cannot freeze
   a read from it. A bare call selects nothing
   (`sous-chef/use-variants-return-is-read`).
-- **A host that mounts its children later than they were created wraps them in
-  `CurrentThemeScope`.** A `styles.x` read is a snapshot, and the compiler caches
-  an element against its other dependencies, so a parent that outlives a theme
-  change can hand a host elements carrying the old theme's colours. Unistyles
-  updates MOUNTED views natively, but corrects a snapshot at mount only inside a
-  scoped theme (`HybridShadowRegistry::link`), so the stale colours stick until
-  the next theme change. The sheet wrapper (`#hooks/ui/useStandardBottomSheet`,
-  which `ActionTray` uses too), the `Modal` re-export in `themedComponents`
-  (RN's is banned) and `CollapsibleSection` carry it; a new host that gates
-  `children` on its own open state adds it. A component rendering its own JSX
-  needs nothing: the condition it mounts on is a dependency of that JSX. A
-  `withUnistyles` or `useUnistyles` reader inside a scoped theme
-  [ignores theme events](verified-library-behaviour.md#a-unistyles-reader-inside-a-scopedtheme-ignores-theme-events),
-  so the scope is keyed on the theme epoch and every theme commit remounts its
-  children.
+- **A host that mounts its children later than they were created needs no
+  theme wrapper.** A parent that outlives a theme change can hand a sheet,
+  `Modal` or expanded section elements the compiler kept with the old theme's
+  styles; Unistyles draws them in the current theme when they mount
+  ([verified](verified-library-behaviour.md#unistyles-draws-a-kept-element-that-mounts-late-in-the-current-theme)).
+  A `ScopedTheme` pins a FIXED theme and its readers ignore theme events, so it
+  is never a way to follow the current one.
 
 ## Typography roles
 
