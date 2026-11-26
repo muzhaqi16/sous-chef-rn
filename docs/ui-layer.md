@@ -314,10 +314,12 @@ they read it.
   screen is hidden and never reads the theme again, so the app's reads it when
   the screen is shown
   ([Unistyles' useAnimatedTheme misses a theme change made while its screen is paused](verified-library-behaviour.md#unistyles-useanimatedtheme-misses-a-theme-change-made-while-its-screen-is-paused)).
-- **Never wrap `Pressable`/`TouchableX` with `withUnistyles`.** The wrapper
-  copies a function-style `style={({ pressed }) => [...]}` into `{}`. RN's
-  `Pressable` needs no wrapper, because Unistyles binds it to the ShadowTree
-  itself
+- **Never wrap a `Pressable`, RN's or RNGH's, with `withUnistyles`.** The
+  wrapper copies a function-style `style={({ pressed }) => [...]}` into `{}`,
+  which upstream holds by design. RN's `Pressable` needs no wrapper: the Metro
+  integration swaps in Unistyles' own, which runs the function. Unistyles'
+  guide suggests `withUnistyles(GHPressable)` for RNGH's, which drops the same
+  style
   ([withUnistyles drops function styles](verified-library-behaviour.md#unistyles-withunistyles-drops-function-styles)).
 - **`useUnistyles()` is for runtime metadata** (`rt.colorScheme`, `rt.themeName`,
   `rt.insets`). Reading `theme.*` through it re-renders the whole component on

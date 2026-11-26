@@ -314,7 +314,7 @@ grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/Scr
 
 ### unistyles withUnistyles drops function styles
 
-**Claim:** wrapping `Pressable`/`TouchableX` with `withUnistyles(...)`
+**Claim:** wrapping a `Pressable`, RN's or RNGH's, with `withUnistyles(...)`
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
@@ -323,7 +323,13 @@ the child receives `{}`.
 `Object.assign(acc, secret.uni__getStyles())`. For a function-valued `style`
 that is the function itself, and an arrow function has no own enumerable
 properties. RN's `Pressable` needs no wrapper: Unistyles' Metro resolver swaps
-in a bound one.
+in a bound one. Upstream holds this by design: "Don't wrap Pressable in
+withUnistyles" ([#1180](https://github.com/jpudysz/react-native-unistyles/issues/1180);
+also [#1149](https://github.com/jpudysz/react-native-unistyles/issues/1149),
+[discussion #786](https://github.com/jpudysz/react-native-unistyles/discussions/786)).
+Its guide still suggests `withUnistyles(GHPressable)` for RNGH's
+([#1109](https://github.com/jpudysz/react-native-unistyles/issues/1109)), which
+drops the same style.
 
 Re-check:
 
@@ -346,7 +352,13 @@ mounted four-photo `PantryItemDetail` with every `ThemeEpochSentinel` rendering
 nothing left 3 `dot` views on the old theme 7 to 8 s after the change, light to
 dark and dark to light; `heroInner` no longer reverts (3.9.0's #1393 keeps
 React's node props on a refresh). With the sentinels, 0 of 156, and 0 on the
-pantry list (308 views) and the list under its tour popover (354). On 3.8.2 + 4.7.2, a
+pantry list (308 views) and the list under its tour popover (354). Later the
+same day, after the app's iOS window module went, neither known case came back
+on iOS with every sentinel rendering nothing: that hero 0 of 170 across six
+flips (plain, a toast after, a commit at the theme commit, a gallery swipe
+after), and `AppearanceScreen`'s swatch probe 0 of 132. Android, where this was
+also measured and which never had that module, is not re-measured, so the
+sentinels stay. On 3.8.2 + 4.7.2, a
 freshly mounted gallery `PantryItemDetail` with every `ThemeEpochSentinel`
 rendering nothing left one `dot` on the old theme from 261 ms through 3 s; with
 the sentinels, 0 in both directions, and 0 on pantry rows, list rows under a

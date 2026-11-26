@@ -23,7 +23,7 @@ import { Icon } from '#components/atoms/Icon';
 // props. Module scope, so screens carry no useUnistyles re-render subscription.
 
 // RN's Pressable, which Unistyles binds to the ShadowTree; `withUnistyles` over
-// RNGH's drops proxy values in a `({pressed}) => [...]` style. For gesture
+// RNGH's replaces a `({pressed}) => [...]` style with `{}`. For gesture
 // composition, import RNGH's at the call site. A press target is a button to
 // VoiceOver and TalkBack unless the caller names another role.
 export const Pressable = ({

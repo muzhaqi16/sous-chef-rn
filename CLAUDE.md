@@ -347,8 +347,9 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **`withUnistyles(Component)`** themes a third-party component's props. A wrapper
   2+ files use lives in `src/components/atoms/themedComponents.tsx`; a single-use
   one stays beside its user.
-- **Never wrap `Pressable`/`TouchableX` with `withUnistyles`**: it drops a
-  function-style `style`. Verified: `#unistyles-withunistyles-drops-function-styles`.
+- **Never wrap a `Pressable`, RN's or RNGH's, with `withUnistyles`**: it
+  replaces a function-style `style` with `{}`, by design upstream. RN's needs no
+  wrapper. Verified: `#unistyles-withunistyles-drops-function-styles`.
 - **A node reanimated animates takes no themed Unistyles style**
   (`sous-chef/animated-node-takes-no-themed-style`): the React commit after a
   theme change puts the old values back at and under a Reanimated view. Themed
