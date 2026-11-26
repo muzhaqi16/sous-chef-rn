@@ -4,6 +4,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#services/alertService';
 import { t } from '#i18n';
+import { lightTheme } from '#theme/themes';
 import { Sheet } from '../Sheet';
 import { SheetHeader } from '../SheetHeader';
 import { useSheetUnsavedInput } from '../SheetCloseGuard';
@@ -56,6 +57,31 @@ describe('Sheet', () => {
     rerender(<Parent visible />);
 
     expect(screen.getByText('kept 1')).toBeTruthy();
+  });
+
+  // A list's rows inset themselves, so the title has to take the gutter itself.
+  it.each([
+    ['a list', { mode: 'list' as const }],
+    ['a view with no gutter', { gutter: 'none' as const }],
+  ])('sets the title on the page gutter in %s', (_name, shape) => {
+    render(
+      <Sheet
+        visible
+        onDismiss={() => undefined}
+        snapPoints={['50%']}
+        title="Pick some"
+        {...shape}
+      >
+        <Draft />
+      </Sheet>,
+    );
+
+    // The title's row: the nearest host view above it.
+    let row = screen.getByText('Pick some').parent;
+    while (row && typeof row.type !== 'string') row = row.parent;
+    expect(row).toHaveStyle({
+      paddingHorizontal: lightTheme.layout.pageGutter,
+    });
   });
 
   // A sheet stacked over its host pushes, where gorhom's `switch` minimizes it.

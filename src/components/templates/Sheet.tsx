@@ -120,10 +120,16 @@ export const Sheet: React.FC<SheetProps> = ({
     headerProp
   );
 
+  const gutterStyle = gutter === 'page' ? styles.pageGutter : undefined;
+  // The title sits on the gutter wherever the content has none of its own: a
+  // list's rows inset themselves, and the bar above them would sit flush.
+  const titleGutter =
+    mode === 'list' || !gutterStyle ? styles.pageGutter : undefined;
+
   const body = (
     <>
       {title || actions?.length ? (
-        <View style={styles.titleRow}>
+        <View style={[styles.titleRow, titleGutter]}>
           {!!title && <Title style={styles.title}>{title}</Title>}
           <BarActions actions={actions} placement="gutter" />
         </View>
@@ -132,7 +138,6 @@ export const Sheet: React.FC<SheetProps> = ({
     </>
   );
 
-  const gutterStyle = gutter === 'page' ? styles.pageGutter : undefined;
   const containerStyle = [gutterStyle, contentContainerStyle, insetStyle];
 
   // `keyboardShouldPersistTaps` is stated, not inherited: neither gorhom nor
