@@ -136,6 +136,8 @@ const CorrectPackageSizeForm: React.FC<
     setValue,
     setError,
     getValues,
+    getFieldState,
+    trigger,
     formState: { isDirty },
   } = useForm<CorrectWeightFormValues>({
     resolver: yupResolver(correctWeightSchema),
@@ -155,6 +157,8 @@ const CorrectPackageSizeForm: React.FC<
       'definesCount',
       unitType === UnitType.Count && unitId !== pantryItem?.portionUnitId,
     );
+    // The reason rule reads `definesCount`; `setValue` re-runs only what it writes.
+    if (getFieldState('reason').invalid) void trigger('reason');
     if (unitName) setValue('unitDisplay', unitName, { shouldDirty: true });
   };
 
