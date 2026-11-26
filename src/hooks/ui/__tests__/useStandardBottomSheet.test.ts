@@ -70,13 +70,12 @@ describe('useStandardBottomSheet', () => {
     snapPoints: ['50%'],
   };
 
-  it('returns ref, modalProps, contentContainerStyle and dismiss', () => {
+  it('returns ref, modalProps and contentContainerStyle', () => {
     const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
     expect(result.current.ref).toBeDefined();
     expect(result.current.modalProps).toBeDefined();
     expect(result.current.contentContainerStyle).toBeDefined();
-    expect(typeof result.current.dismiss).toBe('function');
   });
 
   it('includes snap points in modalProps', () => {

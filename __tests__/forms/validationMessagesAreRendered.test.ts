@@ -79,9 +79,11 @@ function renderedThroughController(source: string, field: string): boolean {
   const marker = new RegExp(`name="${field}"(?![A-Za-z0-9_])`, 'gu');
   for (const match of source.matchAll(marker)) {
     const start = match.index ?? 0;
-    if (source.slice(start, start + 800).includes('fieldState.error')) {
-      return true;
-    }
+    // To the next Controller: a render that grows (a ref, a comment) stays
+    // inside its own element, where a fixed window lost it.
+    const next = source.indexOf('<Controller', start);
+    const body = source.slice(start, next === -1 ? undefined : next);
+    if (body.includes('fieldState.error')) return true;
   }
   return false;
 }
@@ -299,6 +301,8 @@ const FORM_OWNERS: Record<string, string> = {
   // Resolved by SearchResults; its fields are written and re-run here.
   scanAmountSchema: 'src/features/barcode/components/ScanAmountSection.tsx',
   receiptLineSchema: 'src/features/receipts/components/ReceiptLineSheet.tsx',
+  restockSchema:
+    'src/features/pantry/components/modals/RestockPantryItemModal.tsx',
 };
 
 describe('cross-field rules are re-run by their form', () => {

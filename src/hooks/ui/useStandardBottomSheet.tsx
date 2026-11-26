@@ -313,14 +313,9 @@ export function useStandardBottomSheet({
 
   const contentContainerStyle = { paddingBottom: insets.bottom + 16 };
 
-  // For an event handler that must close the sheet directly; state-driven
-  // control goes through the `visible` option instead.
-  const dismiss = () => ref.current?.dismiss();
-
   return {
     ref,
     modalProps,
     contentContainerStyle,
-    dismiss,
   };
 }
