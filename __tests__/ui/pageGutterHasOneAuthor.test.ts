@@ -1,5 +1,35 @@
 import { readFileSync } from 'fs';
 import { sync as glob } from 'glob';
+import * as ts from 'typescript';
+import { nodesOf, parseSource } from '#/test-utils/sourceAst';
+
+/**
+ * Whether the file reads the gutter token: `….layout.pageGutter`, or
+ * `pageGutter` destructured from `….layout`. A comment naming it is not a read.
+ */
+const readsGutter = (file: string, text?: string): boolean =>
+  nodesOf(parseSource(file, text)).some(node => {
+    if (ts.isPropertyAccessExpression(node)) {
+      return (
+        node.name.text === 'pageGutter' &&
+        /(^|\.)layout$/.test(node.expression.getText())
+      );
+    }
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name)
+    ) {
+      return (
+        !!node.initializer &&
+        /(^|\.)layout$/.test(node.initializer.getText()) &&
+        node.name.elements.some(
+          element =>
+            (element.propertyName ?? element.name).getText() === 'pageGutter',
+        )
+      );
+    }
+    return false;
+  });
 
 /**
  * The gutter had six authors on the pantry alone, agreeing only because the
@@ -153,10 +183,17 @@ const sources = glob('src/**/*.{ts,tsx}', {
 });
 
 describe('the page gutter has one author per page', () => {
+  it('sees a destructured read, and no read in a comment', () => {
+    expect(
+      readsGutter('planted.ts', 'const { pageGutter } = theme.layout;'),
+    ).toBe(true);
+    expect(
+      readsGutter('planted.ts', '// theme.layout.pageGutter, by the screen'),
+    ).toBe(false);
+  });
+
   it('is read only by a page container, its chrome, or a deliberate negation', () => {
-    const readers = sources.filter(f =>
-      readFileSync(f, 'utf8').includes('layout.pageGutter'),
-    );
+    const readers = sources.filter(f => readsGutter(f));
     const unlisted = readers.filter(f => !(f in AUTHORS)).sort();
 
     // A new reader is a new author of an edge. Add it to AUTHORS with the
@@ -168,7 +205,7 @@ describe('the page gutter has one author per page', () => {
     const stale = Object.keys(AUTHORS)
       .filter(f => {
         try {
-          return !readFileSync(f, 'utf8').includes('layout.pageGutter');
+          return !readsGutter(f);
         } catch {
           return true;
         }
@@ -228,7 +265,7 @@ describe('the page gutter has one author per page', () => {
     expect(skeletonLists.length).toBeGreaterThan(0);
 
     const flush = skeletonLists
-      .filter(f => !readFileSync(f, 'utf8').includes('layout.pageGutter'))
+      .filter(f => !readsGutter(f))
       .filter(f => !(f in SKELETON_INHERITS_AN_INSET))
       .sort();
 
@@ -239,7 +276,7 @@ describe('the page gutter has one author per page', () => {
     const doubled = Object.keys(SKELETON_INHERITS_AN_INSET)
       .filter(f => {
         try {
-          return readFileSync(f, 'utf8').includes('layout.pageGutter');
+          return readsGutter(f);
         } catch {
           return true;
         }
