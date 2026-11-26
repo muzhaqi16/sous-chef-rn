@@ -1,5 +1,14 @@
-import { readdirSync, readFileSync, statSync } from 'fs';
-import { join, relative } from 'path';
+import { readFileSync } from 'fs';
+import { sync as glob } from 'glob';
+import { join } from 'path';
+import * as ts from 'typescript';
+import {
+  calleeName,
+  lineOf,
+  nodesOf,
+  parseSource,
+  propertyName,
+} from '#/test-utils/sourceAst';
 
 /**
  * A hand-built mock states its operation's data, so it is typed by that
@@ -18,37 +27,66 @@ import { join, relative } from 'path';
  * where it is built and may still declare the bare type.
  */
 
-const ROOTS = ['src', '__tests__'];
 const HELPER = join('__tests__', 'helpers', 'apolloMockProvider.tsx');
 /** This file quotes the pattern it bans, so it cannot scan itself. */
 const SELF = join('__tests__', 'apollo', 'typedMockFixtures.test.ts');
 
-const collect = (dir: string, found: string[] = []): string[] => {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) collect(full, found);
-    else if (/\.tsx?$/.test(entry)) found.push(relative(process.cwd(), full));
-  }
-  return found;
-};
-
-const sources = ROOTS.flatMap(root => collect(root)).filter(
+const sources = glob('{src,__tests__}/**/*.{ts,tsx}').filter(
   file => file !== HELPER && file !== SELF,
 );
 
-/** A bare `: MockedResponse` annotation — neither `MockedResponse<…>` nor `[]`. */
-const BARE = /:\s*MockedResponse\b(?!\s*[<[])/g;
+/** A bare `MockedResponse`: no operation type argument, and not an array. */
+const isBareMock = (type: ts.TypeNode | undefined): boolean =>
+  !!type &&
+  ts.isTypeReferenceNode(type) &&
+  type.typeName.getText() === 'MockedResponse' &&
+  !type.typeArguments;
 
-/** Hand-built fixtures: the declaration writes its own `request: { query: … }`. */
-const handBuilt = sources.flatMap(file => {
-  const code = readFileSync(join(process.cwd(), file), 'utf8');
-  return [...code.matchAll(BARE)].flatMap(match => {
-    const window = code.slice(match.index, match.index + 600);
-    const buildsRequest = /request:\s*\{[\s\S]{0,120}?query:/.test(window);
-    const delegates = /recordMock\(/.test(window);
-    if (!buildsRequest || delegates) return [];
-    return [`${file}:${code.slice(0, match.index).split('\n').length}`];
-  });
+/** An object literal that writes its own `request: { query }`. */
+const buildsRequest = (init: ts.Expression | undefined): boolean => {
+  if (!init || !ts.isObjectLiteralExpression(init)) return false;
+  const request = init.properties.find(
+    (property): property is ts.PropertyAssignment =>
+      ts.isPropertyAssignment(property) &&
+      propertyName(property.name) === 'request',
+  );
+  return (
+    !!request &&
+    ts.isObjectLiteralExpression(request.initializer) &&
+    request.initializer.properties.some(
+      property =>
+        (ts.isPropertyAssignment(property) ||
+          ts.isShorthandPropertyAssignment(property)) &&
+        propertyName(property.name) === 'query',
+    )
+  );
+};
+
+/** Hand-built fixtures typed only as a bare `MockedResponse`, as `file:line`. */
+function handBuiltIn(file: string, text?: string): string[] {
+  return nodesOf(parseSource(file, text))
+    .filter(ts.isVariableDeclaration)
+    .filter(declaration => isBareMock(declaration.type))
+    .filter(declaration => {
+      const init = declaration.initializer;
+      const delegates =
+        !!init &&
+        ts.isCallExpression(init) &&
+        calleeName(init) === 'recordMock';
+      return !delegates && buildsRequest(init);
+    })
+    .map(declaration => `${file}:${lineOf(declaration)}`);
+}
+
+const handBuilt = sources.flatMap(file => handBuiltIn(file));
+
+it('catches a hand-built mock whose request comes after a long result', () => {
+  const planted = `const mock: MockedResponse = {
+    result: { data: ${JSON.stringify({ rows: Array(40).fill('row') })} },
+    request: { query: GetPantryDocument },
+  };`;
+
+  expect(handBuiltIn('planted.ts', planted)).toEqual(['planted.ts:1']);
 });
 
 it('finds the mock fixtures at all, so the check below is not vacuous', () => {
