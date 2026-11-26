@@ -49,6 +49,7 @@ const purchases = () =>
             purchase('another-member', '2026-11-15T16:00:00.000Z', 'actor-B'),
             purchase('last-month', '2026-10-20T15:00:00.000Z', ME),
           ],
+          pageInfo: { hasNextPage: false, endCursor: null },
         },
       },
     },
@@ -84,11 +85,72 @@ describe('useEarlierPurchases', () => {
     await drainTimers();
 
     expect(asked.fired[0]).toMatchObject({ homeId: 'H1', itemId: 'item-eggs' });
-    expect(result.current.map(({ id, version }) => ({ id, version }))).toEqual([
+    expect(result.current.state).toBe('ready');
+    expect(
+      result.current.purchases.map(({ id, version }) => ({ id, version })),
+    ).toEqual([
       { id: IN_04.purchaseId, version: 3 },
       { id: 'older', version: 3 },
     ]);
-    expect(result.current[0]?.amount).toBe('12 pc');
+    expect(result.current.purchases[0]?.amount).toBe('12 pc');
+  });
+
+  // Until the API filters by buyer, the user's own may sit past the first page.
+  it('reads every page before offering any', async () => {
+    const asked = recordMock(EarlierPurchasesOfItemDocument, {
+      dataFor: vars => ({
+        home: {
+          id: 'H1',
+          purchasesConnection: vars.after
+            ? {
+                edges: [
+                  purchase(IN_04.purchaseId, '2026-11-15T15:00:00.000Z', ME),
+                ],
+                pageInfo: { hasNextPage: false, endCursor: 'c2' },
+              }
+            : {
+                edges: [
+                  purchase('another', '2026-11-14T15:00:00.000Z', 'actor-B'),
+                ],
+                pageInfo: { hasNextPage: true, endCursor: 'c1' },
+              },
+        },
+      }),
+    });
+    const { result } = renderHookWithApollo(
+      () => useEarlierPurchases('item-eggs'),
+      { operationMocks: [asked.mock] },
+    );
+    await drainTimers();
+
+    expect(asked.fired.map(vars => vars.after ?? null)).toEqual([null, 'c1']);
+    expect(result.current.state).toBe('ready');
+    expect(result.current.purchases.map(({ id }) => id)).toEqual([
+      IN_04.purchaseId,
+    ]);
+  });
+
+  // Offering none would read as "you bought none".
+  it('says it could not check, offline or not', async () => {
+    const failed = recordMock(EarlierPurchasesOfItemDocument, {
+      error: new Error('Network request failed'),
+    });
+    useStore.setState({ isOnline: false });
+    const offline = renderHookWithApollo(
+      () => useEarlierPurchases('item-eggs'),
+      { operationMocks: [failed.mock] },
+    );
+    await drainTimers();
+    expect(offline.result.current).toEqual({ purchases: [], state: 'offline' });
+    offline.unmount();
+
+    useStore.setState({ isOnline: true, apiReachable: true });
+    const online = renderHookWithApollo(
+      () => useEarlierPurchases('item-eggs'),
+      { operationMocks: [failed.mock] },
+    );
+    await drainTimers();
+    expect(online.result.current).toEqual({ purchases: [], state: 'error' });
   });
 
   it('offers none for a line naming no product', async () => {
@@ -98,7 +160,7 @@ describe('useEarlierPurchases', () => {
     });
     await drainTimers();
 
-    expect(result.current).toEqual([]);
+    expect(result.current).toEqual({ purchases: [], state: 'empty' });
     expect(asked.fired).toHaveLength(0);
   });
 });

@@ -1,18 +1,20 @@
 # The household's purchases of a receipt line's product in the days before the
 # receipt's: one of them the line may be the receipt for, whichever pantry it
-# stocked, or none.
+# stocked, or none. Paged by `$after` until the API filters by buyer.
 query EarlierPurchasesOfItem(
   $homeId: ID!
   $itemId: ID!
   $fromDate: DateTime!
   $toDate: DateTime!
+  $after: String
 ) {
   home(id: $homeId) {
     id
     version
     purchasesConnection(
       filters: { itemId: $itemId, fromDate: $fromDate, toDate: $toDate }
-      first: 20
+      first: 100
+      after: $after
     ) {
       edges {
         node {

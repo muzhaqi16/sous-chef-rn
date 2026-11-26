@@ -6,6 +6,7 @@ import { receiptsTestIDs } from '../../testIDs';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { seedChoice } from '../../utils/receiptReviewLines';
 import { drainTimers } from '#/test-utils/drainTimers';
+import type { EarlierPurchases } from '../useEarlierPurchases';
 
 // The real slot, so the form's bar renders where the sheet holds it.
 jest.mock('#components/templates/Sheet', () => {
@@ -96,12 +97,7 @@ jest.mock('#features/catalog/hooks/useResolveUnit', () => {
 });
 
 // The earlier purchases a line may be the receipt for, read through the API.
-let mockEarlier: {
-  id: string;
-  version: number;
-  amount: string;
-  boughtOn: string;
-}[] = [];
+let mockEarlier: EarlierPurchases = { purchases: [], state: 'empty' };
 jest.mock('../useEarlierPurchases', () => ({
   useEarlierPurchases: () => mockEarlier,
 }));
@@ -289,10 +285,22 @@ describe('the receipt for an earlier purchase', () => {
     boughtOn: '11/15/2026',
   };
   beforeEach(() => {
-    mockEarlier = [EGGS_BOUGHT];
+    mockEarlier = { purchases: [EGGS_BOUGHT], state: 'ready' };
   });
   afterEach(() => {
-    mockEarlier = [];
+    mockEarlier = { purchases: [], state: 'empty' };
+  });
+
+  // Offering none would read as "you bought none".
+  it.each([
+    ['offline', 'receipts.review.earlierOffline'],
+    ['error', 'receipts.review.earlierFailed'],
+  ] as const)('says when it could not check, %s', (state, copy) => {
+    mockEarlier = { purchases: [], state };
+    renderSheet();
+
+    expect(screen.getByText(t(copy))).toBeOnTheScreen();
+    expect(screen.queryByText('12 pc on 11/15/2026')).toBeNull();
   });
 
   // IN-04: picked, the line fills in that purchase and stocks nothing again.
@@ -313,7 +321,10 @@ describe('the receipt for an earlier purchase', () => {
 
   // Refused as stale, the purchase it fills is offered as it reads now.
   it('sends a purchase that changed since it was picked as it reads now', async () => {
-    mockEarlier = [{ ...EGGS_BOUGHT, version: 4 }];
+    mockEarlier = {
+      purchases: [{ ...EGGS_BOUGHT, version: 4 }],
+      state: 'ready',
+    };
     const { onSave } = renderSheet(MILK, {
       choice: lineChoice({
         price: MILK.price,

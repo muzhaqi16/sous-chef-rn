@@ -15,6 +15,7 @@ export const homeTypePolicies: TypePolicies = {
       invitesConnection: mergeConnectionByNodeId(),
       pantriesConnection: mergeConnectionByNodeId([]),
       shoppingListsConnection: mergeConnectionByNodeId([]),
+      purchasesConnection: mergeConnectionByNodeId(),
     },
   },
   Query: {

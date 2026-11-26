@@ -145,7 +145,11 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   };
   const listItemName = listItemNameFor({ itemId, unitId, unitText });
   // Offered, never picked for the user: a similar purchase may be another one.
-  const earlier = useEarlierPurchases(itemId);
+  const { purchases: earlier, state: earlierState } =
+    useEarlierPurchases(itemId);
+  // Said, never left blank: no earlier purchase offered reads as none made.
+  const earlierUnchecked =
+    earlierState === 'offline' || earlierState === 'error';
   const pickedElsewhere =
     existingPurchaseId !== null &&
     !earlier.some(purchase => purchase.id === existingPurchaseId);
@@ -307,24 +311,35 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
           )}
         </View>
 
-        {earlierOptions.length > 1 && (
+        {earlierOptions.length > 1 || earlierUnchecked ? (
           <View style={styles.suggestions}>
             <Text role="caption" tone="secondary">
               {t('receipts.review.earlierTitle')}
             </Text>
-            <ChipScrollRow
-              options={earlierOptions}
-              selected={existingPurchaseId ?? NEW_PURCHASE}
-              onSelect={key => {
-                const picked = earlier.find(purchase => purchase.id === key);
-                if (key !== NEW_PURCHASE && !picked) return;
-                setValue('existingPurchaseId', picked?.id ?? null, {
-                  shouldDirty: true,
-                });
-                setValue('existingPurchaseVersion', picked?.version ?? null);
-              }}
-              edgeFadeColor="surface"
-            />
+            {earlierUnchecked ? (
+              <Text role="caption" tone="tertiary">
+                {t(
+                  earlierState === 'offline'
+                    ? 'receipts.review.earlierOffline'
+                    : 'receipts.review.earlierFailed',
+                )}
+              </Text>
+            ) : null}
+            {earlierOptions.length > 1 ? (
+              <ChipScrollRow
+                options={earlierOptions}
+                selected={existingPurchaseId ?? NEW_PURCHASE}
+                onSelect={key => {
+                  const picked = earlier.find(purchase => purchase.id === key);
+                  if (key !== NEW_PURCHASE && !picked) return;
+                  setValue('existingPurchaseId', picked?.id ?? null, {
+                    shouldDirty: true,
+                  });
+                  setValue('existingPurchaseVersion', picked?.version ?? null);
+                }}
+                edgeFadeColor="surface"
+              />
+            ) : null}
             {attached ? (
               <Text role="caption" tone="tertiary">
                 {t('receipts.review.earlierBody')}
@@ -340,7 +355,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
               </Text>
             ) : null}
           </View>
-        )}
+        ) : null}
 
         {!!listItemName && !attached && (
           <Controller

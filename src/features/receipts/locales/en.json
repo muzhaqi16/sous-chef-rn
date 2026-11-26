@@ -154,6 +154,8 @@
       "earlierPurchase": "{{amount}} on {{date}}",
       "earlierPicked": "The earlier purchase",
       "earlierBody": "This receipt fills in that purchase's price and store. Nothing is added to your pantry again.",
+      "earlierOffline": "Earlier purchases show here once you're back online.",
+      "earlierFailed": "Earlier purchases couldn't be checked.",
       "purchaseChanged": "This purchase changed since you picked it. Check it again before adding.",
       "purchaseDiffersAmount": "The amount isn't what the picked purchase recorded.",
       "purchaseDiffersPaid": "The price isn't what the picked purchase recorded.",
