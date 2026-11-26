@@ -114,14 +114,6 @@ interface BuildItemOverrides {
     perUnitNetWeightUnit?: { id: string; name: string; symbol: string } | null;
     totalNetWeight?: number | null;
   } | null;
-  quantityBreakdown?: {
-    fullPackages: number;
-    looseContentUnits: number;
-    contentUnit: { id: string; name: string; symbol: string } | null;
-    totalContentUnits: number;
-    remainingWeight: number | null;
-    remainingWeightUnit: { id: string; name: string; symbol: string } | null;
-  } | null;
   activeBatchCount?: number;
   remainingPortions?: number | null;
   portionUnit?: { id: string; name: string; symbol: string } | null;
@@ -242,27 +234,6 @@ function buildItem(
             : null,
         }
       : null,
-    quantityBreakdown: overrides.quantityBreakdown
-      ? {
-          __typename: 'QuantityBreakdown',
-          fullPackages: overrides.quantityBreakdown.fullPackages,
-          looseContentUnits: overrides.quantityBreakdown.looseContentUnits,
-          totalContentUnits: overrides.quantityBreakdown.totalContentUnits,
-          remainingWeight: overrides.quantityBreakdown.remainingWeight,
-          contentUnit: overrides.quantityBreakdown.contentUnit
-            ? asAbbreviation({
-                __typename: 'Unit',
-                ...overrides.quantityBreakdown.contentUnit,
-              })
-            : null,
-          remainingWeightUnit: overrides.quantityBreakdown.remainingWeightUnit
-            ? asAbbreviation({
-                __typename: 'Unit',
-                ...overrides.quantityBreakdown.remainingWeightUnit,
-              })
-            : null,
-        }
-      : null,
   };
 }
 
@@ -343,21 +314,10 @@ describe('PantryItemCard', () => {
     renderCard({
       expiresOn: toDateKey(expires),
       storageLocationName: 'Freezer',
-      quantityBreakdown: {
-        fullPackages: 2,
-        looseContentUnits: 0,
-        contentUnit: { id: 'gal', name: 'gallon', symbol: 'gal' },
-        totalContentUnits: 2,
-        remainingWeight: null,
-        remainingWeightUnit: null,
-      },
     });
-    // The status slot takes the expiry and the location keeps its own; the
-    // breakdown has no slot on the row and belongs to the detail screen. No
-    // value displaces another.
+    // The status slot takes the expiry and the location keeps its own.
     expect(screen.getAllByText(/day/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Freezer')).toBeTruthy();
-    expect(screen.queryByText(/gallon/i)).toBeNull();
   });
 
   it('does not render default storage tab labels as location', () => {

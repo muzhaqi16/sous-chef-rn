@@ -169,7 +169,6 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
     netWeightUnit: null,
     storageLocation: null,
     packageBreakdown: null,
-    quantityBreakdown: null,
     pantryId: 'pantry-1',
     minQuantity: null,
     restockQuantity: null,

@@ -173,7 +173,6 @@ describe('useHybridPantrySearch', () => {
                     netWeightUnit: null,
                     storageLocation: null,
                     packageBreakdown: null,
-                    quantityBreakdown: null,
                   },
                 },
               ],

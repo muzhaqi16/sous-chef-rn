@@ -224,7 +224,6 @@ export function pantryItemData(
           }
         : null,
       packageBreakdown: null,
-      quantityBreakdown: null,
       brand: fixture.brandName
         ? { __typename: 'Brand', version: 1, id: 'b1', name: fixture.brandName }
         : null,

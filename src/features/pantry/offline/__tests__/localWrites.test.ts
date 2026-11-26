@@ -161,7 +161,6 @@ const restocked = (id: string, extra: Record<string, unknown> = {}) => ({
         portionUnit: null,
         netWeightUnit: null,
         packageBreakdown: null,
-        quantityBreakdown: null,
       },
     },
   },

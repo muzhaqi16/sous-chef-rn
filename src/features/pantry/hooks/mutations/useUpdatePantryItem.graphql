@@ -103,30 +103,6 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
     }
     totalNetWeight
   }
-  quantityBreakdown {
-    fullPackages
-    looseContentUnits
-    contentUnit {
-      id
-      name
-      symbol
-      localizedSymbolForms {
-        one
-        other
-      }
-    }
-    totalContentUnits
-    remainingWeight
-    remainingWeightUnit {
-      id
-      name
-      symbol
-      localizedSymbolForms {
-        one
-        other
-      }
-    }
-  }
 }
 
 # What the write itself needs of the row, so a stack a list holds can be edited

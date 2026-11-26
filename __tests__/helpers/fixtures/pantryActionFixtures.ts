@@ -55,7 +55,6 @@ export function actionItemCache(overrides: Record<string, unknown> = {}) {
         netWeightUnit: null,
         consumeUnit: null,
         packageBreakdown: null,
-        quantityBreakdown: null,
         ...overrides,
       },
     },
