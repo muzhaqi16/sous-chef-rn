@@ -4,6 +4,9 @@
  */
 export const mealPlanTestIDs = {
   screen: 'meal-plan-screen',
+  /** The search fields of the template browser and the add-meal sheet. */
+  templateBrowserSearchInput: 'template-browser-search-input',
+  addMealSearchInput: 'add-meal-search-input',
   itemCompleteToggle: (itemId: string) => `meal-plan-item-complete-${itemId}`,
   mealsIncomplete: 'meal-plan-meals-incomplete',
 

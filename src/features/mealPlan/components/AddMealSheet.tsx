@@ -44,6 +44,7 @@ import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { Loading } from '#components/molecules/Loading';
+import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 
 interface AddMealSheetProps {
   visible: boolean;
@@ -211,6 +212,7 @@ const AddMealContent: React.FC<AddMealContentProps> = ({
         <SearchBar
           ref={searchBarRef}
           placeholder={t('addMealSheet.searchPlaceholder')}
+          testID={mealPlanTestIDs.addMealSearchInput}
           onChangeText={setSearchQuery}
           onSubmitEditing={handleSearchCatalog}
           returnKeyType="search"

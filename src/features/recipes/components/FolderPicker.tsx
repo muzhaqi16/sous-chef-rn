@@ -20,6 +20,7 @@ import { useOpening } from '#hooks/ui/useOpening';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { Divider } from '#components/atoms/Divider';
 import { FolderNameForm } from '#features/recipes/components/FolderPicker/FolderNameForm';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
@@ -251,6 +252,7 @@ const FolderPickerContent: React.FC<FolderPickerContentProps> = ({
       {folders.length > 5 && (
         <SearchBar
           placeholder={t('folderPicker.searchPlaceholder')}
+          testID={recipesTestIDs.folderSearchInput}
           value={searchQuery}
           onChangeText={setSearchQuery}
           autoCapitalize="none"

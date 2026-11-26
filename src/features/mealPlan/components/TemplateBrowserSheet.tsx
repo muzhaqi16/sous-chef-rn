@@ -26,6 +26,7 @@ import { TemplateCategory } from '#graphql/generated/schemaTypes';
 import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
+import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 
 const CATEGORY_KEYS: {
   key: TemplateCategory | undefined;
@@ -122,6 +123,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
         {/* Search bar */}
         <SearchBar
           placeholder={t('templateBrowser.searchPlaceholder')}
+          testID={mealPlanTestIDs.templateBrowserSearchInput}
           value={searchQuery}
           onChangeText={setSearchQuery}
           containerStyle={styles.search}

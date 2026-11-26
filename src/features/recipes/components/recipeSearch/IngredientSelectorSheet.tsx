@@ -19,6 +19,7 @@ import {
 import type { useRecipeScreen } from '#features/recipes/screens/useRecipeScreen';
 import { Text } from '#components/atoms/Text';
 import { hitSlop } from '#theme/foundations/sizes';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 // ── Types ──
 
@@ -109,6 +110,7 @@ const IngredientSelector: React.FC<{
         {screen.pantryItems.length > 8 && (
           <SearchBar
             placeholder={t('recipes.searchIngredientsPlaceholder')}
+            testID={recipesTestIDs.ingredientSearchInput}
             onChangeText={setQuery}
             debounceMs={250}
             autoCapitalize="none"

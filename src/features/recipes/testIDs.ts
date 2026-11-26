@@ -8,6 +8,10 @@ export const recipesTestIDs = {
   searchInput: 'recipe-main-search-input',
   searchModeTab: (mode: string) => `recipe-search-mode-${mode}`,
   ingredientPicker: 'recipe-ingredient-picker',
+  /** The search fields of the pantry-ingredient, tag and folder sheets. */
+  ingredientSearchInput: 'recipe-ingredient-search-input',
+  tagSearchInput: 'recipe-tag-search-input',
+  folderSearchInput: 'recipe-folder-search-input',
   activeFiltersSummary: 'active-filters-summary',
 
   myRecipesScreen: 'my-recipes-screen',

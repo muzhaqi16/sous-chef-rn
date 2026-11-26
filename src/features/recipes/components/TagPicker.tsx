@@ -13,6 +13,7 @@ import { identity, useLocalSearch } from '#hooks/search/useLocalSearch';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
 import { useOpening } from '#hooks/ui/useOpening';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 const TagListSeparator = () => <View style={styles.tagSeparator} />;
 // Every row is the same component, so one recycling pool is correct.
@@ -84,6 +85,7 @@ const TagPickerContent: React.FC<TagPickerContentProps> = ({
       {tags.length > 5 && (
         <SearchBar
           placeholder={t('tagPicker.searchPlaceholder')}
+          testID={recipesTestIDs.tagSearchInput}
           value={searchQuery}
           onChangeText={setSearchQuery}
           autoCapitalize="none"
