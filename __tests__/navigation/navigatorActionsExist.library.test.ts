@@ -34,8 +34,25 @@ function moduleFiles(dir: string): string[] {
   });
 }
 
+/** Each action call in `text` whose creator the router does not export. */
+const missingCreators = (text: string): string[] =>
+  [...text.matchAll(CALL)]
+    .filter(
+      ([, group = '', creator = '']) =>
+        typeof CREATORS[group]?.[creator] !== 'function',
+    )
+    .map(([, group, creator]) => `${group}.${creator}`);
+
 const calls = NAVIGATORS.flatMap(name => {
-  const lib = join(__dirname, '..', '..', 'node_modules', name, 'lib', 'module');
+  const lib = join(
+    __dirname,
+    '..',
+    '..',
+    'node_modules',
+    name,
+    'lib',
+    'module',
+  );
   return moduleFiles(lib).flatMap(file =>
     [...readFileSync(file, 'utf8').matchAll(CALL)].map(
       ([, group = '', creator = '']) => ({
@@ -54,6 +71,14 @@ describe('navigator packages and the router they call', () => {
     expect(calls.map(found => found.call)).toEqual(
       expect.arrayContaining(['StackActions.pop', 'StackActions.dismiss']),
     );
+  });
+
+  it('catches a call to an action the router does not have', () => {
+    expect(
+      missingCreators(
+        'navigation.dispatch(StackActions.pop(1)); TabActions.nope();',
+      ),
+    ).toEqual(['TabActions.nope']);
   });
 
   it.each(calls)('$call in $file exists', ({ group, creator }) => {
