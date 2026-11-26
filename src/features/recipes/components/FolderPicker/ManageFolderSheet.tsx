@@ -55,10 +55,11 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
   const { t } = useTranslation();
   return (
     <Sheet
-      mode="form"
+      mode="view"
       visible={visible}
       onDismiss={onDismiss}
-      snapPoints={['45%']}
+      snapPoints={[]}
+      enableDynamicSizing
       contentContainerStyle={styles.bottomSheetContent}
       header={
         <SheetHeader title={t('folderPicker.manageTitle')} onClose={onClose} />

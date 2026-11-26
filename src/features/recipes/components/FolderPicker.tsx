@@ -308,7 +308,6 @@ const FolderPickerContent: React.FC<FolderPickerContentProps> = ({
           getItemType={getItemType}
           keyExtractor={(item: string) => item}
           showsVerticalScrollIndicator={false}
-          style={styles.folderList}
           contentContainerStyle={styles.folderListContent}
         />
       ) : folders.length > 0 && searchQuery ? (
@@ -353,9 +352,6 @@ const styles = StyleSheet.create(theme => ({
   newFolder: {
     marginBottom: theme.spacing.md,
   },
-  folderList: {
-    maxHeight: 250,
-  },
   folderListContent: {
     paddingBottom: theme.spacing.sm,
   },
@@ -381,7 +377,8 @@ const styles = StyleSheet.create(theme => ({
   },
   bottomSheetContent: {
     flex: 1,
-    padding: theme.spacing.mdPlus,
+    paddingHorizontal: theme.layout.pageGutter,
+    paddingVertical: theme.spacing.mdPlus,
   },
   search: {
     marginBottom: theme.spacing.md,

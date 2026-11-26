@@ -104,6 +104,8 @@ const AUTHORS: Record<string, string> = {
     'list sheet, self-inset',
   'src/features/recipes/components/modals/IngredientMatchingSheet.tsx':
     'list sheet, self-inset',
+  'src/features/recipes/components/TagPicker.tsx': 'list sheet, self-inset',
+  'src/features/recipes/components/FolderPicker.tsx': 'list sheet, self-inset',
 
   // One host, which does not inset it.
   'src/features/shoppingList/components/ShoppingListTabs/FilterTabBar.tsx':

@@ -81,43 +81,42 @@ const TagPickerContent: React.FC<TagPickerContentProps> = ({
 
   return (
     <>
-      {/* Search Input */}
-      {tags.length > 5 && (
-        <SearchBar
-          placeholder={t('tagPicker.searchPlaceholder')}
-          testID={recipesTestIDs.tagSearchInput}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          autoCapitalize="none"
-          containerStyle={styles.search}
-        />
-      )}
-
-      {/* Clear All / Selected Count */}
-      <View style={styles.selectionRow}>
-        <Text role="caption" tone="secondary">
-          {selectedTags.length === 0
-            ? t('tagPicker.noneSelected')
-            : t('tagPicker.selectedCount', {
-                count: selectedTags.length,
-              })}
-        </Text>
-        {selectedTags.length > 0 && (
-          <Pressable
-            onPress={handleClearAll}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Text role="label" tone="accent">
-              {t('labels.clearAll')}
-            </Text>
-          </Pressable>
+      <View style={styles.header}>
+        {tags.length > 5 && (
+          <SearchBar
+            placeholder={t('tagPicker.searchPlaceholder')}
+            testID={recipesTestIDs.tagSearchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            containerStyle={styles.search}
+          />
         )}
+
+        <View style={styles.selectionRow}>
+          <Text role="caption" tone="secondary">
+            {selectedTags.length === 0
+              ? t('tagPicker.noneSelected')
+              : t('tagPicker.selectedCount', {
+                  count: selectedTags.length,
+                })}
+          </Text>
+          {selectedTags.length > 0 && (
+            <Pressable
+              onPress={handleClearAll}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Text role="label" tone="accent">
+                {t('labels.clearAll')}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+
+        <Divider style={styles.dividerGap} />
       </View>
 
-      {/* Divider */}
-      <Divider style={styles.dividerGap} />
-
-      {/* Tags List */}
+      {/* The list fills what the header leaves. */}
       {loading ? (
         <View style={styles.centeredSpinner}>
           <Text role="body" tone="secondary">
@@ -133,7 +132,6 @@ const TagPickerContent: React.FC<TagPickerContentProps> = ({
           keyExtractor={(item: string) => item}
           extraData={selectedTags}
           showsVerticalScrollIndicator={false}
-          style={styles.tagList}
           contentContainerStyle={styles.tagListContent}
           ItemSeparatorComponent={TagListSeparator}
         />
@@ -164,12 +162,11 @@ export const TagPicker: React.FC<TagPickerProps> = ({
 
   return (
     <Sheet
-      mode="view"
+      mode="list"
       visible={visible}
       onDismiss={onCancel}
       title={t('tagPicker.filterByTags')}
       snapPoints={['55%', '70%']}
-      contentContainerStyle={styles.bottomSheetContent}
     >
       {opening ? <TagPickerContent key={opening.id} {...content} /> : null}
     </Sheet>
@@ -177,8 +174,8 @@ export const TagPicker: React.FC<TagPickerProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  bottomSheetContent: {
-    paddingVertical: theme.spacing.mdPlus,
+  header: {
+    paddingHorizontal: theme.layout.pageGutter,
   },
   selectionRow: {
     flexDirection: 'row',
@@ -204,10 +201,8 @@ const styles = StyleSheet.create(theme => ({
   dividerGap: {
     marginVertical: theme.spacing.md,
   },
-  tagList: {
-    maxHeight: 250,
-  },
   tagListContent: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingBottom: theme.spacing.sm,
   },
   tagSeparator: {
@@ -218,6 +213,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   emptyInset: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingVertical: theme.spacing.lg,
     alignItems: 'center',
   },
