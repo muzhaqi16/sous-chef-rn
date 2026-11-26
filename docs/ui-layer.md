@@ -44,8 +44,11 @@ optional:
   no bar takes a bare node. In `Header` each is a whole 44pt target and a label
   is padded by the slack an icon has, so Save lands on the gutter just as a
   glyph does. The tab header, `Sheet` and `ActionTray` sit on a content gutter,
-  so there the glyph takes the edge and `hitSlop` makes the 44pt. Glyphs sit the
-  same distance apart in both; the same test pins all of it.
+  so there each target is a whole box at the platform floor and the group is
+  pulled out by the glyph's slack in it, worked out from the theme, so the glyph
+  takes the edge at every density (`gutterTargetGeometry`). `hitSlop` cannot do
+  it: a touch never reaches past the parent's bounds. The same test pins all of
+  it, density included.
 - **Three trailing slots.** Past three actions, `Header` and
   `CollapsingHeroDetail` keep the first two and put the rest behind "more" (an
   `ActionTray` of `ActionMenuRow`s, `src/components/organisms/HeaderActionMenu.tsx`),
