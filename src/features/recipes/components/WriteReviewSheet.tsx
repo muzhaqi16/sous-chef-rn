@@ -118,6 +118,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
           name="comment"
           render={({ field }) => (
             <ThemedTextInput
+              ref={field.ref}
               defaultValue={field.value}
               onChangeText={field.onChange}
               onBlur={field.onBlur}

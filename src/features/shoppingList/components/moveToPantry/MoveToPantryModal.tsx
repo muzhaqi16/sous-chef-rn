@@ -162,6 +162,8 @@ const MoveToPantryForm: React.FC<MoveToPantryFormProps> = ({
                 render={({ field: unit, fieldState: unitState }) => (
                   <PackageContentsFields
                     variant="inline"
+                    sizeRef={size.ref}
+                    unitRef={unit.ref}
                     size={size.value}
                     onSizeChange={text => {
                       size.onChange(text);
@@ -234,6 +236,7 @@ const MoveToPantryForm: React.FC<MoveToPantryFormProps> = ({
             name="notes"
             render={({ field }) => (
               <FormInput
+                ref={field.ref}
                 label={t('labels.notesOptional')}
                 value={field.value}
                 onChangeText={field.onChange}

@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import { ThemedTextInput } from '#components/atoms/themedComponents';
+import { assignRef, type FocusableInputRef } from '#components/atoms/inputRef';
 import { Text } from '#components/atoms/Text';
 import { localizeNumericHint } from '#utils/formatters/number';
 
@@ -21,6 +22,8 @@ interface FractionInputProps {
     | 'decimal-pad'
     | 'numbers-and-punctuation';
   required?: boolean;
+  /** The input, for a host that only focuses it (react-hook-form). */
+  ref?: React.Ref<FocusableInputRef>;
 }
 
 /** Accepts decimals ("1.5"), simple fractions ("1/4") and mixed numbers ("1 1/4"). */
@@ -34,6 +37,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   testID,
   keyboardType = 'numbers-and-punctuation',
   required = false,
+  ref,
 }) => {
   const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
@@ -71,6 +75,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
       inputTestID={testID}
     >
       <ThemedTextInput
+        ref={node => assignRef(ref, node)}
         style={variantStyles.input}
         value={value}
         onChangeText={handleChangeText}

@@ -191,7 +191,10 @@ const ConsumeFields: React.FC<{
 }> = ({ control, compact, shared, showFifoHint, purposeOptions }) => {
   const { t } = useTranslation();
   const [details, setDetails] = useState(false);
-  const { field: quantity, fieldState: quantityState } = useController({
+  const {
+    field: { ref: quantityRef, ...quantity },
+    fieldState: quantityState,
+  } = useController({
     control,
     name: 'quantityInput',
   });
@@ -217,6 +220,7 @@ const ConsumeFields: React.FC<{
           }
           error={quantityState.error?.message}
           required
+          ref={quantityRef}
           value={quantityInput}
           onChangeText={quantity.onChange}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
@@ -291,6 +295,7 @@ const ConsumeFields: React.FC<{
               name="notes"
               render={({ field }) => (
                 <FormInput
+                  ref={field.ref}
                   label={t('labels.notes')}
                   value={field.value}
                   onChangeText={field.onChange}

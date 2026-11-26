@@ -172,7 +172,10 @@ const WasteFields: React.FC<{
   wasteReasonOptions: Array<{ label: string; value: WasteReason }>;
 }> = ({ control, shared, wasteReasonOptions }) => {
   const { t } = useTranslation();
-  const { field: amount, fieldState: amountState } = useController({
+  const {
+    field: { ref: amountRef, ...amount },
+    fieldState: amountState,
+  } = useController({
     control,
     name: 'amountInput',
   });
@@ -190,6 +193,7 @@ const WasteFields: React.FC<{
         <FractionInput
           label={t('recordWaste.wasteAmount')}
           required
+          ref={amountRef}
           value={wasteAmountInput}
           onChangeText={amount.onChange}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
@@ -265,6 +269,7 @@ const WasteFields: React.FC<{
           name="notes"
           render={({ field }) => (
             <FormInput
+              ref={field.ref}
               label={t('labels.notes')}
               value={field.value}
               onChangeText={field.onChange}

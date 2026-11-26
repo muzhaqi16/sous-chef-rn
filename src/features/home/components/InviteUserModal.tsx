@@ -220,8 +220,9 @@ const InviteUserForm: React.FC<Omit<InviteUserModalProps, 'visible'>> = ({
         <Controller
           control={control}
           name="email"
-          render={({ field: { value, onChange, onBlur } }) => (
+          render={({ field: { value, onChange, onBlur, ref } }) => (
             <ThemedTextInput
+              ref={ref}
               style={variantStyles2.input}
               placeholder={t('inviteUser.emailPlaceholder')}
               value={value}

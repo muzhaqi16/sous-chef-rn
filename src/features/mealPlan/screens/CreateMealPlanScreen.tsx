@@ -201,6 +201,7 @@ export const CreateMealPlanScreen: React.FC = () => {
         name="name"
         render={({ field, fieldState }) => (
           <FormInput
+            ref={field.ref}
             label={t('mealPlan.name')}
             value={field.value}
             onChangeText={field.onChange}
@@ -218,6 +219,7 @@ export const CreateMealPlanScreen: React.FC = () => {
         name="description"
         render={({ field }) => (
           <FormTextArea
+            ref={field.ref}
             label={t('labels.description')}
             value={field.value}
             onChangeText={field.onChange}
@@ -262,6 +264,7 @@ export const CreateMealPlanScreen: React.FC = () => {
         name="servings"
         render={({ field }) => (
           <EditableCounter
+            ref={field.ref}
             label={t('labels.defaultServings')}
             value={field.value}
             onChangeText={field.onChange}
@@ -276,6 +279,7 @@ export const CreateMealPlanScreen: React.FC = () => {
         name="budget"
         render={({ field }) => (
           <FormInput
+            ref={field.ref}
             label={t('mealPlan.budgetAmount')}
             value={field.value}
             onChangeText={field.onChange}

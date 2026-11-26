@@ -69,6 +69,7 @@ export const FolderNameForm: React.FC<FolderNameFormProps> = ({
         <View style={style}>
           <View style={styles.row}>
             <ThemedTextInput
+              ref={field.ref}
               style={styles.input}
               placeholder={placeholder ?? t('labels.enterFolderName')}
               defaultValue={field.value}

@@ -258,6 +258,7 @@ const AdjustQuantityForm: React.FC<
               name="quantityInput"
               render={({ field, fieldState }) => (
                 <FractionInput
+                  ref={field.ref}
                   label={t('adjustQuantity.newQuantity')}
                   required
                   value={field.value}
@@ -275,6 +276,7 @@ const AdjustQuantityForm: React.FC<
               name="reason"
               render={({ field, fieldState }) => (
                 <FormInput
+                  ref={field.ref}
                   label={t('labels.reason')}
                   required
                   value={field.value}
@@ -293,6 +295,7 @@ const AdjustQuantityForm: React.FC<
                 name="remainingWeightInput"
                 render={({ field }) => (
                   <FormInput
+                    ref={field.ref}
                     label={t('labels.remainingWeight')}
                     value={field.value}
                     onChangeText={field.onChange}

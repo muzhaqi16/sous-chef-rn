@@ -6,6 +6,7 @@ import {
 } from '#features/catalog/hooks/useUnitAutocomplete';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
+import type { FieldChaining } from '#features/catalog/components/InlineAutocomplete';
 import type { UnitType } from '#graphql/generated/schemaTypes';
 import { unitLabel } from '#utils/formatQuantity';
 
@@ -27,6 +28,8 @@ interface UnitAutocompleteFieldProps {
   ) => void;
   /** See `InlineAutocomplete`: for hosts sized to their own content. */
   reserveDropdownSpace?: boolean;
+  /** Inline only: the input's ref, and where the return key moves on to. */
+  chaining?: FieldChaining;
 }
 
 export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
@@ -40,6 +43,7 @@ export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
   testID,
   onUnitSelected,
   reserveDropdownSpace,
+  chaining,
 }) => {
   const { t } = useTranslation();
   const unit = useUnitAutocomplete();
@@ -47,6 +51,7 @@ export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
   return (
     <GenericAutocompleteField<UnitItem>
       variant={variant}
+      chaining={chaining}
       reserveDropdownSpace={reserveDropdownSpace}
       label={label}
       value={value}

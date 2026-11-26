@@ -134,6 +134,7 @@ const SaveAsTemplateForm: React.FC<SaveAsTemplateFormProps> = ({
         name="name"
         render={({ field, fieldState }) => (
           <FormInput
+            ref={field.ref}
             label={t('labels.templateName')}
             value={field.value}
             onChangeText={field.onChange}
@@ -150,6 +151,7 @@ const SaveAsTemplateForm: React.FC<SaveAsTemplateFormProps> = ({
         name="description"
         render={({ field }) => (
           <FormTextArea
+            ref={field.ref}
             label={t('labels.description')}
             value={field.value}
             onChangeText={field.onChange}
@@ -183,6 +185,7 @@ const SaveAsTemplateForm: React.FC<SaveAsTemplateFormProps> = ({
         name="tags"
         render={({ field, fieldState }) => (
           <FormInput
+            ref={field.ref}
             label={t('saveAsTemplate.tagsLabel')}
             value={field.value}
             onChangeText={field.onChange}

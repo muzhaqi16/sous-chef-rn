@@ -60,6 +60,7 @@ const RenameHomeForm = ({
           name="name"
           render={({ field, fieldState }) => (
             <BaseInput
+              ref={field.ref}
               value={field.value}
               onChangeText={field.onChange}
               onBlur={field.onBlur}

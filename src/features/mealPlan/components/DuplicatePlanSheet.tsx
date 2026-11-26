@@ -128,6 +128,7 @@ const DuplicatePlanForm: React.FC<DuplicatePlanFormProps> = ({
         name="name"
         render={({ field, fieldState }) => (
           <FormInput
+            ref={field.ref}
             label={t('duplicatePlan.newNameLabel')}
             value={field.value}
             onChangeText={field.onChange}

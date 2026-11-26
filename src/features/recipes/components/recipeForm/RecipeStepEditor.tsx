@@ -69,6 +69,7 @@ const StepForm: React.FC<StepFormProps> = ({ step, onSave, onClose }) => {
         name="instruction"
         render={({ field, fieldState }) => (
           <FormTextArea
+            ref={field.ref}
             label={t('recipes.instruction')}
             value={field.value}
             onChangeText={field.onChange}

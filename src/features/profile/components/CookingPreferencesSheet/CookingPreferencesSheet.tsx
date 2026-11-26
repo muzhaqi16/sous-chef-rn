@@ -86,6 +86,7 @@ const CookingPreferencesForm: React.FC<CookingPreferencesFormProps> = ({
           name="cookTime"
           render={({ field, fieldState }) => (
             <FormInput
+              ref={field.ref}
               label={t('cookingPreferences.maxCookTime')}
               value={field.value}
               onChangeText={field.onChange}

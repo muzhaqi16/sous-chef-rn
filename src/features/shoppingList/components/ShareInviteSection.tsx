@@ -88,6 +88,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
           name="email"
           render={({ field, fieldState }) => (
             <EmailInput
+              ref={field.ref}
               containerStyle={styles.emailInputContainer}
               value={field.value}
               onChangeText={field.onChange}

@@ -297,6 +297,7 @@ export const StorageLocationForm: React.FC<StorageLocationFormProps> = ({
         name="description"
         render={({ field }) => (
           <FormTextArea
+            ref={field.ref}
             label={t('storageLocationForm.descriptionLabel')}
             value={field.value}
             onChangeText={field.onChange}

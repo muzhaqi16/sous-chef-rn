@@ -158,6 +158,7 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
             name="name"
             render={({ field, fieldState }) => (
               <ItemAutocompleteField
+                chaining={{ inputRef: field.ref }}
                 variant="inline"
                 label={t('recipes.ingredientName')}
                 value={field.value}
@@ -180,6 +181,7 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
             name="quantity"
             render={({ field, fieldState }) => (
               <EditableCounter
+                ref={field.ref}
                 label={t('labels.quantity')}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -213,6 +215,7 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
           name="preparation"
           render={({ field }) => (
             <FormInput
+              ref={field.ref}
               label={t('recipes.preparation')}
               value={field.value}
               onChangeText={field.onChange}
@@ -227,6 +230,7 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
           name="section"
           render={({ field }) => (
             <FormInput
+              ref={field.ref}
               label={t('recipes.section')}
               value={field.value}
               onChangeText={field.onChange}
@@ -241,6 +245,7 @@ const IngredientForm: React.FC<IngredientFormProps> = ({
           name="notes"
           render={({ field }) => (
             <FormInput
+              ref={field.ref}
               label={t('labels.notes')}
               value={field.value}
               onChangeText={field.onChange}

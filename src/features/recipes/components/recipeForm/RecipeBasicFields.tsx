@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { Controller, type Control } from 'react-hook-form';
 import { useTranslation } from '#i18n';
 import { FormInput } from '#components/atoms/FormInput';
 import { FormTextArea } from '#components/atoms/FormTextArea';
@@ -8,126 +9,200 @@ import { EditableCounter } from '#components/molecules/EditableCounter';
 import type { RecipeFormState } from '#features/recipes/types';
 
 interface RecipeBasicFieldsProps {
-  state: RecipeFormState;
-  updateField: <K extends keyof RecipeFormState>(
-    field: K,
-    value: RecipeFormState[K],
-  ) => void;
-  /** Each field's message, if it has one. */
-  errors?: Partial<
-    Record<'name' | 'imageUrl' | 'videoUrl' | 'tips' | 'tags', string>
-  >;
+  control: Control<RecipeFormState>;
 }
 
 export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
-  state,
-  updateField,
-  errors,
+  control,
 }) => {
   const { t } = useTranslation();
   return (
     <>
-      <FormInput
-        label={t('recipes.name')}
-        value={state.name}
-        onChangeText={v => updateField('name', v)}
-        placeholder={t('recipes.namePlaceholder')}
-        error={errors?.name}
-        required
+      <Controller
+        control={control}
+        name="name"
+        render={({ field, fieldState }) => (
+          <FormInput
+            ref={field.ref}
+            label={t('recipes.name')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('recipes.namePlaceholder')}
+            error={fieldState.error?.message}
+            required
+          />
+        )}
       />
 
-      <FormTextArea
-        label={t('labels.description')}
-        value={state.description}
-        onChangeText={v => updateField('description', v)}
-        placeholder={t('recipes.descriptionPlaceholder')}
+      <Controller
+        control={control}
+        name="description"
+        render={({ field }) => (
+          <FormTextArea
+            ref={field.ref}
+            label={t('labels.description')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('recipes.descriptionPlaceholder')}
+          />
+        )}
       />
 
-      <FormInput
-        label={t('recipes.imageUrl')}
-        value={state.imageUrl}
-        onChangeText={v => updateField('imageUrl', v)}
-        placeholder={t('recipes.imageUrlPlaceholder')}
-        keyboardType="url"
-        autoCapitalize="none"
-        error={errors?.imageUrl}
+      <Controller
+        control={control}
+        name="imageUrl"
+        render={({ field, fieldState }) => (
+          <FormInput
+            ref={field.ref}
+            label={t('recipes.imageUrl')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('recipes.imageUrlPlaceholder')}
+            keyboardType="url"
+            autoCapitalize="none"
+            error={fieldState.error?.message}
+          />
+        )}
       />
 
-      <FormInput
-        label={t('recipes.videoUrl')}
-        value={state.videoUrl}
-        onChangeText={v => updateField('videoUrl', v)}
-        placeholder={t('recipes.imageUrlPlaceholder')}
-        keyboardType="url"
-        autoCapitalize="none"
-        error={errors?.videoUrl}
+      <Controller
+        control={control}
+        name="videoUrl"
+        render={({ field, fieldState }) => (
+          <FormInput
+            ref={field.ref}
+            label={t('recipes.videoUrl')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('recipes.imageUrlPlaceholder')}
+            keyboardType="url"
+            autoCapitalize="none"
+            error={fieldState.error?.message}
+          />
+        )}
       />
 
       <View style={styles.row}>
         <View style={styles.halfField}>
-          <EditableCounter
-            label={t('labels.servings')}
-            value={state.servings}
-            onChangeText={v => updateField('servings', v)}
-            min={1}
-            step={1}
+          <Controller
+            control={control}
+            name="servings"
+            render={({ field }) => (
+              <EditableCounter
+                ref={field.ref}
+                label={t('labels.servings')}
+                value={field.value}
+                onChangeText={field.onChange}
+                min={1}
+                step={1}
+              />
+            )}
           />
         </View>
         <View style={styles.halfField}>
-          <EditableCounter
-            label={t('recipes.caloriesPerServing')}
-            value={state.caloriesPerServing}
-            onChangeText={v => updateField('caloriesPerServing', v)}
-            min={0}
-            step={10}
-            notation="decimal"
+          <Controller
+            control={control}
+            name="caloriesPerServing"
+            render={({ field }) => (
+              <EditableCounter
+                ref={field.ref}
+                label={t('recipes.caloriesPerServing')}
+                value={field.value}
+                onChangeText={field.onChange}
+                min={0}
+                step={10}
+                notation="decimal"
+              />
+            )}
           />
         </View>
       </View>
 
       <View style={styles.row}>
         <View style={styles.halfField}>
-          <EditableCounter
-            label={t('recipes.prepTimeMin')}
-            value={state.prepTimeMinutes}
-            onChangeText={v => updateField('prepTimeMinutes', v)}
-            min={0}
-            step={5}
+          <Controller
+            control={control}
+            name="prepTimeMinutes"
+            render={({ field }) => (
+              <EditableCounter
+                ref={field.ref}
+                label={t('recipes.prepTimeMin')}
+                value={field.value}
+                onChangeText={field.onChange}
+                min={0}
+                step={5}
+              />
+            )}
           />
         </View>
         <View style={styles.halfField}>
-          <EditableCounter
-            label={t('recipes.cookTimeMin')}
-            value={state.cookTimeMinutes}
-            onChangeText={v => updateField('cookTimeMinutes', v)}
-            min={0}
-            step={5}
+          <Controller
+            control={control}
+            name="cookTimeMinutes"
+            render={({ field }) => (
+              <EditableCounter
+                ref={field.ref}
+                label={t('recipes.cookTimeMin')}
+                value={field.value}
+                onChangeText={field.onChange}
+                min={0}
+                step={5}
+              />
+            )}
           />
         </View>
       </View>
 
-      <FormTextArea
-        label={t('labels.tips')}
-        value={state.tips}
-        onChangeText={v => updateField('tips', v)}
-        placeholder={t('recipes.tipsPlaceholder')}
-        error={errors?.tips}
+      <Controller
+        control={control}
+        name="tips"
+        render={({ field, fieldState }) => (
+          <FormTextArea
+            ref={field.ref}
+            label={t('labels.tips')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('recipes.tipsPlaceholder')}
+            error={fieldState.error?.message}
+          />
+        )}
       />
 
-      <FormInput
-        label={t('labels.tags')}
-        value={state.tags}
-        onChangeText={v => updateField('tags', v)}
-        placeholder={t('labels.commaSeparated')}
-        autoCapitalize="none"
-        error={errors?.tags}
+      <Controller
+        control={control}
+        name="tags"
+        render={({ field, fieldState }) => (
+          <FormInput
+            ref={field.ref}
+            label={t('labels.tags')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('labels.commaSeparated')}
+            autoCapitalize="none"
+            error={fieldState.error?.message}
+          />
+        )}
       />
 
-      <FormInput
-        label={t('recipes.originalAuthor')}
-        value={state.originalAuthor}
-        onChangeText={v => updateField('originalAuthor', v)}
-        placeholder={t('recipes.originalAuthorPlaceholder')}
+      <Controller
+        control={control}
+        name="originalAuthor"
+        render={({ field }) => (
+          <FormInput
+            ref={field.ref}
+            label={t('recipes.originalAuthor')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('recipes.originalAuthorPlaceholder')}
+          />
+        )}
       />
     </>
   );

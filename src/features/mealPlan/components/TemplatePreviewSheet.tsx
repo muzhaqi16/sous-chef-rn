@@ -105,6 +105,7 @@ const DuplicateTemplateForm: React.FC<DuplicateTemplateFormProps> = ({
         name="name"
         render={({ field, fieldState }) => (
           <FormInput
+            ref={field.ref}
             label={t('templatePreview.duplicateNameLabel')}
             value={field.value}
             onChangeText={field.onChange}
@@ -247,6 +248,7 @@ const TemplatePreviewContent: React.FC<TemplatePreviewContentProps> = ({
           name="name"
           render={({ field }) => (
             <FormInput
+              ref={field.ref}
               label={t('templatePreview.planNameLabel')}
               value={field.value}
               onChangeText={field.onChange}
@@ -274,6 +276,7 @@ const TemplatePreviewContent: React.FC<TemplatePreviewContentProps> = ({
           name="servings"
           render={({ field }) => (
             <EditableCounter
+              ref={field.ref}
               label={t('labels.servings')}
               value={field.value}
               onChangeText={field.onChange}

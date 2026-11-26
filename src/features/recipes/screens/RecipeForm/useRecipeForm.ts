@@ -75,7 +75,7 @@ export function useRecipeForm() {
   });
   const { control, setValue, getValues, reset } = form;
 
-  // The children render plain inputs against a value object rather than one
+  // The pickers and lists render against a value object rather than one
   // `Controller` each, so the whole form is watched. `useWatch`, never
   // `watch()` — the React Compiler cannot memoize the function that returns.
   const state = useWatch({ control }) as RecipeFormState;
@@ -406,6 +406,7 @@ export function useRecipeForm() {
   };
 
   return {
+    control,
     state,
     errors: form.formState.errors,
     isDirty: form.formState.isDirty,

@@ -46,6 +46,7 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
         name="name"
         render={({ field, fieldState }) => (
           <BaseInput
+            ref={field.ref}
             testID={homeTestIDs.createHomeNameInput}
             value={field.value}
             onChangeText={field.onChange}

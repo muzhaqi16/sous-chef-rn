@@ -246,6 +246,7 @@ const StockCheckForm: React.FC<StockCheckFormProps> = ({
                   name={`rows.${row.id}.left`}
                   render={({ field, fieldState }) => (
                     <FractionInput
+                      ref={field.ref}
                       label={t('pantryScreen.stockCheckLeft', {
                         unit: row.unitSymbol,
                       })}
@@ -262,6 +263,7 @@ const StockCheckForm: React.FC<StockCheckFormProps> = ({
                     name={`rows.${row.id}.inside`}
                     render={({ field, fieldState }) => (
                       <FractionInput
+                        ref={field.ref}
                         label={t('pantryScreen.stockCheckInside', {
                           unit: row.contents?.unitSymbol,
                         })}

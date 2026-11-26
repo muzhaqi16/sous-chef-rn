@@ -137,6 +137,7 @@ const ReportContentForm: React.FC<ReportContentFormProps> = ({
         name="description"
         render={({ field, fieldState }) => (
           <FormTextArea
+            ref={field.ref}
             label={t('reports.descriptionLabel')}
             value={field.value}
             onChangeText={field.onChange}

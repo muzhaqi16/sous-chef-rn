@@ -124,6 +124,7 @@ const TextEditForm: React.FC<Omit<TextEditBottomSheetProps, 'visible'>> = ({
           render={({ field, fieldState }) => (
             <View>
               <ThemedTextInput
+                ref={field.ref}
                 style={variantStyles.input}
                 value={
                   typeof field.value === 'string' ? field.value : undefined

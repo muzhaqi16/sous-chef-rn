@@ -373,6 +373,7 @@ export const MealTemplateBuilderScreen: React.FC<
         name="defaultServings"
         render={({ field }) => (
           <EditableCounter
+            ref={field.ref}
             label={t('labels.defaultServings')}
             value={field.value}
             onChangeText={field.onChange}
@@ -387,6 +388,7 @@ export const MealTemplateBuilderScreen: React.FC<
         name="description"
         render={({ field }) => (
           <FormTextArea
+            ref={field.ref}
             label={t('labels.description')}
             value={field.value}
             onChangeText={field.onChange}
@@ -400,6 +402,7 @@ export const MealTemplateBuilderScreen: React.FC<
         name="tags"
         render={({ field, fieldState }) => (
           <FormInput
+            ref={field.ref}
             label={t('labels.tags')}
             value={field.value}
             onChangeText={field.onChange}
@@ -487,6 +490,7 @@ export const MealTemplateBuilderScreen: React.FC<
             name="itemName"
             render={({ field, fieldState }) => (
               <FormInput
+                ref={field.ref}
                 label={t('mealTemplateBuilder.mealName')}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -533,6 +537,7 @@ export const MealTemplateBuilderScreen: React.FC<
           name="itemDay"
           render={({ field }) => (
             <EditableCounter
+              ref={field.ref}
               label={t('mealTemplateBuilder.dayNumber')}
               // The field holds a zero-based offset; the control shows day 1.
               value={String((parseInt(field.value) || 0) + 1)}
@@ -549,6 +554,7 @@ export const MealTemplateBuilderScreen: React.FC<
           name="itemServings"
           render={({ field }) => (
             <EditableCounter
+              ref={field.ref}
               label={t('labels.servings')}
               value={field.value}
               onChangeText={field.onChange}

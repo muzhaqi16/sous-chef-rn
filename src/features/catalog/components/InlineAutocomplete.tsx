@@ -12,10 +12,8 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 // Themed wrapper, not gorhom's raw `BottomSheetTextInput`: the raw one sets no
 // `placeholderTextColor` and falls back to the OS default, ignoring the theme.
-import {
-  ThemedTextInput,
-  type ThemedTextInputRef,
-} from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
+import { assignRef, type FocusableInputRef } from '#components/atoms/inputRef';
 import { Label } from '#components/atoms/Label';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import { Text } from '#components/atoms/Text';
@@ -31,7 +29,7 @@ const DROPDOWN_GAP = 4;
 
 /** How the return key moves on from a field: the next field's input, or done. */
 export interface FieldChaining {
-  inputRef?: React.Ref<ThemedTextInputRef>;
+  inputRef?: React.Ref<FocusableInputRef>;
   returnKeyType?: ReturnKeyTypeOptions;
   onSubmitEditing?: () => void;
 }
@@ -212,7 +210,7 @@ export function InlineAutocomplete<T>({
             autoCapitalize={autoCapitalize}
             testID={testID}
             {...fieldAccessibility}
-            ref={chaining?.inputRef}
+            ref={node => assignRef(chaining?.inputRef, node)}
             returnKeyType={chaining?.returnKeyType}
             onSubmitEditing={chaining?.onSubmitEditing}
             // Hands focus on without the keyboard dropping in between.

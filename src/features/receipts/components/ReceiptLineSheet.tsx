@@ -254,6 +254,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
             name="itemName"
             render={({ field, fieldState }) => (
               <ItemAutocompleteField
+                chaining={{ inputRef: field.ref }}
                 variant="inline"
                 label={t('labels.itemName')}
                 value={field.value}
@@ -392,6 +393,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
               name="quantityInput"
               render={({ field, fieldState }) => (
                 <FractionInput
+                  ref={field.ref}
                   label={t('labels.quantity')}
                   value={field.value}
                   onChangeText={field.onChange}
@@ -407,6 +409,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
               name="unitValue"
               render={({ field, fieldState }) => (
                 <UnitAutocompleteField
+                  chaining={{ inputRef: field.ref }}
                   variant="inline"
                   label={t('labels.unit')}
                   value={field.value}
@@ -444,6 +447,8 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                   render={({ field: unit, fieldState: unitState }) => (
                     <PackageContentsFields
                       variant="inline"
+                      sizeRef={size.ref}
+                      unitRef={unit.ref}
                       size={size.value}
                       onSizeChange={text => {
                         size.onChange(text);
@@ -477,6 +482,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
             name="priceInput"
             render={({ field, fieldState }) => (
               <FormInput
+                ref={field.ref}
                 label={t('labels.totalPaid')}
                 value={field.value}
                 onChangeText={field.onChange}

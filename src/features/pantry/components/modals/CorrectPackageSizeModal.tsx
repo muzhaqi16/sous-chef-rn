@@ -249,6 +249,7 @@ const CorrectPackageSizeForm: React.FC<
                   render={({ field: unit, fieldState: unitState }) => (
                     <PackageContentsFields
                       variant="modal"
+                      sizeRef={size.ref}
                       size={size.value}
                       onSizeChange={size.onChange}
                       sizeError={sizeState.error?.message}
@@ -270,6 +271,7 @@ const CorrectPackageSizeForm: React.FC<
                 name="reason"
                 render={({ field, fieldState }) => (
                   <FormInput
+                    ref={field.ref}
                     label={t('labels.reason')}
                     required
                     value={field.value}

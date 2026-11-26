@@ -130,6 +130,7 @@ const MarkCookedForm: React.FC<MarkCookedFormProps> = ({
           name="servings"
           render={({ field, fieldState }) => (
             <FractionInput
+              ref={field.ref}
               label={t('markCookedModal.servingsMade')}
               value={field.value}
               onChangeText={field.onChange}

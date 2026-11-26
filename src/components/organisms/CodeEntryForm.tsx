@@ -47,6 +47,7 @@ export const CodeEntryForm: React.FC<CodeEntryFormProps> = ({
         name="code"
         render={({ field, fieldState }) => (
           <BaseInput
+            ref={field.ref}
             containerStyle={styles.inputContainer}
             style={styles.inputText}
             value={field.value}

@@ -278,9 +278,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       <Controller
         control={control}
         name="itemName"
-        render={({ field: { value, onChange } }) =>
+        render={({ field: { value, onChange, ref } }) =>
           isEdit ? (
             <FormInput
+              ref={ref}
               label={t('labels.itemName')}
               required
               error={errors.itemName?.message}
@@ -300,7 +301,6 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
               onSelectItem={handleItemSelect}
               placeholder={t('shoppingListScreens.itemNamePlaceholder')}
               required
-              autoFocus
               testID={formTestIDs.nameInput}
             />
           )
@@ -333,8 +333,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         <Controller
           control={control}
           name="quantityInput"
-          render={({ field: { value, onChange } }) => (
+          render={({ field: { value, onChange, ref } }) => (
             <EditableCounter
+              ref={ref}
               label={t('labels.quantity')}
               required
               error={errors.quantityInput?.message}

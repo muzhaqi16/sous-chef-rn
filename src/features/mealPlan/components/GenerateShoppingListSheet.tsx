@@ -200,6 +200,7 @@ const GenerateShoppingListForm: React.FC<GenerateShoppingListFormProps> = ({
           name="name"
           render={({ field }) => (
             <FormInput
+              ref={field.ref}
               label={t('generateShoppingList.listNameLabel')}
               value={field.value}
               onChangeText={field.onChange}

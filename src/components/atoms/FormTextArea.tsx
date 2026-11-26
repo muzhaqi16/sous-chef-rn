@@ -3,6 +3,7 @@ import type { TextInputProps, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { ThemedTextInput } from '#components/atoms/themedComponents';
+import { assignRef, type FocusableInputRef } from './inputRef';
 
 interface FormTextAreaProps
   extends Omit<TextInputProps, 'style' | 'multiline'> {
@@ -12,6 +13,8 @@ interface FormTextAreaProps
   containerStyle?: ViewStyle;
   inputStyle?: ViewStyle;
   numberOfLines?: number;
+  /** The input, for a host that only focuses it (react-hook-form). */
+  ref?: React.Ref<FocusableInputRef>;
 }
 
 export const FormTextArea: React.FC<FormTextAreaProps> = ({
@@ -21,6 +24,7 @@ export const FormTextArea: React.FC<FormTextAreaProps> = ({
   containerStyle,
   inputStyle,
   numberOfLines = 4,
+  ref,
   ...textInputProps
 }) => {
   const variantStyles = styles.useVariants({ error: !!error });
@@ -36,6 +40,7 @@ export const FormTextArea: React.FC<FormTextAreaProps> = ({
       containerStyle={containerStyle}
     >
       <ThemedTextInput
+        ref={node => assignRef(ref, node)}
         style={[variantStyles.input, { height: inputHeight }, inputStyle]}
         multiline
         numberOfLines={numberOfLines}

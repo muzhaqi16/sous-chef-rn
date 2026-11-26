@@ -135,6 +135,7 @@ const MacroTargetsForm: React.FC<
           name="calories"
           render={({ field, fieldState }) => (
             <FormInput
+              ref={field.ref}
               label={t('macroTargets.dailyCalories')}
               value={field.value}
               onChangeText={field.onChange}
@@ -153,6 +154,7 @@ const MacroTargetsForm: React.FC<
           name="protein"
           render={({ field, fieldState }) => (
             <FormInput
+              ref={field.ref}
               label={t('labels.proteinG')}
               value={field.value}
               onChangeText={field.onChange}
@@ -171,6 +173,7 @@ const MacroTargetsForm: React.FC<
           name="carbs"
           render={({ field, fieldState }) => (
             <FormInput
+              ref={field.ref}
               label={t('labels.carbsG')}
               value={field.value}
               onChangeText={field.onChange}
@@ -189,6 +192,7 @@ const MacroTargetsForm: React.FC<
           name="fat"
           render={({ field, fieldState }) => (
             <FormInput
+              ref={field.ref}
               label={t('macroTargets.fat')}
               value={field.value}
               onChangeText={field.onChange}

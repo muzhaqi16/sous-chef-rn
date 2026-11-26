@@ -61,6 +61,7 @@ const NewListForm: React.FC<NewListFormProps> = ({
         <View style={styles.createList}>
           <View style={styles.createListRow}>
             <ThemedTextInput
+              ref={field.ref}
               style={styles.createListInput}
               value={field.value}
               onChangeText={field.onChange}

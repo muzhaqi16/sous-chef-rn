@@ -150,6 +150,7 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
           render={({ field, fieldState }) => (
             <>
               <FormInput
+                ref={field.ref}
                 label={t('recipes.captureLinkLabel')}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -195,6 +196,7 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
             name="text"
             render={({ field, fieldState }) => (
               <FormTextArea
+                ref={field.ref}
                 label={t('recipes.captureTextLabel')}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -219,6 +221,7 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
             name="sourceUrl"
             render={({ field, fieldState }) => (
               <FormInput
+                ref={field.ref}
                 label={t('recipes.captureSourceLabel')}
                 value={field.value}
                 onChangeText={field.onChange}

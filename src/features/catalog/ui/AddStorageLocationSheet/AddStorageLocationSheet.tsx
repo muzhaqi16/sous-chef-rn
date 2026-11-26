@@ -1,13 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useController, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#i18n';
-import {
-  ThemedTextInput,
-  type ThemedTextInputRef,
-} from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { StorageType } from '#graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 import { Sheet } from '#components/templates/Sheet';
@@ -55,23 +52,26 @@ const AddStorageLocationForm: React.FC<AddStorageLocationFormProps> = ({
   creating = false,
 }) => {
   const { t } = useTranslation();
-  const inputRef = useRef<ThemedTextInputRef>(null);
   const {
     control,
     handleSubmit,
     setError,
+    setFocus,
     formState: { isDirty },
   } = useForm<AddStorageLocationFormValues>({
     resolver: yupResolver(addStorageLocationSchema),
     defaultValues: { name: '' },
   });
   useSheetUnsavedInput(isDirty);
-  const { field, fieldState } = useController({ control, name: 'name' });
+  const {
+    field: { ref, ...field },
+    fieldState,
+  } = useController({ control, name: 'name' });
 
   // Focus once the sheet's open animation has run.
   useEffect(() => {
-    requestIdleCallback(() => inputRef.current?.focus());
-  }, []);
+    requestIdleCallback(() => setFocus('name'));
+  }, [setFocus]);
 
   const create = handleSubmit(async ({ name }) => {
     const result = await executeCreateLocation(onCreateLocation, {
@@ -109,7 +109,7 @@ const AddStorageLocationForm: React.FC<AddStorageLocationFormProps> = ({
         </Text>
 
         <ThemedTextInput
-          ref={inputRef}
+          ref={ref}
           style={variantStyles.input}
           defaultValue={field.value}
           onChangeText={field.onChange}

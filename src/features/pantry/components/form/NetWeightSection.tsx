@@ -41,8 +41,12 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
           <Controller
             control={control}
             name="netWeight"
-            render={({ field: { onChange, onBlur, value }, fieldState }) => (
+            render={({
+              field: { onChange, onBlur, value, ref },
+              fieldState,
+            }) => (
               <FormInput
+                ref={ref}
                 label={t('labels.netWeight')}
                 value={value ?? ''}
                 onChangeText={text => {

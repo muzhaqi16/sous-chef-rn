@@ -76,7 +76,10 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
     control,
     name: 'sizeUnitId',
   });
-  const { field: sizeField, fieldState: sizeState } = useController({
+  const {
+    field: { ref: sizeRef, ...sizeField },
+    fieldState: sizeState,
+  } = useController({
     control,
     name: 'sizeInput',
   });
@@ -145,6 +148,7 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
           name="quantityInput"
           render={({ field, fieldState }) => (
             <FractionInput
+              ref={field.ref}
               label={t('labels.quantity')}
               required
               value={field.value}
@@ -187,6 +191,7 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
       {holdsContents ? (
         <PackageContentsFields
           variant="modal"
+          sizeRef={sizeRef}
           size={sizeField.value}
           onSizeChange={text => {
             sizeField.onChange(text);

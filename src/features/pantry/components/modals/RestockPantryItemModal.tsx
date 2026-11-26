@@ -211,7 +211,10 @@ const RestockFields: React.FC<{
   onAskSize: () => void;
 }> = ({ control, shared, reason, asksCost, askingSize, onAskSize }) => {
   const { t } = useTranslation();
-  const { field: amount, fieldState: amountState } = useController({
+  const {
+    field: { ref: amountRef, ...amount },
+    fieldState: amountState,
+  } = useController({
     control,
     name: 'quantityInput',
   });
@@ -269,6 +272,7 @@ const RestockFields: React.FC<{
       {/* Quantity Input */}
       <View style={commonStyles.bottomSheetSection}>
         <FractionInput
+          ref={amountRef}
           label={t('restockItem.quantityToAdd')}
           value={amount.value}
           onChangeText={amount.onChange}
@@ -332,6 +336,7 @@ const RestockFields: React.FC<{
                 name="costPerUnitInput"
                 render={({ field, fieldState }) => (
                   <FormInput
+                    ref={field.ref}
                     label={t('restockItem.costPerUnit')}
                     value={field.value}
                     onChangeText={field.onChange}
@@ -348,6 +353,7 @@ const RestockFields: React.FC<{
                 name="totalCostInput"
                 render={({ field, fieldState }) => (
                   <FormInput
+                    ref={field.ref}
                     label={t('labels.totalPaid')}
                     value={field.value}
                     onChangeText={field.onChange}
@@ -369,6 +375,7 @@ const RestockFields: React.FC<{
           name="notes"
           render={({ field }) => (
             <FormInput
+              ref={field.ref}
               label={t('labels.notes')}
               value={field.value}
               onChangeText={field.onChange}
@@ -407,7 +414,10 @@ const SizeFields: React.FC<{
 }> = ({ control }) => {
   // The whole-packages and unit rules read the size; a change to the size or
   // its unit also answers a refusal of it.
-  const { field: size, fieldState: sizeState } = useController({
+  const {
+    field: { ref: sizeRef, ...size },
+    fieldState: sizeState,
+  } = useController({
     control,
     name: 'sizeInput',
     rules: { deps: ['quantityInput', 'sizeUnitId'] },
@@ -430,6 +440,7 @@ const SizeFields: React.FC<{
   return (
     <PackageContentsFields
       variant="modal"
+      sizeRef={sizeRef}
       size={size.value}
       onSizeChange={size.onChange}
       sizeError={sizeState.error?.message}

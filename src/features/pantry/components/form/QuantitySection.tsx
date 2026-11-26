@@ -44,8 +44,9 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
         <Controller
           control={control}
           name="quantityInput"
-          render={({ field: { onChange, value }, fieldState }) => (
+          render={({ field: { onChange, value, ref }, fieldState }) => (
             <FractionInput
+              ref={ref}
               label={t('itemForm.quantityCurrent')}
               value={value ?? ''}
               onChangeText={onChange}
@@ -78,8 +79,9 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
         <Controller
           control={control}
           name="minQuantity"
-          render={({ field: { onChange, onBlur, value }, fieldState }) => (
+          render={({ field: { onChange, onBlur, value, ref }, fieldState }) => (
             <FormInput
+              ref={ref}
               label={t('labels.alertWhenBelow')}
               value={value?.toString() ?? ''}
               onChangeText={onChange}
@@ -93,8 +95,9 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
         <Controller
           control={control}
           name="restockQuantity"
-          render={({ field: { onChange, onBlur, value }, fieldState }) => (
+          render={({ field: { onChange, onBlur, value, ref }, fieldState }) => (
             <FormInput
+              ref={ref}
               label={t('labels.restockTo')}
               value={value?.toString() ?? ''}
               onChangeText={onChange}
