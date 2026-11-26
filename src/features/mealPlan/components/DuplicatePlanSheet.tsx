@@ -152,7 +152,7 @@ const DuplicatePlanForm: React.FC<DuplicatePlanFormProps> = ({
             tone="primary"
             onPress={() => offset.onChange(offset.value - 7)}
             accessibilityLabel={t('a11y.previousWeek')}
-            style={styles.dateButton}
+            filled={{ size: 'md', tone: 'background' }}
           />
           <View style={styles.dateDisplay}>
             <Text role="bodyStrong">{formatWeekdayMonthDay(start)}</Text>
@@ -168,7 +168,7 @@ const DuplicatePlanForm: React.FC<DuplicatePlanFormProps> = ({
             tone="primary"
             onPress={() => offset.onChange(offset.value + 7)}
             accessibilityLabel={t('a11y.nextWeek')}
-            style={styles.dateButton}
+            filled={{ size: 'md', tone: 'background' }}
           />
         </View>
       </View>
@@ -243,11 +243,6 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     padding: theme.spacing.sm,
-  },
-  dateButton: {
-    padding: theme.spacing.sm,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.background,
   },
   dateDisplay: {
     alignItems: 'center',

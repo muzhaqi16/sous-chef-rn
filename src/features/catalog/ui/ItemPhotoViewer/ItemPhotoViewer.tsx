@@ -150,6 +150,7 @@ const ItemPhotoViewerContent: React.FC<ItemPhotoViewerContentProps> = ({
         onPress={onClose}
         accessibilityLabel={t('labels.close')}
         accessibilityRole="button"
+        filled={{ size: 'lg', tone: 'scrim' }}
         style={[styles.closeButton, { top: insets.top + 8 }]}
       />
 
@@ -561,13 +562,6 @@ const styles = StyleSheet.create(theme => ({
   closeButton: {
     position: 'absolute',
     right: theme.spacing.md,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: theme.radii.full,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.overlays.medium,
   },
   caption: {
     position: 'absolute',

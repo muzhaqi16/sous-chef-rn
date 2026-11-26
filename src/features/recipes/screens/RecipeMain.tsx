@@ -329,7 +329,7 @@ const RecipeMainInner: React.FC = () => {
           accessibilityLabel={t('recipes.refreshSuggestions')}
           accessibilityRole="button"
           disabled={busy}
-          style={styles.refreshButton}
+          filled={{ size: 'md', tone: 'background' }}
         />
       </View>
     );
@@ -633,11 +633,6 @@ const styles = StyleSheet.create(theme => ({
   suggestedTextContainer: { flex: 1 },
   suggestedSubtitle: {
     marginTop: theme.spacing['2xs'],
-  },
-  refreshButton: {
-    padding: theme.spacing.sm,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.background,
   },
   searchResultsHeader: {
     flexDirection: 'row',

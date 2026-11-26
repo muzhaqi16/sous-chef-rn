@@ -175,6 +175,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 accessibilityLabel={t('imagePicker.removeImage')}
                 accessibilityRole="button"
                 disabled={disabled}
+                filled={{ size: 'xs', tone: 'scrim' }}
                 style={styles.removeButton}
               />
               {!!allowPrimarySelection && (
@@ -191,6 +192,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                   accessibilityRole="button"
                   disabled={disabled || image.isPrimary}
                   selected={!!image.isPrimary}
+                  filled={{ size: 'xs', tone: 'scrim' }}
                   style={styles.primaryButton}
                 />
               )}
@@ -295,28 +297,17 @@ const styles = StyleSheet.create(theme => ({
     height: 80,
     backgroundColor: theme.colors.surfaceVariant,
   },
+  // Each fill sits 2pt in from its corner; its floor-sized target is pulled
+  // out by half the difference, opposite corners so the two never meet.
   removeButton: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    backgroundColor: theme.colors.overlays.dark,
-    borderRadius: theme.radii.full,
-    width: 22,
-    height: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    top: 2 - (theme.sizes.touchTarget.min - theme.sizes.iconFill.xs) / 2,
+    right: 2 - (theme.sizes.touchTarget.min - theme.sizes.iconFill.xs) / 2,
   },
-  // Opposite corner from remove: two 22pt targets on an 80pt thumbnail.
   primaryButton: {
     position: 'absolute',
-    bottom: 2,
-    left: 2,
-    backgroundColor: theme.colors.overlays.dark,
-    borderRadius: theme.radii.full,
-    width: 22,
-    height: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    bottom: 2 - (theme.sizes.touchTarget.min - theme.sizes.iconFill.xs) / 2,
+    left: 2 - (theme.sizes.touchTarget.min - theme.sizes.iconFill.xs) / 2,
   },
   perspectiveButton: {
     flexDirection: 'row',

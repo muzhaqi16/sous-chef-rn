@@ -3,14 +3,11 @@ import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#i18n';
-import {
-  OnPrimaryActivityIndicator,
-  Pressable,
-  ThemedTextInput,
-} from '#components/atoms/themedComponents';
+import { Pressable, ThemedTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
+import { IconButton } from '#components/atoms/IconButton';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import { DataStateView } from '#components/organisms/DataStateView';
 import type { DataState } from '#hooks/data/useDataState';
@@ -70,26 +67,19 @@ const NewListForm: React.FC<NewListFormProps> = ({
               autoCapitalize="words"
               maxLength={LIST_NAME_MAX_LENGTH}
             />
-            <Pressable
-              style={({ pressed }) => [
-                styles.createListButton,
-                pressed && styles.pressed,
-              ]}
+            <IconButton
+              name="checkmark"
+              size="sm"
+              tone="onPrimary"
               onPress={() => {
                 void create();
               }}
-              disabled={creating}
-              accessibilityRole="button"
               accessibilityLabel={t(
                 'shoppingListPicker.createAndAddIngredients',
               )}
-            >
-              {creating ? (
-                <OnPrimaryActivityIndicator />
-              ) : (
-                <Icon name="checkmark" size="sm" tone="onPrimary" />
-              )}
-            </Pressable>
+              filled={{ size: 'xl', tone: 'primary', shape: 'rounded' }}
+              loading={creating}
+            />
           </View>
           {fieldState.error ? (
             <Text role="error" tone="error" style={styles.createListError}>
@@ -245,15 +235,6 @@ const styles = StyleSheet.create(theme => ({
   },
   createListInput: {
     flex: 1,
-  },
-  createListButton: {
-    width: theme.sizes.touchTarget.md,
-    height: theme.sizes.touchTarget.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.primary,
   },
   createListError: {
     marginTop: theme.spacing.xs,

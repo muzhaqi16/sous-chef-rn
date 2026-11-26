@@ -96,7 +96,7 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
             size="sm"
             onPress={onRevoke}
             accessibilityLabel={t('a11y.revokeInvite')}
-            style={styles.revokeButton}
+            filled={{ size: 'sm', tone: 'error', shape: 'rounded' }}
           />
         )}
       </View>
@@ -149,11 +149,5 @@ const styles = StyleSheet.create(theme => ({
         expired: { backgroundColor: theme.colors.status.expired + '20' },
       },
     },
-  },
-  revokeButton: {
-    padding: theme.spacing.xs,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.validation.errorBg,
   },
 }));

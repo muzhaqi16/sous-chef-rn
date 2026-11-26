@@ -41,7 +41,7 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
           tone="primary"
           onPress={onAddPress}
           accessibilityLabel={t('labels.addNamed', { name: title })}
-          style={styles.addButton}
+          filled={{ size: 'sm', tone: 'primaryLight' }}
         />
       </View>
       {/* Chip grid showing existing items */}
@@ -75,14 +75,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
-  },
-  addButton: {
-    width: 32,
-    height: 32,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   chipContainer: {
     flexDirection: 'row',

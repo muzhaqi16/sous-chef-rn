@@ -277,7 +277,7 @@ export const BarcodeScannerScreen: React.FC<
           name="close"
           onPress={handleGoBack}
           size="md"
-          style={styles.headerButton}
+          filled={{ size: 'xl', tone: 'scrim' }}
           accessibilityLabel={t('barcodeScanner.closeScanner')}
         />
         <Text role="heading" style={styles.headerTitle}>
@@ -287,7 +287,7 @@ export const BarcodeScannerScreen: React.FC<
           name={flashEnabled ? 'flash' : 'flash-off'}
           onPress={toggleFlash}
           size="md"
-          style={styles.headerButton}
+          filled={{ size: 'xl', tone: 'scrim' }}
           accessibilityLabel={
             flashEnabled
               ? t('barcodeScanner.flashOff')
@@ -360,14 +360,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
     zIndex: theme.zIndex.raised,
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.overlays.medium,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   headerTitle: {
     color: theme.colors.onScrim,

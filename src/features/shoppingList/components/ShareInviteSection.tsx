@@ -3,11 +3,9 @@ import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
-import { OnPrimaryActivityIndicator } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
+import { IconButton } from '#components/atoms/IconButton';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#i18n';
-import { Icon } from '#components/atoms/Icon';
 import { EmailInput } from '#components/molecules/EmailInput';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { useInviteCollaborator } from '#features/shoppingList/hooks/useInviteCollaborator';
@@ -96,18 +94,18 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
             />
           )}
         />
-        <AppPressable
-          style={styles.sendButton}
-          onPress={() => handleShare()}
+        <IconButton
+          name="send"
+          size="sm"
+          tone="onPrimary"
+          onPress={() => {
+            void handleShare();
+          }}
           accessibilityLabel={t('labels.inviteMembers')}
-          disabled={sharing}
-        >
-          {sharing ? (
-            <OnPrimaryActivityIndicator size="small" />
-          ) : (
-            <Icon name="send" size="sm" tone="onPrimary" />
-          )}
-        </AppPressable>
+          filled={{ size: 'xl', tone: 'primary' }}
+          loading={sharing}
+          style={styles.sendButton}
+        />
       </View>
       <Text role="bodyStrong" style={styles.roleLabel}>
         {t('labels.role')}
@@ -137,12 +135,6 @@ const styles = StyleSheet.create(theme => ({
   },
   sendButton: {
     marginLeft: theme.spacing.base,
-    backgroundColor: theme.colors.primary,
-    width: 44,
-    height: 44,
-    borderRadius: theme.radii.full,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   roleLabel: {
     color: theme.colors.textSecondary,

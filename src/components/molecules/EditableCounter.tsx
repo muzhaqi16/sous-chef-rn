@@ -146,7 +146,8 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           accessibilityHint={t('a11y.currentQuantity', { value })}
           accessibilityRole="button"
           disabled={disabled}
-          style={variantStyles.button}
+          filled={{ size: 'md', tone: 'primary', shape: 'rounded' }}
+          style={variantStyles.stepper}
         />
 
         <ThemedTextInput ref={node => assignRef(ref, node)} {...inputProps} />
@@ -160,7 +161,8 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           accessibilityHint={t('a11y.currentQuantity', { value })}
           accessibilityRole="button"
           disabled={disabled}
-          style={variantStyles.button}
+          filled={{ size: 'md', tone: 'primary', shape: 'rounded' }}
+          style={variantStyles.stepper}
         />
       </View>
       {error ? (
@@ -211,17 +213,8 @@ const styles = StyleSheet.create(theme => ({
       },
     },
   },
-  button: {
+  stepper: {
     zIndex: theme.zIndex.raised,
-    backgroundColor: theme.colors.primary,
-    width: 35,
-    height: 35,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
   },
   input: {
     ...singleLineInputStyle(theme),

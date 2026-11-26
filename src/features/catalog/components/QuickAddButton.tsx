@@ -1,6 +1,5 @@
 import React from 'react';
 import { IconButton } from '#components/atoms/IconButton';
-import { StyleSheet } from 'react-native-unistyles';
 
 interface QuickAddButtonProps {
   onPress: () => void;
@@ -22,17 +21,6 @@ export const QuickAddButton: React.FC<QuickAddButtonProps> = ({
     accessibilityLabel={accessibilityLabel}
     accessibilityRole="button"
     testID={testID}
-    style={styles.button}
+    filled={{ size: 'md', tone: 'primaryLight' }}
   />
 );
-
-const styles = StyleSheet.create(theme => ({
-  button: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-}));
