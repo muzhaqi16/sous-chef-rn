@@ -8,9 +8,10 @@ import {
   FEATURE_GONE_REPLAYS,
   FEATURE_MERGE_REPORTERS,
   FEATURE_QUANTITY_OVERWRITES,
+  FEATURE_REFUSED_ROWS,
   FEATURE_SETTLED_REPLAYS,
 } from '#features/registry.data';
-import type { ReplayReconcilerTable } from './types';
+import type { RefusedRowsNarrower, ReplayReconcilerTable } from './types';
 
 export const MERGE_REPORTERS: ReplayReconcilerTable = byOperation(
   FEATURE_MERGE_REPORTERS,
@@ -23,6 +24,9 @@ export const REPLAY_RECONCILERS: ReplayReconcilerTable = {
 
 export const GONE_REPLAYS: ReplayReconcilerTable =
   byOperation(FEATURE_GONE_REPLAYS);
+
+export const REFUSED_ROW_NARROWERS: Record<string, RefusedRowsNarrower> =
+  byOperation(FEATURE_REFUSED_ROWS);
 
 export const MERGED_QUANTITY_OVERWRITES: Record<
   string,

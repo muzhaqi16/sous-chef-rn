@@ -175,6 +175,7 @@ export function useStockCheck(enabled = true) {
       now: checkedAt,
       rows: answers.map(({ row, choice }) => ({
         pantryItemId: row.id,
+        itemName: row.name,
         held: heldAfter(choice),
         ...(choice.answer === StockCheckAnswer.SomeLeft &&
           choice.contents && { remainingNetWeight: choice.contents.amount }),

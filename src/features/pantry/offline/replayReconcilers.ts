@@ -3,8 +3,12 @@
  * the writes queued behind it move onto that row. The rest is `commit`.
  */
 import { extractMutationPayload } from '#utils/errors/mutationPayload';
-import type { ReplayReconcilerTable } from '#apollo/offlineQueue/types';
+import type {
+  RefusedRowsNarrower,
+  ReplayReconcilerTable,
+} from '#apollo/offlineQueue/types';
 import { isRecord } from '#utils/isRecord';
+import { generateEntityId } from '#utils/generateEntityId';
 import { answeredStack } from './localWrites';
 
 type Reconciler = ReplayReconcilerTable[string];
@@ -56,3 +60,60 @@ export const reconcileCreatePantryItemReplay = adoptAnsweredStack('id');
 export const reconcilePantryUsageReplay = adoptAnsweredStack('pantryItemId');
 export const reconcileRestockReplay = adoptAnsweredStack('id');
 export const reconcileConvertExpiredReplay = adoptAnsweredStack('pantryItemId');
+
+/** The stacks whose entries a stock check's answer refused. */
+const refusedStacks = (payload: unknown): ReadonlySet<string> =>
+  new Set(
+    (isRecord(payload) && Array.isArray(payload.results)
+      ? payload.results
+      : []
+    ).flatMap((result: unknown) =>
+      isRecord(result) &&
+      result.success === false &&
+      typeof result.pantryItemId === 'string'
+        ? [result.pantryItemId]
+        : [],
+    ),
+  );
+
+const aboutRefused =
+  (refused: ReadonlySet<string>) =>
+  (row: unknown): boolean =>
+    isRecord(row) &&
+    typeof row.pantryItemId === 'string' &&
+    refused.has(row.pantryItemId);
+
+/**
+ * A stock check whose answer refused rows keeps only those, under a key of its
+ * own: the API answers a resend of the first key with what that send did, so
+ * the refused rows would never apply, and a row that landed is not counted
+ * again over what changed since.
+ */
+export const keepRefusedStockCheckRows: RefusedRowsNarrower = (
+  { variables, pendingWrite },
+  payload,
+) => {
+  const refused = refusedStacks(payload);
+  const input: unknown = variables.input;
+  if (refused.size === 0 || !isRecord(input) || !Array.isArray(input.entries)) {
+    return null;
+  }
+  const rows: unknown = pendingWrite?.inputs.rows;
+  return {
+    variables: {
+      ...variables,
+      input: {
+        ...input,
+        idempotencyKey: generateEntityId(),
+        entries: input.entries.filter(aboutRefused(refused)),
+      },
+    },
+    pendingWrite: pendingWrite && {
+      ...pendingWrite,
+      inputs: {
+        ...pendingWrite.inputs,
+        rows: Array.isArray(rows) ? rows.filter(aboutRefused(refused)) : rows,
+      },
+    },
+  };
+};

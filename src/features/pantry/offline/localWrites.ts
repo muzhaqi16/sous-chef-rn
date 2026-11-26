@@ -149,6 +149,8 @@ export type StockCheckInputs = {
   pantryId: string;
   rows: readonly {
     pantryItemId: string;
+    /** What a refusal names the row by. */
+    itemName: string;
     held: number | null;
     remainingNetWeight?: number;
   }[];

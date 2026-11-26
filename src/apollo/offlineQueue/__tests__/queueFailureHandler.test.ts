@@ -22,6 +22,7 @@ import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.genera
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UpdateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { makeQueuedMutation } from '#/test-utils/queuedMutation';
 
 const client = {
   cache: {},
@@ -69,6 +70,7 @@ jest.mock('../queueStore', () => ({
   queueStore: {
     removeMutation: jest.fn(),
     markRefused: jest.fn(),
+    getMutation: jest.fn(() => null),
     // No signed-in queue, so nothing is pending and the reread runs.
     getCurrentUserId: jest.fn(() => null),
     getQueueStats: jest.fn(() => ({
@@ -250,6 +252,30 @@ describe('queue failure handler', () => {
         }),
       );
       expect(message).toContain('meal plan item');
+    });
+
+    // As the list of changes not saved names it: a stock check by its stacks.
+    it('names the row itself where the change says what it was to', () => {
+      jest.mocked(queueStore.getMutation).mockReturnValueOnce(
+        makeQueuedMutation({
+          pendingWrite: {
+            id: 'write-1',
+            inputs: { rows: [{ pantryItemId: 'eggs', itemName: 'Eggs' }] },
+          },
+        }),
+      );
+
+      expect(
+        toldAfter({
+          error: {
+            type: 'conflict',
+            message: 'Version conflict',
+            code: 'VERSION_CONFLICT',
+            timestamp: 0,
+            retryable: false,
+          },
+        }),
+      ).toBe(t('errors.queuedClashKeptNamed', { name: 'Eggs' }));
     });
 
     it.each([null, 'NoSuchEntity'])(

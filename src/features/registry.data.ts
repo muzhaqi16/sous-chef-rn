@@ -184,6 +184,7 @@ import {
 import { entityFields } from '#apollo/pendingWrites/entityFields';
 import type { LocalWrite } from '#apollo/pendingWrites/types';
 import {
+  keepRefusedStockCheckRows,
   reconcileConvertExpiredReplay,
   reconcileCreatePantryItemReplay,
   reconcileMoveToPantryReplay,
@@ -201,8 +202,14 @@ import {
 } from './mealPlan/offline/replayReconcilers';
 import { removeGoneNotification } from './notifications/offline/replayReconcilers';
 import { reconcileReceiptCheckInReplay } from './receipts/offline/receiptCheckIn';
-import type { ReplayReconciler } from '#apollo/offlineQueue/types';
-import { preparePantryItemCreate } from './pantry/offline/replayPreparers';
+import type {
+  RefusedRowsNarrower,
+  ReplayReconciler,
+} from '#apollo/offlineQueue/types';
+import {
+  preparePantryItemCreate,
+  retryStockCheckAsItStands,
+} from './pantry/offline/replayPreparers';
 import {
   asQueued,
   withCurrentUnits,
@@ -352,6 +359,12 @@ export const FEATURE_REPLAY_PREPARATIONS: ByOperation<ReplayPreparer> = [
   [UpdateShoppingListItemDocument, withCurrentUnits],
   [RemoveItemFromShoppingListDocument, asQueued],
   [MarkRecipeAsCookedDocument, withCurrentMealVersion],
+  [RecordPantryStockCheckDocument, retryStockCheckAsItStands],
+];
+
+/** Batches whose refused rows become a write of their own. */
+export const FEATURE_REFUSED_ROWS: ByOperation<RefusedRowsNarrower> = [
+  [RecordPantryStockCheckDocument, keepRefusedStockCheckRows],
 ];
 
 /** Replays whose answer may name a stack merged since they were queued. */

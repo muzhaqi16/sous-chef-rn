@@ -540,8 +540,11 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   dropping that row would discard a write the server never refused. A row answering `APPLIED` has
   landed. Any other row is refused (`BatchRowRefusedError`), after the rows that landed are confirmed:
   the entry goes to the changes not saved whole, and a retry resends it all, as the landed rows
-  converge. A retry never trims the input: a batch keyed at the top would then send other input under
-  a spent key, which the API counts and will refuse.
+  converge. A retry never trims the input under its key: a batch keyed at the top would then send other
+  input under a spent key, which the API counts and will refuse. A batch whose key answers a resend with
+  what the first send did (`RecordPantryStockCheck`) could never land a refused row that way, so its
+  operation lists a narrower (`FEATURE_REFUSED_ROWS`): the refused rows become a write of their own
+  under a new key, named by those rows, and a row that landed is never counted again.
 - **A replay refused because its row is gone can settle silently.** An operation listed in
   `GONE_REPLAYS` (`replayRegistry.ts`: notification mark-read and delete, meal-plan item delete) treats a replayed
   `NotFoundError` as settled: its reconciler removes the row locally and the entry dequeues with no
@@ -584,7 +587,9 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   account clears it. Writes on a refused create's row follow it unsent (`heldBy`): the list shows the
   parent, and its retry or discard takes them along. `retryRefusedChange` returns the entries to
   `PENDING`, newest, with `overwrites` set, and shows their layers again; on a conflict such a write
-  goes out at the row's version with no comparison, as the person chose it. A retry that finds the row
+  goes out at the row's version with no comparison, as the person chose it (a stock check's entries go
+  without `expectedVersion`, which the API applies to each stack as it stands). The toast and the list
+  name the change the same way (`nameOfChange`). A retry that finds the row
   gone stays listed with discard as the only choice (`namesNoRow`).
 - **Queue-health telemetry** at each drain: `offline_queue_depth` + `offline_queue_oldest_age_ms`
   gauges, `offline_queue_conflicts_total` (version conflicts met) and

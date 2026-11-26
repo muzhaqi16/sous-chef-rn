@@ -6,6 +6,7 @@ import {
   retryRefusedChange,
 } from '#apollo/offlineQueue/refusedChanges';
 import type { QueuedMutation } from '#apollo/offlineQueue/types';
+import { nameOfChange } from '#apollo/offlineQueue/changeName';
 import { isTranslationKey, useTranslation } from '#i18n';
 import { formatQuantity } from '#utils/formatQuantity';
 import { isRecord } from '#utils/isRecord';
@@ -46,25 +47,6 @@ const stringIn = (source: unknown, field: string): string | undefined => {
   return typeof value === 'string' && value !== '' ? value : undefined;
 };
 
-/** What the person calls the row, from the change or the row it changed. */
-function nameOf({
-  pendingWrite,
-  variables,
-}: QueuedMutation): string | undefined {
-  const inputs = pendingWrite?.inputs;
-  const named = [
-    inputs?.fields,
-    inputs?.row,
-    inputs?.baseline,
-    variables.input,
-  ];
-  for (const source of named) {
-    const name = stringIn(source, 'itemName') ?? stringIn(source, 'name');
-    if (name) return name;
-  }
-  return undefined;
-}
-
 function enteredIn(fields: unknown): string[] {
   if (!isRecord(fields)) return [];
   return Object.entries(fields).flatMap(([field, value]) => {
@@ -93,7 +75,7 @@ export function useChangesNotSaved() {
     return {
       id: entry.id,
       name:
-        nameOf(entry) ??
+        nameOfChange(entry) ??
         (isTranslationKey(resourceKey)
           ? t(resourceKey)
           : t('changesNotSaved.aChange')),

@@ -94,7 +94,8 @@ export class BatchRowDeferredError extends Error {
 
 /**
  * A batch applied but the server refused a row. Thrown once the rows that
- * landed are settled; the entry is kept whole, as a retry converges on them.
+ * landed are settled; the entry is kept whole, as a retry converges on them,
+ * unless its operation narrows it to the refused rows.
  */
 export class BatchRowRefusedError extends Error {
   readonly rowCode: string;
@@ -274,7 +275,7 @@ export function classifyError(error: unknown): QueueError {
 
   if (error instanceof BatchRowRefusedError) {
     return {
-      type: 'unknown',
+      type: isVersionConflictCode(error.rowCode) ? 'conflict' : 'unknown',
       message: error.message,
       code: error.rowCode,
       timestamp: Date.now(),

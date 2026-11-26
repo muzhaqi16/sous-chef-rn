@@ -23,6 +23,7 @@ import type { FeedApplied } from '#apollo/feed/types';
 import { PROMISED_WINDOW_MS, readReplayWindow } from './replayWindow';
 import { lastCleanAnswerAt } from './serverAnswers';
 import {
+  narrowToRefusedRows,
   overwritesMergedQuantity,
   reconcileReplaySuccess,
   reportMergedRow,
@@ -561,6 +562,8 @@ export class QueueManager {
 
     const refusedRowCode = refusedBatchRowCode(payload);
     if (refusedRowCode !== null) {
+      const narrowed = narrowToRefusedRows(mutation, payload);
+      if (narrowed) queueStore.updateMutation(mutation.id, narrowed);
       throw new BatchRowRefusedError(mutation.operationName, refusedRowCode);
     }
 

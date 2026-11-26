@@ -726,7 +726,7 @@ describe('a stock check', () => {
       { today: TODAY, input: { pantryId: PANTRY_ID, entries: [] } },
       {
         pantryId: PANTRY_ID,
-        rows: [{ pantryItemId: 'held', held: count }],
+        rows: [{ pantryItemId: 'held', itemName: 'Flour', held: count }],
         now: NOW,
       } satisfies StockCheckInputs,
     );
