@@ -28,7 +28,6 @@ describe('StorageLocationCard', () => {
   const defaultLocation = {
     name: 'Kitchen Fridge',
     type: StorageType.Refrigerator,
-    icon: '🧊',
     currentItemCount: 12,
     parentLocation: null,
   };

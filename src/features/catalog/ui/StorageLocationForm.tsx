@@ -47,7 +47,6 @@ export interface StorageLocationFormInitialData {
 export interface StorageLocationFormValues {
   name: string;
   type: StorageType;
-  icon: string | null;
   parentLocationId: string | null;
   description: string | null;
   temperature: StorageState | null;
@@ -128,7 +127,6 @@ export const StorageLocationForm: React.FC<StorageLocationFormProps> = ({
     const result = await onSubmit({
       name: fields.name,
       type: fields.type,
-      icon: null,
       parentLocationId: fields.parentLocationId,
       description: fields.description.trim() || null,
       temperature:

@@ -308,7 +308,7 @@
     "pantriesHiddenDescription": "Someone who manages this home can let you view its pantries.",
     "searchNoResultsDescription": "Would you like to add it to your pantry?",
     "tabEmptyTitle": "No items in {{tabName}}",
-    "tabEmptyDescription": "Items stored here will appear in this tab",
+    "tabEmptyDescription": "Items stored here will appear in this list",
     "tabEmptyFallbackName": "this location",
     "tutorialPantrySettingsSubtitle": "Switch between pantry lists and create new pantries",
     "tutorialAddItemsTitle": "Add items quickly",

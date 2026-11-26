@@ -12,7 +12,6 @@ fragment StorageLocationConflict_storageLocation on StorageLocation {
   id
   name
   type
-  icon
   color
   temperature
   description

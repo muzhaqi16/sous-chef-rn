@@ -308,7 +308,7 @@
     "pantriesHiddenDescription": "Chi gestisce questa casa può permetterti di vedere le sue dispense.",
     "searchNoResultsDescription": "Vuoi aggiungerlo alla dispensa?",
     "tabEmptyTitle": "Nessun articolo in {{tabName}}",
-    "tabEmptyDescription": "Gli articoli conservati qui appariranno in questa scheda",
+    "tabEmptyDescription": "Gli articoli conservati qui appariranno in questo elenco",
     "tabEmptyFallbackName": "questa posizione",
     "tutorialPantrySettingsSubtitle": "Passa tra gli elenchi delle dispense e crea nuove dispense",
     "tutorialAddItemsTitle": "Aggiungi articoli rapidamente",

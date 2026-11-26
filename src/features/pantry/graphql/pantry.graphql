@@ -116,7 +116,6 @@ query GetPantry(
           id
           name
           type
-          icon
           color
           temperature
           isDefault

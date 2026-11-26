@@ -78,7 +78,6 @@ function buildLocationNode(
     id: 'loc-1',
     name: 'Fridge',
     type: StorageType.Refrigerator,
-    icon: null,
     color: null,
     temperature: null,
     description: null,

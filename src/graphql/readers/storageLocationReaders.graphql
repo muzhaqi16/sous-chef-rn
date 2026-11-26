@@ -6,7 +6,6 @@ fragment StorageLocationReaders on StorageLocation {
   color
   currentItemCount
   description
-  icon
   isClimateControlled
   isDefault
   name

@@ -65,7 +65,6 @@ export function writeLocalStorageLocation(
       id: input.id,
       name: input.name,
       type: input.type,
-      icon: input.icon ?? null,
       color: input.color ?? null,
       temperature: input.temperature ?? null,
       description: input.description ?? null,

@@ -139,7 +139,6 @@ const sheet = () => screen.UNSAFE_getByType(StorageLocationSheet);
 const VALUES: StorageLocationFormValues = {
   name: 'Garage shelf',
   type: StorageType.Cabinet,
-  icon: null,
   parentLocationId: null,
   description: null,
   temperature: null,

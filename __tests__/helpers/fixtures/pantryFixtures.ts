@@ -187,7 +187,6 @@ function storageLocationNode(loc: StorageLocationFixture): StorageLocationNode {
     id: loc.id,
     name: loc.name ?? `Location ${loc.id}`,
     type: loc.type ?? StorageType.PantryShelf,
-    icon: null,
     color: null,
     temperature: loc.temperature ?? null,
     isDefault: false,

@@ -308,7 +308,7 @@
     "pantriesHiddenDescription": "Quien gestiona este hogar puede permitirte ver sus despensas.",
     "searchNoResultsDescription": "¿Quieres añadirlo a tu despensa?",
     "tabEmptyTitle": "Sin artículos en {{tabName}}",
-    "tabEmptyDescription": "Los artículos guardados aquí aparecerán en esta pestaña",
+    "tabEmptyDescription": "Los artículos guardados aquí aparecerán en esta lista",
     "tabEmptyFallbackName": "esta ubicación",
     "tutorialPantrySettingsSubtitle": "Cambia entre listas de despensa y crea nuevas despensas",
     "tutorialAddItemsTitle": "Añade artículos rápidamente",
