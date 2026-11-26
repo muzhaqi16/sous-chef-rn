@@ -1,6 +1,5 @@
 import React from 'react';
-import { readFileSync } from 'fs';
-import { globSync } from 'glob';
+import * as ts from 'typescript';
 import { View } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +11,11 @@ import {
 } from '#navigation/layouts/TopInsetLayout';
 import { Screen, type ScreenProps } from '#components/templates/Screen';
 import { Text } from '#components/atoms/Text';
+import {
+  nodesOf,
+  parseSource,
+  productionSources,
+} from '#/test-utils/sourceAst';
 
 /**
  * The top inset is applied by the NAVIGATOR, once per screen, and `Screen`
@@ -230,23 +234,33 @@ describe('every screen that opts out of the inset is a deliberate one', () => {
     ],
   ];
 
-  const registrations = [
-    ...new Set([
-      ...globSync('src/features/*/screens/registration.ts'),
-      ...globSync('src/navigation/**/*.tsx'),
-    ]),
-  ] as string[];
+  /** Whether the file refers to `name` in code: a comment is not a use. */
+  const refersTo = (file: string, name: string, text?: string): boolean =>
+    nodesOf(parseSource(file, text)).some(
+      node => ts.isIdentifier(node) && node.text === name,
+    );
 
-  it('finds the registration modules, so the check is not vacuous', () => {
-    expect(registrations.length).toBeGreaterThan(10);
+  const sources = productionSources();
+
+  it('reads uses, not mentions, under any alias', () => {
+    expect(
+      refersTo(
+        'planted.ts',
+        'edgeToEdgeScreenLayout',
+        '// edgeToEdgeScreenLayout',
+      ),
+    ).toBe(false);
+    expect(
+      refersTo(
+        'planted.ts',
+        'edgeToEdgeScreenLayout',
+        "import { edgeToEdgeScreenLayout as hero } from '#navigation/layouts/TopInsetLayout';",
+      ),
+    ).toBe(true);
   });
 
-  it.each(OPT_OUTS)('names %s only in the recorded modules', (name, files) => {
-    const users = registrations.filter(file =>
-      new RegExp(`\\b${name}\\b`).test(readFileSync(file, 'utf8')),
-    );
-    expect(users.sort()).toEqual(
-      files.filter(f => registrations.includes(f)).sort(),
-    );
+  it.each(OPT_OUTS)('uses %s only in the recorded modules', (name, files) => {
+    const users = sources.filter(file => refersTo(file, name));
+    expect(users.sort()).toEqual([...files].sort());
   });
 });
