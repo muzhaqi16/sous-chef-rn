@@ -1,6 +1,5 @@
-import { readdirSync, readFileSync, statSync } from 'fs';
-import { join, relative } from 'path';
-
+import * as ts from 'typescript';
+import { parseSource, productionSources } from '#/test-utils/sourceAst';
 /**
  * Every sheet renders through the shell.
  *
@@ -28,46 +27,68 @@ const SHELL = [
   'src/components/templates/ActionTray/ActionTray.tsx',
 ];
 
-const SRC = join(process.cwd(), 'src');
+/** The one module that wraps gorhom's modal, themed, under gorhom's name. */
+const WRAPPER = 'src/hooks/ui/useStandardBottomSheet.tsx';
+
+const isGorhom = (specifier: string) => specifier === '@gorhom/bottom-sheet';
+const isWrapper = (specifier: string) =>
+  specifier.endsWith('/useStandardBottomSheet');
 
 /**
- * A RENDER, not a type. The boundary on the left rejects `RefObject<Bottom…>`;
- * the one on the right rejects `BottomSheetModalProps`.
+ * Whether the file imports `BottomSheetModal` as a value, under any name, from
+ * a module `from` accepts. A type import (`RefObject<BottomSheetModal>`,
+ * `BottomSheetModalProps`) renders nothing.
  */
-const RENDERS_MODAL = /(?<![A-Za-z0-9_])<BottomSheetModal(?![A-Za-z0-9_])/;
+function importsModal(
+  file: string,
+  from: (specifier: string) => boolean,
+  text?: string,
+): boolean {
+  return parseSource(file, text).statements.some(
+    statement =>
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      from(statement.moduleSpecifier.text) &&
+      statement.importClause?.phaseModifier !== ts.SyntaxKind.TypeKeyword &&
+      !!statement.importClause?.namedBindings &&
+      ts.isNamedImports(statement.importClause.namedBindings) &&
+      statement.importClause.namedBindings.elements.some(
+        element =>
+          !element.isTypeOnly &&
+          (element.propertyName ?? element.name).text === 'BottomSheetModal',
+      ),
+  );
+}
 
-/** Strip comments, so a docblock example does not read as a render. */
-const stripComments = (source: string): string =>
-  source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .split('\n')
-    .filter(line => !line.trim().startsWith('//'))
-    .join('\n');
-
-const collect = (dir: string, found: string[] = []): string[] => {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      if (entry !== '__tests__') collect(full, found);
-    } else if (
-      /\.tsx?$/.test(entry) &&
-      !/\.(test|generated)\.tsx?$/.test(entry)
-    ) {
-      found.push(full);
-    }
-  }
-  return found;
-};
-
-const renderers = collect(SRC)
-  .filter(file => RENDERS_MODAL.test(stripComments(readFileSync(file, 'utf8'))))
-  .map(file => relative(process.cwd(), file))
-  .sort();
+const SOURCES = productionSources();
 
 describe('bottom sheet shell', () => {
+  it('catches the modal imported under another name', () => {
+    const planted = `
+      import { BottomSheetModal as Modal } from '@gorhom/bottom-sheet';
+      const ThemedModal = withUnistyles(Modal);`;
+
+    expect(importsModal('planted.tsx', isGorhom, planted)).toBe(true);
+    expect(
+      importsModal(
+        'planted.tsx',
+        isGorhom,
+        `import type { BottomSheetModal } from '@gorhom/bottom-sheet';`,
+      ),
+    ).toBe(false);
+  });
+
+  it("wraps gorhom's modal in one module", () => {
+    expect(SOURCES.filter(file => importsModal(file, isGorhom))).toEqual([
+      WRAPPER,
+    ]);
+  });
+
   // Exact, both ways: a scan broken into finding nothing fails on the shell's
   // own files, and a hand-rendered modal fails as an extra entry.
-  it('only the shell renders a modal', () => {
-    expect(renderers).toEqual([...SHELL].sort());
+  it('only the shell renders the modal', () => {
+    expect(SOURCES.filter(file => importsModal(file, isWrapper))).toEqual(
+      [...SHELL].sort(),
+    );
   });
 });
