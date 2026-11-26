@@ -35,76 +35,107 @@ const COLLECTED = {
   NSPrivacyCollectedDataTypePerformanceData: { linked: false },
 } as const;
 
-/** Values of every `<string>` inside the dict that follows `key`. */
-function stringsInSection(xml: string, key: string): string[] {
-  const start = xml.indexOf(`<key>${key}</key>`);
-  if (start === -1) return [];
-  const arrayStart = xml.indexOf('<array', start);
-  if (arrayStart === -1) return [];
-  if (xml.startsWith('<array/>', arrayStart)) return [];
-  const arrayEnd = xml.indexOf('</array>', arrayStart);
-  const body = xml.slice(arrayStart, arrayEnd);
-  return [...body.matchAll(/<string>([^<]+)<\/string>/g)].map(m => m[1]!);
+/**
+ * The value element that directly follows `<key>key</key>`, or undefined. An
+ * array or dict is read to its own closing tag, past any nested in it.
+ */
+function valueAfter(xml: string, key: string): string | undefined {
+  const marker = `<key>${key}</key>`;
+  const at = xml.indexOf(marker);
+  if (at === -1) return undefined;
+  const body = xml.slice(at + marker.length).trimStart();
+  const leaf =
+    /^(<array\/>|<dict\/>|<true\/>|<false\/>|<string>[^<]*<\/string>)/.exec(
+      body,
+    );
+  if (leaf) return leaf[1];
+  const [, tag] = /^<(array|dict)>/.exec(body) ?? [];
+  if (!tag) return undefined;
+  const nesting = new RegExp(`<(/?)${tag}>`, 'g');
+  let depth = 0;
+  for (const match of body.matchAll(nesting)) {
+    depth += match[1] ? -1 : 1;
+    if (depth === 0) return body.slice(0, (match.index ?? 0) + match[0].length);
+  }
+  return undefined;
 }
+
+/** The `<string>` values of an array value, or none. */
+const stringsOf = (value: string | undefined): string[] =>
+  [...(value ?? '').matchAll(/<string>([^<]+)<\/string>/g)].map(m => m[1]!);
+
+/** The flag a key holds: true, false, or undefined when it holds no flag. */
+const flagOf = (xml: string, key: string): boolean | undefined => {
+  const value = valueAfter(xml, key);
+  return value === '<true/>' ? true : value === '<false/>' ? false : undefined;
+};
+
+/** Each collected-type entry: its own dict, read on its own. */
+const collectedEntries = (xml: string) =>
+  [
+    ...(valueAfter(xml, 'NSPrivacyCollectedDataTypes') ?? '').matchAll(
+      /<dict>([\s\S]*?)<\/dict>/g,
+    ),
+  ].map(([, entry = '']) => ({
+    type: stringsOf(valueAfter(entry, 'NSPrivacyCollectedDataType')).at(0),
+    linked: flagOf(entry, 'NSPrivacyCollectedDataTypeLinked'),
+    tracking: flagOf(entry, 'NSPrivacyCollectedDataTypeTracking'),
+    purposes: stringsOf(
+      valueAfter(entry, 'NSPrivacyCollectedDataTypePurposes'),
+    ),
+  }));
 
 describe('iOS privacy manifest', () => {
   const xml = readFileSync(MANIFEST_PATH, 'utf8');
+  const entries = collectedEntries(xml);
 
-  it('declares every collected data type on the recorded list', () => {
-    const declared = [
-      ...xml.matchAll(
-        /<key>NSPrivacyCollectedDataType<\/key>\s*<string>([^<]+)<\/string>/g,
-      ),
-    ].map(m => m[1]);
+  it('reads each entry on its own, never from its neighbour', () => {
+    const planted = `
+      <key>NSPrivacyTracking</key><false/>
+      <key>NSPrivacyCollectedDataTypes</key>
+      <array>
+        <dict>
+          <key>NSPrivacyCollectedDataType</key><string>A</string>
+        </dict>
+        <dict>
+          <key>NSPrivacyCollectedDataType</key><string>B</string>
+          <key>NSPrivacyCollectedDataTypeLinked</key><true/>
+        </dict>
+      </array>`;
 
-    expect(declared.sort()).toEqual(Object.keys(COLLECTED).sort());
+    expect(collectedEntries(planted).map(entry => entry.linked)).toEqual([
+      undefined,
+      true,
+    ]);
+    expect(stringsOf(valueAfter(planted, 'NSPrivacyTracking'))).toEqual([]);
   });
 
-  it('declares no collection the recorded list does not explain', () => {
-    const declared = new Set(
-      [
-        ...xml.matchAll(
-          /<key>NSPrivacyCollectedDataType<\/key>\s*<string>([^<]+)<\/string>/g,
-        ),
-      ].map(m => m[1]),
+  it('declares exactly the collected data types on the recorded list', () => {
+    expect(entries.map(entry => entry.type).sort()).toEqual(
+      Object.keys(COLLECTED).sort(),
     );
-
-    for (const type of declared) {
-      expect(Object.keys(COLLECTED)).toContain(type);
-    }
   });
 
   it('marks each type linked or unlinked as recorded', () => {
     for (const [type, { linked }] of Object.entries(COLLECTED)) {
-      const entryStart = xml.indexOf(`<string>${type}</string>`);
-      expect(entryStart).toBeGreaterThan(-1);
-      const entry = xml.slice(entryStart, entryStart + 400);
-      const linkedTag = entry.match(
-        /<key>NSPrivacyCollectedDataTypeLinked<\/key>\s*<(true|false)\/>/,
-      );
-      expect(linkedTag?.[1]).toBe(linked ? 'true' : 'false');
+      expect(entries.find(entry => entry.type === type)?.linked).toBe(linked);
     }
   });
 
   it('gives every collected type at least one purpose', () => {
-    const purposeBlocks = [
-      ...xml.matchAll(
-        /<key>NSPrivacyCollectedDataTypePurposes<\/key>\s*<array>([\s\S]*?)<\/array>/g,
-      ),
-    ];
-
-    expect(purposeBlocks).toHaveLength(Object.keys(COLLECTED).length);
-    for (const [, body] of purposeBlocks) {
-      expect(body).toMatch(/<string>NSPrivacyCollectedDataTypePurpose/);
+    for (const entry of entries) {
+      expect(
+        entry.purposes.some(purpose =>
+          purpose.startsWith('NSPrivacyCollectedDataTypePurpose'),
+        ),
+      ).toBe(true);
     }
   });
 
   it('claims no tracking, consistent with the per-type flags', () => {
-    expect(xml).toMatch(/<key>NSPrivacyTracking<\/key>\s*<false\/>/);
-    expect(stringsInSection(xml, 'NSPrivacyTrackingDomains')).toEqual([]);
-    expect(xml).not.toMatch(
-      /<key>NSPrivacyCollectedDataTypeTracking<\/key>\s*<true\/>/,
-    );
+    expect(flagOf(xml, 'NSPrivacyTracking')).toBe(false);
+    expect(stringsOf(valueAfter(xml, 'NSPrivacyTrackingDomains'))).toEqual([]);
+    expect(entries.filter(entry => entry.tracking === true)).toEqual([]);
   });
 
   it('keeps the required-reason API declarations', () => {

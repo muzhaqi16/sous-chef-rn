@@ -16,9 +16,14 @@ const build = read('.github', 'workflows', 'build-android.yml');
 const promote = read('.github', 'workflows', 'promote-android.yml');
 const fastfile = read('fastlane', 'Fastfile');
 
+/** A job key at two spaces, a trailing comment allowed. */
+const JOB_KEY = (name: string) =>
+  new RegExp(`^ {2}${name}:[ \\t]*(?:#.*)?$`, 'm');
+
+/** One job's text: from its key to the next job's, whatever that key carries. */
 const jobOf = (workflow: string, name: string): string => {
-  const [, rest = ''] = workflow.split(new RegExp(`^ {2}${name}:$`, 'm'));
-  const [job = ''] = rest.split(/^ {2}[a-zA-Z_-]+:$/m);
+  const [, rest = ''] = workflow.split(JOB_KEY(name));
+  const [job = ''] = rest.split(JOB_KEY('[a-zA-Z0-9_-]+'));
   return job;
 };
 
@@ -48,6 +53,24 @@ const evaluate = (
 const VERSION = '1.2.3';
 
 const MAIN = 'refs/heads/main';
+
+describe('the workflow reader', () => {
+  it('keeps each job to its own text, comments and all', () => {
+    const planted = [
+      'jobs:',
+      '  upload: # waits on nothing',
+      '    runs-on: ubuntu-latest',
+      '  version-code: # asks Play',
+      "    if: github.ref == 'refs/heads/main'",
+      '',
+    ].join('\n');
+
+    expect(jobOf(planted, 'upload')).not.toContain('refs/heads/main');
+    expect(lineIf(jobOf(planted, 'version-code'))).toBe(
+      "github.ref == 'refs/heads/main'",
+    );
+  });
+});
 
 describe('a version code is asked of Play', () => {
   const condition = lineIf(jobOf(build, 'version-code'));
