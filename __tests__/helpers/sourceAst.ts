@@ -2,7 +2,21 @@ import { readFileSync } from 'fs';
 import { sync as glob } from 'glob';
 import * as ts from 'typescript';
 
-/** A file's syntax tree, parsed as TSX so JSX and type syntax both read. */
+/**
+ * The kind a file is parsed as, from its extension. A `.ts` file read as TSX
+ * misparses an angle-bracket assertion or a generic arrow, and every node after
+ * the error can be lost.
+ */
+const scriptKindOf = (file: string): ts.ScriptKind =>
+  file.endsWith('.tsx')
+    ? ts.ScriptKind.TSX
+    : file.endsWith('.jsx')
+    ? ts.ScriptKind.JSX
+    : file.endsWith('.js')
+    ? ts.ScriptKind.JS
+    : ts.ScriptKind.TS;
+
+/** A file's syntax tree, parsed as its extension says. */
 export function parseSource(
   file: string,
   text: string = readFileSync(file, 'utf8'),
@@ -12,7 +26,7 @@ export function parseSource(
     text,
     ts.ScriptTarget.Latest,
     true,
-    ts.ScriptKind.TSX,
+    scriptKindOf(file),
   );
 }
 
