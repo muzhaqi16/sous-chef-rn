@@ -14,10 +14,9 @@
  */
 jest.unmock('#services/alertService');
 import React from 'react';
-import { Platform } from 'react-native';
+import { Modal, Platform } from 'react-native';
 import { act, render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
-import { Modal } from '#components/atoms/themedComponents';
 import { AlertProvider } from '../AlertProvider';
 import { alertService } from '#services/alertService';
 import { drainTimers } from '#/test-utils/drainTimers';

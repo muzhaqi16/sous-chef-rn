@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Platform, View } from 'react-native';
-import { Pressable, Modal } from '#components/atoms/themedComponents';
+import { Modal, Platform, View } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   useSharedValue,
@@ -318,8 +318,6 @@ export const AlertProvider: React.FC<AlertProviderProps> = ({ children }) => {
       <Modal
         transparent
         visible={open}
-        statusBarTranslucent
-        navigationBarTranslucent
         presentationStyle="overFullScreen"
         onRequestClose={handleRequestClose}
         onDismiss={handleClosed}

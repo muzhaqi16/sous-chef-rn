@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import {
+  Modal,
   View,
   FlatList,
   useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { Modal } from '#components/atoms/themedComponents';
 import { useTranslation } from '#i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -205,8 +205,6 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
       visible={visible}
       transparent={false}
       animationType="fade"
-      statusBarTranslucent
-      navigationBarTranslucent
       onRequestClose={content.onClose}
     >
       {opening ? (

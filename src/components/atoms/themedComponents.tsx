@@ -1,6 +1,5 @@
 import {
   ActivityIndicator,
-  Modal as RNModal,
   Platform,
   Pressable as RNPressable,
   RefreshControl as RNRefreshControl,
@@ -39,8 +38,6 @@ export const Pressable = ({
     }
   />
 );
-
-export const Modal = RNModal;
 
 // A body-text placeholder tone renders an empty field as dark as a filled one.
 // `keyboardAppearance` reads `rt.themeName`: an explicit theme preference calls

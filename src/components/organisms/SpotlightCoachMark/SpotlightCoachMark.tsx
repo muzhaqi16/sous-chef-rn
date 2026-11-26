@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
+  Modal,
   View,
   useWindowDimensions,
   type LayoutChangeEvent,
@@ -21,7 +22,7 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
-import { Pressable, Modal } from '#components/atoms/themedComponents';
+import { Pressable } from '#components/atoms/themedComponents';
 import {
   Canvas,
   Group,
@@ -485,14 +486,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   }
 
   return (
-    <Modal
-      visible
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      navigationBarTranslucent
-      onRequestClose={onClose}
-    >
+    <Modal visible transparent animationType="none" onRequestClose={onClose}>
       <GestureHandlerRootView style={styles.fullScreen}>
         {overlay}
       </GestureHandlerRootView>

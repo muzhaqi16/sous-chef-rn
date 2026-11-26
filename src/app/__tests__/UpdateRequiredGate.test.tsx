@@ -1,5 +1,5 @@
 import React from 'react';
-import { AccessibilityInfo, BackHandler } from 'react-native';
+import { AccessibilityInfo, BackHandler, Modal } from 'react-native';
 import {
   isHiddenFromAccessibility,
   render,
@@ -7,7 +7,6 @@ import {
   userEvent,
 } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
-import { Modal } from '#components/atoms/themedComponents';
 import { appConfig } from '#config/appConfig';
 import { UpdateRequiredGate } from '../UpdateRequiredGate';
 import { drainTimers } from '#/test-utils/drainTimers';

@@ -1,7 +1,6 @@
 'use no memo';
 import React from 'react';
-import { Platform, TextInput } from 'react-native';
-import { Modal } from '#components/atoms/themedComponents';
+import { Modal, Platform, TextInput } from 'react-native';
 import {
   fireEvent,
   render,
