@@ -1,5 +1,15 @@
-import { readFileSync } from 'fs';
-import { sync as glob } from 'glob';
+import * as ts from 'typescript';
+import {
+  calleeName,
+  findProperty,
+  jsxAttribute,
+  jsxAttributeText,
+  jsxElementsOf,
+  nodesOf,
+  parseSource,
+  productionSources,
+  propertyName,
+} from '#/test-utils/sourceAst';
 
 /**
  * gorhom's `BottomSheetView` is `position: absolute` with no bottom and no
@@ -9,66 +19,118 @@ import { sync as glob } from 'glob';
  * A sheet holding one uses `mode="list"`, which hands the child to the modal.
  */
 
-const SCROLLABLES = /<(FlashList|FlatList|SectionList|ScrollView)\b/;
-const VIEW_MODE = /mode=["']view["']/;
+const SCROLLABLES = new Set([
+  'FlashList',
+  'FlatList',
+  'SectionList',
+  'ScrollView',
+]);
 
-/**
- * `style={styles.x}` on each scrollable's opening tag. The tag's end is found
- * by brace depth, not by the first `>` — an arrow function in any earlier prop
- * supplies one of those and would cut the search short of the style.
- */
-const styleKeysOnScrollables = (src: string): string[] => {
-  const keys: string[] = [];
-  const re = /<(?:FlashList|FlatList|SectionList|ScrollView)\b/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(src))) {
-    let depth = 0;
-    let end = m.index;
-    for (let i = m.index; i < src.length; i++) {
-      const c = src[i];
-      if (c === '{') depth++;
-      else if (c === '}') depth--;
-      else if (c === '>' && depth === 0) {
-        end = i;
-        break;
-      }
-    }
-    const tag = src.slice(m.index, end);
-    for (const s of tag.matchAll(/\bstyle=\{\w*[sS]tyles\d*\.(\w+)\}/g))
-      keys.push(s[1]!);
-  }
-  return keys;
-};
+/** `styles.x`, in a plain, array or conditional style, as `x`. */
+const styleKeys = (expression: ts.Expression): string[] =>
+  nodesOf(expression)
+    .filter(ts.isPropertyAccessExpression)
+    .filter(
+      access =>
+        ts.isIdentifier(access.expression) &&
+        /[sS]tyles\d*$/.test(access.expression.text),
+    )
+    .map(access => access.name.text);
 
-/** The literal body of `key: { … }` in the file's StyleSheet block. */
-const styleBody = (src: string, key: string): string => {
-  const start = src.search(new RegExp(`\\b${key}:\\s*\\{`));
-  if (start === -1) return '';
-  const from = src.indexOf('{', start);
-  let depth = 0;
-  for (let i = from; i < src.length; i++) {
-    if (src[i] === '{') depth++;
-    else if (src[i] === '}' && --depth === 0) return src.slice(from, i + 1);
-  }
-  return '';
-};
+/** Whether an object literal states `name` among its own properties. */
+const states = (style: ts.ObjectLiteralExpression, name: string) =>
+  style.properties.some(
+    property =>
+      ts.isPropertyAssignment(property) && propertyName(property.name) === name,
+  );
+
+const fillsItsParent = (style: ts.ObjectLiteralExpression) =>
+  style.properties.some(
+    property =>
+      ts.isPropertyAssignment(property) &&
+      propertyName(property.name) === 'flex' &&
+      property.initializer.getText() === '1',
+  );
+
+/** The style `key` as the file's StyleSheet declares it. */
+const styleEntry = (source: ts.SourceFile, key: string) =>
+  nodesOf(source)
+    .filter(ts.isCallExpression)
+    .filter(call => calleeName(call) === 'StyleSheet.create')
+    .map(call => findProperty(call, key))
+    .find(Boolean);
+
+/** Each scrollable style in a view-mode sheet's file that is never bounded. */
+function unboundedScrollables(file: string, text?: string): string[] {
+  const source = parseSource(file, text);
+  const elements = jsxElementsOf(source);
+  const hasViewSheet = elements.some(element => {
+    const mode = jsxAttribute(element, 'mode');
+    return (
+      element.tagName.getText() === 'Sheet' &&
+      !!mode &&
+      jsxAttributeText(mode) === 'view'
+    );
+  });
+  if (!hasViewSheet) return [];
+
+  return elements
+    .filter(element => SCROLLABLES.has(element.tagName.getText()))
+    .flatMap(element => {
+      const style = jsxAttribute(element, 'style')?.initializer;
+      return style && ts.isJsxExpression(style) && style.expression
+        ? styleKeys(style.expression)
+        : [];
+    })
+    .filter(key => {
+      const style = styleEntry(source, key)?.initializer;
+      return (
+        !!style &&
+        ts.isObjectLiteralExpression(style) &&
+        fillsItsParent(style) &&
+        !states(style, 'maxHeight')
+      );
+    })
+    .map(key => `${file} ${key}`);
+}
+
+const viewSheetFiles = productionSources('src/**/*.tsx').filter(file =>
+  jsxElementsOf(parseSource(file)).some(element => {
+    const mode = jsxAttribute(element, 'mode');
+    return (
+      element.tagName.getText() === 'Sheet' &&
+      !!mode &&
+      jsxAttributeText(mode) === 'view'
+    );
+  }),
+);
 
 describe('a view-mode sheet does not hold an unbounded scrollable', () => {
-  const files = glob('src/**/*.tsx', { ignore: ['**/__tests__/**'] })
-    .map(file => ({ file, src: readFileSync(file, 'utf8') }))
-    .filter(({ src }) => VIEW_MODE.test(src) && SCROLLABLES.test(src));
+  it('catches a scrollable whose style is one of several', () => {
+    const planted = `
+      const Picker = () => (
+        <Sheet mode="view" visible onDismiss={close}>
+          <FlatList style={[styles.list, open && styles.open]} data={rows} />
+        </Sheet>
+      );
+      const styles = StyleSheet.create(theme => ({
+        list: { flex: 1 },
+        open: { opacity: 1 },
+      }));`;
+
+    expect(unboundedScrollables('planted.tsx', planted)).toEqual([
+      'planted.tsx list',
+    ]);
+  });
 
   it('finds the view-mode sheets to check', () => {
     // A rename that stops this matching would make every case below vacuous.
-    expect(files.length).toBeGreaterThan(0);
+    expect(viewSheetFiles.length).toBeGreaterThan(0);
   });
 
-  it.each(files.map(f => f.file))('%s bounds its scrollable', file => {
-    const src = readFileSync(file, 'utf8');
-    const unbounded = styleKeysOnScrollables(src).filter(key => {
-      const body = styleBody(src, key);
-      return /\bflex:\s*1\b/.test(body) && !/\bmaxHeight\b/.test(body);
-    });
-    expect(unbounded).toEqual([]);
+  it('bounds every scrollable in them', () => {
+    expect(viewSheetFiles.flatMap(file => unboundedScrollables(file))).toEqual(
+      [],
+    );
   });
 });

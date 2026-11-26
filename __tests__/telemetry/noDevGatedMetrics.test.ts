@@ -16,65 +16,108 @@
  * inside `__DEV__`; `Telemetry.*` metric calls do not. Gate reporting volume
  * with `enabled` / `sampleRate` instead.
  */
-import fs from 'fs';
-import path from 'path';
+import * as ts from 'typescript';
+import {
+  calleeName,
+  nodesOf,
+  parseSource,
+  productionSources,
+} from '#/test-utils/sourceAst';
 
-const SRC = path.join(__dirname, '..', '..', 'src');
-const METRIC_CALL =
-  /Telemetry\.(?:histogram|increment|gauge|counter)\(\s*\n?\s*['"]([a-z0-9_]+)['"]/g;
+const METRIC_CALLS = new Set([
+  'Telemetry.histogram',
+  'Telemetry.increment',
+  'Telemetry.gauge',
+  'Telemetry.counter',
+]);
 
-function sourceFiles(dir: string, out: string[] = []): string[] {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === '__tests__' || entry.name === '__mocks__') continue;
-      sourceFiles(full, out);
-    } else if (/\.tsx?$/.test(entry.name) && !entry.name.endsWith('.d.ts')) {
-      out.push(full);
-    }
+/** Whether a condition holds only in a dev build, only in release, or neither. */
+function buildOf(condition: ts.Expression): 'dev' | 'release' | undefined {
+  if (ts.isParenthesizedExpression(condition)) {
+    return buildOf(condition.expression);
   }
-  return out;
+  if (ts.isIdentifier(condition) && condition.text === '__DEV__') return 'dev';
+  if (
+    ts.isPrefixUnaryExpression(condition) &&
+    condition.operator === ts.SyntaxKind.ExclamationToken
+  ) {
+    const inner = buildOf(condition.operand);
+    return inner === 'dev'
+      ? 'release'
+      : inner === 'release'
+      ? 'dev'
+      : undefined;
+  }
+  if (
+    ts.isBinaryExpression(condition) &&
+    condition.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+    (buildOf(condition.left) === 'dev' || buildOf(condition.right) === 'dev')
+  ) {
+    return 'dev';
+  }
+  return undefined;
 }
 
-/** Body of every `if (__DEV__) { … }` block, matched by brace depth. */
-function devBlocks(src: string): string[] {
-  const blocks: string[] = [];
-  const opener = /if \(__DEV__\)\s*\{/g;
-  let m: RegExpExecArray | null;
-  while ((m = opener.exec(src)) !== null) {
-    const start = m.index + m[0].length;
-    let depth = 0;
-    for (let i = start - 1; i < src.length; i++) {
-      if (src[i] === '{') depth++;
-      else if (src[i] === '}') {
-        depth--;
-        if (depth === 0) {
-          blocks.push(src.slice(start, i));
-          break;
-        }
-      }
+/** Code that runs only in a dev build: a branch, or the rest of `__DEV__ && …`. */
+function devOnly(source: ts.SourceFile): ts.Node[] {
+  return nodesOf(source).flatMap((node): ts.Node[] => {
+    if (ts.isIfStatement(node)) {
+      const build = buildOf(node.expression);
+      if (build === 'dev') return [node.thenStatement];
+      if (build === 'release' && node.elseStatement)
+        return [node.elseStatement];
+      return [];
     }
-  }
-  return blocks;
+    if (ts.isConditionalExpression(node)) {
+      const build = buildOf(node.condition);
+      if (build === 'dev') return [node.whenTrue];
+      if (build === 'release') return [node.whenFalse];
+      return [];
+    }
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+      buildOf(node.left) === 'dev'
+    ) {
+      return [node.right];
+    }
+    return [];
+  });
+}
+
+/** Each metric emitted only in a dev build, as `file → name`. */
+function devGatedMetrics(file: string, text?: string): string[] {
+  return devOnly(parseSource(file, text)).flatMap(scope =>
+    nodesOf(scope)
+      .filter(ts.isCallExpression)
+      .filter(call => METRIC_CALLS.has(calleeName(call) ?? ''))
+      .map(call => {
+        const [name] = call.arguments;
+        return `${file} → ${
+          name && ts.isStringLiteral(name) ? name.text : '?'
+        }`;
+      }),
+  );
 }
 
 describe('telemetry metrics are not __DEV__-gated', () => {
-  it('emits no Telemetry metric from inside an if (__DEV__) block', () => {
-    const offenders: string[] = [];
+  it('catches a metric behind any dev-only condition', () => {
+    const planted = `
+      if (__DEV__ && verbose) Telemetry.increment('cache_writes');
+      __DEV__ && Telemetry.histogram('render_ms', ms);
+      if (!__DEV__) Telemetry.increment('release_only');
+      else Telemetry.gauge('dev_only_depth', depth);`;
 
-    for (const file of sourceFiles(SRC)) {
-      const src = fs.readFileSync(file, 'utf8');
-      if (!src.includes('__DEV__') || !src.includes('Telemetry.')) continue;
+    expect(devGatedMetrics('planted.ts', planted)).toEqual([
+      'planted.ts → cache_writes',
+      'planted.ts → render_ms',
+      'planted.ts → dev_only_depth',
+    ]);
+  });
 
-      for (const block of devBlocks(src)) {
-        METRIC_CALL.lastIndex = 0;
-        let call: RegExpExecArray | null;
-        while ((call = METRIC_CALL.exec(block)) !== null) {
-          offenders.push(`${path.relative(SRC, file)} → ${call[1]}`);
-        }
-      }
-    }
-
-    expect(offenders).toEqual([]);
+  it('emits no Telemetry metric from inside a dev-only branch', () => {
+    expect(productionSources().flatMap(file => devGatedMetrics(file))).toEqual(
+      [],
+    );
   });
 });
