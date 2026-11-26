@@ -120,7 +120,10 @@ const SKELETON_INHERITS_AN_INSET: Record<string, string> = {
 const SUPPLIES_AN_INSET =
   /layout\.pageGutter|gutter="page"|[sS]tyles\d*\.gutter/;
 
-const sources = glob('src/**/*.{ts,tsx}', { ignore: ['**/*.generated.ts'] });
+// A test that asserts the gutter authors no edge.
+const sources = glob('src/**/*.{ts,tsx}', {
+  ignore: ['**/*.generated.ts', '**/__tests__/**'],
+});
 
 describe('the page gutter has one author per page', () => {
   it('is read only by a page container, its chrome, or a deliberate negation', () => {
