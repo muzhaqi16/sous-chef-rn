@@ -701,6 +701,16 @@ they read it.
 - **The schema sits in a `*FormConfig.ts` beside its form**;
   `shoppingItemFormConfig.ts` is shared by the AddEditItem screen and the
   AddToShoppingList sheet.
+- **Every `Controller` hands its input `field.ref`.** A failed submit focuses the
+  first field in error, and the keyboard-aware scroller brings it into view, only
+  through that ref. A kit input takes it as `ref` (`FormInput`, `FractionInput`,
+  `FormTextArea`, `EditableCounter`, `BaseInput`), an inline autocomplete as
+  `chaining.inputRef`; a `modal` autocomplete is a button and takes none
+  (`__tests__/forms/controllersFocusTheirInput.test.ts`).
+- **A cap a field is held to goes in the resolver's `context`** (what a stack
+  holds, what a batch can give), never in a schema built per render. When the
+  cap moves after a submit, `trigger` re-runs the field, so a shown message
+  follows it (`ConsumePantryItemModal`, `RecordWastePantryItemModal`).
 - **A form over data it reads** seeds `defaultValues` from the cached copy and
   passes the same object as `values`, with
   `resetOptions: { keepDirtyValues: true }`, so a later read restates every
