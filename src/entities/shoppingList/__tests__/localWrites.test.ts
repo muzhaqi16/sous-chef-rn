@@ -10,7 +10,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { cacheShows } from '#/test-utils/cacheWaits';
 import { operationNameOf } from '#apollo/utils/documentOperation';
-import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
+import { SHOPPING_ITEMS_PAGE_SIZE } from '#features/shoppingList/hooks/shoppingItemsPage';
 import {
   AddItemToShoppingListDocument,
   CreateShoppingListDocument,
@@ -1120,7 +1120,7 @@ describe('a list', () => {
     const { id } = create(list);
     const linesVariables = {
       id: 'minted-list',
-      first: PAGINATION.ITEMS_PAGE_SIZE,
+      first: SHOPPING_ITEMS_PAGE_SIZE,
       isPurchased: false,
     };
     seedQuery(list.cache, {

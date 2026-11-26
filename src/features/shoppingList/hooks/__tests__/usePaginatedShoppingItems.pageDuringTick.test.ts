@@ -18,9 +18,8 @@ import { usePaginatedShoppingItems } from '#features/shoppingList/hooks/usePagin
 jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
 }));
-jest.mock('#features/shoppingList/utils/shoppingListConstants', () => ({
-  ...jest.requireActual('#features/shoppingList/utils/shoppingListConstants'),
-  PAGINATION: { ITEMS_PAGE_SIZE: 2 },
+jest.mock('#features/shoppingList/hooks/shoppingItemsPage', () => ({
+  SHOPPING_ITEMS_PAGE_SIZE: 2,
 }));
 
 const list = { __typename: 'ShoppingList', id: 'list-1', version: 1 };

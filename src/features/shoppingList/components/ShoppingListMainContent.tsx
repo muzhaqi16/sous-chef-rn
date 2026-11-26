@@ -39,7 +39,7 @@ import {
 import { useUser } from '#store/useAppStore';
 import { useFirstShopTourContext } from '#features/shoppingList/context/FirstShopTourContext';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
-import { useNewFeatureTour } from '#features/shoppingList/components/useNewFeatureTour';
+import { useNewFeatureTour } from '#features/shoppingList/hooks/useNewFeatureTour';
 import { FIRST_SHOP_STEP } from '#features/shoppingList/context/useFirstShopTour';
 
 // Utils

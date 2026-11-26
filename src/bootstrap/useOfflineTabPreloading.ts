@@ -8,7 +8,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { SHOPPING_LISTS_PAGE_SIZE } from '#features/shoppingList/hooks/useShoppingListsQuery';
 import { activeShoppingListId } from '#features/shoppingList/hooks/useActiveShoppingListId';
-import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
+import { SHOPPING_ITEMS_PAGE_SIZE } from '#features/shoppingList/hooks/shoppingItemsPage';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { UNFILTERED_PLANS_VARIABLES } from '#features/mealPlan/hooks/useMealPlans';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
@@ -115,7 +115,7 @@ async function warmActiveList(client: ApolloClient): Promise<void> {
     ...[false, true].map(isPurchased =>
       client.query({
         query: GetShoppingListItemsFilteredDocument,
-        variables: { id, first: PAGINATION.ITEMS_PAGE_SIZE, isPurchased },
+        variables: { id, first: SHOPPING_ITEMS_PAGE_SIZE, isPurchased },
         ...WARM_OPTIONS,
       }),
     ),

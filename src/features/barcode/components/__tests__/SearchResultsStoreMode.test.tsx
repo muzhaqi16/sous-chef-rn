@@ -51,7 +51,7 @@ import {
   GetShoppingListItemsFilteredDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
+import { SHOPPING_ITEMS_PAGE_SIZE } from '#features/shoppingList/hooks/shoppingItemsPage';
 import { UseListAsksPrice_ListFragmentDoc } from '#features/shoppingList/hooks/useListAsksPrice.generated';
 import { UseListCurrency_ListFragmentDoc } from '#features/shoppingList/hooks/useListCurrency.generated';
 import { localizeNumericHint } from '#utils/formatters/number';
@@ -338,7 +338,7 @@ const cartSettles = (client: ApolloClient, id: string, inCart: boolean) => {
     query: GetShoppingListItemsFilteredDocument,
     variables: {
       id: 'list-1',
-      first: PAGINATION.ITEMS_PAGE_SIZE,
+      first: SHOPPING_ITEMS_PAGE_SIZE,
       isPurchased: true,
     },
   };

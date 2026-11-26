@@ -4,7 +4,7 @@ import { firstNonBlank } from '#utils/firstNonBlank';
 import { heldFetchPolicy } from '#hooks/apollo/standDownOptions';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
+import { SHOPPING_ITEMS_PAGE_SIZE } from '#features/shoppingList/hooks/shoppingItemsPage';
 import {
   matchScannedLine,
   type ScannedProductRef,
@@ -34,7 +34,7 @@ export function useStoreModeCart(
       ? {
           variables: {
             id: listId,
-            first: PAGINATION.ITEMS_PAGE_SIZE,
+            first: SHOPPING_ITEMS_PAGE_SIZE,
             isPurchased: false,
           },
           ...heldFetchPolicy('cache-only'),
@@ -47,7 +47,7 @@ export function useStoreModeCart(
       ? {
           variables: {
             id: listId,
-            first: PAGINATION.ITEMS_PAGE_SIZE,
+            first: SHOPPING_ITEMS_PAGE_SIZE,
             isPurchased: true,
           },
           ...heldFetchPolicy('cache-only'),

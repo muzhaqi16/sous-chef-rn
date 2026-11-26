@@ -12,7 +12,7 @@ import {
   GetShoppingListItemsFilteredDocument,
   type GetShoppingListItemsFilteredQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
+import { SHOPPING_ITEMS_PAGE_SIZE } from '#features/shoppingList/hooks/shoppingItemsPage';
 import { useStoreModeCart } from '../useStoreModeCart';
 import { UseListCurrency_ListFragmentDoc } from '../useListCurrency.generated';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
@@ -80,7 +80,7 @@ const node = ({
 
 const tabVariables = (isPurchased: boolean) => ({
   id: LIST,
-  first: PAGINATION.ITEMS_PAGE_SIZE,
+  first: SHOPPING_ITEMS_PAGE_SIZE,
   isPurchased,
 });
 

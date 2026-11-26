@@ -21,7 +21,7 @@ import {
   type UseToggleShoppingItem_ItemFragment,
 } from './useToggleShoppingItem.generated';
 import { appliedPayload } from '#utils/errors/mutationPayload';
-import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
+import { SHOPPING_ITEMS_PAGE_SIZE } from '#features/shoppingList/hooks/shoppingItemsPage';
 import type { PurchasedItemInput } from '#graphql/generated/schemaTypes';
 
 interface UseToggleShoppingItemOptions {
@@ -92,7 +92,7 @@ export function useToggleShoppingItem({
         query: GetShoppingListItemsFilteredDocument,
         variables: {
           id: listId,
-          first: PAGINATION.ITEMS_PAGE_SIZE,
+          first: SHOPPING_ITEMS_PAGE_SIZE,
           isPurchased: previousIsPurchased,
         },
         optimistic: true,
