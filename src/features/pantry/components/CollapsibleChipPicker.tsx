@@ -3,12 +3,12 @@ import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import { commonStyles } from '#styles/commonStyles';
 
 import { Text } from '#components/atoms/Text';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import { motion } from '#theme/motion';
+import { Chip } from '#components/molecules/Chip';
 
 interface CollapsibleChipPickerProps<T extends string> {
   label: string;
@@ -62,33 +62,15 @@ export const CollapsibleChipPicker = <T extends string>({
           exiting={FadeOut.duration(motion.timing.FAST)}
           style={styles.expandedContainer}
         >
-          <View style={commonStyles.bottomSheetOptionContainer}>
-            {options.map(option => {
-              const selected = option.value === selectedValue;
-              return (
-                <AppPressable
-                  key={option.value}
-                  style={[
-                    commonStyles.bottomSheetOption,
-                    selected && commonStyles.bottomSheetOptionSelected,
-                  ]}
-                  onPress={() => handleSelect(option.value)}
-                >
-                  <Text
-                    role="caption"
-                    style={[
-                      commonStyles.bottomSheetOptionText,
-                      selected && commonStyles.bottomSheetOptionTextSelected,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                  {selected ? (
-                    <Icon name="checkmark" size="xs" tone="primary" />
-                  ) : null}
-                </AppPressable>
-              );
-            })}
+          <View style={commonStyles.chipGrid}>
+            {options.map(option => (
+              <Chip
+                key={option.value}
+                label={option.label}
+                selected={option.value === selectedValue}
+                onPress={() => handleSelect(option.value)}
+              />
+            ))}
           </View>
         </Animated.View>
       )}

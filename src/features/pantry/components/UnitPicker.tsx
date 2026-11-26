@@ -2,10 +2,8 @@ import React, { useState } from 'react';
 import { useTranslation } from '#i18n';
 import { unitLabel } from '#utils/formatQuantity';
 import { View } from 'react-native';
-import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import { commonStyles } from '#styles/commonStyles';
 
 import { Text } from '#components/atoms/Text';
@@ -13,6 +11,7 @@ import type { UnitType } from '#graphql/generated/schemaTypes';
 import { MutedActivityIndicator } from '#components/atoms/themedComponents';
 import { motion } from '#theme/motion';
 import type { PickableUnit } from '#features/pantry/types';
+import { Chip } from '#components/molecules/Chip';
 
 export interface PickableUnitGroup {
   type: UnitType;
@@ -102,28 +101,12 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
       unit.conversionConfidence < 0.8 &&
       !unit.isTrackingUnit;
     return (
-      <AppPressable
+      <Chip
         key={unit.unitId}
-        style={[
-          commonStyles.bottomSheetOption,
-          selected && commonStyles.bottomSheetOptionSelected,
-          unit.isTrackingUnit && styles.trackingUnit,
-        ]}
-        accessibilityState={{ selected }}
+        label={`${unitLabel(unit.unit)}${isLowConfidence ? ' ~' : ''}`}
+        selected={selected}
         onPress={() => handleSelect(unit)}
-      >
-        <Text
-          role="caption"
-          style={[
-            commonStyles.bottomSheetOptionText,
-            selected && commonStyles.bottomSheetOptionTextSelected,
-          ]}
-        >
-          {unitLabel(unit.unit)}
-          {isLowConfidence ? ' ~' : null}
-        </Text>
-        {selected ? <Icon name="checkmark" size="xs" tone="primary" /> : null}
-      </AppPressable>
+      />
     );
   };
 
@@ -145,27 +128,20 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
                   {group.label}
                 </Text>
               )}
-              <View style={commonStyles.bottomSheetOptionContainer}>
-                {group.units.map(chip)}
-              </View>
+              <View style={commonStyles.chipGrid}>{group.units.map(chip)}</View>
             </View>
           ))}
         </Animated.View>
       ) : (
-        <View style={[commonStyles.bottomSheetOptionContainer, styles.units]}>
+        <View style={[commonStyles.chipGrid, styles.units]}>
           {leadingUnits(ranked, selectedUnitId).map(chip)}
           {ranked.length > LEADING_UNITS ? (
-            <AppPressable
-              style={commonStyles.bottomSheetOption}
-              accessibilityRole="button"
+            <Chip
+              label={t('labels.more')}
               onPress={() => {
                 setShowingAll(true);
               }}
-            >
-              <Text role="caption" style={commonStyles.bottomSheetOptionText}>
-                {t('labels.more')}
-              </Text>
-            </AppPressable>
+            />
           ) : null}
         </View>
       )}
@@ -190,8 +166,5 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-  },
-  trackingUnit: {
-    borderStyle: 'solid',
   },
 }));

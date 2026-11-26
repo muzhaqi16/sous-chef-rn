@@ -205,34 +205,11 @@ export const commonStyles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
-  bottomSheetOptionContainer: {
+  // Chips that wrap onto further lines, as a sheet's choices do.
+  chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.sm,
-  },
-  bottomSheetOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    gap: theme.spacing.xs,
-  },
-  bottomSheetOptionSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surfaceVariant,
-  },
-  bottomSheetOptionText: {
-    ...theme.type.caption,
-    color: theme.colors.textSecondary,
-  },
-  bottomSheetOptionTextSelected: {
-    color: theme.colors.primaryText,
-    ...theme.type.bodyStrong,
   },
 
   caption: {

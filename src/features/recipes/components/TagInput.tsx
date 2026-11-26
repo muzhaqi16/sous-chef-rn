@@ -1,13 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { IconButton } from '#components/atoms/IconButton';
 import { useTranslation } from '#i18n';
 import { View, Keyboard, ScrollView } from 'react-native';
 import { ThemedTextInput } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { filterByTerm, identity } from '#hooks/search/useLocalSearch';
 import { MAX_TAG_LENGTH, MAX_TAGS } from '#utils/validation/entryLimits';
+import { Chip } from '#components/molecules/Chip';
 
 export interface TagInputProps {
   tags: string[];
@@ -83,20 +82,14 @@ export const TagInput: React.FC<TagInputProps> = ({
       {/* Tags display */}
       <View style={styles.tagsContainer}>
         {tags.map((tag, index) => (
-          <View key={`${tag}-${index}`} style={styles.tagChip}>
-            <Text role="label" tone="accent">
-              {tag}
-            </Text>
-            {!!editable && (
-              <IconButton
-                name="close"
-                size="2xsPlus"
-                tone="primary"
-                onPress={() => handleRemoveTag(tag)}
-                accessibilityLabel={t('a11y.removeNamed', { name: tag })}
-              />
-            )}
-          </View>
+          <Chip
+            key={`${tag}-${index}`}
+            label={tag}
+            removable
+            disabled={!editable}
+            onPress={() => handleRemoveTag(tag)}
+            accessibilityLabel={t('a11y.removeNamed', { name: tag })}
+          />
         ))}
 
         {/* Input field */}
@@ -146,20 +139,17 @@ export const TagInput: React.FC<TagInputProps> = ({
             horizontal
             showsHorizontalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.suggestions}
           >
             {filteredSuggestions.map((suggestion, index) => (
-              <AppPressable
+              <Chip
                 key={`${suggestion}-${index}`}
-                style={styles.suggestionChip}
+                label={suggestion}
                 onPress={() => {
                   handleAddTag(suggestion);
                   Keyboard.dismiss();
                 }}
-              >
-                <Text role="caption" tone="secondary">
-                  {suggestion}
-                </Text>
-              </AppPressable>
+              />
             ))}
           </ScrollView>
         </View>
@@ -185,16 +175,6 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     minHeight: 48,
   },
-  tagChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primaryLight,
-    paddingVertical: theme.spacing.xs,
-    paddingLeft: theme.spacing.base,
-    paddingRight: theme.spacing.sm,
-    borderRadius: theme.radii.full,
-    gap: theme.spacing.xs,
-  },
   input: {
     flex: 1,
     minWidth: 80,
@@ -206,13 +186,7 @@ const styles = StyleSheet.create(theme => ({
   suggestionsContainer: {
     paddingVertical: theme.spacing.sm,
   },
-  suggestionChip: {
-    backgroundColor: theme.colors.background,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.full,
-    marginRight: theme.spacing.sm,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
+  suggestions: {
+    gap: theme.spacing.sm,
   },
 }));

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 // RNGH's ScrollView (not RN's) so the row scrolls when nested inside a
 // @gorhom/bottom-sheet — RN's ScrollView doesn't coordinate with the sheet's
@@ -18,6 +19,8 @@ const AnimatedChipScrollView = Animated.createAnimatedComponent(ScrollView);
 export interface ChipOption<T> {
   key: T;
   label: string;
+  /** A second line under the label, such as a plan's dates. */
+  detail?: string;
   icon?: IconName;
   testID?: string;
 }
@@ -34,6 +37,8 @@ interface ChipScrollRowProps<T> {
    * `background` for a screen, `surface` for a bottom sheet. Omit to disable.
    */
   edgeFadeColor?: 'background' | 'surface';
+  /** After the choices, such as a chip that loads more of them. */
+  trailing?: ReactNode;
 }
 
 export function ChipScrollRow<T>({
@@ -43,6 +48,7 @@ export function ChipScrollRow<T>({
   style,
   contentContainerStyle,
   edgeFadeColor,
+  trailing,
 }: ChipScrollRowProps<T>) {
   const { edges, metrics, onScroll, onContentSizeChange, onLayout } =
     useScrollEdgeFades(!!edgeFadeColor);
@@ -57,6 +63,7 @@ export function ChipScrollRow<T>({
     <Chip
       key={String(opt.key)}
       label={opt.label}
+      detail={opt.detail}
       icon={opt.icon}
       selected={selected === opt.key}
       onPress={() => onSelect(opt.key)}
@@ -81,6 +88,7 @@ export function ChipScrollRow<T>({
       scrollEventThrottle={16}
     >
       {chips}
+      {trailing}
     </AnimatedChipScrollView>
   );
 
