@@ -1694,7 +1694,7 @@ describe('optimistic entity completeness', () => {
         'covered: the pantry event read-back case, and the fragment comparison below',
       'src/features/notifications/utils/notificationCacheWrites.ts':
         'covered: the notification event read-back case above',
-      'src/features/catalog/cache/storageLocations.ts':
+      'src/entities/storageLocation/storageLocations.ts':
         'covered: the GetStorageLocations reader is compared below',
       'src/features/home/hooks/useHomeInvitations.ts':
         'covered: InviteToHome is compared below',

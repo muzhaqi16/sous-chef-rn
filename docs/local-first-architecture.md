@@ -163,13 +163,13 @@ maps an operation to what it changes on the device; a feature keeps its own in `
 `__tests__/apollo/localWriteCoverage.test.ts` holds every local-first operation to one, or to a stated
 reason for having none (those show on the answer).
 
-| Member      | Runs                                                     | Does                                                                                |
-| ----------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `apply`     | In a layer: when made, on every rebuild, after a restart | Shows the change                                                                    |
-| `capture`   | Once, when the write is made                             | Reads from the cache what its caller did not pass                                   |
-| `commit`    | On the root, after the server confirms                   | Writes what the answer does not state, such as a new row's edge                     |
-| `refused`   | When the server refuses a queued write for good          | Undoes what the write left outside the cache, which dropping its layer cannot reach |
-| `orderedBy` | At send, and stored with a queued write                  | Names what the write stays in order behind, when its input names no row             |
+| Member      | Runs                                                     | Does                                                                                 |
+| ----------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `apply`     | In a layer: when made, on every rebuild, after a restart | Shows the change                                                                     |
+| `capture`   | Once, when the write is made                             | Reads from the cache what its caller did not pass                                    |
+| `commit`    | On the root, after the server confirms                   | Writes what the answer does not state, such as a new row's edge                      |
+| `refused`   | When the server refuses a queued write for good          | Undoes what the write left outside the cache, which dropping its layer cannot reach  |
+| `orderedBy` | At send, and stored with a queued write                  | Names what the write stays in order behind, when its input names no row              |
 | `subject`   | Read by the queue at send, withdrawal and eviction       | Names the row, where it is not the input's `id`, and whether it is minted or deleted |
 
 An operation's registry entry is its descriptor. One that shares another's behaviour spreads it and
@@ -280,17 +280,19 @@ The same cuid rides the create input as `input.id`, and its replay sends the sam
 ## 4. Optimistic-offline appearance
 
 A create's `apply` writes the whole row, so a newly-added item is visible immediately and survives a
-fully-offline create. Two shared writers keep this DRY:
+fully-offline create. An entity two or more features write keeps its writers in
+`src/entities/<entity>/`, named for one schema type, so every add surface builds the same row:
 
 - **`createLocalShoppingListItem(id, fields)` + `addLocalShoppingListItem(cache, listId, item)`**
-  (both `features/shoppingList/cache/items.ts`) — the row a create adds, written through
+  (both `src/entities/shoppingList/items.ts`) — the row a create adds, written through
   `writeLocalEntity` over the readers-based `items_row` fragment: what the create knows, else what the
   cache holds, else the SDL neutral. A related `unit` / `item` is named by reference only when the cache
   holds it, so a create never overwrites a held `Unit`'s name or an `Item`'s images. The writer also adds
-  the connection edge and recomputes list stats. A feature's `cache/` is outside the closed internals
-  (`context/`, `hooks/mutations/`, `utils/`, `components/`, `offline/`, `graphql/`), so add surfaces in
-  other features
-  (barcode, pantry-detail, filtered-pantry) build the same entity from it.
+  the connection edge and recomputes list stats. Barcode, pantry detail and filtered pantry add through it.
+- **`writeLocalStorageLocation`** (`src/entities/storageLocation/storageLocations.ts`) — a created
+  location over `storageLocations_row`, listed in the locations query and in its pantry's connection.
+- **`localBrand`, `localUnit`, `localStorageLocation`** (`src/entities/brand`, `unit`, `storageLocation`)
+  — the nested record a pending edit names: as held, else complete enough that no row reads a hole.
 - **`writeLocalPantryItem(cache, id, row)`** (`src/entities/pantryItem/writeLocalPantryItem.ts`) —
   writes the row complete for every query reading a pantry item (list and detail), through
   `writeLocalEntity`: what the create knows, else what the cache holds per field, else the SDL-derived
@@ -311,6 +313,7 @@ answer replaces the layer, so a mutation that moves stock returns `amountLeft` a
 the row falls back to the old read when the layer drops.
 
 **Four figures, one stack.**
+
 - `quantity` is the physical count, a part-used package counted whole (the API's `countOf`).
 - `heldQuantity` is the exact fraction held, each batch by its own size (the API's `packagesHeld`).
 - `stockBreakdown.fullPackages` is the unopened count.
@@ -347,18 +350,19 @@ replay applies nothing twice, and a row whose stack moved since fails alone with
 row stays in the sheet to be counted again; the absolute count is never rebased onto newer stock
 (CHECK-03), and accepted rows stand (REL-02). Its local write (`recordStockCheck`) sets each answered
 row's absolute count ahead of the answer:
+
 - **Still have** moves nothing.
 - **Some left** sets the count in the stack's unit.
 - **Used up** and **Threw out** set zero.
-A count stated with what the packages hold (CHECK-04: one carton holding 40 fl oz) sets at once what
-the server records for it: the packages as stated and what is left in the open one, never a fraction the
-device works out; the server owns any arithmetic past that. The ledger meaning is the API's:
+  A count stated with what the packages hold (CHECK-04: one carton holding 40 fl oz) sets at once what
+  the server records for it: the packages as stated and what is left in the open one, never a fraction the
+  device works out; the server owns any arithmetic past that. The ledger meaning is the API's:
 - Some left records an adjustment of the difference (10 eggs found as 6 is a correction of 4, CHECK-01).
 - Used up is a correction to zero, never consumption.
 - Threw out is waste.
 - Still have is a confirmation with no movement (CHECK-02).
-A confirmation does not force the level HIGH: the answer reads the stack's confidence again. The sheet
-keeps its answers in component state only, so a session end leaves nothing behind (REL-03).
+  A confirmation does not force the level HIGH: the answer reads the stack's confidence again. The sheet
+  keeps its answers in component state only, so a session end leaves nothing behind (REL-03).
 
 **Cooking.** A recipe is cooked one way, from its page or a planned meal: `useRecipeCookingActions`
 under `RecipeCookFlow`. The review scales each draw once, by servings / `Recipe.servings`, and the
@@ -971,7 +975,7 @@ replay only after their parent has landed — the drain reads the parent referen
 | Pending layers                                     | `src/apollo/pendingWrites/pendingWrites.ts`, `readFence.ts`, `localWriteRegistry.ts`; each feature's `offline/localWrites.ts`; coverage: `__tests__/apollo/localWriteCoverage.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Cache persistence (debounce + `flushPending`)      | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Background flush trigger                           | `src/hooks/app/useAppStateLifecycle.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Shared shopping writers                            | `src/entities/shoppingList/items.ts` (`createLocalShoppingListItem`, `addLocalShoppingListItem`), `createShoppingListRow.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Shared shopping writers                            | `src/entities/shoppingList/items.ts` (`createLocalShoppingListItem`, `addLocalShoppingListItem`), `createShoppingListRow.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Replay reconcilers                                 | `src/apollo/offlineQueue/replayRegistry.ts` (`REPLAY_RECONCILERS`), `queueReplayReconcilers.ts`, each feature's `offline/replayReconcilers.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Change feed engine and scope adapters              | `src/apollo/feed/feedEngine.ts`, `feedRegistry.ts`, `feedStorage.ts`; `src/features/shoppingList/offline/listFeed.ts`, `src/features/pantry/offline/pantryFeed.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | List shards                                        | `src/features/shoppingList/offline/listShards.ts`, `scopeStorage` in `ApolloCachePersistence.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -984,4 +988,4 @@ replay only after their parent has landed — the drain reads the parent referen
 | Query short-circuit when offline                   | `src/apollo/links/offlineReadLink.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | API-reachability circuit breaker                   | `src/apollo/links/apiReachabilityBreaker.ts`, `networkStatusLink.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Unified `isApiUnavailable` predicate               | `src/store/slices/networkSlice.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| Primary add hooks                                  | `src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts`, `src/features/pantry/hooks/usePantryIntake.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Primary add hooks                                  | `src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts`, `src/features/pantry/hooks/usePantryIntake.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |

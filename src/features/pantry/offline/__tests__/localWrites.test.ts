@@ -30,7 +30,7 @@ import {
   HomePantries_HomeFragmentDoc,
   type HomePantries_HomeFragment,
 } from '#features/home/utils/homePantries.generated';
-import { LocalRefs_UnitFragmentDoc } from '#entities/catalog/localRefs.generated';
+import { LocalUnit_UnitFragmentDoc } from '#entities/unit/localUnit.generated';
 import { UseWastePantryItemBatch_PantryItemFragmentDoc } from '#features/pantry/hooks/mutations/useWastePantryItemBatch.generated';
 import {
   ConvertExpiredToWasteDocument,
@@ -527,7 +527,7 @@ describe('a use', () => {
     const wasted = oneBag();
     // The ounce, as the device holds a unit it was shown.
     seedFragment(used.cache, {
-      fragment: LocalRefs_UnitFragmentDoc,
+      fragment: LocalUnit_UnitFragmentDoc,
       data: { __typename: 'Unit', id: 'oz', name: 'ounce', symbol: 'oz' },
     });
 

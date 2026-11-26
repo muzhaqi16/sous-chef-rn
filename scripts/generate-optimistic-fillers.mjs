@@ -117,24 +117,22 @@ const TARGETS = [
   {
     graphql: fromRoot(
       'src',
-      'features',
-      'catalog',
-      'hooks',
-      'useCreateStorageLocation.graphql',
+      'entities',
+      'storageLocation',
+      'storageLocations.graphql',
     ),
     out: fromRoot(
       'src',
-      'features',
-      'catalog',
-      'hooks',
-      'useCreateStorageLocationNeutral.generated.ts',
+      'entities',
+      'storageLocation',
+      'storageLocationRowNeutral.generated.ts',
     ),
-    typesFrom: './useCreateStorageLocation.generated',
+    typesFrom: './storageLocations.generated',
     unmasked: true,
     fragments: {
-      useCreateStorageLocation_row: [
+      storageLocations_row: [
         'NEUTRAL_LOCAL_STORAGE_LOCATION',
-        'UseCreateStorageLocation_RowFragment',
+        'StorageLocations_RowFragment',
       ],
     },
   },

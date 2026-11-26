@@ -4,7 +4,7 @@ import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDet
 import { writeLocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 import { ExpiryKind, StorageType } from '#graphql/generated/schemaTypes';
-import { LocalRefs_StorageLocationFragmentDoc } from '#entities/catalog/localRefs.generated';
+import { LocalStorageLocation_StorageLocationFragmentDoc } from '#entities/storageLocation/localStorageLocation.generated';
 import { UseUpdatePantryItem_PantryItemFragmentDoc } from '#features/pantry/hooks/mutations/useUpdatePantryItem.generated';
 
 const NOW = '2026-10-30T10:00:00.000Z';
@@ -321,8 +321,8 @@ describe('writeLocalPantryItem', () => {
   it('shows a picked location as the pantry holds it', () => {
     const cache = makeCache();
     seedFragment(cache, {
-      fragment: LocalRefs_StorageLocationFragmentDoc,
-      fragmentName: 'localRefs_storageLocation',
+      fragment: LocalStorageLocation_StorageLocationFragmentDoc,
+      fragmentName: 'localStorageLocation_storageLocation',
       data: {
         __typename: 'StorageLocation',
         id: 'loc-1',

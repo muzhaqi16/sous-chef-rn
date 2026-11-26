@@ -9,11 +9,11 @@ import {
 } from '#apollo/utils/cacheUpdaters';
 import { writeLocalEntity } from '#apollo/utils/writeLocalEntity';
 import type { CreateStorageLocationInput } from '#graphql/generated/schemaTypes';
-import { UseCreateStorageLocation_RowFragmentDoc } from '#features/catalog/hooks/useCreateStorageLocation.generated';
+import { StorageLocations_RowFragmentDoc } from './storageLocations.generated';
 import {
   NEUTRAL_LOCAL_STORAGE_LOCATION,
   NEUTRAL_LOCAL_STORAGE_LOCATION_BY_TYPE,
-} from '#features/catalog/hooks/useCreateStorageLocationNeutral.generated';
+} from './storageLocationRowNeutral.generated';
 
 /** What a create states about the location, under the id it minted. */
 export type LocalStorageLocation = Omit<
@@ -56,8 +56,8 @@ export function writeLocalStorageLocation(
   input: LocalStorageLocation,
 ): void {
   writeLocalEntity(cache, {
-    fragment: UseCreateStorageLocation_RowFragmentDoc,
-    fragmentName: 'useCreateStorageLocation_row',
+    fragment: StorageLocations_RowFragmentDoc,
+    fragmentName: 'storageLocations_row',
     neutral: NEUTRAL_LOCAL_STORAGE_LOCATION,
     neutralByType: NEUTRAL_LOCAL_STORAGE_LOCATION_BY_TYPE,
     known: {

@@ -10,7 +10,7 @@ import { isRecord } from '#utils/isRecord';
 import {
   placeStorageLocation,
   unplaceStorageLocation,
-} from '#features/catalog/cache/storageLocations';
+} from '#entities/storageLocation/storageLocations';
 import type { HomeFeedSnapshotQuery } from '../offline/homeFeed.generated';
 
 type RowTypename =

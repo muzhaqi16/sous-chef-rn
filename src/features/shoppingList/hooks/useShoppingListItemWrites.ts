@@ -12,7 +12,8 @@ import type {
   UpdateShoppingListItemInput,
 } from '#graphql/generated/schemaTypes';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
-import { localBrand, localUnit } from '#entities/catalog/localRefs';
+import { localBrand } from '#entities/brand/localBrand';
+import { localUnit } from '#entities/unit/localUnit';
 import { appliedPayload } from '#utils/errors/mutationPayload';
 import { parseStoredQuantityText } from '#utils/formatQuantity';
 import { UseShoppingListItemForm_ItemFragmentDoc } from '#features/shoppingList/hooks/useShoppingListItemForm.generated';

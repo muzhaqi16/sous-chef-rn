@@ -9,8 +9,8 @@ import {
   createFieldHelpers,
   createMockCache,
   invokeFieldModifier,
-} from '#features/shoppingList/cache/__tests__/helpers/mockCache';
-import type { MockRef } from '#features/shoppingList/cache/__tests__/helpers/mockCache';
+} from './helpers/mockCache';
+import type { MockRef } from './helpers/mockCache';
 import { logger } from '#utils/environment';
 
 describe('move-to-pantry unlink', () => {

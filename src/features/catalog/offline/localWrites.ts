@@ -24,7 +24,7 @@ import {
   unlistStorageLocation,
   writeLocalStorageLocation,
   type LocalStorageLocation,
-} from '#features/catalog/cache/storageLocations';
+} from '#entities/storageLocation/storageLocations';
 import {
   isUsualStoreList,
   keepUsualStores,
