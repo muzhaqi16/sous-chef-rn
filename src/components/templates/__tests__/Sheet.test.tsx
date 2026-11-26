@@ -106,7 +106,7 @@ describe('Sheet', () => {
     let node = screen.getByText('a field').parent;
     let inKeyboardAware = false;
     while (node) {
-      if (node.type === 'RCTScrollView') inKeyboardAware = true;
+      if (String(node.type) === 'RCTScrollView') inKeyboardAware = true;
       node = node.parent;
     }
     expect(inKeyboardAware).toBe(keyboardAware);
