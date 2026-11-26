@@ -278,11 +278,15 @@ describe('the chrome', () => {
     expect(screen.queryByText('3')).toBeNull();
   });
 
-  it('offers adding a location as the last tab', () => {
+  it('offers adding a location after the locations', () => {
     const onAddLocation = jest.fn();
     renderContent({ onAddLocation }, MILK);
 
-    fireEvent.press(tab('__add__'));
+    fireEvent.press(
+      screen.getByTestId(
+        kitTestIDs.filterTabAction(pantryTestIDs.locationTabPrefix),
+      ),
+    );
 
     expect(onAddLocation).toHaveBeenCalledTimes(1);
   });

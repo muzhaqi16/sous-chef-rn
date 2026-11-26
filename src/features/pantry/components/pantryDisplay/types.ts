@@ -1,6 +1,6 @@
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
-import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
+import type { ChipOption } from '#components/molecules/ChipScrollRow';
 import type {
   PantrySortOption,
   PantrySortDirection,
@@ -39,7 +39,7 @@ export interface PantryContentProps {
   locationCounts: Record<string, number>;
 
   /** Falls back to `getDefaultPantryTabs()`. */
-  tabs?: FilterTabConfig<LocationFilter>[];
+  tabs?: ChipOption<LocationFilter>[];
   onAddLocation?: () => void;
 
   searchQuery: string;
@@ -123,7 +123,7 @@ export interface PantryEmptyStateProps {
   searchQuery: string;
   itemCount: number;
   locationFilter: LocationFilter;
-  tabs: FilterTabConfig<LocationFilter>[];
+  tabs: ChipOption<LocationFilter>[];
   onAddItem?: () => void;
   noHomeSelected?: boolean;
   noHomes?: boolean;

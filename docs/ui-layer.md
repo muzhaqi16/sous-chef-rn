@@ -268,6 +268,14 @@ they read it.
   storage locations stay chips; a choice inside a form stays a
   `SegmentedControl`. `tabTestID` names each tab for tests and flows, and
   `onTabLayout` reports a tab's rect for a tutorial step.
+- **A chip is `Chip`; a row of them is `ChipScrollRow`.** Every filter strip
+  uses them: Pantry's locations, the notification categories, the store-mode
+  aisles and Saved Recipes' folder and tag filters. A chip's `count` sits in a
+  surface badge, so a label such as "Freezer 2" never runs into its number. A
+  chip never takes a per-item colour or drawing: a location's colour fails
+  contrast under white text on half its swatches, and the storage drawings are
+  faint at chip size, so both stay on the location's card. A filtered list hides
+  what describes the whole pantry, such as the stock-check banner.
 - **A count badge is the only sign a control is active.** The control itself
   does not change when active; a fill in the badge's colour would swallow it.
 - **An icon `Ionicons` lacks is an app glyph.** `Icon` draws the SVGs in

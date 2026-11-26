@@ -292,6 +292,7 @@
     "sortedBy": "Rendit, tani sipas {{field}}",
     "tabAll": "Të gjitha",
     "tabUnassigned": "Pa caktuar",
+    "locationInParent": "{{parent}} › {{name}}",
     "expiringCount": "{{count}} po skadojnë",
     "expiredCount": "{{count}} të skaduar",
     "lowStockCount": "{{count}} pak gjendje",

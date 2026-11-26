@@ -442,7 +442,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   mealTypeContent: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
     paddingVertical: theme.spacing.xs,
   },
   searchBarWrapper: {

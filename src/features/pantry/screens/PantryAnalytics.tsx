@@ -129,7 +129,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
 const styles = StyleSheet.create(theme => ({
   tabs: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   scene: {
     flex: 1,

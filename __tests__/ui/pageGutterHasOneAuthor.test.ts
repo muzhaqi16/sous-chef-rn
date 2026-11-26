@@ -66,6 +66,14 @@ const AUTHORS: Record<string, string> = {
     'insets its bare children',
   'src/features/shoppingList/components/ShoppingListMainContent.tsx':
     'insets its bare children',
+  'src/features/pantry/screens/PantryAnalytics.tsx': 'insets its bare children',
+
+  // A list sheet's content takes no gutter, so its body insets itself.
+  'src/features/mealPlan/components/AddMealSheet.tsx': 'list sheet, self-inset',
+  'src/features/mealPlan/components/TemplateBrowserSheet.tsx':
+    'list sheet, self-inset',
+  'src/features/recipes/components/modals/IngredientMatchingSheet.tsx':
+    'list sheet, self-inset',
 
   // One host, which does not inset it.
   'src/features/shoppingList/components/ShoppingListTabs/FilterTabBar.tsx':
@@ -78,6 +86,8 @@ const AUTHORS: Record<string, string> = {
     'skeleton list, overlaid on a padded list it is not inside',
   'src/features/mealPlan/components/skeletons/MealPlanSkeleton.tsx':
     'single host, self-inset',
+  'src/features/pantry/components/analytics/DateRangeFilter.tsx':
+    'single host, self-inset',
   'src/features/recipes/components/skeletons/RecipeSkeleton.tsx':
     'its own scroll view, a sibling of the list; an outer inset clips its shadows',
   'src/features/notifications/components/NotificationFilters.tsx':
@@ -87,11 +97,28 @@ const AUTHORS: Record<string, string> = {
 /**
  * Shared components that carry NO inset of their own, and the render sites that
  * therefore have to supply one. Derived from the tree rather than listed, so a
- * new host cannot ship flush to the screen edge — which is what
- * `NotificationFilters` and `SavedRecipes` did when `FilterTabs` gave its own
- * inset up.
+ * new host cannot ship flush to the screen edge, as `NotificationFilters` and
+ * `SavedRecipes` once did.
  */
-const GUTTERLESS = ['FilterTabs'];
+const GUTTERLESS = ['ChipScrollRow'];
+
+/** A host that sits inside a container already supplying the inset, and which. */
+const HOST_INHERITS_AN_INSET: Record<string, string> = {
+  'src/features/mealPlan/components/AddToMealPlanSheet/AddToMealPlanSheet.tsx':
+    'a form Sheet, whose content takes the page gutter',
+  'src/features/mealPlan/components/SaveAsTemplateSheet.tsx':
+    'a form Sheet, whose content takes the page gutter',
+  'src/features/pantry/components/StockCheckSheet.tsx':
+    'a form Sheet, whose content takes the page gutter',
+  'src/features/receipts/components/ReceiptLineSheet.tsx':
+    'a form Sheet, whose content takes the page gutter',
+  'src/features/pantry/components/form/StorageDetailsSection.tsx':
+    'PantryItemForm\'s FormScreen, a gutter="page" screen',
+  'src/features/shoppingList/components/ShareInviteSection.tsx':
+    'ShareList, a gutter="page" SubScreen',
+  'src/features/recipes/components/IngredientMatchRow.tsx':
+    'IngredientMatchingSheet, whose body insets itself',
+};
 
 /**
  * A skeleton list that INHERITS its inset, and the padded container it sits in.
@@ -181,6 +208,7 @@ describe('the page gutter has one author per page', () => {
 
       const bare = hosts
         .filter(f => !SUPPLIES_AN_INSET.test(readFileSync(f, 'utf8')))
+        .filter(f => !(f in HOST_INHERITS_AN_INSET))
         .sort();
 
       expect(bare).toEqual([]);

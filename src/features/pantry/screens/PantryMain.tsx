@@ -46,11 +46,11 @@ import type { PantryContentRef } from '#features/pantry/components/pantryDisplay
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import { PantryErrorBoundary } from '#components/providers/ScreenErrorBoundary';
-import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { PantryScreenSkeleton } from '#features/pantry/components/skeletons/PantryScreenSkeleton';
 import { SearchBar } from '#components/molecules/SearchBar';
-import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
+import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
+import { getDefaultPantryTabs } from '#features/pantry/components/pantryDisplay/constants';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import type { Translate } from '#i18n/types';
 import { Screen } from '#components/templates/Screen';
@@ -534,24 +534,6 @@ const noop = () => {};
 const PantryMainFallback: React.FC = () => {
   const { t } = useTranslation();
   const { pantry } = useCurrentPantry();
-  const skeletonTabs: FilterTabConfig<LocationFilter>[] = [
-    { id: 'all', label: t('pantryScreen.tabAll') },
-    {
-      id: 'fridge',
-      label: t('storageState.REFRIGERATED'),
-      icon: 'thermometer-outline',
-    },
-    {
-      id: 'freezer',
-      label: t('labels.storageFrozen'),
-      icon: 'snow-outline',
-    },
-    {
-      id: 'pantry',
-      label: t('labels.storageAmbient'),
-      icon: 'cube-outline',
-    },
-  ];
   return (
     // No `header`: the loaded screen draws its own above its list, so the
     // chrome here is the same shape, with the same title, before it mounts.
@@ -571,10 +553,10 @@ const PantryMainFallback: React.FC = () => {
         />
       </View>
       <View style={styles.gutter}>
-        <FilterTabs<LocationFilter>
-          tabs={skeletonTabs}
-          activeTabId="all"
-          onTabChange={noop}
+        <ChipScrollRow<LocationFilter>
+          options={getDefaultPantryTabs(t)}
+          selected="all"
+          onSelect={noop}
         />
       </View>
       <View style={styles.gutter}>

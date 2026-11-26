@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon, type IconName } from '#components/atoms/Icon';
+import { Text } from '#components/atoms/Text';
 import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
@@ -58,6 +59,8 @@ type ChipProps = {
   reserveImageHeight?: boolean;
   /** A second line under the label, such as a plan's dates. */
   detail?: string;
+  /** How many it holds, in a badge so it never reads as part of the label. */
+  count?: number;
   /** Defaults to the label; a removable chip names what pressing removes. */
   accessibilityLabel?: string;
   testID?: string;
@@ -75,6 +78,7 @@ export const Chip: React.FC<ChipProps> = ({
   imageUrl,
   reserveImageHeight = false,
   detail,
+  count,
   accessibilityLabel,
   testID,
   onLayout,
@@ -181,7 +185,12 @@ export const Chip: React.FC<ChipProps> = ({
         disabled={disabled}
         accessibilityRole="button"
         accessibilityLabel={
-          accessibilityLabel ?? accessibilityLabelOf(label, detail)
+          accessibilityLabel ??
+          accessibilityLabelOf(
+            label,
+            detail,
+            count === undefined ? undefined : String(count),
+          )
         }
         accessibilityState={
           selected === undefined ? { disabled } : { selected, disabled }
@@ -213,6 +222,13 @@ export const Chip: React.FC<ChipProps> = ({
             </View>
           ) : (
             <Animated.Text style={animatedTextStyle}>{label}</Animated.Text>
+          )}
+          {count === undefined ? null : (
+            <View style={styles.countBadge}>
+              <Text role="footnoteStrong" tone="secondary" style={styles.count}>
+                {String(count)}
+              </Text>
+            </View>
           )}
           {removable ? (
             <View style={styles.iconContainer}>
@@ -272,6 +288,18 @@ const styles = StyleSheet.create(theme => ({
   },
   iconContainer: {
     marginLeft: theme.spacing.sm,
+  },
+  // A surface pill: apart from the chip's fill, selected or not, in both themes.
+  countBadge: {
+    marginLeft: theme.spacing.xs,
+    minWidth: theme.sizes.icon.sm,
+    paddingHorizontal: theme.spacing.xs,
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.surface,
+    alignItems: 'center',
+  },
+  count: {
+    fontVariant: ['tabular-nums'],
   },
   leadingIcon: {
     marginRight: theme.spacing.xs,

@@ -59,10 +59,6 @@ function scaleObject<T extends Record<string, number>>(
 const PRIMARY_LIGHT_ALPHA_HEX = '20';
 const PRIMARY_LIGHT_ALPHA = parseInt(PRIMARY_LIGHT_ALPHA_HEX, 16) / 255;
 
-function withAlpha(hex: string, alpha: string): string {
-  return `${hex}${alpha}`;
-}
-
 /**
  * Applies brand color, density, font scale and high contrast to both themes.
  * A plain function, so a store setter can call it directly for an instant runtime
@@ -149,15 +145,6 @@ export function applyAppearanceToRuntime(prefs: AppearanceSettings): void {
             )
           : foregroundShade(palette, [palette['100']], '800', 'darker'),
         iconPrimary: isDark ? palette['400'] : primaryText,
-        filterTab: {
-          ...next.colors.filterTab,
-          activeBg: palette['500'],
-          activeText: onFill,
-          filteredBg: isDark ? withAlpha(palette['400'], '26') : palette['50'],
-          filteredText: isDark
-            ? palette['300']
-            : foregroundShade(palette, [palette['50']], '600', 'darker'),
-        },
       };
     }
 
@@ -173,11 +160,6 @@ export function applyAppearanceToRuntime(prefs: AppearanceSettings): void {
           iconPrimary: brand[700],
           onPrimaryLight: brand[800],
         }),
-        filterTab: {
-          ...next.colors.filterTab,
-          activeBg: brand[700],
-          ...(isLight && { filteredText: brand[700] }),
-        },
       };
     }
 

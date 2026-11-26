@@ -183,7 +183,7 @@ export const IngredientMatchingSheet: React.FC<
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   summaryBar: {
     flexDirection: 'row',

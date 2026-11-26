@@ -2,8 +2,11 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation, type TranslationKey } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
-import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
+import {
+  ChipScrollRow,
+  type ChipOption,
+} from '#components/molecules/ChipScrollRow';
+import { kitTestIDs } from '#components/testIDs';
 import { NotificationCategory } from '#graphql/generated/schemaTypes';
 import { NOTIFICATION_CATEGORIES } from '#features/notifications/types';
 import { notificationsTestIDs } from '#features/notifications/testIDs';
@@ -13,8 +16,7 @@ interface NotificationFiltersProps {
   onCategoryChange: (category: NotificationCategory | null) => void;
 }
 
-// Sentinel id for the "All" pill, since the absence of a category is `null`
-// but FilterTabs keys tabs by string id.
+// The "All" chip's key, since the absence of a category is `null`.
 const ALL_TAB = 'all';
 type FilterTabId = NotificationCategory | typeof ALL_TAB;
 
@@ -28,12 +30,7 @@ const CATEGORY_LABEL_KEYS: Record<NotificationCategory, TranslationKey> = {
   [NotificationCategory.System]: 'labels.system',
 };
 
-/**
- * Category filter row for the notifications list. Delegates to the shared
- * {@link FilterTabs} so it matches every other filter strip in the app
- * (animated sliding pill, scroll-edge fade, auto-centering) instead of
- * re-implementing one.
- */
+/** The notifications list's category filter, the kit's chip strip. */
 export const NotificationFilters: React.FC<NotificationFiltersProps> = ({
   selectedCategory,
   onCategoryChange,
@@ -41,22 +38,20 @@ export const NotificationFilters: React.FC<NotificationFiltersProps> = ({
   const { t } = useTranslation();
 
   // Resolve labels at render time so a language switch re-labels the tabs.
-  const tabs: FilterTabConfig<FilterTabId>[] = [
-    { id: ALL_TAB, label: t('labels.all') },
-    ...NOTIFICATION_CATEGORIES.map(category => ({
-      id: category,
-      label: t(CATEGORY_LABEL_KEYS[category]),
-    })),
-  ];
+  const keys: FilterTabId[] = [ALL_TAB, ...NOTIFICATION_CATEGORIES];
+  const options: ChipOption<FilterTabId>[] = keys.map(key => ({
+    key,
+    label: t(key === ALL_TAB ? 'labels.all' : CATEGORY_LABEL_KEYS[key]),
+    testID: kitTestIDs.filterTab(notificationsTestIDs.filterTabs, key),
+  }));
 
   return (
     <View style={styles.container}>
-      <FilterTabs<FilterTabId>
-        tabs={tabs}
-        activeTabId={selectedCategory ?? ALL_TAB}
-        onTabChange={id => onCategoryChange(id === ALL_TAB ? null : id)}
-        showCounts={false}
-        testIDPrefix={notificationsTestIDs.filterTabs}
+      <ChipScrollRow<FilterTabId>
+        options={options}
+        selected={selectedCategory ?? ALL_TAB}
+        onSelect={id => onCategoryChange(id === ALL_TAB ? null : id)}
+        edgeFadeColor="background"
       />
     </View>
   );
@@ -66,8 +61,7 @@ const styles = StyleSheet.create(theme => ({
   // Hairline separator below the filter strip so it reads as a distinct band
   // above the list, consistent with the warm background showing through.
   container: {
-    // FilterTabs carries no inset of its own, so its host owns the gutter —
-    // and this one renders it bare inside a screen with none.
+    // The chip strip carries no inset of its own, and this screen has none.
     paddingHorizontal: theme.layout.pageGutter,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.border,

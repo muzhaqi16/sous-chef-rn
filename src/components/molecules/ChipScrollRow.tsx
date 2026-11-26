@@ -22,12 +22,14 @@ export interface ChipOption<T> {
   /** A second line under the label, such as a plan's dates. */
   detail?: string;
   icon?: IconName;
+  count?: number;
   testID?: string;
 }
 
 interface ChipScrollRowProps<T> {
   options: ChipOption<T>[];
-  selected: T;
+  /** One choice, or each filter that is on when several can be. */
+  selected: T | readonly T[];
   onSelect: (key: T) => void;
   style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
@@ -53,9 +55,13 @@ export function ChipScrollRow<T>({
   const { edges, metrics, onScroll, onContentSizeChange, onLayout } =
     useScrollEdgeFades(!!edgeFadeColor);
 
-  // Keep the selected chip centered, like the pantry location filter strip.
+  const selectedKeys: readonly T[] = isKeyList(selected)
+    ? selected
+    : [selected];
+
+  // Keep the (first) selected chip centered.
   const { onItemLayout, animatedRef } = useCenterActiveItem({
-    activeKey: selected,
+    activeKey: selectedKeys[0],
     metrics,
   });
 
@@ -65,7 +71,8 @@ export function ChipScrollRow<T>({
       label={opt.label}
       detail={opt.detail}
       icon={opt.icon}
-      selected={selected === opt.key}
+      count={opt.count}
+      selected={selectedKeys.includes(opt.key)}
       onPress={() => onSelect(opt.key)}
       onLayout={e => onItemLayout(opt.key, e)}
       testID={opt.testID}
@@ -105,13 +112,19 @@ export function ChipScrollRow<T>({
   );
 }
 
+function isKeyList<T>(selected: T | readonly T[]): selected is readonly T[] {
+  return Array.isArray(selected);
+}
+
 const styles = StyleSheet.create(theme => ({
   // As tall as its chips in a column: a horizontal ScrollView grows by default.
   row: {
     flexGrow: 0,
     flexShrink: 0,
   },
+  // One axis for every chip and the trailing control, whatever their heights.
   chipRow: {
+    alignItems: 'center',
     gap: theme.spacing.sm,
   },
 }));

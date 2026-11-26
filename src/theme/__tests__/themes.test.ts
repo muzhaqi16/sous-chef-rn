@@ -172,11 +172,6 @@ describe('themes', () => {
       expect(darkTheme.colors.expiration.expiredText).toBeDefined();
     });
 
-    it('has dark-mode specific filter tab colors', () => {
-      expect(darkTheme.colors.filterTab).toBeDefined();
-      expect(darkTheme.colors.filterTab.inactiveBg).toBeDefined();
-    });
-
     it('has dark-mode alert banner colors', () => {
       expect(darkTheme.colors.alertBanner).toBeDefined();
       expect(darkTheme.colors.alertBanner.error).toBeDefined();

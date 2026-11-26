@@ -292,6 +292,7 @@
     "sortedBy": "Ordina, ora per {{field}}",
     "tabAll": "Tutti",
     "tabUnassigned": "Non assegnati",
+    "locationInParent": "{{parent}} › {{name}}",
     "expiringCount": "{{count}} in scadenza",
     "expiredCount": "{{count}} scaduti",
     "lowStockCount": "{{count}} scorta bassa",

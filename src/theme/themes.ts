@@ -1,7 +1,6 @@
 import {
   colors,
   darkExpiration,
-  darkFilterTab,
   chartCategorical,
   darkChartCategorical,
 } from './foundations/colors';
@@ -184,7 +183,6 @@ export const lightTheme = {
 
     // Pantry redesign colors
     expiration: colors.expiration,
-    filterTab: colors.filterTab,
     chartCategorical,
     alertBanner: colors.alertBanner,
 
@@ -322,7 +320,6 @@ export const darkTheme = {
     // Pantry redesign colors — dark-mode override values (same key shape as light).
     // Solid backgrounds prevent swipeable container background bleed-through.
     expiration: darkExpiration,
-    filterTab: darkFilterTab,
     chartCategorical: darkChartCategorical,
     // Alert banner — solid dark backgrounds instead of light-mode pastels
     alertBanner: {

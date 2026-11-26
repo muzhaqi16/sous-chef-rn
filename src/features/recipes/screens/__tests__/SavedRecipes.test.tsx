@@ -427,9 +427,8 @@ describe('the folder filter', () => {
     await log.landed(MySavedRecipesDocument);
     await log.landed(SavedRecipeFoldersDocument);
     const user = userEvent.setup();
-    const clear = () =>
-      screen.getByTestId(recipesTestIDs.savedRecipesClearFilters);
-    expect(clear().props.accessibilityState).toEqual({ disabled: true });
+    expect(tab('all')).toBeSelected();
+    expect(tab('folder')).not.toBeSelected();
 
     await user.press(tab('folder'));
     await user.press(
@@ -439,7 +438,8 @@ describe('the folder filter', () => {
 
     expect(shown()).toEqual(['Apple pie', 'Carrot cake']);
     expect(within(tab('folder')).getByText('Weeknights')).toBeTruthy();
-    expect(clear().props.accessibilityState).toEqual({ disabled: false });
+    expect(tab('folder')).toBeSelected();
+    expect(tab('all')).not.toBeSelected();
 
     await user.press(tab('all'));
     expect(shown()).toEqual(['Apple pie', 'Banana bread', 'Carrot cake']);
@@ -473,9 +473,7 @@ describe('the folder filter', () => {
       within(screen.UNSAFE_getByType(FolderPicker)).getByText('Weeknights'),
     );
 
-    await user.press(
-      screen.getByTestId(recipesTestIDs.savedRecipesClearFilters),
-    );
+    await user.press(tab('all'));
 
     expect(
       screen.getByPlaceholderText(t('recipes.savedRecipesSearchPlaceholder'))

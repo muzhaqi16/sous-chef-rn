@@ -147,7 +147,7 @@ export function PantryEmptyState({
   }
 
   if (locationFilter !== 'all' && itemCount === 0 && overallItemCount > 0) {
-    const activeTab = tabs.find(tab => tab.id === locationFilter);
+    const activeTab = tabs.find(tab => tab.key === locationFilter);
     const tabName = activeTab?.label ?? t('pantryScreen.tabEmptyFallbackName');
     return (
       <EmptyState

@@ -292,6 +292,7 @@
     "sortedBy": "Ordenar, ahora por {{field}}",
     "tabAll": "Todos",
     "tabUnassigned": "Sin asignar",
+    "locationInParent": "{{parent}} › {{name}}",
     "expiringCount": "{{count}} por vencer",
     "expiredCount": "{{count}} caducados",
     "lowStockCount": "{{count}} poca existencia",

@@ -46,7 +46,7 @@ const styles = StyleSheet.create(theme => ({
     marginVertical: theme.spacing.sm,
   },
   scrollContent: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
     gap: theme.spacing.sm,
   },
 }));

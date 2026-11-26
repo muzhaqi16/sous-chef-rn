@@ -292,6 +292,7 @@
     "sortedBy": "Sort, now by {{field}}",
     "tabAll": "All",
     "tabUnassigned": "Unassigned",
+    "locationInParent": "{{parent}} › {{name}}",
     "expiringCount": "{{count}} expiring",
     "expiredCount": "{{count}} expired",
     "lowStockCount": "{{count}} low stock",

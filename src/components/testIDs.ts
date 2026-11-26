@@ -28,7 +28,6 @@ export const kitTestIDs = {
   tabBarAddAction: (key: string) => `tab-bar-add-action-${key}`,
   toastMessage: 'toast-message',
   toastDetail: 'toast-detail',
-  filterTabsPrefix: 'filter-tab',
   alertModal: 'alert-modal',
   alertModalBehind: 'alert-modal-behind',
   stateLoading: 'state-loading',
