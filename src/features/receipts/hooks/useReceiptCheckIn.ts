@@ -25,8 +25,8 @@ import {
   settleReceiptCheckIn,
   type CheckInLineResult,
 } from '../offline/receiptCheckIn';
-import { CreateReceiptCheckInDocument } from './useReceiptCheckIn.generated';
 import { cappedNames } from '#utils/cappedNames';
+import { createReceiptCheckInWrite } from '#features/receipts/offline/localWrites';
 
 /** The API's cap on one check-in: a longer receipt goes as several. */
 export const LINES_PER_CHECK_IN = 100;
@@ -168,7 +168,7 @@ export function useReceiptCheckIn(listId: string | undefined) {
   const client = useApolloClient();
   const { setCheckInState, remintCheckInId, markAdded, markUnsent } =
     useReceiptDraftActions();
-  const createCheckIn = useLocalWrite(CreateReceiptCheckInDocument, {
+  const createCheckIn = useLocalWrite(createReceiptCheckInWrite, {
     fallback: t('errors.addItemFailedRetry'),
     present: 'none',
   });

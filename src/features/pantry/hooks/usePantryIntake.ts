@@ -1,5 +1,4 @@
 import { useApolloClient } from '@apollo/client/react';
-import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import type { LocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
 import { localIntakeRow } from '#entities/pantryItem/localIntake';
 import type { CreateItemInputs } from '#features/pantry/offline/localWrites';
@@ -12,6 +11,7 @@ import type {
   CreatePantryItemInput,
   PantryItemSourceInput,
 } from '#graphql/generated/schemaTypes';
+import { createPantryItemWrite } from '#features/pantry/offline/localWrites';
 
 /**
  * A typed item goes under an id minted here, which the row names at once: the
@@ -53,7 +53,7 @@ export function usePantryIntake(pantryId: string | undefined) {
   const { t } = useTranslation();
   const client = useApolloClient();
 
-  const create = useLocalWrite(CreatePantryItemDocument, {
+  const create = useLocalWrite(createPantryItemWrite, {
     fallback: t('errors.addItemFailedRetry'),
     present: 'none',
   });

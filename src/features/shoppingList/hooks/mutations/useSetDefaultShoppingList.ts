@@ -6,21 +6,23 @@
  */
 
 import { useTranslation } from '#i18n';
-import { MarkShoppingListAsDefaultDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { markShoppingListAsDefaultWrite } from '#features/shoppingList/offline/localWrites';
 
 export function useSetDefaultShoppingList() {
   const { t } = useTranslation();
-  const markDefault = useLocalWrite(MarkShoppingListAsDefaultDocument, {
+  const markDefault = useLocalWrite(markShoppingListAsDefaultWrite, {
     fallback: t('shoppingListScreens.failedToSetDefault'),
   });
 
   const setAsDefault = async (id: string): Promise<boolean> => {
-    const settled = await markDefault.sendFields({
-      entity: { __typename: 'ShoppingList', id },
-      fields: { isDefault: true },
-      variables: { input: { id } },
-    });
+    const settled = await markDefault.send(
+      { input: { id } },
+      {
+        entity: { __typename: 'ShoppingList', id },
+        fields: { isDefault: true },
+      },
+    );
     return settled.status !== 'failed';
   };
 

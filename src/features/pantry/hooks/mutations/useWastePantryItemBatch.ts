@@ -4,7 +4,6 @@
  * `input.idempotencyKey` is what keeps a queued replay from double-counting.
  */
 
-import { WastePantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
 import type { SettleStatus } from '#apollo/utils/settleMutation';
 import type { WasteBatchInputs } from '#features/pantry/offline/localWrites';
 import type { WasteReason } from '#graphql/generated/schemaTypes';
@@ -12,6 +11,7 @@ import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#i18n';
 import { generateEntityId } from '#utils/generateEntityId';
 import { todayKey } from '#utils/dateUtils';
+import { wastePantryItemBatchWrite } from '#features/pantry/offline/localWrites';
 
 /** A batch thrown out whole. */
 export interface WastedBatch {
@@ -31,7 +31,7 @@ interface BatchWasteDetails {
 
 export function useWastePantryItemBatch() {
   const { t } = useTranslation();
-  const waste = useLocalWrite(WastePantryItemBatchDocument, {
+  const waste = useLocalWrite(wastePantryItemBatchWrite, {
     fallback: t('errors.wasteBatchFailed'),
   });
 

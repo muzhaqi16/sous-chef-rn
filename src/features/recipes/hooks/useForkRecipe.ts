@@ -6,7 +6,6 @@
 
 import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#i18n';
-import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   UseRecipeFormWrites_RecipeFragmentDoc,
   type UseRecipeFormWrites_RecipeFragment,
@@ -19,12 +18,13 @@ import { generateEntityId } from '#utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#services/toastService';
 import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
+import { forkRecipeWrite } from '#features/recipes/offline/localWrites';
 
 export function useForkRecipe() {
   const { t } = useTranslation();
   const client = useApolloClient();
   const user = useUser();
-  const fork = useLocalWrite(ForkRecipeDocument, {
+  const fork = useLocalWrite(forkRecipeWrite, {
     fallback: t('recipes.forkFailed'),
   });
 

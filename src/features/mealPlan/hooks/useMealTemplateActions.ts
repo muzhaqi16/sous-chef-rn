@@ -1,5 +1,4 @@
 import { useApolloClient } from '@apollo/client/react';
-import { DeleteMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { planFromTemplate } from '#features/mealPlan/utils/planFromTemplate';
 import { templateFromPlan } from '#features/mealPlan/utils/templateFromPlan';
 import { duplicateTemplate as deriveTemplateCopy } from '#features/mealPlan/utils/duplicateTemplate';
@@ -19,6 +18,7 @@ import { Telemetry } from '#services/telemetry';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { SettledFailure } from '#apollo/utils/settleMutation';
 import { useTranslation } from '#i18n';
+import { deleteMealTemplateWrite } from '#features/mealPlan/offline/localWrites';
 
 /** What a plan made from a template states; its meals come from the cache. */
 export interface PlanFromTemplateInput {
@@ -48,7 +48,7 @@ export function useMealTemplateActions() {
     useCreateMealTemplate();
   const { sendItem, creating: addingMeals } = useCreateMealPlanItem();
 
-  const removeTemplate = useLocalWrite(DeleteMealTemplateDocument, {
+  const removeTemplate = useLocalWrite(deleteMealTemplateWrite, {
     fallback: t('mealTemplateActions.deleteFailed'),
     removal: true,
   });

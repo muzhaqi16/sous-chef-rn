@@ -1,10 +1,7 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { BatchAddShoppingListItemInput } from '#graphql/generated/schemaTypes';
 import { settledStatus } from '#apollo/utils/settleMutation';
-import {
-  AddItemToShoppingListDocument,
-  type AddItemToShoppingListMutation,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import type { AddItemToShoppingListMutation } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   addItemsInSlices,
   createShoppingListRow,
@@ -12,6 +9,7 @@ import {
   type ShoppingRowLine,
 } from '#entities/shoppingList/createShoppingListRow';
 import { isListedToBuy } from '#entities/shoppingList/connections';
+import { addItemToShoppingListWrite } from '#features/shoppingList/offline/localWrites';
 import { appliedPayload } from '#utils/errors/mutationPayload';
 import type { LocalShoppingListItem } from '#entities/shoppingList/items';
 
@@ -44,7 +42,7 @@ export interface AddedBatch<TItem> {
 export function useAddShoppingRows() {
   const client = useApolloClient();
   const [mutate, { loading: adding }] = useMutation(
-    AddItemToShoppingListDocument,
+    addItemToShoppingListWrite.document,
     { context: { localFirst: true } },
   );
 
@@ -57,7 +55,7 @@ export function useAddShoppingRows() {
     createShoppingListRow(client.cache, {
       ...args,
       send: mutate,
-      document: AddItemToShoppingListDocument,
+      write: addItemToShoppingListWrite,
     });
 
   const addRows = <TItem extends BatchAddShoppingListItemInput>(
@@ -108,7 +106,7 @@ export function useAddShoppingRows() {
           },
         );
       },
-      { document: AddItemToShoppingListDocument, fallback },
+      { write: addItemToShoppingListWrite, fallback },
     );
 
   return {

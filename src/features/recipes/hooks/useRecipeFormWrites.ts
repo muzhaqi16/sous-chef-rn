@@ -2,7 +2,6 @@ import { noteTipFact } from '#hooks/settings/useFeatureHint';
 import { skipToken, useApolloClient, useQuery } from '@apollo/client/react';
 import {
   GetRecipeDocument,
-  CreateRecipeDocument,
   UpdateRecipeDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import {
@@ -32,6 +31,10 @@ import {
   MAX_RECIPE_INGREDIENTS,
   RECIPE_INGREDIENTS_PAGE_SIZE,
 } from '#domain/recipeIngredientsPaging';
+import {
+  createRecipeWrite,
+  updateRecipeWrite,
+} from '#features/recipes/offline/localWrites';
 
 /**
  * An edit's fields with what the FORM read, against which it is judged, not the
@@ -105,7 +108,7 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
         })
       : null;
 
-  const create = useLocalWrite(CreateRecipeDocument, {
+  const create = useLocalWrite(createRecipeWrite, {
     fallback: t('recipes.createRecipeFailed'),
     // The form shows the failure, on its field where it names one.
     present: 'none',
@@ -114,7 +117,7 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
     fallback: t('recipes.updateRecipeFailed'),
     present: 'none',
   };
-  const update = useLocalWrite(UpdateRecipeDocument, updateSettle);
+  const update = useLocalWrite(updateRecipeWrite, updateSettle);
 
   /** The minted cuid is the row's real PK, so a queued create replays onto it. */
   const createRecipe = async (

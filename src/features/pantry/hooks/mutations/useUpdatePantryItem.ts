@@ -5,7 +5,6 @@
  */
 
 import { useApolloClient } from '@apollo/client/react';
-import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   UseUpdatePantryItem_RowFragmentDoc,
   type UseUpdatePantryItem_PantryItemFragment,
@@ -22,6 +21,7 @@ import type { DirtyFieldFlags, FormDataInput } from './types';
 import { parseDecimalInput } from '#utils/parseDecimalInput';
 import { logger } from '#utils/environment';
 import { toDateKey, todayKey } from '#utils/dateUtils';
+import { updatePantryItemWrite } from '#features/pantry/offline/localWrites';
 
 interface UseUpdatePantryItemOptions {
   refetch?: () => void;
@@ -44,7 +44,7 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
   const { t } = useTranslation();
   const client = useApolloClient();
 
-  const update = useLocalWrite(UpdatePantryItemDocument, {
+  const update = useLocalWrite(updatePantryItemWrite, {
     fallback: t('errors.updateItemFailed'),
     onConflictRefresh: refetch,
   });
@@ -145,14 +145,16 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
 
     // A refusal naming `field: "unit"` (a unit change while the item has
     // batches) reads as the localized `errors.field.unit` copy.
-    const settled = await update.sendFields({
-      entity: { __typename: 'PantryItem', id: itemId },
-      fields: optimisticUpdate,
-      variables: {
+    const settled = await update.send(
+      {
         input: { ...updateInput, id: itemId, version: currentItem.version },
         today: todayKey(),
       },
-    });
+      {
+        entity: { __typename: 'PantryItem', id: itemId },
+        fields: optimisticUpdate,
+      },
+    );
 
     return settled.status !== 'failed';
   };

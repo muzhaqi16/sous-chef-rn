@@ -1,7 +1,7 @@
-import { UpdateHomeDocument } from '#operations/home/home.generated';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { SettledFailure } from '#apollo/utils/settleMutation';
 import { useTranslation } from '#i18n';
+import { updateHomeWrite } from '#apollo/pendingWrites/sharedWrites';
 
 /** What a settings screen can change about a home through `updateHome`. */
 export type HomeFieldUpdates = {
@@ -17,7 +17,7 @@ export type HomeFieldUpdates = {
 export function useUpdateHomeFields(homeId: string) {
   const { t } = useTranslation();
   // The mutation returns updated scalar fields; Apollo merges by __typename + id.
-  const updateHome = useLocalWrite(UpdateHomeDocument, {
+  const updateHome = useLocalWrite(updateHomeWrite, {
     fallback: t('errors.updateHomeFailed'),
   });
 
@@ -32,14 +32,11 @@ export function useUpdateHomeFields(homeId: string) {
     fallback: string,
     { onField = false }: { onField?: boolean } = {},
   ): Promise<SettledFailure | undefined> => {
-    const settled = await updateHome.sendFields(
+    const settled = await updateHome.send(
       {
-        entity: { __typename: 'Home', id: homeId },
-        fields: updates,
-        variables: {
-          input: { id: homeId, ...updates, version: home.version },
-        },
+        input: { id: homeId, ...updates, version: home.version },
       },
+      { entity: { __typename: 'Home', id: homeId }, fields: updates },
       { settle: { fallback, ...(onField && { present: 'none' }) } },
     );
     return settled.failure;

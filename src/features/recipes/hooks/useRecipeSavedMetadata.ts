@@ -3,7 +3,6 @@ import { useTranslation } from '#i18n';
 import { useApolloClient } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
-import { UpdateFavoriteRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import type { SavedFieldsInputs } from '#features/recipes/offline/localWrites';
 import { useUnfavoriteRecipe } from '#features/recipes/hooks/useUnfavoriteRecipe';
 import { toastService } from '#services/toastService';
@@ -12,6 +11,7 @@ import {
   UseRecipeSavedMetadata_RecipeFragmentDoc,
   type UseRecipeSavedMetadata_RecipeFragment,
 } from './useRecipeSavedMetadata.generated';
+import { updateFavoriteRecipeWrite } from '#features/recipes/offline/localWrites';
 
 interface UseRecipeSavedMetadataOptions {
   recipeId: string | undefined;
@@ -46,7 +46,7 @@ export function useRecipeSavedMetadata({
   const { unfavoriteRecipe } = useUnfavoriteRecipe();
   const [updatingFolderTags, setUpdatingFolderTags] = useState(false);
 
-  const updateFavoriteRecipe = useLocalWrite(UpdateFavoriteRecipeDocument, {
+  const updateFavoriteRecipe = useLocalWrite(updateFavoriteRecipeWrite, {
     fallback: t('recipes.updateRecipeFailed'),
     present: 'toast',
   });

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from '#i18n';
-import { DeleteRecipeFolderDocument } from '#features/recipes/graphql/recipe.generated';
 import type { MoveFolderInputs } from '#features/recipes/offline/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { toastService } from '#services/toastService';
+import { deleteRecipeFolderWrite } from '#features/recipes/offline/localWrites';
 
 /**
  * Rename and delete both go through `deleteRecipeFolder`: without `moveTo` its
@@ -13,7 +13,7 @@ export function useFolderActions() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
 
-  const moveFolder = useLocalWrite(DeleteRecipeFolderDocument, {
+  const moveFolder = useLocalWrite(deleteRecipeFolderWrite, {
     fallback: t('recipes.deleteFolderFailed'),
     present: 'toast',
   });

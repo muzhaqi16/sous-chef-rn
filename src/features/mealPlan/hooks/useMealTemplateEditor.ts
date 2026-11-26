@@ -5,12 +5,6 @@
 
 import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#i18n';
-import {
-  UpdateMealTemplateDocument,
-  AddTemplateItemDocument,
-  UpdateTemplateItemDocument,
-  RemoveTemplateItemDocument,
-} from '#features/mealPlan/graphql/mealTemplate.generated';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { generateEntityId } from '#utils/generateEntityId';
 import { readRecipeRef } from '#features/mealPlan/cache/mealTemplateItem';
@@ -25,22 +19,28 @@ import type {
   AddTemplateItemInput,
   UpdateTemplateItemInput,
 } from '#graphql/generated/schemaTypes';
+import {
+  addTemplateItemWrite,
+  removeTemplateItemWrite,
+  updateMealTemplateWrite,
+  updateTemplateItemWrite,
+} from '#features/mealPlan/offline/localWrites';
 
 export function useMealTemplateEditor() {
   const { t } = useTranslation();
   const client = useApolloClient();
   const { createTemplate: create, creating } = useCreateMealTemplate();
 
-  const updateMealTemplate = useLocalWrite(UpdateMealTemplateDocument, {
+  const updateMealTemplate = useLocalWrite(updateMealTemplateWrite, {
     fallback: t('mealTemplateBuilder.failedToSave'),
   });
-  const addTemplateItem = useLocalWrite(AddTemplateItemDocument, {
+  const addTemplateItem = useLocalWrite(addTemplateItemWrite, {
     fallback: t('mealTemplateBuilder.failedToAddItem'),
   });
-  const updateTemplateItem = useLocalWrite(UpdateTemplateItemDocument, {
+  const updateTemplateItem = useLocalWrite(updateTemplateItemWrite, {
     fallback: t('mealTemplateBuilder.failedToSaveItem'),
   });
-  const removeTemplateItem = useLocalWrite(RemoveTemplateItemDocument, {
+  const removeTemplateItem = useLocalWrite(removeTemplateItemWrite, {
     fallback: t('mealTemplateBuilder.failedToRemoveItem'),
     removal: true,
   });
@@ -96,11 +96,10 @@ export function useMealTemplateEditor() {
         : {}),
     };
 
-    const settled = await updateTemplateItem.sendFields({
-      entity: { __typename: 'MealTemplateItem', id },
-      fields,
-      variables: { input },
-    });
+    const settled = await updateTemplateItem.send(
+      { input },
+      { entity: { __typename: 'MealTemplateItem', id }, fields: fields },
+    );
     return settled.status !== 'failed';
   };
 

@@ -45,7 +45,8 @@ export function authoredMutations(): Map<string, OperationDefinitionNode> {
 
 /**
  * The operation names reachable from a file that opts into `localFirst`, by
- * the marker or by sending through `useLocalWrite`, which sets it.
+ * the marker or by sending through `useLocalWrite`, which sets it: each
+ * document it names, and each binding (`xWrite` sends operation `X`).
  * Over-collects (a file's queries come along too) and is then narrowed to the
  * authored mutations — a false positive here would only make a gate stricter.
  */
@@ -59,6 +60,11 @@ export function localFirstOperationNames(): Set<string> {
     if (!/localFirst:\s*true|\buseLocalWrite\(/.test(source)) continue;
     for (const match of source.matchAll(/\b([A-Z][A-Za-z0-9_]*)Document\b/g)) {
       names.add(match[1]!);
+    }
+    // A binding names its operation: `createPantryItemWrite` sends CreatePantryItem.
+    for (const match of source.matchAll(/\b([a-z][A-Za-z0-9_]*)Write\b/g)) {
+      const name = match[1]!;
+      names.add(name.charAt(0).toUpperCase() + name.slice(1));
     }
     // `useXMutation()` codegen hooks name the operation the same way.
     for (const match of source.matchAll(

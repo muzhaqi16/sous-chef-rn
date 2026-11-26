@@ -3,16 +3,16 @@
  * survives an offline queue — a list already gone counts as deleted.
  */
 
-import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#i18n';
 import { useStore } from '#store';
+import { deleteShoppingListWrite } from '#features/shoppingList/offline/localWrites';
 
 export function useDeleteShoppingList() {
   const { t } = useTranslation();
 
   // Toasted rather than alerted: the list simply reappears where it was.
-  const remove = useLocalWrite(DeleteShoppingListDocument, {
+  const remove = useLocalWrite(deleteShoppingListWrite, {
     fallback: t('errors.deleteShoppingListFailed'),
     removal: true,
     present: 'toast',

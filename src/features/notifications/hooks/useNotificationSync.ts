@@ -8,14 +8,6 @@
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { useApolloClient } from '@apollo/client/react';
 import {
-  MarkNotificationAsReadDocument,
-  DeleteNotificationDocument,
-} from '#features/notifications/graphql/notificationMutations.generated';
-import {
-  MarkAllNotificationsAsReadDocument,
-  DeleteMultipleNotificationsDocument,
-} from '#features/notifications/graphql/bulkNotificationMutations.generated';
-import {
   applyNotificationRemoved,
   cachedUnreadNotificationIds,
   isUnreadStatus,
@@ -25,22 +17,28 @@ import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { isGoneCode } from '#apollo/utils/settleMutation';
 import { alertService } from '#services/alertService';
 import { useTranslation } from '#i18n';
+import {
+  deleteMultipleNotificationsWrite,
+  deleteNotificationWrite,
+  markAllNotificationsAsReadWrite,
+  markNotificationAsReadWrite,
+} from '#features/notifications/offline/localWrites';
 
 export function useNotificationSync() {
   const client = useApolloClient();
   const { t } = useTranslation();
-  const markRead = useLocalWrite(MarkNotificationAsReadDocument, {
+  const markRead = useLocalWrite(markNotificationAsReadWrite, {
     fallback: t('notifications.actionFailed'),
     present: 'none',
   });
-  const remove = useLocalWrite(DeleteNotificationDocument, {
+  const remove = useLocalWrite(deleteNotificationWrite, {
     fallback: t('notifications.deleteFailed'),
     removal: true,
   });
-  const markAllRead = useLocalWrite(MarkAllNotificationsAsReadDocument, {
+  const markAllRead = useLocalWrite(markAllNotificationsAsReadWrite, {
     fallback: t('notifications.actionFailed'),
   });
-  const removeMultiple = useLocalWrite(DeleteMultipleNotificationsDocument, {
+  const removeMultiple = useLocalWrite(deleteMultipleNotificationsWrite, {
     fallback: t('notifications.deleteFailed'),
     removal: true,
   });

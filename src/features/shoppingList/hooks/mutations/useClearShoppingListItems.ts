@@ -4,10 +4,10 @@
  */
 
 import { useRef } from 'react';
-import { RemoveItemsFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#i18n';
 import type { RemoveRowsInputs } from '#entities/shoppingList/localWrites';
+import { removeItemsFromShoppingListWrite } from '#features/shoppingList/offline/localWrites';
 
 // The hook only reads `id` and the array length from the item lists.
 interface ClearableItem {
@@ -28,7 +28,7 @@ export function useClearShoppingListItems({
   const { t } = useTranslation();
   const isClearingRef = useRef(false);
 
-  const clear = useLocalWrite(RemoveItemsFromShoppingListDocument, {
+  const clear = useLocalWrite(removeItemsFromShoppingListWrite, {
     fallback: t('shoppingListScreens.failedToClear'),
   });
 

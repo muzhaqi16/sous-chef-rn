@@ -23,6 +23,19 @@ import {
   writeLocalRecipe,
   type RecipeCreatedBy,
 } from '#features/recipes/utils/recipeCacheWriters';
+import { bindLocalWrite } from '#apollo/pendingWrites/bindLocalWrite';
+import { entityFields } from '#apollo/pendingWrites/entityFields';
+import {
+  AddRecipeToFavoritesDocument,
+  CreateRecipeDocument,
+  DeleteRecipeDocument,
+  DeleteRecipeFolderDocument,
+  ForkRecipeDocument,
+  MarkRecipeAsCookedDocument,
+  RemoveRecipeFromFavoritesDocument,
+  UpdateFavoriteRecipeDocument,
+  UpdateRecipeDocument,
+} from '#features/recipes/graphql/recipe.generated';
 
 export type CreateRecipeInputs = {
   id: string;
@@ -182,3 +195,41 @@ export const cookRecipe: LocalWrite<CookRecipeInputs> = {
     });
   },
 };
+
+// Each document this feature sends as a local write, bound to its write.
+export const markRecipeAsCookedWrite = bindLocalWrite(
+  MarkRecipeAsCookedDocument,
+  cookRecipe,
+);
+export const createRecipeWrite = bindLocalWrite(
+  CreateRecipeDocument,
+  createRecipe,
+);
+export const forkRecipeWrite = bindLocalWrite(ForkRecipeDocument, {
+  ...createRecipe,
+  subject: { key: 'newRecipeId', mints: true },
+});
+export const updateRecipeWrite = bindLocalWrite(
+  UpdateRecipeDocument,
+  entityFields,
+);
+export const deleteRecipeWrite = bindLocalWrite(
+  DeleteRecipeDocument,
+  removeRecipe,
+);
+export const addRecipeToFavoritesWrite = bindLocalWrite(
+  AddRecipeToFavoritesDocument,
+  { ...addFavorite, subject: { mints: true } },
+);
+export const removeRecipeFromFavoritesWrite = bindLocalWrite(
+  RemoveRecipeFromFavoritesDocument,
+  { ...removeFavorite, subject: { key: 'recipeId' } },
+);
+export const updateFavoriteRecipeWrite = bindLocalWrite(
+  UpdateFavoriteRecipeDocument,
+  savedFields,
+);
+export const deleteRecipeFolderWrite = bindLocalWrite(
+  DeleteRecipeFolderDocument,
+  moveFolder,
+);

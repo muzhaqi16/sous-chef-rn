@@ -3,7 +3,6 @@ import { useTranslation, type TranslateFn } from '#i18n';
 import { useApolloClient, useLazyQuery } from '@apollo/client/react';
 import {
   MatchRecipeIngredientsToPantryDocument,
-  MarkRecipeAsCookedDocument,
   RecipeCookUsesDocument,
   type MatchRecipeIngredientsToPantryQuery,
 } from '#features/recipes/graphql/recipe.generated';
@@ -43,6 +42,7 @@ import { generateEntityId } from '#utils/generateEntityId';
 import { appliedPayload } from '#utils/errors/mutationPayload';
 import { logger } from '#utils/environment';
 import { errorService } from '#services/errorService';
+import { markRecipeAsCookedWrite } from '#features/recipes/offline/localWrites';
 
 type IngredientMatch =
   MatchRecipeIngredientsToPantryQuery['matchRecipeIngredientsToPantry'][number];
@@ -331,7 +331,7 @@ export function useRecipeIngredientMatching(
   // The reviewed cook is the quick cook's own write with `exactStacks`: one
   // transaction, so it deducts every stack stated or none. Held as a pending
   // layer that draws what it states.
-  const reviewedCook = useLocalWrite(MarkRecipeAsCookedDocument, {
+  const reviewedCook = useLocalWrite(markRecipeAsCookedWrite, {
     fallback: t('recipes.markCookedFailed'),
     // The review sheet reports the cook as a toast and stays open to retry.
     present: 'toast',

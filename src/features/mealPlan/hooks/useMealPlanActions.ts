@@ -1,10 +1,5 @@
 import { useApolloClient } from '@apollo/client/react';
-import {
-  CreateMealPlanDocument,
-  UpdateMealPlanDocument,
-  DeleteMealPlanDocument,
-  GetMealPlansDocument,
-} from '#features/mealPlan/graphql/mealPlan.generated';
+import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import type { CreatePlanInputs } from '#features/mealPlan/offline/localWrites';
 import type {
   CreateMealPlanInput,
@@ -17,6 +12,11 @@ import { generateEntityId } from '#utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import { alertService } from '#services/alertService';
 import { useTranslation } from '#i18n';
+import {
+  createMealPlanWrite,
+  deleteMealPlanWrite,
+  updateMealPlanWrite,
+} from '#features/mealPlan/offline/localWrites';
 
 /** A plan create as its caller acts on it; `failure` is what to show. */
 export type MealPlanCreateOutcome =
@@ -47,12 +47,12 @@ export function useMealPlanActions() {
   const user = useUser();
   const { t } = useTranslation();
 
-  const createPlan = useLocalWrite(CreateMealPlanDocument, {
+  const createPlan = useLocalWrite(createMealPlanWrite, {
     fallback: t('mealPlan.failedToCreate'),
   });
 
   // A save made elsewhere since is refused, not overwritten.
-  const updatePlan = useLocalWrite(UpdateMealPlanDocument, {
+  const updatePlan = useLocalWrite(updateMealPlanWrite, {
     fallback: t('errors.saveFailed'),
     // A stale version means another member saved the plan since: show theirs.
     onVersionConflict: () => {
@@ -62,7 +62,7 @@ export function useMealPlanActions() {
     },
   });
 
-  const deletePlan = useLocalWrite(DeleteMealPlanDocument, {
+  const deletePlan = useLocalWrite(deleteMealPlanWrite, {
     fallback: t('mealPlanMain.deleteMealPlanFailed'),
     removal: true,
   });
@@ -99,11 +99,10 @@ export function useMealPlanActions() {
       return false;
     }
 
-    const settled = await updatePlan.sendFields({
-      entity,
-      fields: shownPlanFields(input),
-      variables: { input: { ...input, id, version } },
-    });
+    const settled = await updatePlan.send(
+      { input: { ...input, id, version } },
+      { entity: entity, fields: shownPlanFields(input) },
+    );
     return settled.status !== 'failed';
   };
 

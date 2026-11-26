@@ -5,7 +5,6 @@
 
 import { useApolloClient } from '@apollo/client/react';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
-import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   UseUpdatePantryItemQuantity_RowFragmentDoc,
   type UseUpdatePantryItemQuantity_RowFragment,
@@ -19,6 +18,7 @@ import type { writeHeldStock } from '#entities/pantryItem/stock';
 import type { SetStockInputs } from '#features/pantry/offline/localWrites';
 import { todayKey } from '#utils/dateUtils';
 import { statedAmount } from '#utils/formatQuantity';
+import { updatePantryItemQuantityWrite } from '#features/pantry/offline/localWrites';
 
 interface UseUpdatePantryItemQuantityOptions {
   refetch?: () => void;
@@ -43,7 +43,7 @@ export function useUpdatePantryItemQuantity({
   const { t } = useTranslation();
   const client = useApolloClient();
 
-  const setQuantity = useLocalWrite(UpdatePantryItemQuantityDocument, {
+  const setQuantity = useLocalWrite(updatePantryItemQuantityWrite, {
     fallback: t('errors.updateItemFailed'),
     onConflictRefresh: refetch,
   });

@@ -9,10 +9,10 @@ import type {
   UsualStoreInputs,
 } from '#features/catalog/offline/localWrites';
 import {
-  AddUsualStoreDocument,
-  RemoveUsualStoreDocument,
-  UpdateUsualStoreDocument,
-} from './useUsualStoreWrites.generated';
+  addUsualStoreWrite,
+  removeUsualStoreWrite,
+  updateUsualStoreWrite,
+} from '#features/catalog/offline/localWrites';
 
 /**
  * A household's usual-store writes (`homeId` null: the caller's own), each
@@ -32,15 +32,15 @@ export function useUsualStoreWrites(homeId: string | null) {
     },
   };
   const fallback = t('usualStores.saveFailed');
-  const addStore = useLocalWrite(AddUsualStoreDocument, {
+  const addStore = useLocalWrite(addUsualStoreWrite, {
     fallback,
     copy: overTheLimit,
   });
-  const updateStore = useLocalWrite(UpdateUsualStoreDocument, {
+  const updateStore = useLocalWrite(updateUsualStoreWrite, {
     fallback,
     copy: overTheLimit,
   });
-  const removeStore = useLocalWrite(RemoveUsualStoreDocument, {
+  const removeStore = useLocalWrite(removeUsualStoreWrite, {
     fallback,
     removal: true,
   });

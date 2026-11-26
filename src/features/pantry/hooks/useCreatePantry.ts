@@ -1,4 +1,3 @@
-import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import type { CreatePantryInputs } from '#features/pantry/offline/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { SettledFailure } from '#apollo/utils/settleMutation';
@@ -6,6 +5,7 @@ import { generateEntityId } from '#utils/generateEntityId';
 import type { CreatePantryInput } from '#graphql/generated/schemaTypes';
 import { useTranslation } from '#i18n';
 import { todayKey } from '#utils/dateUtils';
+import { createPantryWrite } from '#features/pantry/offline/localWrites';
 
 /** A write's verdict. A refusal carries the localized copy the caller shows. */
 export interface PantryWriteOutcome {
@@ -29,7 +29,7 @@ export interface CreatePantryOutcome extends PantryWriteOutcome {
  */
 export function useCreatePantry() {
   const { t } = useTranslation();
-  const createPantry = useLocalWrite(CreatePantryDocument, {
+  const createPantry = useLocalWrite(createPantryWrite, {
     fallback: t('errors.createPantryFailed'),
     present: 'none',
   });

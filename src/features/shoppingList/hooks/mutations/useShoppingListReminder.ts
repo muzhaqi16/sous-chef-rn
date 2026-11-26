@@ -5,18 +5,18 @@
  */
 
 import { useTranslation } from '#i18n';
-import {
-  UpdateShoppingListReminderDocument,
-  DeleteShoppingListReminderDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import {
+  deleteShoppingListReminderWrite,
+  updateShoppingListReminderWrite,
+} from '#features/shoppingList/offline/localWrites';
 
 export function useShoppingListReminder() {
   const { t } = useTranslation();
-  const set = useLocalWrite(UpdateShoppingListReminderDocument, {
+  const set = useLocalWrite(updateShoppingListReminderWrite, {
     fallback: t('shoppingListScreens.failedToSetReminder'),
   });
-  const clear = useLocalWrite(DeleteShoppingListReminderDocument, {
+  const clear = useLocalWrite(deleteShoppingListReminderWrite, {
     fallback: t('shoppingListScreens.failedToClearReminder'),
   });
 
@@ -25,20 +25,24 @@ export function useShoppingListReminder() {
     reminderDate: string,
     reminderEnabled = true,
   ): Promise<boolean> => {
-    const settled = await set.sendFields({
-      entity: { __typename: 'ShoppingList', id },
-      fields: { reminderEnabled, reminderDate },
-      variables: { input: { id, reminderDate, reminderEnabled } },
-    });
+    const settled = await set.send(
+      { input: { id, reminderDate, reminderEnabled } },
+      {
+        entity: { __typename: 'ShoppingList', id },
+        fields: { reminderEnabled, reminderDate },
+      },
+    );
     return settled.status !== 'failed';
   };
 
   const clearReminder = async (id: string): Promise<boolean> => {
-    const settled = await clear.sendFields({
-      entity: { __typename: 'ShoppingList', id },
-      fields: { reminderEnabled: false, reminderDate: null },
-      variables: { input: { id } },
-    });
+    const settled = await clear.send(
+      { input: { id } },
+      {
+        entity: { __typename: 'ShoppingList', id },
+        fields: { reminderEnabled: false, reminderDate: null },
+      },
+    );
     return settled.status !== 'failed';
   };
 

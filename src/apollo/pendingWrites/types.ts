@@ -1,4 +1,8 @@
-import type { ApolloCache, OperationVariables } from '@apollo/client';
+import type {
+  ApolloCache,
+  OperationVariables,
+  TypedDocumentNode,
+} from '@apollo/client';
 import type { DocumentNode } from 'graphql';
 
 /** What a write read outside its variables when made. Queued with it, so JSON. */
@@ -119,3 +123,22 @@ export interface RegisteredConflict extends ConflictRow {
 }
 
 export type LocalWriteTable = Record<string, RegisteredWrite>;
+
+/**
+ * A document bound to the local write it sends as. A sender holds the binding,
+ * so its variables, inputs and answer are all checked against the one write.
+ */
+export interface LocalWriteBinding<
+  TData,
+  TVariables extends OperationVariables,
+  TInputs extends LocalInputs,
+> {
+  readonly document: TypedDocumentNode<TData, TVariables>;
+  readonly write: LocalWrite<TInputs>;
+}
+
+/** A binding as the kernel's table lists it, its types erased. */
+export interface RegisteredBinding {
+  readonly document: DocumentNode;
+  readonly write: RegisteredWrite;
+}

@@ -7,12 +7,7 @@ import {
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useDataState } from '#hooks/data/useDataState';
 import { skipToken, useQuery } from '@apollo/client/react';
-import {
-  GetDietaryProfileDocument,
-  UpdateDietaryProfileDocument,
-  AddDietaryRestrictionDocument,
-  RemoveDietaryRestrictionDocument,
-} from '#operations/user/user.generated';
+import { GetDietaryProfileDocument } from '#operations/user/user.generated';
 import type {
   Diet,
   Intolerance,
@@ -28,6 +23,11 @@ import type {
 } from '#features/profile/offline/localWrites';
 import { generateEntityId } from '#utils/generateEntityId';
 import { useTranslation } from '#i18n';
+import {
+  addDietaryRestrictionWrite,
+  removeDietaryRestrictionWrite,
+  updateDietaryProfileWrite,
+} from '#features/profile/offline/localWrites';
 
 export interface DietaryRestriction {
   id: string;
@@ -106,12 +106,12 @@ export const useDietaryProfile = ({
   const pendingCreation = useRef<Promise<boolean> | null>(null);
 
   // ===== MUTATION 1: Update Dietary Profile =====
-  const updateProfile = useLocalWrite(UpdateDietaryProfileDocument, {
+  const updateProfile = useLocalWrite(updateDietaryProfileWrite, {
     fallback: t('errors.codes.genericRetry'),
   });
 
   // ===== MUTATION 2: Add Dietary Restriction =====
-  const addRestriction = useLocalWrite(AddDietaryRestrictionDocument, {
+  const addRestriction = useLocalWrite(addDietaryRestrictionWrite, {
     fallback: t('errors.codes.genericRetry'),
     // Both callers alert on the false return; a second alert stacks, and
     // a bulk add stacks one per restriction.
@@ -119,7 +119,7 @@ export const useDietaryProfile = ({
   });
 
   // ===== MUTATION 3: Remove Dietary Restriction =====
-  const removeRestriction = useLocalWrite(RemoveDietaryRestrictionDocument, {
+  const removeRestriction = useLocalWrite(removeDietaryRestrictionWrite, {
     fallback: t('dietary.removeRestrictionFailed'),
     removal: true,
     present: 'none',
@@ -163,13 +163,15 @@ export const useDietaryProfile = ({
     // Null clears a field, as the API reads it; a field left out is kept.
     const cleanedUpdates: Record<string, unknown> = { ...updates };
 
-    const settled = await updateProfile.sendFields({
-      entity: profile
-        ? { __typename: 'DietaryProfile', id: profile.id }
-        : undefined,
-      fields: cleanedUpdates,
-      variables: { input: cleanedUpdates },
-    });
+    const settled = await updateProfile.send(
+      { input: cleanedUpdates },
+      {
+        entity: profile
+          ? { __typename: 'DietaryProfile', id: profile.id }
+          : undefined,
+        fields: cleanedUpdates,
+      },
+    );
     return settled.status !== 'failed';
   };
 

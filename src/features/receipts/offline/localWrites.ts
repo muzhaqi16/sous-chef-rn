@@ -21,6 +21,8 @@ import {
 } from '#entities/shoppingList/moveToPantry';
 import { readIsPurchased } from '#entities/shoppingList/purchase';
 import { refuseReceiptCheckIn, resultsOf } from './receiptCheckIn';
+import { bindLocalWrite } from '#apollo/pendingWrites/bindLocalWrite';
+import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 
 /** What one line shows until the server answers. */
 export type LocalCheckInLine = {
@@ -95,3 +97,12 @@ export const checkIn: LocalWrite<CheckInInputs> = {
   },
   recoverable: false,
 };
+
+// Each document this feature sends as a local write, bound to its write.
+export const createReceiptCheckInWrite = bindLocalWrite(
+  CreateReceiptCheckInDocument,
+  {
+    ...checkIn,
+    subject: { key: 'lines', rowKey: 'pantryItemId', mints: true },
+  },
+);

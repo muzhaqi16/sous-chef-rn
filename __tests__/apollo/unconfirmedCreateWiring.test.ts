@@ -59,7 +59,17 @@ const callsIn = (file: string, text?: string): Set<string> =>
       }),
   );
 
-/** Whether the file sends one of `documents` through `useMutation` or `useLocalWrite`. */
+/** The binding a document is sent through: `CreateHomeDocument` → `createHomeWrite`. */
+const bindingOf = (document: string) =>
+  `${document.charAt(0).toLowerCase()}${document.slice(
+    1,
+    -'Document'.length,
+  )}Write`;
+
+/**
+ * Whether the file sends one of `documents` through `useMutation` or
+ * `useLocalWrite`: by the document, its binding, or the binding's document.
+ */
 const sendsDocument = (
   file: string,
   documents: readonly string[],
@@ -70,7 +80,15 @@ const sendsDocument = (
     .some(
       call =>
         ['useMutation', 'useLocalWrite'].includes(calleeName(call) ?? '') &&
-        documents.includes(call.arguments[0]?.getText() ?? ''),
+        documents.some(document => {
+          const sent = call.arguments[0]?.getText();
+          const binding = bindingOf(document);
+          return (
+            sent === document ||
+            sent === binding ||
+            sent === `${binding}.document`
+          );
+        }),
     );
 
 /** Whether a subscription's `variables` name a home or a pantry, in any position. */

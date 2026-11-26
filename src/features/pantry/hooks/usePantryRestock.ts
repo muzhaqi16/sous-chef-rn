@@ -1,5 +1,4 @@
 import { useApolloClient } from '@apollo/client/react';
-import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { inTrackingUnit } from '#entities/pantryItem/stock';
 import type { AddStockInputs } from '#features/pantry/offline/localWrites';
 import { readStackUnit } from '#features/pantry/utils/pantryCacheReaders';
@@ -17,6 +16,7 @@ import type {
   StockAmountInput,
 } from '#graphql/generated/schemaTypes';
 import { UnitType } from '#graphql/generated/schemaTypes';
+import { restockPantryItemWrite } from '#features/pantry/offline/localWrites';
 
 /**
  * A restock's variables. `input.today` dates its default expiry; the key
@@ -84,7 +84,7 @@ export function usePantryRestock(pantryId: string | undefined) {
   const client = useApolloClient();
   const intake = usePantryIntake(pantryId);
 
-  const restockPantryItem = useLocalWrite(RestockPantryItemDocument, {
+  const restockPantryItem = useLocalWrite(restockPantryItemWrite, {
     fallback: t('errors.restockFailedRetry'),
   });
 

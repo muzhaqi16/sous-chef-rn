@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useFragment } from '@apollo/client/react';
-import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UseQuantityEditModal_ItemFragmentDoc } from './useQuantityEditModal.generated';
 import { Telemetry } from '#services/telemetry';
@@ -14,6 +13,7 @@ import { parseFractionalInput } from '#utils/fractionUtils';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { shownLineReading } from '#features/shoppingList/utils/lineReading';
 import { unitLabel, type UnitLabelSource } from '#utils/formatQuantity';
+import { updateShoppingListItemWrite } from '#features/shoppingList/offline/localWrites';
 
 export interface QuantityEditItem {
   id: string;
@@ -60,7 +60,7 @@ export function useQuantityEditModal(
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const updateQuantity = useLocalWrite(UpdateShoppingListItemDocument, {
+  const updateQuantity = useLocalWrite(updateShoppingListItemWrite, {
     fallback: t('errors.adjustQuantityFailed'),
   });
 

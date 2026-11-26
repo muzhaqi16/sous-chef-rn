@@ -4,7 +4,7 @@ import { generateEntityId } from '#utils/generateEntityId';
 import { useTranslation } from '#i18n';
 import type { CreateStoreInput } from '#graphql/generated/schemaTypes';
 import type { CreateStoreInputs } from '#features/catalog/offline/localWrites';
-import { CreateStoreDocument } from './useCreateStore.generated';
+import { createStoreWrite } from '#features/catalog/offline/localWrites';
 
 /** A store to add; the hook mints its id. */
 export type NewStore = Omit<CreateStoreInput, 'id'>;
@@ -22,7 +22,7 @@ export interface CreatedStore {
  */
 export function useCreateStore() {
   const { t } = useTranslation();
-  const create = useLocalWrite(CreateStoreDocument, {
+  const create = useLocalWrite(createStoreWrite, {
     fallback: t('errors.generic'),
   });
 

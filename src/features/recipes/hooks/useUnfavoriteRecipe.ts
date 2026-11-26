@@ -1,7 +1,7 @@
-import { RemoveRecipeFromFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
 import type { RemoveFavoriteInputs } from '#features/recipes/offline/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#i18n';
+import { removeRecipeFromFavoritesWrite } from '#features/recipes/offline/localWrites';
 
 interface UnfavoriteOptions {
   /** The caller's copy for a failure nothing more specific describes. */
@@ -11,7 +11,7 @@ interface UnfavoriteOptions {
 
 export function useUnfavoriteRecipe() {
   const { t } = useTranslation();
-  const removeFavorite = useLocalWrite(RemoveRecipeFromFavoritesDocument, {
+  const removeFavorite = useLocalWrite(removeRecipeFromFavoritesWrite, {
     fallback: t('recipes.removeRecipeFailed'),
   });
 

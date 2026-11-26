@@ -5,10 +5,7 @@
  */
 
 import { useApolloClient } from '@apollo/client/react';
-import {
-  GetShoppingListItemsFilteredDocument,
-  UpdateShoppingListDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ListSavingsDocument } from '#features/shoppingList/hooks/useListSavings.generated';
 import {
   UseUpdateShoppingList_ListFragmentDoc,
@@ -21,6 +18,7 @@ import type {
   ListStatus,
   ShoppingListPlanningInput,
 } from '#graphql/generated/schemaTypes';
+import { updateShoppingListWrite } from '#features/shoppingList/offline/localWrites';
 
 interface ShoppingListSettingsUpdate {
   name?: string;
@@ -37,7 +35,7 @@ interface ShoppingListSettingsUpdate {
 
 export function useUpdateShoppingList(fallbackErrorMessage: string) {
   const client = useApolloClient();
-  const update = useLocalWrite(UpdateShoppingListDocument, {
+  const update = useLocalWrite(updateShoppingListWrite, {
     fallback: fallbackErrorMessage,
     present: 'none',
   });
@@ -71,24 +69,8 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
       throw new GraphQLNetworkError(fallbackErrorMessage);
     }
 
-    const settled = await update.sendFields({
-      entity: { __typename: 'ShoppingList', id },
-      fields: {
-        ...(updates.name !== undefined && { name: updates.name }),
-        ...(updates.isDefault !== undefined && {
-          isDefault: updates.isDefault,
-        }),
-        ...(updates.status !== undefined && { status: updates.status }),
-        ...(updates.planning?.budgetAmount !== undefined && {
-          budgetAmount: updates.planning.budgetAmount,
-        }),
-        ...(updates.planning?.currency !== undefined && {
-          currency: updates.planning.currency,
-        }),
-        ...(localStore !== undefined && { targetStore: localStore }),
-        updatedAt: new Date().toISOString(),
-      },
-      variables: {
+    const settled = await update.send(
+      {
         input: {
           id,
           ...fields,
@@ -96,7 +78,25 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
           version: snapshot.version,
         },
       },
-    });
+      {
+        entity: { __typename: 'ShoppingList', id },
+        fields: {
+          ...(updates.name !== undefined && { name: updates.name }),
+          ...(updates.isDefault !== undefined && {
+            isDefault: updates.isDefault,
+          }),
+          ...(updates.status !== undefined && { status: updates.status }),
+          ...(updates.planning?.budgetAmount !== undefined && {
+            budgetAmount: updates.planning.budgetAmount,
+          }),
+          ...(updates.planning?.currency !== undefined && {
+            currency: updates.planning.currency,
+          }),
+          ...(localStore !== undefined && { targetStore: localStore }),
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    );
     if (settled.failure) throw new GraphQLNetworkError(settled.failure.body);
 
     // Queued (offline / API down): the permanent write stands and the update

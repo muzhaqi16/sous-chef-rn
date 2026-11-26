@@ -1,8 +1,8 @@
-import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import type { CreatePlanItemInputs } from '#features/mealPlan/offline/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { CreateMealPlanItemInput } from '#graphql/generated/schemaTypes';
 import { useTranslation } from '#i18n';
+import { createMealPlanItemWrite } from '#features/mealPlan/offline/localWrites';
 
 /**
  * The one meal create. Its minted id is the row's PK, so a replay converges on
@@ -10,7 +10,7 @@ import { useTranslation } from '#i18n';
  */
 export function useCreateMealPlanItem() {
   const { t } = useTranslation();
-  const create = useLocalWrite(CreateMealPlanItemDocument, {
+  const create = useLocalWrite(createMealPlanItemWrite, {
     fallback: t('mealTemplateBuilder.failedToAddItem'),
   });
 

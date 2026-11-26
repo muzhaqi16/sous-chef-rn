@@ -8,181 +8,36 @@
  */
 import type { DocumentNode } from 'graphql';
 import {
-  MarkSuggestionActiveDocument,
-  MarkSuggestionDismissedDocument,
-} from '#operations/item/item.generated';
-import {
-  AddDietaryRestrictionDocument,
-  RemoveDietaryRestrictionDocument,
-  UpdateDietaryProfileDocument,
-} from '#operations/user/user.generated';
-import { CreateHomeDocument } from '#operations/home/home.generated';
-import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
-import {
-  CreateStorageLocationDocument,
-  DeleteStorageLocationDocument,
-  MarkStorageLocationAsDefaultDocument,
-  UpdateStorageLocationDocument,
-} from './catalog/graphql/storageLocation.generated';
-import { CreateStoreDocument } from './catalog/hooks/useCreateStore.generated';
-import { createHome, markDefaultHome } from './home/offline/localWrites';
-import {
-  AddUsualStoreDocument,
-  RemoveUsualStoreDocument,
-  UpdateUsualStoreDocument,
-} from './catalog/hooks/useUsualStoreWrites.generated';
-import {
-  addUsualStore,
-  createLocation,
-  createStore,
-  dismissSuggestion,
-  locationFields,
-  pinUsualStore,
-  removeLocation,
-  removeUsualStore,
-  undoDismissal,
-  updateLocation,
-} from './catalog/offline/localWrites';
-import {
   AdjustPantryItemQuantityDocument,
   ConsumptionUnitsForPantryItemDocument,
   ConvertExpiredToWasteDocument,
-  CorrectPantryItemPackageSizeDocument,
-  CreatePantryDocument,
   CreatePantryItemDocument,
   CreatePantryItemUsageDocument,
-  DeletePantryDocument,
   DeletePantryItemDocument,
-  MarkPantryAsDefaultDocument,
-  OpenPantryItemBatchDocument,
   RestockPantryItemDocument,
   RestockUnitsForPantryItemDocument,
-  UpdatePantryDocument,
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
-  WastePantryItemBatchDocument,
 } from './pantry/graphql/pantry.generated';
 import {
-  CreateMealPlanDocument,
   CreateMealPlanItemDocument,
-  DeleteMealPlanDocument,
   DeleteMealPlanItemDocument,
-  UpdateMealPlanDocument,
-  UpdateMealPlanItemDocument,
 } from './mealPlan/graphql/mealPlan.generated';
-import {
-  AddTemplateItemDocument,
-  CreateMealTemplateDocument,
-  DeleteMealTemplateDocument,
-  RemoveTemplateItemDocument,
-  UpdateMealTemplateDocument,
-  UpdateTemplateItemDocument,
-} from './mealPlan/graphql/mealTemplate.generated';
-import {
-  addTemplateItem,
-  createPlan,
-  createPlanItem,
-  createTemplate,
-  removePlan,
-  removePlanItem,
-  removeTemplate,
-  removeTemplateItem,
-} from './mealPlan/offline/localWrites';
 import { RecordPantryStockCheckDocument } from './pantry/hooks/useStockCheck.generated';
-import {
-  addStock,
-  createItem,
-  createPantry,
-  discardExpired,
-  drawStock,
-  recordStockCheck,
-  removeItem,
-  removePantry,
-  setStock,
-  updatePantryRow,
-  wasteBatch,
-} from './pantry/offline/localWrites';
-import {
-  AddRecipeToFavoritesDocument,
-  CreateRecipeDocument,
-  DeleteRecipeDocument,
-  DeleteRecipeFolderDocument,
-  ForkRecipeDocument,
-  MarkRecipeAsCookedDocument,
-  RemoveRecipeFromFavoritesDocument,
-  UpdateFavoriteRecipeDocument,
-  UpdateRecipeDocument,
-} from './recipes/graphql/recipe.generated';
-import {
-  DeleteMultipleNotificationsDocument,
-  MarkAllNotificationsAsReadDocument,
-} from './notifications/graphql/bulkNotificationMutations.generated';
+import { MarkRecipeAsCookedDocument } from './recipes/graphql/recipe.generated';
 import {
   DeleteNotificationDocument,
   MarkNotificationAsReadDocument,
 } from './notifications/graphql/notificationMutations.generated';
-import {
-  markAllRead,
-  markRead,
-  removeNotifications,
-} from './notifications/offline/localWrites';
-import {
-  AddBrandToListDocument,
-  CreateBrandListDocument,
-  DeleteBrandListDocument,
-  RemoveBrandFromListDocument,
-  UpdateBrandListDocument,
-} from './profile/hooks/useBrandLists.generated';
-import { UpdateDietarySharingDocument } from './profile/hooks/useDietarySharing.generated';
-import {
-  addBrand,
-  addRestriction,
-  createBrandList,
-  dietaryProfileFields,
-  removeBrand,
-  removeBrandList,
-  removeRestriction,
-} from './profile/offline/localWrites';
 import { CreateReceiptCheckInDocument } from './receipts/hooks/useReceiptCheckIn.generated';
-import { checkIn } from './receipts/offline/localWrites';
-import {
-  addFavorite,
-  cookRecipe,
-  createRecipe,
-  moveFolder,
-  removeFavorite,
-  removeRecipe,
-  savedFields,
-} from './recipes/offline/localWrites';
 import { withCurrentMealVersion } from './recipes/offline/cookReplay';
 import {
   AddItemToShoppingListDocument,
-  CancelRecurringDocument,
-  CompleteShoppingListDocument,
-  CreateRecurringShoppingListDocument,
   CreateShoppingListDocument,
-  DeleteShoppingListDocument,
-  DeleteShoppingListReminderDocument,
-  MarkAsTemplateDocument,
-  MarkShoppingListActiveDocument,
-  MarkShoppingListAsDefaultDocument,
   MoveShoppingItemToPantryDocument,
   RemoveItemFromShoppingListDocument,
-  RemoveItemsFromShoppingListDocument,
-  UpdateShoppingListDocument,
   UpdateShoppingListItemDocument,
-  UpdateShoppingListReminderDocument,
 } from './shoppingList/graphql/shoppingList.generated';
-import {
-  addRows,
-  createList,
-  moveToPantry,
-  removeList,
-  removeRows,
-  updateRow,
-} from '#entities/shoppingList/localWrites';
-import { entityFields } from '#apollo/pendingWrites/entityFields';
-import type { RegisteredWrite } from '#apollo/pendingWrites/types';
 import {
   keepRefusedStockCheckRows,
   reconcileConvertExpiredReplay,
@@ -215,135 +70,186 @@ import {
   withCurrentUnits,
   type ReplayPreparer,
 } from '#apollo/offlineQueue/replayPreparation';
+import {
+  addUsualStoreWrite,
+  createStorageLocationWrite,
+  createStoreWrite,
+  deleteStorageLocationWrite,
+  markStorageLocationAsDefaultWrite,
+  markSuggestionActiveWrite,
+  markSuggestionDismissedWrite,
+  removeUsualStoreWrite,
+  updateStorageLocationWrite,
+  updateUsualStoreWrite,
+} from './catalog/offline/localWrites';
+import {
+  createHomeWrite,
+  markHomeAsDefaultWrite,
+} from './home/offline/localWrites';
+import {
+  addTemplateItemWrite,
+  createMealPlanItemWrite,
+  createMealPlanWrite,
+  createMealTemplateWrite,
+  deleteMealPlanItemWrite,
+  deleteMealPlanWrite,
+  deleteMealTemplateWrite,
+  removeTemplateItemWrite,
+  updateMealPlanItemWrite,
+  updateMealPlanWrite,
+  updateMealTemplateWrite,
+  updateTemplateItemWrite,
+} from './mealPlan/offline/localWrites';
+import {
+  deleteMultipleNotificationsWrite,
+  deleteNotificationWrite,
+  markAllNotificationsAsReadWrite,
+  markNotificationAsReadWrite,
+} from './notifications/offline/localWrites';
+import {
+  adjustPantryItemQuantityWrite,
+  convertExpiredToWasteWrite,
+  correctPantryItemPackageSizeWrite,
+  createPantryItemUsageWrite,
+  createPantryItemWrite,
+  createPantryWrite,
+  deletePantryItemWrite,
+  deletePantryWrite,
+  markPantryAsDefaultWrite,
+  openPantryItemBatchWrite,
+  recordPantryStockCheckWrite,
+  restockPantryItemWrite,
+  updatePantryItemQuantityWrite,
+  updatePantryItemWrite,
+  updatePantryWrite,
+  wastePantryItemBatchWrite,
+} from './pantry/offline/localWrites';
+import {
+  addBrandToListWrite,
+  addDietaryRestrictionWrite,
+  createBrandListWrite,
+  deleteBrandListWrite,
+  removeBrandFromListWrite,
+  removeDietaryRestrictionWrite,
+  updateBrandListWrite,
+  updateDietaryProfileWrite,
+  updateDietarySharingWrite,
+} from './profile/offline/localWrites';
+import { createReceiptCheckInWrite } from './receipts/offline/localWrites';
+import {
+  addRecipeToFavoritesWrite,
+  createRecipeWrite,
+  deleteRecipeFolderWrite,
+  deleteRecipeWrite,
+  forkRecipeWrite,
+  markRecipeAsCookedWrite,
+  removeRecipeFromFavoritesWrite,
+  updateFavoriteRecipeWrite,
+  updateRecipeWrite,
+} from './recipes/offline/localWrites';
+import {
+  addItemToShoppingListWrite,
+  cancelRecurringWrite,
+  completeShoppingListWrite,
+  createRecurringShoppingListWrite,
+  createShoppingListWrite,
+  deleteShoppingListReminderWrite,
+  deleteShoppingListWrite,
+  markAsTemplateWrite,
+  markShoppingListActiveWrite,
+  markShoppingListAsDefaultWrite,
+  moveShoppingItemToPantryWrite,
+  removeItemFromShoppingListWrite,
+  removeItemsFromShoppingListWrite,
+  updateShoppingListItemWrite,
+  updateShoppingListReminderWrite,
+  updateShoppingListWrite,
+} from './shoppingList/offline/localWrites';
+import type { RegisteredBinding } from '#apollo/pendingWrites/types';
 
 type ByOperation<T> = ReadonlyArray<readonly [DocumentNode, T]>;
 
-/** Each feature's local-first writes; the kernel adds its own. */
-export const FEATURE_LOCAL_WRITES: ByOperation<RegisteredWrite> = [
-  [
-    AddItemToShoppingListDocument,
-    { ...addRows, subject: { key: 'items', mints: true } },
-  ],
-  [CreateShoppingListDocument, createList],
-  [DeleteShoppingListDocument, removeList],
-  [UpdateShoppingListItemDocument, updateRow],
-  [
-    RemoveItemFromShoppingListDocument,
-    { ...removeRows, subject: { deletes: true } },
-  ],
-  [
-    RemoveItemsFromShoppingListDocument,
-    { ...removeRows, subject: { key: 'ids', deletes: true } },
-  ],
-  [UpdateShoppingListDocument, entityFields],
-  [CompleteShoppingListDocument, entityFields],
-  [MarkShoppingListActiveDocument, entityFields],
-  [MarkShoppingListAsDefaultDocument, entityFields],
-  [MarkAsTemplateDocument, entityFields],
-  [CreateRecurringShoppingListDocument, entityFields],
-  [CancelRecurringDocument, entityFields],
-  [UpdateShoppingListReminderDocument, entityFields],
-  [DeleteShoppingListReminderDocument, entityFields],
-  [
-    MoveShoppingItemToPantryDocument,
-    { ...moveToPantry, subject: { key: 'pantryItemId', mints: true } },
-  ],
-  [CreatePantryItemDocument, createItem],
-  [UpdatePantryItemDocument, updatePantryRow],
-  [
-    UpdatePantryItemQuantityDocument,
-    { ...setStock, subject: { key: 'pantryItemId' } },
-  ],
-  [AdjustPantryItemQuantityDocument, setStock],
-  [
-    RecordPantryStockCheckDocument,
-    {
-      ...recordStockCheck,
-      subject: { key: 'entries', rowKey: 'pantryItemId' },
-    },
-  ],
-  [DeletePantryItemDocument, removeItem],
-  [
-    CreatePantryItemUsageDocument,
-    { ...drawStock, subject: { key: 'pantryItemId' } },
-  ],
-  [MarkRecipeAsCookedDocument, cookRecipe],
-  [RestockPantryItemDocument, addStock],
-  [
-    ConvertExpiredToWasteDocument,
-    { ...discardExpired, subject: { key: 'pantryItemId' } },
-  ],
-  [
-    OpenPantryItemBatchDocument,
-    { ...entityFields, subject: { key: 'batchId' } },
-  ],
-  [WastePantryItemBatchDocument, wasteBatch],
-  [CorrectPantryItemPackageSizeDocument, entityFields],
-  [CreatePantryDocument, createPantry],
-  [UpdatePantryDocument, entityFields],
-  [DeletePantryDocument, removePantry],
-  [MarkPantryAsDefaultDocument, entityFields],
-  [CreateStorageLocationDocument, createLocation],
-  [UpdateStorageLocationDocument, updateLocation],
-  [MarkStorageLocationAsDefaultDocument, locationFields],
-  [DeleteStorageLocationDocument, removeLocation],
-  [CreateStoreDocument, createStore],
-  [AddUsualStoreDocument, addUsualStore],
-  [UpdateUsualStoreDocument, pinUsualStore],
-  [RemoveUsualStoreDocument, removeUsualStore],
-  [CreateMealPlanDocument, createPlan],
-  [UpdateMealPlanDocument, entityFields],
-  [DeleteMealPlanDocument, removePlan],
-  [CreateMealPlanItemDocument, createPlanItem],
-  [UpdateMealPlanItemDocument, entityFields],
-  [DeleteMealPlanItemDocument, removePlanItem],
-  [CreateMealTemplateDocument, createTemplate],
-  [UpdateMealTemplateDocument, entityFields],
-  [DeleteMealTemplateDocument, removeTemplate],
-  [AddTemplateItemDocument, { ...addTemplateItem, subject: { mints: true } }],
-  [UpdateTemplateItemDocument, entityFields],
-  [RemoveTemplateItemDocument, removeTemplateItem],
-  [CreateRecipeDocument, createRecipe],
-  [
-    ForkRecipeDocument,
-    { ...createRecipe, subject: { key: 'newRecipeId', mints: true } },
-  ],
-  [UpdateRecipeDocument, entityFields],
-  [DeleteRecipeDocument, removeRecipe],
-  [AddRecipeToFavoritesDocument, { ...addFavorite, subject: { mints: true } }],
-  [
-    RemoveRecipeFromFavoritesDocument,
-    { ...removeFavorite, subject: { key: 'recipeId' } },
-  ],
-  [UpdateFavoriteRecipeDocument, savedFields],
-  [DeleteRecipeFolderDocument, moveFolder],
-  [CreateHomeDocument, createHome],
-  [MarkHomeAsDefaultDocument, markDefaultHome],
-  [UpdateDietaryProfileDocument, dietaryProfileFields],
-  [
-    AddDietaryRestrictionDocument,
-    { ...addRestriction, subject: { mints: true } },
-  ],
-  [RemoveDietaryRestrictionDocument, removeRestriction],
-  [UpdateDietarySharingDocument, entityFields],
-  [CreateBrandListDocument, createBrandList],
-  [UpdateBrandListDocument, { ...entityFields, keyed: true }],
-  [DeleteBrandListDocument, removeBrandList],
-  [AddBrandToListDocument, { ...addBrand, subject: { mints: true } }],
-  [RemoveBrandFromListDocument, removeBrand],
-  [MarkNotificationAsReadDocument, markRead],
-  [MarkAllNotificationsAsReadDocument, markAllRead],
-  [DeleteNotificationDocument, removeNotifications],
-  [DeleteMultipleNotificationsDocument, removeNotifications],
-  [MarkSuggestionDismissedDocument, dismissSuggestion],
-  [MarkSuggestionActiveDocument, undoDismissal],
-  [
-    CreateReceiptCheckInDocument,
-    {
-      ...checkIn,
-      subject: { key: 'lines', rowKey: 'pantryItemId', mints: true },
-    },
-  ],
+/** Each feature's local-first writes, as the bindings its hooks send; the kernel adds its own. */
+export const FEATURE_LOCAL_WRITES: readonly RegisteredBinding[] = [
+  addItemToShoppingListWrite,
+  createShoppingListWrite,
+  deleteShoppingListWrite,
+  updateShoppingListItemWrite,
+  removeItemFromShoppingListWrite,
+  removeItemsFromShoppingListWrite,
+  updateShoppingListWrite,
+  completeShoppingListWrite,
+  markShoppingListActiveWrite,
+  markShoppingListAsDefaultWrite,
+  markAsTemplateWrite,
+  createRecurringShoppingListWrite,
+  cancelRecurringWrite,
+  updateShoppingListReminderWrite,
+  deleteShoppingListReminderWrite,
+  moveShoppingItemToPantryWrite,
+  createPantryItemWrite,
+  updatePantryItemWrite,
+  updatePantryItemQuantityWrite,
+  adjustPantryItemQuantityWrite,
+  recordPantryStockCheckWrite,
+  deletePantryItemWrite,
+  createPantryItemUsageWrite,
+  markRecipeAsCookedWrite,
+  restockPantryItemWrite,
+  convertExpiredToWasteWrite,
+  openPantryItemBatchWrite,
+  wastePantryItemBatchWrite,
+  correctPantryItemPackageSizeWrite,
+  createPantryWrite,
+  updatePantryWrite,
+  deletePantryWrite,
+  markPantryAsDefaultWrite,
+  createStorageLocationWrite,
+  updateStorageLocationWrite,
+  markStorageLocationAsDefaultWrite,
+  deleteStorageLocationWrite,
+  createStoreWrite,
+  addUsualStoreWrite,
+  updateUsualStoreWrite,
+  removeUsualStoreWrite,
+  createMealPlanWrite,
+  updateMealPlanWrite,
+  deleteMealPlanWrite,
+  createMealPlanItemWrite,
+  updateMealPlanItemWrite,
+  deleteMealPlanItemWrite,
+  createMealTemplateWrite,
+  updateMealTemplateWrite,
+  deleteMealTemplateWrite,
+  addTemplateItemWrite,
+  updateTemplateItemWrite,
+  removeTemplateItemWrite,
+  createRecipeWrite,
+  forkRecipeWrite,
+  updateRecipeWrite,
+  deleteRecipeWrite,
+  addRecipeToFavoritesWrite,
+  removeRecipeFromFavoritesWrite,
+  updateFavoriteRecipeWrite,
+  deleteRecipeFolderWrite,
+  createHomeWrite,
+  markHomeAsDefaultWrite,
+  updateDietaryProfileWrite,
+  addDietaryRestrictionWrite,
+  removeDietaryRestrictionWrite,
+  updateDietarySharingWrite,
+  createBrandListWrite,
+  updateBrandListWrite,
+  deleteBrandListWrite,
+  addBrandToListWrite,
+  removeBrandFromListWrite,
+  markNotificationAsReadWrite,
+  markAllNotificationsAsReadWrite,
+  deleteNotificationWrite,
+  deleteMultipleNotificationsWrite,
+  markSuggestionDismissedWrite,
+  markSuggestionActiveWrite,
+  createReceiptCheckInWrite,
 ];
 
 /**

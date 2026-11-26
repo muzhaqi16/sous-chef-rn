@@ -1,7 +1,6 @@
 import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#i18n';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
-import { CreatePantryItemUsageDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   ErrorCode,
   UsagePurpose,
@@ -11,6 +10,7 @@ import { generateEntityId } from '#utils/generateEntityId';
 import { todayKey } from '#utils/dateUtils';
 import { heldQuantityOf } from '#entities/pantryItem/stock';
 import type { DrawStockInputs } from '#features/pantry/offline/localWrites';
+import { createPantryItemUsageWrite } from '#features/pantry/offline/localWrites';
 
 interface FinishStock {
   purpose: UsagePurpose;
@@ -40,7 +40,7 @@ export function useFinishStock() {
     title: t('errors.stockAlreadyGoneTitle'),
     body: t('errors.stockAlreadyGone'),
   };
-  const createUsage = useLocalWrite(CreatePantryItemUsageDocument, {
+  const createUsage = useLocalWrite(createPantryItemUsageWrite, {
     fallback: t('errors.recordUsageFailedRetry'),
     copy: { INSUFFICIENT_QUANTITY: gone, NOT_FOUND: gone },
   });

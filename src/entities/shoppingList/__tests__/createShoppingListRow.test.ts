@@ -5,6 +5,7 @@ import {
   type AddItemsToShoppingListInput,
 } from '#graphql/generated/schemaTypes';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { addItemToShoppingListWrite } from '#features/shoppingList/offline/localWrites';
 import { errorService } from '#services/errorService';
 import { operationNameOf } from '#apollo/utils/documentOperation';
 import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
@@ -66,7 +67,7 @@ function create(
     row: { itemName: 'Milk' },
     line: { item: TYPED_MILK },
     send,
-    document: AddItemToShoppingListDocument,
+    write: addItemToShoppingListWrite,
     fallback: 'Could not add it',
   });
   return { created, send };
@@ -170,12 +171,12 @@ describe('createShoppingListRow', () => {
         }),
     );
 
-    const outcome = await createShoppingListRow(cache, {
+    const outcome = await createShoppingListRow<unknown>(cache, {
       listId: 'list-1',
       row: { itemName: 'Milk' },
       line: { item: TYPED_MILK },
       send,
-      document: AddItemToShoppingListDocument,
+      write: addItemToShoppingListWrite,
       fallback: 'Could not add it',
     });
 

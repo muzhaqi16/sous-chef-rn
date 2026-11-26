@@ -6,7 +6,6 @@
  */
 
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
-import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ADD_ITEMS_BATCH_LIMIT } from '#entities/shoppingList/createShoppingListRow';
 import type { LocalShoppingListItem } from '#entities/shoppingList/items';
 import type { CreateListInputs } from '#entities/shoppingList/localWrites';
@@ -17,6 +16,7 @@ import type {
   BatchAddShoppingListItemInput,
   CreateShoppingListInput,
 } from '#graphql/generated/schemaTypes';
+import { createShoppingListWrite } from '#features/shoppingList/offline/localWrites';
 
 /** Lines a new list is made with, each under the id minted for it. */
 export interface StartingLines<TItem extends BatchAddShoppingListItemInput> {
@@ -40,7 +40,7 @@ export type CreateShoppingListOutcome<TItem = never> =
 export function useCreateShoppingList(fallbackErrorMessage: string) {
   const user = useUser();
 
-  const create = useLocalWrite(CreateShoppingListDocument, {
+  const create = useLocalWrite(createShoppingListWrite, {
     fallback: fallbackErrorMessage,
     present: 'none',
   });

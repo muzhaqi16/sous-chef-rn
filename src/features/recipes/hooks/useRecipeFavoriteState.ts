@@ -1,7 +1,6 @@
 import { noteTipFact } from '#hooks/settings/useFeatureHint';
 import { useState } from 'react';
 import { errorService } from '#services/errorService';
-import { AddRecipeToFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
 import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
 import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { firstNonBlank } from '#utils/firstNonBlank';
@@ -11,6 +10,7 @@ import type { SaveToFavoritesOptions } from '#features/recipes/cache/favorites';
 import type { AddFavoriteInputs } from '#features/recipes/offline/localWrites';
 import { toastService } from '#services/toastService';
 import { useTranslation } from '#i18n';
+import { addRecipeToFavoritesWrite } from '#features/recipes/offline/localWrites';
 
 export interface UseRecipeFavoriteStateParams {
   backendRecipe: MaterializedRecipe | undefined;
@@ -39,7 +39,7 @@ export function useRecipeFavoriteState({
   const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
 
-  const favoriteRecipe = useLocalWrite(AddRecipeToFavoritesDocument, {
+  const favoriteRecipe = useLocalWrite(addRecipeToFavoritesWrite, {
     fallback: t('recipes.saveRecipeFailed'),
     // Saving a recipe reports its outcome as a toast.
     present: 'toast',

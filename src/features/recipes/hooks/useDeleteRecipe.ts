@@ -1,11 +1,11 @@
-import { DeleteRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import type { RemoveRecipeInputs } from '#features/recipes/offline/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#i18n';
+import { deleteRecipeWrite } from '#features/recipes/offline/localWrites';
 
 export function useDeleteRecipe() {
   const { t } = useTranslation();
-  const removeRecipe = useLocalWrite(DeleteRecipeDocument, {
+  const removeRecipe = useLocalWrite(deleteRecipeWrite, {
     fallback: t('recipes.deleteRecipeFailed'),
     removal: true,
   });

@@ -13,6 +13,7 @@ import type { MarkDefaultHomeInputs } from '#features/home/offline/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useDefaultHomeSyncStore } from '#features/home/store/useDefaultHomeSyncStore';
 import { todayKey } from '#utils/dateUtils';
+import { markHomeAsDefaultWrite } from '#features/home/offline/localWrites';
 
 interface MarkHomeAsDefaultResult {
   /** `refused`: the server ruled against it. `failed`: it never ruled. */
@@ -28,7 +29,7 @@ export const useMarkHomeAsDefault = () => {
   const markConfirmed = useDefaultHomeSyncStore(state => state.markConfirmed);
   const clearPending = useDefaultHomeSyncStore(state => state.clearPending);
 
-  const markDefault = useLocalWrite(MarkHomeAsDefaultDocument, {
+  const markDefault = useLocalWrite(markHomeAsDefaultWrite, {
     fallback: t('errors.setDefaultHomeFailed'),
     present: 'none',
   });

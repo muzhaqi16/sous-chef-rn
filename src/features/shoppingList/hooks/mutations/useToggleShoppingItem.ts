@@ -6,7 +6,6 @@
 
 import { useApolloClient } from '@apollo/client/react';
 import {
-  UpdateShoppingListItemDocument,
   GetShoppingListItemsFilteredDocument,
   type GetShoppingListItemsFilteredQuery,
   type GetShoppingListItemsFilteredQueryVariables,
@@ -23,6 +22,7 @@ import {
 import { appliedPayload } from '#utils/errors/mutationPayload';
 import { SHOPPING_ITEMS_PAGE_SIZE } from '#features/shoppingList/hooks/shoppingItemsPage';
 import type { PurchasedItemInput } from '#graphql/generated/schemaTypes';
+import { updateShoppingListItemWrite } from '#features/shoppingList/offline/localWrites';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;
@@ -39,7 +39,7 @@ export function useToggleShoppingItem({
   // An API unreachable while "online" queues for replay rather than raising a
   // blocking error. The server does not hold an update carrying only
   // `purchaseTracking` to its `version`, so a tick replays over a reorder.
-  const updatePurchase = useLocalWrite(UpdateShoppingListItemDocument, {
+  const updatePurchase = useLocalWrite(updateShoppingListItemWrite, {
     fallback: t('errors.updateItemFailed'),
   });
 

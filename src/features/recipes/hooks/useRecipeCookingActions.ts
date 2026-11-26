@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useTranslation } from '#i18n';
-import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   plannedMealInput,
   plannedMealSettle,
@@ -23,6 +22,7 @@ import { logger } from '#utils/environment';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { cappedNames } from '#utils/cappedNames';
 import type { CookConfirmOutcome } from '#features/recipes/types';
+import { markRecipeAsCookedWrite } from '#features/recipes/offline/localWrites';
 
 interface UseRecipeCookingActionsOptions extends CookContext {
   recipeId: string | undefined;
@@ -76,7 +76,7 @@ export function useRecipeCookingActions({
   });
   const pantryId = useSelectedPantryId();
 
-  const markCooked = useLocalWrite(MarkRecipeAsCookedDocument, {
+  const markCooked = useLocalWrite(markRecipeAsCookedWrite, {
     fallback: t('recipes.markCookedFailed'),
     present: 'toast',
     ...plannedMealSettle(t, { plannedMeal, onMealChanged }),

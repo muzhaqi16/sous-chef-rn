@@ -20,10 +20,8 @@ import { formatReading, readingOf } from '#domain/measure';
 import { useTranslation } from '#i18n';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import type { StockCheckInputs } from '#features/pantry/offline/localWrites';
-import {
-  RecordPantryStockCheckDocument,
-  StockToConfirmDocument,
-} from './useStockCheck.generated';
+import { StockToConfirmDocument } from './useStockCheck.generated';
+import { recordPantryStockCheckWrite } from '#features/pantry/offline/localWrites';
 
 /** A stack to check, as the sheet shows it. */
 export interface StockCheckRow {
@@ -128,7 +126,7 @@ export function useStockCheck(enabled = true) {
       ? `${variables.today}:${variables.pantryId}`
       : null,
   );
-  const record = useLocalWrite(RecordPantryStockCheckDocument, {
+  const record = useLocalWrite(recordPantryStockCheckWrite, {
     fallback: t('pantryScreen.stockCheckFailed'),
   });
 

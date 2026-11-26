@@ -54,6 +54,25 @@ import {
   writeHeldStock,
 } from '#entities/pantryItem/stock';
 import type { LocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
+import { bindLocalWrite } from '#apollo/pendingWrites/bindLocalWrite';
+import {
+  AdjustPantryItemQuantityDocument,
+  ConvertExpiredToWasteDocument,
+  CorrectPantryItemPackageSizeDocument,
+  CreatePantryDocument,
+  CreatePantryItemDocument,
+  CreatePantryItemUsageDocument,
+  DeletePantryDocument,
+  DeletePantryItemDocument,
+  MarkPantryAsDefaultDocument,
+  OpenPantryItemBatchDocument,
+  RestockPantryItemDocument,
+  UpdatePantryDocument,
+  UpdatePantryItemDocument,
+  UpdatePantryItemQuantityDocument,
+  WastePantryItemBatchDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { RecordPantryStockCheckDocument } from '#features/pantry/hooks/useStockCheck.generated';
 
 const stackRef = (id: string): PantryItemRef => ({
   __typename: 'PantryItem',
@@ -472,3 +491,72 @@ export const updatePantryRow: LocalWrite<EntityFieldsInputs> = {
     }
   },
 };
+
+// Each document this feature sends as a local write, bound to its write.
+export const createPantryItemWrite = bindLocalWrite(
+  CreatePantryItemDocument,
+  createItem,
+);
+export const updatePantryItemWrite = bindLocalWrite(
+  UpdatePantryItemDocument,
+  updatePantryRow,
+);
+export const updatePantryItemQuantityWrite = bindLocalWrite(
+  UpdatePantryItemQuantityDocument,
+  { ...setStock, subject: { key: 'pantryItemId' } },
+);
+export const adjustPantryItemQuantityWrite = bindLocalWrite(
+  AdjustPantryItemQuantityDocument,
+  setStock,
+);
+export const recordPantryStockCheckWrite = bindLocalWrite(
+  RecordPantryStockCheckDocument,
+  {
+    ...recordStockCheck,
+    subject: { key: 'entries', rowKey: 'pantryItemId' },
+  },
+);
+export const deletePantryItemWrite = bindLocalWrite(
+  DeletePantryItemDocument,
+  removeItem,
+);
+export const createPantryItemUsageWrite = bindLocalWrite(
+  CreatePantryItemUsageDocument,
+  { ...drawStock, subject: { key: 'pantryItemId' } },
+);
+export const restockPantryItemWrite = bindLocalWrite(
+  RestockPantryItemDocument,
+  addStock,
+);
+export const convertExpiredToWasteWrite = bindLocalWrite(
+  ConvertExpiredToWasteDocument,
+  { ...discardExpired, subject: { key: 'pantryItemId' } },
+);
+export const openPantryItemBatchWrite = bindLocalWrite(
+  OpenPantryItemBatchDocument,
+  { ...entityFields, subject: { key: 'batchId' } },
+);
+export const wastePantryItemBatchWrite = bindLocalWrite(
+  WastePantryItemBatchDocument,
+  wasteBatch,
+);
+export const correctPantryItemPackageSizeWrite = bindLocalWrite(
+  CorrectPantryItemPackageSizeDocument,
+  entityFields,
+);
+export const createPantryWrite = bindLocalWrite(
+  CreatePantryDocument,
+  createPantry,
+);
+export const updatePantryWrite = bindLocalWrite(
+  UpdatePantryDocument,
+  entityFields,
+);
+export const deletePantryWrite = bindLocalWrite(
+  DeletePantryDocument,
+  removePantry,
+);
+export const markPantryAsDefaultWrite = bindLocalWrite(
+  MarkPantryAsDefaultDocument,
+  entityFields,
+);

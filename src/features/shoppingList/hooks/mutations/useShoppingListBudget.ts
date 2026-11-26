@@ -7,7 +7,6 @@
 
 import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#i18n';
-import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   UseShoppingListBudget_ListFragmentDoc,
   type UseShoppingListBudget_ListFragment,
@@ -15,11 +14,12 @@ import {
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { toastService } from '#services/toastService';
 import type { UpdateShoppingListInput } from '#graphql/generated/schemaTypes';
+import { updateShoppingListWrite } from '#features/shoppingList/offline/localWrites';
 
 export function useShoppingListBudget() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const update = useLocalWrite(UpdateShoppingListDocument, {
+  const update = useLocalWrite(updateShoppingListWrite, {
     fallback: t('shoppingListScreens.failedToSetPriceTracking'),
   });
 
@@ -43,12 +43,9 @@ export function useShoppingListBudget() {
       return false;
     }
 
-    const settled = await update.sendFields(
-      {
-        entity: { __typename: 'ShoppingList', id },
-        fields: patch,
-        variables: { input: { id, ...input, version: current.version } },
-      },
+    const settled = await update.send(
+      { input: { id, ...input, version: current.version } },
+      { entity: { __typename: 'ShoppingList', id }, fields: patch },
       { settle: { fallback: failureMessage } },
     );
     return settled.status !== 'failed';

@@ -14,6 +14,15 @@ import {
   dropNotifications,
   hideNotification,
 } from '#features/notifications/utils/notificationCacheWrites';
+import { bindLocalWrite } from '#apollo/pendingWrites/bindLocalWrite';
+import {
+  DeleteMultipleNotificationsDocument,
+  MarkAllNotificationsAsReadDocument,
+} from '#features/notifications/graphql/bulkNotificationMutations.generated';
+import {
+  DeleteNotificationDocument,
+  MarkNotificationAsReadDocument,
+} from '#features/notifications/graphql/notificationMutations.generated';
 
 const idsOf = ({ input }: OperationVariables): string[] => {
   const value: unknown = input;
@@ -53,3 +62,21 @@ export const removeNotifications: LocalWrite = {
     else idsOf(variables).forEach(id => applyNotificationRemoved(cache, id));
   },
 };
+
+// Each document this feature sends as a local write, bound to its write.
+export const markNotificationAsReadWrite = bindLocalWrite(
+  MarkNotificationAsReadDocument,
+  markRead,
+);
+export const markAllNotificationsAsReadWrite = bindLocalWrite(
+  MarkAllNotificationsAsReadDocument,
+  markAllRead,
+);
+export const deleteNotificationWrite = bindLocalWrite(
+  DeleteNotificationDocument,
+  removeNotifications,
+);
+export const deleteMultipleNotificationsWrite = bindLocalWrite(
+  DeleteMultipleNotificationsDocument,
+  removeNotifications,
+);

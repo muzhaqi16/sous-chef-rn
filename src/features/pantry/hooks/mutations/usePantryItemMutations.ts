@@ -4,12 +4,12 @@
  * DuplicatePantryItemError restock/force-add recovery every add path requires.
  */
 
-import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import type { RemoveItemInputs } from '#features/pantry/offline/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { todayKey } from '#utils/dateUtils';
 import { subscriptionService } from '#services/subscriptions/SubscriptionService';
 import { useTranslation } from '#i18n';
+import { deletePantryItemWrite } from '#features/pantry/offline/localWrites';
 
 interface UsePantryItemMutationsOptions {
   pantryId: string | undefined;
@@ -20,7 +20,7 @@ export function usePantryItemMutations({
 }: UsePantryItemMutationsOptions) {
   const { t } = useTranslation();
 
-  const deleteItem = useLocalWrite(DeletePantryItemDocument, {
+  const deleteItem = useLocalWrite(deletePantryItemWrite, {
     fallback: t('errors.deleteItemFailed'),
     removal: true,
   });

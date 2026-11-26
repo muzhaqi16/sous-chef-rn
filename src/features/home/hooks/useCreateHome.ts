@@ -1,5 +1,4 @@
 import { useApolloClient } from '@apollo/client/react';
-import { CreateHomeDocument } from '#operations/home/home.generated';
 import { holdsHomesList } from '#features/home/hooks/homeCacheUpdaters';
 import type { CreateHomeInputs } from '#features/home/offline/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
@@ -8,6 +7,7 @@ import { generateEntityId } from '#utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import type { CreateHomeInput } from '#graphql/generated/schemaTypes';
 import { useTranslation } from '#i18n';
+import { createHomeWrite } from '#features/home/offline/localWrites';
 
 /** A create's verdict, plus the id it minted — the home's id, queued or not. */
 export type CreateHomeOutcome =
@@ -25,7 +25,7 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
   const { t } = useTranslation();
   const client = useApolloClient();
   const user = useUser();
-  const create = useLocalWrite(CreateHomeDocument, {
+  const create = useLocalWrite(createHomeWrite, {
     fallback: t('errors.createHomeFailed'),
     present: 'none',
   });

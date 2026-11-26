@@ -25,6 +25,20 @@ import {
   type LocalRestriction,
 } from '#features/profile/cache/restrictions';
 import { dropScreenedAnswers } from '#features/profile/cache/screenedAnswers';
+import { bindLocalWrite } from '#apollo/pendingWrites/bindLocalWrite';
+import {
+  AddBrandToListDocument,
+  CreateBrandListDocument,
+  DeleteBrandListDocument,
+  RemoveBrandFromListDocument,
+  UpdateBrandListDocument,
+} from '#features/profile/hooks/useBrandLists.generated';
+import { UpdateDietarySharingDocument } from '#features/profile/hooks/useDietarySharing.generated';
+import {
+  AddDietaryRestrictionDocument,
+  RemoveDietaryRestrictionDocument,
+  UpdateDietaryProfileDocument,
+} from '#operations/user/user.generated';
 
 export type AddRestrictionInputs = { row: LocalRestriction; now: string };
 
@@ -124,3 +138,41 @@ export const removeBrand: LocalWrite<RemoveBrandInputs> = {
   // The answer names the entry, not the list it left.
   commit: leaveBrandList,
 };
+
+// Each document this feature sends as a local write, bound to its write.
+export const updateDietaryProfileWrite = bindLocalWrite(
+  UpdateDietaryProfileDocument,
+  dietaryProfileFields,
+);
+export const addDietaryRestrictionWrite = bindLocalWrite(
+  AddDietaryRestrictionDocument,
+  { ...addRestriction, subject: { mints: true } },
+);
+export const removeDietaryRestrictionWrite = bindLocalWrite(
+  RemoveDietaryRestrictionDocument,
+  removeRestriction,
+);
+export const updateDietarySharingWrite = bindLocalWrite(
+  UpdateDietarySharingDocument,
+  entityFields,
+);
+export const createBrandListWrite = bindLocalWrite(
+  CreateBrandListDocument,
+  createBrandList,
+);
+export const updateBrandListWrite = bindLocalWrite(UpdateBrandListDocument, {
+  ...entityFields,
+  keyed: true,
+});
+export const deleteBrandListWrite = bindLocalWrite(
+  DeleteBrandListDocument,
+  removeBrandList,
+);
+export const addBrandToListWrite = bindLocalWrite(AddBrandToListDocument, {
+  ...addBrand,
+  subject: { mints: true },
+});
+export const removeBrandFromListWrite = bindLocalWrite(
+  RemoveBrandFromListDocument,
+  removeBrand,
+);

@@ -4,12 +4,12 @@
  * server's recompute. `idempotencyKey` stops a replay double-counting.
  */
 
-import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
 import type { DiscardExpiredInputs } from '#features/pantry/offline/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { generateEntityId } from '#utils/generateEntityId';
 import { useTranslation } from '#i18n';
 import { todayKey } from '#utils/dateUtils';
+import { convertExpiredToWasteWrite } from '#features/pantry/offline/localWrites';
 
 interface UseConvertExpiredToWasteOptions {
   onSuccess?: (wasted: { hasBatches: boolean }) => void;
@@ -19,7 +19,7 @@ export function useConvertExpiredToWaste({
   onSuccess,
 }: UseConvertExpiredToWasteOptions = {}) {
   const { t } = useTranslation();
-  const convert = useLocalWrite(ConvertExpiredToWasteDocument, {
+  const convert = useLocalWrite(convertExpiredToWasteWrite, {
     fallback: t('errors.discardExpiredFailed'),
   });
 

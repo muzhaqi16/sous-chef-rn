@@ -39,6 +39,22 @@ const takesUpdate = (options: ts.Expression | undefined): boolean =>
       property.name.text === 'update',
   );
 
+/**
+ * The operation a write hook sends: its document (`CreateHomeDocument`), its
+ * binding (`createHomeWrite`), or the binding's document.
+ */
+function operationSent(sent: ts.Expression): string | undefined {
+  const name = ts.isPropertyAccessExpression(sent)
+    ? sent.expression.getText()
+    : ts.isIdentifier(sent)
+    ? sent.text
+    : undefined;
+  const document = /^(\w+)Document$/.exec(name ?? '')?.[1];
+  if (document) return document;
+  const binding = /^(\w+)Write$/.exec(name ?? '')?.[1];
+  return binding && binding.charAt(0).toUpperCase() + binding.slice(1);
+}
+
 function hooksIn(file: string): Hook[] {
   const source = ts.createSourceFile(
     file,
@@ -55,10 +71,7 @@ function hooksIn(file: string): Hook[] {
       WRITE_HOOKS.has(node.expression.text)
     ) {
       const [document, options] = node.arguments;
-      const operation =
-        document && ts.isIdentifier(document)
-          ? /^(\w+)Document$/.exec(document.text)?.[1]
-          : undefined;
+      const operation = document ? operationSent(document) : undefined;
       if (operation) {
         const { line } = source.getLineAndCharacterOfPosition(node.getStart());
         found.push({

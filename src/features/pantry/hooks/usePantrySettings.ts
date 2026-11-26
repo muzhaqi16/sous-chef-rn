@@ -1,10 +1,5 @@
 import { skipToken, useApolloClient, useQuery } from '@apollo/client/react';
-import {
-  GetPantryDocument,
-  UpdatePantryDocument,
-  DeletePantryDocument,
-  MarkPantryAsDefaultDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import type { RemovePantryInputs } from '#features/pantry/offline/localWrites';
 import {
   useCreatePantry,
@@ -16,6 +11,11 @@ import { readVersion } from '#apollo/utils/entityWriteChain';
 import { alertService } from '#services/alertService';
 import { useTranslation } from '#i18n';
 import { todayKey } from '#utils/dateUtils';
+import {
+  deletePantryWrite,
+  markPantryAsDefaultWrite,
+  updatePantryWrite,
+} from '#features/pantry/offline/localWrites';
 
 interface UsePantrySettingsArgs {
   pantryId: string | undefined;
@@ -52,7 +52,7 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
 
   const pantry = pantryData?.pantry;
 
-  const updatePantry = useLocalWrite(UpdatePantryDocument, {
+  const updatePantry = useLocalWrite(updatePantryWrite, {
     fallback: t('errors.saveSettingsFailed'),
     onConflictRefresh: () => {
       void refetchPantry();
@@ -60,11 +60,11 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
   });
 
   // Absolute flag on an existing row, so a replay lands the same state.
-  const markAsDefault = useLocalWrite(MarkPantryAsDefaultDocument, {
+  const markAsDefault = useLocalWrite(markPantryAsDefaultWrite, {
     fallback: t('errors.saveSettingsFailed'),
   });
 
-  const removePantry = useLocalWrite(DeletePantryDocument, {
+  const removePantry = useLocalWrite(deletePantryWrite, {
     fallback: t('errors.deletePantryFailed'),
     removal: true,
   });
@@ -74,11 +74,10 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
    * In line with the pantry's saves: the server moves its version.
    */
   const setDefault = async (id: string): Promise<boolean> => {
-    const settled = await markAsDefault.sendFields({
-      entity: { __typename: 'Pantry', id },
-      fields: { isDefault: true },
-      variables: { input: { id }, today: todayKey() },
-    });
+    const settled = await markAsDefault.send(
+      { input: { id }, today: todayKey() },
+      { entity: { __typename: 'Pantry', id }, fields: { isDefault: true } },
+    );
     return settled.status !== 'failed';
   };
 
@@ -111,11 +110,10 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
     }
 
     // A save made elsewhere since is refused, not overwritten.
-    const settled = await updatePantry.sendFields({
-      entity,
-      fields: updates,
-      variables: { input: { id, ...updates, version }, today: todayKey() },
-    });
+    const settled = await updatePantry.send(
+      { input: { id, ...updates, version }, today: todayKey() },
+      { entity: entity, fields: updates },
+    );
     return settled.status !== 'failed';
   };
 

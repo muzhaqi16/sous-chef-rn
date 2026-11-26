@@ -42,6 +42,23 @@ import {
   StorageLocationConflict_StorageLocationFragmentDoc,
   StorageLocationForConflictDocument,
 } from './storageLocationConflict.generated';
+import { bindLocalWrite } from '#apollo/pendingWrites/bindLocalWrite';
+import {
+  CreateStorageLocationDocument,
+  DeleteStorageLocationDocument,
+  MarkStorageLocationAsDefaultDocument,
+  UpdateStorageLocationDocument,
+} from '#features/catalog/graphql/storageLocation.generated';
+import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
+import {
+  AddUsualStoreDocument,
+  RemoveUsualStoreDocument,
+  UpdateUsualStoreDocument,
+} from '#features/catalog/hooks/useUsualStoreWrites.generated';
+import {
+  MarkSuggestionActiveDocument,
+  MarkSuggestionDismissedDocument,
+} from '#operations/item/item.generated';
 
 const locationRef = (id: string) => ({ __typename: 'StorageLocation', id });
 
@@ -263,3 +280,45 @@ export const undoDismissal: LocalWrite<UndoDismissalInputs> = {
   // The answer states no list.
   commit: returnSuggestion,
 };
+
+// Each document this feature sends as a local write, bound to its write.
+export const createStorageLocationWrite = bindLocalWrite(
+  CreateStorageLocationDocument,
+  createLocation,
+);
+export const updateStorageLocationWrite = bindLocalWrite(
+  UpdateStorageLocationDocument,
+  updateLocation,
+);
+export const markStorageLocationAsDefaultWrite = bindLocalWrite(
+  MarkStorageLocationAsDefaultDocument,
+  locationFields,
+);
+export const deleteStorageLocationWrite = bindLocalWrite(
+  DeleteStorageLocationDocument,
+  removeLocation,
+);
+export const createStoreWrite = bindLocalWrite(
+  CreateStoreDocument,
+  createStore,
+);
+export const addUsualStoreWrite = bindLocalWrite(
+  AddUsualStoreDocument,
+  addUsualStore,
+);
+export const updateUsualStoreWrite = bindLocalWrite(
+  UpdateUsualStoreDocument,
+  pinUsualStore,
+);
+export const removeUsualStoreWrite = bindLocalWrite(
+  RemoveUsualStoreDocument,
+  removeUsualStore,
+);
+export const markSuggestionDismissedWrite = bindLocalWrite(
+  MarkSuggestionDismissedDocument,
+  dismissSuggestion,
+);
+export const markSuggestionActiveWrite = bindLocalWrite(
+  MarkSuggestionActiveDocument,
+  undoDismissal,
+);

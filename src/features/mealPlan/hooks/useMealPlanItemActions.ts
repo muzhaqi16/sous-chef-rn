@@ -1,9 +1,5 @@
 import { useApolloClient } from '@apollo/client/react';
 import {
-  UpdateMealPlanItemDocument,
-  DeleteMealPlanItemDocument,
-} from '#features/mealPlan/graphql/mealPlan.generated';
-import {
   MealPlanItemActions_ItemFragmentDoc,
   MealPlanItemActions_PlanBoundsFragmentDoc,
 } from './useMealPlanItemActions.generated';
@@ -17,13 +13,17 @@ import { subscriptionService } from '#services/subscriptions/SubscriptionService
 import { generateEntityId } from '#utils/generateEntityId';
 import { useTranslation } from '#i18n';
 import { keepDayInsidePlan } from '#utils/dateUtils';
+import {
+  deleteMealPlanItemWrite,
+  updateMealPlanItemWrite,
+} from '#features/mealPlan/offline/localWrites';
 
 export function useMealPlanItemActions(mealPlanId: string | null) {
   const client = useApolloClient();
   const { t } = useTranslation();
   const { sendItem, creating } = useCreateMealPlanItem();
 
-  const updateItem = useLocalWrite(UpdateMealPlanItemDocument, {
+  const updateItem = useLocalWrite(updateMealPlanItemWrite, {
     fallback: t('toasts.mealUpdateFailed'),
     // A stale version means another member changed the meal: show theirs.
     onVersionConflict: () => {
@@ -32,7 +32,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     present: 'toast',
   });
 
-  const removeItem = useLocalWrite(DeleteMealPlanItemDocument, {
+  const removeItem = useLocalWrite(deleteMealPlanItemWrite, {
     fallback: t('mealTemplateBuilder.failedToRemoveItem'),
     removal: true,
     present: 'toast',
@@ -94,16 +94,18 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         options?.notes != null && { notes: options.notes }),
     };
 
-    const settled = await updateItem.sendFields({
-      entity: { __typename: 'MealPlanItem', id: item.id },
-      fields: {
-        isCompleted: markingComplete,
-        completedAt,
-        servings: options?.servings,
-        notes: options?.notes,
+    const settled = await updateItem.send(
+      { input: completionInput },
+      {
+        entity: { __typename: 'MealPlanItem', id: item.id },
+        fields: {
+          isCompleted: markingComplete,
+          completedAt,
+          servings: options?.servings,
+          notes: options?.notes,
+        },
       },
-      variables: { input: completionInput },
-    });
+    );
 
     if (settled.failure) return false;
 

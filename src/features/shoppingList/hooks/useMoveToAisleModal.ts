@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useFragment } from '@apollo/client/react';
 import { StoreDepartment } from '#graphql/generated/schemaTypes';
-import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { knownDepartment } from '#features/shoppingList/utils/aisles';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { UpdateRowInputs } from '#entities/shoppingList/localWrites';
 import { useTranslation } from '#i18n';
 import { UseMoveToAisleModal_ItemFragmentDoc } from './useMoveToAisleModal.generated';
+import { updateShoppingListItemWrite } from '#features/shoppingList/offline/localWrites';
 
 /** The line the aisle picker is open for. */
 export interface AisleLine {
@@ -23,7 +23,7 @@ export function useMoveToAisleModal() {
   const { t } = useTranslation();
   const [lineId, setLineId] = useState<string | null>(null);
 
-  const updateLine = useLocalWrite(UpdateShoppingListItemDocument, {
+  const updateLine = useLocalWrite(updateShoppingListItemWrite, {
     fallback: t('shoppingListScreens.serverNotUpdated', {
       action: t('shoppingListScreens.updated'),
     }),

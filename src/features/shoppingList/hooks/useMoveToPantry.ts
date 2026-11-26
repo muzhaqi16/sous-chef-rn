@@ -1,4 +1,3 @@
-import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type {
   MeasurementProfileInput,
   PriceSource,
@@ -15,6 +14,7 @@ import { useTranslation } from '#i18n';
 import { generateEntityId } from '#utils/generateEntityId';
 import { todayKey } from '#utils/dateUtils';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
+import { moveShoppingItemToPantryWrite } from '#features/shoppingList/offline/localWrites';
 
 export interface MoveToPantryInput {
   pantryId: string;
@@ -44,7 +44,7 @@ export function useMoveToPantry({
   onSuccess,
 }: UseMoveToPantryOptions) {
   const { t } = useTranslation();
-  const move = useLocalWrite(MoveShoppingItemToPantryDocument, {
+  const move = useLocalWrite(moveShoppingItemToPantryWrite, {
     fallback: t('errors.moveToPantryFailedRetry'),
   });
 

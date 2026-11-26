@@ -7,6 +7,7 @@ import {
 import { operationLog } from '#/test-utils/operationLog';
 import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { updateShoppingListWrite } from '#features/shoppingList/offline/localWrites';
 import { useLocalWrite } from '../useLocalWrite';
 
 const LIST = {
@@ -26,7 +27,7 @@ const render = (answer: ReturnType<typeof recordMock>) => {
   const cache = seedCache([LIST]);
   const hook = renderHookWithApollo(
     () =>
-      useLocalWrite(UpdateShoppingListDocument, {
+      useLocalWrite(updateShoppingListWrite, {
         fallback: 'Could not rename the list',
         present: 'none',
       }),
@@ -69,7 +70,7 @@ describe('useLocalWrite', () => {
     const { result } = render(answer);
 
     const settled = await settledBy(() =>
-      result.current.sendFields({ ...fields, variables }),
+      result.current.send(variables, fields),
     );
 
     expect(settled?.status).toBe('applied');
@@ -83,7 +84,7 @@ describe('useLocalWrite', () => {
     const { result } = render(answer);
 
     const settled = await settledBy(() =>
-      result.current.sendFields({ ...fields, variables }),
+      result.current.send(variables, fields),
     );
 
     expect(settled?.status).toBe('queued');
@@ -103,7 +104,7 @@ describe('useLocalWrite', () => {
     const { result, cache } = render(answer);
 
     const settled = await settledBy(() =>
-      result.current.sendFields({ ...fields, variables }),
+      result.current.send(variables, fields),
     );
 
     expect(settled?.status).toBe('failed');
@@ -117,7 +118,7 @@ describe('useLocalWrite', () => {
     const { result, cache } = render(answer);
 
     await act(async () => {
-      void result.current.sendFields({ ...fields, variables });
+      void result.current.send(variables, fields);
     });
 
     expect(nameOf(cache)).toBe('Party');
@@ -136,10 +137,9 @@ describe('useLocalWrite', () => {
     const { result } = render(answer);
 
     const settled = await settledBy(() =>
-      result.current.sendFields(
-        { ...fields, variables },
-        { settle: { fallback: 'Could not save this one' } },
-      ),
+      result.current.send(variables, fields, {
+        settle: { fallback: 'Could not save this one' },
+      }),
     );
 
     expect(settled?.failure?.body).toBe('Could not save this one');
@@ -151,7 +151,7 @@ describe('useLocalWrite', () => {
     expect(result.current.sending).toBe(false);
 
     await act(async () => {
-      void result.current.sendFields({ ...fields, variables });
+      void result.current.send(variables, fields);
       await log.requested(UpdateShoppingListDocument);
     });
 

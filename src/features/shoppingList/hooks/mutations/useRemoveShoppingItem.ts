@@ -3,10 +3,10 @@
  * answers. The replay is idempotent by item id.
  */
 
-import { RemoveItemFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { RemoveRowsInputs } from '#entities/shoppingList/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#i18n';
+import { removeItemFromShoppingListWrite } from '#features/shoppingList/offline/localWrites';
 
 interface UseRemoveShoppingItemOptions {
   listId: string | null | undefined;
@@ -22,7 +22,7 @@ export function useRemoveShoppingItem({
 }: UseRemoveShoppingItemOptions): UseRemoveShoppingItemReturn {
   const { t } = useTranslation();
 
-  const remove = useLocalWrite(RemoveItemFromShoppingListDocument, {
+  const remove = useLocalWrite(removeItemFromShoppingListWrite, {
     fallback: t('errors.deleteItemFailed'),
     removal: true,
   });

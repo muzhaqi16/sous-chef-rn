@@ -4,10 +4,8 @@ import { useTranslation } from '#i18n';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { generateEntityId } from '#utils/generateEntityId';
 import { errorService } from '#services/errorService';
-import {
-  DietarySharingHomesDocument,
-  UpdateDietarySharingDocument,
-} from './useDietarySharing.generated';
+import { DietarySharingHomesDocument } from './useDietarySharing.generated';
+import { updateDietarySharingWrite } from '#features/profile/offline/localWrites';
 
 /** One of the caller's homes, and whether it sees their restrictions. */
 export interface DietarySharingHome {
@@ -25,7 +23,7 @@ export function useDietarySharing() {
   const { t } = useTranslation();
   const { data, error, refetch } = useQuery(DietarySharingHomesDocument);
   useApolloErrorLogger(DietarySharingHomesDocument, error);
-  const updateSharing = useLocalWrite(UpdateDietarySharingDocument, {
+  const updateSharing = useLocalWrite(updateDietarySharingWrite, {
     fallback: t('dietary.sharingFailed'),
     present: 'toast',
     // A later toggle the server took may stand: show what it holds.
@@ -48,11 +46,13 @@ export function useDietarySharing() {
     // One key per toggle: a queued toggle resent on reconnect writes nothing
     // twice, and a late "off" never undoes a later "on".
     const idempotencyKey = generateEntityId();
-    await updateSharing.sendFields({
-      entity: { __typename: 'Membership', id: entry.membership.id },
-      fields: { sharesDietaryNeeds: shared },
-      variables: { input: { homeId, shared, idempotencyKey } },
-    });
+    await updateSharing.send(
+      { input: { homeId, shared, idempotencyKey } },
+      {
+        entity: { __typename: 'Membership', id: entry.membership.id },
+        fields: { sharesDietaryNeeds: shared },
+      },
+    );
   };
 
   const homes: DietarySharingHome[] = memberships.map(

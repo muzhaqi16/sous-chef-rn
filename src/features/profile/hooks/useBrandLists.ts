@@ -13,14 +13,16 @@ import type {
   RemoveBrandInputs,
 } from '#features/profile/offline/localWrites';
 import {
-  AddBrandToListDocument,
   BrandListsDocument,
-  CreateBrandListDocument,
-  DeleteBrandListDocument,
-  RemoveBrandFromListDocument,
-  UpdateBrandListDocument,
   type BrandListsQuery,
 } from './useBrandLists.generated';
+import {
+  addBrandToListWrite,
+  createBrandListWrite,
+  deleteBrandListWrite,
+  removeBrandFromListWrite,
+  updateBrandListWrite,
+} from '#features/profile/offline/localWrites';
 
 /** One of the user's lists, as the screens and the scan card show it. */
 export interface BrandListView {
@@ -70,19 +72,19 @@ export function useBrandLists({
     hasResult: data !== undefined,
     isEmpty: data?.brandLists.length === 0,
   });
-  const createWrite = useLocalWrite(CreateBrandListDocument, {
+  const createWrite = useLocalWrite(createBrandListWrite, {
     fallback: t('brandLists.errors.createFailed'),
   });
-  const updateWrite = useLocalWrite(UpdateBrandListDocument, {
+  const updateWrite = useLocalWrite(updateBrandListWrite, {
     fallback: t('brandLists.errors.updateFailed'),
   });
-  const deleteWrite = useLocalWrite(DeleteBrandListDocument, {
+  const deleteWrite = useLocalWrite(deleteBrandListWrite, {
     fallback: t('brandLists.errors.deleteFailed'),
   });
-  const addWrite = useLocalWrite(AddBrandToListDocument, {
+  const addWrite = useLocalWrite(addBrandToListWrite, {
     fallback: t('brandLists.errors.addFailed'),
   });
-  const removeWrite = useLocalWrite(RemoveBrandFromListDocument, {
+  const removeWrite = useLocalWrite(removeBrandFromListWrite, {
     fallback: t('brandLists.errors.removeFailed'),
   });
 
@@ -107,11 +109,10 @@ export function useBrandLists({
     fields: { name?: string; enabled?: boolean },
   ): Promise<boolean> => {
     if (!readBrandList(client.cache, id)) return false;
-    const settled = await updateWrite.sendFields({
-      entity: { __typename: 'BrandList', id },
-      fields,
-      variables: { input: { id, ...fields } },
-    });
+    const settled = await updateWrite.send(
+      { input: { id, ...fields } },
+      { entity: { __typename: 'BrandList', id }, fields: fields },
+    );
     return settled.status !== 'failed';
   };
 

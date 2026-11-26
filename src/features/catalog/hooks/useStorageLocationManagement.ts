@@ -3,9 +3,6 @@ import { useDataState } from '#hooks/data/useDataState';
 import { skipToken, useQuery } from '@apollo/client/react';
 import {
   GetStorageLocationsDocument,
-  UpdateStorageLocationDocument,
-  DeleteStorageLocationDocument,
-  MarkStorageLocationAsDefaultDocument,
   type GetStorageLocationsQuery,
 } from '#features/catalog/graphql/storageLocation.generated';
 import type {
@@ -17,6 +14,11 @@ import { usePreservedNodes } from '#hooks/apollo/usePreservedConnection';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 import { useTranslation } from '#i18n';
+import {
+  deleteStorageLocationWrite,
+  markStorageLocationAsDefaultWrite,
+  updateStorageLocationWrite,
+} from '#features/catalog/offline/localWrites';
 
 /** Flat storage-location node as returned by `GetStorageLocations`. */
 type FlatStorageLocation =
@@ -117,7 +119,7 @@ export function useStorageLocationManagement(
   // true` once gone, `NotFoundError` only for a row that never existed).
 
   // Each write below settles its own failure and toasts it — no `onError`.
-  const update = useLocalWrite(UpdateStorageLocationDocument, {
+  const update = useLocalWrite(updateStorageLocationWrite, {
     fallback: t('errors.codes.genericRetry'),
     present: 'toast',
     // Else the stale version stays held and every retry conflicts again.
@@ -129,14 +131,14 @@ export function useStorageLocationManagement(
   });
 
   // A delete converges: a row already gone is the outcome asked for.
-  const remove = useLocalWrite(DeleteStorageLocationDocument, {
+  const remove = useLocalWrite(deleteStorageLocationWrite, {
     fallback: t('errors.codes.genericRetry'),
     removal: true,
     present: 'toast',
   });
 
   // SetDefault returns the updated location; Apollo auto-normalizes by id.
-  const markDefault = useLocalWrite(MarkStorageLocationAsDefaultDocument, {
+  const markDefault = useLocalWrite(markStorageLocationAsDefaultWrite, {
     fallback: t('errors.codes.genericRetry'),
     present: 'toast',
   });

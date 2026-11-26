@@ -5,7 +5,6 @@ import {
   useFragment,
   useQuery,
 } from '@apollo/client/react';
-import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ShoppingListItemForEditDocument } from './useShoppingListItemWrites.generated';
 import type {
   ShoppingListItem,
@@ -27,6 +26,7 @@ import type { UpdateRowInputs } from '#entities/shoppingList/localWrites';
 import { alertService } from '#services/alertService';
 import { toastService } from '#services/toastService';
 import { useTranslation } from '#i18n';
+import { updateShoppingListItemWrite } from '#features/shoppingList/offline/localWrites';
 
 type LocalItemFields = Partial<
   Pick<
@@ -172,7 +172,7 @@ export function useShoppingListItemWrites(
 
   const { addRow } = useAddShoppingRows();
 
-  const update = useLocalWrite(UpdateShoppingListItemDocument, {
+  const update = useLocalWrite(updateShoppingListItemWrite, {
     fallback: t('shoppingListScreens.serverNotUpdated', {
       action: t('shoppingListScreens.updated'),
     }),

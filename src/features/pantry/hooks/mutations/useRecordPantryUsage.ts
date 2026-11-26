@@ -4,7 +4,6 @@ import { errorService } from '#services/errorService';
 import { alertService } from '#services/alertService';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { SettleStatus } from '#apollo/utils/settleMutation';
-import { CreatePantryItemUsageDocument } from '#features/pantry/graphql/pantry.generated';
 import { dropRankedUnits } from '#features/pantry/cache/rankedUnits';
 import {
   TopLevelErrorCode,
@@ -15,6 +14,7 @@ import { generateEntityId } from '#utils/generateEntityId';
 import { todayKey } from '#utils/dateUtils';
 import { inTrackingUnit } from '#entities/pantryItem/stock';
 import type { DrawStockInputs } from '#features/pantry/offline/localWrites';
+import { createPantryItemUsageWrite } from '#features/pantry/offline/localWrites';
 
 /** The uses whose unit the server remembers: not waste, a transfer or a gift. */
 const REMEMBERS_ITS_UNIT: ReadonlySet<UsagePurpose> = new Set([
@@ -47,7 +47,7 @@ export function useRecordPantryUsage() {
   // Replays as the canonical mutation, deduped by its idempotencyKey.
   // The sheet holds an amount to the stock it reads, so the server refuses one
   // only when the stock moved meanwhile.
-  const createUsage = useLocalWrite(CreatePantryItemUsageDocument, {
+  const createUsage = useLocalWrite(createPantryItemUsageWrite, {
     fallback: t('errors.recordUsageFailedRetry'),
     on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
     copy: {

@@ -6,13 +6,13 @@
 
 import type { ApolloCache } from '@apollo/client';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
-import type { DocumentNode } from 'graphql';
 import type {
   AddItemsToShoppingListInput,
   BatchAddShoppingListItemInput,
 } from '#graphql/generated/schemaTypes';
 import type { LocalWriteSend } from '#apollo/pendingWrites/pendingWrites';
 import { sendLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { LocalWriteBinding } from '#apollo/pendingWrites/types';
 import type { SettledFailure } from '#apollo/utils/settleMutation';
 import { appliedPayload } from '#utils/errors/mutationPayload';
 import { generateEntityId } from '#utils/generateEntityId';
@@ -52,7 +52,12 @@ interface ShoppingRowCreate<TData> {
   send: (
     options: LocalWriteSend<{ input: AddItemsToShoppingListInput }>,
   ) => Promise<{ data?: TData | null; error?: unknown }>;
-  document: DocumentNode;
+  /** The batch add, bound to the rows it shows: `useAddShoppingRows` passes it. */
+  write: LocalWriteBinding<
+    TData,
+    { input: AddItemsToShoppingListInput },
+    AddRowsInputs
+  >;
   /** The surface's copy for a refusal nothing more specific describes. */
   fallback: string;
 }
@@ -109,7 +114,14 @@ export async function addItemsInSlices<TItem extends { id?: string | null }>(
       input: { shoppingListId: string; items: TItem[] };
     }>,
   ) => Promise<{ data?: unknown; error?: unknown }>,
-  settle: { document: DocumentNode; fallback: string },
+  settle: {
+    write: LocalWriteBinding<
+      unknown,
+      { input: { shoppingListId: string; items: TItem[] } },
+      AddRowsInputs
+    >;
+    fallback: string;
+  },
 ): Promise<SettledFailure | null> {
   let firstFailure: SettledFailure | null = null;
   let landed = false;
@@ -123,7 +135,7 @@ export async function addItemsInSlices<TItem extends { id?: string | null }>(
     };
     const settled = await sendLocalWrite(
       cache,
-      settle.document,
+      settle.write,
       { input: { shoppingListId: listId, items: slice } },
       send,
       { fallback: settle.fallback, present: 'none' },
@@ -139,7 +151,7 @@ export async function addItemsInSlices<TItem extends { id?: string | null }>(
 
 export async function createShoppingListRow<TData>(
   cache: ApolloCache,
-  { listId, row, line, send, document, fallback }: ShoppingRowCreate<TData>,
+  { listId, row, line, send, write, fallback }: ShoppingRowCreate<TData>,
 ): Promise<ShoppingRowCreated<TData>> {
   const id = generateEntityId();
   const inputs: AddRowsInputs = {
@@ -156,7 +168,7 @@ export async function createShoppingListRow<TData>(
 
   const settled = await sendLocalWrite(
     cache,
-    document,
+    write,
     { input: { shoppingListId: listId, items: [{ ...line, id }] } },
     send,
     { fallback, present: 'none' },

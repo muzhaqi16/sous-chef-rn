@@ -19,6 +19,7 @@ import {
 import type { LocalWriteSend } from '#apollo/pendingWrites/pendingWrites';
 import { snapshotFields } from '#apollo/utils/localFirstFields';
 import { useTranslation } from '#i18n';
+import { updateUserPreferencesWrite } from '#apollo/pendingWrites/sharedWrites';
 
 /**
  * The one writer of the account's settings: applied to the cache and the
@@ -53,7 +54,7 @@ export async function applyAccountSettings({
 
   const settled = await sendLocalWrite(
     cache,
-    UpdateUserPreferencesDocument,
+    updateUserPreferencesWrite,
     { input: settingsInput(updates) },
     mutate,
     settle,

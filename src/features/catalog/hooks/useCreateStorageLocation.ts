@@ -1,10 +1,10 @@
-import { CreateStorageLocationDocument } from '#features/catalog/graphql/storageLocation.generated';
 import type { CreateLocationInputs } from '#features/catalog/offline/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { CreateStorageLocationInput } from '#graphql/generated/schemaTypes';
 import { generateEntityId } from '#utils/generateEntityId';
 import { alertService } from '#services/alertService';
 import { useTranslation } from '#i18n';
+import { createStorageLocationWrite } from '#features/catalog/offline/localWrites';
 
 type CreateLocationInput = Omit<CreateStorageLocationInput, 'homeId'>;
 
@@ -19,7 +19,7 @@ export function useCreateStorageLocation(
 ) {
   const { t } = useTranslation();
 
-  const create = useLocalWrite(CreateStorageLocationDocument, {
+  const create = useLocalWrite(createStorageLocationWrite, {
     fallback: t('errors.createStorageLocationFailed'),
   });
 

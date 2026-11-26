@@ -194,11 +194,21 @@ store to the household's usual stores, so that store is in the check-in's `apply
 since the answer states no list: it shows while the check-in is queued, survives a restart, and goes
 with a refusal, with no layer of its own to end.
 
+**A write is sent through its binding.** `bindLocalWrite(Document, write)`
+(`src/apollo/pendingWrites/bindLocalWrite.ts`) pairs a document with the `LocalWrite` it sends as, so a
+send's variables, inputs and answer are checked against that one write; a missing or mistyped input
+fails typecheck (`localWriteCoverage.test.ts`). A binding sits beside its write: a feature's in its
+`offline/localWrites.ts`, which its own hooks import and no other feature may; the shared `#operations`
+documents' in `src/apollo/pendingWrites/sharedWrites.ts`. No hook sends another feature's document: one
+feature changes another's rows through that feature's public hook (`useAddShoppingRows`).
+`registry.data.ts` lists the bindings, and `LOCAL_WRITES` is derived from them, keyed by operation name,
+because a write restored from the queue carries a deserialized document.
+
 Lifecycle of a local-first mutation:
 
 ```
 1. id = generateEntityId()                  // creates only: a permanent cuid2, the row's PK
-2. useLocalWrite(document, settle).send(variables, inputs)   // or its core, sendLocalWrite
+2. useLocalWrite(binding, settle).send(variables, inputs)   // or its core, sendLocalWrite
    │  the layer shows the change now; the mutation leaves once the earlier writes it builds on
    │  have answered (an edit behind its row's create, a version behind the write that moved it)
    ├─ applied → the answer is in the root; `commit` adds what it does not state; the layer goes
@@ -254,10 +264,9 @@ site-specific.
 **Field edits share one `LocalWrite`.** `entityFields` (`apollo/pendingWrites/entityFields.ts`) is the
 write whose change is fields on one row, in that row's own field names: `apply` writes them with
 `cache.writeFragment` (never `cache.modify`, which skips a field's write-time invariant), and the answer
-states the row, so nothing is left to commit. `useLocalWrite(...).sendFields` sends one. It returns the
-outcome rather than reporting it: its callers (`useUpdateSettings`, `useNotificationSettings`,
-`useUpdateHomeFields`, `useMealTemplateEditor`, `useDeviceTimezoneSync`, `useCompleteOnboarding`) surface
-a refusal differently, and deciding that centrally is what produces double alerts.
+states the row, so nothing is left to commit. A document bound to it is sent like any other:
+`send(variables, { entity, fields })`. A send returns the outcome rather than reporting it, because its
+callers surface a refusal differently, and deciding that centrally is what produces double alerts.
 
 ## 3. Identity — client-generated permanent ids
 
@@ -855,7 +864,7 @@ were queueable. Areas, with what is worth knowing beyond the pattern:
   `useAddShoppingRows`, rows written locally). `UpdateRecipe` from the form is queued but writes nothing local: the detail
   catches up when the replay lands.
 - **Receipts:** check-in (`useReceiptCheckIn`), which stamps list lines, moves and intakes locally.
-- **Settings, profile, notifications:** field edits through `useLocalWrite(...).sendFields`
+- **Settings, profile, notifications:** field edits sent through a binding to `entityFields`
   (§2), profile, dietary profile and sharing, brand lists, language, onboarding completion, notification
   read/delete, the device time zone.
 
@@ -981,7 +990,7 @@ replay only after their parent has landed — the drain reads the parent referen
 | List shards                                        | `src/features/shoppingList/offline/listShards.ts`, `scopeStorage` in `ApolloCachePersistence.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Resync after foreground / reconnect                | `src/apollo/refetchEvents.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Local row writers (`writeLocalEntity`)             | `src/apollo/utils/writeLocalEntity.ts`; `writeLocalPantryItem`, `writeLocalPantry` (`src/features/pantry/cache/`), `writeLocalHome` (`src/features/home/cache/optimisticHome.ts`), `writeLocalStorageLocation` (`src/features/catalog/hooks/useCreateStorageLocation.ts`), `writeLocalShoppingList` and `addLocalShoppingListItem` (`src/features/shoppingList/cache/`), `writeLocalRecipe` (`src/features/recipes/utils/recipeCacheWriters.ts`), `writeLocalFavorite` (`src/features/recipes/cache/favorites.ts`), `writeLocalMealPlan` (`src/features/mealPlan/cache/`), `writeLocalMealTemplate` and `addTemplateItemToCache` (`src/features/mealPlan/cache/`) |
-| Field-edit write                                   | `src/apollo/pendingWrites/entityFields.ts`, `useLocalWrite.ts` (`sendFields`); `src/apollo/utils/localFirstFields.ts` (`writeEntityFields`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Field-edit write                                   | `src/apollo/pendingWrites/entityFields.ts`, `bindLocalWrite.ts`, `useLocalWrite.ts`; `src/apollo/utils/localFirstFields.ts` (`writeEntityFields`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Write-outcome settling and classification          | `src/apollo/utils/settleMutation.ts` (`settleMutation`, `settledStatus`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Optimistic-entity completeness guard               | `__tests__/apollo/optimisticEntityCompleteness.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Offline indicator                                  | `src/components/molecules/OfflineStatusPill.tsx` (in each screen header), `src/components/atoms/OfflineTransitionAnnouncer.tsx` (mounted in `App.tsx`), both reading `src/hooks/ui/useOfflineStatus.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                           |

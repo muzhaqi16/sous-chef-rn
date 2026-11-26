@@ -7,18 +7,18 @@
 
 import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#i18n';
-import { MarkAsTemplateDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { readCopyableList } from '#features/shoppingList/cache/copySource';
 import { listFromTemplate } from '#features/shoppingList/utils/listFromTemplate';
 import { useCopyShoppingList } from './useCopyShoppingList';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { toastService } from '#services/toastService';
 import { firstNonBlank } from '#utils/firstNonBlank';
+import { markAsTemplateWrite } from '#features/shoppingList/offline/localWrites';
 
 export function useShoppingListTemplate() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const mark = useLocalWrite(MarkAsTemplateDocument, {
+  const mark = useLocalWrite(markAsTemplateWrite, {
     fallback: t('shoppingListScreens.failedToSaveTemplate'),
   });
   const { copyList, copying: creating } = useCopyShoppingList(

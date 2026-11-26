@@ -177,8 +177,10 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   the key; connections stay with their edge writers.
 - **A response that states a count settles it**: no handler adjusts on top
   (`carriesListTotals`, `carriesPantryCount`).
-- **A local-first write is one `LocalWrite`** in `LOCAL_WRITES`, sent through
-  `useLocalWrite(Document, settle)` (its core `sendLocalWrite` outside a hook) and held
+- **A local-first write is one `LocalWrite`**, bound to its document by
+  `bindLocalWrite` beside it (a feature's `offline/localWrites.ts`; shared documents'
+  `sharedWrites.ts`) and sent through `useLocalWrite(binding, settle)` (its core
+  `sendLocalWrite` outside a hook), which checks the inputs against the write; held
   as an optimistic layer (`localWriteCoverage.test.ts`): the root holds
   only what the server said, and a refusal just drops the layer. `apply` re-runs, so it
   is deterministic (`sous-chef/local-write-is-deterministic`). **`commit` writes what

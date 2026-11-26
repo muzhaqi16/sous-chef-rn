@@ -22,6 +22,7 @@ import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { computeIsQuietTime } from '#features/notifications/utils/quietHours';
 import { logger } from '#utils/environment';
 import { t } from '#i18n';
+import { updateNotificationPreferencesWrite } from '#apollo/pendingWrites/sharedWrites';
 
 export interface NotificationSettings {
   // Core toggles
@@ -162,7 +163,7 @@ export async function applySettingsUpdate({
 }): Promise<boolean> {
   const settled = await sendLocalWrite(
     cache,
-    UpdateNotificationPreferencesDocument,
+    updateNotificationPreferencesWrite,
     { input: toNestedInput(updates) },
     mutate,
     {

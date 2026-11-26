@@ -1,9 +1,5 @@
 import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#i18n';
-import {
-  MarkSuggestionDismissedDocument,
-  MarkSuggestionActiveDocument,
-} from '#operations/item/item.generated';
 import type { SuggestionSurface } from '#graphql/generated/schemaTypes';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { Settled } from '#apollo/utils/settleMutation';
@@ -17,6 +13,10 @@ import {
 import type {
   DismissSuggestionInputs,
   UndoDismissalInputs,
+} from '#features/catalog/offline/localWrites';
+import {
+  markSuggestionActiveWrite,
+  markSuggestionDismissedWrite,
 } from '#features/catalog/offline/localWrites';
 
 interface DismissTarget {
@@ -36,11 +36,11 @@ export function useSuggestionDismissal(
 ) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const dismiss = useLocalWrite(MarkSuggestionDismissedDocument, {
+  const dismiss = useLocalWrite(markSuggestionDismissedWrite, {
     fallback: t('addItemSheet.dismissFailed'),
     present: 'toast',
   });
-  const undismiss = useLocalWrite(MarkSuggestionActiveDocument, {
+  const undismiss = useLocalWrite(markSuggestionActiveWrite, {
     fallback: t('addItemSheet.undoFailed'),
     present: 'toast',
   });

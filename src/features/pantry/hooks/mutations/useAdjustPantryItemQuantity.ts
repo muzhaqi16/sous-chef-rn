@@ -4,13 +4,13 @@
  * keeps a queued replay from double-counting.
  */
 
-import { AdjustPantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import type { SetStockInputs } from '#features/pantry/offline/localWrites';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useTranslation } from '#i18n';
 import { generateEntityId } from '#utils/generateEntityId';
 import { todayKey } from '#utils/dateUtils';
 import type { RecountUnits } from '#features/pantry/types';
+import { adjustPantryItemQuantityWrite } from '#features/pantry/offline/localWrites';
 
 interface UseAdjustPantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -21,7 +21,7 @@ export function useAdjustPantryItemQuantity({
 }: UseAdjustPantryItemQuantityOptions = {}) {
   const { t } = useTranslation();
 
-  const adjust = useLocalWrite(AdjustPantryItemQuantityDocument, {
+  const adjust = useLocalWrite(adjustPantryItemQuantityWrite, {
     fallback: t('errors.adjustQuantityFailed'),
   });
 

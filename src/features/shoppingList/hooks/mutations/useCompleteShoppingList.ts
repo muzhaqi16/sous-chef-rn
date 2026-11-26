@@ -5,19 +5,19 @@
  */
 
 import { useTranslation } from '#i18n';
-import {
-  CompleteShoppingListDocument,
-  MarkShoppingListActiveDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
 import { ListStatus } from '#graphql/generated/schemaTypes';
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import {
+  completeShoppingListWrite,
+  markShoppingListActiveWrite,
+} from '#features/shoppingList/offline/localWrites';
 
 export function useCompleteShoppingList() {
   const { t } = useTranslation();
-  const complete = useLocalWrite(CompleteShoppingListDocument, {
+  const complete = useLocalWrite(completeShoppingListWrite, {
     fallback: t('shoppingListScreens.failedToComplete'),
   });
-  const reactivate = useLocalWrite(MarkShoppingListActiveDocument, {
+  const reactivate = useLocalWrite(markShoppingListActiveWrite, {
     fallback: t('shoppingListScreens.failedToReactivate'),
   });
 
