@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { commonStyles } from '#styles/commonStyles';
 import { Text } from '#components/atoms/Text';
-import { Pressable } from '#components/atoms/themedComponents';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { DetailSection } from '#components/molecules/DetailSection';
 
@@ -35,7 +35,7 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
   return (
     <DetailSection title={title}>
       {hasItems ? (
-        <Pressable onPress={onPress}>
+        <AppPressable onPress={onPress}>
           {items.map((item, index) => (
             <View
               key={index}
@@ -62,7 +62,7 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
             </Text>
             <Icon name="chevron-forward" size="sm" />
           </View>
-        </Pressable>
+        </AppPressable>
       ) : (
         <EmptyState
           size="compact"

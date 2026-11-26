@@ -13,6 +13,7 @@ import {
   type MealTemplateDisplayFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
+import { rowType } from '#theme/foundations/type';
 
 interface TemplateCardProps {
   template: FragmentType<typeof MealTemplateDisplayFragmentDoc>;
@@ -52,7 +53,7 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
         subtitle={
           <View style={styles.details}>
             {!!template.description && (
-              <Text role="caption" tone="secondary" numberOfLines={2}>
+              <Text role={rowType.subtitle} tone="secondary" numberOfLines={2}>
                 {template.description}
               </Text>
             )}
@@ -63,7 +64,7 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
                   size="2xsPlus"
                   tone="textTertiary"
                 />
-                <Text role="caption" tone="secondary">
+                <Text role={rowType.subtitle} tone="secondary">
                   {days}
                 </Text>
               </View>
@@ -73,7 +74,7 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
                   size="2xsPlus"
                   tone="textTertiary"
                 />
-                <Text role="caption" tone="secondary">
+                <Text role={rowType.subtitle} tone="secondary">
                   {servings}
                 </Text>
               </View>
@@ -84,19 +85,19 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
                     size="2xsPlus"
                     tone="textTertiary"
                   />
-                  <Text role="caption" tone="secondary">
+                  <Text role={rowType.subtitle} tone="secondary">
                     {template.home.name}
                   </Text>
                 </View>
               )}
               {template.usageCount > 0 && (
-                <Text role="caption" tone="tertiary">
+                <Text role={rowType.subtitle} tone="tertiary">
                   {t('templateCard.usedTimes', { count: template.usageCount })}
                 </Text>
               )}
             </View>
             {template.tags.length > 0 && (
-              <Text role="caption" tone="tertiary" numberOfLines={1}>
+              <Text role={rowType.subtitle} tone="tertiary" numberOfLines={1}>
                 {template.tags.slice(0, 3).join(' · ')}
                 {template.tags.length > 3
                   ? ` +${template.tags.length - 3}`

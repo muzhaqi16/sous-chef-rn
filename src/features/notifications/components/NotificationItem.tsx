@@ -11,6 +11,7 @@ import { safeParseDate } from '#utils/dateUtils';
 import { RowCard } from '#components/atoms/RowCard';
 import { ListItem } from '#components/molecules/ListItem';
 import { Text } from '#components/atoms/Text';
+import { rowType } from '#theme/foundations/type';
 import { formatRelativeToNow } from '#utils/formatters/date';
 
 interface NotificationItemProps {
@@ -56,11 +57,11 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({
         subtitle={
           <>
             {!!copy.message && (
-              <Text role="caption" tone="secondary" numberOfLines={2}>
+              <Text role={rowType.subtitle} tone="secondary" numberOfLines={2}>
                 {copy.message}
               </Text>
             )}
-            <Text role="caption" tone="tertiary">
+            <Text role={rowType.subtitle} tone="tertiary">
               {formattedTimestamp}
             </Text>
           </>
