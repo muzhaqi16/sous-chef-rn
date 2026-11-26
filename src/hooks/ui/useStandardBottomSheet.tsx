@@ -276,6 +276,15 @@ export function useStandardBottomSheet({
     userOnAnimateRef.current?.(fromIndex, toIndex, fromPosition, toPosition);
   };
 
+  // gorhom renders the sheet through a portal a render behind, and a close
+  // binds its callback as it starts: a handler changed in the render that
+  // closes the sheet would run as the one before it.
+  // Verified: #gorhom-calls-the-ondismiss-of-the-render-before-the-close
+  const onDismissRef = useRef(onDismiss);
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  });
+
   // Gorhom fires `onClose` and `onChange(-1)` from separate animated reactions;
   // if `onClose` wins it unmounts the portal first and the claim leaks, so the
   // release is repeated here (idempotent).
@@ -291,7 +300,7 @@ export function useStandardBottomSheet({
       blurDismissRef.current = false;
       return;
     }
-    onDismiss();
+    onDismissRef.current();
   };
 
   // Theme-derived `backgroundStyle` / `handleIndicatorStyle` come from the

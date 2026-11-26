@@ -551,6 +551,8 @@ they read it.
   reaches the input either way. A text input is only ever `ThemedTextInput`
   ([gorhom keyboard handling requires BottomSheetTextInput](verified-library-behaviour.md#gorhom-keyboard-handling-requires-bottomsheettextinput),
   [gorhom's internal context answers whether a render is in a sheet](verified-library-behaviour.md#gorhoms-internal-context-answers-whether-a-render-is-in-a-sheet)).
+  In a sheet its `autoFocus` waits for the sheet to stop moving, once
+  ([A field focused while its sheet opens is scrolled out of view](verified-library-behaviour.md#a-field-focused-while-its-sheet-opens-is-scrolled-out-of-view)).
 - **A content-sized sheet (`enableDynamicSizing`) takes no keyboard-aware
   scrollable.** `KeyboardAwareScrollView` pads its content by the keyboard's
   height, and gorhom sizes the sheet to that content, so focusing a field grows

@@ -9,8 +9,16 @@ import {
 } from 'react-native';
 // RNGH's, not RN's — see `ThemedRefreshControl` below.
 import { RefreshControl } from 'react-native-gesture-handler';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { useRef } from 'react';
+import {
+  ANIMATION_STATUS,
+  BottomSheetTextInput,
+  useBottomSheetInternal,
+} from '@gorhom/bottom-sheet';
+import { useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { useInBottomSheet } from '#hooks/ui/useInBottomSheet';
+import { assignRef } from '#components/atoms/inputRef';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 
@@ -87,6 +95,45 @@ const withFieldStyle = (
 ) => [inputStyles.base, style].flat();
 
 /**
+ * gorhom's input. `autoFocus` waits for the sheet to stop moving: a field
+ * focused while the sheet slides in is measured below the keyboard, and the
+ * keyboard-aware scroll carries it out of view.
+ * Verified: #a-field-focused-while-its-sheet-opens-is-scrolled-out-of-view
+ */
+const SheetFieldInput = ({
+  autoFocus = false,
+  ref,
+  ...rest
+}: React.ComponentProps<typeof UniTextInput>) => {
+  const { animatedAnimationState, animatedIndex } = useBottomSheetInternal();
+  const input = useRef<TextInputInstance | null>(null);
+  const focused = useSharedValue(false);
+  const focus = () => input.current?.focus();
+
+  useAnimatedReaction(
+    () =>
+      autoFocus &&
+      animatedAnimationState.get().status === ANIMATION_STATUS.STOPPED &&
+      animatedIndex.get() >= 0,
+    arrived => {
+      if (!arrived || focused.get()) return;
+      focused.set(true);
+      scheduleOnRN(focus);
+    },
+  );
+
+  return (
+    <UniBottomSheetTextInput
+      {...rest}
+      ref={node => {
+        input.current = node;
+        assignRef(ref, node);
+      }}
+    />
+  );
+};
+
+/**
  * A TextInput carrying the theme's field color, placeholder and keyboard. Inside
  * a bottom sheet it is gorhom's, whose keyboard handling waits for its own
  * input's focus; the sheet is read from gorhom, so no caller says where it is.
@@ -97,7 +144,7 @@ export const ThemedTextInput = ({
   ...rest
 }: React.ComponentProps<typeof UniTextInput>) =>
   useInBottomSheet() ? (
-    <UniBottomSheetTextInput {...rest} style={withFieldStyle(style)} />
+    <SheetFieldInput {...rest} style={withFieldStyle(style)} />
   ) : (
     <UniTextInput {...rest} style={withFieldStyle(style)} />
   );

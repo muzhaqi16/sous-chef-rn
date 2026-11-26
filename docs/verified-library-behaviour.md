@@ -212,6 +212,53 @@ grep -n "highestDetentPosition - keyboardHeightInContainer" node_modules/@gorhom
 grep -n "absoluteY + inputHeight" node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
 ```
 
+### gorhom calls the onDismiss of the render before the close
+
+**Claim:** `BottomSheetModal` renders its sheet through `@gorhom/portal`, which
+pushes new children from an effect, so the sheet in the host is a render behind.
+A `dismiss()` from an effect of the render that hid the sheet starts the close
+on that older sheet, and the close's `onClose` → `unmount` → `onDismiss` chain
+is bound then. A consumer whose `onDismiss` changed in that same render gets the
+previous one. `useStandardBottomSheet` reads `onDismiss` through a ref.
+
+**Verified 2026-11-26 against `@gorhom/bottom-sheet@5.2.14` +
+`@gorhom/portal@1.0.14`** on the iPhone 17 simulator: a long-pressed folder set
+`managingFolder` and hid `FolderPicker` in one render; the `onDismiss` that ran
+logged `managingFolder` null and `visible` true, so the manage sheet never
+opened and the picker could not reopen. With the ref it opens, and closing it
+brings the picker back.
+
+Re-check:
+
+```
+grep -n "handleOnUpdateRef.current?.()" node_modules/@gorhom/portal/src/components/portal/Portal.tsx
+grep -n "_providedOnDismiss()" node_modules/@gorhom/bottom-sheet/src/components/bottomSheetModal/BottomSheetModal.tsx
+```
+
+### A field focused while its sheet opens is scrolled out of view
+
+**Claim:** an `autoFocus` field shows the keyboard while its sheet is still
+sliding in from below. `KeyboardAwareScrollView` measures the field there, under
+the keyboard, and scrolls it up by that overlap, so once the sheet has risen the
+field sits above the top of its scroll view. A field focused after gorhom's
+animation stops (`animatedAnimationState.status` `STOPPED`, `animatedIndex >= 0`)
+is measured where it stays. `ThemedTextInput` defers `autoFocus` in a sheet to
+that point, once.
+
+**Verified 2026-11-26 against `@gorhom/bottom-sheet@5.2.14` +
+`react-native-keyboard-controller@1.22.5`** on the iPhone 17 simulator: the add
+storage location sheet (80%) opened with its Name field focused and its scroll
+view at offset 539 of a 410 pt viewport, the field out of view. Blurred and
+tapped on the settled sheet, the same field stayed in view; with the deferred
+focus it opens in view.
+
+Re-check:
+
+```
+grep -n "status: ANIMATION_STATUS.STOPPED" node_modules/@gorhom/bottom-sheet/src/components/bottomSheet/BottomSheet.tsx
+grep -n "absoluteY + inputHeight" node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
+```
+
 ### A keyboard-aware scrollable cannot size a sheet
 
 **Claim:** `KeyboardAwareScrollView` inside an `enableDynamicSizing` sheet grows

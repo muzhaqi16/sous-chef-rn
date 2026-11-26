@@ -2,10 +2,35 @@
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = require('react');
   const { View, TextInput } = require('react-native');
-  // What `useBottomSheetInternal` reads: set inside a sheet, null outside.
+  const ANIMATION_STATUS = {
+    UNDETERMINED: 0,
+    RUNNING: 1,
+    STOPPED: 2,
+    INTERRUPTED: 3,
+  };
+  const sharedValue = initial => {
+    const sv = {
+      value: initial,
+      get: () => sv.value,
+      set: v => Object.assign(sv, { value: v }),
+    };
+    return sv;
+  };
+  // What `useBottomSheetInternal` reads: set inside a sheet, null outside. A
+  // sheet here has arrived: its opening animation stopped at its first detent.
   const InternalContext = React.createContext(null);
-  const inSheet = children =>
-    React.createElement(InternalContext.Provider, { value: {} }, children);
+  function InSheet({ children }) {
+    const [internal] = React.useState(() => ({
+      animatedAnimationState: sharedValue({ status: ANIMATION_STATUS.STOPPED }),
+      animatedIndex: sharedValue(0),
+    }));
+    return React.createElement(
+      InternalContext.Provider,
+      { value: internal },
+      children,
+    );
+  }
+  const inSheet = children => React.createElement(InSheet, null, children);
   // Named, so a test can tell gorhom's input from React Native's.
   function BottomSheetTextInput(props) {
     return React.createElement(TextInput, props);
@@ -74,6 +99,7 @@ jest.mock('@gorhom/bottom-sheet', () => {
     BottomSheetScrollView: props => React.createElement(View, props),
     BottomSheetFlatList: props => React.createElement(View, props),
     BottomSheetTextInput,
+    ANIMATION_STATUS,
     useBottomSheetInternal: unsafe => {
       const internal = React.useContext(InternalContext);
       if (!unsafe && internal === null) {

@@ -127,6 +127,25 @@ describe('useStandardBottomSheet', () => {
     expect(onDismiss).toHaveBeenCalled();
   });
 
+  // gorhom renders the sheet through a portal a render behind and binds a
+  // close's callback as it starts, so it calls what an earlier render gave it.
+  it('runs the latest onDismiss from the one an earlier render handed gorhom', () => {
+    const before = jest.fn();
+    const latest = jest.fn();
+    const { result, rerender } = renderHook(
+      ({ onDismiss }: { onDismiss: () => void }) =>
+        useStandardBottomSheet({ ...defaultOptions, onDismiss }),
+      { initialProps: { onDismiss: before } },
+    );
+    const heldByGorhom = result.current.modalProps.onDismiss;
+
+    rerender({ onDismiss: latest });
+    act(() => heldByGorhom?.());
+
+    expect(latest).toHaveBeenCalledTimes(1);
+    expect(before).not.toHaveBeenCalled();
+  });
+
   // Invariant for the whole gorhom-5214 lifecycle bug class: after ANY close
   // path, a subsequent open must put the sheet back on screen. Each path closes
   // the sheet and drives the parent's `visible` to false the way the real
