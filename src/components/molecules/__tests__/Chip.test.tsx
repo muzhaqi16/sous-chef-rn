@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { HapticService } from '#services/haptic/HapticService';
+import { lightTheme } from '#theme/themes';
 import { Chip } from '../Chip';
 
 jest.mock('#services/haptic/HapticService', () => ({
@@ -52,5 +53,26 @@ describe('Chip', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Remove Gluten' })).toBeTruthy();
+  });
+
+  // A plan chip states its dates under its name, and is read with them.
+  it('shows and reads a second line', () => {
+    render(
+      <Chip label="Week 46" detail="Nov 9 – Nov 15" onPress={jest.fn()} />,
+    );
+
+    expect(screen.getByText('Nov 9 – Nov 15')).toBeOnTheScreen();
+    expect(
+      screen.getByRole('button', { name: 'Week 46, Nov 9 – Nov 15' }),
+    ).toBeOnTheScreen();
+  });
+
+  // The chip is drawn at its own height; what takes the touch is the floor.
+  it('takes a touch at the platform floor', () => {
+    render(<Chip label="Dinner" onPress={jest.fn()} testID="chip" />);
+
+    expect(screen.getByTestId('chip')).toHaveStyle({
+      minHeight: lightTheme.sizes.touchTarget.min,
+    });
   });
 });

@@ -19,6 +19,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import { HapticService } from '#services/haptic/HapticService';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 import { motion } from '#theme/motion';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -55,6 +56,8 @@ type ChipProps = {
   imageUrl?: string;
   /** As tall as a chip with a photo, for a list where some have none. */
   reserveImageHeight?: boolean;
+  /** A second line under the label, such as a plan's dates. */
+  detail?: string;
   /** Defaults to the label; a removable chip names what pressing removes. */
   accessibilityLabel?: string;
   testID?: string;
@@ -71,6 +74,7 @@ export const Chip: React.FC<ChipProps> = ({
   disabled = false,
   imageUrl,
   reserveImageHeight = false,
+  detail,
   accessibilityLabel,
   testID,
   onLayout,
@@ -97,10 +101,10 @@ export const Chip: React.FC<ChipProps> = ({
     onPress();
   };
 
-  // Animated container style driven by shared value
-  // paddingRight is fixed — the LinearTransition layout animation handles spacing
-  // when the checkmark icon appears/disappears, avoiding non-GPU layout recalc.
-  const chipSurfaceStyle = useAnimatedStyle(() => {
+  // The surface: its theme geometry and its selection colours, one style.
+  // paddingRight is fixed — the LinearTransition layout animation handles
+  // spacing when the checkmark appears, avoiding a non-GPU layout recalc.
+  const animatedContainerStyle = useAnimatedStyle(() => {
     const theme = animatedTheme.get();
     return {
       borderRadius: theme.radii['2xl'],
@@ -111,42 +115,42 @@ export const Chip: React.FC<ChipProps> = ({
         ? theme.sizes.icon.md +
           2 * (theme.spacing.xsPlus + theme.borderWidth.thin)
         : 0,
-    };
-  });
-
-  const animatedContainerStyle = useAnimatedStyle(() => {
-    return {
       borderColor: interpolateColor(
         selectedProgress.get(),
         [0, 1],
-        [animatedTheme.get().colors.border, animatedTheme.get().colors.primary],
+        [theme.colors.border, theme.colors.primary],
       ),
       backgroundColor: interpolateColor(
         selectedProgress.get(),
         [0, 1],
-        [
-          animatedTheme.get().colors.chipBackground,
-          animatedTheme.get().colors.primaryLight,
-        ],
+        [theme.colors.chipBackground, theme.colors.primaryLight],
       ),
-      opacity: disabled ? animatedTheme.get().opacity.disabled : 1,
+      opacity: disabled ? theme.opacity.disabled : 1,
     };
   });
 
-  // Animated text style driven by shared value
-  const labelTypeStyle = useAnimatedStyle(() => ({
-    ...animatedTheme.get().type.label,
-  }));
-
+  // Selected, the text sits on the primaryLight fill, so it reads that fill's
+  // own foreground.
   const animatedTextStyle = useAnimatedStyle(() => {
+    const theme = animatedTheme.get();
     return {
+      ...theme.type.label,
       color: interpolateColor(
         selectedProgress.get(),
         [0, 1],
-        [
-          animatedTheme.get().colors.chipText,
-          animatedTheme.get().colors.primary,
-        ],
+        [theme.colors.chipText, theme.colors.onPrimaryLight],
+      ),
+    };
+  });
+
+  const animatedDetailStyle = useAnimatedStyle(() => {
+    const theme = animatedTheme.get();
+    return {
+      ...theme.type.caption,
+      color: interpolateColor(
+        selectedProgress.get(),
+        [0, 1],
+        [theme.colors.textSecondary, theme.colors.onPrimaryLight],
       ),
     };
   });
@@ -161,7 +165,7 @@ export const Chip: React.FC<ChipProps> = ({
         [0, 1],
         [CHECKMARK_LENGTH, 0],
       ),
-      stroke: animatedTheme.get().colors.primary,
+      stroke: animatedTheme.get().colors.onPrimaryLight,
     };
   });
 
@@ -176,16 +180,16 @@ export const Chip: React.FC<ChipProps> = ({
         onPress={handlePress}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel ?? label}
+        accessibilityLabel={
+          accessibilityLabel ?? accessibilityLabelOf(label, detail)
+        }
         accessibilityState={
           selected === undefined ? { disabled } : { selected, disabled }
         }
         testID={testID}
-        style={({ pressed }) => pressed && styles.pressed}
+        style={({ pressed }) => [styles.target, pressed && styles.pressed]}
       >
-        <Animated.View
-          style={[styles.chip, chipSurfaceStyle, animatedContainerStyle]}
-        >
+        <Animated.View style={[styles.chip, animatedContainerStyle]}>
           {/* The icons below are themed, under an animated surface. */}
           <ThemeEpochSentinel />
           {!!icon && (
@@ -193,16 +197,23 @@ export const Chip: React.FC<ChipProps> = ({
               <Icon
                 name={icon}
                 size="xs"
-                tone={isSelected ? 'primary' : 'textSecondary'}
+                tone={isSelected ? 'onPrimaryLight' : 'textSecondary'}
               />
             </View>
           )}
           {!!imageUrl && (
             <CachedImage uri={imageUrl} style={styles.image} displaySize={24} />
           )}
-          <Animated.Text style={[labelTypeStyle, animatedTextStyle]}>
-            {label}
-          </Animated.Text>
+          {detail ? (
+            <View>
+              <Animated.Text style={animatedTextStyle}>{label}</Animated.Text>
+              <Animated.Text style={animatedDetailStyle}>
+                {detail}
+              </Animated.Text>
+            </View>
+          ) : (
+            <Animated.Text style={animatedTextStyle}>{label}</Animated.Text>
+          )}
           {removable ? (
             <View style={styles.iconContainer}>
               <Icon name="close-circle" size="xs" tone="textSecondary" />
@@ -240,6 +251,11 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: theme.opacity.pressed,
+  },
+  // The touch target is the platform floor; the chip is drawn at its own height.
+  target: {
+    minHeight: theme.sizes.touchTarget.min,
+    justifyContent: 'center',
   },
   chip: {
     alignItems: 'center',

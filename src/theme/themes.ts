@@ -164,12 +164,6 @@ export const lightTheme = {
     transparent: colors.transparent,
     chipBackground: colors.neutral[200],
     chipText: colors.neutral[700],
-    chipSelectedBackground: brand[300],
-    chipSelectedText: onColor(
-      brand[300],
-      colors.neutral[0],
-      colors.neutral[900],
-    ),
 
     // Icon colors - semantic tokens for consistent icon styling
     iconPrimary: brand[500],
@@ -295,12 +289,6 @@ export const darkTheme = {
     transparent: colors.transparent,
     chipBackground: colors.neutral[700],
     chipText: colors.neutral[200],
-    chipSelectedBackground: brand[400],
-    chipSelectedText: onColor(
-      brand[400],
-      colors.neutral[0],
-      colors.neutral[900],
-    ),
 
     // Icon colors - semantic tokens for consistent icon styling
     iconPrimary: brand[400],

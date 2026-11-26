@@ -133,11 +133,6 @@ export function applyAppearanceToRuntime(prefs: AppearanceSettings): void {
         primary: palette['500'],
         onPrimary: onFill,
         iconOnPrimary: onFill,
-        chipSelectedText: onColor(
-          isDark ? palette['400'] : palette['300'],
-          colors.neutral[0],
-          colors.neutral[900],
-        ),
         primaryLight: isDark
           ? palette['400'] + PRIMARY_LIGHT_ALPHA_HEX
           : palette['100'],
@@ -154,7 +149,6 @@ export function applyAppearanceToRuntime(prefs: AppearanceSettings): void {
             )
           : foregroundShade(palette, [palette['100']], '800', 'darker'),
         iconPrimary: isDark ? palette['400'] : primaryText,
-        chipSelectedBackground: isDark ? palette['400'] : palette['300'],
         filterTab: {
           ...next.colors.filterTab,
           activeBg: palette['500'],
