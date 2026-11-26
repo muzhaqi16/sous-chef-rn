@@ -188,6 +188,30 @@ Re-check:
 grep -n "absoluteY + inputHeight\|bottomOffset = " node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
 ```
 
+### gorhom's lift and a keyboard-aware scroll both make room
+
+**Claim:** with `keyboardBehavior: 'interactive'`, gorhom moves a sheet's top to
+`max(0, highestDetentPosition - keyboardHeight)`: a sheet short enough rises by
+the whole keyboard and sits on it. A `KeyboardAwareScrollView` inside measures
+the focused field before that rise and scrolls it up by the overlap as well, so
+in a short sheet the field ends above the sheet's top, out of view. A tall sheet,
+whose top stops at the screen's, rises less and its field sits only a little
+high. `Sheet mode="form"` therefore uses gorhom's own scroll view up to a 60%
+snap point (a phone keyboard takes under 40% of the screen).
+
+**Verified 2026-11-25 against `@gorhom/bottom-sheet@5.2.14` +
+`react-native-keyboard-controller@1.22.5`** on the iPhone 17 simulator: the Bio
+sheet (30%) showed its bar over an empty band with the keyboard up; its field
+sat behind the bar (component tree y 0.10 to 0.18, sheet top 0.39). With gorhom's
+scroll view the field sits above the keyboard.
+
+Re-check:
+
+```
+grep -n "highestDetentPosition - keyboardHeightInContainer" node_modules/@gorhom/bottom-sheet/src/components/bottomSheet/BottomSheet.tsx
+grep -n "absoluteY + inputHeight" node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
+```
+
 ### A keyboard-aware scrollable cannot size a sheet
 
 **Claim:** `KeyboardAwareScrollView` inside an `enableDynamicSizing` sheet grows
@@ -1007,8 +1031,9 @@ Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
 **Claim:** a type-level `merge` on a type with an `id` receives references,
 never the row's fields. That holds for a plain `InMemoryCache` and for
 `makeCache()`, for a row under a root field and in a list.
+
 - It runs for the parent field that holds the row (`getMergeFunction(parent,
-  field, childTypename)`).
+field, childTypename)`).
 - The row's own fields are collected in `incomingById` and stored with
   `store.merge(dataId, …)`, which no policy sees.
 - A field-level `merge` can't read the incoming row's other fields.

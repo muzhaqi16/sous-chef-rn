@@ -84,6 +84,34 @@ describe('Sheet', () => {
     });
   });
 
+  // gorhom lifts a short sheet whole above the keyboard; a keyboard-aware
+  // scroll in it would make that room again and push the field out of view.
+  it.each([
+    ['30%', false],
+    ['55%', false],
+    ['85%', true],
+  ])('scrolls a %s form keyboard-aware: %s', (snap, keyboardAware) => {
+    render(
+      <Sheet
+        mode="form"
+        visible
+        onDismiss={() => undefined}
+        snapPoints={[snap]}
+      >
+        <Text>a field</Text>
+      </Sheet>,
+    );
+
+    // The keyboard-aware scroll is a ScrollView here; gorhom's is a View.
+    let node = screen.getByText('a field').parent;
+    let inKeyboardAware = false;
+    while (node) {
+      if (node.type === 'RCTScrollView') inKeyboardAware = true;
+      node = node.parent;
+    }
+    expect(inKeyboardAware).toBe(keyboardAware);
+  });
+
   // A sheet stacked over its host pushes, where gorhom's `switch` minimizes it.
   it('lets a modal option replace the standard value', () => {
     render(

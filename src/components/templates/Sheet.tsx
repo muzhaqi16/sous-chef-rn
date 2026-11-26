@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ScrollViewProps, StyleProp, ViewStyle } from 'react-native';
-import { View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import {
   BottomSheetScrollView,
   BottomSheetView,
@@ -15,6 +15,7 @@ import {
   type UseStandardBottomSheetOptions,
 } from '#hooks/ui/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 import {
   SheetHeaderOutlet,
   SheetHeaderStoreProvider,
@@ -23,6 +24,27 @@ import {
 import { SheetCloseGuardProvider, useSheetCloseGuard } from './SheetCloseGuard';
 
 export type SheetMode = 'view' | 'form' | 'action' | 'list';
+
+/**
+ * A phone keyboard takes under 40% of the screen, so gorhom's `interactive`
+ * lift raises a sheet up to this share of it whole above the keyboard.
+ */
+const LIFTED_WHOLE = 0.6;
+
+/** The tallest a sheet's snap points make it, as a share of the window. */
+function tallestShare(
+  snapPoints: readonly (string | number)[],
+  windowHeight: number,
+): number {
+  return Math.max(
+    0,
+    ...snapPoints.map(point =>
+      typeof point === 'number'
+        ? point / windowHeight
+        : parseDecimalInput(point.replace('%', '')) / 100,
+    ),
+  );
+}
 
 /**
  * gorhom options a sheet sets beyond the standard ones: `push` to stack over a
@@ -40,8 +62,9 @@ export type SheetModalOptions = Pick<
 export interface SheetProps extends UseStandardBottomSheetOptions {
   children: React.ReactNode;
   /**
-   * `view` a static `BottomSheetView`; `form` a keyboard-aware scroll view plus
-   * the input context; `action` a scrolling list of choices; `list` the child
+   * `view` a static `BottomSheetView`; `form` a scroll view for inputs, kept
+   * above the keyboard (see `LIFTED_WHOLE`); `action` a scrolling list of
+   * choices; `list` the child
    * unwrapped, for content that scrolls itself and so needs the modal's height.
    * A bespoke layout calls {@link useStandardBottomSheet} directly.
    */
@@ -140,6 +163,12 @@ export const Sheet: React.FC<SheetProps> = ({
 
   const containerStyle = [gutterStyle, contentContainerStyle, insetStyle];
 
+  // gorhom lifts a short sheet whole above the keyboard, so a keyboard-aware
+  // scroll would make that room a second time and push the field out of view.
+  const { height: windowHeight } = useWindowDimensions();
+  const liftedWhole =
+    tallestShare(sheetOptions.snapPoints, windowHeight) <= LIFTED_WHOLE;
+
   // `keyboardShouldPersistTaps` is stated, not inherited: neither gorhom nor
   // the keyboard-aware view supplies one, and RN's default spends the first
   // tap on dismissing the keyboard rather than on the control it landed on.
@@ -198,15 +227,24 @@ export const Sheet: React.FC<SheetProps> = ({
         );
       case 'form':
         return underHeader(
-          <BottomSheetFormScrollView
-            {...scrollProps}
-            contentContainerStyle={containerStyle}
-            // Forwarded only when set: spreading `bottomOffset: undefined`
-            // would override the scroll view's theme-mapped default.
-            {...(bottomOffset !== undefined ? { bottomOffset } : {})}
-          >
-            {body}
-          </BottomSheetFormScrollView>,
+          liftedWhole ? (
+            <BottomSheetScrollView
+              {...scrollProps}
+              contentContainerStyle={containerStyle}
+            >
+              {body}
+            </BottomSheetScrollView>
+          ) : (
+            <BottomSheetFormScrollView
+              {...scrollProps}
+              contentContainerStyle={containerStyle}
+              // Forwarded only when set: spreading `bottomOffset: undefined`
+              // would override the scroll view's theme-mapped default.
+              {...(bottomOffset !== undefined ? { bottomOffset } : {})}
+            >
+              {body}
+            </BottomSheetFormScrollView>
+          ),
         );
     }
   })();

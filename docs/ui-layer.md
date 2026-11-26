@@ -547,9 +547,14 @@ they read it.
   uses `BottomSheetView` (`PurchaseAmountSheet`, `QuantityEditSheet`) and lets
   gorhom's `interactive` lift seat it on the keyboard
   ([A keyboard-aware scrollable cannot size a sheet](verified-library-behaviour.md#a-keyboard-aware-scrollable-cannot-size-a-sheet)).
-- **A fixed-snap-point sheet with inputs uses `BottomSheetFormScrollView`.** It is
-  a gorhom-registered `KeyboardAwareScrollView` that also supplies the input
-  context. The raw `BottomSheetKeyboardAwareScrollView` supplies the keyboard
+- **A tall fixed-snap-point sheet with inputs uses `BottomSheetFormScrollView`.**
+  `Sheet mode="form"` picks it when the tallest snap point passes 60%. A shorter
+  sheet scrolls in gorhom's own view: gorhom's `interactive` lift raises it whole
+  above the keyboard, so a keyboard-aware scroll would make that room a second
+  time and push the field out of view
+  ([gorhom's lift and a keyboard-aware scroll both make room](verified-library-behaviour.md#gorhoms-lift-and-a-keyboard-aware-scroll-both-make-room)).
+  `BottomSheetFormScrollView` is a gorhom-registered `KeyboardAwareScrollView`
+  that also supplies the input context. The raw `BottomSheetKeyboardAwareScrollView` supplies the keyboard
   offset but not the input context, so its inputs would resolve to RN's; only
   `BottomSheetFormScrollView` may import it.
 - **`bottomOffset` defaults to the density-scaled `theme.spacing.md`**, applied as

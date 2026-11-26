@@ -407,8 +407,10 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
   (`useInBottomSheet`); gorhom's throws outside a sheet. Verified: `#gorhom-keyboard-handling-requires-bottomsheettextinput`.
 - **A content-sized sheet (`enableDynamicSizing`) takes NO keyboard-aware
   scrollable**: `BottomSheetView` and gorhom's `interactive` lift. Verified: `#a-keyboard-aware-scrollable-cannot-size-a-sheet`.
-- **A fixed-snap sheet with inputs uses `BottomSheetFormScrollView`.** Never
-  hardcode `bottomOffset` or pass it `undefined` (it defaults to
+- **A tall fixed-snap sheet with inputs uses `BottomSheetFormScrollView`**, which
+  `Sheet mode="form"` picks past 60%; gorhom lifts a shorter one whole, so it scrolls
+  in gorhom's own view. Verified: `#gorhoms-lift-and-a-keyboard-aware-scroll-both-make-room`.
+  Never hardcode `bottomOffset` or pass it `undefined` (it defaults to
   `theme.spacing.md`); it measures from the input's bottom edge. Verified: `#keyboard-controller-bottomoffset-measures-input-bottom`.
 - **A scrollable in a sheet sits in a `View style={{ flex: 1 }}`, never in
   `BottomSheetView`**, which is absolute with no height
