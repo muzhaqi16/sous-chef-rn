@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { moduleSpecifiersOf } from '#/test-utils/sourceAst';
 
 /**
  * The static registry is what the APP SHELL iterates — i18n init, the cache's
@@ -32,9 +33,6 @@ const ALIASES: Record<string, string> = Object.fromEntries(
     path.join(ROOT, target),
   ]),
 );
-
-const IMPORT_SOURCE =
-  /(?:from\s*|import\s*\(\s*|require\s*\(\s*)['"]([^'"]+)['"]/g;
 
 /** Resolve a specifier to a file under `src/`, or null when it leaves the tree. */
 const resolve = (spec: string, fromFile: string): string | null => {
@@ -71,9 +69,8 @@ const reachableFrom = (entry: string): string[] => {
     const file = queue.pop()!;
     if (seen.has(file) || file.endsWith('.json')) continue;
     seen.add(file);
-    const source = fs.readFileSync(file, 'utf8');
-    for (const [, spec] of source.matchAll(IMPORT_SOURCE)) {
-      const next = resolve(spec!, file);
+    for (const spec of moduleSpecifiersOf(file)) {
+      const next = resolve(spec, file);
       if (next && !seen.has(next)) queue.push(next);
     }
   }
@@ -89,6 +86,15 @@ const featureDirs = () =>
 
 describe('static feature registry', () => {
   const reached = reachableFrom(ENTRY).map(f => path.relative(ROOT, f));
+
+  it('reads what a file loads, past a load written in a comment', () => {
+    expect(
+      moduleSpecifiersOf(
+        'planted.ts',
+        `// import { Screen } from './screens/Screen';\nexport { manifest } from './manifest.static';\nconst copy = require('./locales/en.json');`,
+      ),
+    ).toEqual(['./manifest.static', './locales/en.json']);
+  });
 
   it('reaches every static manifest, so the checks below are not vacuous', () => {
     const manifests = reached.filter(f => f.endsWith('manifest.static.ts'));
@@ -108,10 +114,11 @@ describe('static feature registry', () => {
   });
 
   it('pulls in no React at all, which is the property behind that', () => {
-    const withReact = reached.filter(f => {
-      const source = fs.readFileSync(path.join(ROOT, f), 'utf8');
-      return /\bfrom 'react'|\bfrom "react"|React\./.test(source);
-    });
+    const withReact = reached.filter(
+      f =>
+        !f.endsWith('.json') &&
+        moduleSpecifiersOf(path.join(ROOT, f)).includes('react'),
+    );
     expect(withReact).toEqual([]);
   });
 

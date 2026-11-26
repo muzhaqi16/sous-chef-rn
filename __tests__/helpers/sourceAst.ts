@@ -97,3 +97,24 @@ export function calleeName(call: ts.CallExpression): string | undefined {
   if (ts.isPropertyAccessExpression(callee)) return callee.getText();
   return undefined;
 }
+
+/** Every module a file loads: imports, re-exports, `import()` and `require()`. */
+export const moduleSpecifiersOf = (file: string, text?: string): string[] =>
+  nodesOf(parseSource(file, text)).flatMap(node => {
+    if (
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier)
+    ) {
+      return [node.moduleSpecifier.text];
+    }
+    if (ts.isCallExpression(node)) {
+      const [first] = node.arguments;
+      const loads =
+        node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) &&
+          node.expression.text === 'require');
+      return loads && first && ts.isStringLiteral(first) ? [first.text] : [];
+    }
+    return [];
+  });
