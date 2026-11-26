@@ -1,42 +1,45 @@
-import { NativeModules } from 'react-native';
+import { Appearance, NativeModules, Platform } from 'react-native';
 import { WindowBackground } from '../WindowBackground';
 
 const nativeModules = NativeModules as Record<string, unknown>;
 
 afterEach(() => {
   delete nativeModules.WindowBackgroundModule;
+  jest.restoreAllMocks();
 });
 
-describe('WindowBackground', () => {
-  it('leaves the window unstyled while following the system, where it can', () => {
-    const setTheme = jest.fn();
-    const followSystem = jest.fn();
-    nativeModules.WindowBackgroundModule = { setTheme, followSystem };
+describe('WindowBackground on iOS', () => {
+  it('leaves the window unstyled while following the system', () => {
+    const setColorScheme = jest.spyOn(Appearance, 'setColorScheme');
 
     WindowBackground.setTheme('dark', true);
 
-    expect(followSystem).toHaveBeenCalledTimes(1);
-    expect(setTheme).not.toHaveBeenCalled();
+    expect(setColorScheme).toHaveBeenCalledWith('auto');
   });
 
-  it('pins a chosen theme', () => {
-    const setTheme = jest.fn();
-    const followSystem = jest.fn();
-    nativeModules.WindowBackgroundModule = { setTheme, followSystem };
+  it('styles the window with a chosen theme', () => {
+    const setColorScheme = jest.spyOn(Appearance, 'setColorScheme');
 
     WindowBackground.setTheme('dark', false);
 
-    expect(setTheme).toHaveBeenCalledWith('dark');
-    expect(followSystem).not.toHaveBeenCalled();
+    expect(setColorScheme).toHaveBeenCalledWith('dark');
+  });
+});
+
+describe('WindowBackground on Android', () => {
+  beforeEach(() => {
+    jest.replaceProperty(Platform, 'OS', 'android');
   });
 
-  it('still hands the resolved theme to a platform with nothing to unpin', () => {
+  it('hands the resolved theme to the navigation bar, following the system or not', () => {
     const setTheme = jest.fn();
+    const setColorScheme = jest.spyOn(Appearance, 'setColorScheme');
     nativeModules.WindowBackgroundModule = { setTheme };
 
     WindowBackground.setTheme('dark', true);
 
     expect(setTheme).toHaveBeenCalledWith('dark');
+    expect(setColorScheme).not.toHaveBeenCalled();
   });
 
   it('does nothing where the app has no module', () => {

@@ -470,10 +470,21 @@ appearance. With `.unspecified`, the app followed the OS in both directions: 0
 of 609 views stale across the tabs. `getColorScheme` in
 `NativePlatform+ios.swift` reads `RCTKeyWindow()?.traitCollection`.
 
-The fix: `WindowBackground` calls the iOS module's `followSystem` on the System
-preference. Android has no such method and keeps `setTheme`, because its
-navigation bar needs the resolved theme. Guarded by
-`src/components/atoms/__tests__/ThemedStatusBar.test.tsx`.
+The fix: on iOS, `WindowBackground` calls React Native's
+`Appearance.setColorScheme`, with `'auto'` on the System preference, which
+clears the style from every window (`RCTAppearance.mm`). Android keeps its
+module's `setTheme`, because its navigation bar needs the resolved theme.
+Guarded by `src/native/__tests__/WindowBackground.test.ts`.
+
+Never style the root view controller as well. Unistyles changes an adaptive
+theme only on `RCTUserInterfaceStyleDidChangeNotification`
+(`NativePlatformListener+ios.swift`), which React Native posts from the root
+view's trait change, so a style there swallows every later window change. With
+one left in place, Dark then System kept the app dark on a light OS. Without
+one (`react-native@0.87.1` + `react-native-unistyles@3.9.0`, 2026-11-25), on a
+fresh launch Dark then System returned to light, the OS going dark and light
+was followed with 0 stale views, and Light held through the OS going dark,
+window included.
 
 That flip lands natively, a moment after the tap's React render, so a render
 that straddles it can put old values back. `AppearanceScreen`'s selected swatch
