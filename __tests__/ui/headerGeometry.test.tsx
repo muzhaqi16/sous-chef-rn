@@ -1,10 +1,11 @@
 import React from 'react';
-import type { ViewStyle } from 'react-native';
+import { View, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Header } from '#components/organisms/Header';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import {
+  BarActions,
   gutterTargetGeometry,
   type BarAction,
 } from '#components/molecules/BarActions';
@@ -141,6 +142,16 @@ describe('bar actions put their outermost glyph on the page gutter', () => {
     expect(
       flat(screen.getByTestId('text-action').props.style).paddingHorizontal,
     ).toBe(pull);
+  });
+
+  // A sheet's title row holds one whether or not it has actions, and an empty
+  // group pulled out hands its pull to the title, which overruns the gutter.
+  it('a gutter bar with nothing in it takes no room from the title beside it', () => {
+    render(<BarActions placement="gutter" />);
+
+    expect(
+      flat(screen.UNSAFE_getByType(View).props.style).marginHorizontal,
+    ).toBeUndefined();
   });
 
   it('glyphs sit the same distance apart in either bar', () => {

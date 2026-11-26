@@ -128,9 +128,9 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
       mode="action"
       visible={visible}
       onDismiss={onDismiss}
-      snapPoints={['50%']}
+      snapPoints={[]}
+      enableDynamicSizing
       title={t('expirationAction.title', { itemName })}
-      style={styles.scrollView}
       contentContainerStyle={styles.contentContainer}
     >
       <Text role="caption" tone="secondary" style={styles.subtitle}>
@@ -155,10 +155,6 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  scrollView: {
-    flex: 1,
-  },
-
   contentContainer: {
     paddingVertical: theme.spacing.md,
   },

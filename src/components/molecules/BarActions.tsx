@@ -129,8 +129,10 @@ export const BarActions: React.FC<BarActionsProps> = ({
   placement = 'bar',
   onLayout,
 }) => {
+  // An empty group pulled out would hand its pull to the title beside it.
+  const pulled = placement === 'gutter' && (actions.length > 0 || !!leading);
   return (
-    <View style={styles.group(placement)} onLayout={onLayout}>
+    <View style={styles.group(pulled)} onLayout={onLayout}>
       {leading}
       {actions.map((action, index) => (
         <BarActionButton key={index} action={action} placement={placement} />
@@ -157,11 +159,11 @@ export const gutterTargetGeometry = (theme: Theme) => {
 const styles = StyleSheet.create(theme => {
   const { box, pull } = gutterTargetGeometry(theme);
   return {
-    group: (placement: Placement) => ({
+    group: (pulled: boolean) => ({
       flexDirection: 'row',
       alignItems: 'center',
       gap: theme.spacing.sm,
-      ...(placement === 'gutter' && {
+      ...(pulled && {
         marginHorizontal: -pull,
         marginVertical: -pull,
       }),
