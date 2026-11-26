@@ -1,5 +1,7 @@
 import fs from 'fs';
 import path from 'path';
+import * as ts from 'typescript';
+import { nodesOf, parseSource } from '#/test-utils/sourceAst';
 
 /**
  * `i18n/config` is imported near the top of `index.js`, so everything it
@@ -28,7 +30,26 @@ const { babelAliases } = require('../../scripts/lib/aliases') as {
 };
 const ALIASES = babelAliases();
 
-const IMPORT_SOURCE = /(?:from\s*|import\s*\(\s*)['"]([^'"]+)['"]/g;
+/** Every module a file loads: imports, re-exports, `import()` and `require()`. */
+const specifiersIn = (file: string, text?: string): string[] =>
+  nodesOf(parseSource(file, text)).flatMap(node => {
+    if (
+      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+      node.moduleSpecifier &&
+      ts.isStringLiteral(node.moduleSpecifier)
+    ) {
+      return [node.moduleSpecifier.text];
+    }
+    if (ts.isCallExpression(node)) {
+      const [first] = node.arguments;
+      const loads =
+        node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) &&
+          node.expression.text === 'require');
+      return loads && first && ts.isStringLiteral(first) ? [first.text] : [];
+    }
+    return [];
+  });
 
 const resolve = (spec: string, from: string): string | null => {
   let base: string;
@@ -61,10 +82,8 @@ const reachable = (entry: string): Set<string> => {
   while (queue.length) {
     const file = queue.pop()!;
     if (file.endsWith('.json')) continue;
-    for (const [, spec] of fs
-      .readFileSync(file, 'utf8')
-      .matchAll(IMPORT_SOURCE)) {
-      const next = resolve(spec!, file);
+    for (const spec of specifiersIn(file)) {
+      const next = resolve(spec, file);
       if (next && !seen.has(next)) {
         seen.add(next);
         queue.push(next);
@@ -77,6 +96,15 @@ const reachable = (entry: string): Set<string> => {
 describe('the i18n launch path', () => {
   const reached = reachable(ENTRY);
   const reaches = (rel: string) => reached.has(path.join(ROOT, rel));
+
+  it('follows a require() as well as an import', () => {
+    expect(
+      specifiersIn(
+        'planted.ts',
+        `import './a';\nexport { b } from './b';\nconst c = require('./c');\nconst d = () => import('./d');`,
+      ),
+    ).toEqual(['./a', './b', './c', './d']);
+  });
 
   it('resolves the graph at all, so the checks below are not vacuous', () => {
     expect(reached.size).toBeGreaterThan(20);
