@@ -200,7 +200,8 @@ const WasteFields: React.FC<{
           error={amountState.error?.message}
         />
         <QuantityInputFeedback
-          remaining={remaining}
+          // A message on the field says it; the line below would repeat it.
+          remaining={amountState.error ? null : remaining}
           available={available}
           consumeUnit={shared.activeUnit}
           isConvertedUnit={shared.isConvertedUnit}

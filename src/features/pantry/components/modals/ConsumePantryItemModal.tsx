@@ -227,7 +227,8 @@ const ConsumeFields: React.FC<{
           testID={pantryTestIDs.consumeQuantity}
         />
         <QuantityInputFeedback
-          remaining={remaining}
+          // A message on the field says it; the line below would repeat it.
+          remaining={quantityState.error ? null : remaining}
           available={available}
           consumeUnit={shared.activeUnit}
           isConvertedUnit={shared.isConvertedUnit}

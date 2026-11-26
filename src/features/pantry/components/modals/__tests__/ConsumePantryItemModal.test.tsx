@@ -276,6 +276,26 @@ describe('an amount it cannot use', () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
+  // The line under the field said it while typing; once the field does, once.
+  it('says it once, on the field', async () => {
+    await open();
+    typeAmount('9');
+    expect(
+      screen.getByText(
+        t('deduction.exceedsAvailable', { amount: '5', unit: 'lbs' }),
+      ),
+    ).toBeOnTheScreen();
+
+    await confirm();
+
+    expect(screen.getByText(MORE_THAN_HELD())).toBeOnTheScreen();
+    expect(
+      screen.queryByText(
+        t('deduction.exceedsAvailable', { amount: '5', unit: 'lbs' }),
+      ),
+    ).toBeNull();
+  });
+
   it('keeps saying so while the amount is still more than is held', async () => {
     await open();
     typeAmount('9');
