@@ -126,6 +126,22 @@ describe('useAccountCurrencySync', () => {
     expect(result.current.money(15000, 'IDR')).not.toMatch(/15,000\.\d/);
   });
 
+  it('writes nothing when a resync answers with the same table', async () => {
+    const settings = settingsRead('IDR');
+    const table = tableRead(0);
+    const { result } = renderHookWithApollo(useSyncedCurrency, {
+      operationMocks: [settings.mock, table.mock],
+    });
+    await drainTimers();
+    const held = useStore.getState().currencyDecimals;
+
+    await resync(result.current.client);
+
+    await drainTimers();
+    expect(table.fired).toHaveLength(2);
+    expect(useStore.getState().currencyDecimals).toBe(held);
+  });
+
   it('takes the currency the settings hold when this device last had another', async () => {
     const read = settingsRead('GBP');
     const { result } = renderHookWithApollo(useSyncedCurrency, {

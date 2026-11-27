@@ -26,16 +26,17 @@ export function useAccountCurrencySync(): void {
   useApolloErrorLogger(GetCurrenciesDocument, table.error);
   const currencies = table.data?.currencies;
 
+  // Apollo keeps the answer's identity when a re-read changes nothing, so this
+  // writes only when the table does.
   useEffect(() => {
     if (!currencies) return;
-    const decimals = Object.fromEntries(
-      currencies.map(({ code, decimalPlaces }) => [code, decimalPlaces]),
-    );
-    const store = useStore.getState();
-    // Every money surface reads the table, so an unchanged answer writes nothing.
-    if (!sameDecimals(store.currencyDecimals, decimals)) {
-      store.setCurrencyDecimals(decimals);
-    }
+    useStore
+      .getState()
+      .setCurrencyDecimals(
+        Object.fromEntries(
+          currencies.map(({ code, decimalPlaces }) => [code, decimalPlaces]),
+        ),
+      );
   }, [currencies]);
 
   // Keyed on the server's value alone: a pick in flight moves the mirror ahead
@@ -52,10 +53,3 @@ export function useAccountCurrencySync(): void {
     }
   }, [currency]);
 }
-
-const sameDecimals = (
-  held: Record<string, number>,
-  answer: Record<string, number>,
-) =>
-  Object.keys(held).length === Object.keys(answer).length &&
-  Object.entries(answer).every(([code, places]) => held[code] === places);
