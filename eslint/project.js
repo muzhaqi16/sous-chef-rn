@@ -48,6 +48,7 @@ const PRODUCTION_RULES = [
   'no-schema-enum-cast',
   'testid-from-registry',
   'queueable-write-is-local-first',
+  'resolved-failure-is-read',
   'recycling-list-host-is-bounded',
   'flashlist-declares-scroll-component',
   'no-scrollable-in-bottom-sheet-view',

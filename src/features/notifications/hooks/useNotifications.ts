@@ -42,6 +42,7 @@ import { logger } from '#utils/environment';
 import { operationNameOf } from '#apollo/utils/documentOperation';
 import { registerSessionTeardown } from '#store/sessionTeardown';
 import { isNetworkError } from '#utils/isNetworkError';
+import { onFailedRead } from '#utils/onFailedRead';
 
 // PERFORMANCE: Grouped selectors with useShallow keep store subscriptions low
 // The listener needs the signed-in user and nothing else from the store; the
@@ -89,19 +90,21 @@ const scheduleUnreadReseed = (
     const withFeed = reseedFeed;
     reseedFeed = false;
     if (withFeed) {
-      client
-        .query({
+      onFailedRead(
+        client.query({
           query: GetUnreadNotificationsDocument,
           fetchPolicy: 'network-only',
-        })
-        .catch(ignoreReseedFailure);
+        }),
+        ignoreReseedFailure,
+      );
     } else {
-      client
-        .query({
+      onFailedRead(
+        client.query({
           query: NotificationSummaryDocument,
           fetchPolicy: 'network-only',
-        })
-        .catch(ignoreReseedFailure);
+        }),
+        ignoreReseedFailure,
+      );
     }
   }, RESEED_DEBOUNCE_MS);
 };

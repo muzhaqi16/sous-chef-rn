@@ -42,13 +42,15 @@ export function useVerifyEmail() {
   // The signed-in account, when the server holds it verified now.
   const verifiedSignedInUserId = async (): Promise<string | null> => {
     if (!signedInUserId) return null;
+    // A failed read, resolved or thrown, cannot show the account verified.
     const read = await client
       .query({
         query: SignedInEmailVerificationDocument,
         fetchPolicy: 'network-only',
       })
-      .catch(() => null);
-    const me = read?.data?.me;
+      .catch((error: unknown) => ({ data: undefined, error }));
+    if (read.error) return null;
+    const me = read.data?.me;
     return me?.id === signedInUserId && me.emailVerified ? me.id : null;
   };
 

@@ -43,6 +43,7 @@ nothing it was not. Removing or loosening a gate needs a yes that names it.
 | [`sous-chef/no-string-keyed-lookup`](no-string-keyed-lookup.md)                           | A closed lookup table is keyed by the real key type, never by string.                           |
 | [`sous-chef/no-number-noun-concat`](no-number-noun-concat.md)                             | A count and its noun are one translated sentence, never a number joined to a string.            |
 | [`sous-chef/queueable-write-is-local-first`](queueable-write-is-local-first.md)           | A write the offline queue can take writes the cache first and says so.                          |
+| [`sous-chef/resolved-failure-is-read`](resolved-failure-is-read.md)                       | A send caught with `try` / `.catch` reads the failure its result resolves with.                 |
 | [`sous-chef/cache-read-states-optimism`](cache-read-states-optimism.md)                   | A direct cache read states whether it sees pending writes.                                      |
 | [`sous-chef/local-write-is-deterministic`](local-write-is-deterministic.md)               | A local write reads only its write and the cache, and hides a row without `evict`.              |
 | [`sous-chef/recycling-list-host-is-bounded`](recycling-list-host-is-bounded.md)           | A recycling list is bounded by the view that hosts it.                                          |

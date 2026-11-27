@@ -63,17 +63,21 @@ export function usePantryUnitChange() {
     request: UnitChangeRequest,
   ): Promise<PreviewOutcome> => {
     if (isApiUnavailable) return { status: 'offline' };
+    // Under `errorPolicy: 'all'` a failed read resolves with its error.
     const result = await client
       .query({
         query: PreviewPantryItemUnitChangeDocument,
         variables: { input: request },
         fetchPolicy: 'no-cache',
       })
-      .catch((error: unknown) => {
-        errorService.reportError(error, { operation: 'Preview unit change' });
-        return null;
+      .catch((error: unknown) => ({ data: undefined, error }));
+    if (result.error) {
+      errorService.reportError(result.error, {
+        operation: 'Preview unit change',
       });
-    const next = result?.data?.previewPantryItemUnitChange;
+      return { status: 'failed' };
+    }
+    const next = result.data?.previewPantryItemUnitChange;
     return next ? { status: 'ready', preview: next } : { status: 'failed' };
   };
 
