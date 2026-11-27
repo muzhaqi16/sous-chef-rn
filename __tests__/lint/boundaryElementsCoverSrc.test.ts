@@ -1,31 +1,49 @@
-import micromatch from 'micromatch';
+import path from 'path';
+import {
+  Elements,
+  type ElementDescriptors,
+  type FileDescriptors,
+} from '@boundaries/elements';
 import { productionSources } from '#/test-utils/sourceAst';
 
 /**
- * Every source file belongs to a boundary element. A file in no element is
- * unknown to `boundaries/dependencies`, so no policy holds it: a new top-level
- * folder would import any feature's internals unseen.
+ * Every source file is held by a boundary: an element, or the registry file
+ * category beside the features. A file in neither is unknown to
+ * `boundaries/dependencies`, so no policy holds it: a new top-level folder
+ * would import any feature's internals unseen.
+ *
+ * Classified by the plugin's own matcher: elements match folders only, so a
+ * glob test here would pass a file the plugin leaves unknown.
  */
 
-const { BOUNDARY_ELEMENTS } = jest.requireActual<{
-  BOUNDARY_ELEMENTS: Array<{ type: string; pattern: string }>;
+const ROOT = path.join(__dirname, '..', '..');
+
+const { BOUNDARY_ELEMENTS, BOUNDARY_FILES } = jest.requireActual<{
+  BOUNDARY_ELEMENTS: ElementDescriptors;
+  BOUNDARY_FILES: FileDescriptors;
 }>('../../eslint/boundaries.js');
 
-const classify = (file: string): string | undefined =>
-  BOUNDARY_ELEMENTS.find(element => micromatch.isMatch(file, element.pattern))
-    ?.type;
+const matcher = new Elements({ rootPath: ROOT }).getMatcher({
+  elements: BOUNDARY_ELEMENTS,
+  files: BOUNDARY_FILES,
+});
+
+const isHeld = (file: string): boolean => {
+  const absolute = path.join(ROOT, file);
+  return (
+    !matcher.describeElement(absolute).isUnknown ||
+    (matcher.describeFile(absolute).categories ?? []).includes('registry')
+  );
+};
 
 describe('boundary elements', () => {
-  it('leave a file in a new folder unclassified', () => {
-    expect(classify('src/newFolder/thing.ts')).toBeUndefined();
-    expect(classify('src/features/pantry/cache/feedRows.ts')).toBe(
-      'feature-private',
-    );
+  it('hold a feature internal, a registry, and not a new folder', () => {
+    expect(isHeld('src/features/pantry/cache/feedRows.ts')).toBe(true);
+    expect(isHeld('src/features/registry.static.ts')).toBe(true);
+    expect(isHeld('src/newFolder/thing.ts')).toBe(false);
   });
 
-  it('classify every production source', () => {
-    const unclassified = productionSources().filter(file => !classify(file));
-
-    expect(unclassified).toEqual([]);
+  it('hold every production source', () => {
+    expect(productionSources().filter(file => !isHeld(file))).toEqual([]);
   });
 });

@@ -23,7 +23,7 @@ const {
   BOUNDARY_ELEMENTS,
   BOUNDARY_POLICIES,
   ONE_DOOR_POLICIES,
-  LAYER_FILES,
+  BOUNDARY_FILES,
   LAYER_POLICIES,
   CORE_RESTRICTED_GLOBALS,
   CORE_PATTERNS,
@@ -71,7 +71,7 @@ const base = {
       },
     },
     'boundaries/elements': BOUNDARY_ELEMENTS,
-    'boundaries/files': LAYER_FILES,
+    'boundaries/files': BOUNDARY_FILES,
   },
   rules: {
     'no-barrel-files/no-barrel-files': 'error',

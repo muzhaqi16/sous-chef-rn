@@ -74,19 +74,18 @@ const BOUNDARY_ELEMENTS = [
     pattern: 'src/domain/**',
     partialMatch: false,
   },
-  // The composition root, the core's start-up and the feature registries,
-  // which wire every feature in.
+  // The composition root and the core's start-up, which wire every feature in.
+  // The registries beside the features are files, so a file category holds
+  // them (REGISTRY_FILES): an element matches folders only.
   {
     type: 'root',
     pattern: 'src/(app|bootstrap)/**',
     partialMatch: false,
   },
-  {
-    type: 'root',
-    pattern: 'src/features/*.ts',
-    partialMatch: false,
-  },
 ];
+
+/** The feature registries, which list every feature by its manifest. */
+const REGISTRY_FILES = [{ category: 'registry', pattern: 'src/features/*.ts' }];
 
 const FEATURE_INTERNALS = [
   'feature-private',
@@ -129,6 +128,15 @@ const BOUNDARY_POLICIES = [
     },
     message:
       "An entity imports no feature: every feature that writes it sits above it. Move what it needs into the entity, or into src/domain/ when it is not the entity's own.",
+  },
+  {
+    from: { file: { categories: 'registry' } },
+    disallow: {
+      to: { element: { type: 'feature-private' } },
+      dependency: { kind: 'value' },
+    },
+    message:
+      "A registry lists each feature by its manifest; it does not reach into {{ to.element.captured.featureName }}'s internals. Expose what it needs through the feature's manifest.",
   },
   // A type counts: a feature's fragment type ties the logic to that feature.
   {
@@ -314,6 +322,9 @@ const LAYER_FILES = LAYERS.flatMap(entry =>
   entry.patterns.map(pattern => ({ category: entry.layer, pattern })),
 );
 
+/** Every file category: a file takes each whose pattern it matches. */
+const BOUNDARY_FILES = [...LAYER_FILES, ...REGISTRY_FILES];
+
 // No `dependency.kind`: a type import ties core to mobile as surely as a value.
 const LAYER_POLICIES = [
   {
@@ -386,7 +397,7 @@ module.exports = {
   BOUNDARY_ELEMENTS,
   BOUNDARY_POLICIES,
   ONE_DOOR_POLICIES,
-  LAYER_FILES,
+  BOUNDARY_FILES,
   LAYER_POLICIES,
   CORE_RESTRICTED_GLOBALS,
   CORE_PATTERNS,

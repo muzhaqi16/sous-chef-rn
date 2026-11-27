@@ -127,6 +127,13 @@ const CASES: Case[] = [
     blocked: true,
   },
 
+  {
+    label: "a registry reaching into a feature's internals",
+    filePath: 'src/features/registry.static.ts',
+    code: `import { x } from '#features/pantry/utils/hybridSort';\n${VALUE_USE}`,
+    blocked: true,
+  },
+
   // ── One door per internal ──
   {
     label: "React Native's TextInput outside the themed atom",
