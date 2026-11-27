@@ -22,6 +22,7 @@ const {
   COLOCATED_DATA_HOOK_ZONES,
   BOUNDARY_ELEMENTS,
   BOUNDARY_POLICIES,
+  ONE_DOOR_POLICIES,
   LAYER_FILES,
   LAYER_POLICIES,
   CORE_RESTRICTED_GLOBALS,
@@ -91,7 +92,11 @@ const base = {
       {
         default: 'allow',
         checkAllOrigins: true,
-        policies: [...BOUNDARY_POLICIES, ...LAYER_POLICIES],
+        policies: [
+          ...BOUNDARY_POLICIES,
+          ...ONE_DOOR_POLICIES,
+          ...LAYER_POLICIES,
+        ],
       },
     ],
     // `import {} from 'x'` is what an autofix leaves after removing every unused
@@ -550,17 +555,13 @@ const overrides = [
     },
   },
   {
-    // The gorhom re-export site and its circular-import helper.
+    // The sheet wrapper and its back handler.
     files: [
       'src/hooks/ui/useStandardBottomSheet.tsx',
       'src/hooks/ui/useBottomSheetBackHandler.ts',
     ],
     rules: {
       'no-restricted-imports': restrictedImports({
-        allow: {
-          '@gorhom/bottom-sheet': true,
-          '#hooks/ui/useBottomSheetBackdropClaim': true,
-        },
         add: [
           {
             // Not a dependency; the ban is the tripwire that keeps it out.
@@ -594,11 +595,10 @@ const overrides = [
     rules: {
       'no-restricted-imports': restrictedImports({
         allow: {
-          'react-native': ['TextInput', 'ActivityIndicator'],
+          'react-native': ['ActivityIndicator'],
           '#i18n/config': ['getI18n'],
           'react-native-permissions': true,
           'react-native-turbo-image': true,
-          '#store/deviceStorage': true,
           'date-fns': true,
           'fraction.js': true,
         },
@@ -656,18 +656,6 @@ const overrides = [
           'react-native-permissions': true,
           'react-native-turbo-image': true,
           '@react-native-vector-icons/ionicons': true,
-        },
-      }),
-    },
-  },
-  {
-    // This file IS the wrapper that composes the raw scroller with the input
-    // context.
-    files: ['src/components/atoms/BottomSheetFormScrollView.tsx'],
-    rules: {
-      'no-restricted-imports': restrictedImports({
-        allow: {
-          '#components/atoms/BottomSheetKeyboardAwareScrollView': true,
         },
       }),
     },
@@ -775,31 +763,6 @@ const overrides = [
               'An atom or molecule takes state as props; it does not read the store. If it genuinely needs application state it is an organism — move it to src/components/organisms/.',
           },
         ],
-      }),
-    },
-  },
-  {
-    // Device storage's writers: the kernel persisters, the reset manager, the
-    // device id's mirror and the feature caches that register with it.
-    files: [
-      'src/apollo/**/*.{ts,tsx}',
-      'src/services/auth/deviceId.ts',
-      'src/store/**/*.{ts,tsx}',
-      'src/features/*/store/**/*.{ts,tsx}',
-    ],
-    ignores: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': restrictedImports({
-        allow: { '#store/deviceStorage': true },
-      }),
-    },
-  },
-  {
-    // The composition root installs the device's key-value store as the port.
-    files: ['src/app/installNativePlatform.ts'],
-    rules: {
-      'no-restricted-imports': restrictedImports({
-        allow: { '#native/storage/keyValueStore': true },
       }),
     },
   },

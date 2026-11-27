@@ -262,17 +262,18 @@ adds an import of the screen-bearing registry to a launch-path module.
 ### The public API boundary
 
 A feature is a module with a public surface. Reaching past it is blocked by
-ESLint (`no-restricted-imports` + `boundaries/dependencies`). The one statement
-of what is internal is `BOUNDARY_ELEMENTS` in `eslint/boundaries.js`:
+ESLint (`boundaries/dependencies`). The one statement of what is internal is
+`BOUNDARY_ELEMENTS` in `eslint/boundaries.js`, which classifies every `src`
+file (`boundaryElementsCoverSrc.test.ts`):
 
-- **Internal:** `context/`, `utils/`, `components/`, `hooks/mutations/` and
-  `graphql/`. A component two features want is a kit component; an operation
+- **Internal:** `context/`, `utils/`, `components/`, `cache/`,
+  `hooks/mutations/` and `graphql/`. A component two features want is a kit component; an operation
   another feature needs is sent through the owner's hook, never copied.
 - **The offline queue's only:** `offline/`. A feature's replay preparers and
   reconcilers say what its queued mutation means; the kernel imports them, other
   features may not.
 - **Public:** everything else — `screens/`, top-level `hooks/`, `ui/`,
-  `cache/`, `store/`, `testIDs.ts`, `manifest.ts`, `types.ts`, and the types of
+  `store/`, `testIDs.ts`, `manifest.ts`, `types.ts`, and the types of
   `*Fragments.generated.ts`. A feature store MUST call
   `registerSessionScopedStore`: `SESSION_SCOPED_STATE` only reaches the root
   store.
@@ -350,7 +351,7 @@ NAMED after a feature either. Its feature IMPORTS are load-bearing — the offli
 queue replays every feature's writes, i18n bundles every feature's copy, the
 subscription layer mounts every feature's events — and are governed by the same
 `eslint/boundaries.js` policies: `graphql/` and `offline/` stay open to it,
-`context/`, `utils/`, `components/` and `hooks/mutations/` do not. The per-feature navigation stacks in
+`context/`, `utils/`, `components/`, `cache/` and `hooks/mutations/` do not. The per-feature navigation stacks in
 `src/navigation/stacks/` are exempt by design.
 
 **A module in the shared layers is there because more than one feature uses it.**
@@ -794,7 +795,7 @@ Chrome is composed once, not per screen.
   to the modal, since `BottomSheetView` cannot bound one. `form` brings the keyboard offset. In every
   mode `ThemedTextInput` resolves to gorhom's `BottomSheetTextInput` rather than
   RN's, which would leave the sheet blind to the keyboard, by asking gorhom
-  whether it renders in a sheet. `__tests__/sheets/bottomSheetShell.test.ts` holds the shell.
+  whether it renders in a sheet. `ONE_DOOR_POLICIES` in `eslint/boundaries.js` hold the shell and the one input.
 - **`FormScreen`** is a full-screen form — a screen with a form's chrome. It is
   not a sheet and does not share a mechanism with one.
 

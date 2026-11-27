@@ -3,11 +3,9 @@ import { useQuery, useFragment } from '@apollo/client/react';
 import {
   GetItemForEditDocument,
   UseItemForEdit_ItemFragmentDoc,
+  type UseItemForEdit_ItemFragment,
 } from '#features/catalog/hooks/useItemForEdit.generated';
-import {
-  itemToEditableSnapshot,
-  type EditableItemSnapshot,
-} from '#domain/items/suggestItemChanges';
+import type { EditableItemSnapshot } from '#domain/items/suggestItemChanges';
 
 export interface UseItemForEditResult {
   /** null until the cache holds every field the diff needs. */
@@ -16,6 +14,37 @@ export interface UseItemForEditResult {
   error: unknown;
   /** Re-runs the query. `error` alone strands the caller on a spinner. */
   refetch: () => void;
+}
+
+const nullableToUndefined = <T>(value: T | null | undefined): T | undefined =>
+  value ?? undefined;
+
+function itemToEditableSnapshot(
+  item: UseItemForEdit_ItemFragment,
+): EditableItemSnapshot {
+  const primaryBrand = item.brands[0]?.brand;
+  return {
+    id: item.id,
+    version: item.version,
+    canEdit: item.canEdit,
+    canSuggest: item.canSuggest,
+    name: item.name,
+    description: nullableToUndefined(item.description),
+    type: item.type,
+    brandId: primaryBrand?.id,
+    brandName: primaryBrand?.name,
+    storageState: item.storageState,
+    tags: item.tags,
+    primaryUpc: nullableToUndefined(item.primaryUpc),
+    shelfLifeDays: nullableToUndefined(item.shelfLifeDays),
+    shelfLifeOpenedDays: nullableToUndefined(item.shelfLifeOpenedDays),
+    netWeight: nullableToUndefined(item.netWeight),
+    netWeightKind: nullableToUndefined(item.netWeightKind),
+    displayUnitId: item.displayUnit?.id,
+    displayUnitName: item.displayUnit?.name,
+    baseDimension: nullableToUndefined(item.baseDimension),
+    imageUrl: nullableToUndefined(item.imageUrl),
+  };
 }
 
 /**

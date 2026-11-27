@@ -97,8 +97,8 @@ optional:
   (close, centred title, primary confirm); only templates render `Header`.
   `__tests__/ui/screenUsesTheScaffold.test.ts` holds all of this.
 - **`Sheet`** (`src/components/templates/Sheet.tsx`) is every bottom sheet:
-  only it and `ActionTray` render a `BottomSheetModal`
-  (`__tests__/sheets/bottomSheetShell.test.ts`). It takes
+  only it and `ActionTray` render a `BottomSheetModal` (a one-door policy in
+  `eslint/boundaries.js`). It takes
   `view | form | action | list`. `form` supplies the keyboard offset; in every
   mode the inputs inside resolve to gorhom's `BottomSheetTextInput` themselves.
   `list` puts its child in a plain `flex: 1` view the modal bounds, and clears

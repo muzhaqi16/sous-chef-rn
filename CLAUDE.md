@@ -73,8 +73,8 @@ Map and reasoning: `docs/architecture.md`.
   the layer policies, `check:import-cycles`), not a measured launch time.
 - **Feature API boundary** (`boundaries/dependencies`; `BOUNDARY_ELEMENTS` in
   `eslint/boundaries.js` is the one statement): a feature's `context/`,
-  `utils/`, `components/`, `hooks/mutations/`, `offline/` and `graphql/` are
-  internal; everything else — `screens/`, top-level `hooks/`, `ui/`, `testIDs.ts`,
+  `utils/`, `components/`, `cache/`, `hooks/mutations/`, `offline/` and
+  `graphql/` are internal; everything else — `screens/`, top-level `hooks/`, `ui/`, `testIDs.ts`,
   `*Fragments.generated.ts` types — is importable. `catalog/` owns the grocery `Item`,
   pickers and storage locations; its `ui/` is the shared grocery-item UI. Tests are exempt.
 - **Kit** (`src/hooks/`, `src/components/`): only what 2+ features use, no
@@ -84,7 +84,8 @@ Map and reasoning: `docs/architecture.md`.
   module named after a feature" (navigation stacks exempt).
 - `src/entities/<entity>/` is an entity 2+ features write (its cache writers,
   write descriptors and the documents they write to); it imports no feature.
-- `src/domain/` is logic 2+ features share; `src/app/` is the composition root;
+- `src/domain/` is logic 2+ features share and imports no feature, a type
+  included; `src/app/` is the composition root;
   `src/bootstrap/` (core) is what every host runs to start the core.
 - **Two layers, by folder** (`scripts/lib/layers.js`): **core** runs without
   React Native and loads with nothing installed; **mobile** is the React Native

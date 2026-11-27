@@ -24,7 +24,7 @@ const { CORE_EXTERNALS, LAYERS } = require('../scripts/lib/layers');
 const BOUNDARY_ELEMENTS = [
   {
     type: 'feature-private',
-    pattern: 'src/features/*/(context|utils|components)/**',
+    pattern: 'src/features/*/(context|utils|components|cache)/**',
     capture: ['featureName'],
     partialMatch: false,
   },
@@ -57,7 +57,7 @@ const BOUNDARY_ELEMENTS = [
   {
     type: 'shared',
     pattern:
-      'src/(components|hooks|screens|apollo|utils|store|services|navigation)/**',
+      'src/(components|hooks|screens|apollo|utils|store|services|navigation|config|constants|context|graphql|i18n|native|platform|styles|theme|types|assets)/**',
     partialMatch: false,
   },
   // An entity several features write: importable by every feature, below all
@@ -66,6 +66,24 @@ const BOUNDARY_ELEMENTS = [
     type: 'entity',
     pattern: 'src/entities/*/**',
     capture: ['entityName'],
+    partialMatch: false,
+  },
+  // Logic two or more features share, below every one of them.
+  {
+    type: 'domain',
+    pattern: 'src/domain/**',
+    partialMatch: false,
+  },
+  // The composition root, the core's start-up and the feature registries,
+  // which wire every feature in.
+  {
+    type: 'root',
+    pattern: 'src/(app|bootstrap)/**',
+    partialMatch: false,
+  },
+  {
+    type: 'root',
+    pattern: 'src/features/*.ts',
     partialMatch: false,
   },
 ];
@@ -96,13 +114,13 @@ const BOUNDARY_POLICIES = [
       "Cross-feature import into {{ to.element.captured.featureName }}'s internals is not allowed. Use a public hook from src/features/{{ to.element.captured.featureName }}/hooks/, or compose your own GraphQL operation. Type imports from its *Fragments.generated.ts are allowed.",
   },
   {
-    from: { element: { type: 'shared' } },
+    from: { element: { types: { anyOf: ['shared', 'root'] } } },
     disallow: {
       to: { element: { type: 'feature-private' } },
       dependency: { kind: 'value' },
     },
     message:
-      "Shared code must not import {{ to.element.captured.featureName }}'s internals (context/, hooks/mutations/, utils/, components/). A hook or component two features want belongs in src/hooks/ or src/components/; one feature's belongs in that feature. The catalog's PUBLIC UI is src/features/catalog/ui/.",
+      "Shared code must not import {{ to.element.captured.featureName }}'s internals (context/, cache/, hooks/mutations/, utils/, components/). A hook or component two features want belongs in src/hooks/ or src/components/; one feature's belongs in that feature. The catalog's PUBLIC UI is src/features/catalog/ui/.",
   },
   {
     from: { element: { type: 'entity' } },
@@ -112,6 +130,113 @@ const BOUNDARY_POLICIES = [
     message:
       "An entity imports no feature: every feature that writes it sits above it. Move what it needs into the entity, or into src/domain/ when it is not the entity's own.",
   },
+  // A type counts: a feature's fragment type ties the logic to that feature.
+  {
+    from: { element: { type: 'domain' } },
+    disallow: {
+      to: { element: { types: { anyOf: ['feature', ...FEATURE_INTERNALS] } } },
+    },
+    message:
+      'Domain logic sits below every feature that shares it, so it imports none of them, a type included. Take the shape it reads as its own type and map to it in the feature, or move the logic into the feature.',
+  },
+];
+
+const MMKV_MESSAGE =
+  'Device storage belongs to the kernel persisters and the reset manager. A key written elsewhere is one `SESSION_SCOPED_STATE` does not know about, so a sign-out leaves it behind — put the value in a store slice, or register a feature store with `registerSessionScopedStore`.';
+
+/**
+ * A module with one door: only the files listed may import it, or the names
+ * listed from it. Every other source file is caught, the day it appears.
+ */
+const oneDoor = ({ doors, to, specifiers, message }) => ({
+  // micromatch leaves a one-item brace unexpanded, matching nothing.
+  from: {
+    file: {
+      path: doors.length > 1 ? `!{${doors.join(',')}}` : `!${doors[0]}`,
+    },
+  },
+  disallow: { to, ...(specifiers && { dependency: { specifiers } }) },
+  message,
+});
+
+const ONE_DOOR_POLICIES = [
+  // ── One text input ──
+  oneDoor({
+    doors: ['src/components/atoms/themedComponents.tsx'],
+    to: { module: { source: 'react-native' } },
+    specifiers: 'TextInput',
+    message:
+      "Use ThemedTextInput from #components/atoms/themedComponents. It carries the theme and, inside a bottom sheet, renders gorhom's input, without which the sheet cannot see the keyboard. For a ref type, import `type { ThemedTextInputRef }` from the same atom.",
+  }),
+  oneDoor({
+    doors: ['src/components/atoms/themedComponents.tsx'],
+    to: { module: { source: '@gorhom/bottom-sheet' } },
+    specifiers: 'BottomSheetTextInput',
+    message:
+      "Use ThemedTextInput from #components/atoms/themedComponents: inside a sheet it renders gorhom's input itself, and outside one gorhom's throws.",
+  }),
+
+  // The raw scroller gives a sheet the keyboard offset but not the input
+  // context the form scroll view adds.
+  oneDoor({
+    doors: ['src/components/atoms/BottomSheetFormScrollView.tsx'],
+    to: {
+      file: {
+        path: 'src/components/atoms/BottomSheetKeyboardAwareScrollView.tsx',
+      },
+    },
+    message:
+      'Use BottomSheetFormScrollView from #components/atoms/BottomSheetFormScrollView. The raw scroller supplies the keyboard offset but not the input context, so the sheet cannot see the keyboard. See CLAUDE.md § Bottom sheets.',
+  }),
+
+  // ── One sheet ──
+  oneDoor({
+    doors: ['src/hooks/ui/useStandardBottomSheet.tsx'],
+    to: { module: { source: '@gorhom/bottom-sheet' } },
+    specifiers: 'BottomSheetModal',
+    message:
+      "Render a sheet with Sheet from #components/templates/Sheet. gorhom's modal is wrapped once, themed and holding the global backdrop claim, in #hooks/ui/useStandardBottomSheet.",
+  }),
+  oneDoor({
+    doors: [
+      'src/components/templates/Sheet.tsx',
+      'src/components/templates/ActionTray/ActionTray.tsx',
+    ],
+    to: { file: { path: 'src/hooks/ui/useStandardBottomSheet.tsx' } },
+    specifiers: ['BottomSheetModal', 'useStandardBottomSheet'],
+    message:
+      'Render a sheet with Sheet from #components/templates/Sheet, driven by `visible` and `onDismiss`. It settles the backdrop, snap points, keyboard host and header; a sheet it does not fit grows it an option. See docs/ui-layer.md § Sheet.',
+  }),
+  oneDoor({
+    doors: ['src/hooks/ui/useStandardBottomSheet.tsx'],
+    to: { file: { path: 'src/hooks/ui/useBottomSheetBackdropClaim.ts' } },
+    message:
+      'useBottomSheetBackdropClaim is an internal helper for useStandardBottomSheet, which wires animatedIndex, onChange, the back handler, focus-aware dismiss-on-blur and theme styles together. Render the sheet with Sheet from #components/templates/Sheet.',
+  }),
+
+  // ── One device storage ──
+  oneDoor({
+    doors: [
+      'src/apollo/**',
+      'src/services/auth/deviceId.ts',
+      'src/store/**',
+      'src/features/*/store/**',
+    ],
+    to: { file: { path: 'src/store/deviceStorage.ts' } },
+    message: MMKV_MESSAGE,
+  }),
+  // The raw MMKV instance and its adapter: only the composition root installs
+  // them, as the key-value store port that `#store/deviceStorage` reads.
+  oneDoor({
+    doors: ['src/native/storage/keyValueStore.ts'],
+    to: { file: { path: 'src/native/storage/mmkv.ts' } },
+    message: MMKV_MESSAGE,
+  }),
+  oneDoor({
+    doors: ['src/app/installNativePlatform.ts'],
+    to: { file: { path: 'src/native/storage/keyValueStore.ts' } },
+    message: MMKV_MESSAGE,
+  }),
 ];
 
 // ── The data layer stays out of what renders ──
@@ -260,6 +385,7 @@ module.exports = {
   COLOCATED_DATA_HOOK_ZONES,
   BOUNDARY_ELEMENTS,
   BOUNDARY_POLICIES,
+  ONE_DOOR_POLICIES,
   LAYER_FILES,
   LAYER_POLICIES,
   CORE_RESTRICTED_GLOBALS,

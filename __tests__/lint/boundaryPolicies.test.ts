@@ -107,6 +107,96 @@ const CASES: Case[] = [
     code: `import { x } from '#apollo/utils/settleMutation';\n${VALUE_USE}`,
     blocked: false,
   },
+  {
+    label: "another feature's cache writers",
+    filePath: RECIPES_HOOK,
+    code: `import { x } from '#features/pantry/cache/feedRows';\n${VALUE_USE}`,
+    blocked: true,
+  },
+  {
+    label: "shared code reaching into a feature's cache",
+    filePath: 'src/i18n/localeTypes.ts',
+    code: `import { x } from '#features/pantry/cache/feedRows';\n${VALUE_USE}`,
+    blocked: true,
+  },
+  {
+    // A type counts: the fragment ties the logic to the feature.
+    label: "domain logic naming a feature's type",
+    filePath: 'src/domain/items/createItemMapping.ts',
+    code: "import type { X } from '#features/catalog/hooks/useItemForEdit.generated';\nexport type Y = X;\n",
+    blocked: true,
+  },
+
+  // ── One door per internal ──
+  {
+    label: "React Native's TextInput outside the themed atom",
+    filePath: 'src/components/molecules/SearchBar.tsx',
+    code: `import { TextInput as x } from 'react-native';\n${VALUE_USE}`,
+    blocked: true,
+  },
+  {
+    label: "React Native's TextInput in the themed atom",
+    filePath: 'src/components/atoms/themedComponents.tsx',
+    code: `import { TextInput as x } from 'react-native';\n${VALUE_USE}`,
+    blocked: false,
+  },
+  {
+    label: "gorhom's text input in a sheet",
+    filePath:
+      'src/features/recipes/components/modals/IngredientMatchingSheet.tsx',
+    code: `import { BottomSheetTextInput as x } from '@gorhom/bottom-sheet';\n${VALUE_USE}`,
+    blocked: true,
+  },
+  {
+    label: "gorhom's modal outside the wrapper",
+    filePath: 'src/components/templates/Sheet.tsx',
+    code: `import { BottomSheetModal as x } from '@gorhom/bottom-sheet';\n${VALUE_USE}`,
+    blocked: true,
+  },
+  {
+    label: 'a sheet rendering the wrapped modal itself',
+    filePath:
+      'src/features/recipes/components/modals/IngredientMatchingSheet.tsx',
+    code: `import { useStandardBottomSheet as x } from '#hooks/ui/useStandardBottomSheet';\n${VALUE_USE}`,
+    blocked: true,
+  },
+  {
+    label: 'the shell rendering the wrapped modal',
+    filePath: 'src/components/templates/Sheet.tsx',
+    code: `import { useStandardBottomSheet as x } from '#hooks/ui/useStandardBottomSheet';\n${VALUE_USE}`,
+    blocked: false,
+  },
+  {
+    label: "the wrapper's types, beside the shell",
+    filePath: 'src/components/templates/SheetCloseGuard.tsx',
+    code: "import type { SheetDiscardGuard } from '#hooks/ui/useStandardBottomSheet';\nexport type Y = SheetDiscardGuard;\n",
+    blocked: false,
+  },
+  {
+    label: 'the raw keyboard scroller in a sheet',
+    filePath:
+      'src/features/recipes/components/modals/IngredientMatchingSheet.tsx',
+    code: `import { x } from '#components/atoms/BottomSheetKeyboardAwareScrollView';\n${VALUE_USE}`,
+    blocked: true,
+  },
+  {
+    label: 'device storage from a screen',
+    filePath: 'src/features/profile/screens/useMyReports.ts',
+    code: `import { x } from '#store/deviceStorage';\n${VALUE_USE}`,
+    blocked: true,
+  },
+  {
+    label: 'device storage from a feature store',
+    filePath: 'src/features/recipes/store/catalogFetchTimes.ts',
+    code: `import { x } from '#store/deviceStorage';\n${VALUE_USE}`,
+    blocked: false,
+  },
+  {
+    label: 'the raw key-value store outside the composition root',
+    filePath: 'src/store/resetManager.ts',
+    code: `import { x } from '#native/storage/keyValueStore';\n${VALUE_USE}`,
+    blocked: true,
+  },
 ];
 
 /**

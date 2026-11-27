@@ -8,7 +8,6 @@ import {
   type StorageState,
   type SuggestibleItemChangesInput,
 } from '#graphql/generated/schemaTypes';
-import type { UseItemForEdit_ItemFragment } from '#features/catalog/hooks/useItemForEdit.generated';
 import type {
   AddItemFormData,
   AddItemFormInitialData,
@@ -61,9 +60,6 @@ export interface ItemChangesDiff {
   changedFields: string[];
 }
 
-const nullableToUndefined = <T>(value: T | null | undefined): T | undefined =>
-  value ?? undefined;
-
 /** Trim, then collapse empty strings to undefined so '' and absent compare equal. */
 const norm = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined;
@@ -83,34 +79,6 @@ const sameTagSet = (a: readonly string[], b: readonly string[]): boolean => {
   const rightSet = new Set(right);
   return left.every(tag => rightSet.has(tag));
 };
-
-export function itemToEditableSnapshot(
-  item: UseItemForEdit_ItemFragment,
-): EditableItemSnapshot {
-  const primaryBrand = item.brands[0]?.brand;
-  return {
-    id: item.id,
-    version: item.version,
-    canEdit: item.canEdit,
-    canSuggest: item.canSuggest,
-    name: item.name,
-    description: nullableToUndefined(item.description),
-    type: item.type,
-    brandId: primaryBrand?.id,
-    brandName: primaryBrand?.name,
-    storageState: item.storageState,
-    tags: item.tags,
-    primaryUpc: nullableToUndefined(item.primaryUpc),
-    shelfLifeDays: nullableToUndefined(item.shelfLifeDays),
-    shelfLifeOpenedDays: nullableToUndefined(item.shelfLifeOpenedDays),
-    netWeight: nullableToUndefined(item.netWeight),
-    netWeightKind: nullableToUndefined(item.netWeightKind),
-    displayUnitId: item.displayUnit?.id,
-    displayUnitName: item.displayUnit?.name,
-    baseDimension: nullableToUndefined(item.baseDimension),
-    imageUrl: nullableToUndefined(item.imageUrl),
-  };
-}
 
 /**
  * Emits ONLY changed fields (an unchanged one reads to the admin as a request);

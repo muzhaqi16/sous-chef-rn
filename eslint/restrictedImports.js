@@ -3,36 +3,15 @@
  * sets the rule replaces its options, so an override retyping a shorter list
  * silently un-bans the rest. `restrictedImports({ allow })` makes an override
  * name what it drops; `__tests__/lint/restrictedImportsAreNotDropped.test.ts`
- * holds that.
+ * holds that. A module of the app's own that only named files may import is a
+ * one-door policy in `boundaries.js`.
  */
-const MMKV_MESSAGE =
-  'Device storage belongs to the kernel persisters and the reset manager. A key written elsewhere is one `SESSION_SCOPED_STATE` does not know about, so a sign-out leaves it behind — put the value in a store slice, or register a feature store with `registerSessionScopedStore`.';
-
 const RESTRICTED_IMPORT_PATHS = [
-  {
-    name: '#store/deviceStorage',
-    message: MMKV_MESSAGE,
-  },
-  // The raw MMKV instance and its adapter: only the composition root installs
-  // them, as the key-value store port that `#store/deviceStorage` reads.
-  ...['#native/storage/mmkv', '#native/storage/keyValueStore'].map(name => ({
-    name,
-    message: MMKV_MESSAGE,
-  })),
-  // The raw scroller gives a sheet the keyboard offset but NOT the input
-  // context, so its inputs resolve to React Native's `TextInput`. Only the
-  // wrapper itself may import it (allowed in its own override).
-  {
-    name: '#components/atoms/BottomSheetKeyboardAwareScrollView',
-    message:
-      'Use BottomSheetFormScrollView from #components/atoms/BottomSheetFormScrollView. The raw scroller supplies the keyboard offset but not the input context, so inputs inside the sheet resolve to RN TextInput and the sheet cannot see the keyboard. See CLAUDE.md § Bottom sheets.',
-  },
   {
     name: 'react-native',
     importNames: [
       'StyleSheet',
       'Text',
-      'TextInput',
       'Pressable',
       'TouchableOpacity',
       'TouchableHighlight',
@@ -43,7 +22,7 @@ const RESTRICTED_IMPORT_PATHS = [
       'SectionList',
     ],
     message:
-      'Use the project re-exports/atoms for app-wide consistency: FlatList/SectionList → FlashList with an explicit renderScrollComponent (RN lists do not take part in the gesture arbitration swipeable rows need); StyleSheet → "react-native-unistyles"; Text → "#components/atoms/Text" (role/tone typography, where a role carries size, weight and leading together); Pressable → "#components/atoms/themedComponents" (or AppPressable/PressableScale for press feedback, or react-native-gesture-handler\'s Pressable for gesture composition). TextInput → "#components/atoms/themedComponents" (ThemedTextInput carries the theme\'s field color, placeholder, keyboard appearance and caret; a raw one renders dark text on the dark theme). ActivityIndicator → one of the themed spinners in "#components/atoms/themedComponents" (Themed, Muted, Error, Success, OnPrimary, OnError); a raw one renders in the platform\'s default colour rather than the theme\'s. Touchables are deprecated — use Pressable. For RN Text/Pressable *types*, import `type { TextProps, TextStyle, PressableProps }` (type-only imports are fine); for a TextInput ref import `type { ThemedTextInputRef }` from the same atom, because this rule matches the name whether or not the import is type-only.',
+      'Use the project re-exports/atoms for app-wide consistency: FlatList/SectionList → FlashList with an explicit renderScrollComponent (RN lists do not take part in the gesture arbitration swipeable rows need); StyleSheet → "react-native-unistyles"; Text → "#components/atoms/Text" (role/tone typography, where a role carries size, weight and leading together); Pressable → "#components/atoms/themedComponents" (or AppPressable/PressableScale for press feedback, or react-native-gesture-handler\'s Pressable for gesture composition). ActivityIndicator → one of the themed spinners in "#components/atoms/themedComponents" (Themed, Muted, Error, Success, OnPrimary, OnError); a raw one renders in the platform\'s default colour rather than the theme\'s. Touchables are deprecated — use Pressable. For RN Text/Pressable *types*, import `type { TextProps, TextStyle, PressableProps }` (type-only imports are fine).',
   },
   {
     name: 'react',
@@ -55,12 +34,6 @@ const RESTRICTED_IMPORT_PATHS = [
     name: 'react-i18next',
     message:
       "Import from '#i18n' instead — it is the single entry point for translation, and it pins the namespace so call sites cannot drift onto a second one. `const { t } = useTranslation()` in components and hooks; `import { t }` at module scope. Only src/i18n's own entry files may reach for react-i18next directly (exempted in this config).",
-  },
-  {
-    name: '@gorhom/bottom-sheet',
-    importNames: ['BottomSheetModal', 'BottomSheetTextInput'],
-    message:
-      "Import BottomSheetModal from '#hooks/ui/useStandardBottomSheet' instead. That re-export is theme-wrapped and composes the global backdrop claim via modalProps.onChange — importing from @gorhom/bottom-sheet directly bypasses both. For type-only usage, import { BottomSheetModalRef } from '#hooks/ui/useStandardBottomSheet'. BottomSheetTextInput → ThemedBottomSheetTextInput from '#components/atoms/themedComponents' (ref type: ThemedBottomSheetTextInputRef).",
   },
   {
     name: 'react-native-permissions',
@@ -119,11 +92,6 @@ const RESTRICTED_IMPORT_PATHS = [
     importNames: ['getI18n'],
     message:
       "Translate through `t` from '#i18n' (aliased `tGlobal` in a .tsx), or `useTranslation()` in a component. The module-scope `t` IS `getI18n().t` with the fallback and options overloads in front of it, so reaching the instance loses the fallback form and bypasses the entry point that pins the namespace. Reaching it for something other than translating — changing the language, reading the current one — belongs in src/i18n or the store, which are exempt.",
-  },
-  {
-    name: '#hooks/ui/useBottomSheetBackdropClaim',
-    message:
-      'useBottomSheetBackdropClaim is an internal helper for useStandardBottomSheet. Consumers should use useStandardBottomSheet instead — it wires animatedIndex, onChange, the back handler, focus-aware dismiss-on-blur, and theme styles all together. Importing the lower-level hook directly bypasses every other affordance.',
   },
 ];
 
