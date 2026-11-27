@@ -23,7 +23,7 @@ const propertyNamed = (object, name) =>
       )
     : undefined;
 
-/** `theme.colors.X` → `X`. */
+/** `theme.colors.X`, or `animatedTheme.get().colors.X` → `X`. */
 const themeColor = node =>
   node?.type === 'MemberExpression' &&
   node.property.type === 'Identifier' &&
@@ -32,6 +32,45 @@ const themeColor = node =>
   node.object.property.name === 'colors'
     ? node.property.name
     : undefined;
+
+const isWhite = node =>
+  node?.type === 'Literal' &&
+  typeof node.value === 'string' &&
+  WHITE.test(node.value.trim());
+
+/** The object a style factory returns: `() => ({…})` or `() => { return {…} }`. */
+const returnedObject = fn => {
+  if (
+    fn?.type !== 'ArrowFunctionExpression' &&
+    fn?.type !== 'FunctionExpression'
+  )
+    return undefined;
+  if (fn.body.type === 'ObjectExpression') return fn.body;
+  if (fn.body.type !== 'BlockStatement') return undefined;
+  const returned = fn.body.body.find(
+    statement => statement.type === 'ReturnStatement',
+  );
+  return returned?.argument?.type === 'ObjectExpression'
+    ? returned.argument
+    : undefined;
+};
+
+/** `interpolateColor(progress, inputs, [a, b])`: its driver and its stops. */
+const interpolation = (node, sourceCode) => {
+  if (
+    node?.type !== 'CallExpression' ||
+    node.callee.type !== 'Identifier' ||
+    node.callee.name !== 'interpolateColor'
+  )
+    return undefined;
+  const [progress, inputs, outputs] = node.arguments;
+  if (!progress || !inputs || outputs?.type !== 'ArrayExpression')
+    return undefined;
+  return {
+    driver: `${sourceCode.getText(progress)}|${sourceCode.getText(inputs)}`,
+    stops: outputs.elements,
+  };
+};
 
 /** @type {import('eslint').Rule.RuleModule} */
 module.exports = {
@@ -50,7 +89,26 @@ module.exports = {
     },
   },
   create(context) {
+    const { sourceCode } = context;
     const blocks = [];
+    /** Animated colours, by driver: where each stop of a fill and a foreground lands. */
+    const animated = new Map();
+
+    const reportPair = (node, token, fill) => {
+      if (!token || !fill || !/^on[A-Z]/.test(token)) return;
+      const itsFill = fillOfOnToken(token);
+      if (itsFill === fill) return;
+      context.report({
+        node,
+        messageId: 'onTokenNotNamingItsFill',
+        data: {
+          token,
+          itsFill,
+          fill,
+          expected: fill.slice(0, 1).toUpperCase() + fill.slice(1),
+        },
+      });
+    };
 
     return {
       'CallExpression[callee.property.name="create"][callee.object.name="StyleSheet"]'(
@@ -60,12 +118,30 @@ module.exports = {
         const object =
           argument?.type === 'ObjectExpression'
             ? argument
-            : argument?.type === 'ArrowFunctionExpression' &&
-              argument.body.type === 'ObjectExpression'
-            ? argument.body
-            : undefined;
+            : returnedObject(argument);
         for (const property of object?.properties ?? []) {
           if (property.type === 'Property') blocks.push(property.value);
+        }
+      },
+
+      // A style animated between colours: each stop of its foreground sits on
+      // the fill at the same stop, in its own block or in another driven alike.
+      'CallExpression[callee.name="useAnimatedStyle"]'(node) {
+        const object = returnedObject(node.arguments[0]);
+        if (!object) return;
+        for (const role of ['backgroundColor', 'color']) {
+          const property = propertyNamed(object, role);
+          const animation = interpolation(property?.value, sourceCode);
+          if (!animation) continue;
+          const entry = animated.get(animation.driver) ?? {
+            fills: [],
+            foregrounds: [],
+          };
+          entry[role === 'color' ? 'foregrounds' : 'fills'].push({
+            property,
+            stops: animation.stops,
+          });
+          animated.set(animation.driver, entry);
         }
       },
 
@@ -75,37 +151,50 @@ module.exports = {
           const name = themeColor(background?.value);
           return name && FILL_NAMES.has(name) ? name : undefined;
         };
-        const paintsAFill = blocks.some(fillOf);
+        const paintsAFill =
+          blocks.some(fillOf) ||
+          [...animated.values()].some(entry =>
+            entry.fills.some(fill =>
+              fill.stops.some(stop => FILL_NAMES.has(themeColor(stop))),
+            ),
+          );
 
         for (const block of blocks) {
           const color = propertyNamed(block, 'color');
           if (!color) continue;
 
-          if (
-            paintsAFill &&
-            color.value.type === 'Literal' &&
-            typeof color.value.value === 'string' &&
-            WHITE.test(color.value.value.trim())
-          ) {
+          if (paintsAFill && isWhite(color.value)) {
             context.report({ node: color, messageId: 'hardcodedWhite' });
             continue;
           }
 
-          const token = themeColor(color.value);
-          const fill = fillOf(block);
-          if (!token || !fill || !/^on[A-Z]/.test(token)) continue;
-          const itsFill = fillOfOnToken(token);
-          if (itsFill === fill) continue;
-          context.report({
-            node: color,
-            messageId: 'onTokenNotNamingItsFill',
-            data: {
-              token,
-              itsFill,
-              fill,
-              expected: fill.slice(0, 1).toUpperCase() + fill.slice(1),
-            },
-          });
+          reportPair(color, themeColor(color.value), fillOf(block));
+        }
+
+        for (const { fills, foregrounds } of animated.values()) {
+          for (const foreground of foregrounds) {
+            const reported = foreground.stops.some(stop => {
+              if (paintsAFill && isWhite(stop)) {
+                context.report({
+                  node: foreground.property,
+                  messageId: 'hardcodedWhite',
+                });
+                return true;
+              }
+              return false;
+            });
+            if (reported) continue;
+
+            for (const fill of fills) {
+              foreground.stops.forEach((stop, index) =>
+                reportPair(
+                  foreground.property,
+                  themeColor(stop),
+                  themeColor(fill.stops[index]),
+                ),
+              );
+            }
+          }
         }
       },
     };

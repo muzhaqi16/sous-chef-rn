@@ -9,6 +9,8 @@ Text on a fill reads that fill's own `on*` token.
 
 Fills checked: `primary`, `danger`, `error`, `success`, `warning`, `info`.
 
+An animated colour counts as each of its stops. In a `useAnimatedStyle`, a foreground `interpolateColor` stop sits on the fill at the same stop, whether the fill is in its own style or in another driven by the same progress and input range (`Chip`'s container and label).
+
 ## Why
 
 The foreground follows the fill's luminance, and the fill is user-overridable — so a hardcoded white is wrong for four of the seven pickable brand colours. There is no `colors.white`; text over a ground the theme does not paint (a photo, a camera preview, a dark scrim) reads `onScrim`.
