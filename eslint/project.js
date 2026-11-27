@@ -710,11 +710,8 @@ const overrides = [
     },
   },
   {
-    // The navigation wrappers are the one place that reaches the raw hook.
-    files: [
-      'src/hooks/navigation/useAppNavigation.ts',
-      'src/features/onboarding/hooks/useOnboardingNavigation.ts',
-    ],
+    // The navigation wrapper is the one place that reaches the raw hook.
+    files: ['src/hooks/navigation/useAppNavigation.ts'],
     rules: {
       'no-restricted-imports': restrictedImports({
         allow: { '@react-navigation/native': ['useNavigation'] },

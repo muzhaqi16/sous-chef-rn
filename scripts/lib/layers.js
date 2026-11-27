@@ -131,9 +131,7 @@ const LAYERS = [
   {
     name: 'hooks (UI and device)',
     layer: 'mobile',
-    patterns: [
-      'src/hooks/{ui,animations,navigation,permissions,performance,device}/**',
-    ],
+    patterns: ['src/hooks/{ui,animations,navigation,performance,device}/**'],
   },
   {
     name: 'theme runtime',

@@ -85,7 +85,7 @@ react-native-web, is [`web-host-decision.md`](web-host-decision.md).
 | features/declarations | core   | `features/*/{manifest.static,types,pushCopy}.ts`, `features/{registry.static,registry.cache,registry.data,registry.feed,staticTypes}.ts` |
 | app shell             | mobile | `{app,assets,components,constants,context,native,navigation,screens,styles}/**`                                                          |
 | services (device)     | mobile | `services/{push,permissions,haptic,notifications,performance,biometric,device}/**`, `services/NavigationService.ts`                      |
-| hooks (UI and device) | mobile | `hooks/{ui,animations,navigation,permissions,performance,device}/**`                                                                     |
+| hooks (UI and device) | mobile | `hooks/{ui,animations,navigation,performance,device}/**`                                                                                 |
 | theme runtime         | mobile | `theme/*.ts`                                                                                                                             |
 | features (UI)         | mobile | `features/*/{screens,components,ui,context}/**`, `features/*/{manifest,testIDs}.ts`, `features/{registry,types}.ts`                      |
 
