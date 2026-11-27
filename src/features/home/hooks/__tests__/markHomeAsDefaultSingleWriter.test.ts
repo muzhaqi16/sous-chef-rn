@@ -28,11 +28,28 @@ const walk = (dir: string, out: string[] = []): string[] => {
 
 describe('MarkHomeAsDefault', () => {
   it('is fired from useMarkHomeAsDefault and nowhere else', () => {
-    const callers = walk(SRC).filter(file =>
-      /(useMutation|useLocalWrite)\(\s*MarkHomeAsDefaultDocument/.test(
-        fs.readFileSync(file, 'utf8'),
-      ),
+    const sources = walk(SRC).map(file => ({
+      file,
+      text: fs.readFileSync(file, 'utf8'),
+    }));
+    // A local write sends its document through the binding made for it.
+    const bindings = sources.flatMap(({ text }) =>
+      [
+        ...text.matchAll(
+          /const (\w+) = bindLocalWrite\(\s*MarkHomeAsDefaultDocument\b/g,
+        ),
+      ].map(([, name = '']) => name),
     );
+    expect(bindings.length).toBeGreaterThan(0);
+
+    const sends = new RegExp(
+      `useMutation\\(\\s*MarkHomeAsDefaultDocument\\b|useLocalWrite\\(\\s*(${bindings.join(
+        '|',
+      )})\\b`,
+    );
+    const callers = sources
+      .filter(({ text }) => sends.test(text))
+      .map(({ file }) => file);
 
     expect(callers.map(file => path.relative(SRC, file))).toEqual([
       path.join('features', 'home', 'hooks', 'useMarkHomeAsDefault.ts'),

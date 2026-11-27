@@ -24,7 +24,15 @@ const { CORE_EXTERNALS, LAYERS } = require('../scripts/lib/layers');
 const BOUNDARY_ELEMENTS = [
   {
     type: 'feature-private',
-    pattern: 'src/features/*/(context|utils|components|cache)/**',
+    pattern: 'src/features/*/(context|utils|components)/**',
+    capture: ['featureName'],
+    partialMatch: false,
+  },
+  // A feature's cache policies and writers: private like the rest, but the
+  // cache registry reads every feature's policies.
+  {
+    type: 'feature-cache',
+    pattern: 'src/features/*/cache/**',
     capture: ['featureName'],
     partialMatch: false,
   },
@@ -89,6 +97,7 @@ const REGISTRY_FILES = [{ category: 'registry', pattern: 'src/features/*.ts' }];
 
 const FEATURE_INTERNALS = [
   'feature-private',
+  'feature-cache',
   'feature-queue',
   'feature-graphql',
 ];
@@ -115,7 +124,9 @@ const BOUNDARY_POLICIES = [
   {
     from: { element: { types: { anyOf: ['shared', 'root'] } } },
     disallow: {
-      to: { element: { type: 'feature-private' } },
+      to: {
+        element: { types: { anyOf: ['feature-private', 'feature-cache'] } },
+      },
       dependency: { kind: 'value' },
     },
     message:
@@ -137,6 +148,20 @@ const BOUNDARY_POLICIES = [
     },
     message:
       "A registry lists each feature by its manifest; it does not reach into {{ to.element.captured.featureName }}'s internals. Expose what it needs through the feature's manifest.",
+  },
+  {
+    from: {
+      file: {
+        categories: 'registry',
+        path: '!src/features/registry.cache.ts',
+      },
+    },
+    disallow: {
+      to: { element: { type: 'feature-cache' } },
+      dependency: { kind: 'value' },
+    },
+    message:
+      "Only the cache registry reads {{ to.element.captured.featureName }}'s cache policies. Another registry lists the feature by its manifest.",
   },
   // A type counts: a feature's fragment type ties the logic to that feature.
   {

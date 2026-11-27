@@ -134,6 +134,19 @@ const CASES: Case[] = [
     blocked: true,
   },
 
+  {
+    label: "the cache registry reading a feature's cache policies",
+    filePath: 'src/features/registry.cache.ts',
+    code: `import { x } from './pantry/cache/typePolicies';\n${VALUE_USE}`,
+    blocked: false,
+  },
+  {
+    label: "another registry reading a feature's cache",
+    filePath: 'src/features/registry.static.ts',
+    code: `import { x } from './pantry/cache/typePolicies';\n${VALUE_USE}`,
+    blocked: true,
+  },
+
   // ── One door per internal ──
   {
     label: "React Native's TextInput outside the themed atom",
