@@ -227,7 +227,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
         <SectionHeader variant="overline">
           {t('mealPlanSettings.actionsLabel')}
         </SectionHeader>
-        <View style={styles.actionsCard}>
+        <View>
           {permissions.canSaveAsTemplate ? (
             <>
               <ActionItem
@@ -239,7 +239,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
                   onSaveAsTemplate();
                 }}
               />
-              <Divider style={styles.dividerGap} />
+              <Divider />
             </>
           ) : null}
           {permissions.canDuplicate ? (
@@ -253,7 +253,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
                   onDuplicate();
                 }}
               />
-              <Divider style={styles.dividerGap} />
+              <Divider />
             </>
           ) : null}
           <ActionItem
@@ -268,7 +268,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           />
           {!!dietaryProfile && (
             <>
-              <Divider style={styles.dividerGap} />
+              <Divider />
               <ActionItem
                 icon="fitness-outline"
                 label={
@@ -300,7 +300,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           <SectionHeader variant="overline">
             {t('mealPlanSettings.generatedLists')}
           </SectionHeader>
-          <View style={styles.actionsCard}>
+          <View>
             {generatedLists.map(list => (
               <View key={list.id} style={styles.listRow}>
                 <Icon name="list-outline" size="xsPlus" tone="textSecondary" />
@@ -319,7 +319,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           <SectionHeader variant="overline">
             {t('labels.dangerZone')}
           </SectionHeader>
-          <View style={styles.actionsCard}>
+          <View>
             <ActionItem
               icon="trash-outline"
               label={
@@ -348,10 +348,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.lg,
   },
   planInfo: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.xs,
   },
   planDate: {
@@ -360,27 +357,14 @@ const styles = StyleSheet.create(theme => ({
   section: {
     gap: theme.spacing.sm,
   },
-  actionsCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-  },
-  dividerGap: {
-    marginHorizontal: theme.spacing.md,
-  },
   nutritionContainer: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
   },
   listName: {
     flex: 1,
@@ -392,7 +376,6 @@ const actionStyles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.md,
   },
   content: {

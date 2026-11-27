@@ -325,10 +325,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     width: '48%',
-    padding: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.surface,
+    paddingVertical: theme.spacing.sm,
   },
   checkboxText: {
     marginLeft: theme.spacing.sm,

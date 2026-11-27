@@ -350,10 +350,6 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     marginBottom: theme.spacing.xl,
     paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
   },
   toggleInfo: {
     flex: 1,

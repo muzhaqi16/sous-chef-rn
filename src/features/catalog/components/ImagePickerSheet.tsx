@@ -78,10 +78,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.surface,
     gap: theme.spacing.md,
   },
   iconContainer: {

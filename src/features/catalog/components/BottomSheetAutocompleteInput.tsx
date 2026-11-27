@@ -357,7 +357,6 @@ const styles = StyleSheet.create(theme => ({
   },
   listContent: {
     paddingBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
   },
   bottomSheetInput: {
     ...singleLineInputStyle(theme),
@@ -375,11 +374,10 @@ const styles = StyleSheet.create(theme => ({
   },
   messageContainer: {
     flex: 1,
-    padding: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
   },
   emptyMessageInset: {
     marginBottom: theme.spacing.sm,

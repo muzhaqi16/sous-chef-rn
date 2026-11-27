@@ -403,6 +403,47 @@ describe('the page gutter has one author per page', () => {
       expect(sheetSideInsets(planted)).toEqual(['content']);
     });
 
+    /**
+     * A sheet is `surface`: a card filled with it and drawing no edge cannot be
+     * seen, and its padding reads as content set in off the gutter.
+     */
+    const unseenCards = (src: string): string[] =>
+      [...src.matchAll(/\n {2}(\w+): \{([\s\S]*?)\n {2}\}/g)]
+        .filter(
+          ([, , body = '']) =>
+            /backgroundColor: theme\.colors\.surface,/.test(body) &&
+            !/\bborder(Width|Color)\b/.test(body),
+        )
+        .map(([, name = '']) => name);
+
+    it('catches a card the sheet hides', () => {
+      const planted = [
+        '<Sheet mode="action">',
+        'const styles = StyleSheet.create(theme => ({',
+        '  card: {',
+        '    backgroundColor: theme.colors.surface,',
+        '    padding: theme.spacing.md,',
+        '  },',
+        '  field: {',
+        '    backgroundColor: theme.colors.surface,',
+        '    borderWidth: theme.borderWidth.hairline,',
+        '  },',
+        '}));',
+      ].join('\n');
+
+      expect(unseenCards(planted)).toEqual(['card']);
+    });
+
+    it('fills nothing with the sheet’s own colour in any host', () => {
+      const unseen = sources
+        .filter(f => f.endsWith('.tsx') && !f.includes('__tests__'))
+        .filter(f => /<Sheet\b/.test(readFileSync(f, 'utf8')))
+        .filter(f => unseenCards(readFileSync(f, 'utf8')).length > 0)
+        .sort();
+
+      expect(unseen).toEqual([]);
+    });
+
     it('leaves the sides to the sheet in every host', () => {
       const padded = sources
         .filter(f => f.endsWith('.tsx') && !f.includes('__tests__'))

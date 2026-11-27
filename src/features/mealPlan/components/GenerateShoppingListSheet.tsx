@@ -327,10 +327,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
   },
   toggleInfo: {
     flex: 1,
@@ -369,16 +365,18 @@ const styles = StyleSheet.create(theme => ({
   modeTextActive: {
     color: theme.colors.onPrimary,
   },
+  // A card only once chosen: the border is there at rest, so choosing one
+  // recolours it rather than moving the row.
   listItem: {
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: theme.colors.transparent,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     gap: theme.spacing.sm,
   },
   listItemSelected: {
-    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.primary,
   },
   listItemContent: {

@@ -224,10 +224,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
   },
   currentInfo: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   currentLabel: {
     marginBottom: theme.spacing.xs,
@@ -239,10 +236,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    padding: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
   },
   dateDisplay: {
     alignItems: 'center',
@@ -255,10 +249,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
+    paddingVertical: theme.spacing.md,
   },
   infoText: {
     flex: 1,
