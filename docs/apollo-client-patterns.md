@@ -28,7 +28,7 @@ A screen, sheet or list cell gets its data from a hook in its feature's `hooks/`
 or from one beside it when the query is that UI's own: a display query spreads
 the fragments its screen's components own, so the query and the hook that runs
 it live with that screen (`COLOCATED_DATA_HOOKS` in `eslint/boundaries.js`).
-What renders does not import `#/apollo/*` or `@apollo/client`'s operation hooks,
+What renders does not import `#apollo/*` or `@apollo/client`'s operation hooks,
 hold the client, or write the cache; an `import/no-restricted-paths` zone in
 `eslint/` bans the `src/apollo/**` import everywhere but those hooks, which the
 feature-hook rules hold instead.
@@ -784,30 +784,30 @@ import { useApolloClient } from '@apollo/client';
 import {
   usePreservedConnection,
   usePreservedNodes,
-} from '#/hooks/apollo/usePreservedConnection';
-import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
+} from '#hooks/apollo/usePreservedConnection';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 
 // A list of masked refs, read live
-import { useFragmentList } from '#/hooks/apollo/useFragmentList';
+import { useFragmentList } from '#hooks/apollo/useFragmentList';
 
 // A query that must not run yet
 import { skipToken } from '@apollo/client/react';
 
 // A local-first write and its client-minted id
-import { useLocalWrite } from '#/apollo/pendingWrites/useLocalWrite';
-import { generateEntityId } from '#/utils/generateEntityId';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { generateEntityId } from '#utils/generateEntityId';
 
 // An online-only write's outcome (a local-first send settles itself)
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
 
 // Fetch policies — the global watchQuery defaults already cover most cases:
 // fetchPolicy: 'cache-and-network', nextFetchPolicy: 'cache-first', errorPolicy: 'all'
 // (see src/apollo/client.ts). Override per-query only when needed.
 
 // Subscriptions
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { CacheStrategy } from '#/services/subscriptions/types';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
+import { CacheStrategy } from '#services/subscriptions/types';
 ```
 
 ### Common Mistakes to Avoid
@@ -1114,7 +1114,7 @@ A document bound to `entityFields` (`src/apollo/pendingWrites/`) sends a field e
 **Example Usage:**
 
 ```typescript
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { createAddToParentConnectionUpdater } from '#apollo/utils/cacheUpdaters';
 
 const addToPantryItemsCache = createAddToParentConnectionUpdater<PantryItem>(
   'Pantry',

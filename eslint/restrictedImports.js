@@ -13,18 +13,12 @@ const RESTRICTED_IMPORT_PATHS = [
     name: '#store/deviceStorage',
     message: MMKV_MESSAGE,
   },
-  {
-    name: '#/store/deviceStorage',
-    message: MMKV_MESSAGE,
-  },
   // The raw MMKV instance and its adapter: only the composition root installs
   // them, as the key-value store port that `#store/deviceStorage` reads.
-  ...[
-    '#native/storage/mmkv',
-    '#/native/storage/mmkv',
-    '#native/storage/keyValueStore',
-    '#/native/storage/keyValueStore',
-  ].map(name => ({ name, message: MMKV_MESSAGE })),
+  ...['#native/storage/mmkv', '#native/storage/keyValueStore'].map(name => ({
+    name,
+    message: MMKV_MESSAGE,
+  })),
   // The raw scroller gives a sheet the keyboard offset but NOT the input
   // context, so its inputs resolve to React Native's `TextInput`. Only the
   // wrapper itself may import it (allowed in its own override).
@@ -60,7 +54,7 @@ const RESTRICTED_IMPORT_PATHS = [
   {
     name: 'react-i18next',
     message:
-      "Import from '#/i18n' instead — it is the single entry point for translation, and it pins the namespace so call sites cannot drift onto a second one. `const { t } = useTranslation()` in components and hooks; `import { t }` at module scope. Only src/i18n's own entry files may reach for react-i18next directly (exempted in this config).",
+      "Import from '#i18n' instead — it is the single entry point for translation, and it pins the namespace so call sites cannot drift onto a second one. `const { t } = useTranslation()` in components and hooks; `import { t }` at module scope. Only src/i18n's own entry files may reach for react-i18next directly (exempted in this config).",
   },
   {
     name: '@gorhom/bottom-sheet',
@@ -76,7 +70,7 @@ const RESTRICTED_IMPORT_PATHS = [
   {
     name: 'fraction.js',
     message:
-      'Use formatQuantityForDisplay / formatQuantityAsFraction from \'#/utils/formatQuantity\'. A second fraction table decides its own denominators and precision, so the same 1/3 cup reads as "0.33" on one screen and "0.33333334" on the next.',
+      'Use formatQuantityForDisplay / formatQuantityAsFraction from \'#utils/formatQuantity\'. A second fraction table decides its own denominators and precision, so the same 1/3 cup reads as "0.33" on one screen and "0.33333334" on the next.',
   },
   {
     name: 'date-fns',
@@ -90,7 +84,7 @@ const RESTRICTED_IMPORT_PATHS = [
       'lightFormat',
     ],
     message:
-      "Use the shared formatters in '#/utils/formatters/date' or '#/utils/dateUtils'. A direct format() call takes no locale, so the date stays English after a language change.",
+      "Use the shared formatters in '#utils/formatters/date' or '#utils/dateUtils'. A direct format() call takes no locale, so the date stays English after a language change.",
   },
   {
     name: 'react-native-turbo-image',
@@ -120,12 +114,12 @@ const RESTRICTED_IMPORT_PATHS = [
     message:
       "Use `useAnimatedTheme` from '#hooks/ui/useAnimatedTheme'. Unistyles' own drops its listener while a paused screen is hidden and re-subscribes without re-reading the theme, so a screen revealed after a theme change keeps animating in the old one. See docs/verified-library-behaviour.md § Unistyles' useAnimatedTheme misses a theme change made while its screen is paused.",
   },
-  ...['#i18n/config', '#/i18n/config'].map(name => ({
-    name,
+  {
+    name: '#i18n/config',
     importNames: ['getI18n'],
     message:
       "Translate through `t` from '#i18n' (aliased `tGlobal` in a .tsx), or `useTranslation()` in a component. The module-scope `t` IS `getI18n().t` with the fallback and options overloads in front of it, so reaching the instance loses the fallback form and bypasses the entry point that pins the namespace. Reaching it for something other than translating — changing the language, reading the current one — belongs in src/i18n or the store, which are exempt.",
-  })),
+  },
   {
     name: '#hooks/ui/useBottomSheetBackdropClaim',
     message:

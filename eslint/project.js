@@ -596,11 +596,9 @@ const overrides = [
         allow: {
           'react-native': ['TextInput', 'ActivityIndicator'],
           '#i18n/config': ['getI18n'],
-          '#/i18n/config': ['getI18n'],
           'react-native-permissions': true,
           'react-native-turbo-image': true,
           '#store/deviceStorage': true,
-          '#/store/deviceStorage': true,
           'date-fns': true,
           'fraction.js': true,
         },
@@ -608,7 +606,7 @@ const overrides = [
     },
   },
   {
-    // The two files that DEFINE the '#/i18n' entry point.
+    // The two files that DEFINE the '#i18n' entry point.
     files: ['src/i18n/index.ts', 'src/i18n/config.ts'],
     rules: {
       'no-restricted-imports': 'off',
@@ -776,11 +774,6 @@ const overrides = [
             message:
               'An atom or molecule takes state as props; it does not read the store. If it genuinely needs application state it is an organism — move it to src/components/organisms/.',
           },
-          {
-            name: '#/store/useAppStore',
-            message:
-              'An atom or molecule takes state as props; it does not read the store. If it genuinely needs application state it is an organism — move it to src/components/organisms/.',
-          },
         ],
       }),
     },
@@ -797,7 +790,7 @@ const overrides = [
     ignores: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-imports': restrictedImports({
-        allow: { '#store/deviceStorage': true, '#/store/deviceStorage': true },
+        allow: { '#store/deviceStorage': true },
       }),
     },
   },
@@ -896,7 +889,7 @@ const overrides = [
       ],
       '@typescript-eslint/no-unsafe-enum-comparison': 'error',
       '@typescript-eslint/no-base-to-string': 'error',
-      // A blank string falls back through `firstNonBlank` (#/utils/firstNonBlank),
+      // A blank string falls back through `firstNonBlank` (#utils/firstNonBlank),
       // never `||`, which also swallows `0` and `false`.
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
       'sous-chef/no-error-message-branching': 'error',

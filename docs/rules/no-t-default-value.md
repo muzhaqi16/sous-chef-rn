@@ -15,7 +15,7 @@ Declare the key in the owning feature's `en.json` (and `es` / `it` / `sq`) and c
 
 ## Why
 
-A fallback renders only when the key is missing, so it is English in every locale exactly when something is wrong, and it hides that the key is missing from `check-i18n` and review. With typed keys (`TranslationKey`) a missing key is a compile error, so the fallback is dead or wrong. `TranslateFn` and the module-level `t` in `#/i18n` take no fallback.
+A fallback renders only when the key is missing, so it is English in every locale exactly when something is wrong, and it hides that the key is missing from `check-i18n` and review. With typed keys (`TranslationKey`) a missing key is a compile error, so the fallback is dead or wrong. `TranslateFn` and the module-level `t` in `#i18n` take no fallback.
 
 ## Exempt
 

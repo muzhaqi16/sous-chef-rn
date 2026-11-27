@@ -54,7 +54,7 @@ npm run genenv
 
 The generated `RAW_ENV` is typed as the core's `Env` (`src/platform/ports.ts`),
 so a key added to the generator's `KEYS` also needs its field there. The app
-reads it through `env` from `#/config/env`, which the mobile host fills from
+reads it through `env` from `#config/env`, which the mobile host fills from
 this file at startup.
 
 ---
@@ -399,7 +399,7 @@ as no-op spies).
 
 ```ts
 // ✅ Override per-suite via mockReturnValue — do not replace the whole module
-import { Environment } from '#/utils/environment';
+import { Environment } from '#utils/environment';
 beforeEach(() => {
   (Environment.isDevelopment as jest.Mock).mockReturnValue(false);
   (Environment.getApiConfig as jest.Mock).mockReturnValue({
@@ -410,14 +410,14 @@ beforeEach(() => {
 
 ```ts
 // ✅ For the rare suite that tests the real Environment class itself
-jest.unmock('#/utils/environment');
+jest.unmock('#utils/environment');
 import { Environment } from '../environment';
 ```
 
 ```ts
 // ❌ Don't — a partial factory defeats the shared mock and reintroduces
 //    per-test "missing method" fragility:
-jest.mock('#/utils/environment', () => ({
+jest.mock('#utils/environment', () => ({
   Environment: { isDevelopment: jest.fn() }, // missing all other methods
 }));
 ```
@@ -547,7 +547,7 @@ that IS the canonical mechanism as its only exemption:
 | Banned import                         | Use instead                                                                                       | Exempt                                                                                 |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | `useNavigation` from React Navigation | `useAppNavigation`, whose `navigation` field is the escape hatch for `dispatch` and `addListener` | the two navigation wrappers                                                            |
-| `getI18n` from `#/i18n/config`        | `t` from `#/i18n` (`tGlobal` in a `.tsx`), or `useTranslation()`                                  | `src/i18n`, and the four modules that need the instance to read or change the language |
+| `getI18n` from `#i18n/config`         | `t` from `#i18n` (`tGlobal` in a `.tsx`), or `useTranslation()`                                   | `src/i18n`, and the four modules that need the instance to read or change the language |
 | RN `ActivityIndicator`                | a themed spinner from `themedComponents`                                                          | `themedComponents`, and `Loading` for its caller-supplied colour                       |
 | `react-native-permissions`            | `PermissionService`                                                                               | the service                                                                            |
 | `react-native-turbo-image`            | `CachedImage`                                                                                     | `CachedImage`, and `RecipeHeroImage` for its shared-transition wrapper                 |

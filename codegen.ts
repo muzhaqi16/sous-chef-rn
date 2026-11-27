@@ -40,7 +40,7 @@ const SCALARS = {
   CurrencyCode: 'string',
   // Mapped to global ambient types declared in src/types/graphqlScalars.d.ts.
   // Referenced by bare name — no import — because the `module#Type` import
-  // syntax collides with the project's `#/` path alias. JSON uses the
+  // syntax collides with the project's `#` path aliases. JSON uses the
   // input/output split (like FlexibleQuantity below): reads get the narrow,
   // indexable `JsonValue`; writes get the permissive `JsonInput`.
   JSON: { input: 'JsonInput', output: 'JsonValue' },

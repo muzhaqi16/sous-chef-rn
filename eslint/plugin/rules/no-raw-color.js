@@ -26,7 +26,7 @@ module.exports = {
     schema: [],
     messages: {
       rawColor:
-        "A raw colour ignores the colour scheme and the user's accent override. Read a token (`theme.colors.*` in a stylesheet, `colors.*` from `#/theme/foundations/colors` elsewhere), or add one under `src/theme/`.",
+        "A raw colour ignores the colour scheme and the user's accent override. Read a token (`theme.colors.*` in a stylesheet, `colors.*` from `#theme/foundations/colors` elsewhere), or add one under `src/theme/`.",
     },
   },
   create(context) {

@@ -9,7 +9,7 @@ A `<Text>` outside the kit names its typography role; error copy everywhere is `
 - `errorRoleNeedsErrorTone` — `role="error"` pairs with `tone="error"`: the role carries only size and weight, so without the tone the error line renders in the default text colour.
 - `errorColourInStyle` — Give the error colour through `tone`, not a style: `<Text role="error" tone="error">` for error copy, `tone="danger"` for a destructive label or a negative status.
 
-Matched: a JSX element whose name is the local binding of the `Text` atom (`#components/atoms/Text`, `#/components/atoms/Text`, or a relative path to it).
+Matched: a JSX element whose name is the local binding of the `Text` atom (`#components/atoms/Text` or a relative path to it).
 
 - `missingRole`: no `role` attribute and no spread attribute.
 - The pairing: the string literals `tone` and `role` can take (a literal, or the literal branches of a `?:`, `||` or `??`) — a `tone` that can be `'error'` needs a `role` that can be `'error'`, and the reverse. A spread attribute, or a non-literal on the side that must answer, skips the check.

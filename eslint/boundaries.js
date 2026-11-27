@@ -241,7 +241,7 @@ const CORE_RESTRICTED_GLOBALS = [
   // React Native and most browsers have them; Safari and node do not.
   ...restrictedGlobals(
     ['requestIdleCallback', 'cancelIdleCallback'],
-    'Safari and node have no idle callbacks. Use `scheduleIdle` from #/utils/scheduleIdle.',
+    'Safari and node have no idle callbacks. Use `scheduleIdle` from #utils/scheduleIdle.',
   ),
   // Node's own globals, which React Native does not have.
   ...restrictedGlobals(

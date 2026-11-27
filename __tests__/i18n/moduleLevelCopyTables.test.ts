@@ -95,7 +95,7 @@ const PROSE = /^[A-Z][a-z]+(?:[ /][A-Za-z0-9&'’,.!?-]+)+$/;
  * `useTranslation()` binding doesn't exist there. Requiring this import is what
  * separates the real bug from the `title: t(…)` lines inside component bodies.
  */
-const MODULE_T = new Set(['#i18n/t', '#/i18n/t']);
+const MODULE_T = new Set(['#i18n/t']);
 
 /**
  * Copy-carrying properties under each module-level `const`. `intoFunctions`

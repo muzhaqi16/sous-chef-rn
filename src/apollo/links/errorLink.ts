@@ -23,7 +23,7 @@ import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 import { logger } from '#utils/environment';
 import { useStore } from '#store';
 
-// What a refresh can clear is #/utils/authErrorCodes: this link, the refresh
+// What a refresh can clear is #utils/authErrorCodes: this link, the refresh
 // path and the offline queue classify from that one list, by code only.
 
 // FORBIDDEN is a missing permission, not an auth fault: no refresh can grant

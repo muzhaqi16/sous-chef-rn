@@ -107,8 +107,8 @@ Map and reasoning: `docs/architecture.md`.
   its feature works as before, so it plugs in through an optional prop or a
   selector hook, never a branch inside existing code — `docs/architecture.md`.
 - **Aliases** are added ONLY in `tsconfig.json` `paths`. Each top-level `src/`
-  folder is `#<name>`; irregular: `#/*` → `src/*`, `#operations`,
-  `#generated`, `#/test-utils/*` → `__tests__/helpers/*`.
+  folder is `#<name>`; irregular: `#operations`, `#generated`,
+  `#/test-utils/*` → `__tests__/helpers/*`.
 - **A `src/` module or export needs a PRODUCTION importer** (`check:dead-modules`):
   a test or `jest.mock()` does not count, so dead code goes with its test; a
   deliberate test seam is tagged `@internal`.

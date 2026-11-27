@@ -5,9 +5,5 @@ testRule('no-module-level-t', {
     'import { t as tGlobal } from "#i18n";',
     'import { useTranslation } from "#i18n";',
   ],
-  invalid: [
-    { code: 'import { t } from "#i18n";', errors: ['moduleLevelT'] },
-    // The `#/` spelling still resolves, so it is caught too.
-    { code: 'import { t } from "#/i18n";', errors: ['moduleLevelT'] },
-  ],
+  invalid: [{ code: 'import { t } from "#i18n";', errors: ['moduleLevelT'] }],
 });

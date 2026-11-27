@@ -1,7 +1,7 @@
 const path = require('node:path');
 const { sheetNameOf } = require('../variantSheets');
 
-const ALIASES = new Set(['#components/atoms/Text', '#/components/atoms/Text']);
+const ALIASES = new Set(['#components/atoms/Text']);
 
 const isTextAtom = (source, filename) => {
   if (ALIASES.has(source)) return true;

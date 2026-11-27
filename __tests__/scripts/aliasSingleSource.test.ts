@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { sync as glob } from 'glob';
 
 /**
  * `tsconfig.json` is the single source for module aliases.
@@ -37,5 +38,38 @@ describe('module aliases have one source', () => {
       .map(entry => entry.name);
 
     expect(folders.filter(folder => !targets.has(folder))).toEqual([]);
+  });
+
+  // `#/x` reached src beside `#x`, so a ban written for one spelling missed
+  // the other. Only the test helpers keep the slash.
+  it('reaches src by one spelling', () => {
+    const slashed = Object.keys(tsconfigPaths()).filter(
+      alias => alias.startsWith('#/') && !alias.startsWith('#/test-utils'),
+    );
+
+    expect(slashed).toEqual([]);
+  });
+
+  /** A `#/` module path outside the test helpers: it resolves to nothing. */
+  const SLASHED_PATH = /#\/(?!test-utils)[a-z]/;
+
+  it('sees a slashed path, and not the test helpers', () => {
+    expect(SLASHED_PATH.test("from '#/utils/formatQuantity'")).toBe(true);
+    expect(SLASHED_PATH.test("from '#/test-utils/render'")).toBe(false);
+  });
+
+  it('is the spelling every lint message and doc gives', () => {
+    const files = glob('{eslint/**/*.js,docs/**/*.md,CLAUDE.md}', {
+      cwd: ROOT,
+      ignore: ['docs/audits/**'],
+    });
+
+    const slashed = files
+      .filter(file =>
+        SLASHED_PATH.test(fs.readFileSync(path.join(ROOT, file), 'utf8')),
+      )
+      .sort();
+
+    expect(slashed).toEqual([]);
   });
 });

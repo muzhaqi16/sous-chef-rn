@@ -16,7 +16,7 @@ useSubscriptionTransportRecovery(PantryEventsDocument, pantryEvents, skip);
 subscriptionService.register({ document: PantryEventsDocument, … });
 ```
 
-Where only the name will do (a link comparing `operation.operationName`), derive it: `operationNameOf(RefreshTokenDocument)` from `#/apollo/utils/documentOperation`.
+Where only the name will do (a link comparing `operation.operationName`), derive it: `operationNameOf(RefreshTokenDocument)` from `#apollo/utils/documentOperation`.
 
 ## Why
 
