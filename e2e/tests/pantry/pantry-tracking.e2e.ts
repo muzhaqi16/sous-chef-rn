@@ -16,6 +16,7 @@ import { launchAppWithFabricWorkaround } from '../../init';
 import { generateItemName } from '../../helpers/data';
 import {
   retry,
+  returnFromField,
   waitForModalClosed,
   waitForModalReady,
 } from '../../helpers/waitFor';
@@ -113,7 +114,10 @@ describe('Pantry tracking', () => {
     await element(by.id(pantryTestIDs.consumeQuantity)).replaceText('2');
     // The field lets go first, as a household's return key does: Detox's tap
     // on the bar's Confirm does nothing while the field still holds focus.
-    await element(by.id(pantryTestIDs.consumeQuantity)).tapReturnKey();
+    await returnFromField(
+      element(by.id(pantryTestIDs.consumeQuantity)),
+      element(by.id(pantryTestIDs.actionConfirm)),
+    );
     await element(by.id(pantryTestIDs.actionConfirm)).tap();
     await waitForModalClosed(pantryTestIDs.actionConfirm, WAIT);
 
@@ -139,7 +143,10 @@ describe('Pantry tracking', () => {
     // A carton is used in what it holds: fl oz is offered, so only the amount
     // is typed.
     await element(by.id(pantryTestIDs.consumeQuantity)).replaceText('8');
-    await element(by.id(pantryTestIDs.consumeQuantity)).tapReturnKey();
+    await returnFromField(
+      element(by.id(pantryTestIDs.consumeQuantity)),
+      element(by.id(pantryTestIDs.actionConfirm)),
+    );
     await element(by.id(pantryTestIDs.actionConfirm)).tap();
     await waitForModalClosed(pantryTestIDs.actionConfirm, WAIT);
 
@@ -195,7 +202,7 @@ describe('Pantry tracking', () => {
       .withTimeout(WAIT);
     const left = element(by.id(pantryTestIDs.stockCheckLeft(checked.id)));
     await left.replaceText('6');
-    await left.tapReturnKey();
+    await returnFromField(left, element(by.id(pantryTestIDs.stockCheckSave)));
     await element(by.id(pantryTestIDs.stockCheckSave)).tap();
 
     await waitFor(element(by.id(pantryTestIDs.itemQuantity(checked.id))))
@@ -267,7 +274,7 @@ describe('Pantry tracking', () => {
     await waitForModalReady(recipesTestIDs.cookConfirm, WAIT);
     const servings = element(by.id(recipesTestIDs.cookServings));
     await servings.replaceText('4');
-    await servings.tapReturnKey();
+    await returnFromField(servings, element(by.id(recipesTestIDs.cookConfirm)));
     await element(by.id(recipesTestIDs.cookConfirm)).tap();
     await waitForModalReady(recipesTestIDs.cookReviewConfirm, WAIT);
     await element(by.id(recipesTestIDs.cookReviewConfirm)).tap();

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Keyboard, type KeyboardEvent } from 'react-native';
 import { renderHook, act } from '@testing-library/react-native';
 import { NavigationContext } from '@react-navigation/native';
 import type { ParamListBase, NavigationProp } from '@react-navigation/native';
@@ -602,5 +603,39 @@ describe('useStandardBottomSheet', () => {
 
       expect(backHandlerEnabled()).toBe(false);
     });
+  });
+
+  // A touch as the keyboard leaves makes gorhom skip its restore and keep the
+  // lift: the sheet's own stop is restated once the keyboard has gone.
+  it('puts a sheet the keyboard lifted back on its stop once the keyboard hides', () => {
+    const hidden: KeyboardEvent = {
+      duration: 0,
+      easing: 'keyboard',
+      endCoordinates: { screenX: 0, screenY: 874, width: 402, height: 0 },
+    };
+    const onHide: Array<() => void> = [];
+    jest
+      .spyOn(Keyboard, 'addListener')
+      .mockImplementation((event, listener) => {
+        if (event === 'keyboardDidHide') onHide.push(() => listener(hidden));
+        return { remove: jest.fn() };
+      });
+    const snapToIndex = jest.fn();
+    const { result, rerender } = renderHook(
+      ({ visible }: { visible: boolean }) =>
+        useStandardBottomSheet({ ...defaultOptions, visible }),
+      { initialProps: { visible: false } },
+    );
+    (result.current.ref as React.RefObject<unknown>).current = {
+      present: mockPresent,
+      dismiss: mockDismiss,
+      snapToIndex,
+    };
+    rerender({ visible: true });
+
+    act(() => result.current.modalProps.onChange?.(0, 300, 0));
+    act(() => onHide.forEach(hide => hide()));
+
+    expect(snapToIndex).toHaveBeenCalledWith(0);
   });
 });

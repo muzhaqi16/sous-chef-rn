@@ -242,6 +242,31 @@ grep -n "handleOnUpdateRef.current?.()" node_modules/@gorhom/portal/src/componen
 grep -n "_providedOnDismiss()" node_modules/@gorhom/bottom-sheet/src/components/bottomSheetModal/BottomSheetModal.tsx
 ```
 
+### gorhom keeps a keyboard lift when a touch lands as the keyboard leaves
+
+**Claim:** gorhom's `interactive` keyboard behaviour lifts a sheet as a
+temporary position, and `keyboardBlurBehavior: 'restore'` puts it back when
+the keyboard hides, but only while neither the content nor the handle gesture
+is active. A touch on the sheet as the keyboard leaves skips the restore, and
+the sheet keeps the lifted position: its content clipped above an empty band,
+until something snaps it. The touch itself is lost too, landing on a view that
+moves. `useStandardBottomSheet` snaps to the stop gorhom last reported once the
+keyboard has hidden.
+
+**Verified 2026-11-26 against `@gorhom/bottom-sheet@5.2.14`** on the iPhone 17
+simulator: in Mark Cooked (55%), typing the servings, pressing return and
+tapping confirm 100 ms later left the sheet lifted with Smart Deduction cut in
+half, and the confirm's `onPress` never ran (a console probe). With the snap
+the sheet returns to 55%. The offline cook e2e failed on it three times in a
+row, after `c841b0183` gave every sheet input gorhom's input, which gorhom
+lifts.
+
+Re-check:
+
+```
+grep -n "animatedContentGestureState.value !== State.ACTIVE" node_modules/@gorhom/bottom-sheet/src/components/bottomSheet/BottomSheet.tsx
+```
+
 ### A field focused while its sheet opens is scrolled out of view
 
 **Claim:** an `autoFocus` field shows the keyboard while its sheet is still

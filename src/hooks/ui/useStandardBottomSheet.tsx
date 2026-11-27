@@ -236,14 +236,29 @@ export function useStandardBottomSheet({
     userOnChangeRef.current = userOnChange;
   });
 
+  /** The stop gorhom last settled on; a lift above it is temporary. */
+  const stopRef = useRef(-1);
   const handleChange = (
     index: number,
     position: number,
     type: SnapPointType,
   ): void => {
+    stopRef.current = index;
     handleBackdrop(index);
     userOnChangeRef.current?.(index, position, type);
   };
+
+  // A touch as the keyboard leaves makes gorhom skip its `restore` and keep the
+  // lifted position, its content clipped above an empty band. Back to the stop
+  // the sheet is on.
+  // Verified: #gorhom-keeps-a-keyboard-lift-when-a-touch-lands-as-the-keyboard-leaves
+  useEffect(() => {
+    if (!visible) return;
+    const hidden = Keyboard.addListener('keyboardDidHide', () => {
+      if (stopRef.current >= 0) ref.current?.snapToIndex(stopRef.current);
+    });
+    return () => hidden.remove();
+  }, [visible]);
 
   // Same for onAnimate, which is what fires the backdrop claim at the
   // open-animation start.
