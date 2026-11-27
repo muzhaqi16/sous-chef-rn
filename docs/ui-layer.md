@@ -571,6 +571,11 @@ they read it.
   above the keyboard, so a keyboard-aware scroll would make that room a second
   time and push the field out of view
   ([gorhom's lift and a keyboard-aware scroll both make room](verified-library-behaviour.md#gorhoms-lift-and-a-keyboard-aware-scroll-both-make-room)).
+  A taller one has one stop and `extend`, so gorhom leaves it where it is and
+  the scroll alone makes the room; a second stop would make gorhom move it,
+  locking its content below the top stop, and the scroll would overshoot by the
+  move (`formSheetHasOneStop.test.ts`). The same holds for any sheet set to
+  `extend`.
   `BottomSheetFormScrollView` is a gorhom-registered `KeyboardAwareScrollView`
   that also supplies the input context. The raw `BottomSheetKeyboardAwareScrollView` supplies the keyboard
   offset but not the input context, so its inputs would resolve to RN's; only

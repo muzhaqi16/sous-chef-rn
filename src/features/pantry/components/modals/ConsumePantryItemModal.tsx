@@ -83,7 +83,6 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       visible={visible}
       pantryItemId={pantryItemId}
       onClose={onClose}
-      snapPoints={['75%', '95%']}
       unitToggleLabel={t('consumeItem.consumeBy')}
       operation={PantryOperation.Consume}
       batch={batch}

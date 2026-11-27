@@ -69,7 +69,7 @@ export const CorrectPackageSizeModal: React.FC<
       visible={presented}
       onDismiss={onClose}
       headerFromContent
-      snapPoints={['65%', '85%']}
+      snapPoints={['65%']}
       contentContainerStyle={commonStyles.bottomSheetContent}
     >
       {opening?.payload ? (

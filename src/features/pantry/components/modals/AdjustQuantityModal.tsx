@@ -72,7 +72,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
       visible={presented}
       onDismiss={onClose}
       headerFromContent
-      snapPoints={['65%', '85%']}
+      snapPoints={['65%']}
       contentContainerStyle={commonStyles.bottomSheetContent}
     >
       {opening?.payload ? (

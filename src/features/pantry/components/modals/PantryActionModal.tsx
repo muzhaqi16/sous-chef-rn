@@ -42,7 +42,8 @@ interface PantryActionModalProps {
   /** Read as the sheet opens; the caller may clear it as the sheet closes. */
   pantryItemId: string | null;
   onClose: () => void;
-  snapPoints?: (string | number)[];
+  /** The sheet's one stop. */
+  snapPoint?: string;
   unitToggleLabel?: string;
   currentQuantityLabel?: string;
   /** Selects which unit-eligibility query runs. */
@@ -70,7 +71,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   visible,
   pantryItemId,
   onClose,
-  snapPoints = ['75%', '95%'],
+  snapPoint = '75%',
   ...frame
 }) => {
   const presented = visible && !!pantryItemId;
@@ -82,7 +83,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       headerFromContent
       visible={presented}
       onDismiss={onClose}
-      snapPoints={snapPoints}
+      snapPoints={[snapPoint]}
       style={commonStyles.bottomSheetScrollView}
       contentContainerStyle={commonStyles.bottomSheetContent}
     >
@@ -99,7 +100,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
 
 type PantryActionFrameProps = Omit<
   PantryActionModalProps,
-  'visible' | 'pantryItemId' | 'onClose' | 'snapPoints'
+  'visible' | 'pantryItemId' | 'onClose' | 'snapPoint'
 > & { pantryItemId: string };
 
 /**

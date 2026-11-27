@@ -145,7 +145,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
       headerFromContent
       visible={visible}
       onDismiss={form.onClose}
-      snapPoints={['75%', '95%']}
+      snapPoints={['75%']}
       contentContainerStyle={styles.contentContainer}
       style={styles.scrollView}
     >

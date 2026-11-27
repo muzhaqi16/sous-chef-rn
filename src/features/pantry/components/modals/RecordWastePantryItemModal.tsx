@@ -65,7 +65,7 @@ export const RecordWastePantryItemModal: React.FC<
       visible={visible}
       pantryItemId={pantryItemId}
       onClose={onClose}
-      snapPoints={['80%', '95%']}
+      snapPoint="80%"
       unitToggleLabel={t('recordWaste.wasteBy')}
       operation={PantryOperation.Waste}
       batch={batch}

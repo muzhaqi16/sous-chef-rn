@@ -131,11 +131,22 @@ export const Sheet: React.FC<SheetProps> = ({
   ...sheetOptions
 }) => {
   const closeGuard = useSheetCloseGuard();
+  // gorhom lifts a short sheet whole above the keyboard, so a keyboard-aware
+  // scroll would make that room a second time and push the field out of view.
+  // A taller form keeps its one stop and its scroll alone makes the room.
+  // Verified: #gorhoms-lift-and-a-keyboard-aware-scroll-both-make-room
+  const { height: windowHeight } = useWindowDimensions();
+  const liftedWhole =
+    tallestShare(sheetOptions.snapPoints, windowHeight) <= LIFTED_WHOLE;
   const {
     ref,
     modalProps,
     contentContainerStyle: insetStyle,
-  } = useStandardBottomSheet({ ...sheetOptions, discardGuard: closeGuard });
+  } = useStandardBottomSheet({
+    ...sheetOptions,
+    ...(mode === 'form' && !liftedWhole && { keyboardBehavior: 'extend' }),
+    discardGuard: closeGuard,
+  });
   const headerStore = useSheetHeaderStore();
   const header = headerFromContent ? (
     <SheetHeaderOutlet store={headerStore} />
@@ -162,12 +173,6 @@ export const Sheet: React.FC<SheetProps> = ({
   );
 
   const containerStyle = [gutterStyle, contentContainerStyle, insetStyle];
-
-  // gorhom lifts a short sheet whole above the keyboard, so a keyboard-aware
-  // scroll would make that room a second time and push the field out of view.
-  const { height: windowHeight } = useWindowDimensions();
-  const liftedWhole =
-    tallestShare(sheetOptions.snapPoints, windowHeight) <= LIFTED_WHOLE;
 
   // `keyboardShouldPersistTaps` is stated, not inherited: neither gorhom nor
   // the keyboard-aware view supplies one, and RN's default spends the first

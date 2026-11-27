@@ -210,7 +210,7 @@ export const SearchResultsScreen: React.FC<
         headerFromContent
         visible={scannerSheetVisible}
         onDismiss={hideBottomSheet}
-        snapPoints={['50%', '65%', '85%']}
+        snapPoints={['50%']}
         // Over the scanner's own screen, which a `switch` would minimize.
         modalOptions={{ stackBehavior: 'push' }}
         style={styles.bottomSheetContent}

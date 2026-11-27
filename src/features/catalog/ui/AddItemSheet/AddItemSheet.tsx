@@ -342,7 +342,7 @@ export function AddItemSheet<
       mode="list"
       visible={open}
       onDismiss={content.onClose}
-      snapPoints={['70%', '95%']}
+      snapPoints={['95%']}
       keyboardBehavior="extend"
       // Every step scrolls itself and pads its own end.
       bottomInset="content"

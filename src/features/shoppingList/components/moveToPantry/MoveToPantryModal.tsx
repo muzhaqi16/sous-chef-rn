@@ -295,7 +295,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       headerFromContent
       visible={open}
       onDismiss={form.onClose}
-      snapPoints={['75%', '95%']}
+      snapPoints={['75%']}
       contentContainerStyle={styles.contentContainer}
       style={styles.scrollView}
     >

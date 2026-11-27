@@ -194,22 +194,33 @@ grep -n "absoluteY + inputHeight\|bottomOffset = " node_modules/react-native-key
 `max(0, highestDetentPosition - keyboardHeight)`: a sheet short enough rises by
 the whole keyboard and sits on it. A `KeyboardAwareScrollView` inside measures
 the focused field before that rise and scrolls it up by the overlap as well, so
-in a short sheet the field ends above the sheet's top, out of view. A tall sheet,
-whose top stops at the screen's, rises less and its field sits only a little
-high. `Sheet mode="form"` therefore uses gorhom's own scroll view up to a 60%
-snap point (a phone keyboard takes under 40% of the screen).
+in a short sheet the field ends above the sheet's top, out of view. A tall sheet
+rises less, and its field still lands that much too high. The scroll reads the
+field once, at focus, so any move of the sheet after it, `extend` from a lower
+stop included, adds onto the scroll. And gorhom locks a sheet's content below
+its top stop, so no scroll can raise a field there. `Sheet mode="form"`
+therefore uses gorhom's own scroll view up to a 60% snap point (a phone keyboard
+takes under 40% of the screen). Past it the sheet has one stop and `extend`,
+which leaves a sheet at its top stop where it is, so the scroll alone makes the
+room (`formSheetHasOneStop.test.ts`).
 
 **Verified 2026-11-25 against `@gorhom/bottom-sheet@5.2.14` +
 `react-native-keyboard-controller@1.22.5`** on the iPhone 17 simulator: the Bio
 sheet (30%) showed its bar over an empty band with the keyboard up; its field
 sat behind the bar (component tree y 0.10 to 0.18, sheet top 0.39). With gorhom's
-scroll view the field sits above the keyboard.
+scroll view the field sits above the keyboard. Re-measured 2026-11-26: Adjust
+Quantity at its 65% stop rose to 0.07 with `interactive`, and its Reason field
+landed at 0.28 to 0.33 with the keyboard's top at 0.655. With one 65% stop and
+`extend` the sheet stays at 0.40 and the field ends at 0.60 to 0.65. The Add
+Item sheet extending from 70% to 95% put Category at 0.37 to 0.42; at one 95%
+stop it stays where it was, clear of the keyboard.
 
 Re-check:
 
 ```
 grep -n "highestDetentPosition - keyboardHeightInContainer" node_modules/@gorhom/bottom-sheet/src/components/bottomSheet/BottomSheet.tsx
 grep -n "absoluteY + inputHeight" node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
+grep -n "SHEET_STATE.EXTENDED" -A3 node_modules/@gorhom/bottom-sheet/src/hooks/useScrollable.ts
 ```
 
 ### gorhom calls the onDismiss of the render before the close

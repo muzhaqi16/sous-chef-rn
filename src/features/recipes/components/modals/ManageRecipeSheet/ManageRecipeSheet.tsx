@@ -217,7 +217,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       mode="form"
       visible={visible}
       onDismiss={content.onClose}
-      snapPoints={['85%', '95%']}
+      snapPoints={['85%']}
       contentContainerStyle={styles.contentContainer}
       style={styles.scrollView}
     >

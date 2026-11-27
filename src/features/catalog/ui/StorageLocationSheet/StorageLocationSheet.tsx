@@ -56,7 +56,7 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
     mode="form"
     visible={visible}
     onDismiss={onClose}
-    snapPoints={['80%', '95%']}
+    snapPoints={['80%']}
     headerFromContent
   >
     <StorageLocationForm

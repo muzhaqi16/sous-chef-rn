@@ -31,8 +31,6 @@ interface AddToMealPlanSheetProps {
   initialMealType?: MealType;
 }
 
-const SNAP_POINTS = ['65%'];
-
 type AddToMealPlanFormProps = Omit<AddToMealPlanSheetProps, 'visible'>;
 
 /** One opening: the plan, day and meal the recipe goes on. */
@@ -198,7 +196,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
       headerFromContent
       visible={visible}
       onDismiss={form.onClose}
-      snapPoints={SNAP_POINTS}
+      snapPoints={['65%']}
     >
       {opening ? <AddToMealPlanForm key={opening.id} {...form} /> : null}
     </Sheet>
