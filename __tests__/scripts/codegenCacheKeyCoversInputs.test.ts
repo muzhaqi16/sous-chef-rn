@@ -49,9 +49,7 @@ const localDependencies = (file: string): string[] => {
     .map(node => node.text)
     .filter(text => LOCAL.test(text))
     .map(text => path.normalize(path.join(dir, text)))
-    .flatMap(target =>
-      ['', '.js', '.mjs', '.ts'].map(ext => target + ext),
-    )
+    .flatMap(target => ['', '.js', '.mjs', '.ts'].map(ext => target + ext))
     .filter(candidate => {
       const absolute = path.join(ROOT, candidate);
       return fs.existsSync(absolute) && fs.statSync(absolute).isFile();
@@ -73,7 +71,9 @@ const uncovered = (files: string[], patterns: string[]) =>
   files.filter(file => !micromatch.isMatch(file, patterns));
 
 describe('the codegen cache key', () => {
-  const patterns = keyPatterns(fs.readFileSync(path.join(ROOT, ACTION), 'utf8'));
+  const patterns = keyPatterns(
+    fs.readFileSync(path.join(ROOT, ACTION), 'utf8'),
+  );
   const inputs = inputsOf(filesOfScript('codegen'));
 
   it('reads the key and walks the generators', () => {
