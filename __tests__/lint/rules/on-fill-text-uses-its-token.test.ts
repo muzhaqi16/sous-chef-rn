@@ -31,7 +31,7 @@ testRule('on-fill-text-uses-its-token', {
     ),
     // Selected, the label sits on the light fill and reads that fill's token.
     animated(
-      '[theme.colors.chipBackground, theme.colors.primaryLight]',
+      '[theme.colors.surface, theme.colors.primaryLight]',
       '[theme.colors.chipText, animatedTheme.get().colors.onPrimaryLight]',
     ),
     // Another driver: the stops do not meet.
@@ -63,7 +63,7 @@ testRule('on-fill-text-uses-its-token', {
     {
       // The stop that lands on the light fill names the strong one.
       code: animated(
-        '[theme.colors.chipBackground, theme.colors.primaryLight]',
+        '[theme.colors.surface, theme.colors.primaryLight]',
         '[theme.colors.chipText, theme.colors.onPrimary]',
       ),
       errors: ['onTokenNotNamingItsFill'],

@@ -161,7 +161,6 @@ export const lightTheme = {
     // Components specific
     black: colors.neutral[1000],
     transparent: colors.transparent,
-    chipBackground: colors.neutral[200],
     chipText: colors.neutral[700],
 
     // Icon colors - semantic tokens for consistent icon styling
@@ -285,7 +284,6 @@ export const darkTheme = {
     // Components specific
     black: colors.neutral[1000],
     transparent: colors.transparent,
-    chipBackground: colors.neutral[700],
     chipText: colors.neutral[200],
 
     // Icon colors - semantic tokens for consistent icon styling

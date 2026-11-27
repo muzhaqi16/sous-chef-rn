@@ -127,7 +127,7 @@ export const Chip: React.FC<ChipProps> = ({
       backgroundColor: interpolateColor(
         selectedProgress.get(),
         [0, 1],
-        [theme.colors.chipBackground, theme.colors.primaryLight],
+        [theme.colors.surface, theme.colors.primaryLight],
       ),
       opacity: disabled ? theme.opacity.disabled : 1,
     };
@@ -289,13 +289,13 @@ const styles = StyleSheet.create(theme => ({
   iconContainer: {
     marginLeft: theme.spacing.sm,
   },
-  // A surface pill: apart from the chip's fill, selected or not, in both themes.
+  // Apart from the chip's surface fill and its selected fill, in both themes.
   countBadge: {
     marginLeft: theme.spacing.xs,
     minWidth: theme.sizes.icon.sm,
     paddingHorizontal: theme.spacing.xs,
     borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.surfaceVariant,
     alignItems: 'center',
   },
   count: {
