@@ -154,6 +154,7 @@
       "earlierPurchase": "{{amount}} el {{date}}",
       "earlierPicked": "La compra anterior",
       "earlierBody": "Este recibo completa el precio y la tienda de esa compra. No se añade nada de nuevo a tu despensa.",
+      "earlierLoading": "Comprobando compras anteriores…",
       "earlierOffline": "Las compras anteriores aparecerán aquí cuando vuelvas a tener conexión.",
       "earlierFailed": "No se pudieron comprobar las compras anteriores.",
       "purchaseChanged": "Esta compra cambió desde que la elegiste. Revísala de nuevo antes de añadirla.",

@@ -148,8 +148,14 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   const { purchases: earlier, state: earlierState } =
     useEarlierPurchases(itemId);
   // Said, never left blank: no earlier purchase offered reads as none made.
-  const earlierUnchecked =
-    earlierState === 'offline' || earlierState === 'error';
+  const earlierNote =
+    earlierState === 'loading'
+      ? 'receipts.review.earlierLoading'
+      : earlierState === 'offline'
+      ? 'receipts.review.earlierOffline'
+      : earlierState === 'error'
+      ? 'receipts.review.earlierFailed'
+      : null;
   const pickedElsewhere =
     existingPurchaseId !== null &&
     !earlier.some(purchase => purchase.id === existingPurchaseId);
@@ -311,18 +317,14 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
           )}
         </View>
 
-        {earlierOptions.length > 1 || earlierUnchecked ? (
+        {earlierOptions.length > 1 || earlierNote ? (
           <View style={styles.suggestions}>
             <Text role="caption" tone="secondary">
               {t('receipts.review.earlierTitle')}
             </Text>
-            {earlierUnchecked ? (
+            {earlierNote ? (
               <Text role="caption" tone="tertiary">
-                {t(
-                  earlierState === 'offline'
-                    ? 'receipts.review.earlierOffline'
-                    : 'receipts.review.earlierFailed',
-                )}
+                {t(earlierNote)}
               </Text>
             ) : null}
             {earlierOptions.length > 1 ? (

@@ -154,6 +154,7 @@
       "earlierPurchase": "{{amount}} më {{date}}",
       "earlierPicked": "Blerja e mëparshme",
       "earlierBody": "Kjo faturë plotëson çmimin dhe dyqanin e asaj blerjeje. Asgjë nuk shtohet sërish në qilarin tënd.",
+      "earlierLoading": "Po kontrollohen blerjet e mëparshme…",
       "earlierOffline": "Blerjet e mëparshme do të shfaqen këtu kur të jesh sërish në linjë.",
       "earlierFailed": "Blerjet e mëparshme nuk u kontrolluan dot.",
       "purchaseChanged": "Kjo blerje ka ndryshuar që kur e zgjodhe. Kontrolloje sërish para se ta shtosh.",

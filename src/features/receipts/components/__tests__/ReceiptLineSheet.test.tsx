@@ -293,9 +293,10 @@ describe('the receipt for an earlier purchase', () => {
 
   // Offering none would read as "you bought none".
   it.each([
+    ['loading', 'receipts.review.earlierLoading'],
     ['offline', 'receipts.review.earlierOffline'],
     ['error', 'receipts.review.earlierFailed'],
-  ] as const)('says when it could not check, %s', (state, copy) => {
+  ] as const)('says when it has not checked, %s', (state, copy) => {
     mockEarlier = { purchases: [], state };
     renderSheet();
 

@@ -154,6 +154,7 @@
       "earlierPurchase": "{{amount}} il {{date}}",
       "earlierPicked": "L'acquisto precedente",
       "earlierBody": "Questo scontrino completa prezzo e negozio di quell'acquisto. Nulla viene aggiunto di nuovo alla tua dispensa.",
+      "earlierLoading": "Controllo degli acquisti precedenti…",
       "earlierOffline": "Gli acquisti precedenti compariranno qui quando tornerai online.",
       "earlierFailed": "Non è stato possibile controllare gli acquisti precedenti.",
       "purchaseChanged": "Questo acquisto è cambiato da quando l'hai scelto. Ricontrollalo prima di aggiungerlo.",
