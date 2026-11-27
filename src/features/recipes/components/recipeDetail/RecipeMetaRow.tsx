@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation, type TranslateFn } from '#i18n';
 import { Icon, type IconName } from '#components/atoms/Icon';
@@ -73,7 +73,7 @@ export const RecipeMetaRow: React.FC<RecipeMetaRowProps> = ({
       {/* Any recipe can be cooked; only a saved one keeps a count. */}
       {!!recipeId && (
         <Pressable
-          style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.cooked, pressed && styles.pressed]}
           onPress={() => detail.setCookedModalVisible(true)}
           disabled={markingAsCooked}
           accessibilityRole="button"
@@ -99,20 +99,25 @@ export const RecipeMetaRow: React.FC<RecipeMetaRowProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
-  row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: theme.spacing.md,
-    rowGap: theme.spacing.xs,
-    marginBottom: theme.spacing.md,
-  },
-  item: {
+const styles = StyleSheet.create(theme => {
+  const item: ViewStyle = {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-}));
+  };
+  return {
+    row: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      columnGap: theme.spacing.md,
+      rowGap: theme.spacing.xs,
+      marginBottom: theme.spacing.md,
+    },
+    item,
+    // The one control in the row is a whole target at the platform floor.
+    cooked: { ...item, minHeight: theme.sizes.touchTarget.min },
+    pressed: {
+      opacity: 0.7,
+    },
+  };
+});

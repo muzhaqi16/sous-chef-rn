@@ -88,6 +88,5 @@ const styles = StyleSheet.create(theme => ({
   },
   link: {
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
   },
 }));

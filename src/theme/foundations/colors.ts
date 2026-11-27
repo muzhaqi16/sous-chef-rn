@@ -174,8 +174,6 @@ export const colors = {
   /** Native press ripple (`android_ripple`); translucent, so one value reads on either scheme. */
   ripple: {
     subtle: 'rgba(0,0,0,0.06)',
-    default: 'rgba(0,0,0,0.1)',
-    onFill: 'rgba(255,255,255,0.2)',
   },
   /** A white wash for a control's ground over a photo or scrim. */
   onScrimSubtle: 'rgba(255, 255, 255, 0.2)',

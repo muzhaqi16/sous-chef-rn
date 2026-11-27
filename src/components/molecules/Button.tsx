@@ -1,7 +1,6 @@
 import React from 'react';
-import type { StyleProp, TextStyle, ViewStyle } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { RIPPLE } from '#constants/ripple';
 import { Icon } from '#components/atoms/Icon';
 import { PressableScale } from '#components/atoms/PressableScale';
 import { Text } from '#components/atoms/Text';
@@ -21,9 +20,8 @@ interface ButtonProps {
   children?: React.ReactNode;
   fullWidth?: boolean;
   title?: string; // For backwards compatibility with atoms/Button
-  style?: StyleProp<ViewStyle>; // For custom styling
-  btnStyle?: StyleProp<ViewStyle>; // For backwards compatibility
-  txtStyle?: StyleProp<TextStyle>; // For backwards compatibility
+  /** Layout only (margin, flex, width): it lands on the touch target. */
+  style?: StyleProp<ViewStyle>;
   testID?: string;
   accessibilityLabel?: string;
   accessibilityHint?: string;
@@ -40,8 +38,6 @@ export const Button: React.FC<ButtonProps> = ({
   title,
   fullWidth = false,
   style,
-  btnStyle,
-  txtStyle,
   testID,
   accessibilityLabel,
   accessibilityHint,
@@ -51,8 +47,6 @@ export const Button: React.FC<ButtonProps> = ({
     title ??
     (typeof children === 'string' ? children : undefined);
 
-  const useWhiteRipple = variant === 'primary' || variant === 'danger';
-
   const variantStyles = styles.useVariants({
     variant,
     size,
@@ -61,53 +55,65 @@ export const Button: React.FC<ButtonProps> = ({
   });
 
   return (
+    // The touch target is a whole box at the platform floor, the button drawn
+    // at its own size inside it. No `android_ripple`: it would fill the box.
     <PressableScale
       testID={testID}
-      style={[variantStyles.button, style, btnStyle]}
+      style={[variantStyles.target, style]}
       onPress={onPress}
       haptic="light"
       disabled={disabled || loading}
-      android_ripple={useWhiteRipple ? RIPPLE.PRIMARY : RIPPLE.DEFAULT}
       accessibilityRole="button"
       accessibilityLabel={buttonLabel}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
     >
-      {loading ? (
-        // The same three-way split the icon's `tone` makes below; `danger`
-        // sits on `error`, not `primary`.
-        variant === 'primary' ? (
-          <OnPrimaryActivityIndicator size="small" />
-        ) : variant === 'danger' ? (
-          <OnErrorActivityIndicator size="small" />
+      <View style={variantStyles.button}>
+        {loading ? (
+          // The same three-way split the icon's `tone` makes below; `danger`
+          // sits on `error`, not `primary`.
+          variant === 'primary' ? (
+            <OnPrimaryActivityIndicator size="small" />
+          ) : variant === 'danger' ? (
+            <OnErrorActivityIndicator size="small" />
+          ) : (
+            <ThemedActivityIndicator size="small" />
+          )
         ) : (
-          <ThemedActivityIndicator size="small" />
-        )
-      ) : (
-        <>
-          {!!icon && (
-            <Icon
-              name={icon}
-              size={size === 'small' ? 'xs' : size === 'large' ? 'md' : 'sm'}
-              tone={
-                variant === 'primary'
-                  ? 'onPrimary'
-                  : variant === 'danger'
-                  ? 'onError'
-                  : undefined
-              }
-            />
-          )}
-          <Text role="bodyStrong" style={[variantStyles.text, txtStyle]}>
-            {title ?? children}
-          </Text>
-        </>
-      )}
+          <>
+            {!!icon && (
+              <Icon
+                name={icon}
+                size={size === 'small' ? 'xs' : size === 'large' ? 'md' : 'sm'}
+                tone={
+                  variant === 'primary'
+                    ? 'onPrimary'
+                    : variant === 'danger'
+                    ? 'onError'
+                    : undefined
+                }
+              />
+            )}
+            <Text role="bodyStrong" style={variantStyles.text}>
+              {title ?? children}
+            </Text>
+          </>
+        )}
+      </View>
     </PressableScale>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  target: {
+    minHeight: theme.sizes.touchTarget.min,
+    justifyContent: 'center',
+    variants: {
+      fullWidth: {
+        true: { flex: 1 },
+      },
+    },
+  },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -152,9 +158,6 @@ const styles = StyleSheet.create(theme => ({
           paddingVertical: theme.spacing.md,
           minHeight: theme.sizes.button.lg,
         },
-      },
-      fullWidth: {
-        true: { flex: 1 },
       },
       disabled: {
         true: { opacity: theme.opacity.disabled },
