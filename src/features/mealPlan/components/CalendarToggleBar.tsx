@@ -3,7 +3,6 @@ import { View } from 'react-native';
 import { useTranslation } from '#i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { hitSlop } from '#theme/foundations/sizes';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
 
 interface CalendarToggleBarProps {
@@ -19,7 +18,6 @@ export const CalendarToggleBar: React.FC<CalendarToggleBarProps> = ({
   return (
     <Pressable
       onPress={onToggle}
-      hitSlop={{ top: hitSlop.md, bottom: hitSlop.md }}
       style={styles.container}
       accessibilityLabel={
         isExpanded
@@ -40,7 +38,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: theme.spacing.xs,
+    minHeight: theme.sizes.touchTarget.min,
     gap: theme.spacing.sm,
   },
   line: {

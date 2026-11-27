@@ -8,7 +8,6 @@ import { toastService } from '#services/toastService';
 import { Text } from '#components/atoms/Text';
 import { Icon, type IconSizeName } from '#components/atoms/Icon';
 import { kitTestIDs } from '#components/testIDs';
-import { hitSlop } from '#theme/foundations/sizes';
 import { motion } from '#theme/motion';
 
 interface OfflineStatusPillProps {
@@ -42,7 +41,6 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
         testID={kitTestIDs.offlineBanner}
         onPress={handlePress}
         style={[styles.pressable, style]}
-        hitSlop={hitSlop.md}
         accessibilityRole="button"
         accessibilityLabel={message}
       >
@@ -69,8 +67,8 @@ const styles = StyleSheet.create(theme => ({
   pressable: {
     position: 'relative',
     padding: theme.spacing.xs,
-    minWidth: theme.sizes.touchTarget.md,
-    minHeight: theme.sizes.touchTarget.md,
+    minWidth: theme.sizes.touchTarget.min,
+    minHeight: theme.sizes.touchTarget.min,
     justifyContent: 'center',
     alignItems: 'center',
   },

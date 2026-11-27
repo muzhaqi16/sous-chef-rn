@@ -15,7 +15,6 @@ import { OPENSTREETMAP_COPYRIGHT } from '#domain/openStreetMap';
 import { storeBranchLabel } from '#domain/stores';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { useToday } from '#hooks/app/useToday';
-import { hitSlop } from '#theme/foundations/sizes';
 import { fromDateKey, toDateKey } from '#utils/dateUtils';
 import { useReceiptMoney } from '../hooks/useReceiptCurrency';
 import type { ReceiptReview } from '../hooks/useReceiptReview';
@@ -91,7 +90,6 @@ export const ReceiptReviewHeader: React.FC<ReceiptReviewHeaderProps> = ({
           accessibilityRole="button"
           accessibilityLabel={storeWhere}
           accessibilityHint={t('receipts.review.storeWhereHint')}
-          hitSlop={hitSlop.lg}
           style={styles.storeWhere}
           testID={receiptsTestIDs.reviewStoreWhere}
         >
@@ -234,6 +232,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
+    minHeight: theme.sizes.touchTarget.min,
   },
   storeWhereText: {
     flexShrink: 1,

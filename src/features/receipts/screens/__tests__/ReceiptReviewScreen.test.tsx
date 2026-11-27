@@ -7,6 +7,7 @@ import { makeCache } from '#apollo/cache';
 import { ReceiptMatchMethod, UnitSystem } from '#graphql/generated/schemaTypes';
 import { toastService } from '#services/toastService';
 import { t } from '#i18n';
+import { TOUCH_TARGET_MIN } from '#theme/touchTarget';
 import type { ReceiptReviewRow } from '../../hooks/useReceiptReview';
 import type { DataState } from '#hooks/data/useDataState';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
@@ -666,8 +667,9 @@ describe('ReceiptReviewScreen store', () => {
 
     const where = screen.getByTestId(receiptsTestIDs.reviewStoreWhere);
     expect(where).toHaveTextContent('100 Main St, Springfield');
-    // A caption-height line: the slop makes it a full-size target.
-    expect(where).toHaveProp('hitSlop', 12);
+    // A caption-height line in a whole target, inside the header's bounds.
+    expect(where).toHaveStyle({ minHeight: TOUCH_TARGET_MIN });
+    expect(where).not.toHaveProp('hitSlop');
     expect(where).toHaveProp('accessibilityHint', 'Changes the store');
     expect(screen.queryByTestId(receiptsTestIDs.reviewStore)).toBeNull();
 

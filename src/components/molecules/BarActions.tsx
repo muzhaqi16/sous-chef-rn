@@ -149,7 +149,6 @@ const GLYPH_SLACK = (sizes.touchTarget.md - sizes.icon.md) / 2;
  * A gutter bar's target is a whole box at the platform floor, and the group is
  * pulled out by the glyph's slack in it, so the outermost glyph lands on the
  * gutter. Read from the theme: the glyph grows with density, the floor does not.
- * @internal Exported for the geometry test.
  */
 export const gutterTargetGeometry = (theme: Theme) => {
   const box = theme.sizes.touchTarget.min;

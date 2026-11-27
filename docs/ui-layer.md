@@ -257,8 +257,10 @@ they read it.
   action does not go inside the field: Pantry's "Select pantry" is in its header.
 - **At most one control sits beside the field, and it sorts or filters the list
   below.** That control is `SearchBar`'s `accessory` (a `SearchBarAction`): a plain
-  primary icon at its own width, ending on the gutter, with an optional count
-  `badge`; `hitSlop` gives it the 44pt target. Pantry's sorts (the `sort`
+  primary icon ending on the gutter, with an optional count `badge`. Its target
+  is a whole box at the platform floor, and the bar reaches into the gutter by
+  the glyph's slack so the box lies inside it (`gutterTargetGeometry`, as the
+  gutter bars). Pantry's sorts (the `sort`
   glyph), and its label names the active sort. Recipes' filters by diet in name mode, and
   its badge counts the active filters. The shopping list and the add sheet have
   none, because scanning is in the tab's `+` menu.

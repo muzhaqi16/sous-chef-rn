@@ -18,7 +18,6 @@ import {
 } from '#features/recipes/components/recipeSearch/IngredientListItem';
 import type { useRecipeScreen } from '#features/recipes/screens/useRecipeScreen';
 import { Text } from '#components/atoms/Text';
-import { hitSlop } from '#theme/foundations/sizes';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 
 // ── Types ──
@@ -128,7 +127,8 @@ const IngredientSelector: React.FC<{
             </Text>
             <Pressable
               onPress={screen.clearSelectedIngredients}
-              hitSlop={hitSlop.md}
+              accessibilityRole="button"
+              style={styles.clearAll}
             >
               <Text role="label" tone="accent">
                 {t('labels.clearAll')}
@@ -197,6 +197,10 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
+  },
+  clearAll: {
+    minHeight: theme.sizes.touchTarget.min,
+    justifyContent: 'center',
   },
   // The rows' inset is the list's content, so the whole width scrolls it.
   listContent: {

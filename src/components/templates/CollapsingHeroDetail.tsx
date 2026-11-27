@@ -18,6 +18,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { commonStyles } from '#styles/commonStyles';
 import { sizes } from '#theme/foundations/sizes';
+import type { Theme } from '#theme/themes';
 import { spacing } from '#theme/foundations/spacing';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
@@ -35,7 +36,6 @@ import {
   HeaderActionMenu,
   useHeaderOverflow,
 } from '#components/organisms/HeaderActionMenu';
-import { hitSlop } from '#theme/foundations/sizes';
 
 // Visible hero height below the status bar; `heroHeight` grows it by the top
 // inset so it fills edge-to-edge behind it.
@@ -45,6 +45,9 @@ const HEADER_TOP_GAP = spacing.sm;
 // The same target and glyph as `Header`'s actions, so both bars put the back
 // arrow on the page gutter through `commonStyles.barInset`.
 const BUTTON_SIZE = sizes.touchTarget.md;
+// How far a chip's target reaches past the chip, to the platform floor.
+const chipSlack = (theme: Theme) =>
+  (theme.sizes.touchTarget.min - BUTTON_SIZE) / 2;
 // Action-button band below the status-bar inset; also reserved above the title
 // when there is no hero.
 export const HEADER_BAND_HEIGHT = HEADER_TOP_GAP + BUTTON_SIZE + HEADER_TOP_GAP;
@@ -75,14 +78,15 @@ const HeroChip: React.FC<{ action: HeaderAction }> = ({ action }) => (
   <AppPressable
     onPress={action.onPress}
     disabled={!!action.disabled || !!action.loading}
-    style={styles.chip}
-    hitSlop={hitSlop.md}
+    style={styles.chipTarget}
     testID={action.testID}
     accessibilityRole="button"
     accessibilityLabel={action.accessibilityLabel}
   >
-    <HeaderActionIcon action={action} defaultSize="md" />
-    <StatusMark icon={action.mark} />
+    <View style={styles.chip}>
+      <HeaderActionIcon action={action} defaultSize="md" />
+      <StatusMark icon={action.mark} />
+    </View>
   </AppPressable>
 );
 
@@ -376,7 +380,9 @@ const styles = StyleSheet.create(theme => ({
     position: 'absolute',
     left: 0,
     right: 0,
-    height: BUTTON_SIZE,
+    // The targets' row, centred on the chips' band.
+    height: theme.sizes.touchTarget.min,
+    marginTop: -chipSlack(theme),
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -394,6 +400,15 @@ const styles = StyleSheet.create(theme => ({
     right: 0,
     alignItems: 'center',
     zIndex: theme.zIndex.sticky,
+  },
+  // The chip is drawn at its own size inside a target at the platform floor,
+  // which reaches past it by the difference, so the bar lays out the chip.
+  chipTarget: {
+    width: theme.sizes.touchTarget.min,
+    height: theme.sizes.touchTarget.min,
+    margin: -chipSlack(theme),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chip: {
     width: BUTTON_SIZE,

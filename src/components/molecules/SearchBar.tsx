@@ -14,7 +14,7 @@ import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import type { ThemedTextInputRef } from '#components/atoms/themedComponents';
 import { CountBadge } from '#components/atoms/CountBadge';
 import { Pressable } from '#components/atoms/themedComponents';
-import { hitSlop } from '#theme/foundations/sizes';
+import { gutterTargetGeometry } from '#components/molecules/BarActions';
 import { commonStyles } from '#styles/commonStyles';
 import { Icon, type IconName } from '#components/atoms/Icon';
 
@@ -73,7 +73,6 @@ type SearchBarProps = Omit<
 const SearchAccessory: FC<{ action: SearchBarAction }> = ({ action }) => (
   <Pressable
     onPress={action.onPress}
-    hitSlop={hitSlop.lg}
     accessibilityRole="button"
     accessibilityLabel={action.accessibilityLabel}
     testID={action.testID}
@@ -157,7 +156,7 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
     }));
 
     return (
-      <View style={[styles.container, containerStyle]}>
+      <View style={[styles.container(!!accessory), containerStyle]}>
         <BaseInput
           value={text}
           ref={inputRef}
@@ -184,20 +183,27 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
 
 SearchBar.displayName = 'SearchBar';
 
-const styles = StyleSheet.create(theme => ({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  // The icon's own width, so it ends on the gutter; `hitSlop` makes the 44pt.
-  accessory: {
-    marginLeft: theme.spacing.sm,
-    minHeight: theme.sizes.touchTarget.md,
-    justifyContent: 'center',
-  },
-  inputContainer: {
-    flex: 1,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
-}));
+const styles = StyleSheet.create(theme => {
+  // The accessory is a whole target, its glyph on the gutter: the bar reaches
+  // into the gutter by the glyph's slack, so the target lies inside the bar.
+  const { box, pull } = gutterTargetGeometry(theme);
+  return {
+    container: (withAccessory: boolean) => ({
+      flexDirection: 'row',
+      alignItems: 'center',
+      ...(withAccessory && { marginRight: -pull }),
+    }),
+    accessory: {
+      marginLeft: theme.spacing.sm - pull,
+      minWidth: box,
+      minHeight: box,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    inputContainer: {
+      flex: 1,
+      borderRadius: theme.radii.md,
+      borderCurve: 'continuous',
+    },
+  };
+});

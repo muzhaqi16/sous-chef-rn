@@ -21,7 +21,6 @@ import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { catalogTestIDs } from '#features/catalog/testIDs';
-import { hitSlop } from '#theme/foundations/sizes';
 import type { BaseSuggestionItem } from '#features/catalog/types';
 import { useOpening } from '#hooks/ui/useOpening';
 
@@ -185,7 +184,6 @@ function AddItemSheetContent<T extends BaseSuggestionItem>({
             <AppPressable
               onPress={() => setActiveSourceKey(groupConfig.key)}
               style={styles.moreButton}
-              hitSlop={hitSlop.md}
               accessibilityRole="button"
               accessibilityLabel={`${t('labels.more')} ${sectionTitle}`}
             >
@@ -372,16 +370,20 @@ const styles = StyleSheet.create(theme => ({
   searchBar: {
     marginBottom: theme.spacing.lg,
   },
+  // Every header is as tall as the "More" target some hold, so all sections
+  // keep one rhythm.
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing.md,
+    minHeight: theme.sizes.touchTarget.min,
+    marginBottom: theme.spacing.xs,
   },
   moreButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs / 2,
+    minHeight: theme.sizes.touchTarget.min,
   },
   centeredSpinner: {
     padding: theme.spacing.xl,

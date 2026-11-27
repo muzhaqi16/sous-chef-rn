@@ -74,10 +74,12 @@ describe('header bars put the back glyph on the page gutter', () => {
       </CollapsingHeroDetail>,
     );
     const back = screen.getByLabelText('Go Back');
-    const chip = flat(back.props.style);
+    const target = flat(back.props.style);
     const bar = barOf(back);
 
-    expect(chip.width).toBe(sizes.touchTarget.md);
+    // A whole target at the floor, over a chip drawn at its own size.
+    expect(target.width).toBe(sizes.touchTarget.min);
+    expect(back.props.hitSlop).toBeUndefined();
     expect(Number(bar.paddingHorizontal) + GLYPH_SLACK).toBe(layout.pageGutter);
     expect(HEADER_BAND_HEIGHT).toBe(spacing.sm * 2 + sizes.touchTarget.md);
   });
