@@ -302,7 +302,8 @@ Mechanism, evidence and traps for everything below: `docs/ui-layer.md`.
 Each concern is solved once; an import ban or `sous-chef/*` rule names the
 replacement when you reach past it — a growing list (`FlashList`), an image
 (`CachedImage`), a modal (`useStandardBottomSheet` / `alertService`), a date or
-quantity (`src/utils` formatters), device storage (a Zustand slice), loading
+quantity (`src/utils` formatters), money (`useMoney`, at its currency's
+`decimalPlaces`), device storage (a Zustand slice), loading
 (`Loading`), a toast (`toastService`), navigation (`useAppNavigation`), text
 (`<Text role>` + `tone`), inputs (`ThemedTextInput`), icons (`<Icon tone>`),
 colour and spacing (`theme.*`), elevation (`theme.shadows`), text on a fill (its

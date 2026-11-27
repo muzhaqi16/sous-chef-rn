@@ -14,7 +14,7 @@ import {
   EXPIRING_SOON_DAYS,
   expiryLabel,
 } from '#domain/expiry';
-import { formatCurrency as formatMoney } from '#utils/formatters/number';
+import type { FormatCurrency } from '#domain/money';
 import { formatMonthDayYear } from '#utils/formatters/date';
 import {
   formatQuantityForDisplay,
@@ -236,11 +236,11 @@ export const formatAcquisitionMethod = (
 
 // A cost, or null when none was recorded, so callers omit the row instead of an
 // em dash. A cost recorded AS zero is a fact (a gift) and is shown.
-// `formatCurrency` always returns a string.
 export const formatCostOrNull = (
   amount: number | null | undefined,
   currency: string,
+  format: FormatCurrency,
 ): string | null => {
   if (amount == null) return null;
-  return formatMoney(amount, currency);
+  return format(amount, currency);
 };

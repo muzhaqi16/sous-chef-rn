@@ -104,11 +104,12 @@ export const DEFAULT_CURRENCY = 'USD';
 
 const currencyFormatters = new Map<string, Intl.NumberFormat | null>();
 
+/** Omitted digits are Intl's own for the code. */
 function getCurrencyFormatter(
   currency: string,
-  wholeUnits = false,
+  digits?: number,
 ): Intl.NumberFormat | null {
-  const key = wholeUnits ? `${currency}:whole` : currency;
+  const key = `${currency}:${digits ?? ''}`;
   const cached = currencyFormatters.get(key);
   if (cached !== undefined) return cached;
 
@@ -117,7 +118,10 @@ function getCurrencyFormatter(
     formatter = new Intl.NumberFormat(undefined, {
       style: 'currency',
       currency,
-      ...(wholeUnits && { maximumFractionDigits: 0, minimumFractionDigits: 0 }),
+      ...(digits != null && {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+      }),
     });
   } catch {
     formatter = null;
@@ -134,21 +138,20 @@ function getCurrencyFormatter(
 export const UNKNOWN_AMOUNT = '—';
 
 /**
- * Symbol PLACEMENT is the locale's and FRACTION DIGITS the currency's, so a
- * zero-decimal currency is never forced to two places. Degrades to
- * `CODE 1234.56`, then to a plain number. Absent is `UNKNOWN_AMOUNT`, never a
- * formatted zero — to omit the row instead, see `formatCostOrNull`.
+ * Symbol PLACEMENT is the locale's and FRACTION DIGITS the currency's: its
+ * `decimalPlaces` as the server stores it, else Intl's for the code. Read in
+ * render through `useFormatCurrency` or `useMoney`, which supply the digits.
+ * Degrades to `CODE 1234.56`, then to a plain number. Absent is
+ * `UNKNOWN_AMOUNT`, never a formatted zero.
  */
 export function formatCurrency(
   value: number | null | undefined,
   currency: string | null | undefined,
-  decimalPlaces?: number | null,
+  decimalPlaces: number | null | undefined,
 ): string {
   if (value == null || !Number.isFinite(value)) return UNKNOWN_AMOUNT;
 
-  // Only the no-Intl paths need this: with a currency Intl knows, Intl supplies
-  // the minor unit itself. Two places is the fallback for a currency we were
-  // told nothing about.
+  // Two places only for a currency nothing describes.
   const digits = decimalPlaces ?? 2;
   const money = {
     minimumFractionDigits: digits,
@@ -157,7 +160,7 @@ export function formatCurrency(
 
   if (!currency) return formatDecimal(value, money);
 
-  const formatter = getCurrencyFormatter(currency);
+  const formatter = getCurrencyFormatter(currency, decimalPlaces ?? undefined);
   if (!formatter) return `${currency} ${formatDecimal(value, money)}`;
   return formatter.format(value);
 }
@@ -168,7 +171,7 @@ export function formatApproximateCurrency(
   currency: string,
 ): string {
   const rounded = Math.round(value);
-  const formatter = getCurrencyFormatter(currency, true);
+  const formatter = getCurrencyFormatter(currency, 0);
   if (formatter) return formatter.format(rounded);
   return `${currency} ${formatDecimal(rounded, {
     minimumFractionDigits: 0,

@@ -21,17 +21,7 @@ import {
 // Wrapped only so `uniProps` type-checks at the call sites; no static theme
 // mapping — every theme read happens via `uniProps={t => ({ … })}`.
 export const TrendLineChart = withUnistyles(BaseTrendLineChart);
-import { formatCurrency } from '#utils/formatters/number';
 export const TopItemsBarChart = withUnistyles(BaseTopItemsBarChart);
-/**
- * An amount nobody recorded reads as an em dash, as InfoRow does. Module scope,
- * so the currency is passed in — a caller resolves it with `useMoney`.
- */
-export const money = (
-  amount: number | null | undefined,
-  currency: string,
-): string => formatCurrency(amount, currency);
-
 export const AnalyticsSummaryCard = withUnistyles(BaseAnalyticsSummaryCard);
 
 export type AnalyticsResult = ReturnType<typeof usePantryAnalytics>;

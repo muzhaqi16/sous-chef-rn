@@ -13,12 +13,15 @@ import { commonStyles } from '#styles/commonStyles';
 
 import { Text } from '#components/atoms/Text';
 import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistoryScreen';
-import { formatCurrency, UNKNOWN_AMOUNT } from '#utils/formatters/number';
+import { UNKNOWN_AMOUNT } from '#utils/formatters/number';
 import {
   moneyByCurrency,
   resolveCurrency,
+  useFormatCurrency,
+  useMoney,
   usePreferredCurrency,
   type FigureCurrency,
+  type FormatMoney,
 } from '#domain/money';
 import { formatDateTime, formatMonthDayYear } from '#utils/formatters/date';
 import { isCalendarDayInstant, purchaseDay } from '#utils/dateUtils';
@@ -46,13 +49,13 @@ const formatDate = (dateString: string) =>
 const formatPrice = (
   amount: number | null | undefined,
   currency: FigureCurrency,
-  preferredCurrency: string,
+  money: FormatMoney,
 ): string | null => {
   // Only an ABSENT price has nothing to show. A price recorded as zero is a
   // price somebody entered — a comped or free line — and it is counted in the
   // totals below, so suppressing its own row would disagree with them.
   if (amount == null) return null;
-  return formatCurrency(amount, resolveCurrency(currency, preferredCurrency));
+  return money(amount, currency);
 };
 
 /**
@@ -97,17 +100,17 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
   totalCount,
 }) => {
   const { t } = useTranslation();
-  const preferredCurrency = usePreferredCurrency();
+  const money = useMoney();
   // Off, a purchase reads as when and how much, with no price.
   const showPrices = useBudgetAndPricesEnabled();
   const priceText = showPrices
-    ? formatPrice(purchase.totalPrice, purchase.currency, preferredCurrency)
+    ? formatPrice(purchase.totalPrice, purchase.currency, money)
     : null;
   // At quantity 1 the per-unit price IS the total. Every other quantity gets
   // the rate — a fractional one most of all.
   const perUnitText =
     purchase.quantity !== 1
-      ? formatPrice(purchase.unitPrice, purchase.currency, preferredCurrency)
+      ? formatPrice(purchase.unitPrice, purchase.currency, money)
       : null;
 
   return (
@@ -243,6 +246,7 @@ export const PurchaseHistoryScreen: React.FC<
     retry,
   } = useItemPurchaseHistory(itemId);
   const preferredCurrency = usePreferredCurrency();
+  const money = useFormatCurrency();
 
   // With no priced purchase the spend is unknown, never zero. The API states no
   // money totals, so they stay unknown until every page is loaded.
@@ -250,8 +254,8 @@ export const PurchaseHistoryScreen: React.FC<
     hasNextPage ? [] : purchases,
     preferredCurrency,
   );
-  const totalSpent = moneyByCurrency(spend.totals) ?? UNKNOWN_AMOUNT;
-  const averageSpent = moneyByCurrency(spend.averages) ?? UNKNOWN_AMOUNT;
+  const totalSpent = moneyByCurrency(spend.totals, money) ?? UNKNOWN_AMOUNT;
+  const averageSpent = moneyByCurrency(spend.averages, money) ?? UNKNOWN_AMOUNT;
 
   return (
     <PaginatedHistoryScreen

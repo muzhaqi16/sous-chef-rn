@@ -7,7 +7,7 @@ import { CostSummary } from '../CostSummary';
 
 type Props = ComponentProps<typeof CostSummary>;
 
-const usd = (amount: number) => formatCurrency(amount, 'USD');
+const usd = (amount: number) => formatCurrency(amount, 'USD', undefined);
 
 /** A cost to go of `amount` over `lines` unbought lines, `priced` of them priced. */
 const toGo = (amount: number, priced = 1, lines = 1): ListCostToGo => ({

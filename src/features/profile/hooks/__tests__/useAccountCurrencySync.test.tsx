@@ -7,7 +7,8 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
-import { usePreferredCurrency } from '#domain/money';
+import { GetCurrenciesDocument } from '#features/profile/graphql/currency.generated';
+import { useFormatCurrency, usePreferredCurrency } from '#domain/money';
 import { DEFAULT_CURRENCY } from '#utils/formatters/number';
 import { useStore } from '#store';
 import { useAccountCurrencySync } from '../useAccountCurrencySync';
@@ -34,7 +35,11 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
-  useStore.setState({ user: null, preferredCurrency: DEFAULT_CURRENCY });
+  useStore.setState({
+    user: null,
+    preferredCurrency: DEFAULT_CURRENCY,
+    currencyDecimals: {},
+  });
 });
 
 /** The settings as the server holds them; `null` is an account with no row. */
@@ -57,10 +62,30 @@ const settingsRead = (
   });
 };
 
+/** The currency table as the server holds it: rupiah at `places`. */
+const tableRead = (places: number, { once = false } = {}) =>
+  recordMock(GetCurrenciesDocument, {
+    data: {
+      currencies: [
+        {
+          __typename: 'Currency',
+          id: 'idr',
+          code: 'IDR',
+          decimalPlaces: places,
+        },
+      ],
+    },
+    ...(once && { maxUsageCount: 1 }),
+  });
+
 /** What a money surface reads, beside the client the resync drives. */
 function useSyncedCurrency() {
   useAccountCurrencySync();
-  return { currency: usePreferredCurrency(), client: useApolloClient() };
+  return {
+    currency: usePreferredCurrency(),
+    money: useFormatCurrency(),
+    client: useApolloClient(),
+  };
 }
 
 /** What `RefetchEventManager` runs on foreground, reconnect or a drained queue. */
@@ -83,6 +108,22 @@ describe('useAccountCurrencySync', () => {
     expect(result.current.currency).toBe('EUR');
     // The persisted record follows, so the next launch opens in it too.
     expect(useStore.getState().user?.preferredCurrency).toBe('EUR');
+  });
+
+  it("shows money at the precision the server states, and follows the admin's change", async () => {
+    const settings = settingsRead('IDR');
+    const before = tableRead(2, { once: true });
+    const after = tableRead(0);
+    const { result } = renderHookWithApollo(useSyncedCurrency, {
+      operationMocks: [settings.mock, before.mock, after.mock],
+    });
+    await drainTimers();
+    expect(result.current.money(15000, 'IDR')).toContain('15,000.00');
+
+    await resync(result.current.client);
+
+    await drainTimers();
+    expect(result.current.money(15000, 'IDR')).not.toMatch(/15,000\.\d/);
   });
 
   it('takes the currency the settings hold when this device last had another', async () => {

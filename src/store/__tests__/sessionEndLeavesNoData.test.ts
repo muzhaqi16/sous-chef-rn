@@ -81,6 +81,8 @@ const KEPT_ON_PURPOSE: Record<string, string> = {
   showNavigationLabels: 'device appearance choice',
   pantrySortOption: 'sort order, carries no content',
   pantrySortDirection: 'sort order, carries no content',
+  currencyDecimals:
+    "each currency's precision, the same table for every account",
 
   // Sign-in affordances, scoped per account by design.
   hasStoredCredentials:

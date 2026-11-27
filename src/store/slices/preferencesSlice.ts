@@ -60,6 +60,9 @@ export interface PreferencesState extends MirroredSettings {
   // an Apollo watcher per list cell would be a query subscription per row.
   preferredCurrency: string;
   setPreferredCurrency: (code: string) => void;
+  /** Each currency's `decimalPlaces` by code, the precision money is shown at. */
+  currencyDecimals: Record<string, number>;
+  setCurrencyDecimals: (decimals: Record<string, number>) => void;
 
   // Pantry Sort Preferences
   pantrySortOption: PantrySortOption;
@@ -94,6 +97,7 @@ const initialPreferencesState = {
   showNavigationLabels: true, // Enabled by default
   ...MIRRORED_SETTINGS,
   preferredCurrency: DEFAULT_CURRENCY,
+  currencyDecimals: {},
   pantrySortOption: PREFERENCE_DEFAULTS.pantrySortOption,
   pantrySortDirection: PREFERENCE_DEFAULTS.pantrySortDirection, // Newest first
   primaryColorOverride: null,
@@ -126,6 +130,7 @@ export const createPreferencesSlice: StateCreator<
 
   mirrorSettings: settings => set(settings),
   setPreferredCurrency: code => set({ preferredCurrency: code }),
+  setCurrencyDecimals: decimals => set({ currencyDecimals: decimals }),
   setPantrySortOption: option => set({ pantrySortOption: option }),
   setPantrySortDirection: direction => set({ pantrySortDirection: direction }),
 

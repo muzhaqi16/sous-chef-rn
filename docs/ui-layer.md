@@ -798,6 +798,20 @@ they read it.
   sheet cannot disagree. A decimal-only field (`PurchaseAmountSheet`, whose
   keypad has no `/`) seeds from `formatQuantity` instead.
 
+## Money
+
+- **Money is shown at its currency's `decimalPlaces`**, the precision the server
+  stores it in, so iOS, Android and the admin show the same digits; Intl still
+  places the symbol and separators for the locale. `useAccountCurrencySync`
+  mirrors the table into the store (`currencyDecimals`), so a list cell reads it
+  without an Apollo watcher per row. Until the device holds it, Intl's digits for
+  the code apply.
+- **Render code formats through `useMoney`** (a figure's own currency, else the
+  account's) **or `useFormatCurrency`** (a known code; null shows a bare number).
+  `formatCurrency` takes the precision as a required argument, so a call outside
+  them states where its digits come from (a figure selecting
+  `currency { decimalPlaces }`).
+
 ## Navigation
 
 `inactiveBehavior` and the focus-gate recipe for a secondary consumer of another

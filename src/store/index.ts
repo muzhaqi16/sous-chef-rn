@@ -228,6 +228,8 @@ const PERSISTED_KEYS = classifyKeys(
   // WITH `user`: restoring the session without it renders a EUR account's costs
   // under the USD default until something re-reads the account.
   'preferredCurrency',
+  // The currencies' precision, the same table for every account.
+  'currencyDecimals',
 
   // Entity selections + navigation memory
   'selectedHomeId',

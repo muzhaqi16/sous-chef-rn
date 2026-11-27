@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from '#i18n';
+import { useFormatCurrency, type FormatCurrency } from '#domain/money';
 import { toastService } from '#services/toastService';
 import { useUser } from '#store/useAppStore';
 import {
@@ -33,8 +34,11 @@ export interface StoreModeEstimate {
 }
 
 /** Store mode's line of what is left to buy, from the list's cost to go. */
-function estimateOf(cost: ListCostToGo | null): StoreModeEstimate | null {
-  const price = cost && formatCostToGo(cost);
+function estimateOf(
+  cost: ListCostToGo | null,
+  format: FormatCurrency,
+): StoreModeEstimate | null {
+  const price = cost && formatCostToGo(cost, format);
   return cost && price
     ? { price, priced: cost.pricedLines, lines: cost.lines }
     : null;
@@ -113,6 +117,7 @@ export function useStoreMode(listId: string) {
   });
 
   const { t } = useTranslation();
+  const money = useFormatCurrency();
   const { updateShoppingList } = useUpdateShoppingList(
     t('errors.saveSettingsFailed'),
   );
@@ -138,7 +143,7 @@ export function useStoreMode(listId: string) {
       lineCount: lines.length,
       cartCount: totalCountPurchased,
       totalCount: totalCountUnpurchased + totalCountPurchased,
-      estimate: estimateOf(costToGo),
+      estimate: estimateOf(costToGo, money),
       routeNote,
       permissions,
       /** Every loaded line, for the sheets the rows open. */

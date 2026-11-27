@@ -30,13 +30,15 @@ export function useCurrencyPreference() {
   const updateUser = useUpdateUser();
   const [updateSettings] = useMutation(UpdateUserPreferencesDocument);
 
+  // A retired currency is one nobody may choose any more.
+  const offered = data?.currencies.filter(currency => currency.isActive) ?? [];
   const optionsState = useDataState({
     loading,
     error,
     hasResult: !!data,
-    isEmpty: !data?.currencies.length,
+    isEmpty: !offered.length,
   });
-  const options: CurrencyOption[] = (data?.currencies ?? []).map(currency => ({
+  const options: CurrencyOption[] = offered.map(currency => ({
     value: currency.code,
     // Deliberately unlocalized: a currency's name and symbol are its own, and
     // the code disambiguates the dollars and the kronor from each other.

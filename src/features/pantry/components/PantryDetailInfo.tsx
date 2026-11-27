@@ -17,7 +17,11 @@ import {
   PantryDetailInfo_PantryItemFragmentDoc,
   type PantryDetailInfo_PantryItemFragment,
 } from './PantryDetailInfo.generated';
-import { resolveCurrency, usePreferredCurrency } from '#domain/money';
+import {
+  resolveCurrency,
+  useFormatCurrency,
+  usePreferredCurrency,
+} from '#domain/money';
 import {
   formatCondition,
   formatAcquisitionMethod,
@@ -62,6 +66,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
 }) => {
   const { t } = useTranslation();
   const preferredCurrency = usePreferredCurrency();
+  const money = useFormatCurrency();
   const showsCost = useBudgetAndPricesEnabled();
   // Per-entity cache subscription: re-renders only when this PantryItem's
   // fields change. Falls back to the source prop on cache miss so the
@@ -109,17 +114,17 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   // shown under an assumed one.
   const purchaseTotalIsDenominated = !fromBatch || !!batchCurrency;
   const costPerUnitText = showsCost
-    ? formatCostOrNull(costPerUnit, itemCurrency)
+    ? formatCostOrNull(costPerUnit, itemCurrency, money)
     : null;
   const stockValueText = showsCost
-    ? formatCostOrNull(item.totalCost, itemCurrency)
+    ? formatCostOrNull(item.totalCost, itemCurrency, money)
     : null;
   const purchaseTotalText =
     showsCost &&
     purchaseTotal != null &&
     purchaseTotal > 0 &&
     purchaseTotalIsDenominated
-      ? formatCostOrNull(purchaseTotal, purchaseCurrency)
+      ? formatCostOrNull(purchaseTotal, purchaseCurrency, money)
       : null;
 
   return (

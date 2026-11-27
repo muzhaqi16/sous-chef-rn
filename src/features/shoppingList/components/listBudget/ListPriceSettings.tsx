@@ -9,7 +9,8 @@ import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { useTranslation } from '#i18n';
 import { commonStyles } from '#styles/commonStyles';
-import { formatCurrency, formatNumberForInput } from '#utils/formatters/number';
+import { formatNumberForInput } from '#utils/formatters/number';
+import { useFormatCurrency } from '#domain/money';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import {
@@ -46,6 +47,7 @@ export const ListPriceSettings: React.FC<ListPriceSettingsProps> = ({
   onPriceTrackingChange,
 }) => {
   const { t } = useTranslation();
+  const money = useFormatCurrency();
   const { control, trigger, getValues, resetField } =
     useForm<ListPriceSettingsValues>({
       resolver: yupResolver(listPriceSettingsSchema),
@@ -130,7 +132,7 @@ export const ListPriceSettings: React.FC<ListPriceSettingsProps> = ({
             value={
               budgetAmount === null
                 ? t('shoppingListScreens.budgetPlaceholder')
-                : formatCurrency(budgetAmount, currency)
+                : money(budgetAmount, currency)
             }
           />
           <InfoRow

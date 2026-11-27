@@ -12,7 +12,6 @@ import { formatQuantityForInput } from '#utils/formatQuantity';
 import { parseDecimalInput } from '#utils/parseDecimalInput';
 import {
   currencySymbol,
-  formatCurrency,
   formatNumberForInput,
   localizeNumericHint,
 } from '#utils/formatters/number';
@@ -27,6 +26,7 @@ import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { parseMoneyInput, quantityCapMessage } from '#utils/validation/common';
 import { MAX_MONEY, MAX_QUANTITY } from '#utils/validation/entryLimits';
 import { formatDecimal } from '#utils/formatters/number';
+import { useFormatCurrency } from '#domain/money';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 interface PurchaseAmountSheetItem {
@@ -87,6 +87,7 @@ const PurchaseAmountForm: React.FC<PurchaseAmountFormProps> = ({
   askPrice = true,
 }) => {
   const { t } = useTranslation();
+  const money = useFormatCurrency();
 
   // The seed is read back by the parsers, so it must carry the device's
   // separator; a period reads as grouping on a comma device.
@@ -229,7 +230,7 @@ const PurchaseAmountForm: React.FC<PurchaseAmountFormProps> = ({
             ) : null}
             {perUnitPrice != null ? (
               <PerUnitHint
-                price={formatCurrency(perUnitPrice, currency)}
+                price={money(perUnitPrice, currency)}
                 unit={item.unitName}
                 style={styles.perUnitHint}
               />

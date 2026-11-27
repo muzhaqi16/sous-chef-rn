@@ -1,15 +1,14 @@
-# The currency picker's option list. `isActive: true` because a retired currency
-# is one nobody may choose any more, not one to offer and have refused.
-#
-# `decimalPlaces` is NOT for ordinary display — Intl reads a currency's minor
-# unit from its code — but for the degraded path where Intl rejects the code,
-# and for rounding an amount before it is sent.
+# Every currency, retired ones included, since a cost recorded in one still
+# shows. Money is shown at its currency's `decimalPlaces`, the precision the
+# server stores it in (`useAccountCurrencySync` mirrors them). The picker offers
+# only the active ones: a retired currency is one nobody may choose any more.
 query GetCurrencies {
-  currencies(isActive: true) {
+  currencies {
     id
     code
     name
     symbol
     decimalPlaces
+    isActive
   }
 }

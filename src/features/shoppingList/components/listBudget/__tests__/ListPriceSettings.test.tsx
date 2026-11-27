@@ -72,7 +72,7 @@ describe('ListPriceSettings', () => {
     expect(
       screen.getByTestId(shoppingListTestIDs.budgetInput).props.value,
     ).toBe('60');
-    expect(screen.queryByText(formatCurrency(60, 'USD'))).toBeNull();
+    expect(screen.queryByText(formatCurrency(60, 'USD', undefined))).toBeNull();
   });
 
   // Retyping a store sends only its pick, never a clear on the way.
@@ -116,7 +116,7 @@ describe('ListPriceSettings', () => {
       priceTracking: false,
     });
 
-    expect(screen.getByText(formatCurrency(60, 'USD'))).toBeTruthy();
+    expect(screen.getByText(formatCurrency(60, 'USD', undefined))).toBeTruthy();
     expect(screen.getByText('No store chosen')).toBeTruthy();
     expect(screen.getByText('Ask for prices on this list')).toBeTruthy();
     expect(screen.getByText('No')).toBeTruthy();
