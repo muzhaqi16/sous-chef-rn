@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import micromatch from 'micromatch';
 import * as ts from 'typescript';
 import { nodesOf, parseSource } from '#/test-utils/sourceAst';
 
@@ -68,7 +67,9 @@ const inputsOf = (entries: string[]): string[] => {
 };
 
 const uncovered = (files: string[], patterns: string[]) =>
-  files.filter(file => !micromatch.isMatch(file, patterns));
+  files.filter(
+    file => !patterns.some(pattern => path.matchesGlob(file, pattern)),
+  );
 
 describe('the codegen cache key', () => {
   const patterns = keyPatterns(
