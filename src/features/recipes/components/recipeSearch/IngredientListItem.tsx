@@ -61,7 +61,7 @@ const styles = StyleSheet.create(theme => ({
   ingredientItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
   },

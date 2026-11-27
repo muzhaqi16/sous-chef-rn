@@ -190,7 +190,7 @@ const IngredientSelector: React.FC<{
 
 const styles = StyleSheet.create(theme => ({
   header: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   selectionRow: {
     flexDirection: 'row',
@@ -198,7 +198,11 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
   },
-  listContent: { paddingBottom: theme.spacing.xl },
+  // The rows' inset is the list's content, so the whole width scrolls it.
+  listContent: {
+    paddingHorizontal: theme.layout.pageGutter,
+    paddingBottom: theme.spacing.xl,
+  },
   emptyMessage: {
     marginTop: theme.spacing.xl,
   },

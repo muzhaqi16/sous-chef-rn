@@ -148,6 +148,7 @@ export const IngredientMatchingSheet: React.FC<
               getItemType={getMatchItemType}
               {...FLASHLIST_DEFAULTS.bottomSheet}
               style={styles.list}
+              contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
             />
           </IngredientMatchingProvider>
@@ -183,9 +184,9 @@ export const IngredientMatchingSheet: React.FC<
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    paddingHorizontal: theme.layout.pageGutter,
   },
   summaryBar: {
+    paddingHorizontal: theme.layout.pageGutter,
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
@@ -198,7 +199,12 @@ const styles = StyleSheet.create(theme => ({
   list: {
     flex: 1,
   },
+  // The rows' inset is the list's content, so the whole width scrolls it.
+  listContent: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
   bottomActions: {
+    paddingHorizontal: theme.layout.pageGutter,
     flexDirection: 'row',
     gap: theme.spacing.sm,
     paddingTop: theme.spacing.md,

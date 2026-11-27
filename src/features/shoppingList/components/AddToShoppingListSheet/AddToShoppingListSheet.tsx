@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { useTranslation } from '#i18n';
 import type { ShoppingListSuggestionItem } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import {
@@ -81,13 +81,6 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   // focus effect re-presents the sheet on return. Calling onClose() here would
   // flip `visible` to false before the blur, so the sheet would stay closed on
   // return instead of restoring.
-  // Prefilled name for the in-place details step. The shared AddItemSheet morphs
-  // to the details form itself (see renderDetails); here we just seed the name.
-  const [prefilledItemName, setPrefilledItemName] = useState('');
-  const handleAddManually = (searchValue: string) => {
-    setPrefilledItemName(searchValue);
-  };
-
   // Item created from the details form — refresh suggestions and close the sheet.
   const handleAddDetailsSuccess = () => {
     suggestionsResult.refetch();
@@ -171,15 +164,14 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       onQuickAddSearchSuggestion={handleQuickAddSearchSuggestion}
       onQuickAddSuggestion={handleQuickAddSuggestion}
       onDismissSuggestion={handleDismissSuggestion}
-      onAddManually={handleAddManually}
       startStep={startStep}
       initialSearchQuery={initialSearchQuery}
       showImages={showImages}
       tutorialHint={tutorialHintElement}
-      renderDetails={({ goBack }) => (
+      renderDetails={({ goBack, itemName }) => (
         <ShoppingListDetailsStep
           shoppingListId={shoppingListId}
-          prefilledItemName={prefilledItemName}
+          prefilledItemName={itemName}
           onClose={goBack}
           onSuccess={handleAddDetailsSuccess}
         />

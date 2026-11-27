@@ -101,36 +101,37 @@ function MultiSelectChipContent<T extends string>({
           }}
         />
       </SheetHeaderSlot>
-      {/* Search Input */}
-      {!!showSearch && (
-        <SearchBar
-          placeholder={t('multiSelectChipSheet.searchPlaceholder')}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          autoCapitalize="none"
-          containerStyle={styles.search}
-        />
-      )}
-
-      {/* Selection Counter / Clear All */}
-      <View style={styles.selectionRow}>
-        <Text role="caption" tone="secondary">
-          {selectedItems.length === 0
-            ? t('multiSelect.noneSelected')
-            : t('multiSelect.selectedCount', {
-                count: selectedItems.length,
-              })}
-        </Text>
-        {selectedItems.length > 0 && (
-          <Pressable
-            onPress={handleClearAll}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Text role="label" tone="accent">
-              {t('labels.clearAll')}
-            </Text>
-          </Pressable>
+      <View style={styles.gutter}>
+        {!!showSearch && (
+          <SearchBar
+            placeholder={t('multiSelectChipSheet.searchPlaceholder')}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            containerStyle={styles.search}
+          />
         )}
+
+        {/* Selection Counter / Clear All */}
+        <View style={styles.selectionRow}>
+          <Text role="caption" tone="secondary">
+            {selectedItems.length === 0
+              ? t('multiSelect.noneSelected')
+              : t('multiSelect.selectedCount', {
+                  count: selectedItems.length,
+                })}
+          </Text>
+          {selectedItems.length > 0 && (
+            <Pressable
+              onPress={handleClearAll}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Text role="label" tone="accent">
+                {t('labels.clearAll')}
+              </Text>
+            </Pressable>
+          )}
+        </View>
       </View>
 
       {/* Chip Grid */}
@@ -154,13 +155,17 @@ function MultiSelectChipContent<T extends string>({
             ))}
           </View>
         </BottomSheetScrollView>
-      ) : items.length > 0 && searchQuery ? (
-        <EmptyState
-          size="compact"
-          title={t('multiSelectChipSheet.noMatches', { query: searchQuery })}
-        />
       ) : (
-        <EmptyState size="compact" title={t('multiSelectChipSheet.noItems')} />
+        <View style={styles.gutter}>
+          <EmptyState
+            size="compact"
+            title={
+              items.length > 0 && searchQuery
+                ? t('multiSelectChipSheet.noMatches', { query: searchQuery })
+                : t('multiSelectChipSheet.noItems')
+            }
+          />
+        </View>
       )}
     </View>
   );
@@ -197,7 +202,10 @@ export function MultiSelectChipSheet<T extends string = string>({
 const styles = StyleSheet.create(theme => ({
   bottomSheetContent: {
     flex: 1,
-    paddingHorizontal: theme.spacing.md,
+  },
+  // The chips' inset is the scroll's content, so the whole width scrolls it.
+  gutter: {
+    paddingHorizontal: theme.layout.pageGutter,
   },
   selectionRow: {
     flexDirection: 'row',
@@ -207,6 +215,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
   scrollContent: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingBottom: theme.spacing.md,
   },
   chipContainer: {

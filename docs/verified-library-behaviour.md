@@ -221,12 +221,19 @@ on that older sheet, and the close's `onClose` → `unmount` → `onDismiss` cha
 is bound then. A consumer whose `onDismiss` changed in that same render gets the
 previous one. `useStandardBottomSheet` reads `onDismiss` through a ref.
 
+The content lags the same way: state inside the sheet re-renders it at once,
+with the props of the render before. A value its owner sets in the same event
+arrives one update later, after a form mounted by that state change has read
+its defaults, so `AddItemSheet` hands its details step the name itself.
+
 **Verified 2026-11-26 against `@gorhom/bottom-sheet@5.2.14` +
 `@gorhom/portal@1.0.14`** on the iPhone 17 simulator: a long-pressed folder set
 `managingFolder` and hid `FolderPicker` in one render; the `onDismiss` that ran
 logged `managingFolder` null and `visible` true, so the manage sheet never
 opened and the picker could not reopen. With the ref it opens, and closing it
-brings the picker back.
+brings the picker back. "Add 'Zqxv Gutter' manually" opened the pantry details
+form with an empty name while its `prefilledItemName` prop read the name: the
+form had mounted with the owner's previous ''.
 
 Re-check:
 

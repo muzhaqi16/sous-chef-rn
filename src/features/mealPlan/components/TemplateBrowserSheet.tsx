@@ -193,10 +193,10 @@ const styles = StyleSheet.create(theme => ({
   },
   // Each template is its own card in the sheet.
   listContent: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   search: {
-    marginHorizontal: theme.spacing.md,
+    marginHorizontal: theme.layout.pageGutter,
     marginBottom: theme.spacing.sm,
   },
 }));

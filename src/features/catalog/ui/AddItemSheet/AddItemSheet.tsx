@@ -70,6 +70,7 @@ function AddItemSheetContent<T extends BaseSuggestionItem>({
   const goBackToSearch = () => {
     setStep('search');
   };
+  const [manualName, setManualName] = useState('');
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const deferRender = config.deferFetch;
   const [shouldRenderSuggestions, setShouldRenderSuggestions] = useState(
@@ -125,15 +126,16 @@ function AddItemSheetContent<T extends BaseSuggestionItem>({
 
   // Opened on the form: the owner preps its inputs, as "Add manually" does.
   useEffect(() => {
-    if (startStep === 'details') onAddManually('');
+    if (startStep === 'details') onAddManually?.('');
   }, [startStep, onAddManually]);
 
   // With `renderDetails` this same sheet morphs to the details step, keeping
   // its search snap height; the user can drag it up to the 95% max.
   const handleAddManually = () => {
     const searchValue = searchBarRef.current?.getValue() ?? '';
-    onAddManually(searchValue);
+    onAddManually?.(searchValue);
     if (renderDetails) {
+      setManualName(searchValue);
       setStep('details');
     }
   };
@@ -220,6 +222,7 @@ function AddItemSheetContent<T extends BaseSuggestionItem>({
         // Opened on the form, there is no search to go back to: back closes.
         renderDetails({
           goBack: openingStep === 'details' ? onClose : goBackToSearch,
+          itemName: manualName,
         })
       ) : inDrilldown ? (
         <SuggestionDrilldown
@@ -229,7 +232,6 @@ function AddItemSheetContent<T extends BaseSuggestionItem>({
             renderSuggestionItem(item, !!activeGroup.dismissible)
           }
           onBack={() => setActiveSourceKey(null)}
-          backLabel={t('labels.back')}
           emptyLabel={t('addItemSheet.allAdded')}
         />
       ) : (
@@ -255,7 +257,9 @@ function AddItemSheetContent<T extends BaseSuggestionItem>({
             placeholder={t(config.searchPlaceholderKey)}
             onChangeText={handleSearchChange}
             onClear={() => setSearchQuery('')}
-            value={initialSearchQuery}
+            // Remounted on the way back from a step, it shows the search the
+            // results below still answer.
+            value={searchQuery}
             debounceMs={250}
             autoCapitalize="words"
             returnKeyType="search"
@@ -358,7 +362,8 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   contentContainer: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
+    paddingTop: theme.spacing.md,
   },
   title: {
     marginBottom: theme.spacing.lg,

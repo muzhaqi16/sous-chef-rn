@@ -65,7 +65,8 @@ export interface AddItemSheetProps<
   onQuickAddSuggestion: (item: T) => void;
   /** Hides the suggestion from this surface. */
   onDismissSuggestion?: (item: T) => void;
-  onAddManually: (searchValue: string) => void;
+  /** Readies what the details step reads besides the name, as it opens. */
+  onAddManually?: (searchValue: string) => void;
   /**
    * The step the sheet opens on. `details` is the + menu's "Add manually": the
    * sheet opens on the form, after asking `onAddManually('')` to prep it.
@@ -77,10 +78,15 @@ export interface AddItemSheetProps<
   /** Rendered above the action buttons. */
   tutorialHint?: React.ReactNode;
   /**
-   * Renders the "details" step IN PLACE in this sheet: one BottomSheetModal,
-   * one backdrop, no stacking. The consumer still gets
-   * `onAddManually(searchValue)` first, to prep the form's inputs.
+   * The details step, rendered IN PLACE in this sheet: one BottomSheetModal,
+   * one backdrop, no stacking. Its form asks the sheet before input is lost.
+   * `itemName` is what the search held: gorhom renders a sheet's content a
+   * render behind its owner, so a name the owner stores reaches a form that
+   * has already read its defaults.
+   * Verified: #gorhom-calls-the-ondismiss-of-the-render-before-the-close
    */
-  /** The in-place details step; its form asks the sheet before input is lost. */
-  renderDetails?: (controls: { goBack: () => void }) => React.ReactNode;
+  renderDetails?: (step: {
+    goBack: () => void;
+    itemName: string;
+  }) => React.ReactNode;
 }

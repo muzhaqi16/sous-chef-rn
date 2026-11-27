@@ -1,5 +1,4 @@
 import React from 'react';
-import { IconButton } from '#components/atoms/IconButton';
 import { View, type FlatListProps } from 'react-native';
 import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import Animated, {
@@ -9,6 +8,7 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '#components/atoms/Text';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { motion } from '#theme/motion';
 import type { BaseSuggestionItem } from '#features/catalog/types';
 
@@ -33,7 +33,7 @@ function AnimatedCell<T>({ children, onLayout, style }: CellRendererProps<T>) {
 }
 
 interface SuggestionDrilldownProps<T extends BaseSuggestionItem> {
-  /** Section title (e.g. "POPULAR") shown next to the back button */
+  /** Section title (e.g. "POPULAR") shown in the step's bar */
   title: string;
   /** Full list of suggestions for the drilled-into source */
   items: T[];
@@ -41,8 +41,6 @@ interface SuggestionDrilldownProps<T extends BaseSuggestionItem> {
   renderItem: (item: T) => React.ReactElement;
   /** Returns to the overview */
   onBack: () => void;
-  /** Accessibility label for the back button */
-  backLabel: string;
   /** Message shown when the list has been emptied */
   emptyLabel: string;
 }
@@ -58,27 +56,13 @@ export function SuggestionDrilldown<T extends BaseSuggestionItem>({
   items,
   renderItem,
   onBack,
-  backLabel,
   emptyLabel,
 }: SuggestionDrilldownProps<T>) {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <IconButton
-          name="chevron-back"
-          size="md"
-          tone="textPrimary"
-          onPress={onBack}
-          accessibilityLabel={backLabel}
-          accessibilityRole="button"
-          style={styles.backButton}
-        />
-        <Text role="subheading" style={styles.title}>
-          {title}
-        </Text>
-      </View>
+      <SheetHeader title={title} onClose={onBack} leading="back" />
       {/* The rows painted on open do not fade in; one that returns later does. */}
       <LayoutAnimationConfig skipEntering>
         <BottomSheetFlatList
@@ -109,23 +93,9 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  backButton: {
-    padding: theme.spacing.xs,
-  },
-  title: {
-    flexShrink: 1,
-  },
   // Each row is a RowCard, which carries the gap below it.
   listContent: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   emptyInset: {
     padding: theme.spacing.xl,

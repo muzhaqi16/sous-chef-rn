@@ -217,7 +217,7 @@ describe('the add-item sheet', () => {
       ),
     );
 
-    await user.press(screen.getByLabelText(t('labels.back')));
+    await user.press(screen.getByTestId(kitTestIDs.headerBackButton));
 
     expect(screen.getByText('Bread')).toBeTruthy();
   });
@@ -303,9 +303,17 @@ describe('its search', () => {
     ).not.toBeOnTheScreen();
   });
 
-  it('hands what was typed to a manual add, and turns to the details', async () => {
+  // The owner's own state reaches the sheet a render late, after a form the
+  // step mounts has read its defaults: the step is handed the name itself.
+  it('turns to the details holding what was typed from their first render', async () => {
+    const namesSeen: string[] = [];
     await openSheet(
-      { renderDetails: () => <Text role="body">Details step</Text> },
+      {
+        renderDetails: ({ itemName }) => {
+          namesSeen.push(itemName);
+          return <Text role="body">Details step</Text>;
+        },
+      },
       [searching('Oat drink')],
     );
     await search('oat milk');
@@ -316,6 +324,33 @@ describe('its search', () => {
 
     expect(props.onAddManually).toHaveBeenCalledWith('oat milk');
     expect(screen.getByText('Details step')).toBeTruthy();
+    expect(namesSeen[0]).toBe('oat milk');
+  });
+
+  it('comes back from the details to the search it left', async () => {
+    let goBack: () => void = () => undefined;
+    await openSheet(
+      {
+        renderDetails: step => {
+          goBack = step.goBack;
+          return <Text role="body">Details step</Text>;
+        },
+      },
+      [searching('Oat drink')],
+    );
+    await search('oat milk');
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(catalogTestIDs.addManuallyButton(PREFIX)));
+
+    act(() => {
+      goBack();
+    });
+
+    expect(
+      screen.getByTestId(catalogTestIDs.addItemSheetSearchInput(PREFIX)).props
+        .value,
+    ).toBe('oat milk');
   });
 
   it('turns to a report in place', async () => {

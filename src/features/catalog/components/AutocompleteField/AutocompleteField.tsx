@@ -81,7 +81,7 @@ const footerStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
     backgroundColor: theme.colors.surface,
   },
   icon: {

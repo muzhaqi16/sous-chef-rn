@@ -352,7 +352,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   headerSection: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
     paddingTop: theme.spacing.sm,
   },
   listContent: {
@@ -369,8 +369,9 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     color: theme.colors.inputText,
   },
+  // Under the rows' text, which sits on the gutter (`AutocompleteRow`).
   rowDividerInset: {
-    marginHorizontal: theme.spacing.md,
+    marginHorizontal: theme.layout.pageGutter,
   },
   messageContainer: {
     flex: 1,

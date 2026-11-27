@@ -52,10 +52,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  // Details step state. The shared AddItemSheet owns which step is visible
-  // (search vs details); here we only prep the inputs the details form reads.
-  const [prefilledItemName, setPrefilledItemName] = useState('');
-
   // Shared state management
   const shouldFetch = useDeferredSheetFetch({
     open: visible && !!pantryId,
@@ -95,12 +91,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   // Track items currently being added to prevent duplicate rapid-fire mutations
   const pendingItemIds = useRef(new Set<string>());
 
-  // Prep the details form's inputs when "Add manually" is pressed. The shared
-  // AddItemSheet morphs to the in-place details step itself (see renderDetails);
-  // here we only seed the prefilled name and the storage locations it reads.
-  const handleAddManually = (searchValue: string) => {
+  // The details step's storage picker lists these; the sheet hands it the name.
+  const handleAddManually = () => {
     setStorageLocations(readStorageLocations());
-    setPrefilledItemName(searchValue);
   };
 
   /**
@@ -236,10 +229,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       onAddManually={handleAddManually}
       startStep={startStep}
       initialSearchQuery={initialSearchQuery}
-      renderDetails={({ goBack }) => (
+      renderDetails={({ goBack, itemName }) => (
         <AddDetailsSheet
           pantryId={pantryId}
-          prefilledItemName={prefilledItemName}
+          prefilledItemName={itemName}
           storageLocations={storageLocations}
           onClose={goBack}
           onSuccess={handleAddSuccess}

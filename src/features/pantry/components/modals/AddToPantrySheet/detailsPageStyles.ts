@@ -14,8 +14,9 @@ export const detailsPageBaseStyles = (theme: Theme) => ({
     flexGrow: 1,
   },
   pageContent: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
     paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.md,
     flexGrow: 1,
   },
   section: {

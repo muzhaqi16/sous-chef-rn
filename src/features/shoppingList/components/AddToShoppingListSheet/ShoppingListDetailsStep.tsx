@@ -352,6 +352,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   content: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
+    paddingTop: theme.spacing.md,
   },
 }));

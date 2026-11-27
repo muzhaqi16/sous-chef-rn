@@ -109,6 +109,11 @@ optional:
   parent therefore uses `list`
   ([gorhom BottomSheetView cannot bound a scrollable](verified-library-behaviour.md#gorhom-bottomsheetview-cannot-bound-a-scrollable)).
   `__tests__/ui/viewSheetScrollableIsBounded.test.ts` holds the `list` rule.
+  - **A list sheet insets its own content, as a page list does.** `Sheet`
+    gutters `view`, `form` and `action` content; a `list` host puts
+    `layout.pageGutter` on its header and its list's content container, never
+    on a wrapper, so the whole width scrolls the list rather than dragging the
+    sheet (`pageGutterHasOneAuthor.test.ts`).
   - **One header.** A sheet's bar is `SheetHeader`, passed as `header`, or
     rendered by the content through `SheetHeaderSlot` (`headerFromContent`)
     when the form's state owns its handlers. Either way it sits above the

@@ -31,6 +31,22 @@ const readsGutter = (file: string, text?: string): boolean =>
     return false;
   });
 
+/** Whether the file renders a `<Sheet mode="list">`, whose content it insets. */
+const rendersListSheet = (file: string, text?: string): boolean =>
+  nodesOf(parseSource(file, text)).some(
+    node =>
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+      node.tagName.getText() === 'Sheet' &&
+      node.attributes.properties.some(
+        attr =>
+          ts.isJsxAttribute(attr) &&
+          attr.name.getText() === 'mode' &&
+          !!attr.initializer &&
+          ts.isStringLiteral(attr.initializer) &&
+          attr.initializer.text === 'list',
+      ),
+  );
+
 /**
  * The gutter had six authors on the pantry alone, agreeing only because the
  * same token was typed six times — which is how a second gutter token came to
@@ -98,7 +114,8 @@ const AUTHORS: Record<string, string> = {
     'insets its bare children',
   'src/features/pantry/screens/PantryAnalytics.tsx': 'insets its bare children',
 
-  // A list sheet's content takes no gutter, so its body insets itself.
+  // A list sheet's content takes no gutter, so its header and its list's
+  // content insets itself, as a page list does.
   'src/features/mealPlan/components/AddMealSheet.tsx': 'list sheet, self-inset',
   'src/features/mealPlan/components/TemplateBrowserSheet.tsx':
     'list sheet, self-inset',
@@ -106,6 +123,29 @@ const AUTHORS: Record<string, string> = {
     'list sheet, self-inset',
   'src/features/recipes/components/TagPicker.tsx': 'list sheet, self-inset',
   'src/features/recipes/components/FolderPicker.tsx': 'list sheet, self-inset',
+  'src/features/recipes/components/recipeSearch/IngredientSelectorSheet.tsx':
+    'list sheet, self-inset',
+  'src/components/organisms/MultiSelectChipSheet/MultiSelectChipSheet.tsx':
+    'list sheet, self-inset',
+  'src/features/catalog/ui/AddItemSheet/AddItemSheet.tsx':
+    'list sheet, self-inset',
+  'src/features/catalog/components/BottomSheetAutocompleteInput.tsx':
+    'list sheet, self-inset',
+  // The Add Item sheet's steps: each scrolls itself inside that list sheet.
+  'src/features/catalog/ui/AddItemSheet/SuggestionDrilldown.tsx':
+    'a step of a list sheet, self-inset',
+  'src/features/catalog/ui/ReportItemForm/ReportItemForm.tsx':
+    'a step of a list sheet, self-inset',
+  'src/features/shoppingList/components/AddToShoppingListSheet/ShoppingListDetailsStep.tsx':
+    'a step of a list sheet, self-inset',
+  'src/features/pantry/components/modals/AddToPantrySheet/detailsPageStyles.ts':
+    'the pages of a list sheet step, self-inset',
+  // The autocomplete sheet's rows are full-width cells, shared with the inline
+  // dropdown: the cell, not the list, holds the text on the gutter.
+  'src/features/catalog/components/AutocompleteField/AutocompleteRow.tsx':
+    'full-width cell of a list sheet',
+  'src/features/catalog/components/AutocompleteField/AutocompleteField.tsx':
+    'full-width cell of a list sheet',
 
   // One host, which does not inset it.
   'src/features/shoppingList/components/ShoppingListTabs/FilterTabBar.tsx':
@@ -192,6 +232,37 @@ describe('the page gutter has one author per page', () => {
     expect(
       readsGutter('planted.ts', '// theme.layout.pageGutter, by the screen'),
     ).toBe(false);
+  });
+
+  it('sees a list sheet by its mode, whatever else the tag carries', () => {
+    expect(
+      rendersListSheet(
+        'planted.tsx',
+        '<Sheet visible={open} mode="list" onDismiss={() => close()} />',
+      ),
+    ).toBe(true);
+    expect(rendersListSheet('planted.tsx', '<Sheet mode="form" />')).toBe(
+      false,
+    );
+
+    const offGutter = [
+      '<Sheet mode="list"><View style={styles.body} /></Sheet>;',
+      'const styles = { body: { paddingHorizontal: theme.spacing.md } };',
+    ].join('\n');
+    expect(rendersListSheet('planted.tsx', offGutter)).toBe(true);
+    expect(readsGutter('planted.tsx', offGutter)).toBe(false);
+  });
+
+  // `Sheet` insets a view, form or action sheet's content; a list's content
+  // scrolls itself, so the host insets its header and its list's content,
+  // and the whole width scrolls the list rather than dragging the sheet.
+  it('is read by every list sheet', () => {
+    const listSheets = sources.filter(
+      f => f.endsWith('.tsx') && rendersListSheet(f),
+    );
+
+    expect(listSheets.length).toBeGreaterThan(0);
+    expect(listSheets.filter(f => !readsGutter(f)).sort()).toEqual([]);
   });
 
   it('is read only by a page container, its chrome, or a deliberate negation', () => {

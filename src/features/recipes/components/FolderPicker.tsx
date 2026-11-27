@@ -249,45 +249,47 @@ const FolderPickerContent: React.FC<FolderPickerContentProps> = ({
 
   return (
     <View style={styles.bottomSheetContent}>
-      {folders.length > 5 && (
-        <SearchBar
-          placeholder={t('folderPicker.searchPlaceholder')}
-          testID={recipesTestIDs.folderSearchInput}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          autoCapitalize="none"
-          containerStyle={styles.search}
-        />
-      )}
-
-      <FolderListItem
-        folder={null}
-        label={t('labels.noFolder')}
-        isSelected={!selectedFolder}
-        onPress={onSelect}
-      />
-
-      <Divider style={styles.dividerGap} />
-
-      {!!allowCreate &&
-        (showNewFolder ? (
-          <FolderNameForm
-            onSubmit={onSelect}
-            actionLabel={t('labels.create')}
-            autoFocus
-            style={styles.newFolder}
+      <View style={styles.gutter}>
+        {folders.length > 5 && (
+          <SearchBar
+            placeholder={t('folderPicker.searchPlaceholder')}
+            testID={recipesTestIDs.folderSearchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            containerStyle={styles.search}
           />
-        ) : (
-          <AppPressable
-            style={styles.newFolderButton}
-            onPress={() => setShowNewFolder(true)}
-          >
-            <Icon name="add" size="sm" tone="primary" />
-            <Text role="bodyStrong" tone="accent">
-              {t('labels.createNewFolder')}
-            </Text>
-          </AppPressable>
-        ))}
+        )}
+
+        <FolderListItem
+          folder={null}
+          label={t('labels.noFolder')}
+          isSelected={!selectedFolder}
+          onPress={onSelect}
+        />
+
+        <Divider style={styles.dividerGap} />
+
+        {!!allowCreate &&
+          (showNewFolder ? (
+            <FolderNameForm
+              onSubmit={onSelect}
+              actionLabel={t('labels.create')}
+              autoFocus
+              style={styles.newFolder}
+            />
+          ) : (
+            <AppPressable
+              style={styles.newFolderButton}
+              onPress={() => setShowNewFolder(true)}
+            >
+              <Icon name="add" size="sm" tone="primary" />
+              <Text role="bodyStrong" tone="accent">
+                {t('labels.createNewFolder')}
+              </Text>
+            </AppPressable>
+          ))}
+      </View>
 
       {unavailable ? (
         <DataStateView
@@ -352,7 +354,12 @@ const styles = StyleSheet.create(theme => ({
   newFolder: {
     marginBottom: theme.spacing.md,
   },
+  // The rows' inset is the list's content, so the whole width scrolls it.
+  gutter: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
   folderListContent: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingBottom: theme.spacing.sm,
   },
   centeredSpinner: {
@@ -360,10 +367,12 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   emptyInset: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingVertical: theme.spacing.lg,
     alignItems: 'center',
   },
   hintText: {
+    paddingHorizontal: theme.layout.pageGutter,
     marginTop: theme.spacing.md,
     fontStyle: 'italic',
   },
@@ -377,7 +386,6 @@ const styles = StyleSheet.create(theme => ({
   },
   bottomSheetContent: {
     flex: 1,
-    paddingHorizontal: theme.layout.pageGutter,
     paddingVertical: theme.spacing.mdPlus,
   },
   search: {
