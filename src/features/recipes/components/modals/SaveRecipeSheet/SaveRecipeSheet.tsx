@@ -141,7 +141,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
 
   return (
     <Sheet
-      mode="action"
+      mode="form"
       headerFromContent
       visible={visible}
       onDismiss={form.onClose}
