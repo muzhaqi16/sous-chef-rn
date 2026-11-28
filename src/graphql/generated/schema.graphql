@@ -5518,8 +5518,9 @@ type Item {
   ): ItemConnection!
   """
   The unit a one-tap add of one package counts this item in, for the caller's
-  household, as ItemSuggestion.defaultUnit is: its held stack's, else the
-  last it held, else a packaged product's counted unit; never a bare gram.
+  household, as ItemSuggestion.defaultUnit is: a unit you buy, its held stack's
+  when that counts packages, else its package unit, else the container
+  households count it in, else piece; never a weight or volume.
   """
   quickAddUnit: Unit!
   """
@@ -9980,7 +9981,8 @@ input PantryItemFilters {
   deliberate superset of PantryStats.expiringCount, which starts at today;
   PantryStats.expiredCount covers the difference. Clients that want both an
   Expiring and an Expired section split this one page by date: expired is
-  an expiry date before today.
+  an expiry date before today. A stack dated by a LONG_LIFE_ESTIMATE is
+  never selected, as the stats never count one.
   """
   expiringSoon: Boolean
   itemId: ID
@@ -10207,12 +10209,14 @@ type PantryStats {
   activeItems: Int!
   """
   Items you still have whose expiry date is before today. An item is
-  expired from the day after its expiry date.
+  expired from the day after its expiry date. Counts LABEL and
+  PERISHABLE_ESTIMATE dates; a LONG_LIFE_ESTIMATE never counts.
   """
   expiredCount: Int!
   """
   Items you still have whose expiry date is between today and seven days
   from today, both included. An item dated today is expiring, not expired.
+  Counts LABEL and PERISHABLE_ESTIMATE dates; a LONG_LIFE_ESTIMATE never counts.
   """
   expiringCount: Int!
   lowStockCount: Int!
@@ -10362,6 +10366,7 @@ type PantrySuggestions {
   expiring later, or never) is above zero and above its low-stock minimum when
   lowStockAlert is set. The pantry's expiringSoon filter, its stats and expiry
   notifications still count the expiring stock until it is used or removed.
+  A stack dated by a LONG_LIFE_ESTIMATE is never listed.
   """
   expiringSoon: [PantryItemSuggestion!]!
   """
