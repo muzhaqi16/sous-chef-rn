@@ -4,7 +4,7 @@
  * against the schema through the real queue store and failure handler, so a
  * withdrawal would show as the toast it raises.
  */
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type { ApolloClient } from '@apollo/client';
 import { useApolloClient } from '@apollo/client/react';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
@@ -15,13 +15,13 @@ import {
 import {
   clearApolloClient,
   registerApolloClient,
-} from '#/apollo/clientRegistry';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+} from '#apollo/clientRegistry';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { useStore } from '#store';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { toastService } from '#/services/toastService';
-import { t } from '#/i18n';
+import { toastService } from '#services/toastService';
+import { t } from '#i18n';
 import { handleQueueFailure } from '../queueFailureHandler';
 import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';

@@ -1,5 +1,5 @@
 import type { TutorialStep } from '#hooks/ui/useTutorialSequence';
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 
 /** What the account has done that Recipes' tips wait for. */
 interface RecipeTipContext {

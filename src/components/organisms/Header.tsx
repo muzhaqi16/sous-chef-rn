@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 import { Pressable } from '#components/atoms/themedComponents';
 import { OfflineStatusPill } from '#components/molecules/OfflineStatusPill';
@@ -33,6 +33,10 @@ interface HeaderProps {
   rightActions?: BarAction[];
   /** Hide bottom border */
   borderless?: boolean;
+  /** In place of the kit's id on the close or back control. */
+  leadingTestID?: string;
+  /** On a title that is not pressable. */
+  titleTestID?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -44,10 +48,12 @@ export const Header: React.FC<HeaderProps> = ({
   onBack,
   onClose,
   borderless = false,
+  leadingTestID,
+  titleTestID,
 }) => {
   const { t } = useTranslation();
   const variantStyles = styles.useVariants({ borderless });
-  const { barActions, menuRef, overflow } = useHeaderOverflow(rightActions);
+  const { barActions, menu, overflow } = useHeaderOverflow(rightActions);
 
   const showTitle = title !== undefined && title !== '';
   const leading: BarAction[] = onClose
@@ -56,7 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
           icon: 'close',
           accessibilityLabel: t('labels.close'),
           onPress: onClose,
-          testID: kitTestIDs.headerCloseButton,
+          testID: leadingTestID ?? kitTestIDs.headerCloseButton,
         },
       ]
     : onBack
@@ -65,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
           icon: 'arrow-back',
           accessibilityLabel: t('labels.goBack'),
           onPress: onBack,
-          testID: kitTestIDs.headerBackButton,
+          testID: leadingTestID ?? kitTestIDs.headerBackButton,
         },
       ]
     : [];
@@ -123,6 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
           align={centerTitle ? 'center' : undefined}
           style={variantStyles.title(leftImbalance, rightImbalance)}
           numberOfLines={1}
+          testID={titleTestID}
         >
           {title}
         </Text>
@@ -133,11 +140,11 @@ export const Header: React.FC<HeaderProps> = ({
           header carries the signal rather than just the tab headers. Renders
           null when online, so screens with no actions are unaffected. */}
       <BarActions
-        leading={<OfflineStatusPill size={22} />}
+        leading={<OfflineStatusPill />}
         actions={barActions}
         onLayout={trackSide('right')}
       />
-      <HeaderActionMenu menuRef={menuRef} actions={overflow} />
+      <HeaderActionMenu menu={menu} actions={overflow} />
     </View>
   );
 };

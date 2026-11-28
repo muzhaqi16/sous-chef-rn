@@ -1,6 +1,5 @@
-import { useEffect, useImperativeHandle, useRef } from 'react';
+import { useImperativeHandle, useState } from 'react';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
-import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { SelectorContent } from './SelectorContent';
 import { ActionButtons } from './ActionButtons';
 import type { AnimatedItemSelectorProps, SelectableItem } from './types';
@@ -14,32 +13,26 @@ export const AnimatedItemSelector = <T extends SelectableItem>({
   onOpen,
   ref,
 }: AnimatedItemSelectorProps<T>) => {
-  const trayRef = useRef<ActionTrayRef>(null);
+  // A host drives it with `isVisible`, or through the ref, which opens it here.
+  const [openedByRef, setOpenedByRef] = useState(false);
+  const visible = isVisible ?? openedByRef;
 
-  // A host driving the tray with a flag rather than the ref.
-  useEffect(() => {
-    if (isVisible === undefined) return;
-    if (isVisible) trayRef.current?.open();
-    else trayRef.current?.close();
-  }, [isVisible]);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      open: () => trayRef.current?.open(),
-      close: () => trayRef.current?.close(),
-      isActive: () => trayRef.current?.isActive() ?? false,
-      toggle: () => trayRef.current?.toggle(),
-    }),
-    [],
-  );
+  useImperativeHandle(ref, () => ({
+    open: () => setOpenedByRef(true),
+    close: () => setOpenedByRef(false),
+    isActive: () => visible,
+    toggle: () => setOpenedByRef(open => !open),
+  }));
 
   return (
     <ActionTray
-      ref={trayRef}
+      visible={visible}
       title={config.title}
       headerActions={config.headerActions}
-      onClose={onClose}
+      onDismiss={() => {
+        setOpenedByRef(false);
+        onClose?.();
+      }}
       onOpen={onOpen}
       showCloseButton={true}
       enableBackdrop={true}

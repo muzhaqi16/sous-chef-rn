@@ -16,8 +16,4 @@ The repo has already paid for this once — `BottomSheetAutocompleteInput` recor
 
 Put the list in a plain `View` carrying `flex: 1`.
 
-## Exempt
-
-`FolderPicker.tsx`: its list carries an explicit `maxHeight`, so it is bounded without the container — the variant CLAUDE.md records as getting away with it.
-
 Source: [`eslint/plugin/rules/no-scrollable-in-bottom-sheet-view.js`](../../eslint/plugin/rules/no-scrollable-in-bottom-sheet-view.js) · spec: [`__tests__/lint/rules/no-scrollable-in-bottom-sheet-view.test.ts`](../../__tests__/lint/rules/no-scrollable-in-bottom-sheet-view.test.ts)

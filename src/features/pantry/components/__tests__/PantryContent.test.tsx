@@ -2,14 +2,14 @@
 
 import React from 'react';
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   pantryRows,
   seedPantry,
   type PantryItemFixture,
 } from '#/test-utils/fixtures/pantryFixtures';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 
 import {
   PantrySortDirection,
@@ -278,11 +278,15 @@ describe('the chrome', () => {
     expect(screen.queryByText('3')).toBeNull();
   });
 
-  it('offers adding a location as the last tab', () => {
+  it('offers adding a location after the locations', () => {
     const onAddLocation = jest.fn();
     renderContent({ onAddLocation }, MILK);
 
-    fireEvent.press(tab('__add__'));
+    fireEvent.press(
+      screen.getByTestId(
+        kitTestIDs.filterTabAction(pantryTestIDs.locationTabPrefix),
+      ),
+    );
 
     expect(onAddLocation).toHaveBeenCalledTimes(1);
   });

@@ -7,9 +7,9 @@
  */
 
 import notifee from '@notifee/react-native';
-import { client } from '#/app/apolloClient';
+import { client } from '#app/apolloClient';
 import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 const applyBadgeCount = (count: number): void => {
   notifee.setBadgeCount(Math.max(0, count)).catch(error => {

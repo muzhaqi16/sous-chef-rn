@@ -9,7 +9,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import {
   GetShoppingListItemsFilteredDocument,
   UpdateShoppingListItemDocument,
@@ -25,8 +25,8 @@ import { drainTimers } from '#/test-utils/drainTimers';
 
 const mockClientHolder: { client: ApolloClient | null } = { client: null };
 // The handler reads the client at call time, so each test's holds.
-jest.mock('#/apollo/clientRegistry', () => ({
-  ...jest.requireActual('#/apollo/clientRegistry'),
+jest.mock('#apollo/clientRegistry', () => ({
+  ...jest.requireActual('#apollo/clientRegistry'),
   requireApolloClient: () => mockClientHolder.client,
 }));
 

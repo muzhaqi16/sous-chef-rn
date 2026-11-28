@@ -14,8 +14,8 @@
  * matches nothing on a device — which is exactly what happened.
  */
 import { gql, type NormalizedCacheObject } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import {
   findCachedPantryItemDuplicate,
   readHeldStackUnit,

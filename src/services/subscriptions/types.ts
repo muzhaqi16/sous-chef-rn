@@ -3,7 +3,7 @@
 import type { ApolloClient, ErrorLike } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
 import type { useSubscription } from '@apollo/client/react';
-import type { MutationType } from '#/graphql/generated/schemaTypes';
+import type { MutationType } from '#graphql/generated/schemaTypes';
 
 /** Apollo Client 4 dropped the cache-shape generic; the cache type is inferred. */
 export type SubscriptionApolloClient = ApolloClient;

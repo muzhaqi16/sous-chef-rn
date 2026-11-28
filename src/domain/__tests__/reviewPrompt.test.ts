@@ -5,7 +5,7 @@ import {
   _resetToastMoments,
   _setToastsShowing,
   noteTrouble,
-} from '#/services/toastService';
+} from '#services/toastService';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import {
   askForReviewAfterSuccess,
@@ -13,10 +13,10 @@ import {
   DAYS_BETWEEN_REQUESTS,
   isDueForReview,
   QUIET_MS,
-} from '#/domain/reviewPrompt';
+} from '#domain/reviewPrompt';
 
 // The real one: the request waits on its toasts and the trouble it has seen.
-jest.unmock('#/services/toastService');
+jest.unmock('#services/toastService');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 9, 28, 12);

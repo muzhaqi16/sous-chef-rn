@@ -1,4 +1,4 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 import {
@@ -12,8 +12,8 @@ import {
   ErrorCode,
   ModerationContentType,
   ReportType,
-} from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import { profileTestIDs } from '#features/profile/testIDs';
 import { CreateUserReportDocument } from '#features/profile/hooks/useReportContent.generated';
 import { ReportContentSheet, type ReportTarget } from '../ReportContentSheet';

@@ -1,14 +1,10 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { ListItem } from '#components/molecules/ListItem';
-import {
-  Pressable,
-  ThemedActivityIndicator,
-} from '#components/atoms/themedComponents';
-import { Icon } from '#components/atoms/Icon';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   useCaptureEntries,
@@ -59,15 +55,15 @@ export const CaptureRows: React.FC = () => {
               }
               leftIcon="create-outline"
               onPress={() => toRecipeCreate({ captureId: entry.id })}
-              rightElement={
-                <Pressable
+              trailingActions={
+                <IconButton
+                  name="close"
+                  size="sm"
+                  tone="textSecondary"
                   onPress={() => settle(entry.id)}
-                  accessibilityRole="button"
                   accessibilityLabel={t('labels.close')}
-                  hitSlop={hitSlop.md}
-                >
-                  <Icon name="close" size={20} tone="textSecondary" />
-                </Pressable>
+                  accessibilityRole="button"
+                />
               }
             />
           </RowCard>

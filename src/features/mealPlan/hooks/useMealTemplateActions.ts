@@ -1,5 +1,4 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { DeleteMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
+import { useApolloClient } from '@apollo/client/react';
 import { planFromTemplate } from '#features/mealPlan/utils/planFromTemplate';
 import { templateFromPlan } from '#features/mealPlan/utils/templateFromPlan';
 import { duplicateTemplate as deriveTemplateCopy } from '#features/mealPlan/utils/duplicateTemplate';
@@ -9,19 +8,17 @@ import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions'
 import {
   MealPlanType,
   type TemplateCategory,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   readPlanSource,
   readTemplateSource,
 } from '#features/mealPlan/cache/derivationSources';
-import { toastService } from '#/services/toastService';
-import { Telemetry } from '#/services/telemetry';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import {
-  settleMutation,
-  type SettledFailure,
-} from '#/apollo/utils/settleMutation';
-import { useTranslation } from '#/i18n';
+import { toastService } from '#services/toastService';
+import { Telemetry } from '#services/telemetry';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { SettledFailure } from '#apollo/utils/settleMutation';
+import { useTranslation } from '#i18n';
+import { deleteMealTemplateWrite } from '#features/mealPlan/offline/localWrites';
 
 /** What a plan made from a template states; its meals come from the cache. */
 export interface PlanFromTemplateInput {
@@ -51,8 +48,9 @@ export function useMealTemplateActions() {
     useCreateMealTemplate();
   const { sendItem, creating: addingMeals } = useCreateMealPlanItem();
 
-  const [deleteTemplateMutation] = useMutation(DeleteMealTemplateDocument, {
-    context: { localFirst: true },
+  const removeTemplate = useLocalWrite(deleteMealTemplateWrite, {
+    fallback: t('mealTemplateActions.deleteFailed'),
+    removal: true,
   });
 
   const reportSkipped = (count: number) => {
@@ -125,16 +123,7 @@ export function useMealTemplateActions() {
   };
 
   const deleteTemplate = async (id: string) => {
-    const settled = await pendingWritesOf(client.cache).send(
-      DeleteMealTemplateDocument,
-      { input: { id } },
-      write =>
-        settleMutation(() => deleteTemplateMutation(write), {
-          document: DeleteMealTemplateDocument,
-          fallback: t('mealTemplateActions.deleteFailed'),
-          removal: true,
-        }),
-    );
+    const settled = await removeTemplate.send({ input: { id } });
     if (settled.status === 'failed') return false;
 
     toastService.success(t('mealTemplateActions.templateDeleted'));

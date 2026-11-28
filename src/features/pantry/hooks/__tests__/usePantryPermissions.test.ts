@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react-native';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import { usePantryPermissions } from '../usePantryPermissions';
 
 jest.mock('#features/pantry/hooks/useCurrentHome');

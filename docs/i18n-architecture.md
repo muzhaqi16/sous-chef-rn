@@ -8,10 +8,10 @@ strings keep slipping through five separate sweeps.
 Two ways, differing only by whether you are in a component:
 
 ```ts
-import { useTranslation } from '#/i18n'; // components and hooks
+import { useTranslation } from '#i18n'; // components and hooks
 const { t } = useTranslation();
 
-import { t } from '#/i18n'; // module scope: services, utilities,
+import { t } from '#i18n'; // module scope: services, utilities,
 // mutation onError handlers
 ```
 

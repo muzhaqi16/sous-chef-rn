@@ -1,5 +1,5 @@
 import { gql, type ApolloCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
@@ -11,7 +11,7 @@ import {
   safeEvictMany,
   adoptServerEntityId,
 } from '../cacheUpdaters';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 /** Mock Apollo cache exposing the methods the updaters touch as jest mocks. */

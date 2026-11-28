@@ -13,16 +13,16 @@ import {
   calculateRetryDelay,
   ReplayRejectedError,
 } from '../queueErrorPolicy';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   AddedContext,
   ErrorCode,
   type MealPlanItem,
-} from '#/graphql/generated/schemaTypes';
-import { Telemetry } from '#/services/telemetry';
-import { SessionError } from '#/utils/errors/sessionError';
-import { TimeoutError } from '#/utils/errors/timeoutError';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+} from '#graphql/generated/schemaTypes';
+import { Telemetry } from '#services/telemetry';
+import { SessionError } from '#utils/errors/sessionError';
+import { TimeoutError } from '#utils/errors/timeoutError';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import {
   AddRecipeToFavoritesDocument,
@@ -30,7 +30,6 @@ import {
   ForkRecipeDocument,
   MarkRecipeAsCookedDocument,
 } from '#features/recipes/graphql/recipe.generated';
-import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import {
   CreateMealPlanItemDocument,
   UpdateMealPlanItemDocument,
@@ -52,12 +51,12 @@ import {
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
 import {
   CreateHomeDocument,
   UpdateHomeDocument,
 } from '#operations/home/home.generated';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
+import { RecordPantryStockCheckDocument } from '#features/pantry/hooks/useStockCheck.generated';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -89,7 +88,7 @@ const mockClient = {
     extract: jest.fn(() => ({})),
   },
 };
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),
@@ -102,7 +101,7 @@ const mockPendingWrites = {
   drop: jest.fn(),
   restore: jest.fn(),
 };
-jest.mock('#/apollo/pendingWrites/pendingWrites', () => ({
+jest.mock('#apollo/pendingWrites/pendingWrites', () => ({
   pendingWritesOf: () => mockPendingWrites,
 }));
 
@@ -138,7 +137,7 @@ jest.mock('../queueStore', () => ({
 }));
 
 // Mock generateId
-jest.mock('#/utils/generateId', () => ({
+jest.mock('#utils/generateId', () => ({
   generateId: jest.fn(() => 'gen-id'),
 }));
 
@@ -712,7 +711,7 @@ describe('QueueManager', () => {
       ],
       [
         'its ingredients added to a list',
-        AddItemsToShoppingListFromRecipeDocument,
+        AddItemToShoppingListDocument,
         {
           shoppingListId: 'list-1',
           items: [
@@ -1994,9 +1993,7 @@ describe('QueueManager', () => {
       expect(
         extractEntityInfo(
           makeMutation({
-            ...queuedMutationFor(
-              AddItemToShoppingListFromFilteredPantryDocument,
-            ),
+            ...queuedMutationFor(AddItemToShoppingListDocument),
             variables: {
               input: { shoppingListId: 'list-1', items: [{ id: 'item-1' }] },
             },
@@ -2245,6 +2242,86 @@ describe('QueueManager', () => {
       expect(failureHandler).toHaveBeenCalledWith(
         expect.objectContaining({
           error: expect.objectContaining({ code: 'VALIDATION_FAILED' }),
+        }),
+      );
+    });
+
+    // A resend of the first key answers what that send did, so the refused rows
+    // become a check of their own; the row that landed is never counted again.
+    it('keeps only the stock check rows the server refused, under a new key', async () => {
+      const failureHandler = jest.fn();
+      manager.setFailureHandler(failureHandler);
+      mockClient.mutate.mockResolvedValue({
+        data: {
+          recordPantryStockCheck: {
+            __typename: 'RecordPantryStockCheckPayload',
+            converged: false,
+            results: [
+              { pantryItemId: 'milk', success: true, failure: null },
+              {
+                pantryItemId: 'eggs',
+                success: false,
+                failure: { code: 'VERSION_CONFLICT', disposition: 'FAIL' },
+              },
+            ],
+          },
+        },
+      });
+      const entry = (pantryItemId: string, expectedVersion: number) => ({
+        pantryItemId,
+        answer: 'ALL_GONE',
+        expectedVersion,
+      });
+
+      jest.useRealTimers();
+      await manager['processMutation'](
+        makeMutation({
+          id: 'check',
+          ...queuedMutationFor(RecordPantryStockCheckDocument),
+          variables: {
+            today: '2026-11-25',
+            input: {
+              pantryId: 'pantry-1',
+              idempotencyKey: 'first-key',
+              entries: [entry('milk', 2), entry('eggs', 5)],
+            },
+          },
+          pendingWrite: {
+            id: 'write-1',
+            inputs: {
+              pantryId: 'pantry-1',
+              now: '2026-11-25T10:00:00.000Z',
+              rows: [
+                { pantryItemId: 'milk', itemName: 'Milk', held: 0 },
+                { pantryItemId: 'eggs', itemName: 'Eggs', held: 0 },
+              ],
+            },
+          },
+        }),
+      );
+      jest.useFakeTimers();
+
+      // The entry's own update, not its status moves.
+      const [, narrowed] =
+        jest
+          .mocked(queueStore.updateMutation)
+          .mock.calls.find(
+            ([id, update]) => id === 'check' && !!update.variables,
+          ) ?? [];
+      expect(narrowed?.variables?.input).toEqual({
+        pantryId: 'pantry-1',
+        idempotencyKey: expect.not.stringMatching(/^first-key$/),
+        entries: [entry('eggs', 5)],
+      });
+      expect(narrowed?.pendingWrite?.inputs.rows).toEqual([
+        { pantryItemId: 'eggs', itemName: 'Eggs', held: 0 },
+      ]);
+      expect(failureHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({
+            type: 'conflict',
+            code: 'VERSION_CONFLICT',
+          }),
         }),
       );
     });
@@ -2759,7 +2836,7 @@ describe('QueueManager', () => {
     });
 
     it('catches and logs handler errors without crashing', () => {
-      const { logger } = require('#/utils/environment');
+      const { logger } = require('#utils/environment');
       const throwingHandler = jest.fn(() => {
         throw new Error('handler boom');
       });

@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { TagInput } from '#features/recipes/components/TagInput';
 import { Text } from '#components/atoms/Text';
 import { InlineFolderChooser } from '#features/recipes/components/InlineFolderChooser';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
 
 export interface SaveRecipeSheetProps {
   visible: boolean;
@@ -23,8 +25,10 @@ export interface SaveRecipeSheetProps {
   recipeName?: string;
 }
 
-export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
-  visible,
+type SaveRecipeFormProps = Omit<SaveRecipeSheetProps, 'visible'>;
+
+/** One opening: Favorites picked, no tags, no notes. */
+const SaveRecipeForm: React.FC<SaveRecipeFormProps> = ({
   onClose,
   folders,
   availableTags,
@@ -34,25 +38,13 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  // Form state
   const [selectedFolder, setSelectedFolder] = useState<string | null>(
     'Favorites',
   );
   const [tags, setTags] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
-  const [localFolders, setLocalFolders] = useState<string[]>([]); // Track newly created folders
-
-  // Reset form when sheet opens (render-time state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  if (visible !== prevVisible) {
-    setPrevVisible(visible);
-    if (visible) {
-      setSelectedFolder('Favorites');
-      setTags([]);
-      setNotes('');
-      setLocalFolders([]);
-    }
-  }
+  // Folders made here, shown before the save creates them.
+  const [localFolders, setLocalFolders] = useState<string[]>([]);
 
   const handleSave = async () => {
     if (saving) return;
@@ -80,14 +72,8 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
   })();
 
   return (
-    <Sheet
-      mode="action"
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={['75%', '95%']}
-      contentContainerStyle={styles.contentContainer}
-      style={styles.scrollView}
-      header={
+    <>
+      <SheetHeaderSlot>
         <SheetHeader
           title={t('saveRecipe.title')}
           onClose={onClose}
@@ -98,8 +84,8 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
             loading: saving,
           }}
         />
-      }
-    >
+      </SheetHeaderSlot>
+
       {!!recipeName && (
         <Text
           role="caption"
@@ -128,14 +114,13 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
         onTagsChange={setTags}
         suggestions={availableTags}
         placeholder={t('saveRecipe.tagsPlaceholder')}
-        maxTags={5}
       />
 
       {/* Notes */}
       <SectionHeader variant="overline" style={styles.sectionLabel}>
         {t('saveRecipe.notesOptional')}
       </SectionHeader>
-      <ThemedBottomSheetTextInput
+      <ThemedTextInput
         style={styles.notesInput}
         placeholder={t('labels.addAnyNotesAboutThisRecipe')}
         defaultValue={notes}
@@ -144,6 +129,27 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
         numberOfLines={3}
         textAlignVertical="top"
       />
+    </>
+  );
+};
+
+export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
+  visible,
+  ...form
+}) => {
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      mode="form"
+      headerFromContent
+      visible={visible}
+      onDismiss={form.onClose}
+      snapPoints={['75%']}
+      contentContainerStyle={styles.contentContainer}
+      style={styles.scrollView}
+    >
+      {opening ? <SaveRecipeForm key={opening.id} {...form} /> : null}
     </Sheet>
   );
 };
@@ -153,7 +159,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   contentContainer: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     paddingBottom: theme.spacing.xl,
   },
   recipeName: {

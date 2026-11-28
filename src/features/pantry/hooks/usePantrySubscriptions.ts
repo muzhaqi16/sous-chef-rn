@@ -8,7 +8,7 @@
 import { useLinkExpirationData } from '#features/notifications/hooks/useLinkExpirationData';
 import { useSubscription } from '@apollo/client/react';
 import { useSelectedPantryId } from '#store/useAppStore';
-import { useFeedKeeps } from '#/hooks/subscriptions/useChangeFeed';
+import { useFeedKeeps } from '#hooks/subscriptions/useChangeFeed';
 import {
   PantryEventsDocument,
   type PantryEventsSubscription,
@@ -23,26 +23,26 @@ import {
   UsePantrySubscriptions_PantryItemFragmentDoc,
   type UsePantrySubscriptions_PantryItemFragment,
 } from './usePantrySubscriptions.generated';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
-import { batchedEventRead } from '#/services/subscriptions/batchedEventRead';
-import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
+import { fetchEventEntity } from '#services/subscriptions/fetchEventEntity';
+import { batchedEventRead } from '#services/subscriptions/batchedEventRead';
+import { isSelfEcho } from '#services/subscriptions/isSelfEcho';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
-} from '#/services/subscriptions/types';
+} from '#services/subscriptions/types';
 import {
   MutationType,
   PantrySubtype,
   SyncScopeKind,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
   skipUnmatchedFilterVariants,
-} from '#/apollo/utils/cacheUpdaters';
-import { logger } from '#/utils/environment';
-import { todayKey } from '#/utils/dateUtils';
+} from '#apollo/utils/cacheUpdaters';
+import { logger } from '#utils/environment';
+import { todayKey } from '#utils/dateUtils';
 import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
 import { useEntitySubscriptionSkip } from '#hooks/subscriptions/useEntitySubscriptionSkip';
 

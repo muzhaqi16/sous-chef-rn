@@ -4,7 +4,7 @@ import { render, renderHook, screen } from '@testing-library/react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Screen } from '#components/templates/Screen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
-import { lightTheme } from '#/theme/themes';
+import { lightTheme } from '#theme/themes';
 
 /**
  * The `scroll` host pads its content by the bottom inset, so iOS's automatic

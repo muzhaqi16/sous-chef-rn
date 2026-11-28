@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { View, type ViewInstance } from 'react-native';
+import { useTranslation } from '#i18n';
 import {
   Canvas,
   ClipOp,
@@ -26,7 +26,7 @@ import Animated, {
 import { Text } from '#components/atoms/Text';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
-import { colors } from '#/theme/foundations/colors';
+import { colors } from '#theme/foundations/colors';
 import { FRAMES, FRAME_MS } from '#components/atoms/sousChefLoaderFrames';
 
 const COLORS = colors.illustration;
@@ -514,7 +514,7 @@ const Banner: React.FC<BannerProps> = ({
   const componentStylesWithVariants = componentStyles.useVariants({ size });
 
   const animatedTheme = useAnimatedTheme();
-  const ref = useRef<View>(null);
+  const ref = useRef<ViewInstance>(null);
   // Fabric measures synchronously here, so the art has its size before the first
   // paint; `onLayout` follows a later change (a rotation, a new message).
   useLayoutEffect(() => {

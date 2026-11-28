@@ -5,7 +5,7 @@ import {
   PantrySortDirection,
   PREFERENCE_DEFAULTS,
 } from '#store/slices/preferenceTypes';
-import { fromDateKey } from '#/utils/dateUtils';
+import { fromDateKey } from '#utils/dateUtils';
 
 interface SortableItem {
   id: string;

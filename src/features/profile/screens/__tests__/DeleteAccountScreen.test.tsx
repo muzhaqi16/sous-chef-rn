@@ -8,7 +8,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { CanDeleteAccountDocument } from '#operations/auth/user.generated';
-import { DeletionBlockerType } from '#/graphql/generated/schemaTypes';
+import { DeletionBlockerType } from '#graphql/generated/schemaTypes';
 import { DeleteAccountScreen } from '../DeleteAccountScreen';
 import type { BaseInputProps } from '#components/molecules/BaseInput/BaseInput';
 import type { LoadingProps } from '#components/molecules/Loading';
@@ -18,8 +18,8 @@ const mockNav = jest
   .requireMock('#hooks/navigation/useAppNavigation')
   .useAppNavigation();
 
-jest.mock('#/services/errorService');
-const { errorCopy } = jest.requireMock('#/services/errorService');
+jest.mock('#services/errorService');
+const { errorCopy } = jest.requireMock('#services/errorService');
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',

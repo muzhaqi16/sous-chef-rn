@@ -7,12 +7,12 @@ import {
   formatPackageBreakdown,
   formatPackageBreakdownFull,
 } from '../usePantryItemTransformation';
-import { getI18n } from '#/i18n/config';
+import { getI18n } from '#i18n/config';
 import {
   StorageState,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 // The real instance (jest.setup.js initializes it), so these assertions still
 // verify the copy in en.json rather than a stub's echo.

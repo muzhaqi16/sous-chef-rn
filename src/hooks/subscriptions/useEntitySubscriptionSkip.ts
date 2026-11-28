@@ -1,6 +1,6 @@
 import type { DocumentNode } from 'graphql';
 import { useIsHomeSelectionReady } from '#store/useAppStore';
-import { useSubscriptionRejected } from '#/services/subscriptions/rejectedSubscriptions';
+import { useSubscriptionRejected } from '#services/subscriptions/rejectedSubscriptions';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 
 /**

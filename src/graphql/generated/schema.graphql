@@ -329,7 +329,7 @@ see.
 """
 input AddTemplateItemInput {
   """
-  The day the meal falls on, counting from 0 for the template's first day: 0 up to durationDays minus 1
+  The day the meal falls on, counting from 0 for the template's first day: 0 to 365. A day past the template's last grows the template to cover it
   """
   dayOffset: Int!
   """
@@ -1579,7 +1579,6 @@ type CookingLog {
   recipe: Recipe
   servingsMade: Int
   user: User!
-  wouldMakeAgain: Boolean
 }
 
 """
@@ -1995,7 +1994,9 @@ input CreateMealTemplateInput {
   defaultServings: Int
   """Free text, at most 2000 characters after trimming"""
   description: String
-  """Days the template covers, a positive integer; 7 when omitted or null"""
+  """
+  Days the template covers, 1 to 366; 7 when omitted or null, and grown to cover the furthest item's day
+  """
   durationDays: Int
   """
   Optional: Link template to a home for shared access.
@@ -3997,8 +3998,6 @@ enum ErrorCode {
   AUTH_TOKEN_MISSING
   CONFLICT
   DEADLOCK
-  EMAIL_ALREADY_EXISTS
-  EMAIL_ALREADY_VERIFIED
   FORBIDDEN
   HOME_ACCESS_DENIED
   """
@@ -4027,7 +4026,6 @@ enum ErrorCode {
   INTERNAL_SERVER_ERROR
   NOT_FOUND
   PANTRY_ITEM_ALREADY_EXISTS
-  RESOURCE_ALREADY_EXISTS
   """
   A unit change whose route is an estimate, sent without CONVERT or RECOUNT. Show the preview's two choices and resend with one.
   """
@@ -6101,7 +6099,10 @@ enum ItemType {
 type ItemUnit {
   contentUnit: Unit
   contentUnitId: ID
-  displayFormat: DisplayFormat!
+  """
+  How quantities in this unit should be displayed. No operation sets it, so every unit reads AUTO
+  """
+  displayFormat: DisplayFormat! @deprecated(reason: "Always AUTO: no operation sets it. Format the quantity by its unit's own rule, as AUTO does.")
   id: ID!
   isCommon: Boolean!
   isDefault: Boolean!
@@ -6153,7 +6154,6 @@ input ItemUnitInput {
   averagePricePerUnit: Float
   """For a package unit: the unit one package holds packageSize of"""
   contentUnit: UnitRefInput
-  externalSourceMappingId: ID
   isDefault: Boolean
   isPreferred: Boolean
   packageDescription: String
@@ -7191,7 +7191,7 @@ type MealTemplateItemEdge implements Edge {
 """One meal in a template being created."""
 input MealTemplateItemInput {
   """
-  The day the meal falls on, counting from 0 for the template's first day; a plan made from the template dates it this many days after the plan's start
+  The day the meal falls on, counting from 0 for the template's first day, up to 365; a plan made from the template dates it this many days after the plan's start
   """
   dayOffset: Int!
   """
@@ -11078,7 +11078,10 @@ input PurchasedItemInput @oneOf {
 type QuantityBreakdown {
   """The content unit (e.g., can)"""
   contentUnit: Unit
-  """Number of full unopened packages (e.g., 1 full case)"""
+  """
+  Whole packages held (e.g., 1 full case), counted as StockBreakdown.fullPackages
+  counts them: each batch by its own package size.
+  """
   fullPackages: Int!
   """Loose content units from opened packages (e.g., 9 cans)"""
   looseContentUnits: Float!
@@ -14491,7 +14494,7 @@ type ShoppingListItem {
   """
   How quantity should be displayed. No operation sets it, so every line reads AUTO
   """
-  displayFormat: DisplayFormat!
+  displayFormat: DisplayFormat! @deprecated(reason: "Always AUTO: no operation sets it. Format the quantity by its unit's own rule, as AUTO does.")
   """The line's id. An add may supply it, so an offline client can mint it"""
   id: ID!
   """
@@ -16066,8 +16069,6 @@ enum TopLevelErrorCode {
   """
   CLIENT_UPGRADE_REQUIRED
   DB_CONSTRAINT_VIOLATION
-  EMAIL_ALREADY_EXISTS
-  EMAIL_ALREADY_VERIFIED
   """
   A feature the operation needs is OFF for the caller. Carries feature, the FeatureFlagName. Retrying cannot fix it: re-read myFeatureFlags and hide the feature. A 403 — clients must not sign the user out.
   """
@@ -16124,7 +16125,6 @@ enum TopLevelErrorCode {
   PREMIUM_REQUIRED
   """Global rate limit. Carries retryAfter in seconds."""
   RATE_LIMIT_EXCEEDED
-  RESOURCE_ALREADY_EXISTS
   """
   A thrown ConflictError escaping a resolver. The union-member spelling is CONFLICT.
   """
@@ -16898,7 +16898,7 @@ input UpdateMealTemplateInput {
   defaultServings: Int
   """Free text, at most 2000 characters after trimming; null clears it"""
   description: String
-  """Days the template covers, a positive integer"""
+  """Days the template covers, 1 to 366"""
   durationDays: Int
   """The template to update"""
   id: ID!
@@ -17420,7 +17420,7 @@ recipe the meal names must be one the caller can see.
 """
 input UpdateTemplateItemInput {
   """
-  The day the meal falls on, counting from 0 for the template's first day: a non-negative integer. Null is refused
+  The day the meal falls on, counting from 0 for the template's first day: 0 to 365, growing the template to cover it. Null is refused
   """
   dayOffset: Int
   id: ID!

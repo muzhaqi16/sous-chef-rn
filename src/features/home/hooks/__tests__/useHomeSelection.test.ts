@@ -6,15 +6,15 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
-import { alertService } from '#/services/alertService';
-import { errorService } from '#/services/errorService';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import { errorService } from '#services/errorService';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { ErrorCode, MembershipRole } from '#graphql/generated/schemaTypes';
 import type { GetHomesQuery } from '#operations/home/home.generated';
 import { useHomeSelection } from '../useHomeSelection';
 import { useDefaultHomeSyncStore } from '#features/home/store/useDefaultHomeSyncStore';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 // The GetHomes connection-node shape this hook consumes. Derived from the
 // generated query so it stays in sync.

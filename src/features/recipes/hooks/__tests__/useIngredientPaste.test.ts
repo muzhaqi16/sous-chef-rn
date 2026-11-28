@@ -1,7 +1,7 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { act } from '@testing-library/react-native';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -10,7 +10,7 @@ import {
 import { ParseIngredientLinesDocument } from '#features/recipes/hooks/useIngredientPaste.generated';
 import { useIngredientPaste } from '../useIngredientPaste';
 
-jest.mock('#/utils/deviceLocale', () => ({
+jest.mock('#utils/deviceLocale', () => ({
   getDeviceLocale: () => 'en-AU',
 }));
 

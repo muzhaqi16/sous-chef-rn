@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import Animated, {
@@ -16,7 +16,7 @@ import { Icon } from '#components/atoms/Icon';
 import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import { Text } from '#components/atoms/Text';
 import type { TabIconPair } from '#features/types';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 
 /** Shown when a route arrives with no appearance entry — a wiring mistake, not
@@ -105,7 +105,7 @@ export const TabItem: React.FC<TabItemProps> = ({
   const renderIcon = () => (
     <Icon
       name={isFocused ? icon.active : icon.inactive}
-      size={24}
+      size="md"
       tone={isFocused ? 'primary' : 'onNavigation'}
     />
   );

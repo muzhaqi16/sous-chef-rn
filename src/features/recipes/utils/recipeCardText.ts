@@ -1,4 +1,4 @@
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 
 /** "25 min", "4 servings": the time only when it is known. */
 export function timeAndServings(

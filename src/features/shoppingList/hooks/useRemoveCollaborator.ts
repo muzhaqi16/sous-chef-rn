@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { RemoveCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { removeCollaboratorFromShoppingListCache } from '#features/shoppingList/cache/collaborators';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { useTranslation } from '#/i18n';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { useTranslation } from '#i18n';
 
 interface LeaveCallbacks {
   onSuccess?: () => void;

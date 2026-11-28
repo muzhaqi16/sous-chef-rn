@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { SearchBar } from '#components/molecules/SearchBar';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { identity, useLocalSearch } from '#hooks/search/useLocalSearch';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
+import { useOpening } from '#hooks/ui/useOpening';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 const TagListSeparator = () => <View style={styles.tagSeparator} />;
 // Every row is the same component, so one recycling pool is correct.
@@ -26,26 +28,18 @@ export interface TagPickerProps {
   loading?: boolean;
 }
 
-export const TagPicker: React.FC<TagPickerProps> = ({
-  visible,
+type TagPickerContentProps = Omit<TagPickerProps, 'visible' | 'onCancel'>;
+
+/** One opening: the search starts empty. */
+const TagPickerContent: React.FC<TagPickerContentProps> = ({
   tags,
   selectedTags,
   onSelect,
-  onCancel,
   loading = false,
 }) => {
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Reset search query when sheet opens (render-time state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  if (visible !== prevVisible) {
-    setPrevVisible(visible);
-    if (visible) {
-      setSearchQuery('');
-    }
-  }
 
   const filteredTags = useLocalSearch(tags, searchQuery, [identity]);
 
@@ -69,7 +63,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
       >
         <Icon
           name="pricetag-outline"
-          size={20}
+          size="sm"
           tone={isSelected ? 'primary' : 'textSecondary'}
         />
         <Text
@@ -80,62 +74,49 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         >
           {item}
         </Text>
-        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
+        {!!isSelected && <Icon name="checkmark" size="sm" tone="primary" />}
       </AppPressable>
     );
   };
 
   return (
-    <Sheet
-      mode="view"
-      visible={visible}
-      onDismiss={onCancel}
-      snapPoints={['55%', '70%']}
-      contentContainerStyle={styles.bottomSheetContent}
-    >
+    <>
       <View style={styles.header}>
-        <Text role="heading">{t('tagPicker.filterByTags')}</Text>
-      </View>
-
-      {/* Search Input */}
-      {tags.length > 5 && (
-        <View style={styles.searchContainer}>
-          <Icon name="search" size={18} tone="textSecondary" />
-          <ThemedBottomSheetTextInput
-            style={styles.searchInput}
+        {tags.length > 5 && (
+          <SearchBar
             placeholder={t('tagPicker.searchPlaceholder')}
-            defaultValue={searchQuery}
+            testID={recipesTestIDs.tagSearchInput}
+            value={searchQuery}
             onChangeText={setSearchQuery}
             autoCapitalize="none"
+            containerStyle={styles.search}
           />
-        </View>
-      )}
-
-      {/* Clear All / Selected Count */}
-      <View style={styles.selectionRow}>
-        <Text role="caption" tone="secondary">
-          {selectedTags.length === 0
-            ? t('tagPicker.noneSelected')
-            : t('tagPicker.selectedCount', {
-                count: selectedTags.length,
-              })}
-        </Text>
-        {selectedTags.length > 0 && (
-          <Pressable
-            onPress={handleClearAll}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Text role="label" tone="accent">
-              {t('labels.clearAll')}
-            </Text>
-          </Pressable>
         )}
+
+        <View style={styles.selectionRow}>
+          <Text role="caption" tone="secondary">
+            {selectedTags.length === 0
+              ? t('tagPicker.noneSelected')
+              : t('tagPicker.selectedCount', {
+                  count: selectedTags.length,
+                })}
+          </Text>
+          {selectedTags.length > 0 && (
+            <Pressable
+              onPress={handleClearAll}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Text role="label" tone="accent">
+                {t('labels.clearAll')}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+
+        <Divider style={styles.dividerGap} />
       </View>
 
-      {/* Divider */}
-      <Divider style={styles.dividerGap} />
-
-      {/* Tags List */}
+      {/* The list fills what the header leaves. */}
       {loading ? (
         <View style={styles.centeredSpinner}>
           <Text role="body" tone="secondary">
@@ -151,7 +132,6 @@ export const TagPicker: React.FC<TagPickerProps> = ({
           keyExtractor={(item: string) => item}
           extraData={selectedTags}
           showsVerticalScrollIndicator={false}
-          style={styles.tagList}
           contentContainerStyle={styles.tagListContent}
           ItemSeparatorComponent={TagListSeparator}
         />
@@ -168,33 +148,34 @@ export const TagPicker: React.FC<TagPickerProps> = ({
           </Text>
         </View>
       )}
+    </>
+  );
+};
+
+export const TagPicker: React.FC<TagPickerProps> = ({
+  visible,
+  onCancel,
+  ...content
+}) => {
+  const { t } = useTranslation();
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      mode="list"
+      visible={visible}
+      onDismiss={onCancel}
+      title={t('tagPicker.filterByTags')}
+      snapPoints={['55%', '70%']}
+    >
+      {opening ? <TagPickerContent key={opening.id} {...content} /> : null}
     </Sheet>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  bottomSheetContent: {
-    padding: theme.spacing.mdPlus,
-  },
   header: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.base,
-    marginBottom: theme.spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: theme.spacing.base,
-    paddingHorizontal: theme.spacing.sm,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   selectionRow: {
     flexDirection: 'row',
@@ -220,10 +201,8 @@ const styles = StyleSheet.create(theme => ({
   dividerGap: {
     marginVertical: theme.spacing.md,
   },
-  tagList: {
-    maxHeight: 250,
-  },
   tagListContent: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingBottom: theme.spacing.sm,
   },
   tagSeparator: {
@@ -234,10 +213,14 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   emptyInset: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingVertical: theme.spacing.lg,
     alignItems: 'center',
   },
   pressed: {
     opacity: theme.opacity.pressed,
+  },
+  search: {
+    marginBottom: theme.spacing.md,
   },
 }));

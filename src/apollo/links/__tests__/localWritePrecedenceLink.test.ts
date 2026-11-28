@@ -1,31 +1,31 @@
 import { ApolloClient, ApolloLink, Observable, gql } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import {
   recordMock,
   testMockLink,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { cacheShows, withDeadline } from '#/test-utils/cacheWaits';
 import {
   ErrorCode,
   ErrorDisposition,
   UsualStoreSource,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   readUsualStores,
   writeUsualStores,
   type UsualStoreEntry,
-} from '#features/catalog/cache/usualStores';
-import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
+} from '#entities/store/usualStores';
+import { UsualStoresDocument } from '#entities/store/usualStores.generated';
 import { UpdateUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
 import type { PinUsualStoreInputs } from '#features/catalog/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { readFenceOf } from '#/apollo/pendingWrites/readFence';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
+import { readFenceOf } from '#apollo/pendingWrites/readFence';
+import { settleMutation } from '#apollo/utils/settleMutation';
 import { createLocalWritePrecedenceLink } from '../localWritePrecedenceLink';
 
 const entry = (

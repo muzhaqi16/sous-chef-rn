@@ -1,37 +1,60 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
+import {
+  Controller,
+  useController,
+  useForm,
+  type Control,
+} from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Button } from '#components/molecules/Button';
 import { pantryTestIDs } from '#features/pantry/testIDs';
-import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
 import { CollapsibleChipPicker } from '#features/pantry/components/CollapsibleChipPicker';
 import { QuantityInputFeedback } from '#features/pantry/components/QuantityInputFeedback';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { validateDeductionQuantity } from '#features/pantry/utils/validateDeductionQuantity';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import {
+  allHeld,
+  deductionCap,
+  judgeDeduction,
+} from '#features/pantry/utils/judgeDeduction';
 import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
-import { UsagePurpose } from '#/graphql/generated/schemaTypes';
-import { commonStyles } from '#/styles/commonStyles';
+import { UsagePurpose } from '#graphql/generated/schemaTypes';
+import { commonStyles } from '#styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
-import { PantryActionModal } from '#features/pantry/components/modals/PantryActionModal';
+import {
+  PantryActionHeader,
+  PantryActionModal,
+} from '#features/pantry/components/modals/PantryActionModal';
+import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { Text } from '#components/atoms/Text';
-import { localizeNumericHint } from '#/utils/formatters/number';
-import { formatQuantityForInput, unitLabel } from '#/utils/formatQuantity';
-import type { PantryActionSharedState } from '#features/pantry/types';
+import { localizeNumericHint } from '#utils/formatters/number';
+import { formatQuantityForInput, unitLabel } from '#utils/formatQuantity';
+import { reportValidationErrors } from '#utils/validation/common';
+import type {
+  PantryActionSharedState,
+  StatedUse,
+  UsedBatch,
+} from '#features/pantry/types';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import {
+  consumeDefaults,
+  consumeSchema,
+  untypedQuantity,
+  type ConsumeFormValues,
+} from './consumeFormConfig';
 
 interface ConsumePantryItemModalProps {
   compact?: boolean;
   visible: boolean;
   pantryItemId: string | null;
+  /** A use from this batch alone; absent, the stack's oldest batches go first. */
+  batch?: UsedBatch | null;
   onClose: () => void;
-  onConfirm: (
-    quantityUsed: number,
-    quantityInput: string,
-    purpose: UsagePurpose,
-    notes: string,
-    usageUnitId?: string,
-  ) => Promise<unknown>;
+  onConfirm: (use: StatedUse) => Promise<unknown>;
 }
 
 const PURPOSE_OPTIONS: Array<{
@@ -50,50 +73,87 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   visible,
   compact = false,
   pantryItemId,
+  batch = null,
   onClose,
   onConfirm,
 }) => {
   const { t } = useTranslation();
-  const [fieldError, setFieldError] = useState<string>();
-  // Null until typed: the amount then reads the default unit's step, which can
-  // land after the sheet opens.
-  const [typedQuantity, setTypedQuantity] = useState<string | null>(null);
-  const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
+  return (
+    <PantryActionModal
+      visible={visible}
+      pantryItemId={pantryItemId}
+      onClose={onClose}
+      unitToggleLabel={t('consumeItem.consumeBy')}
+      operation={PantryOperation.Consume}
+      batch={batch}
+      renderForm={(shared, pantryItem) => (
+        <ConsumeForm
+          compact={compact}
+          shared={shared}
+          fromBatch={!!batch}
+          pantryItem={pantryItem}
+          onClose={onClose}
+          onConfirm={onConfirm}
+        />
+      )}
+    />
+  );
+};
 
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItemId);
-  if (visible !== prevVisible || pantryItemId !== prevPantryItemId) {
-    setPrevVisible(visible);
-    setPrevPantryItemId(pantryItemId);
-    setTypedQuantity(null);
-    setPurpose(UsagePurpose.General);
-    setFieldError(undefined);
-  }
+interface ConsumeFormProps {
+  compact: boolean;
+  shared: PantryActionSharedState;
+  /** Taken from one batch, so no oldest-first order to explain. */
+  fromBatch: boolean;
+  pantryItem: PantryActionModal_PantryItemFragment | null;
+  onClose: () => void;
+  onConfirm: ConsumePantryItemModalProps['onConfirm'];
+}
 
-  const quantityOf = ({ defaultUnitIncrement }: PantryActionSharedState) =>
-    typedQuantity ??
-    (defaultUnitIncrement ? formatQuantityForInput(defaultUnitIncrement) : '1');
+const ConsumeForm: React.FC<ConsumeFormProps> = ({
+  compact,
+  shared,
+  fromBatch,
+  pantryItem,
+  onClose,
+  onConfirm,
+}) => {
+  const { t } = useTranslation();
+  const {
+    control,
+    handleSubmit,
+    trigger,
+    formState: { isDirty, isSubmitted },
+  } = useForm<ConsumeFormValues>({
+    resolver: yupResolver(consumeSchema),
+    defaultValues: consumeDefaults,
+    context: { shared },
+  });
+  useSheetUnsavedInput(isDirty);
+  // A refusal shown stays true to the stock: a conversion landing or the stock
+  // moving checks the amount again.
+  const cap = deductionCap(shared);
+  useEffect(() => {
+    if (isSubmitted) void trigger('quantityInput');
+  }, [cap, isSubmitted, trigger]);
 
-  const handleConfirm = async (shared: PantryActionSharedState) => {
-    if (!pantryItemId) return;
-
-    const quantityInput = quantityOf(shared);
-    const quantityValue = validateDeductionQuantity(
-      quantityInput,
+  // The caller closes the sheet once the use is recorded; a refusal keeps it
+  // open with what was entered.
+  const submit = handleSubmit(async ({ quantityInput, purpose, notes }) => {
+    const judged = judgeDeduction(
+      quantityInput ?? untypedQuantity(shared),
       shared,
       'consume',
-      setFieldError,
     );
-    if (quantityValue === null) return;
-
-    await onConfirm(
-      quantityValue,
-      quantityInput,
+    if (!judged.ok) return;
+    await onConfirm({
+      quantity: judged.amount,
+      all: fromBatch && judged.amount === allHeld(shared),
       purpose,
-      shared.notes,
-      shared.activeUnitId,
-    );
-  };
+      notes,
+      usageUnitId: shared.activeUnitId,
+    });
+  }, reportValidationErrors);
 
   const purposeOptions = PURPOSE_OPTIONS.map(({ labelKey, value }) => ({
     label: t(labelKey),
@@ -101,64 +161,44 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   }));
 
   return (
-    <PantryActionModal
-      visible={visible}
-      pantryItemId={pantryItemId}
-      onClose={onClose}
-      title={t('consumeItem.title')}
-      confirmLabel={t('labels.confirm')}
-      snapPoints={['75%', '95%']}
-      unitToggleLabel={t('consumeItem.consumeBy')}
-      operation={PantryOperation.Consume}
-      onConfirm={handleConfirm}
-      renderActionFields={(shared, pantryItem) => (
-        <ConsumeActionFields
+    <>
+      <PantryActionHeader
+        title={t('consumeItem.title')}
+        confirmLabel={t('labels.confirm')}
+        onClose={onClose}
+        onConfirm={pantryItem ? () => submit() : null}
+      />
+      {pantryItem ? (
+        <ConsumeFields
+          control={control}
           compact={compact}
-          fieldError={fieldError}
-          quantityInput={quantityOf(shared)}
-          setQuantityInput={value => {
-            setFieldError(undefined);
-            setTypedQuantity(value);
-          }}
-          purpose={purpose}
-          setPurpose={setPurpose}
           shared={shared}
-          showFifoHint={pantryItem.activeBatchCount > 1}
+          showFifoHint={!fromBatch && pantryItem.activeBatchCount > 1}
           purposeOptions={purposeOptions}
         />
-      )}
-    />
+      ) : null}
+    </>
   );
 };
 
-/** Extracted to keep the render prop body simple */
-const ConsumeActionFields: React.FC<{
+const ConsumeFields: React.FC<{
+  control: Control<ConsumeFormValues>;
   compact: boolean;
-  fieldError?: string;
-  quantityInput: string;
-  setQuantityInput: (v: string) => void;
-  purpose: UsagePurpose;
-  setPurpose: (v: UsagePurpose) => void;
   shared: PantryActionSharedState;
-  showFifoHint?: boolean;
+  showFifoHint: boolean;
   purposeOptions: Array<{ label: string; value: UsagePurpose }>;
-}> = ({
-  compact,
-  fieldError,
-  quantityInput,
-  setQuantityInput,
-  purpose,
-  setPurpose,
-  shared,
-  showFifoHint,
-  purposeOptions,
-}) => {
+}> = ({ control, compact, shared, showFifoHint, purposeOptions }) => {
   const { t } = useTranslation();
   const [details, setDetails] = useState(false);
-  const useAll =
-    shared.exactFactor != null
-      ? shared.trackingQuantity / shared.exactFactor
-      : shared.availableInSelectedUnit;
+  const {
+    field: { ref: quantityRef, ...quantity },
+    fieldState: quantityState,
+  } = useController({
+    control,
+    name: 'quantityInput',
+  });
+  const quantityInput = quantity.value ?? untypedQuantity(shared);
+  const useAll = allHeld(shared);
   const activeUnitText = unitLabel(shared.activeUnit);
   const consumeAmount = parseFractionalInput(quantityInput);
   const { conversion, remaining, available } = useQuantityFeedback(
@@ -177,16 +217,17 @@ const ConsumeActionFields: React.FC<{
               ? `${t('consumeItem.quantityToConsume')} (${activeUnitText})`
               : t('consumeItem.quantityToConsume')
           }
-          error={fieldError}
+          error={quantityState.error?.message}
           required
+          ref={quantityRef}
           value={quantityInput}
-          onChangeText={setQuantityInput}
+          onChangeText={quantity.onChange}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
-          useBottomSheetInput
           testID={pantryTestIDs.consumeQuantity}
         />
         <QuantityInputFeedback
-          remaining={remaining}
+          // A message on the field says it; the line below would repeat it.
+          remaining={quantityState.error ? null : remaining}
           available={available}
           consumeUnit={shared.activeUnit}
           isConvertedUnit={shared.isConvertedUnit}
@@ -195,7 +236,7 @@ const ConsumeActionFields: React.FC<{
           conversionConfidence={conversion.confidence}
           commonFractions={shared.commonFractions}
           onFractionSelect={value =>
-            setQuantityInput(formatQuantityForInput(value))
+            quantity.onChange(formatQuantityForInput(value))
           }
           selectedFractionValue={consumeAmount ?? undefined}
         />
@@ -215,8 +256,9 @@ const ConsumeActionFields: React.FC<{
             title={t('consumeItem.useAll')}
             disabled={useAll == null || useAll <= 0}
             onPress={() => {
-              if (useAll != null)
-                setQuantityInput(formatQuantityForInput(useAll));
+              if (useAll != null) {
+                quantity.onChange(formatQuantityForInput(useAll));
+              }
             }}
           />
           <AppPressable
@@ -233,23 +275,36 @@ const ConsumeActionFields: React.FC<{
       {!!(!compact || details) && (
         <>
           {/* Purpose Selection */}
-          <CollapsibleChipPicker
-            label={t('consumeItem.purpose')}
-            options={purposeOptions}
-            selectedValue={purpose}
-            onSelect={setPurpose}
+          <Controller
+            control={control}
+            name="purpose"
+            render={({ field }) => (
+              <CollapsibleChipPicker
+                label={t('consumeItem.purpose')}
+                options={purposeOptions}
+                selectedValue={field.value}
+                onSelect={field.onChange}
+              />
+            )}
           />
 
           {/* Notes */}
           <View style={commonStyles.bottomSheetSection}>
-            <FormInput
-              label={t('labels.notes')}
-              value={shared.notes}
-              onChangeText={shared.setNotes}
-              placeholder={t('consumeItem.notesPlaceholder')}
-              multiline
-              numberOfLines={3}
-              useBottomSheetInput
+            <Controller
+              control={control}
+              name="notes"
+              render={({ field }) => (
+                <FormInput
+                  ref={field.ref}
+                  label={t('labels.notes')}
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  onBlur={field.onBlur}
+                  placeholder={t('consumeItem.notesPlaceholder')}
+                  multiline
+                  numberOfLines={3}
+                />
+              )}
             />
           </View>
         </>

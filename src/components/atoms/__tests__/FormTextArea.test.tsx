@@ -3,10 +3,6 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { FormTextArea } from '../FormTextArea';
 
-jest.mock('#context/BottomSheetInputContext', () => ({
-  useIsBottomSheetInput: jest.fn(() => false),
-}));
-
 describe('FormTextArea', () => {
   const defaultProps = {
     label: 'Description',

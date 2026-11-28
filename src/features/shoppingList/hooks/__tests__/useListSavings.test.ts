@@ -1,5 +1,5 @@
-import { makeCache } from '#/apollo/cache';
-import { StoreLineMatch, UnitSystem } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
+import { StoreLineMatch, UnitSystem } from '#graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
@@ -21,7 +21,7 @@ import {
 } from '#/test-utils/fixtures/listSavingsFixtures';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
-import { formatMonthDay } from '#/utils/formatters/date';
+import { formatMonthDay } from '#utils/formatters/date';
 import { ListSavingsDocument } from '../useListSavings.generated';
 import { useListSavings, useStoreSavingsLines } from '../useListSavings';
 

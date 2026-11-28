@@ -3,10 +3,10 @@ import { skipToken, useQuery } from '@apollo/client/react';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { useStore } from '#store';
 import { useSelectedShoppingListId, useUser } from '#store/useAppStore';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useUpdateSettings } from '#hooks/settings/useUpdateSettings';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { PricePromptReadinessDocument } from './usePricePrompt.generated';
 
 /**

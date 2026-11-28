@@ -3,6 +3,7 @@ import { fireEvent, screen } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { t } from '#i18n';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { ParseIngredientLinesDocument } from '#features/recipes/hooks/useIngredientPaste.generated';
 import { pastedLines } from '#features/recipes/utils/pastedIngredients';
@@ -80,7 +81,7 @@ describe('PasteIngredientsSheet', () => {
     expect(
       screen.getByText('3 more ingredients fit in this recipe.'),
     ).toBeTruthy();
-    expect(screen.getByText('Add 3 ingredients')).toBeTruthy();
+    expect(screen.getByLabelText('Add 3 ingredients')).toBeTruthy();
   });
 
   it('cannot read lines while the API is unavailable, and says why', () => {
@@ -96,6 +97,18 @@ describe('PasteIngredientsSheet', () => {
       screen.getByTestId(recipesTestIDs.pasteIngredientsAdd).props
         .accessibilityState,
     ).toMatchObject({ disabled: true });
+  });
+
+  it('says on the field that nothing was pasted, and reads nothing', async () => {
+    const { onPasted } = renderSheet(5);
+
+    fireEvent.press(screen.getByTestId(recipesTestIDs.pasteIngredientsAdd));
+    await drainTimers();
+
+    expect(
+      screen.getByText(t('recipes.pasteIngredientsRequired')),
+    ).toBeTruthy();
+    expect(onPasted).not.toHaveBeenCalled();
   });
 
   it('says the recipe is full instead of offering a field', () => {

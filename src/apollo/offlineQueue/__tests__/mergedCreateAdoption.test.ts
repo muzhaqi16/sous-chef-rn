@@ -3,8 +3,8 @@
  * the version an edit returned, and the row a merged create survives as. Both
  * are written to the queue itself, so a restart mid-drain keeps them.
  */
-import { makeCache } from '#/apollo/cache';
-import { storage } from '#/store/deviceStorage';
+import { makeCache } from '#apollo/cache';
+import { storage } from '#store/deviceStorage';
 import { useStore } from '#store';
 import {
   makeQueuedMutation,
@@ -21,6 +21,7 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import {
   AddItemToShoppingListDocument,
+  RemoveItemsFromShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
@@ -28,11 +29,11 @@ import {
   DeleteMealPlanItemDocument,
   UpdateMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
-import { t } from '#/i18n';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
+import { t } from '#i18n';
 import { handleQueueFailure } from '../queueFailureHandler';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
 import { QueueStatus } from '../types';
@@ -51,7 +52,7 @@ const mockClient = {
   refetchQueries: jest.fn(() => Promise.resolve([])),
   cache: makeCache(),
 };
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),
@@ -490,6 +491,29 @@ describe("a merged create's queued writes", () => {
 
     expect(mockClient.mutate).toHaveBeenCalledTimes(1);
     expect(queueStore.getMutation('delete')).toBeNull();
+    expect(failed).not.toHaveBeenCalled();
+    expect(kept).toHaveBeenCalledTimes(1);
+  });
+
+  // The merged row may hold another member's line: a clear never follows it,
+  // and it still removes the other rows it names.
+  it('keep the other rows of a clear queued while the create was replaying', async () => {
+    queueShoppingAdd();
+    mockClient.mutate.mockImplementationOnce(() => {
+      queueAfterCreate('clear', RemoveItemsFromShoppingListDocument, {
+        shoppingListId: 'list-1',
+        ids: ['minted-2', 'sli-1'],
+      });
+      return Promise.resolve(shoppingMerge);
+    });
+    const { manager, failed, kept } = managerWithHandlers();
+
+    await manager.processQueue();
+
+    expect(queueStore.getMutation('clear')).toMatchObject({
+      status: QueueStatus.PENDING,
+      variables: { input: { shoppingListId: 'list-1', ids: ['sli-1'] } },
+    });
     expect(failed).not.toHaveBeenCalled();
     expect(kept).toHaveBeenCalledTimes(1);
   });

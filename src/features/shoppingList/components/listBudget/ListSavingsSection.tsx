@@ -1,14 +1,15 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslateFn } from '#/i18n';
+import { useTranslation, type TranslateFn } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
-import { Loading } from '#components/molecules/Loading';
+import { DataStateView } from '#components/organisms/DataStateView';
+import { useDataState } from '#hooks/data/useDataState';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
-import { commonStyles } from '#/styles/commonStyles';
-import { formatRelativeToNow } from '#/utils/formatters/date';
+import { commonStyles } from '#styles/commonStyles';
+import { formatRelativeToNow } from '#utils/formatters/date';
 import { StoreRow } from '#features/catalog/ui/StoreRow';
 import {
   useListSavings,
@@ -45,22 +46,25 @@ export const ListSavingsSection: React.FC<{
   const { t } = useTranslation();
   const readingSystem = useReadingSystem();
   const { toUsualStores, toStoreSavingsItems } = useAppNavigation();
-  const { offered, savings, loading, failed } = useListSavings(listId);
+  const { offered, savings, loading, failed, retry } = useListSavings(listId);
+  // The section's states are the app's own: a read it cannot make offline
+  // says so, and a failed one offers to try again.
+  const state = useDataState({
+    loading,
+    error: failed,
+    hasResult: !!savings,
+    isEmpty: savings?.stores.length === 0,
+  });
 
   const body = () => {
-    if (loading) return <Loading size="small" />;
-    if (!savings) {
+    if (!savings || state !== 'ready') {
       return (
-        <Text role="caption" tone="secondary">
-          {t('listSavings.needsConnection')}
-        </Text>
-      );
-    }
-    if (savings.stores.length === 0) {
-      return (
-        <Text role="body" tone="secondary">
-          {t('listSavings.empty')}
-        </Text>
+        <DataStateView
+          state={state}
+          onRetry={retry}
+          empty={{ title: t('listSavings.empty') }}
+          testID={shoppingListTestIDs.listSavingsState}
+        />
       );
     }
     return savings.stores.map(store => {

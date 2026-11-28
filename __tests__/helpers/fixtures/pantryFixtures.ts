@@ -15,12 +15,12 @@ import {
   StorageState,
   StorageType,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   GetPantryDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 import { seedQuery } from '../apolloMockProvider';
 import { asAbbreviation, readingAsAbbreviation } from './unitLabels';
 
@@ -169,7 +169,6 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
     netWeightUnit: null,
     storageLocation: null,
     packageBreakdown: null,
-    quantityBreakdown: null,
     pantryId: 'pantry-1',
     minQuantity: null,
     restockQuantity: null,
@@ -188,7 +187,6 @@ function storageLocationNode(loc: StorageLocationFixture): StorageLocationNode {
     id: loc.id,
     name: loc.name ?? `Location ${loc.id}`,
     type: loc.type ?? StorageType.PantryShelf,
-    icon: null,
     color: null,
     temperature: loc.temperature ?? null,
     isDefault: false,

@@ -1,10 +1,10 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   DietaryAlertState,
   RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { SubstituteOption } from '#features/recipes/hooks/useRecipeSubstitutes';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import type { HouseholdAlert } from '#domain/dietary';

@@ -5,7 +5,7 @@ import {
   chainVersionedWrite,
 } from '../entityWriteChain';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 
 const PlanVersion = gql`
   fragment EntityWriteChainVersion on MealPlan {

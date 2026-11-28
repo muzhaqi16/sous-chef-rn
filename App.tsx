@@ -8,7 +8,7 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
-import { client } from '#/app/apolloClient';
+import { client } from '#app/apolloClient';
 import { startCore } from '#bootstrap/startCore';
 import { useCoreReady } from '#bootstrap/useCoreReady';
 import { Navigation } from '#navigation/RootNavigator';
@@ -19,26 +19,26 @@ import { ToastProvider } from '#components/molecules/Toast';
 import { OfflineTransitionAnnouncer } from '#components/atoms/OfflineTransitionAnnouncer';
 import { ThemedStatusBar } from '#components/atoms/ThemedStatusBar';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
-import { useAppLifecycle } from '#/app/useAppLifecycle';
-import { UpdateRequiredGate } from '#/app/UpdateRequiredGate';
+import { useAppLifecycle } from '#app/useAppLifecycle';
+import { UpdateRequiredGate } from '#app/UpdateRequiredGate';
 import { NotificationProvider } from '#features/notifications/components/NotificationProvider';
-import { AlertProvider } from '#/components/providers/AlertProvider';
+import { AlertProvider } from '#components/providers/AlertProvider';
 import { CoreDataProvider } from '#bootstrap/CoreDataProvider';
 import { OwedAccountSetup } from '#features/onboarding/ui/OwedAccountSetup';
-import { MOBILE_WARM_TARGETS } from '#/app/mobileWarmTargets';
+import { MOBILE_WARM_TARGETS } from '#app/mobileWarmTargets';
 import { FieldRendererProvider } from '#components/molecules/fieldRenderers';
 import { catalogFieldRenderers } from '#features/catalog/ui/catalogFieldRenderers';
 import { CoreSubscriptionProvider } from '#bootstrap/CoreSubscriptionProvider';
 import {
   OverlayBackdropProvider,
   GlobalBackdrop,
-} from '#/components/providers/OverlayBackdropProvider';
+} from '#components/providers/OverlayBackdropProvider';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import { setupGlobalErrorHandler } from '#/app/globalErrorHandler';
-import { setPushTokenProvider } from '#/services/push/pushTokenProvider';
-import { nativePushProvider } from '#/services/push/nativePushProvider';
-import { iosPushProvider } from '#/services/push/iosPushProvider';
-import { registerMobileSessionHost } from '#/app/mobileSessionHost';
+import { setupGlobalErrorHandler } from '#app/globalErrorHandler';
+import { setPushTokenProvider } from '#services/push/pushTokenProvider';
+import { nativePushProvider } from '#services/push/nativePushProvider';
+import { iosPushProvider } from '#services/push/iosPushProvider';
+import { registerMobileSessionHost } from '#app/mobileSessionHost';
 
 // Install global JS exception and promise rejection handlers before any component renders
 setupGlobalErrorHandler();

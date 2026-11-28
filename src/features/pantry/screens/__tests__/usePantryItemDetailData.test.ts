@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -7,14 +7,14 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
-import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import { GetPantryItemDocument } from '../usePantryItemDetailData.generated';
 import {
   BatchStatus,
   ErrorCode,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+} from '#graphql/generated/schemaTypes';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { usePantryItemDetailData } from '../usePantryItemDetailData';
 
 async function loadItem() {

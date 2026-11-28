@@ -1,4 +1,4 @@
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 /**
  * The server and the app are versioned separately, so a member of a closed

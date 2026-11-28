@@ -8,13 +8,13 @@ import {
 } from '@apollo/client';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { act } from '@testing-library/react-native';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 import type { StoreApi } from 'zustand';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
-import { queueManager } from '#/apollo/offlineQueue/queueManager';
-import { feedEngine } from '#/apollo/feed/feedEngine';
+import { queueManager } from '#apollo/offlineQueue/queueManager';
+import { feedEngine } from '#apollo/feed/feedEngine';
 import { APOLLO_DEFAULT_OPTIONS } from '../defaultOptions';
-import { changeLanguage, getResolvedLanguage } from '#/i18n';
+import { changeLanguage, getResolvedLanguage } from '#i18n';
 import { languageLink } from '../links/languageLink';
 import { createOfflineReadLink } from '../links/offlineReadLink';
 import { apolloCachePersistence } from '../offline/ApolloCachePersistence';
@@ -29,17 +29,17 @@ import { drainTimers } from '#/test-utils/drainTimers';
 const mockReconnectListeners = new Set<() => void>();
 let mockChannelOpen = false;
 
-jest.mock('#/apollo/links/wsLink', () => ({
+jest.mock('#apollo/links/wsLink', () => ({
   onWebSocketReconnected: (listener: () => void) => {
     mockReconnectListeners.add(listener);
     return () => mockReconnectListeners.delete(listener);
   },
   isLiveChannelOpen: () => mockChannelOpen,
 }));
-jest.mock('#/apollo/offlineQueue/queueManager', () => ({
+jest.mock('#apollo/offlineQueue/queueManager', () => ({
   queueManager: { whenIdle: jest.fn(async () => {}) },
 }));
-jest.mock('#/apollo/feed/feedEngine', () => ({
+jest.mock('#apollo/feed/feedEngine', () => ({
   feedEngine: { catchUp: jest.fn(), refreshHeld: jest.fn() },
 }));
 interface MockSessionState {
@@ -65,7 +65,7 @@ jest.mock('#store', () => {
 const { useStore } = jest.requireMock<{
   useStore: StoreApi<MockSessionState>;
 }>('#store');
-jest.mock('#/apollo/logoutCleanup', () => {
+jest.mock('#apollo/logoutCleanup', () => {
   const { isSessionEnding } = jest.requireActual<
     typeof import('#store/sessionEnding')
   >('#store/sessionEnding');

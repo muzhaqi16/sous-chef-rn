@@ -1,5 +1,5 @@
-import { UnitType } from '#/graphql/generated/schemaTypes';
-import { shownStock } from '#domain/stockDisplay';
+import { UnitType } from '#graphql/generated/schemaTypes';
+import { shownStock } from '#entities/pantryItem/stockDisplay';
 import type { PantryActionSharedState } from '#features/pantry/types';
 
 const CUP = { symbol: 'cup' };
@@ -22,8 +22,6 @@ export function pantryActionShared(
   const state: PantryActionSharedState = {
     selectedUnitInfo: null,
     setSelectedUnitInfo: jest.fn(),
-    notes: '',
-    setNotes: jest.fn(),
     trackingQuantity,
     trackingUnit: CUP,
     trackingUnitId: 'u1',

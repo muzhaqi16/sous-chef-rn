@@ -1,6 +1,6 @@
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import { formatRole } from '../roleFormatters';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 
 describe('roleFormatters', () => {
   describe('formatRole', () => {

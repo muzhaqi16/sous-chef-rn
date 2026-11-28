@@ -9,7 +9,7 @@ import {
   Diet,
   HealthGoal,
   Intolerance,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 import {
   recipeFormFragment,

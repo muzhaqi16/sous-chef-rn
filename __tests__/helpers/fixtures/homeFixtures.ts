@@ -14,7 +14,7 @@ import {
   InviteStatus,
   MembershipRole,
   MembershipStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { GetHomesQuery } from '#operations/home/home.generated';
 import type { MockDataFor } from '../apolloMockProvider';
 import type { GetHomesDocument } from '#operations/home/home.generated';

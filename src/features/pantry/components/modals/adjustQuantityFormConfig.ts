@@ -1,7 +1,7 @@
 import { object, string, type ObjectSchema } from 'yup';
-import { lazyMessage, quantityRule } from '#/utils/validation/common';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { lazyMessage, quantityRule } from '#utils/validation/common';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 
 export interface AdjustQuantityFormValues {
   quantityInput: string;

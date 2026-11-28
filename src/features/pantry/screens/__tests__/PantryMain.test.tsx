@@ -9,11 +9,11 @@ import {
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { useStore } from '#store';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import {
   homesWithRole,
   type HomeFixture,
@@ -27,12 +27,12 @@ import {
   useTabBarSetters,
   useTabBarState,
   type TabBarAddAction,
-} from '#/context/TabBarActionsContext';
+} from '#context/TabBarActionsContext';
 import { tutorialSession } from '#hooks/ui/tutorialSession';
 import { GUIDE_TOURS } from '#domain/guides';
 import { Telemetry } from '#services/telemetry';
 import { pantryTestIDs } from '#features/pantry/testIDs';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { PantryMain } from '../PantryMain';
 
 jest.mock('#hooks/navigation/useAppNavigation');

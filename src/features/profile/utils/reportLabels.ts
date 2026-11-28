@@ -1,5 +1,5 @@
-import { ReportType } from '#/graphql/generated/schemaTypes';
-import type { TranslationKey } from '#/i18n';
+import { ReportType } from '#graphql/generated/schemaTypes';
+import type { TranslationKey } from '#i18n';
 
 /** Keyed by the enum, so a reason the schema gains fails to compile until it is labelled. */
 export const REPORT_TYPE_LABEL_KEYS: Record<ReportType, TranslationKey> = {

@@ -1,20 +1,12 @@
-import { act } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { drained } from '#/test-utils/drainTimers';
-import {
-  CreateHomeDocument,
-  DeleteHomeDocument,
-} from '#operations/home/home.generated';
+import { CreateHomeDocument } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
-import { alertService } from '#/services/alertService';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { errorService } from '#/services/errorService';
-import { removeFromHomesCache } from '../homeCacheUpdaters';
-import type { MockFor } from '#/test-utils/apolloMockProvider';
+import { alertService } from '#services/alertService';
 import { useHomeMutations } from '../useHomeMutations';
 
 const mockStoreState = {
@@ -27,7 +19,6 @@ let mockHasUnverifiedEmail = false;
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: Partial<RootState>) => unknown) =>
     selector(mockStoreState),
-  useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
   useHasUnverifiedEmail: jest.fn(() => mockHasUnverifiedEmail),
   useHomeState: jest.fn(() => ({
     selectedHomeId: mockStoreState.selectedHomeId,
@@ -41,9 +32,9 @@ jest.mock('#store/useAppStore', () => ({
   })),
 }));
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
-jest.mock('#/utils/connectionUtils', () => ({
+jest.mock('#utils/connectionUtils', () => ({
   extractNodes: jest.fn(
     (conn?: { edges?: Array<{ node?: unknown } | null> | null } | null) =>
       conn?.edges ? conn.edges.map(e => e?.node).filter(Boolean) : [],
@@ -56,12 +47,10 @@ jest.mock('#/utils/connectionUtils', () => ({
 jest.mock('../homeCacheUpdaters', () => ({
   ...jest.requireActual('../homeCacheUpdaters'),
   addToHomesCache: jest.fn(),
-  removeFromHomesCache: jest.fn(),
 }));
 
 const createOptions = () => ({
   refetch: jest.fn().mockResolvedValue(undefined),
-  setDefaultHome: jest.fn().mockResolvedValue(true),
   setSelectedPantryId: jest.fn(),
 });
 
@@ -116,7 +105,6 @@ describe('useHomeMutations', () => {
     );
 
     expect(typeof result.current.createHome).toBe('function');
-    expect(typeof result.current.deleteHome).toBe('function');
     expect(result.current.creating).toBe(false);
   });
 
@@ -257,124 +245,6 @@ describe('useHomeMutations', () => {
       expect(m.fired[0]).toMatchObject({
         input: { name: 'My Home', allowJoinCode: false },
       });
-    });
-  });
-
-  describe('deleteHome', () => {
-    it('calls deleteHomeMutation with confirmation dialog', async () => {
-      const { result } = renderHookWithApollo(() =>
-        useHomeMutations(createOptions()),
-      );
-
-      act(() => {
-        void result.current.deleteHome('home-2', 'Home 2');
-      });
-
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Delete Home',
-        expect.any(String),
-        expect.any(Array),
-      );
-    });
-
-    // The mutation's own `onError` alerted beside the removal builder, which
-    // settles and alerts the same failure: one failure, two dialogs.
-    it('alerts a failed delete once', async () => {
-      const failed = recordMock(DeleteHomeDocument, {
-        error: new Error('Network error'),
-      });
-      const { result } = renderHookWithApollo(
-        () => useHomeMutations(createOptions()),
-        { operationMocks: [failed.mock] },
-      );
-
-      let deleted: Promise<unknown> | undefined;
-      act(() => {
-        deleted = result.current.deleteHome('home-2', 'Home 2');
-      });
-      const confirm = (alertService.alert as jest.Mock).mock.lastCall?.[2] as
-        | Array<{ style?: string; onPress?: () => unknown }>
-        | undefined;
-      await drained(() =>
-        confirm?.find(b => b.style === 'destructive')?.onPress?.(),
-      );
-
-      await expect(deleted).resolves.toBe(false);
-      // The confirmation, then exactly one failure.
-      expect(alertService.alert).toHaveBeenCalledTimes(2);
-    });
-
-    it('moves the selection off a selected home the server says is already gone', async () => {
-      const gone = recordMock(DeleteHomeDocument, {
-        data: {
-          deleteHome: { __typename: 'NotFoundError', code: ErrorCode.NotFound },
-        },
-      });
-      const options = createOptions();
-      const { result } = renderHookWithApollo(() => useHomeMutations(options), {
-        operationMocks: [gone.mock],
-      });
-
-      let deleted: Promise<unknown> | undefined;
-      act(() => {
-        deleted = result.current.deleteHome('home-1', 'Home 1');
-      });
-      const confirm = (alertService.alert as jest.Mock).mock.lastCall?.[2] as
-        | Array<{ style?: string; onPress?: () => unknown }>
-        | undefined;
-      await drained(() =>
-        confirm?.find(b => b.style === 'destructive')?.onPress?.(),
-      );
-
-      await expect(deleted).resolves.toBeTruthy();
-      expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(null);
-      expect(options.setSelectedPantryId).toHaveBeenCalledWith(null);
-    });
-
-    // RESOURCE_NOT_FOUND arrives as a top-level error with no payload, so no
-    // `update` can read it — the removal still has to take the card away.
-    it('removes a home the server says is gone with a top-level code', async () => {
-      const actual: typeof import('#/services/errorService') =
-        jest.requireActual('#/services/errorService');
-      jest
-        .mocked(errorService.parseApolloError)
-        .mockImplementation((...args) =>
-          actual.errorService.parseApolloError(...args),
-        );
-      const gone: MockFor<typeof DeleteHomeDocument> = {
-        request: { query: DeleteHomeDocument, variables: () => true },
-        result: {
-          data: null,
-          errors: [
-            {
-              message: 'gone',
-              extensions: { code: TopLevelErrorCode.ResourceNotFound },
-            },
-          ],
-        },
-      };
-      const options = createOptions();
-      const { result } = renderHookWithApollo(() => useHomeMutations(options), {
-        operationMocks: [gone],
-      });
-
-      act(() => {
-        void result.current.deleteHome('home-1', 'Home 1');
-      });
-      const confirm = (alertService.alert as jest.Mock).mock.lastCall?.[2] as
-        | Array<{ style?: string; onPress?: () => unknown }>
-        | undefined;
-      await drained(() =>
-        confirm?.find(b => b.style === 'destructive')?.onPress?.(),
-      );
-      expect(removeFromHomesCache).toHaveBeenCalledWith(
-        expect.anything(),
-        'home-1',
-        { evictItem: true },
-      );
-      expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(null);
-      // The confirmation only: a converged removal says nothing more.
-      expect(alertService.alert).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -1,4 +1,4 @@
-import { isOwnKey } from '#/utils/isOwnKey';
+import { isOwnKey } from '#utils/isOwnKey';
 
 // Letters with no accent to strip, read as the API reads them: ø is o, ß is ss.
 const LETTER_FOLDS = {

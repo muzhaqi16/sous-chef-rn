@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import type { Control, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';

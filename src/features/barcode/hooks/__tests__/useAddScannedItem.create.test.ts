@@ -4,7 +4,7 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import type { PackageContents } from '#domain/stockAmount';
 import type { ScanAmount, ScannedItem } from '../../types';
 import { useAddScannedItem } from '../useAddScannedItem';

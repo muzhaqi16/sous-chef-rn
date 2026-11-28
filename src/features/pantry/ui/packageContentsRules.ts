@@ -1,8 +1,8 @@
 import { mixed, string } from 'yup';
 import { takesContents } from '#domain/stockAmount';
-import { UnitType } from '#/graphql/generated/schemaTypes';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { positiveDecimalRule } from '#/utils/validation/common';
+import { UnitType } from '#graphql/generated/schemaTypes';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { positiveDecimalRule } from '#utils/validation/common';
 
 const statesSize = (unitType: UnitType | null, sizeInput: string) =>
   takesContents(unitType) && !!sizeInput.trim();

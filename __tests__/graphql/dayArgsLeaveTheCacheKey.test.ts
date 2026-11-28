@@ -16,7 +16,7 @@ import {
   visit,
   visitWithTypeInfo,
 } from 'graphql';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { OPERATION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 
 /**

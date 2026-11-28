@@ -2,7 +2,7 @@ import { act } from '@testing-library/react-native';
 import {
   DietaryAlertState,
   StorageState,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,

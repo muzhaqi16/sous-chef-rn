@@ -4,7 +4,7 @@ import type {
   DefaultContext,
   OperationVariables,
 } from '@apollo/client';
-import type { LocalInputs } from '#/apollo/pendingWrites/types';
+import type { LocalInputs } from '#apollo/pendingWrites/types';
 
 export enum QueueStatus {
   PENDING = 'pending',
@@ -201,3 +201,12 @@ export type ReplayReconciler = (
 
 /** Keyed by operation name, every entry IDEMPOTENT: a drain can re-run one settled. */
 export type ReplayReconcilerTable = Record<string, ReplayReconciler>;
+
+/**
+ * A batch whose answer refused rows, as the entry those rows become: a write
+ * of its own, so a retry never re-sends a row that landed. Null keeps it whole.
+ */
+export type RefusedRowsNarrower = (
+  mutation: QueuedMutation,
+  payload: unknown,
+) => Pick<QueuedMutation, 'variables' | 'pendingWrite'> | null;

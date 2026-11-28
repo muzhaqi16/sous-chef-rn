@@ -48,7 +48,7 @@ jest.mock('@notifee/react-native', () => ({
 // Isolate the tray helper from the deep-link router — assert it's invoked with
 // the tapped notification's data, not that navigation actually happens.
 const mockRouteNotificationTap = jest.fn();
-jest.mock('#/services/push/pushNotificationRouting', () => ({
+jest.mock('#services/push/pushNotificationRouting', () => ({
   routeNotificationTap: (...args: unknown[]) =>
     mockRouteNotificationTap(...args),
 }));
@@ -66,7 +66,7 @@ describe('localNotificationHelper', () => {
     jest.clearAllMocks();
     // Reset module to clear cached channel state
     jest.resetModules();
-    const mod = require('#/services/notifications/localNotificationHelper');
+    const mod = require('#services/notifications/localNotificationHelper');
     showLocalNotification = mod.showLocalNotification;
     setupNotificationHandlers = mod.setupNotificationHandlers;
   });
@@ -141,7 +141,7 @@ describe('localNotificationHelper', () => {
         value: 'android',
         writable: true,
       });
-      const { getI18n } = require('#/i18n/config');
+      const { getI18n } = require('#i18n/config');
       const i18n = getI18n();
 
       await showLocalNotification({ id: 'lang-1', title: 'T', body: 'B' });
@@ -343,7 +343,7 @@ describe('localNotificationHelper', () => {
         value: 'android',
         writable: true,
       });
-      const { getI18n } = require('#/i18n/config');
+      const { getI18n } = require('#i18n/config');
       const i18n = getI18n();
 
       setupNotificationHandlers();

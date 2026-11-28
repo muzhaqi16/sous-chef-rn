@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import type { PantryItemBatchFragment } from '#entities/pantryItem/batches.generated';
+import { BatchStatus } from '#graphql/generated/schemaTypes';
 import { BatchListItem } from './BatchListItem';
 import { useOpenPantryItemBatch } from '#features/pantry/hooks/mutations/useOpenPantryItemBatch';
-import { useWastePantryItemBatch } from '#features/pantry/hooks/mutations/useWastePantryItemBatch';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
@@ -25,6 +24,9 @@ interface BatchSectionProps {
   /** Every batch, including pages this screen did not fetch. */
   totalCount?: number;
   onViewAll: () => void;
+  onUse?: (batchId: string) => void;
+  /** Opens the waste sheet on a batch; absent for someone who cannot remove. */
+  onWaste?: (batchId: string) => void;
   onCorrectSize?: (batchId: string) => void;
 }
 
@@ -32,13 +34,14 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   batches,
   totalCount,
   onViewAll,
+  onUse,
+  onWaste,
   onCorrectSize,
 }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
 
   const { openBatch } = useOpenPantryItemBatch();
-  const { wasteBatch } = useWastePantryItemBatch();
   const permissions = usePantryPermissions();
 
   // Sort active batches by expiration (FIFO order) — earliest first
@@ -62,10 +65,6 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
     void openBatch(batchId);
   };
 
-  const handleWaste = (batchId: string) => {
-    void wasteBatch(batchId);
-  };
-
   return (
     <View>
       <CollapsibleSection
@@ -81,8 +80,9 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
             <BatchListItem
               key={batch.id}
               batch={batch}
+              onUse={onUse}
               onOpen={permissions.canEditItems ? handleOpen : undefined}
-              onWaste={permissions.canRemoveItems ? handleWaste : undefined}
+              onWaste={permissions.canRemoveItems ? onWaste : undefined}
               onCorrectSize={onCorrectSize}
             />
           ))}

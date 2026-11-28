@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import {
+  Modal,
   View,
   FlatList,
   useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { Modal } from '#components/atoms/themedComponents';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   GestureDetector,
@@ -29,7 +30,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { ItemImageStatus } from '#/graphql/generated/schemaTypes';
+import { ItemImageStatus } from '#graphql/generated/schemaTypes';
 import { photoDisplayUrl, getPerspectiveLabel } from '#utils/imageUtils';
 import {
   useItemPhoto,
@@ -40,7 +41,7 @@ import { useReportWrongPhoto } from '#features/catalog/hooks/useReportWrongPhoto
 import { writesItemDirectly } from '#domain/itemWriteAccess';
 import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
 import { catalogTestIDs } from '#features/catalog/testIDs';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { useOpening } from '#hooks/ui/useOpening';
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
@@ -87,13 +88,10 @@ interface ItemPhotoViewerProps {
   } | null;
 }
 
-/**
- * Fullscreen, pinch-zoomable photo viewer — the hero band crops to 280pt, so a
- * label is only legible here. Paging is disabled while zoomed, so a pan on a
- * magnified photo moves the image instead of flicking to the next one.
- */
-export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
-  visible,
+type ItemPhotoViewerContentProps = Omit<ItemPhotoViewerProps, 'visible'>;
+
+/** One opening, on the tapped photo, unzoomed. */
+const ItemPhotoViewerContent: React.FC<ItemPhotoViewerContentProps> = ({
   photos,
   initialIndex,
   onClose,
@@ -105,16 +103,6 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
   const { width, height } = useWindowDimensions();
   const [index, setIndex] = useState(initialIndex);
   const [zoomed, setZoomed] = useState(false);
-
-  // Adjusting state during render: a fresh open starts on the tapped photo.
-  const [prevVisible, setPrevVisible] = useState(visible);
-  if (visible !== prevVisible) {
-    setPrevVisible(visible);
-    if (visible) {
-      setIndex(initialIndex);
-      setZoomed(false);
-    }
-  }
 
   const handleMomentumEnd = (
     event: NativeSyntheticEvent<NativeScrollEvent>,
@@ -128,84 +116,101 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
   const reportableItemId = item?.canSuggest === true ? item.id : null;
 
   return (
+    <GestureHandlerRootView style={styles.root}>
+      <FlatList
+        data={photos}
+        horizontal
+        pagingEnabled
+        scrollEnabled={!zoomed}
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleMomentumEnd}
+        initialScrollIndex={initialIndex}
+        getItemLayout={(_, i) => ({
+          length: width,
+          offset: width * i,
+          index: i,
+        })}
+        keyExtractor={(_, i) => String(i)}
+        renderItem={({ item, index: pageIndex }) => (
+          <ZoomablePhoto
+            photoRef={item}
+            width={width}
+            height={height}
+            isActive={pageIndex === index}
+            onZoomChange={setZoomed}
+            onClose={onClose}
+          />
+        )}
+      />
+
+      <IconButton
+        name="close"
+        size="md"
+        tone="onScrim"
+        onPress={onClose}
+        accessibilityLabel={t('labels.close')}
+        accessibilityRole="button"
+        filled={{ size: 'lg', tone: 'scrim' }}
+        style={[styles.closeButton, { top: insets.top + 8 }]}
+      />
+
+      {/* box-none so the photo keeps receiving the taps that close it, while
+            the action button inside still gets its own. */}
+      <View
+        style={[styles.caption, { bottom: insets.bottom + 16 }]}
+        pointerEvents="box-none"
+      >
+        {!!canEdit && !!photos[index] && (
+          <SetPrimaryAction photoRef={photos[index]} />
+        )}
+        {!!reportableItemId && !!photos[index] && (
+          <ReportPhotoAction
+            photoRef={photos[index]}
+            itemId={reportableItemId}
+          />
+        )}
+        {!!entryPhoto && !!photos[index] && (
+          <UsePhotoAction
+            photoRef={photos[index]}
+            currentPhotoId={entryPhoto.currentPhotoId}
+            onUse={entryPhoto.onUse}
+          />
+        )}
+        <View style={styles.captionStack} pointerEvents="none">
+          {!!photos[index] && <PhotoCaption photoRef={photos[index]} />}
+          {total > 1 && (
+            <Text role="caption" style={styles.counter}>
+              {t('itemPhotos.counter', { current: index + 1, total })}
+            </Text>
+          )}
+        </View>
+        {!!photos[index] && <CurrentPhotoCredit photoRef={photos[index]} />}
+      </View>
+    </GestureHandlerRootView>
+  );
+};
+
+/**
+ * Fullscreen, pinch-zoomable photo viewer — the hero band crops to 280pt, so a
+ * label is only legible here. Paging is disabled while zoomed, so a pan on a
+ * magnified photo moves the image instead of flicking to the next one.
+ */
+export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
+  visible,
+  ...content
+}) => {
+  const opening = useOpening(visible);
+
+  return (
     <Modal
       visible={visible}
       transparent={false}
       animationType="fade"
-      statusBarTranslucent
-      navigationBarTranslucent
-      onRequestClose={onClose}
+      onRequestClose={content.onClose}
     >
-      <GestureHandlerRootView style={styles.root}>
-        <FlatList
-          data={photos}
-          horizontal
-          pagingEnabled
-          scrollEnabled={!zoomed}
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={handleMomentumEnd}
-          initialScrollIndex={initialIndex}
-          getItemLayout={(_, i) => ({
-            length: width,
-            offset: width * i,
-            index: i,
-          })}
-          keyExtractor={(_, i) => String(i)}
-          renderItem={({ item, index: pageIndex }) => (
-            <ZoomablePhoto
-              photoRef={item}
-              width={width}
-              height={height}
-              isActive={pageIndex === index}
-              onZoomChange={setZoomed}
-              onClose={onClose}
-            />
-          )}
-        />
-
-        <Pressable
-          onPress={onClose}
-          style={[styles.closeButton, { top: insets.top + 8 }]}
-          hitSlop={hitSlop.lg}
-          accessibilityRole="button"
-          accessibilityLabel={t('labels.close')}
-        >
-          <Icon name="close" size={24} tone="onScrim" />
-        </Pressable>
-
-        {/* box-none so the photo keeps receiving the taps that close it, while
-            the action button inside still gets its own. */}
-        <View
-          style={[styles.caption, { bottom: insets.bottom + 16 }]}
-          pointerEvents="box-none"
-        >
-          {!!canEdit && !!photos[index] && (
-            <SetPrimaryAction photoRef={photos[index]} />
-          )}
-          {!!reportableItemId && !!photos[index] && (
-            <ReportPhotoAction
-              photoRef={photos[index]}
-              itemId={reportableItemId}
-            />
-          )}
-          {!!entryPhoto && !!photos[index] && (
-            <UsePhotoAction
-              photoRef={photos[index]}
-              currentPhotoId={entryPhoto.currentPhotoId}
-              onUse={entryPhoto.onUse}
-            />
-          )}
-          <View style={styles.captionStack} pointerEvents="none">
-            {!!photos[index] && <PhotoCaption photoRef={photos[index]} />}
-            {total > 1 && (
-              <Text role="caption" style={styles.counter}>
-                {t('itemPhotos.counter', { current: index + 1, total })}
-              </Text>
-            )}
-          </View>
-          {!!photos[index] && <CurrentPhotoCredit photoRef={photos[index]} />}
-        </View>
-      </GestureHandlerRootView>
+      {opening ? (
+        <ItemPhotoViewerContent key={opening.id} {...content} />
+      ) : null}
     </Modal>
   );
 };
@@ -266,7 +271,6 @@ const ZoomablePhoto: React.FC<{
 
   const pinch = usePinchGesture({
     onUpdate: event => {
-      'worklet';
       // Allow a little overshoot below 1x so the pinch feels elastic; onDeactivate
       // settles it back to the clamped range.
       scale.set(
@@ -277,7 +281,6 @@ const ZoomablePhoto: React.FC<{
       );
     },
     onDeactivate: () => {
-      'worklet';
       const settled = Math.min(Math.max(scale.get(), MIN_SCALE), MAX_SCALE);
       // Snap the near-1x band to exactly 1 so every later comparison is exact.
       const next = settled <= MIN_SCALE + ZOOM_EPSILON ? MIN_SCALE : settled;
@@ -311,7 +314,6 @@ const ZoomablePhoto: React.FC<{
     // pager, and only a disabled handler leaves it there.
     enabled: panEnabled,
     onUpdate: event => {
-      'worklet';
       const current = savedScale.get();
       translateX.set(
         clampPan(savedX.get() + event.translationX, width, current),
@@ -321,7 +323,6 @@ const ZoomablePhoto: React.FC<{
       );
     },
     onDeactivate: () => {
-      'worklet';
       savedX.set(translateX.get());
       savedY.set(translateY.get());
     },
@@ -330,7 +331,6 @@ const ZoomablePhoto: React.FC<{
   const doubleTap = useTapGesture({
     numberOfTaps: 2,
     onActivate: () => {
-      'worklet';
       if (savedScale.get() > MIN_SCALE + ZOOM_EPSILON) {
         scale.set(withTiming(MIN_SCALE));
         translateX.set(withTiming(0));
@@ -352,7 +352,6 @@ const ZoomablePhoto: React.FC<{
   const singleTap = useTapGesture({
     numberOfTaps: 1,
     onActivate: () => {
-      'worklet';
       // Tap-to-dismiss only at fit-to-screen: while zoomed a stray tap should
       // not throw away the position the user just worked to reach.
       if (savedScale.get() <= MIN_SCALE + ZOOM_EPSILON) {
@@ -422,7 +421,7 @@ const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
   if (photo.isPrimary) {
     return (
       <View style={styles.primaryBadge}>
-        <Icon name="star" size={14} tone="rating" />
+        <Icon name="star" size="2xsPlus" tone="rating" />
         <Text role="label" style={styles.captionText}>
           {t('itemPhotos.mainPhoto')}
         </Text>
@@ -443,7 +442,7 @@ const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
       accessibilityState={{ busy: loading }}
       accessibilityLabel={t('itemPhotos.setAsMain')}
     >
-      <Icon name="star-outline" size={14} tone="onScrim" />
+      <Icon name="star-outline" size="2xsPlus" tone="onScrim" />
       <Text role="label" style={styles.captionText}>
         {t('itemPhotos.setAsMain')}
       </Text>
@@ -473,7 +472,7 @@ const ReportPhotoAction: React.FC<{
       accessibilityLabel={t('reportItem.wrongPhotoAction')}
       testID={catalogTestIDs.photoViewerReportButton}
     >
-      <Icon name="flag-outline" size={14} tone="onScrim" />
+      <Icon name="flag-outline" size="2xsPlus" tone="onScrim" />
       <Text role="label" style={styles.captionText}>
         {t('reportItem.wrongPhotoAction')}
       </Text>
@@ -503,7 +502,7 @@ const UsePhotoAction: React.FC<{
       accessibilityLabel={t('entryPhoto.useThisPhoto')}
       testID={catalogTestIDs.photoViewerUseButton}
     >
-      <Icon name="checkmark-circle-outline" size={14} tone="onScrim" />
+      <Icon name="checkmark-circle-outline" size="2xsPlus" tone="onScrim" />
       <Text role="label" style={styles.captionText}>
         {t('entryPhoto.useThisPhoto')}
       </Text>
@@ -531,7 +530,7 @@ const PhotoCaption: React.FC<{ photoRef: ItemPhotoRef }> = ({ photoRef }) => {
       )}
       {photo.status === ItemImageStatus.Pending && (
         <View style={styles.pendingBadge}>
-          <Icon name="time-outline" size={12} tone="onScrim" />
+          <Icon name="time-outline" size="2xs" tone="onScrim" />
           <Text role="label" style={styles.captionText}>
             {t('itemPhotos.pendingReview')}
           </Text>
@@ -563,13 +562,6 @@ const styles = StyleSheet.create(theme => ({
   closeButton: {
     position: 'absolute',
     right: theme.spacing.md,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: theme.radii.full,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.overlays.medium,
   },
   caption: {
     position: 'absolute',

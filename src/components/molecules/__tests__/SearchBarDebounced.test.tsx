@@ -11,7 +11,7 @@ import {
 import { SearchBar, type SearchBarRef } from '../SearchBar';
 
 describe('SearchBar, debounced mode', () => {
-  // `debounceMs` is what selects the uncontrolled mode these cases pin.
+  // Reports wait for the debounce; the field shows each keystroke.
   const defaultProps = {
     onChangeText: jest.fn(),
     debounceMs: 250,
@@ -122,23 +122,36 @@ describe('SearchBar, debounced mode', () => {
     expect(screen.getByPlaceholderText('Search…')).toBeTruthy();
   });
 
-  it('notifies parent when initialValue is provided', () => {
-    render(<SearchBar {...defaultProps} defaultValue="preloaded" />);
-    // The useEffect calls onChangeText with the initialValue
-    expect(defaultProps.onChangeText).toHaveBeenCalledWith('preloaded');
+  it('shows the value it opens with, without reporting it back', () => {
+    render(<SearchBar {...defaultProps} value="preloaded" />);
+
+    expect(screen.getByDisplayValue('preloaded')).toBeOnTheScreen();
+    expect(defaultProps.onChangeText).not.toHaveBeenCalled();
   });
 
-  it('updates hasText when initialValue changes', () => {
-    const { rerender } = render(
-      <SearchBar {...defaultProps} defaultValue="" />,
-    );
-    // No text initially
+  it('takes a value set from outside as a reset', () => {
+    const { rerender } = render(<SearchBar {...defaultProps} value="" />);
     expect(screen.queryByLabelText('Clear input')).toBeNull();
 
-    // Change initialValue
-    rerender(<SearchBar {...defaultProps} defaultValue="new value" />);
-    // After initialValue changes, hasText should be true (render-time state update)
-    expect(screen.getByLabelText('Clear input')).toBeTruthy();
+    rerender(<SearchBar {...defaultProps} value="new value" />);
+
+    expect(screen.getByDisplayValue('new value')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Clear input')).toBeOnTheScreen();
+  });
+
+  // The caller's echo of a report lands while more is being typed.
+  it('keeps what is typed when the caller echoes an earlier report', () => {
+    const { rerender } = render(<SearchBar {...defaultProps} value="" />);
+    const input = screen.getByPlaceholderText('Search…');
+    fireEvent.changeText(input, 'ab');
+    act(() => {
+      jest.advanceTimersByTime(250);
+    });
+    fireEvent.changeText(input, 'abc');
+
+    rerender(<SearchBar {...defaultProps} value="ab" />);
+
+    expect(screen.getByDisplayValue('abc')).toBeOnTheScreen();
   });
 
   it('debounces multiple rapid changes', () => {
@@ -190,34 +203,6 @@ describe('SearchBar, debounced mode', () => {
       fireEvent.changeText(input, 'hello');
 
       expect(ref.current?.getValue()).toBe('hello');
-    });
-
-    it('exposes setValue method', () => {
-      const ref = createRef<SearchBarRef>();
-      render(<SearchBar {...defaultProps} ref={ref} />);
-
-      act(() => {
-        ref.current?.setValue('programmatic');
-      });
-
-      expect(ref.current?.getValue()).toBe('programmatic');
-      // Clear button should appear
-      expect(screen.getByLabelText('Clear input')).toBeTruthy();
-    });
-
-    it('setValue with empty string hides clear button', () => {
-      const ref = createRef<SearchBarRef>();
-      render(<SearchBar {...defaultProps} ref={ref} />);
-
-      act(() => {
-        ref.current?.setValue('text');
-      });
-      expect(screen.getByLabelText('Clear input')).toBeTruthy();
-
-      act(() => {
-        ref.current?.setValue('');
-      });
-      expect(screen.queryByLabelText('Clear input')).toBeNull();
     });
   });
 

@@ -1,4 +1,4 @@
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 import type { BadgeContent } from '#components/atoms/Badge';
 import {
   catalogHintOf,
@@ -18,7 +18,7 @@ import {
   timeAndServings,
 } from '#features/recipes/utils/recipeCardText';
 import { coverageBadge } from '#features/recipes/ui/coverageBadge';
-import { suggestionTier } from '#domain/recipeCoverage';
+import { suggestionTier } from '#features/recipes/utils/recipeCoverage';
 
 export interface DisplayItem {
   id: string;

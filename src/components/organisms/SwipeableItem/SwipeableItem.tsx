@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   View,
   type AccessibilityActionEvent,
@@ -12,13 +12,13 @@ import {
   SwipeActions,
   swipeTrayWidth,
 } from '#components/organisms/SwipeableItem/SwipeActions';
-import { SwipeableContent } from '#components/organisms/SwipeableItem/SwipeableContent';
 import { useSwipeableActions } from '#components/organisms/SwipeableItem/hooks/useSwipeableActions';
 import { styles } from '#components/organisms/SwipeableItem/styles';
 import type {
   SwipeAction,
   SwipeableItemProps,
 } from '#components/organisms/SwipeableItem/types';
+import type { SwipeRowPress } from '#components/molecules/RowFrame';
 import { kitTestIDs } from '#components/testIDs';
 
 // Mirrors the -12 marginLeft/Right in the action container styles, so the
@@ -161,8 +161,16 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
       ?.onPress();
   };
 
-  // No wrapper view: the accessibility actions sit on SwipeableContent's own
-  // container and `swipeableContainer` already carries `overflow: 'visible'`.
+  const press: SwipeRowPress = {
+    onPress,
+    onLongPress,
+    testID: testIDPrefix,
+    accessibilityLabel,
+    accessibilityHint: t('a11y.swipeForActions'),
+    accessibilityActions,
+    onAccessibilityAction: handleAccessibilityAction,
+  };
+
   return (
     <Swipeable
       ref={swipeableRef}
@@ -183,16 +191,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
       containerStyle={styles.swipeableContainer}
       childrenContainerStyle={styles.childrenContainer}
     >
-      <SwipeableContent
-        testID={testIDPrefix}
-        onPress={onPress}
-        onLongPress={onLongPress}
-        accessibilityLabel={accessibilityLabel}
-        accessibilityActions={accessibilityActions}
-        onAccessibilityAction={handleAccessibilityAction}
-      >
-        {children}
-      </SwipeableContent>
+      {children(press)}
     </Swipeable>
   );
 };

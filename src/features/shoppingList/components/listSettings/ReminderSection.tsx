@@ -3,8 +3,8 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
-import { commonStyles } from '#/styles/commonStyles';
+import { useTranslation } from '#i18n';
+import { commonStyles } from '#styles/commonStyles';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { listSettingsStyles as styles } from './styles';
 
@@ -49,7 +49,7 @@ export const ReminderSection: React.FC<ReminderSectionProps> = ({
           style={({ pressed }) => [styles.actionRow, pressed && styles.pressed]}
           onPress={handleClearReminder}
         >
-          <Icon name="notifications-off-outline" size={20} tone="primary" />
+          <Icon name="notifications-off-outline" size="sm" tone="primary" />
           <Text role="body" tone="accent" style={styles.actionText}>
             {t('shoppingListScreens.clearReminder')}
           </Text>

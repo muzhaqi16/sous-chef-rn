@@ -12,7 +12,7 @@ import type {
   CopyableLine,
   CopyableList,
 } from '#features/shoppingList/utils/listFromTemplate';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 
 /**
  * Lines read per purchase state. `first` is not a keyArg on

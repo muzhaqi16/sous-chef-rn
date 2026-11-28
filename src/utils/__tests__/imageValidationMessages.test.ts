@@ -16,7 +16,7 @@ import {
   type ImageValidationError,
   MAX_PROFILE_SIZE,
   MAX_IMAGE_SIZE,
-} from '#/utils/imageValidation';
+} from '#utils/imageValidation';
 import { imageErrorMessage } from '#hooks/data/useImageUpload';
 import { mergedLocale } from '#/test-utils/mergedLocales';
 

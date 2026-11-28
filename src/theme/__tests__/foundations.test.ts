@@ -1,4 +1,4 @@
-import { colors, darkExpiration, darkFilterTab } from '../foundations/colors';
+import { colors, darkExpiration } from '../foundations/colors';
 import { spacing } from '../foundations/spacing';
 import { typography, fonts } from '../foundations/typography';
 import { radii } from '../foundations/radii';
@@ -60,14 +60,6 @@ describe('theme foundations', () => {
       expect(darkExpiration.expiredText).toBeDefined();
       expect(Object.keys(darkExpiration).sort()).toEqual(
         Object.keys(colors.expiration).sort(),
-      );
-    });
-
-    it('exports filterTab colors with matching shape for light and dark modes', () => {
-      expect(colors.filterTab.activeBg).toBeDefined();
-      expect(darkFilterTab.inactiveBg).toBeDefined();
-      expect(Object.keys(darkFilterTab).sort()).toEqual(
-        Object.keys(colors.filterTab).sort(),
       );
     });
 

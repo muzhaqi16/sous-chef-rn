@@ -1,10 +1,10 @@
-import { generateEntityId } from '#/utils/generateEntityId';
+import { generateEntityId } from '#utils/generateEntityId';
 import { mealReferenceOf } from '#features/mealPlan/utils/mealReference';
 import type {
   CreateMealTemplateInput,
   MealType,
   TemplateCategory,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /** The template being copied, as the cache holds it. */
 export interface SourceTemplate {

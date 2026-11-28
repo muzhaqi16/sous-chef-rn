@@ -7,7 +7,7 @@ import {
   seedCache,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { formatCurrency } from '#/utils/formatters/number';
+import { formatCurrency } from '#utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useStore } from '#store';
 import { ListBudget } from '../ListBudget';
@@ -98,14 +98,20 @@ describe('ListBudget', () => {
 
     expect(
       screen.getByTestId(shoppingListTestIDs.costToGo).props.children,
-    ).toBe(`≈ ${formatCurrency(4, 'USD')}`);
+    ).toBe(`≈ ${formatCurrency(4, 'USD', undefined)}`);
     expect(screen.getByText('Priced 1 of 2 items')).toBeTruthy();
-    expect(screen.getByText(formatCurrency(18.4, 'USD'))).toBeTruthy();
+    expect(
+      screen.getByText(formatCurrency(18.4, 'USD', undefined)),
+    ).toBeTruthy();
     // 60 budget − 18.40 spent − 4.00 to go.
     expect(
       screen.getByTestId(shoppingListTestIDs.budgetRemaining).props.children,
     ).toBe(
-      `${formatCurrency(37.6, 'USD')} left of ${formatCurrency(60, 'USD')}`,
+      `${formatCurrency(37.6, 'USD', undefined)} left of ${formatCurrency(
+        60,
+        'USD',
+        undefined,
+      )}`,
     );
   });
 

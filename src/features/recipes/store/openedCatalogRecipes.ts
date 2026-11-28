@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { zustandStorage } from '#/store/deviceStorage';
+import { zustandStorage } from '#store/deviceStorage';
 import { hydrateWhenStarted } from '#store/persistedStores';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 /** Older entries go first: a row's recipe opens from its name until reopened. */
 const MAX_KEPT = 500;

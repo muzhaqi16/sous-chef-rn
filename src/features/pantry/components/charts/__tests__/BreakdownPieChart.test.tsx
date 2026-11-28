@@ -78,7 +78,7 @@ describe('the default palette', () => {
   it.each(['light', 'dark'] as const)(
     'has no translucent entry in the %s theme',
     themeName => {
-      const { lightTheme, darkTheme } = require('#/theme/themes');
+      const { lightTheme, darkTheme } = require('#theme/themes');
       const theme = themeName === 'light' ? lightTheme : darkTheme;
       const { __testables } =
         require('../BreakdownPieChart') as typeof import('../BreakdownPieChart');
@@ -90,7 +90,7 @@ describe('the default palette', () => {
   );
 
   it('never uses a surface tint as a data color', () => {
-    const { darkTheme } = require('#/theme/themes');
+    const { darkTheme } = require('#theme/themes');
     const { __testables } =
       require('../BreakdownPieChart') as typeof import('../BreakdownPieChart');
 
@@ -102,7 +102,7 @@ describe('the default palette', () => {
   it('keeps adjacent slices distinguishable', () => {
     // `primary` and `primaryDark` were consecutive steps of one ramp, which is
     // not the separation a categorical scale needs.
-    const { darkTheme } = require('#/theme/themes');
+    const { darkTheme } = require('#theme/themes');
     const { __testables } =
       require('../BreakdownPieChart') as typeof import('../BreakdownPieChart');
     const colors = __testables.brandFirstColors(darkTheme);

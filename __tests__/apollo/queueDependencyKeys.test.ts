@@ -10,8 +10,8 @@ import {
   type GraphQLSchema,
   type OperationDefinitionNode,
 } from 'graphql';
-import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
-import { PARENT_REFERENCE_KEYS } from '#/apollo/offlineQueue/queuedSubject';
+import { REPLAY_PREPARATIONS } from '#apollo/offlineQueue/preparationRegistry';
+import { PARENT_REFERENCE_KEYS } from '#apollo/offlineQueue/queuedSubject';
 import {
   SRC,
   authoredMutations,

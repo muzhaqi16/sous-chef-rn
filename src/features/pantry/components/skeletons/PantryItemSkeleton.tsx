@@ -2,10 +2,10 @@ import React from 'react';
 import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { radii } from '#/theme/foundations/radii';
-import { sizes } from '#/theme/foundations/sizes';
-import { type, rowType } from '#/theme/foundations/type';
-import { commonStyles } from '#/styles/commonStyles';
+import { radii } from '#theme/foundations/radii';
+import { sizes } from '#theme/foundations/sizes';
+import { type, rowType } from '#theme/foundations/type';
+import { commonStyles } from '#styles/commonStyles';
 import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 import { SkeletonRectangle } from '#components/atoms/Skeleton/SkeletonRectangle';
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
@@ -8,7 +8,7 @@ import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Button } from '#components/molecules/Button';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { homeTestIDs } from '#features/home/testIDs';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import {
   CREATE_HOME_DEFAULTS,
   createHomeSchema,
@@ -46,6 +46,7 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
         name="name"
         render={({ field, fieldState }) => (
           <BaseInput
+            ref={field.ref}
             testID={homeTestIDs.createHomeNameInput}
             value={field.value}
             onChangeText={field.onChange}

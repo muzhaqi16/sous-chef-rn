@@ -7,7 +7,7 @@ import {
 import { isItemLine } from './hasItemLines';
 import { holdsDate } from './receiptDate';
 import { rowRedactions, type RowRedaction } from './redactReceiptText';
-import type { PhotoMask, RecognizedLine } from '#/types/textRecognition';
+import type { PhotoMask, RecognizedLine } from '#types/textRecognition';
 
 // A card number whose digits recognition could not read: `XXXXXXXXXXXX  H`.
 // Stars are left out: a row of them is often a rule above the totals.

@@ -3,7 +3,7 @@ import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { ShareShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { ShareCodeSection } from '../ShareCodeSection';
 
 jest.mock('#hooks/auth/useEmailVerification', () => ({

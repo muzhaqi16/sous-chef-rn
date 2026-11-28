@@ -6,9 +6,9 @@ import {
   formatQuantityForDisplay,
   unitLabel,
   type UnitLabelSource,
-} from '#/utils/formatQuantity';
-import { useTranslation } from '#/i18n';
-import { commonStyles } from '#/styles/commonStyles';
+} from '#utils/formatQuantity';
+import { useTranslation } from '#i18n';
+import { commonStyles } from '#styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 import type { ShownQuantity } from '#features/pantry/types';
 

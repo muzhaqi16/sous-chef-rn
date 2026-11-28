@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 import type { SelectableItem } from '../useSelectableItems';
 import { useSelectableItems } from '../useSelectableItems';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 interface TestItem extends SelectableItem {
   name: string;

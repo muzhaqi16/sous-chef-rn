@@ -106,7 +106,7 @@ describe('TelemetryService', () => {
       service.initialize();
       // Calling initialize again should be a no-op (guard against double init)
       service.initialize();
-      const { logger } = jest.requireMock('#/utils/environment');
+      const { logger } = jest.requireMock('#utils/environment');
       // logger.info is called once during initialize
       expect(logger.info).toHaveBeenCalledTimes(1);
 
@@ -1133,7 +1133,7 @@ describe('TelemetryService', () => {
     });
 
     it('logs the outage once and the recovery once (no per-attempt error wall)', async () => {
-      const { logger } = jest.requireMock('#/utils/environment');
+      const { logger } = jest.requireMock('#utils/environment');
       const service = new TelemetryService({
         enabled: true,
         enableLogs: true,
@@ -1184,7 +1184,7 @@ describe('TelemetryService', () => {
       service.initialize();
       service.destroy();
 
-      const { logger } = jest.requireMock('#/utils/environment');
+      const { logger } = jest.requireMock('#utils/environment');
       logger.info.mockClear();
 
       service.initialize();

@@ -1,11 +1,11 @@
 import type { ApolloLink } from '@apollo/client';
 import { HttpLink } from '@apollo/client';
 import { BatchHttpLink } from '@apollo/client/link/batch-http';
-import { env } from '#/config/env';
-import { Environment } from '#/utils/environment';
-import { TimeoutError } from '#/utils/errors/timeoutError';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
-import { clientSourceHeaders } from '#/apollo/clientIdentity';
+import { env } from '#config/env';
+import { Environment } from '#utils/environment';
+import { TimeoutError } from '#utils/errors/timeoutError';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
+import { clientSourceHeaders } from '#apollo/clientIdentity';
 
 /**
  * A fetch with timeout support. Apollo's HttpLink passes its own `signal`,

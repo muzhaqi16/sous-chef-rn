@@ -15,23 +15,28 @@
  */
 import fs from 'fs';
 import path from 'path';
+import * as ts from 'typescript';
+import {
+  calleeName,
+  nodesOf,
+  parseSource,
+  productionSources,
+} from '#/test-utils/sourceAst';
 
 const ROOT = path.join(__dirname, '..', '..');
-const SRC = path.join(ROOT, 'src');
 const CONTRACT_DOC = path.join(ROOT, 'docs', 'telemetry-setup.md');
 
-/**
- * The three emit surfaces, all of which take the name as a string literal:
- *   - `Telemetry.*` — the app-facing façade;
- *   - `emitHistogram` — the fire-and-forget wrapper in `src/apollo/client.ts`,
- *     which takes the name as a parameter, so the `Telemetry.*` call inside it
- *     cannot be matched;
- *   - `this.incrementCounter` / `this.recordHistogram` — `TelemetryService`
- *     emitting its own metrics (`app_starts_total`, `screen_views_total`, …),
- *     which never go through the façade.
- */
-const METRIC_CALL =
-  /(?:Telemetry\.(?:histogram|increment|gauge|counter)|emitHistogram|this\.(?:incrementCounter|recordHistogram|setGauge))\(\s*\n?\s*['"]([a-z0-9_]+)['"]/g;
+/** Every emitter a metric name passes through, by how it is called. */
+const EMITTERS = new Set([
+  'Telemetry.histogram',
+  'Telemetry.increment',
+  'Telemetry.gauge',
+  'Telemetry.counter',
+  'emitHistogram',
+  'this.incrementCounter',
+  'this.recordHistogram',
+  'this.setGauge',
+]);
 
 /**
  * Documented with no emit call at all. Keep this list empty if you can: a
@@ -40,26 +45,20 @@ const METRIC_CALL =
  */
 const DOCUMENTED_WITHOUT_EMITTER = new Set<string>([]);
 
-function sourceFiles(dir: string, out: string[] = []): string[] {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === '__tests__' || entry.name === '__mocks__') continue;
-      sourceFiles(full, out);
-    } else if (/\.tsx?$/.test(entry.name) && !entry.name.endsWith('.d.ts')) {
-      out.push(full);
-    }
-  }
-  return out;
+/** The metric names a file emits: each emitter call's first argument. */
+function emittedIn(file: string, text?: string): string[] {
+  return nodesOf(parseSource(file, text))
+    .filter(ts.isCallExpression)
+    .filter(call => EMITTERS.has(calleeName(call) ?? ''))
+    .map(call => call.arguments[0])
+    .filter(
+      (name): name is ts.StringLiteral => !!name && ts.isStringLiteral(name),
+    )
+    .map(name => name.text);
 }
 
 function emittedMetrics(): Set<string> {
-  const names = new Set<string>();
-  for (const file of sourceFiles(SRC)) {
-    const src = fs.readFileSync(file, 'utf8');
-    for (const match of src.matchAll(METRIC_CALL)) names.add(match[1]!);
-  }
-  return names;
+  return new Set(productionSources().flatMap(file => emittedIn(file)));
 }
 
 /** Metric names in the `| \`name\` | labels | description |` contract tables. */
@@ -75,6 +74,15 @@ function documentedMetrics(): Set<string> {
 describe('metric contracts', () => {
   const emitted = emittedMetrics();
   const documented = documentedMetrics();
+
+  it('reads a metric name past a comment in the call', () => {
+    expect(
+      emittedIn(
+        'planted.ts',
+        `Telemetry.increment(\n  // a hit means the page came from the cache\n  'cache_hits',\n);`,
+      ),
+    ).toEqual(['cache_hits']);
+  });
 
   it('finds the emitters and the contract tables', () => {
     expect(emitted.size).toBeGreaterThan(20);

@@ -4,7 +4,7 @@ import React from 'react';
 import { onboardingScreens } from '#features/onboarding/screens/registration';
 import { OnboardingSetupRunner } from '#features/onboarding/ui/OnboardingSetupRunner';
 import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 export const OnboardingStack = createNativeStackNavigator({
   // Setup runs beside the questions; its screen opens only for invitations.

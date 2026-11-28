@@ -1,6 +1,6 @@
-import { InviteStatus } from '#/graphql/generated/schemaTypes';
-import type { Translate } from '#/i18n/types';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { InviteStatus } from '#graphql/generated/schemaTypes';
+import type { Translate } from '#i18n/types';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
 /** The `theme.colors.status` key an invite's border and badge fill are drawn in. */
 export type InviteStatusKey = 'pending' | 'accepted' | 'declined' | 'expired';

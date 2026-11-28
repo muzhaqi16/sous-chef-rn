@@ -1,14 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import { errorCopy } from '#/services/errorService';
+import { useTranslation } from '#i18n';
+import { errorCopy } from '#services/errorService';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
-import { Icon } from '#components/atoms/Icon';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { useCapturePhotos } from '#features/recipes/components/capture/useCapturePhotos';
 import type {
   CaptureRequest,
@@ -16,39 +14,39 @@ import type {
 } from '#features/recipes/hooks/useRecipeCapture';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { CaptureFormFrame, CaptureSheetShell } from './CaptureSheetShell';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 const THUMBNAIL_SIZE = 88;
 
 interface PhotoFormProps {
-  visible: boolean;
   onSend: (request: CaptureRequest) => Promise<CaptureStart>;
   sending: boolean;
   onClose: () => void;
 }
 
-const PhotoForm: React.FC<PhotoFormProps> = ({
-  visible,
-  onSend,
-  sending,
-  onClose,
-}) => {
+const PhotoForm: React.FC<PhotoFormProps> = ({ onSend, sending, onClose }) => {
   const { t } = useTranslation();
   const photos = useCapturePhotos();
   const [failure, setFailure] = useState<string | null>(null);
+  // Pages taken are input a close would drop.
+  useSheetUnsavedInput(photos.pages.length > 0);
 
-  // A dismissed sheet takes its pages off the phone.
+  // An opening's pages leave the phone with it: gorhom unmounts the form once
+  // the sheet is dismissed.
   const discardRef = useRef(photos.discard);
   useEffect(() => {
     discardRef.current = photos.discard;
   });
-  useEffect(() => {
-    if (!visible) discardRef.current();
-  }, [visible]);
+  useEffect(() => () => discardRef.current(), []);
 
   const busy = photos.uploading || sending;
   const canAdd = photos.canAddPage && !busy;
 
   const send = async () => {
+    if (photos.pages.length === 0) {
+      setFailure(t('recipes.capturePhotosRequired'));
+      return;
+    }
     setFailure(null);
     const keys = await photos.upload();
     if (!keys) {
@@ -82,7 +80,6 @@ const PhotoForm: React.FC<PhotoFormProps> = ({
       onClose={onClose}
       failure={failure}
       sending={busy}
-      canSend={photos.pages.length > 0}
       onSend={() => {
         void send();
       }}
@@ -99,18 +96,18 @@ const PhotoForm: React.FC<PhotoFormProps> = ({
                 style={styles.thumbnail}
                 displaySize={THUMBNAIL_SIZE}
               />
-              <Pressable
-                style={styles.remove}
+              <IconButton
+                name="close-circle"
+                size="md"
+                tone="textInverse"
                 onPress={() => photos.remove(uri)}
-                disabled={busy}
-                accessibilityRole="button"
                 accessibilityLabel={t('a11y.removeNamed', {
                   name: String(index + 1),
                 })}
-                hitSlop={hitSlop.md}
-              >
-                <Icon name="close-circle" size={22} tone="textInverse" />
-              </Pressable>
+                accessibilityRole="button"
+                disabled={busy}
+                style={styles.remove}
+              />
             </View>
           ))}
         </View>
@@ -165,14 +162,7 @@ export const PhotoCaptureSheet: React.FC<PhotoCaptureSheetProps> = ({
   onDismiss,
 }) => (
   <CaptureSheetShell visible={visible} snapPoint="70%" onDismiss={onDismiss}>
-    {() => (
-      <PhotoForm
-        visible={visible}
-        onSend={onSend}
-        sending={sending}
-        onClose={onDismiss}
-      />
-    )}
+    {() => <PhotoForm onSend={onSend} sending={sending} onClose={onDismiss} />}
   </CaptureSheetShell>
 );
 

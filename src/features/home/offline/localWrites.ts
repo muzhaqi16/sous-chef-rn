@@ -2,14 +2,17 @@
  * What each home write changes on the device, as a pending layer. The server's
  * answer writes its own rows; `commit` adds what it cannot state.
  */
-import type { LocalWrite } from '#/apollo/pendingWrites/types';
-import type { CreateHomeInput } from '#/graphql/generated/schemaTypes';
+import type { LocalWrite } from '#apollo/pendingWrites/types';
+import type { CreateHomeInput } from '#graphql/generated/schemaTypes';
 import {
   writeLocalHome,
   type HomeCreator,
 } from '#features/home/cache/optimisticHome';
 import { addToHomesCache } from '#features/home/hooks/homeCacheUpdaters';
 import { applyDefaultHome } from '#features/home/utils/defaultHomeCacheWrites';
+import { bindLocalWrite } from '#apollo/pendingWrites/bindLocalWrite';
+import { CreateHomeDocument } from '#operations/home/home.generated';
+import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 
 export type CreateHomeInputs = {
   home: CreateHomeInput & { id: string };
@@ -47,3 +50,10 @@ export const markDefaultHome: LocalWrite<MarkDefaultHomeInputs> = {
   // The payload never returns the flag.
   commit: showDefaultHome,
 };
+
+// Each document this feature sends as a local write, bound to its write.
+export const createHomeWrite = bindLocalWrite(CreateHomeDocument, createHome);
+export const markHomeAsDefaultWrite = bindLocalWrite(
+  MarkHomeAsDefaultDocument,
+  markDefaultHome,
+);

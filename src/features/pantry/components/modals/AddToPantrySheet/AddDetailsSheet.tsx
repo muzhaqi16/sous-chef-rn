@@ -3,15 +3,15 @@ import React, { useState, useRef } from 'react';
 import { useForm, useWatch, type Path, type PathValue } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import PagerView from 'react-native-pager-view';
+import PagerView, { type PagerViewRef } from 'react-native-pager-view';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePantryItemSubmission } from '#features/pantry/hooks/usePantryItemSubmission';
 import {
   StorageState,
   type ItemCondition,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { OfferedAcquisitionMethod } from '#features/pantry/utils/itemEnumLabels';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 
@@ -19,12 +19,11 @@ import { MainDetailsPage } from './MainDetailsPage';
 import { DetailsPage } from './DetailsPage';
 import { StoragePage } from './StoragePage';
 import { StockSettingsPage } from './StockSettingsPage';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { takesContents } from '#domain/stockAmount';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
-import { reportValidationErrors } from '#/utils/validation/common';
-import { useDiscardGuard } from '#hooks/ui/useDiscardGuard';
+import type { UnitType } from '#graphql/generated/schemaTypes';
+import { reportValidationErrors } from '#utils/validation/common';
 import { isOwnKey } from '#utils/isOwnKey';
 import {
   addPantryItemSchema,
@@ -32,6 +31,7 @@ import {
   FIELD_PAGE,
 } from './addPantryItemFormConfig';
 import type { AddPantryItemFormData } from '#features/pantry/types';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface AddDetailsSheetProps {
   pantryId: string | undefined;
@@ -41,8 +41,6 @@ interface AddDetailsSheetProps {
   onClose: () => void;
   /** Item was created — the parent closes the whole sheet. */
   onSuccess: () => void;
-  /** Holds the parent sheet open against a pan-down while input would be lost. */
-  onHoldOpen?: (held: boolean) => void;
 }
 
 export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
@@ -51,7 +49,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   storageLocations = [],
   onClose,
   onSuccess,
-  onHoldOpen,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -61,7 +58,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     t('labels.storage'),
     t('addToPantry.pageStock'),
   ];
-  const pagerRef = useRef<PagerView>(null);
+  const pagerRef = useRef<PagerViewRef>(null);
 
   // Page state
   const [currentPage, setCurrentPage] = useState(0);
@@ -82,6 +79,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     // that fixes it rather than surviving until the next submit.
     mode: 'onChange',
   });
+  useSheetUnsavedInput(isDirty);
 
   // Subscribed, because the pages render from these values.
   const values = useWatch({
@@ -190,12 +188,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     pagerRef.current?.setPage(index);
   };
 
-  const handleCancel = useDiscardGuard({
-    isDirty,
-    onDiscard: onClose,
-    onHoldOpen,
-  });
-
   const { handleConfirm, loading } = usePantryItemSubmission({
     pantryId,
     onSuccess,
@@ -203,29 +195,30 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
   return (
     <View style={styles.container} testID={pantryTestIDs.addDetailsModal}>
-      <BottomSheetHeader
+      <SheetHeader
         title={t('addToPantry.addItemDetails')}
-        cancelLabel={t('labels.cancel')}
-        confirmLabel={loading ? t('labels.adding') : t('labels.add')}
-        onCancel={handleCancel}
-        // `handleSubmit` validates first: an invalid form shows its message on
-        // the field and jumps to that field's page. Only a valid form reaches
-        // `handleConfirm`.
-        onConfirm={() => {
-          void handleSubmit(handleConfirm, formErrors => {
-            reportValidationErrors(formErrors);
-            const [firstField] = Object.keys(formErrors);
-            if (firstField === undefined || !isOwnKey(FIELD_PAGE, firstField))
-              return;
-            const page = FIELD_PAGE[firstField];
-            // react-hook-form then focuses the first field in error it holds.
-            if (page !== undefined) handlePageChange(page);
-          })();
-        }}
-        saving={loading}
-        cancelTestID={pantryTestIDs.addDetailsCancelButton}
-        confirmTestID={pantryTestIDs.addDetailsSubmitButton}
+        onClose={onClose}
+        leadingTestID={pantryTestIDs.addDetailsCancelButton}
         titleTestID={pantryTestIDs.addDetailsTitle}
+        confirm={{
+          // `handleSubmit` validates first: an invalid form shows its message
+          // on the field and jumps to that field's page. Only a valid form
+          // reaches `handleConfirm`.
+          onPress: () => {
+            void handleSubmit(handleConfirm, formErrors => {
+              reportValidationErrors(formErrors);
+              const [firstField] = Object.keys(formErrors);
+              if (firstField === undefined || !isOwnKey(FIELD_PAGE, firstField))
+                return;
+              const page = FIELD_PAGE[firstField];
+              // react-hook-form then focuses the first field in error it holds.
+              if (page !== undefined) handlePageChange(page);
+            })();
+          },
+          accessibilityLabel: t('labels.add'),
+          loading,
+          testID: pantryTestIDs.addDetailsSubmitButton,
+        }}
       />
 
       {/* Page Indicators */}

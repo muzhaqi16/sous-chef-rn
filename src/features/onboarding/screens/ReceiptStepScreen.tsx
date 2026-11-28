@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import { appConfig } from '#/config/appConfig';
+import { useTranslation } from '#i18n';
+import { appConfig } from '#config/appConfig';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
 import { Loading } from '#components/molecules/Loading';
@@ -188,25 +188,12 @@ const StaplesSection = ({
 }: {
   staples: ReturnType<typeof useStaplesSelection>;
 }) => {
-  const { t } = useTranslation();
   switch (staples.state) {
     case 'loading':
-      return <Loading />;
+      return <DataStateView state="loading" onRetry={staples.retry} />;
+    // Unread, a held food would show unpicked and be added twice.
     case 'failed':
-      return (
-        <View style={styles.body}>
-          <Text role="error" tone="error" align="center">
-            {t('errors.loadItemsFailed')}
-          </Text>
-          <Button
-            title={t('labels.tryAgain')}
-            onPress={staples.retry}
-            variant="outline"
-          />
-        </View>
-      );
     case 'unread':
-      // Unread, a held food would show unpicked and be added twice.
       return <DataStateView state="error" onRetry={staples.retry} />;
     case 'ready':
       return (

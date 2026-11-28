@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react';
 import { useApolloClient } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import type { Translate } from '#/i18n/types';
-import { errorService } from '#/services/errorService';
-import { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import type { Translate } from '#i18n/types';
+import { errorService } from '#services/errorService';
+import { Diet, Intolerance } from '#graphql/generated/schemaTypes';
 import { recipeCardBasics } from '#features/recipes/utils/recipeCardText';
 import { DEFAULT_FILTERS } from '#features/recipes/utils/recipeFilterOptions';
 import { rowKey, type FoundRow } from '#features/recipes/utils/recipeRows';

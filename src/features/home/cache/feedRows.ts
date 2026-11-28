@@ -4,13 +4,13 @@ import {
   safeEvictMany,
   skipUnmatchedArgVariants,
   type ConnectionData,
-} from '#/apollo/utils/cacheUpdaters';
-import type { Pantry } from '#/graphql/generated/schemaTypes';
-import { isRecord } from '#/utils/isRecord';
+} from '#apollo/utils/cacheUpdaters';
+import type { Pantry } from '#graphql/generated/schemaTypes';
+import { isRecord } from '#utils/isRecord';
 import {
   placeStorageLocation,
   unplaceStorageLocation,
-} from '#features/catalog/cache/storageLocations';
+} from '#entities/storageLocation/storageLocations';
 import type { HomeFeedSnapshotQuery } from '../offline/homeFeed.generated';
 
 type RowTypename =

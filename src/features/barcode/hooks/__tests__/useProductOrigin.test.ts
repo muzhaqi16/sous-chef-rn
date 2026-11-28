@@ -1,13 +1,13 @@
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   recordMock,
   renderHookWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { ExternalSource } from '#/graphql/generated/schemaTypes';
-import { formatCountryName } from '#/utils/formatters/region';
-import { makeCache } from '#/apollo/cache';
+import { ExternalSource } from '#graphql/generated/schemaTypes';
+import { formatCountryName } from '#utils/formatters/region';
+import { makeCache } from '#apollo/cache';
 import {
   ProductOriginDocument,
   UseProductOrigin_ItemFragmentDoc,

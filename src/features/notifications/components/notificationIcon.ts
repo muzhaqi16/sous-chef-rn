@@ -1,4 +1,4 @@
-import { NotificationType } from '#/graphql/generated/schemaTypes';
+import { NotificationType } from '#graphql/generated/schemaTypes';
 import type { IconName } from '#components/atoms/Icon';
 
 export const getNotificationIcon = (type: NotificationType): IconName => {

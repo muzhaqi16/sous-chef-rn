@@ -3,12 +3,12 @@ import {
   renderHookWithApollo,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   GetPantryItemSuggestionsDocument,
   type GetPantryItemSuggestionsQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import { PantrySuggestionSource } from '#/graphql/generated/schemaTypes';
+import { PantrySuggestionSource } from '#graphql/generated/schemaTypes';
 import { useAddToPantry } from '../useAddToPantry';
 
 // `today` only moves the expiring window; the cache does not key on it.

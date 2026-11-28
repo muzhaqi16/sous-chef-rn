@@ -11,7 +11,7 @@ jest.mock('#store', () => ({
 }));
 
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { Observable } from 'rxjs';
 import { createClientReleaseLink } from '../clientReleaseLink';
 import { announceClientReleaseAvailable } from '../../clientUpgradeNotice';

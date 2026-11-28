@@ -13,8 +13,8 @@ import {
   getToken,
   onTokenRefresh,
 } from '@react-native-firebase/messaging';
-import { PermissionService } from '#/services/permissions/PermissionService';
-import { logger } from '#/utils/environment';
+import { PermissionService } from '#services/permissions/PermissionService';
+import { logger } from '#utils/environment';
 import type { PushTokenProvider } from './pushTokenProvider';
 
 export const nativePushProvider: PushTokenProvider = {

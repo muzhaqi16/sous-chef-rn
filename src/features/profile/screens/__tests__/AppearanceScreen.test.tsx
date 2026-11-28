@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, within } from '@testing-library/react-native';
-import { t } from '#/i18n';
-import { colors } from '#/theme/foundations/colors';
+import { t } from '#i18n';
+import { colors } from '#theme/foundations/colors';
 import AppearanceScreen from '../AppearanceScreen';
 
 let mockSavedColor: string | null = null;

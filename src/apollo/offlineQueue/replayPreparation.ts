@@ -6,8 +6,8 @@
  */
 import type { ApolloCache, OperationVariables } from '@apollo/client';
 import type { QueuedMutation, ReplayInputs } from './types';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { isRecord } from '#/utils/isRecord';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { isRecord } from '#utils/isRecord';
 import { ReplayPreparation_UnitFragmentDoc } from './replayPreparation.generated';
 
 export interface ReplayContext {

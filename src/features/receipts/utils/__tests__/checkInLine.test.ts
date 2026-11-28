@@ -1,4 +1,4 @@
-import { ReceiptMatchMethod, UnitType } from '#/graphql/generated/schemaTypes';
+import { ReceiptMatchMethod, UnitType } from '#graphql/generated/schemaTypes';
 import { checkInLineOf } from '../checkInLine';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 /** Frames per second during scroll and interaction. `__DEV__` only. */
 

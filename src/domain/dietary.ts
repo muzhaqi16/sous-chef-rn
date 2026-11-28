@@ -1,5 +1,5 @@
-import type { TranslationKey } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import type { TranslationKey } from '#i18n';
+import type { Translate } from '#i18n/types';
 import {
   Diet,
   DietaryAlertState,
@@ -8,8 +8,8 @@ import {
   ReligiousDiet,
   RestrictionSeverity,
   type MembershipRole,
-} from '#/graphql/generated/schemaTypes';
-import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
+} from '#graphql/generated/schemaTypes';
+import { getMemberDisplayName } from '#utils/formatters/memberFormatters';
 
 /**
  * Stackable dietary constraints: they layer on any diet. One source for the

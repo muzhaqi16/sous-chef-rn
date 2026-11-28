@@ -37,6 +37,7 @@
     "sendFailed": "No se pudo enviar la invitación. Inténtalo de nuevo.",
     "inviteeRemoved": "Esta persona fue quitada del hogar. Solo su propietario o un administrador puede invitarla de nuevo.",
     "inviteeSuspended": "La membresía de esta persona en este hogar está suspendida.",
+    "inviteeAlreadyIn": "Esta persona ya está en este hogar o rechazó una invitación en el último día.",
     "emailLabel": "Correo electrónico",
     "emailPlaceholder": "Introduce un correo electrónico"
   },
@@ -68,8 +69,7 @@
     "statsHome_other": "Hogares",
     "statsPantry_one": "Despensa",
     "statsPantry_other": "Despensas",
-    "cardDefault": "Predeterminado",
-    "cardInvite": "Invitar"
+    "cardDefault": "Predeterminado"
   },
   "homeDetail": {
     "shareLinkMessage": "Únete a mi hogar",
@@ -96,7 +96,7 @@
     "storesSectionTitle": "Dónde compras",
     "usualStoresRowSubtitle": "Las tiendas que usan las comparaciones de precios de este hogar",
     "leaveHomeDescription": "Salir de este hogar eliminará tu acceso a todas las despensas, listas de compras, planes de comida y plantillas compartidas.",
-    "ownerCannotLeaveMessage": "Los propietarios no pueden salir del hogar. Transfiere la propiedad a otro miembro o elimina el hogar.",
+    "deleteHomeDescription": "Eliminar este hogar lo borra, con todo lo que contiene, para todos los miembros. Esto no se puede deshacer. Para salir de él, primero haz propietario a otro miembro.",
     "dietaryNeedsRowTitle": "Lo que los miembros no pueden comer",
     "dietaryNeedsRowSubtitle": "Alergias y restricciones que los miembros comparten con este hogar"
   },

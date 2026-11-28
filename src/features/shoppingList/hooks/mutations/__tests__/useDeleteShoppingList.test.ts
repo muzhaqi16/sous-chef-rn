@@ -1,16 +1,16 @@
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { drained } from '#/test-utils/drainTimers';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { List_EmptyItemsVariantFragmentDoc } from '#features/shoppingList/cache/list.generated';
+import { List_EmptyItemsVariantFragmentDoc } from '#entities/shoppingList/list.generated';
 import { useDeleteShoppingList } from '../useDeleteShoppingList';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 
 const LIST_ID = 'list-1';
 

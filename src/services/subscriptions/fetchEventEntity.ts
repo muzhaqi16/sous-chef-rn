@@ -5,7 +5,7 @@
  */
 
 import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import type { SubscriptionApolloClient } from './types';
 
 /**

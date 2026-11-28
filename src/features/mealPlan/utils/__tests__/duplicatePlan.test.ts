@@ -2,7 +2,7 @@ import {
   duplicatePlan,
   type SourcePlan,
 } from '#features/mealPlan/utils/duplicatePlan';
-import { MealPlanType } from '#/graphql/generated/schemaTypes';
+import { MealPlanType } from '#graphql/generated/schemaTypes';
 import {
   leftoversLunch,
   planSource,

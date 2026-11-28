@@ -243,7 +243,8 @@
   },
   "pantryAction": {
     "useByDefault": "Use by",
-    "availableDefault": "Available:"
+    "availableDefault": "Available:",
+    "availableAmount": "{{amount}} {{unit}}"
   },
   "correctWeight": {
     "invalidWeight": "Please enter a valid size",
@@ -291,6 +292,7 @@
     "sortedBy": "Sort, now by {{field}}",
     "tabAll": "All",
     "tabUnassigned": "Unassigned",
+    "locationInParent": "{{parent}} › {{name}}",
     "expiringCount": "{{count}} expiring",
     "expiredCount": "{{count}} expired",
     "lowStockCount": "{{count}} low stock",
@@ -306,7 +308,7 @@
     "pantriesHiddenDescription": "Someone who manages this home can let you view its pantries.",
     "searchNoResultsDescription": "Would you like to add it to your pantry?",
     "tabEmptyTitle": "No items in {{tabName}}",
-    "tabEmptyDescription": "Items stored here will appear in this tab",
+    "tabEmptyDescription": "Items stored here will appear in this list",
     "tabEmptyFallbackName": "this location",
     "tutorialPantrySettingsSubtitle": "Switch between pantry lists and create new pantries",
     "tutorialAddItemsTitle": "Add items quickly",
@@ -335,7 +337,8 @@
     "stockLevelHigh": "Likely still here",
     "stockLevelMedium": "Worth a check",
     "stockLevelLow": "Probably gone",
-    "stockLevelUnknown": "Not known"
+    "stockLevelUnknown": "Not known",
+    "stockLastConfirmed": "Last confirmed {{when}}"
   },
   "storageState": {
     "AMBIENT": "Ambient",
@@ -362,7 +365,9 @@
     "exceedsAvailableWaste": "Cannot waste more than available quantity ({{amount}} {{unit}})",
     "remainingAfter": "Remaining: {{amount}} {{unit}}",
     "exceedsAvailable": "Exceeds available ({{amount}} {{unit}})",
-    "conversionUnavailable": "This unit cannot be converted. Choose another unit."
+    "conversionUnavailable": "This unit cannot be converted. Choose another unit.",
+    "stockMovedTitle": "Not that much left",
+    "stockMoved": "Some of it went since you opened this. Check what is left and try again."
   },
   "duplicateItem": {
     "title": "Item Already in Pantry"

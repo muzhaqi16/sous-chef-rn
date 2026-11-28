@@ -3,8 +3,8 @@ import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { AddCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+import { CollaboratorRole } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import { ShareInviteSection } from '../ShareInviteSection';
 import { INVITE_ROLES } from '../collaboratorRoles';
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { EmptyState } from '#components/molecules/EmptyState';
 import type { EmptyStateProps } from '#components/molecules/EmptyState';
 
@@ -19,7 +19,7 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
   return (
     <EmptyState
       icon="calendar-outline"
-      iconSize={64}
+      iconSize="2xl"
       title={t('mealPlanEmpty.title')}
       description={t('mealPlanEmpty.subtitle')}
       action={{

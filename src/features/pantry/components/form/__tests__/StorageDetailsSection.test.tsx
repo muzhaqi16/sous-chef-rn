@@ -4,7 +4,7 @@ import { useForm, type FieldValues } from 'react-hook-form';
 import { StorageDetailsSection } from '../StorageDetailsSection';
 import type { FieldDef } from '#components/molecules/DynamicFormFields';
 import type { PantryItemFormData } from '../PantryItemForm';
-import { StorageState, ItemCondition } from '#/graphql/generated/schemaTypes';
+import { StorageState, ItemCondition } from '#graphql/generated/schemaTypes';
 
 jest.mock('#components/molecules/DynamicFormFields', () => {
   const { View, Text } = require('react-native');

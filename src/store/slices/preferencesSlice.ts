@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import { changeLanguage } from '#/i18n';
+import { changeLanguage, deviceAppLanguage } from '#i18n';
 import { requirePlatform } from '#platform/install';
 import { PREFERENCE_DEFAULTS, type ThemePreference } from './preferenceTypes';
 import type {
@@ -9,11 +9,11 @@ import type {
   PantrySortDirection,
 } from './preferenceTypes';
 import type { RootState } from '../index';
-import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
+import { DEFAULT_CURRENCY } from '#utils/formatters/number';
 import {
   MIRRORED_SETTINGS,
   type MirroredSettings,
-} from '#/domain/serverSettings';
+} from '#domain/serverSettings';
 
 // Per-user preferences (keyed by userId)
 export interface UserPreferences {
@@ -40,7 +40,8 @@ export interface PreferencesState extends MirroredSettings {
 
   // Language
   language?: string;
-  setLanguage: (language: string) => void;
+  /** `undefined` follows the device's language again. */
+  setLanguage: (language: string | undefined) => void;
 
   // Remember Me (keep here as it's a preference)
 
@@ -60,6 +61,9 @@ export interface PreferencesState extends MirroredSettings {
   // an Apollo watcher per list cell would be a query subscription per row.
   preferredCurrency: string;
   setPreferredCurrency: (code: string) => void;
+  /** Each currency's `decimalPlaces` by code, the precision money is shown at. */
+  currencyDecimals: Record<string, number>;
+  setCurrencyDecimals: (decimals: Record<string, number>) => void;
 
   // Pantry Sort Preferences
   pantrySortOption: PantrySortOption;
@@ -94,6 +98,7 @@ const initialPreferencesState = {
   showNavigationLabels: true, // Enabled by default
   ...MIRRORED_SETTINGS,
   preferredCurrency: DEFAULT_CURRENCY,
+  currencyDecimals: {},
   pantrySortOption: PREFERENCE_DEFAULTS.pantrySortOption,
   pantrySortDirection: PREFERENCE_DEFAULTS.pantrySortDirection, // Newest first
   primaryColorOverride: null,
@@ -118,7 +123,7 @@ export const createPreferencesSlice: StateCreator<
     set({ theme });
   },
   setLanguage: language => {
-    void changeLanguage(language);
+    void changeLanguage(language ?? deviceAppLanguage());
     set({ language });
   },
   setHapticFeedbackEnabled: enabled => set({ hapticFeedbackEnabled: enabled }),
@@ -126,6 +131,7 @@ export const createPreferencesSlice: StateCreator<
 
   mirrorSettings: settings => set(settings),
   setPreferredCurrency: code => set({ preferredCurrency: code }),
+  setCurrencyDecimals: decimals => set({ currencyDecimals: decimals }),
   setPantrySortOption: option => set({ pantrySortOption: option }),
   setPantrySortDirection: direction => set({ pantrySortDirection: direction }),
 

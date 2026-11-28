@@ -1,7 +1,7 @@
 /**
- * Shared test mock for `#/services/errorService`.
+ * Shared test mock for `#services/errorService`.
  *
- * Activated per-suite via a bare `jest.mock('#/services/errorService')` (no
+ * Activated per-suite via a bare `jest.mock('#services/errorService')` (no
  * factory). Provides the COMPLETE module surface, generated from the real module
  * rather than transcribed, so adding an export to `errorService.ts` needs no
  * test edits.
@@ -18,12 +18,12 @@
  * failure's copy is chosen from. A suite asserting on an alert body needs both.
  *
  *   ```ts
- *   jest.mock('#/services/errorService');
+ *   jest.mock('#services/errorService');
  *   ```
  *
  *   ✅ DO — override per-suite where the value matters:
  *     ```ts
- *     import { localizedErrorMessage } from '#/services/errorService';
+ *     import { localizedErrorMessage } from '#services/errorService';
  *     jest.mocked(localizedErrorMessage).mockReturnValue('Offline');
  *     ```
  *
@@ -60,19 +60,15 @@ export const errorService: ErrorServiceModule['errorService'] = Object.assign(
     // caller's fallback, so no code has copy of its own here. A suite asserting
     // on a mapped code's sentence overrides both.
     hasUserFriendlyMessage: jest.fn(() => false),
-    getErrorCategory: jest.fn(() => 'General'),
-    shouldRetry: jest.fn(() => false),
     isAuthError: jest.fn(() => false),
     isExpectedUserError: jest.fn(() => false),
-    // Unclassified, as the real parse reports an error it cannot read.
-    parseApolloError: jest.fn(
+    // Unclassified, as the real classifier reports an error it cannot read.
+    classifyError: jest.fn(
       (): ErrorResult<never> => ({
         success: false,
         error: {
           code: 'UNKNOWN_ERROR',
           message: GENERIC,
-          category: 'General',
-          shouldRetry: false,
           isAuthError: false,
         },
       }),
@@ -84,8 +80,8 @@ export const localizedErrorMessage = jest.fn((): string => GENERIC);
 
 export const errorCopy = jest.fn((): string => GENERIC);
 
-// Derived from the mocked parse the way the real check derives it, so a suite
-// that overrides `parseApolloError` with a code gets that code's verdict. A
+// Derived from the mocked `codeOf` the way the real check derives it, so a
+// suite that overrides `codeOf` with a code gets that code's verdict. A
 // constant `true` nulled every thrown refusal's code in every suite.
 const TRANSPORT_CODES = new Set([
   'UNKNOWN_ERROR',
@@ -93,8 +89,7 @@ const TRANSPORT_CODES = new Set([
   'CIRCUIT_OPEN',
 ]);
 export const isTransportFailure = jest.fn((error: unknown): boolean => {
-  const code = errorService.parseApolloError(error, { logError: false }).error
-    ?.code;
+  const code = errorService.codeOf(error);
   return !code || TRANSPORT_CODES.has(code);
 });
 

@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, type StyleProp, type TextStyle } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
-import type { MemorySnapshot } from '#/services/performance/types';
+import type { MemorySnapshot } from '#services/performance/types';
 import {
   formatMemory,
   formatTimestamp,

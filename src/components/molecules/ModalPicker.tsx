@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { Button } from '#components/molecules/Button';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
-import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 
@@ -35,8 +34,6 @@ export function ModalPicker<T extends string>({
   confirmLabel,
   stackBehavior,
 }: ModalPickerProps<T>) {
-  const trayRef = useRef<ActionTrayRef>(null);
-
   // Local pending selection for confirm mode
   const [pendingValue, setPendingValue] = useState(selected);
 
@@ -47,23 +44,14 @@ export function ModalPicker<T extends string>({
     setPendingValue(selected);
   }
 
-  // Bridge declarative `visible` prop → imperative ActionTray ref
-  useEffect(() => {
-    if (visible) {
-      trayRef.current?.open();
-    } else {
-      trayRef.current?.close();
-    }
-  }, [visible]);
-
   const activeValue = confirmLabel ? pendingValue : selected;
 
   return (
     <ActionTray
-      ref={trayRef}
+      visible={visible}
       title={label}
       stackBehavior={stackBehavior}
-      onClose={onCancel}
+      onDismiss={onCancel}
       footer={
         confirmLabel ? (
           <Button
@@ -82,6 +70,7 @@ export function ModalPicker<T extends string>({
           <AppPressable
             key={opt.value}
             style={styles.option}
+            accessibilityState={{ selected: activeValue === opt.value }}
             onPress={() => {
               if (confirmLabel) {
                 setPendingValue(opt.value);
@@ -92,7 +81,7 @@ export function ModalPicker<T extends string>({
           >
             <Text style={styles.optionText}>{opt.label}</Text>
             {activeValue === opt.value && (
-              <Icon name="checkmark" size={20} tone="primary" />
+              <Icon name="checkmark" size="sm" tone="primary" />
             )}
           </AppPressable>
         ))}

@@ -1,7 +1,7 @@
 import { Dimensions } from 'react-native';
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
-import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
+import type { ChipOption } from '#components/molecules/ChipScrollRow';
 
 // The ONLY bound on how many cells FlashList mounts, and the mounted count sets
 // the sustained frame time. 0.5x is the least janky on device that still
@@ -26,21 +26,9 @@ export const IMAGE_PRELOAD_COUNT = 24;
 // rendered in.
 export const getDefaultPantryTabs = (
   translate: Translate,
-): FilterTabConfig<LocationFilter>[] => [
-  { id: 'all', label: translate('pantryScreen.tabAll') },
-  {
-    id: 'fridge',
-    label: translate('storageState.REFRIGERATED'),
-    icon: 'thermometer-outline',
-  },
-  {
-    id: 'freezer',
-    label: translate('labels.storageFrozen'),
-    icon: 'snow-outline',
-  },
-  {
-    id: 'pantry',
-    label: translate('labels.storageAmbient'),
-    icon: 'cube-outline',
-  },
+): ChipOption<LocationFilter>[] => [
+  { key: 'all', label: translate('pantryScreen.tabAll') },
+  { key: 'fridge', label: translate('storageState.REFRIGERATED') },
+  { key: 'freezer', label: translate('labels.storageFrozen') },
+  { key: 'pantry', label: translate('labels.storageAmbient') },
 ];

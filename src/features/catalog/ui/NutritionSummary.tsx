@@ -1,11 +1,11 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { ViewStyle } from 'react-native';
 import { View, ScrollView } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
-import type { NutritionHighlight } from '#/types/nutrition';
+import type { NutritionHighlight } from '#types/nutrition';
 import {
   type NutritionSummaryFacts,
   extractMacroSummary,
@@ -188,7 +188,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
           <Text role="label" tone="accent">
             {t('labels.viewDetails')}
           </Text>
-          <Icon name="chevron-forward" size={20} />
+          <Icon name="chevron-forward" size="sm" />
         </View>
       )}
     </Card>
@@ -198,7 +198,6 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
     return (
       <AppPressable
         onPress={onPress}
-        android_ripple={null}
         needsOffscreenAlphaCompositing
         style={variantStyles.pressableWrapper}
       >

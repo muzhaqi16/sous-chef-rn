@@ -1,25 +1,37 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View } from 'react-native';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { Text } from '#components/atoms/Text';
-import { Button } from '#components/molecules/Button';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { FractionInput } from '#components/molecules/FractionInput';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { formatRelativeToNow } from '#utils/formatters/date';
 import {
   StockCheckAnswer,
   StockConfidence,
   StockDoubtReason,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
+import { useOpening } from '#hooks/ui/useOpening';
+import { reportValidationErrors } from '#utils/validation/common';
 import {
-  useStockCheck,
-  type StockCheckChoice,
-  type StockCheckRow,
-} from '../hooks/useStockCheck';
+  DEFAULT_WASTE_REASON,
+  WASTE_REASON_OPTIONS,
+} from '#features/pantry/utils/wasteReasons';
+import { CollapsibleChipPicker } from './CollapsibleChipPicker';
+import { useStockCheck } from '../hooks/useStockCheck';
 import { pantryTestIDs } from '../testIDs';
+import {
+  stockCheckChoice,
+  stockCheckSchema,
+  type StockCheckFormValues,
+} from './stockCheckFormConfig';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 const ANSWERS: readonly StockCheckAnswer[] = [
   StockCheckAnswer.StillHave,
@@ -82,126 +94,119 @@ interface StockCheckSheetProps {
   onDismiss: () => void;
 }
 
-/**
- * Up to five doubtful stacks, each answered Still have, Some left, Used up or
- * Threw out. Only answered rows are sent; closing leaves the rest as they were.
- */
-export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
-  visible,
+type StockCheck = ReturnType<typeof useStockCheck>;
+
+type StockCheckFormProps = Pick<
+  StockCheck,
+  'rows' | 'asking' | 'state' | 'retry' | 'answer'
+> & { onDismiss: () => void };
+
+/** One opening's answers: a stack still listed next time is asked afresh. */
+const StockCheckForm: React.FC<StockCheckFormProps> = ({
+  rows,
+  asking,
+  state,
+  retry,
+  answer,
   onDismiss,
 }) => {
   const { t } = useTranslation();
-  const { rows, state, retry, answer } = useStockCheck(visible);
-  // Each answer keeps the version its row showed when it was picked, so a
-  // change that lands while the sheet is open is refused, never counted over.
-  const [choices, setChoices] = useState<
-    Partial<Record<string, { answer: StockCheckAnswer; seen?: number }>>
-  >({});
-  const [left, setLeft] = useState<Partial<Record<string, string>>>({});
-  const [inside, setInside] = useState<Partial<Record<string, string>>>({});
-  const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
-  const [saving, setSaving] = useState(false);
-  const [noneAnswered, setNoneAnswered] = useState(false);
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    setError,
+    clearErrors,
+    reset,
+    formState: { errors, isSubmitting, isDirty },
+  } = useForm<StockCheckFormValues>({
+    resolver: yupResolver(stockCheckSchema),
+    defaultValues: { rows: {} },
+  });
+  useSheetUnsavedInput(isDirty);
+  const answers = useWatch({ control, name: 'rows' });
 
-  const choiceOf = (
-    row: StockCheckRow,
-  ): StockCheckChoice | null | 'invalid' => {
-    const picked = choices[row.id]?.answer;
-    if (!picked) return null;
-    if (picked === StockCheckAnswer.StillHave) {
-      return { answer: StockCheckAnswer.StillHave };
-    }
-    if (picked === StockCheckAnswer.UsedUp) {
-      return { answer: StockCheckAnswer.UsedUp };
-    }
-    if (picked === StockCheckAnswer.ThrewOut) {
-      return { answer: StockCheckAnswer.ThrewOut };
-    }
-    const quantity = parseFractionalInput(left[row.id] ?? '');
-    if (quantity === null || quantity < 0) return 'invalid';
-    // What the packages found hold, as a recount takes it: never a fraction
-    // of a package worked out by hand.
-    const held = (inside[row.id] ?? '').trim();
-    if (!held || !row.contents) {
-      return { answer: StockCheckAnswer.SomeLeft, quantity };
-    }
-    const amount = parseFractionalInput(held);
-    return amount === null || amount < 0
-      ? 'invalid'
-      : {
-          answer: StockCheckAnswer.SomeLeft,
-          quantity,
-          contents: { amount, unitId: row.contents.unitId },
-        };
-  };
-
-  const save = async () => {
-    const found: Partial<Record<string, string>> = {};
+  const onValid = async (values: StockCheckFormValues) => {
     const answered = rows.flatMap(row => {
-      const choice = choiceOf(row);
-      if (choice === 'invalid') {
-        found[row.id] = t('errors.invalidQuantity');
-        return [];
-      }
+      const choice = stockCheckChoice(row, values.rows[row.id]);
       if (!choice) return [];
-      const seen = choices[row.id]?.seen;
+      const seen = values.rows[row.id]?.seen;
       return [
         { row: seen === undefined ? row : { ...row, version: seen }, choice },
       ];
     });
-    setErrors(found);
-    const invalid = Object.keys(found).length > 0;
-    setNoneAnswered(!invalid && answered.length === 0);
-    if (invalid || answered.length === 0) return;
-    setSaving(true);
+    if (answered.length === 0) {
+      setError('root.noneAnswered', {
+        message: t('pantryScreen.stockCheckNoneAnswered'),
+      });
+      return;
+    }
     const { status, refused } = await answer(answered);
-    setSaving(false);
     if (status === 'failed') return;
     if (refused.length === 0) {
-      // Sent: a stack still listed next time is asked afresh, not pre-answered.
-      setChoices({});
-      setLeft({});
-      setInside({});
       onDismiss();
       return;
     }
-    // A stack that moved since it was seen keeps its row, to be counted again.
-    setErrors(
-      Object.fromEntries(
-        refused.map(id => [id, t('pantryScreen.stockCheckStale')]),
-      ),
+    // A refused row keeps its answer and says why, to be looked at again;
+    // counted again, it goes against the version the row shows by then. The
+    // empty defaults stay, so the kept answers still guard the close.
+    reset(
+      {
+        rows: Object.fromEntries(
+          refused.map(({ pantryItemId }) => [
+            pantryItemId,
+            { ...values.rows[pantryItemId], seen: undefined },
+          ]),
+        ),
+      },
+      { keepDefaultValues: true },
     );
-    // Counted again, it goes against the version the row shows by then.
-    setChoices(current =>
-      Object.fromEntries(
-        Object.entries(current)
-          .filter(([id]) => refused.includes(id))
-          .map(([id, choice]) => [id, choice && { answer: choice.answer }]),
-      ),
-    );
+    for (const { pantryItemId, message, field } of refused) {
+      const counted =
+        values.rows[pantryItemId]?.answer === StockCheckAnswer.SomeLeft;
+      setError(`rows.${pantryItemId}.${refusedField(field, counted)}`, {
+        message,
+      });
+    }
   };
 
   return (
-    <Sheet
-      mode="form"
-      visible={visible}
-      onDismiss={onDismiss}
-      title={t('pantryScreen.stockCheckTitle')}
-      snapPoints={['85%']}
-      contentContainerStyle={styles.content}
-    >
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={t('pantryScreen.stockCheckTitle')}
+          onClose={onDismiss}
+          confirm={{
+            onPress: () => {
+              void handleSubmit(onValid, reportValidationErrors)();
+            },
+            loading: isSubmitting,
+            testID: pantryTestIDs.stockCheckSave,
+          }}
+        />
+      </SheetHeaderSlot>
       {/* A check the device cannot read says so, never an empty check. */}
       {rows.length === 0 ? (
         <DataStateView state={state} onRetry={retry} />
       ) : null}
       {rows.map(row => {
-        const picked = choices[row.id]?.answer ?? null;
-        const evidence = [
-          levelLabel(row.level),
-          ...row.reasons.map(reasonLabel),
-        ]
-          .filter((key): key is TranslationKey => key !== null)
-          .map(key => t(key));
+        const picked = answers[row.id]?.answer ?? null;
+        const rowError = errors.rows?.[row.id]?.answer?.message;
+        // While today's answer is on its way, yesterday's evidence is not shown.
+        const evidence = asking
+          ? []
+          : [
+              ...[levelLabel(row.level), ...row.reasons.map(reasonLabel)]
+                .filter((key): key is TranslationKey => key !== null)
+                .map(key => t(key)),
+              ...(row.lastConfirmedAt
+                ? [
+                    t('pantryScreen.stockLastConfirmed', {
+                      when: formatRelativeToNow(new Date(row.lastConfirmedAt)),
+                    }),
+                  ]
+                : []),
+            ];
         return (
           <View
             key={row.id}
@@ -231,61 +236,136 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
               onSelect={key => {
                 const next = ANSWERS.find(option => option === key);
                 if (!next) return;
-                setChoices(current => ({
-                  ...current,
-                  [row.id]: { answer: next, seen: row.version },
-                }));
-                setNoneAnswered(false);
+                setValue(`rows.${row.id}.answer`, next, { shouldDirty: true });
+                setValue(`rows.${row.id}.seen`, row.version);
+                clearErrors('root.noneAnswered');
+                clearErrors([`rows.${row.id}.answer`, `rows.${row.id}.left`]);
               }}
               edgeFadeColor="surface"
             />
             {picked === StockCheckAnswer.SomeLeft ? (
               <>
-                <FractionInput
-                  label={t('pantryScreen.stockCheckLeft', {
-                    unit: row.unitSymbol,
-                  })}
-                  value={left[row.id] ?? ''}
-                  onChangeText={text =>
-                    setLeft(current => ({ ...current, [row.id]: text }))
-                  }
-                  error={errors[row.id]}
-                  testID={pantryTestIDs.stockCheckLeft(row.id)}
+                <Controller
+                  control={control}
+                  name={`rows.${row.id}.left`}
+                  render={({ field, fieldState }) => (
+                    <FractionInput
+                      ref={field.ref}
+                      label={t('pantryScreen.stockCheckLeft', {
+                        unit: row.unitSymbol,
+                      })}
+                      value={field.value ?? ''}
+                      onChangeText={field.onChange}
+                      error={fieldState.error?.message}
+                      testID={pantryTestIDs.stockCheckLeft(row.id)}
+                    />
+                  )}
                 />
                 {row.contents ? (
-                  <FractionInput
-                    label={t('pantryScreen.stockCheckInside', {
-                      unit: row.contents.unitSymbol,
-                    })}
-                    value={inside[row.id] ?? ''}
-                    onChangeText={text =>
-                      setInside(current => ({ ...current, [row.id]: text }))
-                    }
+                  <Controller
+                    control={control}
+                    name={`rows.${row.id}.inside`}
+                    render={({ field, fieldState }) => (
+                      <FractionInput
+                        ref={field.ref}
+                        label={t('pantryScreen.stockCheckInside', {
+                          unit: row.contents?.unitSymbol,
+                        })}
+                        value={field.value ?? ''}
+                        onChangeText={field.onChange}
+                        error={fieldState.error?.message}
+                      />
+                    )}
                   />
                 ) : null}
               </>
-            ) : errors[row.id] ? (
+            ) : null}
+            {picked === StockCheckAnswer.ThrewOut ? (
+              <CollapsibleChipPicker
+                label={t('recordWaste.wasteReason')}
+                options={WASTE_REASON_OPTIONS.map(({ labelKey, value }) => ({
+                  label: t(labelKey),
+                  value,
+                }))}
+                selectedValue={answers[row.id]?.reason ?? DEFAULT_WASTE_REASON}
+                onSelect={reason =>
+                  setValue(`rows.${row.id}.reason`, reason, {
+                    shouldDirty: true,
+                  })
+                }
+              />
+            ) : null}
+            {rowError ? (
               <Text role="error" tone="error">
-                {errors[row.id]}
+                {rowError}
               </Text>
             ) : null}
           </View>
         );
       })}
-      {noneAnswered ? (
+      {errors.root?.noneAnswered ? (
         <Text role="error" tone="error">
-          {t('pantryScreen.stockCheckNoneAnswered')}
+          {errors.root.noneAnswered.message}
         </Text>
       ) : null}
-      <Button
-        title={t('labels.save')}
-        onPress={() => {
-          void save();
-        }}
-        loading={saving}
-        disabled={saving}
-        testID={pantryTestIDs.stockCheckSave}
-      />
+    </>
+  );
+};
+
+/**
+ * Up to five doubtful stacks, each answered Still have, Some left, Used up or
+ * Threw out. Only answered rows are sent; closing leaves the rest as they were.
+ */
+/**
+ * The row field a refusal goes on: the input the server names, else the amount
+ * when one was counted, as that is what is checked again, else the answer,
+ * whose message sits under the waste reason too.
+ */
+const refusedField = (
+  field: string | null,
+  counted: boolean,
+): 'left' | 'inside' | 'answer' => {
+  switch (field) {
+    case 'quantity':
+      return 'left';
+    case 'remainingNetWeight':
+    case 'remainingNetWeightUnitId':
+      return 'inside';
+    case 'wasteReason':
+      return 'answer';
+    case null:
+    default:
+      return counted ? 'left' : 'answer';
+  }
+};
+
+export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
+  visible,
+  onDismiss,
+}) => {
+  const { rows, asking, state, retry, answer } = useStockCheck(visible);
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      mode="form"
+      visible={visible}
+      onDismiss={onDismiss}
+      headerFromContent
+      snapPoints={['85%']}
+      contentContainerStyle={styles.content}
+    >
+      {opening ? (
+        <StockCheckForm
+          key={opening.id}
+          rows={rows}
+          asking={asking}
+          state={state}
+          retry={retry}
+          answer={answer}
+          onDismiss={onDismiss}
+        />
+      ) : null}
     </Sheet>
   );
 };
@@ -293,7 +373,6 @@ export const StockCheckSheet: React.FC<StockCheckSheetProps> = ({
 const styles = StyleSheet.create(theme => ({
   content: {
     gap: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.md,
   },
   row: {
     gap: theme.spacing.sm,

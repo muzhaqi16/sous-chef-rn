@@ -1,0 +1,125 @@
+# Canonical shape for a PantryItemBatch in the cache.
+# Spread by: GetPantryItemBatches (below), restatedStack.graphql,
+#   PantryItemDetail.graphql, useOpenPantryItemBatch.graphql
+# Read via useFragment by: BatchListItem.tsx, usePantryItemDetailData.ts,
+#   usePantryBatchHistory.ts
+# Kept shared — all 6 consumers need the identical write-back shape.
+fragment PantryItemBatchFragment on PantryItemBatch {
+  version
+  id
+  batchNumber
+  quantity
+  status
+  expiresOn
+  expiresAtIsManual
+  # A stated date or a shelf-life estimate; null with no date.
+  expiryKind
+  costPerUnit
+  totalCost
+  # What this batch's cost figures are in; null on a batch carrying no cost.
+  # Read rather than assumed: a batch bought abroad keeps the currency it was
+  # bought in, whatever the account's preference is set to now.
+  currency {
+    id
+    code
+  }
+  store {
+    id
+    name
+  }
+  notes
+  isOpened
+  openedAt
+  depletedAt
+  # This package's own size, in the stack's net-weight unit; the stack's
+  # netWeight is only the default new stock inherits.
+  netWeight
+  remainingNetWeight
+  # netWeight read in each unit system, with the label's figure where it has one.
+  packageSize {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+  }
+  # remainingNetWeight read in each unit system.
+  remaining {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+  }
+  portionsPerTrackingUnit
+  # When the stock was bought (a receipt's day for a receipt), where createdAt
+  # is when the batch was recorded; null on an unpriced add.
+  purchase {
+    version
+    id
+    purchaseDate
+  }
+  createdAt
+  updatedAt
+  wasteReason
+  pantryItemId
+}
+
+# The detail screen's read: a generous `first` because it derives from the WHOLE
+# active set (cost dilution, expired batches) while showing only the first few.
+# `totalCount` is what its "view all" affordance counts, so a stack past this
+# page still names its real size instead of silently reading 100.
+query GetPantryItemBatches(
+  $pantryItemId: ID!
+  $status: BatchStatus
+  $batchesFirst: Int = 100
+) {
+  pantryItemBatchesConnection(
+    pantryItemId: $pantryItemId
+    status: $status
+    first: $batchesFirst
+  ) {
+    totalCount
+    # Shares a cache field with GetPantryItemBatchHistory (keyArgs is
+    # pantryItemId + status, and neither passes a status). Without `pageInfo`
+    # here, `mergeAuthoritativeFirstPage` reads a missing `hasNextPage` as
+    # "covers the whole list" and this write strips the cursor the history
+    # screen's selection requires — leaving that screen's cache read incomplete.
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      node {
+        id
+        ...PantryItemBatchFragment
+      }
+    }
+  }
+}

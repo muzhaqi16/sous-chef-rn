@@ -2,9 +2,9 @@ import React from 'react';
 import type { ApolloClient } from '@apollo/client';
 import { FlashList } from '@shopify/flash-list';
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { useStore } from '#store';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import { kitTestIDs } from '#components/testIDs';
 import {
   recordMock,
@@ -18,7 +18,7 @@ import {
   NotificationStatus,
   NotificationType,
   Priority,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   GetNotificationsDocument,
   type NotificationSummaryQuery,
@@ -385,7 +385,7 @@ describe('pressing a notification', () => {
     const read = markedRead('joined', { held: true });
     await openList([feed([homeJoined()])], [read]);
     const opened = calledOnce(
-      mockNav.toNotificationDetail,
+      mockNav.toNotificationDestination,
       'opening the detail',
     );
 
@@ -394,36 +394,30 @@ describe('pressing a notification', () => {
     );
     await opened;
 
-    expect(mockNav.toNotificationDetail).toHaveBeenCalledWith({
+    expect(mockNav.toNotificationDestination).toHaveBeenCalledWith({
+      kind: 'detail',
       id: 'joined',
-      notification: expect.objectContaining({ id: 'joined' }),
     });
     read.release();
     await act(() => log.landed(MarkNotificationAsReadDocument));
   });
 
-  it('opens nothing for a pantry notification', async () => {
-    await openList([
-      feed([
-        lowStock({ status: NotificationStatus.Read }),
-        homeJoined({ status: NotificationStatus.Read }),
-      ]),
-    ]);
+  // As tapping its push does: a feature's notification opens that feature.
+  it('opens the pantry for a pantry notification, not its detail', async () => {
+    await openList([feed([lowStock({ status: NotificationStatus.Read })])]);
     const opened = calledOnce(
-      mockNav.toNotificationDetail,
-      'opening the detail',
+      mockNav.toNotificationDestination,
+      'opening the pantry',
     );
 
     fireEvent.press(screen.getByText(t('notifications.copy.title.LOW_STOCK')));
-    fireEvent.press(
-      screen.getByText(t('notifications.copy.title.HOME_JOINED')),
-    );
     await opened;
 
-    expect(mockNav.toNotificationDetail).toHaveBeenCalledTimes(1);
-    expect(mockNav.toNotificationDetail).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'joined' }),
-    );
+    expect(mockNav.toNotificationDestination).toHaveBeenCalledWith({
+      kind: 'feature',
+      tab: 'Pantry',
+      screen: 'PantryMain',
+    });
   });
 
   it('offers to answer an invitation at once', async () => {
@@ -437,7 +431,7 @@ describe('pressing a notification', () => {
     expect(
       screen.getByText(t('labels.invitedBy', { name: 'Sam' })),
     ).toBeVisible();
-    expect(mockNav.toNotificationDetail).not.toHaveBeenCalled();
+    expect(mockNav.toNotificationDestination).not.toHaveBeenCalled();
     read.release();
     await act(() => log.landed(MarkNotificationAsReadDocument));
   });

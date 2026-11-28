@@ -1,10 +1,10 @@
 import { ApolloClient, gql } from '@apollo/client';
 import { MockLink } from '@apollo/client/testing';
 import type { DocumentNode } from 'graphql';
-import { QueueManager } from '#/apollo/offlineQueue/queueManager';
+import { QueueManager } from '#apollo/offlineQueue/queueManager';
 import { useStore } from '#store';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import {
   completeMockedResponse,
   inputOf,
@@ -14,13 +14,13 @@ import {
   makeQueuedMutation,
   queuedMutationFor,
 } from '#/test-utils/queuedMutation';
-import { ErrorCode, UnitType } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, UnitType } from '#graphql/generated/schemaTypes';
 import {
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import type { QueuedMutation } from '#/apollo/offlineQueue/types';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import type { QueuedMutation } from '#apollo/offlineQueue/types';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 /**
@@ -38,14 +38,14 @@ jest.mock('#store', () => ({
 }));
 
 let mockClient: ApolloClient | null = null;
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
 }));
 
-jest.mock('#/apollo/offlineQueue/queueStore', () => ({
+jest.mock('#apollo/offlineQueue/queueStore', () => ({
   queueStore: {
     updateMutation: jest.fn(() => true),
     removeMutation: jest.fn(() => true),

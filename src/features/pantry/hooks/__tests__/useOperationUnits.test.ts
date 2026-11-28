@@ -5,11 +5,7 @@ import {
   RestockUnitsForPantryItemDocument,
   type ConsumptionUnitsForPantryItemQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import {
-  UnitType,
-  UnitRole,
-  UnitSource,
-} from '#/graphql/generated/schemaTypes';
+import { UnitType, UnitRole, UnitSource } from '#graphql/generated/schemaTypes';
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { useOperationUnits, PantryOperation } from '../useOperationUnits';

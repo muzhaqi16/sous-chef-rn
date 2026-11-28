@@ -4,12 +4,12 @@
  * for the next sign-in; and a sign-out that arrives while a server end is still
  * running is still the person's choice, so it drops them once that end is done.
  */
-import { createApolloClient } from '#/apollo/client';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { QueueStatus } from '#/apollo/offlineQueue/types';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { createApolloClient } from '#apollo/client';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { QueueStatus } from '#apollo/offlineQueue/types';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { CreateStorageLocationDocument } from '#features/catalog/graphql/storageLocation.generated';
-import { authService } from '#/services/authService';
+import { authService } from '#services/authService';
 import { useStore } from '#store';
 
 const USER = {

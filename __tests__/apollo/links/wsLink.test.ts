@@ -25,39 +25,42 @@ jest.mock('#store', () => ({
 
 // Environment is auto-mocked via jest.setup.js. Override `getApiConfig` for
 // the WS link's URL lookup.
-import { Environment } from '#/utils/environment';
+import { Environment } from '#utils/environment';
 beforeAll(() => {
   (Environment.getApiConfig as jest.Mock).mockReturnValue({
     wsUrl: 'ws://localhost:4000/graphql',
   });
 });
 
-jest.mock('#/utils/errorSerialization', () => ({
+jest.mock('#utils/errorSerialization', () => ({
   serializeError: jest.fn((e: { message?: string } | null | undefined) => ({
     message: e?.message || 'unknown',
   })),
 }));
 
-jest.mock('#/services/auth/deviceId', () => ({
+jest.mock('#services/auth/deviceId', () => ({
   getDeviceId: jest.fn(() => 'test-device-id'),
 }));
 
-jest.mock('#/config/env', () => ({
+jest.mock('#config/env', () => ({
   env: { WEB_SOCKET_URL: 'ws://test-ws-url', API_KEY: 'test-api-key' },
 }));
 
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 describe('wsLink.ts', () => {
   // We need to re-import for each test to get fresh module state
-  let wsLinkModule: typeof import('#/apollo/links/wsLink');
+  let wsLinkModule: typeof import('#apollo/links/wsLink');
+  // The fresh module's graphql-ws, from the registry it was loaded in.
+  let createClient: jest.Mock;
 
   beforeEach(() => {
     jest.useFakeTimers();
     jest.clearAllMocks();
     // Reset module state for each test
     jest.isolateModules(() => {
-      wsLinkModule = require('#/apollo/links/wsLink');
+      wsLinkModule = require('#apollo/links/wsLink');
+      ({ createClient } = require('graphql-ws'));
     });
   });
 
@@ -76,20 +79,46 @@ describe('wsLink.ts', () => {
   // ─── reconnectWebSocket ───────────────────────────────────────
 
   describe('reconnectWebSocket', () => {
-    it('calls terminate on the WebSocket client', () => {
+    type Config = {
+      url: () => Promise<string>;
+      on: {
+        connecting: () => void;
+        connected: (socket: unknown, payload?: unknown) => void;
+      };
+    };
+    /** The fresh module's client: a dial reads the generation, then is acked. */
+    const connect = async () => {
+      const [config] = (createClient.mock.calls.at(-1) ?? []) as [Config?];
+      if (!config) throw new Error('no client was built');
+      config.on.connecting();
+      await config.url();
+      config.on.connected({}, undefined);
+      return config;
+    };
+
+    it('calls terminate on an open socket', async () => {
+      await connect();
       wsLinkModule.reconnectWebSocket();
-      expect(mockTerminate).toHaveBeenCalled();
+      expect(mockTerminate).toHaveBeenCalledTimes(1);
     });
 
-    it('debounces rapid reconnection attempts', () => {
+    it('leaves a dial in flight to re-dial once it connects', async () => {
+      const config = await connect();
+      wsLinkModule.reconnectWebSocket(); // A token re-dial.
+      mockTerminate.mockClear();
+
+      config.on.connecting();
+      await config.url();
+      wsLinkModule.reconnectWebSocket(); // A language switch, mid-dial.
       wsLinkModule.reconnectWebSocket();
-      wsLinkModule.reconnectWebSocket(); // Should be debounced
-      expect(logger.info).toHaveBeenCalledWith(
-        expect.stringContaining('debounced'),
-      );
+      expect(mockTerminate).not.toHaveBeenCalled();
+
+      config.on.connected({}, undefined);
+      expect(mockTerminate).toHaveBeenCalledTimes(1);
     });
 
-    it('handles terminate throwing an error', () => {
+    it('handles terminate throwing an error', async () => {
+      await connect();
       mockTerminate.mockImplementationOnce(() => {
         throw new Error('terminate failed');
       });
@@ -187,7 +216,7 @@ describe('wsLink.ts', () => {
   describe('getWebSocketState', () => {
     it('returns the current WebSocket state', () => {
       const state = wsLinkModule.getWebSocketState();
-      expect(state).toHaveProperty('lastReconnectTime');
+      expect(state).toHaveProperty('redialGeneration');
       expect(state).toHaveProperty('hasClient');
       expect(state.hasClient).toBe(true);
     });
@@ -201,7 +230,7 @@ describe('wsLink createClient config', () => {
       const { createClient } = require('graphql-ws');
       // Clear any previous calls, then re-import to trigger createClient
       createClient.mockClear();
-      require('#/apollo/links/wsLink');
+      require('#apollo/links/wsLink');
       expect(createClient).toHaveBeenCalledWith(
         expect.objectContaining({
           // A function, not a string: graphql-ws awaits `url` before every
@@ -225,7 +254,7 @@ describe('wsLink createClient config', () => {
     jest.isolateModules(() => {
       const { createClient } = require('graphql-ws');
       createClient.mockClear();
-      require('#/apollo/links/wsLink');
+      require('#apollo/links/wsLink');
       connectionParams = createClient.mock.calls[0][0].connectionParams;
     });
     return connectionParams;
@@ -245,7 +274,7 @@ describe('wsLink createClient config', () => {
   // device, so the prior connection is never superseded and its subscriptions
   // sit against the per-user cap until the heartbeat reaps them.
   it('connectionParams omits deviceId when storage has not opened', () => {
-    const { getDeviceId } = require('#/services/auth/deviceId');
+    const { getDeviceId } = require('#services/auth/deviceId');
     getDeviceId.mockReturnValueOnce(null);
 
     expect(loadConnectionParams()()).not.toHaveProperty('deviceId');

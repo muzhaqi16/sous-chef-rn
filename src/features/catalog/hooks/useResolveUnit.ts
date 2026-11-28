@@ -1,10 +1,10 @@
 import { useLazyQuery } from '@apollo/client/react';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
+import type { UnitType } from '#graphql/generated/schemaTypes';
 import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
 import { useCachedUnits } from '#store/useAppStore';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import type { CachedUnit as HeldUnit } from '#store/slices/appSlice';
-import { unitLabel } from '#/utils/formatQuantity';
+import { unitLabel } from '#utils/formatQuantity';
 
 /** A unit a typed text names, as the field shows and checks it. */
 export interface ResolvedUnit {

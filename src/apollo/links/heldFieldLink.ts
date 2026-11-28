@@ -1,7 +1,7 @@
 import { ApolloLink } from '@apollo/client';
 import { isQueryOperation } from '@apollo/client/utilities';
 import { map } from 'rxjs';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 type ErrorPath = readonly (string | number)[];
 

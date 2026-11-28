@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
-import { FormNumberInput } from '#features/catalog/components/FormNumberInput';
+import { FormInput } from '#components/atoms/FormInput';
 import { FormSelect } from '#components/molecules/FormSelect';
 
 import { Text } from '#components/atoms/Text';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
 import { buildCapacityUnitOptions } from '#features/catalog/components/storageLocationFormConfig';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 interface StorageLocationAdvancedSectionProps {
   isClimateControlled: boolean;
   capacity: string;
+  /** Why the capacity typed was refused, said on its field. */
+  capacityError?: string;
   capacityUnit: string;
   isDefault: boolean;
   /** False for the current default, which only another location can take. */
@@ -36,6 +38,7 @@ export const StorageLocationAdvancedSection: React.FC<
 > = ({
   isClimateControlled,
   capacity,
+  capacityError,
   capacityUnit,
   isDefault,
   canChangeDefault,
@@ -70,10 +73,11 @@ export const StorageLocationAdvancedSection: React.FC<
           />
 
           <View style={styles.capacityRow}>
-            <FormNumberInput
+            <FormInput
               label={t('storageLocationForm.capacity')}
               value={capacity}
               onChangeText={onCapacityChange}
+              error={capacityError}
               placeholder={t('storageLocationForm.capacityPlaceholder')}
               keyboardType="decimal-pad"
               containerStyle={styles.capacityInput}

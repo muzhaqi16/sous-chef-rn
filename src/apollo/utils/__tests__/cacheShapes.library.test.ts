@@ -13,7 +13,7 @@
  */
 import { gql } from '@apollo/client';
 import * as utilities from '@apollo/client/utilities';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const LOCATIONS = gql`

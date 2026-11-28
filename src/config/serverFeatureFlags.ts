@@ -1,4 +1,4 @@
-import { FeatureFlagName } from '#/graphql/generated/schemaTypes';
+import { FeatureFlagName } from '#graphql/generated/schemaTypes';
 import type { FeatureFlag } from './featureFlags';
 
 /*

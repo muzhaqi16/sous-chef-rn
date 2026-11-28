@@ -1,5 +1,5 @@
 import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
-import { getI18n } from '#/i18n/config';
+import { getI18n } from '#i18n/config';
 
 const t = getI18n().t;
 

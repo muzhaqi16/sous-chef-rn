@@ -1,8 +1,9 @@
 import type { ComponentRef } from 'react';
+import type { SwipeRowPress } from '#components/molecules/RowFrame';
 import type { SharedValue } from 'react-native-reanimated';
 import type Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import type { Icon } from '#components/atoms/Icon';
-import type { TranslationKey } from '#/i18n';
+import type { TranslationKey } from '#i18n';
 
 export type SwipeableRef = React.RefObject<ComponentRef<
   typeof Swipeable
@@ -35,7 +36,11 @@ export interface SwipeAction {
 }
 
 export interface SwipeableItemProps {
-  children: React.ReactNode;
+  /**
+   * The row, handed the press its surface takes. The row's controls sit beside
+   * that surface, never inside it, so each fires and is reached on its own.
+   */
+  children: (press: SwipeRowPress) => React.ReactNode;
   /**
    * What a screen reader says for the row. Required: RNGH's button derives one
    * from its children without skipping hidden views, so an icon's glyph would

@@ -5,12 +5,12 @@ import {
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
-import type { TabBarAddAction } from '#/context/TabBarActionsContext';
+import type { TabBarAddAction } from '#context/TabBarActionsContext';
 import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePantrySelectorConfig } from '#features/pantry/screens/usePantrySelectorConfig';
@@ -19,7 +19,7 @@ import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import {
   useTabBarSetters,
   useTabBarState,
-} from '#/context/TabBarActionsContext';
+} from '#context/TabBarActionsContext';
 import { useCollapsibleScroll } from '#hooks/animations/useCollapsibleScroll';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import {
@@ -46,13 +46,13 @@ import type { PantryContentRef } from '#features/pantry/components/pantryDisplay
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import { PantryErrorBoundary } from '#components/providers/ScreenErrorBoundary';
-import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { PantryScreenSkeleton } from '#features/pantry/components/skeletons/PantryScreenSkeleton';
 import { SearchBar } from '#components/molecules/SearchBar';
-import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
+import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
+import { getDefaultPantryTabs } from '#features/pantry/components/pantryDisplay/constants';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 import { Screen } from '#components/templates/Screen';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
@@ -534,24 +534,6 @@ const noop = () => {};
 const PantryMainFallback: React.FC = () => {
   const { t } = useTranslation();
   const { pantry } = useCurrentPantry();
-  const skeletonTabs: FilterTabConfig<LocationFilter>[] = [
-    { id: 'all', label: t('pantryScreen.tabAll') },
-    {
-      id: 'fridge',
-      label: t('storageState.REFRIGERATED'),
-      icon: 'thermometer-outline',
-    },
-    {
-      id: 'freezer',
-      label: t('labels.storageFrozen'),
-      icon: 'snow-outline',
-    },
-    {
-      id: 'pantry',
-      label: t('labels.storageAmbient'),
-      icon: 'cube-outline',
-    },
-  ];
   return (
     // No `header`: the loaded screen draws its own above its list, so the
     // chrome here is the same shape, with the same title, before it mounts.
@@ -571,10 +553,10 @@ const PantryMainFallback: React.FC = () => {
         />
       </View>
       <View style={styles.gutter}>
-        <FilterTabs<LocationFilter>
-          tabs={skeletonTabs}
-          activeTabId="all"
-          onTabChange={noop}
+        <ChipScrollRow<LocationFilter>
+          options={getDefaultPantryTabs(t)}
+          selected="all"
+          onSelect={noop}
         />
       </View>
       <View style={styles.gutter}>

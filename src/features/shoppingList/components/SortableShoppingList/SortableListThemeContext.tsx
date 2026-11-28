@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import type { RowThemeColors } from '#components/atoms/rowTheme';
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import { UnitSystem } from '#graphql/generated/schemaTypes';
 import type { ReadingSystem } from '#domain/measure';
 
 /**

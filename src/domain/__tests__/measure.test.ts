@@ -1,5 +1,5 @@
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitSystem } from '#graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import {
   currentReading,
   formatReading,

@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 import type { StaticScreenProps } from '@react-navigation/native';
-import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Button } from '#components/molecules/Button';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
@@ -16,10 +15,11 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useJoinLinkAuthGate } from '#hooks/deepLink/useJoinLinkAuthGate';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useStore } from '#store';
-import { toastService } from '#/services/toastService';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { toastService } from '#services/toastService';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { SubScreen } from '#components/templates/SubScreen';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { CodeEntryForm } from '#components/organisms/CodeEntryForm';
 
 /**
  * Join a home via share link or a typed code. Mirrors
@@ -37,10 +37,10 @@ export const JoinHomeByCodeScreen: React.FC<
   // out (replayed after login by useDeepLinkRouter).
   const isLoggedOut = useJoinLinkAuthGate('join_home', initialCode);
 
-  // `code` is the code we're previewing/joining; `inputValue` is the editable
-  // field. They diverge while the user types a new code before tapping "Find".
+  // `code` is the code being previewed or joined, empty while one is typed;
+  // the entry field opens on `lastCode`, so a mistyped code is fixed in place.
   const [code, setCode] = useState(initialCode);
-  const [inputValue, setInputValue] = useState(initialCode);
+  const [lastCode, setLastCode] = useState(initialCode);
   const [joining, setJoining] = useState(false);
 
   // A second link opened while this screen shows arrives as new params on the
@@ -49,7 +49,7 @@ export const JoinHomeByCodeScreen: React.FC<
   if (initialCode !== linkedCode) {
     setLinkedCode(initialCode);
     setCode(initialCode);
-    setInputValue(initialCode);
+    setLastCode(initialCode);
   }
 
   const { home, previewLoading, previewState, retryPreview, joinHome } =
@@ -60,16 +60,8 @@ export const JoinHomeByCodeScreen: React.FC<
 
   const { requireVerifiedEmail } = useVerifiedEmailGate();
 
-  const handleFind = () => {
-    const trimmed = inputValue.trim();
-    if (!trimmed) {
-      toastService.error(t('labels.pleaseEnterAJoinCode'));
-      return;
-    }
-    setCode(trimmed);
-  };
-
   const handleUseDifferentCode = () => {
+    setLastCode(code);
     setCode('');
   };
 
@@ -122,7 +114,7 @@ export const JoinHomeByCodeScreen: React.FC<
       return (
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Icon name="home-outline" size={48} tone="primary" />
+            <Icon name="home-outline" size="xl" tone="primary" />
           </View>
           <Text role="heading" align="center" style={styles.title}>
             {t('joinHome.enterCodeTitle')}
@@ -135,20 +127,12 @@ export const JoinHomeByCodeScreen: React.FC<
           >
             {t('joinHome.enterCodeDescription')}
           </Text>
-          <BaseInput
-            containerStyle={styles.inputContainer}
-            style={styles.inputText}
-            value={inputValue}
-            onChangeText={setInputValue}
+          <CodeEntryForm
+            defaultCode={lastCode}
             placeholder={t('labels.enterJoinCode')}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <Button
-            title={t('joinHome.findHome')}
-            onPress={handleFind}
-            disabled={!inputValue.trim()}
-            style={styles.actionButton}
+            submitLabel={t('joinHome.findHome')}
+            requiredMessage="labels.pleaseEnterAJoinCode"
+            onSubmit={setCode}
           />
         </View>
       );
@@ -164,7 +148,7 @@ export const JoinHomeByCodeScreen: React.FC<
       return (
         <ErrorState
           icon="alert-circle-outline"
-          title={t('errors.codes.homeNotFound')}
+          title={t('errors.homeNotFound')}
           message={t('joinHome.notFoundDescription')}
           severity="error"
           alignment="center"
@@ -179,7 +163,7 @@ export const JoinHomeByCodeScreen: React.FC<
     return (
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Icon name="home" size={48} tone="primary" />
+          <Icon name="home" size="xl" tone="primary" />
         </View>
         <Text role="body" tone="secondary" align="center" style={styles.title}>
           {t('joinHome.invitedToJoin')}
@@ -243,15 +227,6 @@ const styles = StyleSheet.create(theme => ({
   },
   description: {
     marginBottom: theme.spacing.xl,
-  },
-  inputContainer: {
-    width: '100%',
-    marginBottom: theme.spacing.lg,
-  },
-  inputText: {
-    textAlign: 'center',
-    letterSpacing: 2,
-    ...theme.type.heading,
   },
   previewCard: {
     width: '100%',

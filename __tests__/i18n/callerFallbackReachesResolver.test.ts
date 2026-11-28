@@ -15,7 +15,7 @@
  * || t(…)` — is `no-restricted-syntax`'s `callerFallbackAfterResolver`, since a
  * dead operand is a syntax question rather than a runtime one.
  */
-import { localizedErrorMessage } from '#/services/errorService';
+import { localizedErrorMessage } from '#services/errorService';
 
 describe('localizedErrorMessage receives the caller’s copy', () => {
   it('prefers the caller’s copy over the read-oriented transport sentence', () => {

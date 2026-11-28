@@ -9,7 +9,7 @@ import {
   Intolerance,
   ReligiousDiet,
   RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { HomeDietaryNeedsDocument } from '#features/home/hooks/useHomeDietaryNeeds.generated';
 import { GetDietaryProfileDocument } from '#operations/user/user.generated';
 import type { RootState } from '#store/index';

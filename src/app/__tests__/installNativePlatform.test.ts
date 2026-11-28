@@ -1,6 +1,6 @@
 import { Alert } from 'react-native';
 
-jest.unmock('#/services/alertService');
+jest.unmock('#services/alertService');
 
 const INSTALLED = Symbol.for('sous-chef.platform');
 const registry = globalThis as { [INSTALLED]?: unknown };
@@ -11,12 +11,12 @@ afterEach(() => {
 });
 
 /** A fresh launch: the composition root runs with nothing installed yet. */
-const launch = (): typeof import('#/services/alertService') => {
+const launch = (): typeof import('#services/alertService') => {
   delete registry[INSTALLED];
-  let alerts!: typeof import('#/services/alertService');
+  let alerts!: typeof import('#services/alertService');
   jest.isolateModules(() => {
     require('../installNativePlatform');
-    alerts = require('#/services/alertService');
+    alerts = require('#services/alertService');
   });
   return alerts;
 };

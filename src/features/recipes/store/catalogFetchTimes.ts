@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { zustandStorage } from '#/store/deviceStorage';
+import { zustandStorage } from '#store/deviceStorage';
 import { hydrateWhenStarted } from '#store/persistedStores';
 import { registerSessionScopedStore } from '#store/sessionScopedStores';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 /** The longest a catalog read serves a held answer: a pantry item's suggestions. */
 const KEPT_MS = 7 * 24 * 60 * 60 * 1000;

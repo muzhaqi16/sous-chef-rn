@@ -1,10 +1,9 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import {
   formatInviteStatus,
   getInviteStatusKey,
@@ -12,9 +11,9 @@ import {
 } from '#features/home/utils/inviteFormatters';
 import { INVITE_STATUS_TONE } from './inviteStatusTone';
 import { Text, type TextTone } from '#components/atoms/Text';
-import { InviteStatus } from '#/graphql/generated/schemaTypes';
+import { InviteStatus } from '#graphql/generated/schemaTypes';
 import { HomeInviteCard_InviteFragmentDoc } from './HomeInviteCard.generated';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 interface HomeInviteCardProps {
   inviteRef: FragmentType<typeof HomeInviteCard_InviteFragmentDoc>;
@@ -92,13 +91,13 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
           {statusText}
         </InviteStatusBadge>
         {!!canRevoke && invite.status === InviteStatus.Pending && (
-          <AppPressable
-            style={styles.revokeButton}
+          <IconButton
+            name="close"
+            size="sm"
             onPress={onRevoke}
             accessibilityLabel={t('a11y.revokeInvite')}
-          >
-            <Icon name="close" size={20} />
-          </AppPressable>
+            filled={{ size: 'sm', tone: 'error', shape: 'rounded' }}
+          />
         )}
       </View>
     </InviteSurface>
@@ -150,11 +149,5 @@ const styles = StyleSheet.create(theme => ({
         expired: { backgroundColor: theme.colors.status.expired + '20' },
       },
     },
-  },
-  revokeButton: {
-    padding: theme.spacing.xs,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.validation.errorBg,
   },
 }));

@@ -1,9 +1,9 @@
 import { useMutation } from '@apollo/client/react';
 import { AddCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import type { CollaboratorRole } from '#/graphql/generated/schemaTypes';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import type { CollaboratorRole } from '#graphql/generated/schemaTypes';
+import { createAddToParentConnectionUpdater } from '#apollo/utils/cacheUpdaters';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { settleMutation } from '#apollo/utils/settleMutation';
 
 const addCollaboratorToCache = createAddToParentConnectionUpdater(
   'ShoppingList',

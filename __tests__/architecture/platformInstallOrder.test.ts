@@ -1,5 +1,6 @@
-import * as fs from 'node:fs';
 import * as path from 'node:path';
+import * as ts from 'typescript';
+import { parseSource } from '#/test-utils/sourceAst';
 
 /**
  * The native install precedes everything that runs the core, and the persisted
@@ -15,15 +16,33 @@ const BEFORE_INSTALL = [
   'react-native-get-random-values',
 ];
 
-const importsOf = (source: string): string[] =>
-  [...source.matchAll(/^import\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]/gm)]
-    .map(match => match[1])
-    .filter((specifier): specifier is string => specifier !== undefined);
+/** The module each import names, in source order; comments are not code. */
+const importsOf = (source: ts.SourceFile): string[] =>
+  source.statements
+    .filter(ts.isImportDeclaration)
+    .map(statement => statement.moduleSpecifier)
+    .filter(ts.isStringLiteral)
+    .map(specifier => specifier.text);
+
+/** The first statement that is not an import: what runs first under Metro. */
+const firstStatementOf = (source: ts.SourceFile): string | undefined =>
+  source.statements
+    .find(statement => !ts.isImportDeclaration(statement))
+    ?.getText();
 
 describe('platform install order', () => {
-  const imports = importsOf(
-    fs.readFileSync(path.join(ROOT, 'index.js'), 'utf8'),
-  );
+  const index = parseSource(path.join(ROOT, 'index.js'));
+  const imports = importsOf(index);
+
+  it('reads past an import written in a comment', () => {
+    const planted = parseSource(
+      'planted.js',
+      `/*\nimport './src/legacy/boot';\n*/\nimport './src/app/installNativePlatform';\nconst ready = boot();\nstartPersistedStores();`,
+    );
+
+    expect(importsOf(planted)).toEqual(['./src/app/installNativePlatform']);
+    expect(firstStatementOf(planted)).toBe('const ready = boot();');
+  });
 
   it('installs the platform right after the clock, profiler and polyfill', () => {
     expect(imports.slice(0, BEFORE_INSTALL.length + 1)).toEqual([
@@ -33,15 +52,12 @@ describe('platform install order', () => {
   });
 
   it('starts the persisted stores right after the install', () => {
-    const source = fs.readFileSync(path.join(ROOT, 'index.js'), 'utf8');
     expect(imports[BEFORE_INSTALL.length + 1]).toBe(
       './src/store/persistedStores',
     );
     // Metro hoists every import above the statements, so the call is the
     // first statement that runs.
-    expect(source.match(/^\w[^\n]*\(\);$/m)?.[0]).toBe(
-      'startPersistedStores();',
-    );
+    expect(firstStatementOf(index)).toBe('startPersistedStores();');
   });
 
   // Jest evaluates every import eagerly, which Metro's inline requires do not,

@@ -1,6 +1,6 @@
 # Sous Chef RN — project instructions
 
-React Native 0.86 (New Architecture) · React 19.2 + React Compiler · Apollo
+React Native 0.87 (New Architecture) · React 19.2 + React Compiler · Apollo
 Client 4.2 (`dataMasking` on) + GraphQL codegen · Unistyles 3 · FlashList v2 ·
 React Navigation 8 · Zustand · i18next · MMKV. Offline-first: writes land in
 the cache immediately and replay through an offline queue.
@@ -66,11 +66,15 @@ Map and reasoning: `docs/architecture.md`.
   `components/`, colocated `.graphql`.
 - **The registry split is load-bearing.** Navigation iterates `registry.ts`;
   launch-path code reads `registry.static.ts` (i18n, push routes) and
-  `registry.cache.ts` (type policies). Shell wiring goes in `manifest.static.ts`,
-  never an import of `registry.ts` — § Three registries.
-- **Feature API boundary** (`boundaries/dependencies`): a feature's `context/`,
-  `utils/`, `components/`, `hooks/mutations/`, `offline/` and `graphql/` are
-  internal; everything else — `screens/`, top-level `hooks/`, `ui/`, `testIDs.ts`,
+  `registry.cache.ts` (type policies); the write kernel reads `registry.data.ts`
+  and the feed engine `registry.feed.ts`. Shell wiring goes in
+  `manifest.static.ts`, never an import of `registry.ts` — § Five registries.
+  Its gates hold it (`staticFeatureRegistry.test.ts`, `launchPathWeight.test.ts`,
+  the layer policies, `check:import-cycles`), not a measured launch time.
+- **Feature API boundary** (`boundaries/dependencies`; `BOUNDARY_ELEMENTS` in
+  `eslint/boundaries.js` is the one statement): a feature's `context/`,
+  `utils/`, `components/`, `cache/`, `hooks/mutations/`, `offline/` and
+  `graphql/` are internal; everything else — `screens/`, top-level `hooks/`, `ui/`, `testIDs.ts`,
   `*Fragments.generated.ts` types — is importable. `catalog/` owns the grocery `Item`,
   pickers and storage locations; its `ui/` is the shared grocery-item UI. Tests are exempt.
 - **Kit** (`src/hooks/`, `src/components/`): only what 2+ features use, no
@@ -78,7 +82,10 @@ Map and reasoning: `docs/architecture.md`.
   molecules, organisms, templates, providers, performance), placed by what a
   component RENDERS (`atoms/README.md`). Review holds "no domain-named kit file" and "no kernel
   module named after a feature" (navigation stacks exempt).
-- `src/domain/` is logic 2+ features share; `src/app/` is the composition root;
+- `src/entities/<entity>/` is an entity 2+ features write (its cache writers,
+  write descriptors and the documents they write to); it imports no feature.
+- `src/domain/` is logic 2+ features share and imports no feature, a type
+  included; `src/app/` is the composition root;
   `src/bootstrap/` (core) is what every host runs to start the core.
 - **Two layers, by folder** (`scripts/lib/layers.js`): **core** runs without
   React Native and loads with nothing installed; **mobile** is the React Native
@@ -101,8 +108,8 @@ Map and reasoning: `docs/architecture.md`.
   its feature works as before, so it plugs in through an optional prop or a
   selector hook, never a branch inside existing code — `docs/architecture.md`.
 - **Aliases** are added ONLY in `tsconfig.json` `paths`. Each top-level `src/`
-  folder is `#<name>`; irregular: `#/*` → `src/*`, `#operations`,
-  `#generated`, `#/test-utils/*` → `__tests__/helpers/*`.
+  folder is `#<name>`; irregular: `#operations`, `#generated`,
+  `#/test-utils/*` → `__tests__/helpers/*`.
 - **A `src/` module or export needs a PRODUCTION importer** (`check:dead-modules`):
   a test or `jest.mock()` does not count, so dead code goes with its test; a
   deliberate test seam is tagged `@internal`.
@@ -171,8 +178,11 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   the key; connections stay with their edge writers.
 - **A response that states a count settles it**: no handler adjusts on top
   (`carriesListTotals`, `carriesPantryCount`).
-- **A local-first write is one `LocalWrite`** in `LOCAL_WRITES`, held as an optimistic
-  layer by `pendingWritesOf(cache).send` (`localWriteCoverage.test.ts`): the root holds
+- **A local-first write is one `LocalWrite`**, bound to its document by
+  `bindLocalWrite` beside it (a feature's `offline/localWrites.ts`; shared documents'
+  `sharedWrites.ts`) and sent through `useLocalWrite(binding, settle)` (its core
+  `sendLocalWrite` outside a hook), which checks the inputs against the write; held
+  as an optimistic layer (`localWriteCoverage.test.ts`): the root holds
   only what the server said, and a refusal just drops the layer. `apply` re-runs, so it
   is deterministic (`sous-chef/local-write-is-deterministic`). **`commit` writes what
   the answer does NOT state**, so read the mutation's selection first; no gate catches
@@ -200,8 +210,8 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
 - **Settle a write with `settleMutation`** (`applied | queued | failed`; queued
   is never a failure) and narrow with `appliedPayload(data)`
   (`writesSettleThroughOneMechanism.test.ts`).
-- **`localFirst` goes on the `useMutation` options**: a per-call context object
-  replaces the hook's, so extra keys use the callback form
+- **`localFirst` goes on the `useMutation` options**, which `useLocalWrite` sets; a
+  per-call context object replaces the hook's, so extra keys use the callback form
   (`sous-chef/queueable-write-is-local-first`).
 - **Pick a mutation pattern from `docs/apollo-client-patterns.md` § Choosing a pattern** (no `update` callback by
   default, `refetchQueries` last); build optimistic responses from
@@ -292,7 +302,8 @@ Mechanism, evidence and traps for everything below: `docs/ui-layer.md`.
 Each concern is solved once; an import ban or `sous-chef/*` rule names the
 replacement when you reach past it — a growing list (`FlashList`), an image
 (`CachedImage`), a modal (`useStandardBottomSheet` / `alertService`), a date or
-quantity (`src/utils` formatters), device storage (a Zustand slice), loading
+quantity (`src/utils` formatters), money (`useMoney`, at its currency's
+`decimalPlaces`), device storage (a Zustand slice), loading
 (`Loading`), a toast (`toastService`), navigation (`useAppNavigation`), text
 (`<Text role>` + `tone`), inputs (`ThemedTextInput`), icons (`<Icon tone>`),
 colour and spacing (`theme.*`), elevation (`theme.shadows`), text on a fill (its
@@ -322,8 +333,7 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **`Screen` never applies the top inset** — the navigator does. A bare
   `<SafeAreaView>` (no `edges`) insets all four sides.
 - **A sheet's shell is `Sheet`** (`view | form | action | list`); `form` supplies
-  the keyboard offset and input context. A sheet whose scrollable fills it is
-  `list`, never `view`.
+  the keyboard offset. A sheet whose scrollable fills it is `list`, never `view`.
 - **A `Dialog` stays mounted and is driven by `visible`**: unmounting it skips
   the fade-out and can orphan its scrim on Android. Content goes in
   `DialogBody`, actions in `DialogFooter`.
@@ -341,8 +351,9 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **`withUnistyles(Component)`** themes a third-party component's props. A wrapper
   2+ files use lives in `src/components/atoms/themedComponents.tsx`; a single-use
   one stays beside its user.
-- **Never wrap `Pressable`/`TouchableX` with `withUnistyles`**: it drops a
-  function-style `style`. Verified: `#unistyles-withunistyles-drops-function-styles`.
+- **Never wrap a `Pressable`, RN's or RNGH's, with `withUnistyles`**: it
+  replaces a function-style `style` with `{}`, by design upstream. RN's needs no
+  wrapper. Verified: `#unistyles-withunistyles-drops-function-styles`.
 - **A node reanimated animates takes no themed Unistyles style**
   (`sous-chef/animated-node-takes-no-themed-style`): the React commit after a
   theme change puts the old values back at and under a Reanimated view. Themed
@@ -365,6 +376,9 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **The motion scale stops at 300 ms**; a loop's longer period stays a literal.
 - **Never branch an animation on reduce motion** — Reanimated applies it.
   `useMotionEnabled()` is the ONE read, for what a zero duration can't stop. Verified: `#reanimated-applies-reduce-motion-itself`.
+- **State moving one node is a Reanimated CSS transition; a self-running loop is a CSS
+  animation**, both gated by `useMotionEnabled()` (CSS ignores reduce motion). Shared
+  values are for gestures, scroll, live values and orchestrated motion — `docs/reanimated.md`.
 
 ### Gestures & scroll hosts
 
@@ -389,12 +403,20 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 
 - **Drive a sheet with `visible` + `onDismiss`**; never inline `BottomSheet`,
   which conflicts with the global backdrop.
-- **Every text input inside a sheet resolves to gorhom's `BottomSheetTextInput`**
-  via `useIsBottomSheetInput()` — it throws outside a sheet. Verified: `#gorhom-keyboard-handling-requires-bottomsheettextinput`.
+- **A sheet opens fresh**: its form state lives in its content, which gorhom
+  unmounts on dismiss, so no `prevVisible` reset; what a sheet deliberately
+  keeps lives in its parent. Verified: `#gorhom-unmounts-a-modals-content-once-it-is-dismissed`.
+- **Every text input inside a sheet resolves to gorhom's `BottomSheetTextInput`**:
+  a text input is only ever `ThemedTextInput`, which asks gorhom where it renders
+  (`useInBottomSheet`); gorhom's throws outside a sheet. Verified: `#gorhom-keyboard-handling-requires-bottomsheettextinput`.
 - **A content-sized sheet (`enableDynamicSizing`) takes NO keyboard-aware
   scrollable**: `BottomSheetView` and gorhom's `interactive` lift. Verified: `#a-keyboard-aware-scrollable-cannot-size-a-sheet`.
-- **A fixed-snap sheet with inputs uses `BottomSheetFormScrollView`.** Never
-  hardcode `bottomOffset` or pass it `undefined` (it defaults to
+- **A tall fixed-snap sheet with inputs uses `BottomSheetFormScrollView`**, which
+  `Sheet mode="form"` picks past 60%; gorhom lifts a shorter one whole, so it scrolls
+  in gorhom's own view. **A form sheet, or one that extends for the keyboard, has
+  one stop** (`formSheetHasOneStop.test.ts`): from a lower stop gorhom moves it and
+  the scroll overshoots by that move. Verified: `#gorhoms-lift-and-a-keyboard-aware-scroll-both-make-room`.
+  Never hardcode `bottomOffset` or pass it `undefined` (it defaults to
   `theme.spacing.md`); it measures from the input's bottom edge. Verified: `#keyboard-controller-bottomoffset-measures-input-bottom`.
 - **A scrollable in a sheet sits in a `View style={{ flex: 1 }}`, never in
   `BottomSheetView`**, which is absolute with no height
@@ -413,7 +435,7 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **A skeleton over a mounting FlashList releases on `hasContentLayout`**, never
   on loading flags or `onLoad`; its cover exists from the list's FIRST commit,
   and a settled EMPTY list releases on `rowCount: 0`. Verified: `#flashlist-v2-first-layout-opacity-gate`.
-- **`InteractionManager` is a no-op stub in RN 0.86.3**; use `requestIdleCallback`. Verified: `#interactionmanager-is-a-no-op-stub`.
+- **`InteractionManager` is gone from React Native** (reading it throws in development); use `requestIdleCallback`. Verified: `#interactionmanager-is-gone`.
 
 ### Pickers, row actions, forms
 

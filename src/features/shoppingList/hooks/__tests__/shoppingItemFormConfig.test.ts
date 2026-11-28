@@ -28,6 +28,80 @@ async function messageFor(
 
 const base = SHOPPING_ITEM_DEFAULTS;
 
+/** The message for `field` when the form holds `seed` as stored text. */
+async function messageWithSeed(
+  values: Record<string, unknown>,
+  field: string,
+  quantitySeed: string,
+): Promise<string | undefined> {
+  try {
+    await shoppingItemSchema.validate(values, {
+      abortEarly: false,
+      context: { quantitySeed },
+    });
+    return undefined;
+  } catch (error) {
+    if (!(error instanceof ValidationError)) throw error;
+    return error.inner.find(e => e.path === field)?.message;
+  }
+}
+
+// The API reads a line's quantity only as an amount, up to 999,999.
+describe("a line's quantity, notes and price", () => {
+  it.each(['2', '0.5', '1/3', '1 1/4'])('takes %p', async quantityInput => {
+    expect(
+      await messageFor(
+        { ...base, itemName: 'Milk', quantityInput },
+        'quantityInput',
+      ),
+    ).toBeUndefined();
+  });
+
+  it('refuses text it cannot read, saying what it takes', async () => {
+    expect(
+      await messageFor(
+        { ...base, itemName: 'Salt', quantityInput: 'a pinch' },
+        'quantityInput',
+      ),
+    ).toBe('Enter an amount like 2, 0.5 or 1 1/4');
+  });
+
+  it('leaves stored text alone until it is changed', async () => {
+    const values = { ...base, itemName: 'Salt', quantityInput: 'a pinch' };
+    expect(
+      await messageWithSeed(values, 'quantityInput', 'a pinch'),
+    ).toBeUndefined();
+  });
+
+  it('refuses more than 999,999', async () => {
+    expect(
+      await messageFor(
+        { ...base, itemName: 'Rice', quantityInput: '1000000' },
+        'quantityInput',
+      ),
+    ).toBe('Quantity cannot exceed 999,999');
+  });
+
+  it('holds notes to 500 characters', async () => {
+    expect(
+      await messageFor(
+        { ...base, itemName: 'Milk', notes: 'x'.repeat(501) },
+        'notes',
+      ),
+    ).toBe('Keep notes to 500 characters');
+  });
+
+  // A price it cannot read is said on the field, never sent as a clear.
+  it('refuses a price it cannot read', async () => {
+    expect(
+      await messageFor(
+        { ...base, itemName: 'Milk', estimatedPrice: 'abc' },
+        'estimatedPrice',
+      ),
+    ).toBe('Enter a price like 4.99, or leave it empty.');
+  });
+});
+
 describe('shoppingItemSchema', () => {
   describe('itemName', () => {
     it('is required', async () => {

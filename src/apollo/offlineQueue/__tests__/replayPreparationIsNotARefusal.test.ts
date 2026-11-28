@@ -3,8 +3,8 @@ import { queueStore } from '../queueStore';
 import { useStore } from '#store';
 import { QueueStatus } from '../types';
 import { classifyError, ReplayNotPreparedError } from '../queueErrorPolicy';
-import { makeCache } from '#/apollo/cache';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { makeCache } from '#apollo/cache';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import {
   queuedMutationFor,
   makeQueuedMutation,
@@ -40,7 +40,7 @@ const mockClient = {
   query: jest.fn(),
   cache: makeCache(),
 };
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),

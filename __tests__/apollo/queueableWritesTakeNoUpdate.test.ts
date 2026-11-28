@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as ts from 'typescript';
-import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
+import { REPLAY_PREPARATIONS } from '#apollo/offlineQueue/preparationRegistry';
 import {
   SRC,
   authoredMutations,
@@ -13,10 +13,15 @@ import {
  * A queued write's `update` never runs: the queue resolves the call with a null
  * payload, and the replay's result reaches only its `commit`. So what an answer
  * leaves to write goes in the operation's `commit`, which runs for both, and a
- * `useMutation` of a queueable operation takes no `update` of its own.
+ * `useMutation` or `useLocalWrite` of a queueable operation takes no `update`
+ * of its own.
  */
 
 const ROOT = path.join(SRC, '..');
+const WRITE_HOOKS: ReadonlySet<string> = new Set([
+  'useMutation',
+  'useLocalWrite',
+]);
 
 interface Hook {
   operation: string;
@@ -34,6 +39,22 @@ const takesUpdate = (options: ts.Expression | undefined): boolean =>
       property.name.text === 'update',
   );
 
+/**
+ * The operation a write hook sends: its document (`CreateHomeDocument`), its
+ * binding (`createHomeWrite`), or the binding's document.
+ */
+function operationSent(sent: ts.Expression): string | undefined {
+  const name = ts.isPropertyAccessExpression(sent)
+    ? sent.expression.getText()
+    : ts.isIdentifier(sent)
+    ? sent.text
+    : undefined;
+  const document = /^(\w+)Document$/.exec(name ?? '')?.[1];
+  if (document) return document;
+  const binding = /^(\w+)Write$/.exec(name ?? '')?.[1];
+  return binding && binding.charAt(0).toUpperCase() + binding.slice(1);
+}
+
 function hooksIn(file: string): Hook[] {
   const source = ts.createSourceFile(
     file,
@@ -47,13 +68,10 @@ function hooksIn(file: string): Hook[] {
     if (
       ts.isCallExpression(node) &&
       ts.isIdentifier(node.expression) &&
-      node.expression.text === 'useMutation'
+      WRITE_HOOKS.has(node.expression.text)
     ) {
       const [document, options] = node.arguments;
-      const operation =
-        document && ts.isIdentifier(document)
-          ? /^(\w+)Document$/.exec(document.text)?.[1]
-          : undefined;
+      const operation = document ? operationSent(document) : undefined;
       if (operation) {
         const { line } = source.getLineAndCharacterOfPosition(node.getStart());
         found.push({

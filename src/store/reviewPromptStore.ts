@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { zustandStorage } from '#/store/deviceStorage';
+import { zustandStorage } from '#store/deviceStorage';
 import { hydrateWhenStarted } from '#store/persistedStores';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 
 /** Enough distinct days to tell a returning user from a first visit. */
 const DAYS_KEPT = 3;

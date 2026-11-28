@@ -5,12 +5,12 @@
  * unloadable, so the sign-out also needs nothing from a device.
  */
 import { gql } from '@apollo/client';
-import { createApolloClient } from '#/apollo/client';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { QueueStatus } from '#/apollo/offlineQueue/types';
+import { createApolloClient } from '#apollo/client';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { QueueStatus } from '#apollo/offlineQueue/types';
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { requirePlatform } from '#platform/install';
-import { authService } from '#/services/authService';
+import { authService } from '#services/authService';
 import { useStore } from '#store';
 
 const USER = {

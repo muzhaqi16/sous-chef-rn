@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { act, fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, userEvent } from '@testing-library/react-native';
 import { RecipeIngredientEditor } from '#features/recipes/components/recipeForm/RecipeIngredientEditor';
 
 // The real one builds a gorhom scrollable at module load, which needs
@@ -26,7 +26,12 @@ jest.mock('#features/catalog/ui/autocomplete/ItemAutocompleteField', () => ({
     >,
   ) => {
     const { Text } = require('react-native');
-    return <Text>{props.label}</Text>;
+    return (
+      <>
+        <Text>{props.label}</Text>
+        {props.error ? <Text>{props.error}</Text> : null}
+      </>
+    );
   },
 }));
 jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
@@ -94,84 +99,83 @@ jest.mock('../../../../../src/components/organisms/Header', () => ({
 describe('RecipeIngredientEditor', () => {
   const onSave = jest.fn();
 
-  const renderEditor = () => {
-    const ref =
-      React.createRef<React.ComponentRef<typeof RecipeIngredientEditor>>();
-    const view = render(<RecipeIngredientEditor ref={ref} onSave={onSave} />);
-    act(() => ref.current?.open());
-    return view;
-  };
+  beforeEach(() => {
+    onSave.mockClear();
+  });
 
+  const renderEditor = () => {
+    return render(
+      <RecipeIngredientEditor visible onDismiss={jest.fn()} onSave={onSave} />,
+    );
+  };
   it('renders without crashing', () => {
     const { toJSON } = renderEditor();
     expect(toJSON()).toBeTruthy();
   });
-
   it('shows Add Ingredient title by default', () => {
     const { getByText } = renderEditor();
     expect(getByText('Add Ingredient')).toBeTruthy();
   });
-
   it('renders form fields', () => {
     const { getByText } = renderEditor();
     expect(getByText('Ingredient Name')).toBeTruthy();
     expect(getByText(/^Quantity:/)).toBeTruthy();
   });
-
+  it('asks for a name on the field when saved without one', async () => {
+    const { getByTestId, getByText } = renderEditor();
+    await userEvent.setup().press(getByTestId('header-right-0'));
+    expect(getByText('Please enter an item name')).toBeTruthy();
+    expect(onSave).not.toHaveBeenCalled();
+  });
   it('renders Optional switch label', () => {
     const { getByText } = renderEditor();
     expect(getByText('Optional')).toBeTruthy();
   });
-
-  it('seeds a fractional quantity as a cooking fraction and saves it back', () => {
-    const ref =
-      React.createRef<React.ComponentRef<typeof RecipeIngredientEditor>>();
+  it('seeds a fractional quantity as a cooking fraction and saves it back', async () => {
     const { getByText, getByTestId } = render(
-      <RecipeIngredientEditor ref={ref} onSave={onSave} />,
+      <RecipeIngredientEditor
+        visible
+        ingredient={{
+          id: 'ing-1',
+          name: 'Flour',
+          quantity: 1.25,
+          isOptional: false,
+          sortOrder: 0,
+        }}
+        onDismiss={jest.fn()}
+        onSave={onSave}
+      />,
     );
 
-    act(() => {
-      ref.current?.open({
-        id: 'ing-1',
-        name: 'Flour',
-        quantity: 1.25,
-        isOptional: false,
-        sortOrder: 0,
-      });
-    });
-
     expect(getByText('Quantity:1 1/4')).toBeTruthy();
-    fireEvent.press(getByTestId('header-right-0'));
+    await userEvent.setup().press(getByTestId('header-right-0'));
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ quantity: 1.25 }),
     );
   });
 
   it('seeds a quantity no fraction fits rounded to three decimals', () => {
-    const ref =
-      React.createRef<React.ComponentRef<typeof RecipeIngredientEditor>>();
     const { getByText } = render(
-      <RecipeIngredientEditor ref={ref} onSave={onSave} />,
+      <RecipeIngredientEditor
+        visible
+        ingredient={{
+          id: 'ing-2',
+          name: 'Milk',
+          quantity: 177.4412,
+          isOptional: false,
+          sortOrder: 0,
+        }}
+        onDismiss={jest.fn()}
+        onSave={onSave}
+      />,
     );
-
-    act(() => {
-      ref.current?.open({
-        id: 'ing-2',
-        name: 'Milk',
-        quantity: 177.4412,
-        isOptional: false,
-        sortOrder: 0,
-      });
-    });
 
     expect(getByText('Quantity:177.441')).toBeTruthy();
   });
 
   // A captured line the server could not match offers what it proposed.
-  it('links an unmatched captured line to an item its capture proposed', () => {
+  it('links an unmatched captured line to an item its capture proposed', async () => {
     const save = jest.fn();
-    const ref =
-      React.createRef<React.ComponentRef<typeof RecipeIngredientEditor>>();
     const candidatesFor = (line: string | null | undefined) =>
       line === '2 scallions'
         ? [
@@ -181,28 +185,26 @@ describe('RecipeIngredientEditor', () => {
         : [];
     const { getByText, getByTestId, getByRole } = render(
       <RecipeIngredientEditor
-        ref={ref}
+        visible
+        ingredient={{
+          id: 'ing-1',
+          name: 'scallions',
+          quantity: 2,
+          originalText: '2 scallions',
+          itemId: null,
+          isOptional: false,
+          sortOrder: 0,
+        }}
+        onDismiss={jest.fn()}
         onSave={save}
         candidatesFor={candidatesFor}
       />,
     );
-
-    act(() => {
-      ref.current?.open({
-        id: 'ing-1',
-        name: 'scallions',
-        quantity: 2,
-        originalText: '2 scallions',
-        itemId: null,
-        isOptional: false,
-        sortOrder: 0,
-      });
-    });
     fireEvent.press(getByText('Green onion'));
 
     expect(getByRole('button', { name: 'Green onion' })).toBeSelected();
     expect(getByRole('button', { name: 'Onion' })).not.toBeSelected();
-    fireEvent.press(getByTestId('header-right-0'));
+    await userEvent.setup().press(getByTestId('header-right-0'));
 
     expect(save).toHaveBeenCalledWith(
       expect.objectContaining({

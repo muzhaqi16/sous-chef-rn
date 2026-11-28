@@ -1,20 +1,20 @@
 import { SetContextLink } from '@apollo/client/link/context';
 import { useStore } from '#store';
-import { env } from '#/config/env';
+import { env } from '#config/env';
 import { LogoutCleanup } from '../logoutCleanup';
-import { getDeviceId } from '#/services/auth/deviceId';
-import { isTokenExpired, isTokenExpiringSoon } from '#/utils/tokenExpiry';
+import { getDeviceId } from '#services/auth/deviceId';
+import { isTokenExpired, isTokenExpiringSoon } from '#utils/tokenExpiry';
 import { proactiveTokenRefresh } from './refreshToken';
-import { logger } from '#/utils/environment';
-import { SessionError } from '#/utils/errors/sessionError';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { logger } from '#utils/environment';
+import { SessionError } from '#utils/errors/sessionError';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import {
   LoginDocument,
   RefreshTokenDocument,
   RegisterDocument,
 } from '#operations/auth/auth.generated';
 import { operationNameOf } from '../utils/documentOperation';
-import { withinMs } from '#/utils/withinMs';
+import { withinMs } from '#utils/withinMs';
 
 // Sent without an access token: each runs before a session exists.
 const PUBLIC_OPERATIONS = [

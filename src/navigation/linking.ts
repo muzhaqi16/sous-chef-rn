@@ -1,4 +1,8 @@
-import { appConfig } from '#/config/appConfig';
+import type { RootParamList } from '@react-navigation/native';
+import { appConfig } from '#config/appConfig';
+
+// A route name, so the root navigator checks it against its own routes.
+const initialRouteName: keyof RootParamList = 'Home';
 
 /**
  * The root navigator's deep-link options. `initialRouteName` puts `Home` beneath
@@ -10,5 +14,5 @@ export const rootLinking = {
     `${appConfig.identity.deepLink.scheme}://`,
     ...appConfig.identity.deepLink.hosts.map(h => `https://${h}`),
   ],
-  config: { initialRouteName: 'Home' },
+  config: { initialRouteName },
 };

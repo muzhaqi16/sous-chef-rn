@@ -5,11 +5,11 @@ import {
   type NormalizedCacheObject,
   type StoreObject,
 } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { storage } from '#/store/deviceStorage';
-import { changeLanguage, getResolvedLanguage } from '#/i18n';
+import { makeCache } from '#apollo/cache';
+import { storage } from '#store/deviceStorage';
+import { changeLanguage, getResolvedLanguage } from '#i18n';
 import { apolloCachePersistence } from '../ApolloCachePersistence';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 const CACHE_KEY = 'apollo-cache-v1';

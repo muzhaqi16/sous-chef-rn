@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { StorageLocationCard } from '#features/catalog/ui/StorageLocationCard';
-import { StorageType } from '#/graphql/generated/schemaTypes';
+import { StorageType } from '#graphql/generated/schemaTypes';
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: ({ name }: { name: string }) => {
@@ -11,7 +11,7 @@ jest.mock('#components/atoms/Icon', () => ({
   },
 }));
 
-jest.mock('#/styles/commonStyles', () => ({
+jest.mock('#styles/commonStyles', () => ({
   commonStyles: {
     card: {},
     shadow: {},
@@ -28,7 +28,6 @@ describe('StorageLocationCard', () => {
   const defaultLocation = {
     name: 'Kitchen Fridge',
     type: StorageType.Refrigerator,
-    icon: '🧊',
     currentItemCount: 12,
     parentLocation: null,
   };

@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -7,8 +7,8 @@ import {
 import { operationLog } from '#/test-utils/operationLog';
 import { pantryRows, seedPantry } from '#/test-utils/fixtures/pantryFixtures';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { todayKey } from '#/utils/dateUtils';
+import { t } from '#i18n';
+import { todayKey } from '#utils/dateUtils';
 import {
   AcquisitionMethod,
   ErrorCode,
@@ -16,8 +16,8 @@ import {
   StorageState,
   StorageType,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+} from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { addPantryItemDefaults } from '#features/pantry/components/modals/AddToPantrySheet/addPantryItemFormConfig';
 import type { AddPantryItemFormData } from '#features/pantry/types';

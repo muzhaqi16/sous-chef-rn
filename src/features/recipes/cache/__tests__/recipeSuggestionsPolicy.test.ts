@@ -1,4 +1,4 @@
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   RecipeSuggestionsDocument,
   type RecipeSuggestionsQuery,

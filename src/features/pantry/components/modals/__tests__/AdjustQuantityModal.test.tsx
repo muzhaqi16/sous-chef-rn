@@ -8,8 +8,8 @@ import {
   asAbbreviation,
   readingAsAbbreviation,
 } from '#/test-utils/fixtures/unitLabels';
-import { t } from '#/i18n';
-import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { UnitSystem, UnitType } from '#graphql/generated/schemaTypes';
 
 type Props = React.ComponentProps<typeof AdjustQuantityModal>;
 
@@ -241,7 +241,7 @@ describe('adjusting', () => {
   it('closes on Cancel, adjusting nothing', () => {
     renderSheet();
 
-    fireEvent.press(screen.getByLabelText(t('labels.cancel')));
+    fireEvent.press(screen.getByLabelText(t('labels.close')));
 
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onConfirm).not.toHaveBeenCalled();

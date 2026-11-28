@@ -42,7 +42,7 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
         {iconLibrary ? (
           <ThemedIcon
             name={icon}
-            size={20}
+            size="sm"
             uniProps={t => ({ color: t.colors.alertBanner[variant].text })}
             library={iconLibrary}
           />
@@ -65,7 +65,7 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
       {!!shouldShowChevron && (
         <ThemedIcon
           name="chevron-forward"
-          size={24}
+          size="md"
           uniProps={t => ({ color: t.colors.alertBanner[variant].text })}
         />
       )}

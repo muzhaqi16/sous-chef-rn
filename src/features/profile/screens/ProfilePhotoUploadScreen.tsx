@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { IconButton } from '#components/atoms/IconButton';
+import { useTranslation } from '#i18n';
 import { View, Dimensions } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
 import { useImageUpload } from '#hooks/data/useImageUpload';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
-import type { ImageFile } from '#/types/media';
-import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import type { ImageFile } from '#types/media';
+import { ImageUploadPurpose } from '#graphql/generated/schemaTypes';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 import { useStore } from '#store';
 import { LocalImage } from '#components/atoms/LocalImage';
@@ -120,20 +121,21 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
                 style={styles.avatarImage}
               />
             ) : (
-              <Icon tone="textSecondary" name="person" size={100} />
+              <Icon tone="textSecondary" name="person" size="3xl" />
             )}
           </View>
 
           {/* Show crop icon below image if not cropped yet */}
           {!!selectedImage && !croppedImage && (
-            <AppPressable
+            <IconButton
+              name="crop"
+              size="sm"
+              tone="background"
               onPress={handleCropImage}
               accessibilityLabel={t('a11y.cropPhoto')}
-              style={styles.cropIconButton}
               disabled={isUploading}
-            >
-              <Icon tone="background" name="crop" size={20} />
-            </AppPressable>
+              style={styles.cropIconButton}
+            />
           )}
         </View>
 

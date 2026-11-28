@@ -1,35 +1,24 @@
-import { useMutation } from '@apollo/client/react';
-import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { useTranslation } from '#/i18n';
+import { useStore } from '#store';
 import { usePreferences } from '#store/useAppStore';
+import { useUpdateSettings } from '#hooks/settings/useUpdateSettings';
 
 /**
  * The app's language: switched on the device at once and saved to the account
- * (`updateSettings { regional }`). The write is `localFirst`, so an
- * unreachable API queues it; it has no optimistic response (the nested input
- * does not map onto the flat cached entity), so a queued write has nothing to
- * tear down and replays idempotently. A failure is alerted.
+ * through the settings writer, so offline it queues and replays. A refused
+ * save puts back what was there, unless a later pick replaced it: for someone
+ * who never picked, that is following the device.
  */
 export function useLanguagePreference() {
-  const { t } = useTranslation();
   const { language, setLanguage } = usePreferences();
-  const [updateSettings] = useMutation(UpdateUserPreferencesDocument, {
-    context: { localFirst: true },
-  });
+  const { updateSettings } = useUpdateSettings();
 
-  const selectLanguage = (next: string): void => {
+  const selectLanguage = async (next: string): Promise<void> => {
+    const previous = language;
     setLanguage(next);
-    void settleMutation(
-      () =>
-        updateSettings({
-          variables: { input: { regional: { language: next } } },
-        }),
-      {
-        document: UpdateUserPreferencesDocument,
-        fallback: t('errors.codes.genericRetry'),
-      },
-    );
+    const landed = await updateSettings({ language: next });
+    if (!landed && useStore.getState().language === next) {
+      setLanguage(previous);
+    }
   };
 
   return { language, selectLanguage };

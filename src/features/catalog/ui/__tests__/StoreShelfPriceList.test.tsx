@@ -5,7 +5,7 @@ import {
   screen,
   within,
 } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import type { StoreShelfPriceRow } from '#features/catalog/hooks/useStoreShelfPrices';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import { StoreShelfPriceList } from '../StoreShelfPriceList';

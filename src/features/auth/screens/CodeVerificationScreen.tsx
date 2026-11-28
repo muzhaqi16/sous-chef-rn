@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { AuthWrapper } from '#features/auth/components/AuthWrapper';
 import { AuthFormTemplate } from '#features/auth/components/AuthFormTemplate';
@@ -12,19 +12,19 @@ import {
   type ResendVerificationOutcome,
   type VerifyEmailOutcome,
 } from '#features/auth/hooks/useVerifyEmail';
-import { alertService } from '#/services/alertService';
-import { authService } from '#/services/authService';
+import { alertService } from '#services/alertService';
+import { authService } from '#services/authService';
 import { useEmailVerificationActions } from '#hooks/auth/useEmailVerification';
 import { useResendBackoff } from '#features/auth/hooks/useResendBackoff';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
-import { logger } from '#/utils/environment';
-import { reportValidationErrors } from '#/utils/validation/common';
-import { emailVerificationSchema } from '#/utils/validation/auth';
+import { logger } from '#utils/environment';
+import { reportValidationErrors } from '#utils/validation/common';
+import { emailVerificationSchema } from '#utils/validation/auth';
 import { toastService } from '#services/toastService';
 import { canOpenMailApp, openMailApp } from '#native/mailApp';
 import { authTestIDs } from '#features/auth/testIDs';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 type CodeVerificationValues = {
   code: string;
@@ -68,16 +68,9 @@ function presentVerifyOutcome(
   toastService.error(outcome.body);
 }
 
-function presentResendOutcome(
-  outcome: ResendVerificationOutcome,
-  onVerified: () => void,
-): void {
+function presentResendOutcome(outcome: ResendVerificationOutcome): void {
   if (outcome.status === 'sent') {
     logger.debug('Verification email resent');
-    return;
-  }
-  if (outcome.status === 'alreadyVerified') {
-    onVerified();
     return;
   }
   // The cooldown is already running, so the failure has to be said.
@@ -236,10 +229,7 @@ export function CodeVerificationScreen({
     // tap lands on a disabled link, and a throw cannot leave the window open.
     registerAttempt();
 
-    presentResendOutcome(
-      await resendVerificationEmail(targetEmail),
-      onVerified,
-    );
+    presentResendOutcome(await resendVerificationEmail(targetEmail));
   };
 
   // Straight after registering there is nothing behind this screen, so the

@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import type { RootState } from './index';
 import { storeApi } from './index';
 import { isSignedIn } from './slices/authSlice';
-import { mirroredFrom, type MirroredSettings } from '#/domain/serverSettings';
+import { mirroredFrom, type MirroredSettings } from '#domain/serverSettings';
 
 /** Core store hook. Prefer the named hooks below; use this for one-offs. */
 export function useAppStore<T>(

@@ -1,4 +1,4 @@
-import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useDataState } from '#hooks/data/useDataState';
 import { useFragment, useQuery } from '@apollo/client/react';
 import { useUpdateHomeFields } from '#features/home/hooks/useUpdateHomeFields';
@@ -6,10 +6,10 @@ import { useHomeMembership } from '#features/home/hooks/useHomeMembership';
 import type { MembershipPermissionKey } from '#features/home/types';
 import { HomeDetailScreen_HomeFragmentDoc } from '#features/home/screens/HomeDetailScreen.generated';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
-import type { MembershipRole } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import type { MembershipRole } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
-import { cleanName } from '#/utils/validation/common';
+import { cleanName } from '#utils/validation/common';
 
 /**
  * Custom hook for HomeDetailScreen business logic
@@ -33,6 +33,8 @@ export function useHomeDetailManagement(homeId: string) {
     revokeInvite,
     leaveHome,
     leaving,
+    deleteHome,
+    deleting,
     enableJoinLink,
     rotateJoinCode,
     rotatingJoinCode,
@@ -67,10 +69,17 @@ export function useHomeDetailManagement(homeId: string) {
    * cache before firing and idempotent on a queued replay. The server requires
    * the version for its optimistic-concurrency check.
    */
-  const saveName = async (typed: string) => {
+  /** The reason a rename was refused, for its field; null once it is taken. */
+  const saveName = async (typed: string): Promise<string | null> => {
     const name = cleanName(typed);
-    if (!home || !name) return;
-    await updateHomeFields({ name }, home, t('errors.updateHomeNameFailed'));
+    if (!home || !name) return null;
+    const failure = await updateHomeFields(
+      { name },
+      home,
+      t('errors.updateHomeNameFailed'),
+      { onField: true },
+    );
+    return failure?.body ?? null;
   };
 
   const changeRole = (membershipId: string, role: MembershipRole) =>
@@ -108,6 +117,7 @@ export function useHomeDetailManagement(homeId: string) {
     home,
     homeState,
     leaving,
+    deleting,
     refetch,
 
     // Actions
@@ -116,6 +126,7 @@ export function useHomeDetailManagement(homeId: string) {
     removeMember,
     revokeInvite,
     leaveHome,
+    deleteHome,
     toggleJoinCode,
     rotateJoinCode,
     rotatingJoinCode,

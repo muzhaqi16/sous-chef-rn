@@ -1,21 +1,21 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { pricePerBasis } from '#/domain/money';
-import { PriceBasis } from '#/graphql/generated/schemaTypes';
-import { useTranslation } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import { pricePerBasis } from '#domain/money';
+import { PriceBasis } from '#graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import type { Translate } from '#i18n/types';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { formatMonthDay } from '#/utils/formatters/date';
-import { formatCurrency } from '#/utils/formatters/number';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { formatMonthDay } from '#utils/formatters/date';
+import { formatCurrency } from '#utils/formatters/number';
 import {
   StoreShelfPricesDocument,
   UseStoreShelfPrices_ItemFragmentDoc,
   UseStoreShelfPrices_ListFragmentDoc,
   type UseStoreShelfPrices_ItemFragment,
 } from './useStoreShelfPrices.generated';
-import { formatPackageSize, unitLabel } from '#/utils/formatQuantity';
+import { formatPackageSize, unitLabel } from '#utils/formatQuantity';
 
 /** One store's shelf price for an item, worded for its row. */
 export interface StoreShelfPriceRow {

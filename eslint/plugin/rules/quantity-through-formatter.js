@@ -39,9 +39,9 @@ module.exports = {
     ],
     messages: {
       rawQuantity:
-        '`{{name}}` is a raw number reaching the screen, so 1.25 reads "1.25" and a converted 177.4412 reads "177.4412". Render it through `QuantityDisplay`, `formatQuantityForDisplay` or `formatQuantityDisplay` (`#/utils/formatQuantity`).',
+        '`{{name}}` is a raw number reaching the screen, so 1.25 reads "1.25" and a converted 177.4412 reads "177.4412". Render it through `QuantityDisplay`, `formatQuantityForDisplay` or `formatQuantityDisplay` (`#utils/formatQuantity`).',
       rawQuantityVariable:
-        '`{{name}}` carries the raw number `{{source}}` to the screen, so 1.25 reads "1.25" and a converted 177.4412 reads "177.4412". Format it where the `const` is built: `formatQuantityForDisplay`, `formatQuantityDisplay` or `QuantityDisplay` (`#/utils/formatQuantity`).',
+        '`{{name}}` carries the raw number `{{source}}` to the screen, so 1.25 reads "1.25" and a converted 177.4412 reads "177.4412". Format it where the `const` is built: `formatQuantityForDisplay`, `formatQuantityDisplay` or `QuantityDisplay` (`#utils/formatQuantity`).',
     },
   },
   create(context) {

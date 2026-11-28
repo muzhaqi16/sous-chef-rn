@@ -1,41 +1,40 @@
 import React from 'react';
 import { useToday } from '#hooks/app/useToday';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { SubScreen } from '#components/templates/SubScreen';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
 import { useNotificationDetail } from '#features/notifications/hooks/useNotificationDetail';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
 import { RecommendedRecipeList } from '#features/recipes/ui/RecommendedRecipeList';
 
 import type { StaticScreenProps } from '@react-navigation/native';
-import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
-import { formatDateTimeLong } from '#/utils/formatters/date';
+import { formatDateTimeLong } from '#utils/formatters/date';
 
 export const NotificationDetailScreen: React.FC<
-  // `notifications/:id` deep-links here with the id alone.
-  StaticScreenProps<{
-    id: string;
-    notification?: NotificationItem;
-  }>
+  // A push, the list and `notifications/:id` all open it with the id alone.
+  StaticScreenProps<{ id: string }>
 > = ({ route }) => {
   const { t } = useTranslation();
   const today = useToday();
-  const notification = useNotificationDetail(
-    route.params.id,
-    route.params.notification,
-  );
+  const { notification, state, retry } = useNotificationDetail(route.params.id);
 
   if (!notification) {
     return (
       <SubScreen title={t('labels.notifications')} scroll="none">
-        <Text role="error" tone="error" align="center" style={styles.errorText}>
-          {t('notifications.notFound')}
-        </Text>
+        <DataStateView
+          state={state}
+          onRetry={retry}
+          empty={{
+            icon: 'notifications-off-outline',
+            title: t('notifications.notFound'),
+          }}
+        />
       </SubScreen>
     );
   }
@@ -54,7 +53,7 @@ export const NotificationDetailScreen: React.FC<
         <SubScreen title={t('labels.notifications')}>
           <View style={styles.header}>
             <View style={styles.iconContainer}>
-              <Icon name="notifications" size={32} tone="primary" />
+              <Icon name="notifications" size="lg" tone="primary" />
             </View>
             <Text role="title" style={styles.title}>
               {copy.title}
@@ -158,8 +157,5 @@ const styles = StyleSheet.create(theme => ({
   },
   actionButtonText: {
     color: theme.colors.onPrimary,
-  },
-  errorText: {
-    marginTop: theme.spacing.xl,
   },
 }));

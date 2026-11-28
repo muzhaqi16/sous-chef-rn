@@ -4,7 +4,7 @@ import type {
   FontScalePreference,
   ThemePreference,
 } from '#store/slices/preferenceTypes';
-import type { ImageFile } from '#/types/media';
+import type { ImageFile } from '#types/media';
 
 /**
  * Build-time configuration. Every value is a string or unset, and consumers

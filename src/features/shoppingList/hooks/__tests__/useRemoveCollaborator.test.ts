@@ -1,6 +1,6 @@
 import { gql } from '@apollo/client';
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   type MockDataFor,
   recordMock,
@@ -8,8 +8,8 @@ import {
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { RemoveCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import { useRemoveCollaborator } from '#features/shoppingList/hooks/useRemoveCollaborator';
 
 type Answer = MockDataFor<

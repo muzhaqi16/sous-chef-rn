@@ -13,13 +13,13 @@ import { renderHook } from '@testing-library/react-native';
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
 import { InvariantError } from '@apollo/client/utilities/invariant';
 import { Observable } from 'rxjs';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { useApolloErrorLogger } from '../useApolloErrorLogger';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 import { isApiUnavailable } from '#store/slices/networkSlice';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 
 const OPERATION = operationNameOf(GetPantryDocument);
 

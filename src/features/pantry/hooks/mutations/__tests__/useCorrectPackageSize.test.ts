@@ -6,16 +6,16 @@ import {
   seedCache,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
-import { alertService } from '#/services/alertService';
-import { ErrorCode, UnitType } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { ErrorCode, UnitType } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import {
   CorrectPantryItemPackageSizeDocument,
   UpdatePantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import { useCorrectPackageSize } from '../useCorrectPackageSize';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 beforeEach(() => {
   jest.clearAllMocks();

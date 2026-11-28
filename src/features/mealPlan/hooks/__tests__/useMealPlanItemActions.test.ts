@@ -1,7 +1,7 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import type { InMemoryCache } from '@apollo/client';
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type {
   MockDataFor,
   MockedResponse,
@@ -26,10 +26,10 @@ import {
   MealType,
   TopLevelErrorCode,
   type CreateMealPlanItemInput,
-} from '#/graphql/generated/schemaTypes';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
-import { t } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
+import { getVersionConflictMessage } from '#utils/errors/versionConflict';
+import { t } from '#i18n';
 import { readPlanSource } from '#features/mealPlan/cache/derivationSources';
 import { MEAL_PLAN_ITEMS_FIELD } from '#features/mealPlan/cache/mealPlanItem';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
@@ -439,6 +439,26 @@ describe('useMealPlanItemActions', () => {
       );
 
       expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Meal completed! Pantry items deducted.',
+      );
+    });
+
+    // The server draws the pantry, so a queued completion has drawn nothing yet.
+    it('says the pantry updates once it syncs while the completion is queued', async () => {
+      const queued = recordMock(UpdateMealPlanItemDocument, {
+        data: { updateMealPlanItem: null },
+      });
+      const cache = seedPlan([fullItem()]);
+      const { result } = renderActions([queued.mock], cache);
+
+      await settledInAct(() =>
+        result.current.toggleCompleted('mpi-1', { deductFromPantry: true }),
+      );
+
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Meal completed. Your pantry updates when it syncs.',
+      );
+      expect(mockToastSuccess).not.toHaveBeenCalledWith(
         'Meal completed! Pantry items deducted.',
       );
     });

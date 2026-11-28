@@ -1,0 +1,11 @@
+# What a row reads of a unit a local edit names.
+fragment localUnit_unit on Unit {
+  id
+  name
+  symbol
+  type
+  localizedSymbolForms {
+    one
+    other
+  }
+}

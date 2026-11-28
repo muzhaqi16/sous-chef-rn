@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { useAppStore, useIsOnline, useUserId } from '#store/useAppStore';
 import { useStore } from '#store';
-import { queueManager } from '#/apollo/offlineQueue/queueManager';
-import { apiReachabilityBreaker } from '#/apollo/links/apiReachabilityBreaker';
-import { resumeWebSocketAfterOnline } from '#/apollo/links/wsLink';
-import { proactiveTokenRefresh } from '#/apollo/links/refreshToken';
+import { queueManager } from '#apollo/offlineQueue/queueManager';
+import { apiReachabilityBreaker } from '#apollo/links/apiReachabilityBreaker';
+import { resumeWebSocketAfterOnline } from '#apollo/links/wsLink';
+import { proactiveTokenRefresh } from '#apollo/links/refreshToken';
 
 /**
  * Drives the offline mutation queue from network status: coming online kicks a

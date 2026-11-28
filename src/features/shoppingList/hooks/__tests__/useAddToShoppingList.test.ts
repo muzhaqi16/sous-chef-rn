@@ -3,7 +3,7 @@ import {
   renderHookWithApollo,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,

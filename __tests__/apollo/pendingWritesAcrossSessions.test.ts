@@ -1,11 +1,11 @@
 import { gql } from '@apollo/client';
-import { createApolloClient, restorePersistedCache } from '#/apollo/client';
-import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
-import { queueManager } from '#/apollo/offlineQueue/queueManager';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { LogoutCleanup } from '#/apollo/logoutCleanup';
-import { storage } from '#/store/deviceStorage';
+import { createApolloClient, restorePersistedCache } from '#apollo/client';
+import { apolloCachePersistence } from '#apollo/offline/ApolloCachePersistence';
+import { queueManager } from '#apollo/offlineQueue/queueManager';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
+import { LogoutCleanup } from '#apollo/logoutCleanup';
+import { storage } from '#store/deviceStorage';
 
 const ROWS = gql`
   query SessionRows {
@@ -16,7 +16,7 @@ const ROWS = gql`
   }
 `;
 
-jest.mock('#/apollo/links/index', () => {
+jest.mock('#apollo/links/index', () => {
   const apollo =
     jest.requireActual<typeof import('@apollo/client')>('@apollo/client');
   return {
@@ -24,7 +24,7 @@ jest.mock('#/apollo/links/index', () => {
   };
 });
 
-jest.mock('#/apollo/pendingWrites/localWriteRegistry', () => ({
+jest.mock('#apollo/pendingWrites/localWriteRegistry', () => ({
   LOCAL_WRITES: {
     AddSessionRow: {
       apply: (

@@ -1,33 +1,26 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useTranslation } from '#/i18n';
+import React, { useState } from 'react';
+import { SearchBar } from '#components/molecules/SearchBar';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { alertService } from '#/services/alertService';
-import {
-  BottomSheetView,
-  useBottomSheetScrollableCreator,
-} from '@gorhom/bottom-sheet';
-import {
-  BottomSheetModal,
-  type BottomSheetModalRef,
-} from '#hooks/ui/useStandardBottomSheet';
+import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
+import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  ThemedActivityIndicator,
-  ThemedBottomSheetTextInput,
-} from '#components/atoms/themedComponents';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
-import { toastService } from '#/services/toastService';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { toastService } from '#services/toastService';
 import { Text } from '#components/atoms/Text';
 import { FolderListItem } from '#features/recipes/components/FolderPicker/FolderListItem';
 import { ManageFolderSheet } from '#features/recipes/components/FolderPicker/ManageFolderSheet';
 import { resolveFolderLongPress } from '#features/recipes/utils/folderProtection';
 import { identity, useLocalSearch } from '#hooks/search/useLocalSearch';
+import { useOpening } from '#hooks/ui/useOpening';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { Divider } from '#components/atoms/Divider';
+import { FolderNameForm } from '#features/recipes/components/FolderPicker/FolderNameForm';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
@@ -91,78 +84,33 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   folderActionLoading = false,
 }) => {
   const { t } = useTranslation();
-  const nextSheetActionRef = useRef<'manage' | null>(null);
 
-  const BottomSheetScrollable = useBottomSheetScrollableCreator();
-
-  // The manage sub-sheet borrows the picker's modalProps (one
-  // useStandardBottomSheet instance), so it stays on the manual ref + effect
-  // pattern. `manageHasPresentedRef` guards the initial dismiss: gorhom 5.2.14
-  // wedges a modal closed forever if dismiss() lands before it ever presented.
+  // One sheet at a time: a long-pressed folder hides the picker, the manage
+  // sheet opens once the picker has closed, and the picker returns once the
+  // manage sheet has closed.
   const [manageVisible, setManageVisible] = useState(false);
-  const manageSheetRef = useRef<BottomSheetModalRef>(null);
-  const manageHasPresentedRef = useRef(false);
-  useEffect(() => {
-    if (manageVisible) {
-      manageHasPresentedRef.current = true;
-      manageSheetRef.current?.present();
-    } else if (manageHasPresentedRef.current) {
-      manageSheetRef.current?.dismiss();
-    }
-  }, [manageVisible]);
-
-  const {
-    ref: folderPickerRef,
-    modalProps,
-    contentContainerStyle,
-  } = useStandardBottomSheet({
-    visible,
-    onDismiss: () => {
-      if (nextSheetActionRef.current === 'manage') {
-        nextSheetActionRef.current = null;
-        setManageVisible(true);
-        return;
-      }
-      onCancel();
-    },
-    snapPoints: ['55%', '70%'],
-  });
-
-  const [showNewFolder, setShowNewFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
 
   const [managingFolder, setManagingFolder] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const hasFolderActions = Boolean(onRenameFolder ?? onDeleteFolder);
 
-  const filteredFolders = useLocalSearch(folders, searchQuery, [identity]);
+  // One opening of the picker: its search and new-folder form start empty,
+  // and a trip to the manage sheet and back keeps them.
+  const opening = useOpening(visible);
 
-  const handleSelectFolder = (folder: string | null) => {
-    setSearchQuery('');
-    setShowNewFolder(false);
-    setNewFolderName('');
-    onSelect(folder);
-  };
-
-  const handleCreateFolder = () => {
-    if (newFolderName.trim()) {
-      handleSelectFolder(newFolderName.trim());
+  const handlePickerDismiss = () => {
+    if (managingFolder !== null) {
+      setManageVisible(true);
+      return;
     }
+    onCancel();
   };
 
-  const handleCancel = () => {
-    setSearchQuery('');
-    setShowNewFolder(false);
-    setNewFolderName('');
+  const handleManageDismiss = () => {
     setManageVisible(false);
     setManagingFolder(null);
-    setRenameValue('');
     setShowDeleteConfirm(false);
-    // Deferred so the dismiss lands outside any synchronous render/state chain.
-    queueMicrotask(() => folderPickerRef.current?.dismiss());
   };
 
   // The decision lives in `resolveFolderLongPress` so it can be tested — this
@@ -181,28 +129,13 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     }
 
     setManagingFolder(folder);
-    setRenameValue(folder);
     setShowDeleteConfirm(false);
-    nextSheetActionRef.current = 'manage';
-    queueMicrotask(() => folderPickerRef.current?.dismiss());
   };
 
-  const handleRenameConfirm = async () => {
-    if (!managingFolder || !renameValue.trim() || !onRenameFolder) return;
-
-    const newName = renameValue.trim();
+  const handleRenameConfirm = async (newName: string) => {
+    if (!managingFolder || !onRenameFolder) return;
     if (newName === managingFolder) {
       setManageVisible(false);
-      setManagingFolder(null);
-      setRenameValue('');
-      return;
-    }
-
-    if (folders.includes(newName)) {
-      alertService.alert(
-        t('labels.error'),
-        t('folderPicker.duplicate', { name: newName }),
-      );
       return;
     }
 
@@ -212,8 +145,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         onSelectedFolderMoved(newName);
       }
       setManageVisible(false);
-      setManagingFolder(null);
-      setRenameValue('');
     }
   };
 
@@ -226,196 +157,51 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         onSelectedFolderMoved(null);
       }
       setManageVisible(false);
-      setManagingFolder(null);
-      setRenameValue('');
-      setShowDeleteConfirm(false);
     }
   };
 
-  const handleManageFolderClose = () => {
-    setManageVisible(false);
-    setManagingFolder(null);
-    setRenameValue('');
-    setShowDeleteConfirm(false);
-  };
-
-  const renderFolderItem = ({ item }: { item: string }) => (
-    <FolderListItem
-      folder={item}
-      isSelected={item === selectedFolder}
-      onPress={handleSelectFolder}
-      onLongPress={hasFolderActions ? handleFolderLongPress : undefined}
-      disabled={folderActionLoading}
-    />
-  );
+  const pickerVisible = visible && managingFolder === null;
 
   return (
     <>
-      <BottomSheetModal ref={folderPickerRef} {...modalProps}>
-        <BottomSheetView
-          style={[styles.bottomSheetContent, contentContainerStyle]}
-        >
-          <View style={styles.header}>
-            <Text role="heading">{t('folderPicker.selectFolder')}</Text>
-            <Pressable
-              onPress={handleCancel}
-              accessibilityLabel={t('labels.close')}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <Icon name="close" size={24} tone="textPrimary" />
-            </Pressable>
-          </View>
-
-          {folders.length > 5 && (
-            <View style={styles.searchContainer}>
-              <Icon name="search" size={18} tone="textSecondary" />
-              <ThemedBottomSheetTextInput
-                style={styles.searchInput}
-                placeholder={t('folderPicker.searchPlaceholder')}
-                defaultValue={searchQuery}
-                onChangeText={setSearchQuery}
-                autoCapitalize="none"
-              />
-            </View>
-          )}
-
-          <AppPressable
-            style={[
-              styles.folderItem,
-              !selectedFolder && styles.folderItemSelected,
-            ]}
-            onPress={() => handleSelectFolder(null)}
-          >
-            <Icon
-              name="mail-outline"
-              size={20}
-              tone={!selectedFolder ? 'primary' : 'textSecondary'}
-            />
-            <Text
-              role={!selectedFolder ? 'bodyStrong' : 'body'}
-              tone={!selectedFolder ? 'accent' : 'primary'}
-              style={styles.folderName}
-            >
-              {t('labels.noFolder')}
-            </Text>
-            {!selectedFolder && (
-              <Icon name="checkmark" size={20} tone="primary" />
-            )}
-          </AppPressable>
-
-          <Divider style={styles.dividerGap} />
-
-          {!!allowCreate &&
-            (showNewFolder ? (
-              <View style={styles.newFolderContainer}>
-                <ThemedBottomSheetTextInput
-                  style={styles.newFolderInput}
-                  placeholder={t('labels.enterFolderName')}
-                  defaultValue={newFolderName}
-                  onChangeText={setNewFolderName}
-                  autoFocus
-                  autoCapitalize="words"
-                  onSubmitEditing={handleCreateFolder}
-                />
-                <AppPressable
-                  style={[
-                    styles.createButton,
-                    !newFolderName.trim() && styles.createButtonDisabled,
-                  ]}
-                  onPress={handleCreateFolder}
-                  disabled={!newFolderName.trim()}
-                >
-                  <Text
-                    role="bodyStrong"
-                    style={[
-                      styles.createButtonText,
-                      !newFolderName.trim() && styles.createButtonTextDisabled,
-                    ]}
-                  >
-                    {t('labels.create')}
-                  </Text>
-                </AppPressable>
-              </View>
-            ) : (
-              <AppPressable
-                style={styles.newFolderButton}
-                onPress={() => setShowNewFolder(true)}
-              >
-                <Icon name="add" size={20} tone="primary" />
-                <Text role="bodyStrong" tone="accent">
-                  {t('labels.createNewFolder')}
-                </Text>
-              </AppPressable>
-            ))}
-
-          {unavailable ? (
-            <DataStateView
-              state={unavailable.state}
-              onRetry={unavailable.onRetry}
-            />
-          ) : loading ? (
-            <View style={styles.centeredSpinner}>
-              <Text role="body" tone="secondary">
-                {t('folderPicker.loading')}
-              </Text>
-            </View>
-          ) : filteredFolders.length > 0 ? (
-            <FlashList
-              renderScrollComponent={BottomSheetScrollable}
-              data={filteredFolders}
-              renderItem={renderFolderItem}
-              getItemType={getItemType}
-              keyExtractor={(item: string) => item}
-              showsVerticalScrollIndicator={false}
-              style={styles.folderList}
-              contentContainerStyle={styles.folderListContent}
-            />
-          ) : folders.length > 0 && searchQuery ? (
-            <View style={styles.emptyInset}>
-              <Text role="body" tone="secondary" align="center">
-                {t('folderPicker.noMatches', { query: searchQuery })}
-              </Text>
-            </View>
-          ) : null}
-
-          {!!hasFolderActions && filteredFolders.length > 0 && (
-            <Text
-              role="caption"
-              tone="secondary"
-              align="center"
-              style={styles.hintText}
-            >
-              {t('folderPicker.longPressHint')}
-            </Text>
-          )}
-
-          {!!folderActionLoading && (
-            <View style={styles.loadingOverlay}>
-              <ThemedActivityIndicator size="large" />
-            </View>
-          )}
-        </BottomSheetView>
-      </BottomSheetModal>
+      <Sheet
+        mode="list"
+        visible={pickerVisible}
+        onDismiss={handlePickerDismiss}
+        snapPoints={['55%', '70%']}
+        header={
+          <SheetHeader
+            title={t('folderPicker.selectFolder')}
+            onClose={onCancel}
+          />
+        }
+      >
+        {opening ? (
+          <FolderPickerContent
+            key={opening.id}
+            folders={folders}
+            selectedFolder={selectedFolder}
+            onSelect={onSelect}
+            onLongPress={hasFolderActions ? handleFolderLongPress : undefined}
+            loading={loading}
+            unavailable={unavailable}
+            allowCreate={allowCreate}
+            folderActionLoading={folderActionLoading}
+          />
+        ) : null}
+      </Sheet>
       <ManageFolderSheet
-        sheetRef={manageSheetRef}
-        modalProps={modalProps}
-        contentContainerStyle={contentContainerStyle}
-        onDismiss={() => {
-          setManagingFolder(null);
-          setRenameValue('');
-          setShowDeleteConfirm(false);
-          setManageVisible(false);
-          // Deferred until the manage sheet's dismiss event has flushed.
-          queueMicrotask(() => folderPickerRef.current?.present());
-        }}
+        visible={manageVisible}
+        onDismiss={handleManageDismiss}
         managingFolder={managingFolder}
-        renameValue={renameValue}
-        onRenameValueChange={setRenameValue}
+        otherFolders={folders.filter(folder => folder !== managingFolder)}
         showDeleteConfirm={showDeleteConfirm}
         onShowDeleteConfirm={setShowDeleteConfirm}
-        onRenameConfirm={handleRenameConfirm}
+        onRenameConfirm={name => {
+          void handleRenameConfirm(name);
+        }}
         onDeleteConfirm={handleDeleteConfirm}
-        onClose={handleManageFolderClose}
+        onClose={() => setManageVisible(false)}
         folderActionLoading={folderActionLoading}
         canRename={Boolean(onRenameFolder)}
         canDelete={Boolean(onDeleteFolder)}
@@ -424,44 +210,137 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   );
 };
 
+type FolderPickerContentProps = Pick<
+  FolderPickerProps,
+  | 'folders'
+  | 'selectedFolder'
+  | 'onSelect'
+  | 'loading'
+  | 'unavailable'
+  | 'allowCreate'
+  | 'folderActionLoading'
+> & { onLongPress: ((folder: string) => void) | undefined };
+
+/** One opening of the picker: a fresh search and no new-folder form. */
+const FolderPickerContent: React.FC<FolderPickerContentProps> = ({
+  folders,
+  selectedFolder,
+  onSelect,
+  onLongPress,
+  loading = false,
+  unavailable,
+  allowCreate = true,
+  folderActionLoading = false,
+}) => {
+  const { t } = useTranslation();
+  const BottomSheetScrollable = useBottomSheetScrollableCreator();
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const filteredFolders = useLocalSearch(folders, searchQuery, [identity]);
+
+  const renderFolderItem = ({ item }: { item: string }) => (
+    <FolderListItem
+      folder={item}
+      isSelected={item === selectedFolder}
+      onPress={onSelect}
+      onLongPress={onLongPress}
+    />
+  );
+
+  return (
+    <View style={styles.bottomSheetContent}>
+      <View style={styles.gutter}>
+        {folders.length > 5 && (
+          <SearchBar
+            placeholder={t('folderPicker.searchPlaceholder')}
+            testID={recipesTestIDs.folderSearchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            containerStyle={styles.search}
+          />
+        )}
+
+        <FolderListItem
+          folder={null}
+          label={t('labels.noFolder')}
+          isSelected={!selectedFolder}
+          onPress={onSelect}
+        />
+
+        <Divider style={styles.dividerGap} />
+
+        {!!allowCreate &&
+          (showNewFolder ? (
+            <FolderNameForm
+              onSubmit={onSelect}
+              actionLabel={t('labels.create')}
+              autoFocus
+              style={styles.newFolder}
+            />
+          ) : (
+            <AppPressable
+              style={styles.newFolderButton}
+              onPress={() => setShowNewFolder(true)}
+            >
+              <Icon name="add" size="sm" tone="primary" />
+              <Text role="bodyStrong" tone="accent">
+                {t('labels.createNewFolder')}
+              </Text>
+            </AppPressable>
+          ))}
+      </View>
+
+      {unavailable ? (
+        <DataStateView
+          state={unavailable.state}
+          onRetry={unavailable.onRetry}
+        />
+      ) : loading ? (
+        <View style={styles.centeredSpinner}>
+          <Text role="body" tone="secondary">
+            {t('folderPicker.loading')}
+          </Text>
+        </View>
+      ) : filteredFolders.length > 0 ? (
+        <FlashList
+          renderScrollComponent={BottomSheetScrollable}
+          data={filteredFolders}
+          renderItem={renderFolderItem}
+          getItemType={getItemType}
+          keyExtractor={(item: string) => item}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.folderListContent}
+        />
+      ) : folders.length > 0 && searchQuery ? (
+        <View style={styles.emptyInset}>
+          <Text role="body" tone="secondary" align="center">
+            {t('folderPicker.noMatches', { query: searchQuery })}
+          </Text>
+        </View>
+      ) : null}
+
+      {!!onLongPress && filteredFolders.length > 0 && (
+        <Text
+          role="caption"
+          tone="secondary"
+          align="center"
+          style={styles.hintText}
+        >
+          {t('folderPicker.longPressHint')}
+        </Text>
+      )}
+
+      {!!folderActionLoading && (
+        <View style={styles.loadingOverlay}>
+          <ThemedActivityIndicator size="large" />
+        </View>
+      )}
+    </View>
+  );
+};
+
 const styles = StyleSheet.create(theme => ({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.base,
-    marginBottom: theme.spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: theme.spacing.base,
-    paddingHorizontal: theme.spacing.sm,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-  },
-  folderItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.base,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    gap: theme.spacing.base,
-  },
-  folderItemSelected: {
-    backgroundColor: theme.colors.primaryLight,
-  },
-  folderName: {
-    flex: 1,
-  },
   dividerGap: {
     marginVertical: theme.spacing.md,
   },
@@ -472,44 +351,15 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.sm,
   },
-  newFolderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
+  newFolder: {
     marginBottom: theme.spacing.md,
   },
-  newFolderInput: {
-    flex: 1,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.base,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.background,
-  },
-  createButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.base,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
-  createButtonDisabled: {
-    backgroundColor: theme.colors.border,
-  },
-  createButtonText: {
-    color: theme.colors.onPrimary,
-  },
-  createButtonTextDisabled: {
-    color: theme.colors.textSecondary,
-  },
-  folderList: {
-    maxHeight: 250,
+  // The rows' inset is the list's content, so the whole width scrolls it.
+  gutter: {
+    paddingHorizontal: theme.layout.pageGutter,
   },
   folderListContent: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingBottom: theme.spacing.sm,
   },
   centeredSpinner: {
@@ -517,10 +367,12 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   emptyInset: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingVertical: theme.spacing.lg,
     alignItems: 'center',
   },
   hintText: {
+    paddingHorizontal: theme.layout.pageGutter,
     marginTop: theme.spacing.md,
     fontStyle: 'italic',
   },
@@ -533,9 +385,10 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
   },
   bottomSheetContent: {
-    padding: theme.spacing.mdPlus,
+    flex: 1,
+    paddingVertical: theme.spacing.mdPlus,
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
+  search: {
+    marginBottom: theme.spacing.md,
   },
 }));

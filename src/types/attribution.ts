@@ -5,7 +5,7 @@
 import type {
   DataAttribution,
   ImageCredit,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /** A licensed photo's attribution. */
 export type PhotoCreditValue = Pick<

@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { profileTestIDs } from '#features/profile/testIDs';
 import type { BrandListView } from '#features/profile/hooks/useBrandLists';

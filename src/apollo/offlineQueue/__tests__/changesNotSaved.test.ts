@@ -1,13 +1,13 @@
 import { ApolloClient } from '@apollo/client';
 import { MockLink } from '@apollo/client/testing';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
-import { toastService } from '#/services/toastService';
-import { storage } from '#/store/deviceStorage';
+import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { toastService } from '#services/toastService';
+import { storage } from '#store/deviceStorage';
 import {
   completeMockedResponse,
   recordMock,
@@ -49,7 +49,7 @@ import { QUEUE_FULL_CODE, QueueStatus } from '../types';
  */
 
 let mockClient: ApolloClient | null = null;
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),

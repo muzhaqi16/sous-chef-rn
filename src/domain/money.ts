@@ -1,13 +1,10 @@
-import { PriceBasis } from '#/graphql/generated/schemaTypes';
-import type { Translate } from '#/i18n/types';
+import { PriceBasis } from '#graphql/generated/schemaTypes';
+import type { Translate } from '#i18n/types';
 import { useAppStore } from '#store/useAppStore';
-import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { DEFAULT_CURRENCY, formatCurrency } from '#utils/formatters/number';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
-/**
- * The shape of every denominated field (`PantryItem.costCurrency`,
- * `Purchase.currency`, …); Intl reads the minor unit from the code alone.
- */
+/** The shape of every denominated field (`PantryItem.costCurrency`, `Purchase.currency`, …). */
 export interface FigureCurrency {
   code: string;
 }
@@ -31,11 +28,29 @@ export function resolveCurrency(
  */
 export function moneyByCurrency(
   amounts: readonly { currencyCode: string; amount: number }[],
+  format: FormatCurrency,
 ): string | undefined {
   if (amounts.length === 0) return undefined;
   return amounts
-    .map(({ currencyCode, amount }) => formatCurrency(amount, currencyCode))
+    .map(({ currencyCode, amount }) => format(amount, currencyCode))
     .join(' · ');
+}
+
+/** An amount in a known currency; a null code is one not known yet, shown bare. */
+export type FormatCurrency = (
+  amount: number | null | undefined,
+  code: string | null,
+) => string;
+
+/**
+ * Money at its currency's `decimalPlaces`, the precision the server stores it
+ * in, so every client and the admin show the same digits. Until the device
+ * holds the currency table, Intl's own digits for the code.
+ */
+export function useFormatCurrency(): FormatCurrency {
+  const decimals = useAppStore(state => state.currencyDecimals);
+  return (amount, code) =>
+    formatCurrency(amount, code, code ? decimals[code] : undefined);
 }
 
 /** The account's currency, mirrored from `UserSettings.preferredCurrency`. */
@@ -44,16 +59,19 @@ export function usePreferredCurrency(): string {
 }
 
 /**
- * An absent amount reads as the unknown marker; a caller that would rather omit
- * its row tests the value itself.
+ * A figure in its own currency, else the account's. An absent amount reads as
+ * the unknown marker; a caller that would rather omit its row tests the value.
  */
-export function useMoney(): (
+export type FormatMoney = (
   amount: number | null | undefined,
   figureCurrency?: FigureCurrency | null,
-) => string {
+) => string;
+
+export function useMoney(): FormatMoney {
   const preferred = usePreferredCurrency();
+  const format = useFormatCurrency();
   return (amount, figureCurrency) =>
-    formatCurrency(amount, resolveCurrency(figureCurrency, preferred));
+    format(amount, resolveCurrency(figureCurrency, preferred));
 }
 
 /**

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Card } from '#components/atoms/Card';
 import { Icon } from '#components/atoms/Icon';
@@ -93,7 +93,7 @@ export const ScanNutritionSection: React.FC<ScanNutritionSectionProps> = ({
             <Text role="label" tone="accent">
               {t('labels.details')}
             </Text>
-            <Icon name="chevron-forward" size={16} tone="primary" />
+            <Icon name="chevron-forward" size="xs" tone="primary" />
           </>
         ) : null}
       </AppPressable>

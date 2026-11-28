@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
-import { toastService } from '#/services/toastService';
-import { useTranslation } from '#/i18n';
+import { toastService } from '#services/toastService';
+import { useTranslation } from '#i18n';
 import type { AddToListOutcome } from '#features/pantry/hooks/useAddPantryItemToShoppingList';
 
 /** One low-stock row, in the shape `addToList` needs. */
@@ -71,11 +71,8 @@ export function useLowStockListPicker({ addToList, rows, homeId }: Options) {
   };
 
   const handleCreateListAndAdd = (name: string) => {
+    // The picker's schema refuses a blank name on its field.
     const trimmed = name.trim();
-    if (!trimmed) {
-      toastService.error(t('errors.listNameEmpty'));
-      return;
-    }
     const picked = target;
     setTarget(null);
     if (!picked) return;

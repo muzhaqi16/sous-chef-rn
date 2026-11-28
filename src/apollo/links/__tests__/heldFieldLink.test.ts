@@ -1,8 +1,8 @@
 import { ApolloClient, ApolloLink, gql } from '@apollo/client';
 import { MockLink } from '@apollo/client/testing';
 import { GraphQLError } from 'graphql';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 import { createHeldFieldLink } from '../heldFieldLink';
 

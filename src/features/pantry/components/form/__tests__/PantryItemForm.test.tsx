@@ -9,7 +9,7 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   type MockDataFor,
   recordMock,
@@ -20,17 +20,17 @@ import { operationLog } from '#/test-utils/operationLog';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { fromDateKey } from '#/utils/dateUtils';
-import { formatMonthDayYear } from '#/utils/formatters/date';
-import { localizeNumericHint } from '#/utils/formatters/number';
+import { t } from '#i18n';
+import { fromDateKey } from '#utils/dateUtils';
+import { formatMonthDayYear } from '#utils/formatters/date';
+import { localizeNumericHint } from '#utils/formatters/number';
 import {
   ItemCondition,
   StorageState,
   StorageType,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { FieldRendererProvider } from '#components/molecules/fieldRenderers';
 import { kitTestIDs } from '#components/testIDs';
 import { catalogFieldRenderers } from '#features/catalog/ui/catalogFieldRenderers';
@@ -60,7 +60,7 @@ import { PantryItemForm } from '../PantryItemForm';
 
 // The day stays fixed: the hook's midnight timer re-arms itself.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 jest.mock('#hooks/navigation/useAppNavigation');
 
@@ -603,6 +603,35 @@ describe('the quantity', () => {
     fireEvent.press(saveButton());
     await log.requested(UpdatePantryItemQuantityDocument);
     expect(saved(cache)?.quantity).toBe(2);
+  });
+
+  // The seeded amount reaches the schema through the resolver's context.
+  it('refuses an amount changed to nothing left, on the field', async () => {
+    const update = recordMock(UpdatePantryItemQuantityDocument, {
+      held: true,
+    });
+    await openForm({ answers: [update] });
+    goTo('Inventory');
+    const quantity = screen.getByTestId(pantryTestIDs.editItemQuantityInput);
+    const user = userEvent.setup();
+
+    await user.clear(quantity);
+    await user.type(quantity, '0');
+
+    expect(screen.getByText(t('errors.invalidQuantity'))).toBeTruthy();
+    fireEvent.press(saveButton());
+    expect(update.fired).toEqual([]);
+  });
+
+  it('lets an empty stack save its other fields, keeping its 0', async () => {
+    const update = heldUpdate();
+    await openForm({ stack: { ...flour, quantity: 0 }, answers: [update] });
+    pickFreezer();
+
+    fireEvent.press(saveButton());
+    await log.requested(UpdatePantryItemDocument);
+
+    expect(screen.queryByText(t('errors.invalidQuantity'))).toBeNull();
   });
 
   // The device does not hold a stick, so only the pick says which unit it is.

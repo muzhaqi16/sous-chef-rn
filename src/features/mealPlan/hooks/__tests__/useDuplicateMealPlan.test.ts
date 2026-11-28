@@ -10,12 +10,12 @@ import {
   CreateMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import { MealPlanMain_MealPlanFragmentDoc } from '#features/mealPlan/screens/MealPlanMain.generated';
-import { ErrorCode, MealPlanType } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, MealPlanType } from '#graphql/generated/schemaTypes';
 import {
   planSource,
   seedPlanSource,
 } from '#/test-utils/fixtures/mealPlanFixtures';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { useStore } from '#store';
 import { useDuplicateMealPlan } from '../useDuplicateMealPlan';
 

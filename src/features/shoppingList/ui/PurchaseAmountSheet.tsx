@@ -1,28 +1,32 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-import { formatQuantityForInput } from '#/utils/formatQuantity';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { formatQuantityForInput } from '#utils/formatQuantity';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 import {
   currencySymbol,
-  formatCurrency,
   formatNumberForInput,
   localizeNumericHint,
-} from '#/utils/formatters/number';
+} from '#utils/formatters/number';
 import {
   shownUnitPrice,
   totalFromUnitPrice,
   unitPriceFromTotal,
-} from '#features/shoppingList/utils/purchasePrice';
+} from '#entities/shoppingList/purchasePrice';
 import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { parseMoneyInput } from '#/utils/validation/common';
+import { parseMoneyInput, quantityCapMessage } from '#utils/validation/common';
+import { MAX_MONEY, MAX_QUANTITY } from '#utils/validation/entryLimits';
+import { formatDecimal } from '#utils/formatters/number';
+import { useFormatCurrency } from '#domain/money';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 interface PurchaseAmountSheetItem {
@@ -67,13 +71,13 @@ const parseQuantityInput = (input: string): number | null => {
 const formatPrice = (price: number | null): string =>
   formatNumberForInput(price);
 
-/**
- * Records the actual purchased amounts, pre-filled with the requested quantity.
- * It asks for the total paid because that is what the receipt shows; a hint
- * gives the per-unit split.
- */
-export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
-  visible,
+type PurchaseAmountFormProps = Omit<
+  PurchaseAmountSheetProps,
+  'visible' | 'item'
+> & { item: PurchaseAmountSheetItem };
+
+/** One opening, on the requested quantity and no price. */
+const PurchaseAmountForm: React.FC<PurchaseAmountFormProps> = ({
   item,
   currency,
   onClose,
@@ -83,35 +87,22 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   askPrice = true,
 }) => {
   const { t } = useTranslation();
+  const money = useFormatCurrency();
 
-  const [quantityInput, setQuantityInput] = useState('');
+  // The seed is read back by the parsers, so it must carry the device's
+  // separator; a period reads as grouping on a comma device.
+  const [quantityInput, setQuantityInput] = useState(() =>
+    formatQuantityForInput(item.requestedQuantity, { notation: 'decimal' }),
+  );
   const [priceInput, setPriceInput] = useState('');
-
-  // Seed on open / item change only (render-time state update), or the inputs
-  // flash back while the confirm mutation is in flight.
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevItemId, setPrevItemId] = useState(item?.id);
-  if (visible !== prevVisible || item?.id !== prevItemId) {
-    setPrevVisible(visible);
-    setPrevItemId(item?.id);
-    if (visible && item) {
-      // The seed is read back by the parsers, so it must carry the device's
-      // separator; a period reads as grouping on a comma device.
-      setQuantityInput(
-        formatQuantityForInput(item.requestedQuantity, { notation: 'decimal' }),
-      );
-      setPriceInput('');
-    }
-  }
 
   // The estimate is the field's hint, never its value: confirmed unread, it
   // would record a guess as the price paid, which the API never counts. With
   // prices off the sheet suggests no price at all.
   const showPrices = useBudgetAndPricesEnabled();
-  const estimatedTotal =
-    item && showPrices
-      ? totalFromUnitPrice(item.estimatedPrice, item.requestedQuantity)
-      : null;
+  const estimatedTotal = showPrices
+    ? totalFromUnitPrice(item.estimatedPrice, item.requestedQuantity)
+    : null;
 
   const parsedQty = parseQuantityInput(quantityInput);
   const parsedTotal = parseMoneyInput(priceInput);
@@ -120,38 +111,36 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   // An empty or unparseable field is NOT a quantity of zero: defaulting it
   // trips `unitPriceFromTotal`'s zero-guard, which returns the total undivided
   // and records the purchase at quantity 0.
-  const quantityIsUsable = parsedQty != null && parsedQty > 0;
+  const quantityOverCap = parsedQty != null && parsedQty > MAX_QUANTITY;
+  const priceOverCap = parsedTotal != null && parsedTotal > MAX_MONEY;
+  const quantityIsUsable =
+    parsedQty != null && parsedQty > 0 && !quantityOverCap;
   // On the field, never through an alert: an alert covers the form, and once
   // dismissed it cannot say which field it meant.
-  const quantityError = quantityIsUsable
+  const quantityError = quantityOverCap
+    ? quantityCapMessage()
+    : quantityIsUsable
     ? null
     : t('purchaseAmountSheet.quantityRequired');
   const priceError =
-    parsedTotal === undefined ? t('errors.invalidAmountPaid') : null;
+    parsedTotal === undefined
+      ? t('errors.invalidAmountPaid')
+      : priceOverCap
+      ? t('errors.amountTooLarge', { max: formatDecimal(MAX_MONEY) })
+      : null;
   const priceNote =
     showPrices && describePrice && quantityIsUsable && parsedTotal != null
       ? describePrice(unitPriceFromTotal(parsedTotal, parsedQty) ?? parsedTotal)
       : null;
 
   const handleConfirm = () => {
-    if (!quantityIsUsable || parsedTotal === undefined) return;
+    if (!quantityIsUsable || parsedTotal === undefined || priceOverCap) return;
     onConfirm(parsedQty, parsedTotal);
   };
 
-  const open = visible && !!item;
-  // No snap points: sized to its content, gorhom's lift seats it on the
-  // keyboard. `view`, never the keyboard-aware `form`: that pads by the
-  // keyboard's height, which a content-sized sheet grows by, scrolling the
-  // header off the top.
   return (
-    <Sheet
-      visible={open}
-      onDismiss={onClose}
-      snapPoints={[]}
-      enableDynamicSizing
-      mode="view"
-      contentContainerStyle={styles.content}
-      header={
+    <>
+      <SheetHeaderSlot>
         <SheetHeader
           title={t('purchaseAmountSheet.title')}
           onClose={onClose}
@@ -161,11 +150,10 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
             loading,
           }}
         />
-      }
-    >
+      </SheetHeaderSlot>
       <View style={styles.sections}>
         <Text role="heading" style={styles.itemName}>
-          {item?.itemName ?? ''}
+          {item.itemName}
         </Text>
 
         <View style={styles.section}>
@@ -173,7 +161,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
             {t('labels.quantity')}
           </SectionHeader>
           <View style={styles.inputRow}>
-            <ThemedBottomSheetTextInput
+            <ThemedTextInput
               style={styles.input}
               value={quantityInput}
               onChangeText={setQuantityInput}
@@ -183,7 +171,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               accessibilityLabel={t('labels.quantity')}
               testID={shoppingListTestIDs.purchaseQuantityInput}
             />
-            {item?.unitName ? (
+            {item.unitName ? (
               <Text role="body" tone="secondary" style={styles.affix}>
                 {item.unitName}
               </Text>
@@ -212,13 +200,13 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
                   {currencySymbol(currency)}
                 </Text>
               ) : null}
-              <ThemedBottomSheetTextInput
+              <ThemedTextInput
                 style={styles.input}
                 value={priceInput}
                 onChangeText={setPriceInput}
                 keyboardType="decimal-pad"
                 selectTextOnFocus
-                maxLength={10}
+                maxLength={16}
                 placeholder={
                   estimatedTotal == null
                     ? localizeNumericHint(
@@ -242,8 +230,8 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
             ) : null}
             {perUnitPrice != null ? (
               <PerUnitHint
-                price={formatCurrency(perUnitPrice, currency)}
-                unit={item?.unitName}
+                price={money(perUnitPrice, currency)}
+                unit={item.unitName}
                 style={styles.perUnitHint}
               />
             ) : null}
@@ -260,6 +248,47 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
           </View>
         ) : null}
       </View>
+    </>
+  );
+};
+
+/**
+ * Records the actual purchased amounts, pre-filled with the requested quantity.
+ * It asks for the total paid because that is what the receipt shows; a hint
+ * gives the per-unit split.
+ */
+export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
+  visible,
+  item,
+  ...form
+}) => {
+  const open = visible && item !== null;
+  const opening = useOpening(open, item);
+  // The line now, or while closing the one it opened on. A new line seeds a
+  // fresh form; a change to the same line leaves what is typed.
+  const shown = item ?? opening?.payload;
+
+  // No snap points: sized to its content, gorhom's lift seats it on the
+  // keyboard. `view`, never the keyboard-aware `form`: that pads by the
+  // keyboard's height, which a content-sized sheet grows by, scrolling the
+  // header off the top.
+  return (
+    <Sheet
+      visible={open}
+      onDismiss={form.onClose}
+      snapPoints={[]}
+      enableDynamicSizing
+      mode="view"
+      headerFromContent
+      contentContainerStyle={styles.content}
+    >
+      {opening && shown ? (
+        <PurchaseAmountForm
+          key={`${opening.id}:${shown.id}`}
+          item={shown}
+          {...form}
+        />
+      ) : null}
     </Sheet>
   );
 };
@@ -270,7 +299,7 @@ const styles = StyleSheet.create(theme => ({
   },
   // On the inner view, so the header still spans the sheet's full width.
   sections: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
   },
   itemName: {
     textAlign: 'center',

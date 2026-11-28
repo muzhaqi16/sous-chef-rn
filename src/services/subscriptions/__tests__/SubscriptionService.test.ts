@@ -1,5 +1,5 @@
-jest.mock('#/utils/errorSerialization', () => ({
-  ...jest.requireActual<object>('#/utils/errorSerialization'),
+jest.mock('#utils/errorSerialization', () => ({
+  ...jest.requireActual<object>('#utils/errorSerialization'),
   serializeError: jest.fn(e => ({ message: String(e) })),
 }));
 
@@ -7,10 +7,10 @@ import type { StoreObject } from '@apollo/client';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { SubscriptionService } from '../SubscriptionService';
 import { CacheStrategy, LogLevel, type SubscriptionConfig } from '../types';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
 import { HomeEventsDocument } from '#operations/home/home.generated';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import {
   isSubscriptionRejected,
   resetRejectedSubscriptions,

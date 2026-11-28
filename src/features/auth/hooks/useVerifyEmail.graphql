@@ -1,5 +1,6 @@
 # The signed-in account's verification as the server holds it, re-read when a
-# link reports "already verified" without naming the account it verified.
+# code or link is refused: a spent one (a link opened twice) is refused like a
+# wrong one, and only this read says the address was verified after all.
 query SignedInEmailVerification {
   me {
     id

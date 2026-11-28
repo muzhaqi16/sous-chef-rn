@@ -1,4 +1,4 @@
-import { MutationType } from '#/graphql/generated/schemaTypes';
+import { MutationType } from '#graphql/generated/schemaTypes';
 import type { SubscriptionPayload } from './types';
 
 /**

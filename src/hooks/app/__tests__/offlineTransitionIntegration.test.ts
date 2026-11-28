@@ -19,7 +19,7 @@ import type { ApolloClient, ApolloLink } from '@apollo/client';
 import { OperationTypeNode } from 'graphql';
 import type { DocumentNode } from 'graphql';
 import { createTestStore } from '#/test-utils/createTestStore';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { TransferHomeOwnershipDocument } from '#operations/home/home.generated';
 import {
   isApiUnavailable,
@@ -47,7 +47,7 @@ jest.mock('#store/useAppStore', () => ({
     selector({ accessToken: 'token' }),
 }));
 
-jest.mock('#/apollo/offlineQueue/queueManager', () => ({
+jest.mock('#apollo/offlineQueue/queueManager', () => ({
   queueManager: {
     onOnline: jest.fn(),
     onOffline: jest.fn(),
@@ -56,21 +56,21 @@ jest.mock('#/apollo/offlineQueue/queueManager', () => ({
     withdrawUnqueueableWrite: jest.fn(),
   },
 }));
-jest.mock('#/apollo/offlineQueue/queueStore', () => ({
+jest.mock('#apollo/offlineQueue/queueStore', () => ({
   queueStore: { addMutation: jest.fn() },
 }));
-jest.mock('#/apollo/links/wsLink', () => ({
+jest.mock('#apollo/links/wsLink', () => ({
   resumeWebSocketAfterOnline: jest.fn(),
 }));
-jest.mock('#/apollo/links/apiHealthProbe', () => ({
+jest.mock('#apollo/links/apiHealthProbe', () => ({
   probeApiHealth: jest.fn(() => Promise.resolve(false)),
 }));
 
 import { useOnlineQueueSync } from '../useOnlineQueueSync';
-import { apiReachabilityBreaker } from '#/apollo/links/apiReachabilityBreaker';
-import { createQueueLink } from '#/apollo/offlineQueue/queueLink';
-import { OfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
-import { probeApiHealth } from '#/apollo/links/apiHealthProbe';
+import { apiReachabilityBreaker } from '#apollo/links/apiReachabilityBreaker';
+import { createQueueLink } from '#apollo/offlineQueue/queueLink';
+import { OfflineRejectedError } from '#apollo/offlineQueue/OfflineRejectedError';
+import { probeApiHealth } from '#apollo/links/apiHealthProbe';
 
 function makeOperation(query: DocumentNode) {
   const context: ApolloLink.OperationContext = {};

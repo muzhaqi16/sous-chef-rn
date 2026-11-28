@@ -5,10 +5,10 @@ import {
 import { drainTimers } from '#/test-utils/drainTimers';
 import { MarkItemForReviewDocument } from '#operations/item/item.generated';
 import { useReportWrongPhoto } from '#features/catalog/hooks/useReportWrongPhoto';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
-import type { AlertButton } from '#/platform/presenters';
-import { changeLanguage } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
+import type { AlertButton } from '#platform/presenters';
+import { changeLanguage } from '#i18n';
 
 const sentReport = () =>
   recordMock(MarkItemForReviewDocument, {

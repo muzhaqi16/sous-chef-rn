@@ -1,6 +1,12 @@
 import { readFileSync } from 'fs';
-import { join } from 'path';
-import { execSync } from 'child_process';
+import * as ts from 'typescript';
+import {
+  lineOf,
+  nodesOf,
+  parseSource,
+  productionSources,
+  propertyName,
+} from '#/test-utils/sourceAst';
 
 /**
  * `useCreateShoppingList` settles with `present: 'none'` and hands its caller
@@ -10,47 +16,93 @@ import { execSync } from 'child_process';
  */
 
 const HOOK = 'src/features/shoppingList/hooks/useCreateShoppingList.ts';
+const FN = 'createShoppingList';
 
-/** Every call site of the hook's returned function, as `file:line`. */
-function callSites(): { file: string; line: number }[] {
-  const out = execSync(
-    `git grep -n "await createShoppingList(" -- 'src/**/*.ts' 'src/**/*.tsx' | grep -v __tests__ || true`,
-    { cwd: process.cwd(), encoding: 'utf8' },
-  );
-  return out
-    .split('\n')
-    .filter(Boolean)
-    .map(hit => {
-      const [file = '', lineText = ''] = hit.split(':');
-      return { file, line: Number(lineText) };
+const enclosingFunction = (node: ts.Node): ts.Node => {
+  let current: ts.Node = node;
+  while (!ts.isFunctionLike(current) && !ts.isSourceFile(current)) {
+    current = current.parent;
+  }
+  return current;
+};
+
+/** Every call of the create function, under any alias or through any object. */
+function createCalls(source: ts.SourceFile): ts.CallExpression[] {
+  const names = new Set([FN]);
+  for (const node of nodesOf(source)) {
+    if (
+      ts.isBindingElement(node) &&
+      node.propertyName &&
+      ts.isIdentifier(node.propertyName) &&
+      propertyName(node.propertyName) === FN &&
+      ts.isIdentifier(node.name)
+    ) {
+      names.add(node.name.text);
+    }
+  }
+  return nodesOf(source)
+    .filter(ts.isCallExpression)
+    .filter(call => {
+      const callee = call.expression;
+      const name = ts.isIdentifier(callee)
+        ? callee.text
+        : ts.isPropertyAccessExpression(callee)
+        ? callee.name.text
+        : undefined;
+      return name !== undefined && names.has(name);
+    });
+}
+
+/** Each call whose own outcome's `body` is never read, as `file:line`. */
+function silentCreates(file: string, text?: string): string[] {
+  return createCalls(parseSource(file, text))
+    .filter(call => {
+      let holder: ts.Node = call.parent;
+      if (ts.isAwaitExpression(holder)) holder = holder.parent;
+      if (!ts.isVariableDeclaration(holder) || !ts.isIdentifier(holder.name)) {
+        return true;
+      }
+      const outcome = holder.name.text;
+      return !nodesOf(enclosingFunction(holder)).some(
+        node =>
+          ts.isPropertyAccessExpression(node) &&
+          node.name.text === 'body' &&
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === outcome,
+      );
     })
-    .filter(({ file }) => file && file !== HOOK);
+    .map(call => `${file}:${lineOf(call)}`);
 }
 
 describe('a refused list create reaches the person', () => {
   it('hands the caller copy to present', () => {
-    const source = readFileSync(join(process.cwd(), HOOK), 'utf8');
+    const source = readFileSync(HOOK, 'utf8');
     expect(source).toContain("present: 'none'");
     expect(source).toContain('body:');
   });
 
+  it('catches an outcome whose body goes unread, under any alias', () => {
+    const planted = `
+      const { createShoppingList: create } = useCreateShoppingList(copy);
+      async function add() {
+        const created = await create(input);
+        if (created.status === 'failed') toastService.error(other.body);
+      }
+      async function quiet() {
+        await deps.createShoppingList(input);
+      }`;
+
+    expect(silentCreates('planted.ts', planted)).toEqual([
+      'planted.ts:4',
+      'planted.ts:8',
+    ]);
+  });
+
   it('is presented at every call site', () => {
-    const sites = callSites();
-    expect(sites.length).toBeGreaterThan(3);
+    const files = productionSources().filter(file => file !== HOOK);
+    const sites = files.flatMap(file => createCalls(parseSource(file)));
+    expect(sites.length).toBeGreaterThan(4);
 
-    const silent = sites
-      .filter(({ file, line }) => {
-        const lines = readFileSync(join(process.cwd(), file), 'utf8').split(
-          '\n',
-        );
-        // The call, its outcome branch, and the branch body. Every reader of
-        // the outcome must show `body` — a ternary on `'created'` that maps
-        // failure to null drops it as surely as a bare `return`.
-        const window = lines.slice(line - 1, line + 12).join('\n');
-        return !/\.body/.test(window);
-      })
-      .map(({ file, line }) => `${file}:${line}`);
-
-    expect(silent).toEqual([]);
+    expect(files.flatMap(file => silentCreates(file))).toEqual([]);
   });
 });

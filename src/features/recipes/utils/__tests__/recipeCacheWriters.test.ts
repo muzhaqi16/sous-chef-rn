@@ -1,5 +1,5 @@
-import { makeCache } from '#/apollo/cache';
-import type { CreateRecipeInput } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
+import type { CreateRecipeInput } from '#graphql/generated/schemaTypes';
 import { writeLocalRecipe } from '../recipeCacheWriters';
 import { RecipeCacheWriters_RowFragmentDoc } from '../recipeCacheWriters.generated';
 

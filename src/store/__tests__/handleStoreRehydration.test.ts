@@ -1,11 +1,11 @@
 import { handleStoreRehydration, useStore } from '../index';
 import { createTestStore } from '#/test-utils/createTestStore';
-import { errorService } from '#/services/errorService';
-import { storage } from '#/store/deviceStorage';
+import { errorService } from '#services/errorService';
+import { storage } from '#store/deviceStorage';
 import { requirePlatform } from '#platform/install';
 import { telemetryDefaults } from '#store/slices/telemetrySlice';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 describe('handleStoreRehydration', () => {
   it('recovers isHydrated and reports to telemetry when rehydration fails', async () => {

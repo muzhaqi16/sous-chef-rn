@@ -2,25 +2,27 @@
  * What a receipt check-in changes on the device, as a pending layer. The
  * server's answer writes each line's rows and the totals; `commit` lists them.
  */
-import type { LocalWrite } from '#/apollo/pendingWrites/types';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
+import type { LocalWrite } from '#apollo/pendingWrites/types';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
 import {
   listNewUsualStore,
   type NewUsualStore,
-} from '#features/catalog/cache/usualStores';
+} from '#entities/store/usualStores';
 import {
   listAnsweredPantryItem,
   showLocalPantryItem,
   type PantryItemRef,
-} from '#features/pantry/cache/items';
-import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
+} from '#entities/pantryItem/items';
+import type { LocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
 import {
   stampItemBoughtOnList,
   stampItemKeptOnListAfterMoveToPantry,
-} from '#features/shoppingList/cache/moveToPantry';
-import { readIsPurchased } from '#features/shoppingList/cache/purchase';
+} from '#entities/shoppingList/moveToPantry';
+import { readIsPurchased } from '#entities/shoppingList/purchase';
 import { refuseReceiptCheckIn, resultsOf } from './receiptCheckIn';
+import { bindLocalWrite } from '#apollo/pendingWrites/bindLocalWrite';
+import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 
 /** What one line shows until the server answers. */
 export type LocalCheckInLine = {
@@ -95,3 +97,12 @@ export const checkIn: LocalWrite<CheckInInputs> = {
   },
   recoverable: false,
 };
+
+// Each document this feature sends as a local write, bound to its write.
+export const createReceiptCheckInWrite = bindLocalWrite(
+  CreateReceiptCheckInDocument,
+  {
+    ...checkIn,
+    subject: { key: 'lines', rowKey: 'pantryItemId', mints: true },
+  },
+);

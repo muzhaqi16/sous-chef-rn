@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import type { DataState } from '#hooks/data/useDataState';
 import { useLazyHomeData } from '#features/home/hooks/useLazyHomeData';

@@ -14,12 +14,12 @@ import { ApolloProvider, skipToken, useQuery } from '@apollo/client/react';
 import { act, renderHook } from '@testing-library/react-native';
 import { createElement } from 'react';
 import { Subject } from 'rxjs';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import {
   clearApolloClient,
   registerApolloClient,
-} from '#/apollo/clientRegistry';
+} from '#apollo/clientRegistry';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 import { LogoutCleanup } from '../logoutCleanup';
 

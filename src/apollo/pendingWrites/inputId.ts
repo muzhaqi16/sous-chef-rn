@@ -1,5 +1,5 @@
 import type { OperationVariables } from '@apollo/client';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 /** The row a write's `input.id` names, read from the variables the queue keeps current. */
 export const inputIdOf = ({

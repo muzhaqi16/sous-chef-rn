@@ -3,9 +3,9 @@ import {
   connectResyncSources,
   type NavigationSubscribe,
   type ScopeOnScreen,
-} from '#/apollo/refetchEvents';
-import { startPersistedStores } from '#/store/persistedStores';
-import { startCountingDaysOfUse } from '#/domain/reviewPrompt';
+} from '#apollo/refetchEvents';
+import { startPersistedStores } from '#store/persistedStores';
+import { startCountingDaysOfUse } from '#domain/reviewPrompt';
 import { followDeviceLanguage } from './followDeviceLanguage';
 
 export interface CoreStartOptions {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { skipToken, useQuery } from '@apollo/client/react';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { useToday } from '#hooks/app/useToday';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import type { StandDownOptions } from '#hooks/apollo/standDownOptions';

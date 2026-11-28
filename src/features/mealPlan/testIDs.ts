@@ -4,6 +4,9 @@
  */
 export const mealPlanTestIDs = {
   screen: 'meal-plan-screen',
+  /** The search fields of the template browser and the add-meal sheet. */
+  templateBrowserSearchInput: 'template-browser-search-input',
+  addMealSearchInput: 'add-meal-search-input',
   itemCompleteToggle: (itemId: string) => `meal-plan-item-complete-${itemId}`,
   mealsIncomplete: 'meal-plan-meals-incomplete',
 
@@ -22,6 +25,7 @@ export const mealPlanTestIDs = {
   templateItemRecipe: 'template-item-recipe',
   templateClearRecipeButton: 'template-clear-recipe-button',
 
+  templatePreviewConfirmButton: 'template-preview-confirm-button',
   templatePreviewEditButton: 'template-preview-edit-button',
   templatePreviewDuplicateButton: 'template-preview-duplicate-button',
   templatePreviewDeleteButton: 'template-preview-delete-button',

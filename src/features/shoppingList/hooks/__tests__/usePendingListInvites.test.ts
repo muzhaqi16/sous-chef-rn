@@ -1,7 +1,7 @@
 import { act } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import { useApolloClient } from '@apollo/client/react';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -14,15 +14,15 @@ import {
   CollaboratorRole,
   CollaboratorStatus,
   ErrorCode,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   AcceptShoppingListInviteDocument,
   DeclineShoppingListInviteDocument,
 } from '#features/shoppingList/graphql/collaboration.generated';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { SHOPPING_LISTS_PAGE_SIZE } from '#features/shoppingList/hooks/useShoppingListsQuery';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import { useStore } from '#store';
 import { GetPendingListInvitesDocument } from '../usePendingListInvites.generated';
 import { usePendingListInvites } from '../usePendingListInvites';

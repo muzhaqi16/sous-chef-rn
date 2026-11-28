@@ -9,7 +9,6 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
   itemName
   quantity
   quantityInput
-  displayFormat
   unitName
   category
   notes

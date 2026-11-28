@@ -1,32 +1,32 @@
-import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { useTranslation } from '#/i18n';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
-import {
-  ThemedTextInput,
-  OnPrimaryActivityIndicator,
-} from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles/commonStyles';
-import { StorageState, StorageType } from '#/graphql/generated/schemaTypes';
+import { commonStyles } from '#styles/commonStyles';
+import { StorageState, StorageType } from '#graphql/generated/schemaTypes';
+import { FormInput } from '#components/atoms/FormInput';
 import { FormTextArea } from '#components/atoms/FormTextArea';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
 import { Text } from '#components/atoms/Text';
 import {
   STORAGE_TYPE_VALUES,
   TEMPERATURE_OPTION_VALUES,
   COLOR_PRESETS,
+  storageLocationSchema,
+  type StorageLocationFields,
 } from '#features/catalog/components/storageLocationFormConfig';
 import { StorageLocationAdvancedSection } from '#features/catalog/components/StorageLocationAdvancedSection';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { formatNumberForInput } from '#/utils/formatters/number';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-
-export interface StorageLocationFormRef {
-  submit: () => void;
-  isValid: () => boolean;
-}
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+import { formatNumberForInput } from '#utils/formatters/number';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { reportValidationErrors } from '#utils/validation/common';
 
 /** Fields the form reads to seed its initial state. */
 export interface StorageLocationFormInitialData {
@@ -47,7 +47,6 @@ export interface StorageLocationFormInitialData {
 export interface StorageLocationFormValues {
   name: string;
   type: StorageType;
-  icon: string | null;
   parentLocationId: string | null;
   description: string | null;
   temperature: StorageState | null;
@@ -61,20 +60,20 @@ export interface StorageLocationFormValues {
 
 interface StorageLocationFormProps {
   initialData?: StorageLocationFormInitialData | null;
-  onSubmit: (data: StorageLocationFormValues) => void;
-  onCancel: () => void;
+  /** Resolves `false` when the save was refused, which keeps the sheet open. */
+  onSubmit: (data: StorageLocationFormValues) => Promise<boolean | void>;
+  onClose: () => void;
   isSubmitting: boolean;
   availableLocations?: Array<{ id: string; name: string; type: StorageType }>;
-  hideActions?: boolean;
 }
 
 /** A blank colour the server stored reads as "no colour", the swatch it selects. */
-const seedFormData = (
+const seedFields = (
   initialData: StorageLocationFormInitialData | null | undefined,
-) => ({
+): StorageLocationFields => ({
   name: initialData?.name ?? '',
   type: initialData?.type ?? StorageType.PantryShelf,
-  parentLocationId: initialData?.parentLocationId ?? undefined,
+  parentLocationId: initialData?.parentLocationId ?? null,
   description: initialData?.description ?? '',
   temperature: initialData?.temperature ?? StorageState.None,
   color: firstNonBlank(initialData?.color) ?? null,
@@ -84,350 +83,342 @@ const seedFormData = (
   isDefault: initialData?.isDefault ?? false,
 });
 
-export const StorageLocationForm = forwardRef<
-  StorageLocationFormRef,
-  StorageLocationFormProps
->(
-  (
-    {
-      initialData,
-      onSubmit,
-      onCancel,
-      isSubmitting,
-      availableLocations = [],
-      hideActions = false,
-    },
-    ref,
-  ) => {
-    const { t } = useTranslation();
+/**
+ * A storage location's form and its sheet's bar, mounted fresh each time the
+ * sheet opens. A refused save keeps it open with what was entered.
+ */
+export const StorageLocationForm: React.FC<StorageLocationFormProps> = ({
+  initialData,
+  onSubmit,
+  onClose,
+  isSubmitting,
+  availableLocations = [],
+}) => {
+  const { t } = useTranslation();
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    formState: { isDirty, errors },
+  } = useForm<StorageLocationFields>({
+    resolver: yupResolver(storageLocationSchema),
+    defaultValues: seedFields(initialData),
+  });
+  useSheetUnsavedInput(isDirty);
+  const type = useWatch({ control, name: 'type' });
+  const parentLocationId = useWatch({ control, name: 'parentLocationId' });
+  const temperature = useWatch({ control, name: 'temperature' });
+  const color = useWatch({ control, name: 'color' });
+  const isClimateControlled = useWatch({
+    control,
+    name: 'isClimateControlled',
+  });
+  const capacity = useWatch({ control, name: 'capacity' });
+  const capacityUnit = useWatch({ control, name: 'capacityUnit' });
+  const isDefault = useWatch({ control, name: 'isDefault' });
 
-    const [formData, setFormData] = useState(() => seedFormData(initialData));
+  // A location can't be its own parent.
+  const parentOptions = availableLocations.filter(
+    loc => loc.id !== initialData?.id,
+  );
 
-    // Sync form data when initialData changes (render-time state update)
-    const [prevInitialData, setPrevInitialData] = useState(initialData);
-    if (initialData !== prevInitialData) {
-      setPrevInitialData(initialData);
-      if (initialData) {
-        setFormData(seedFormData(initialData));
-      }
-    }
+  const save = handleSubmit(async fields => {
+    const capacityValue = parseDecimalInput(fields.capacity);
+    const result = await onSubmit({
+      name: fields.name,
+      type: fields.type,
+      parentLocationId: fields.parentLocationId,
+      description: fields.description.trim() || null,
+      temperature:
+        fields.temperature !== StorageState.None ? fields.temperature : null,
+      color: fields.color,
+      // `null` reads as "unchanged" to the API, so an unticked box sends false.
+      isClimateControlled: fields.isClimateControlled,
+      capacity: capacityValue > 0 ? capacityValue : null,
+      capacityUnit: fields.capacityUnit || null,
+      // The API refuses unsetting the current default: it moves only by
+      // another location taking it, so the current default states nothing.
+      ...(initialData?.isDefault ? {} : { isDefault: fields.isDefault }),
+    });
+    if (result !== false) onClose();
+  }, reportValidationErrors);
 
-    // Filter out current location from parent options (can't be its own parent)
-    const parentOptions = availableLocations.filter(
-      loc => loc.id !== initialData?.id,
-    );
+  const isEditing = !!initialData;
 
-    const handleSubmit = () => {
-      if (!formData.name.trim()) {
-        return;
-      }
-
-      const capacityFloat = formData.capacity
-        ? parseDecimalInput(formData.capacity)
-        : null;
-
-      const finalData = {
-        name: formData.name.trim(),
-        type: formData.type,
-        icon: null,
-        parentLocationId: formData.parentLocationId ?? null,
-        description: formData.description.trim() || null,
-        temperature:
-          formData.temperature !== StorageState.None
-            ? formData.temperature
-            : null,
-        color: formData.color,
-        // `null` reads as "unchanged" to the API, so an unticked box sends false.
-        isClimateControlled: formData.isClimateControlled,
-        capacity: capacityFloat && !isNaN(capacityFloat) ? capacityFloat : null,
-        capacityUnit: formData.capacityUnit || null,
-        // The API refuses unsetting the current default: it moves only by
-        // another location taking it, so the current default states nothing.
-        ...(initialData?.isDefault ? {} : { isDefault: formData.isDefault }),
-      };
-
-      onSubmit(finalData);
-    };
-
-    const isValid = () => formData.name.trim().length > 0;
-
-    useImperativeHandle(ref, () => ({
-      submit: handleSubmit,
-      isValid,
-    }));
-
-    return (
-      <View>
-        {/* Name */}
-        <View style={commonStyles.inputGroup}>
-          <Text role="label" tone="secondary" style={styles.fieldLabel}>
-            {t('storageLocationForm.name')}
-          </Text>
-          <ThemedTextInput
-            style={commonStyles.input}
-            value={formData.name}
-            onChangeText={name => setFormData({ ...formData, name })}
+  return (
+    <View>
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={
+            isEditing
+              ? t('storageLocationSheet.editTitle')
+              : t('storageLocationSheet.addTitle')
+          }
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void save();
+            },
+            accessibilityLabel: isEditing
+              ? t('labels.update')
+              : t('labels.create'),
+            loading: isSubmitting,
+          }}
+        />
+      </SheetHeaderSlot>
+      <Controller
+        control={control}
+        name="name"
+        render={({ field, fieldState }) => (
+          <FormInput
+            label={t('storageLocationForm.name')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            ref={field.ref}
+            error={fieldState.error?.message}
             placeholder={t('storageLocationForm.namePlaceholder')}
             autoFocus
+            required
           />
-        </View>
-        {/* Type Carousel */}
-        <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
-          <Text role="label" tone="secondary" style={styles.fieldLabel}>
-            {t('storageLocationForm.type')}
-          </Text>
-          <View style={styles.carouselContainer}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.typeScroll}
-              contentContainerStyle={styles.typeScrollContent}
-            >
-              {STORAGE_TYPE_VALUES.map(type => (
-                <AppPressable
-                  key={type.value}
-                  style={
-                    formData.type === type.value
-                      ? styles.typeButtonSelected
-                      : styles.typeButton
-                  }
-                  onPress={() =>
-                    setFormData({
-                      ...formData,
-                      type: type.value,
-                    })
-                  }
-                >
-                  <StorageLocationIcon type={type.value} size={28} />
-                  <Text
-                    role="label"
-                    style={
-                      formData.type === type.value
-                        ? styles.typeLabelSelected
-                        : styles.typeLabel
-                    }
-                  >
-                    {t(`storageLocationForm.${type.key}`)}
-                  </Text>
-                </AppPressable>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-        {/* Parent Location Selector */}
-        {parentOptions.length > 0 && (
-          <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
-            <Text role="label" tone="secondary" style={styles.fieldLabel}>
-              {t('storageLocationForm.parentLabel')}
-            </Text>
-            <View style={styles.carouselContainer}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.parentScroll}
-                contentContainerStyle={styles.typeScrollContent}
-              >
-                <AppPressable
-                  style={
-                    !formData.parentLocationId
-                      ? styles.parentButtonSelected
-                      : styles.parentButton
-                  }
-                  onPress={() =>
-                    setFormData({ ...formData, parentLocationId: undefined })
-                  }
-                >
-                  <Text
-                    role="label"
-                    style={
-                      !formData.parentLocationId
-                        ? styles.parentLabelSelected
-                        : styles.parentLabel
-                    }
-                  >
-                    {t('storageLocationForm.parentNone')}
-                  </Text>
-                </AppPressable>
-                {parentOptions.map(location => (
-                  <AppPressable
-                    key={location.id}
-                    style={
-                      formData.parentLocationId === location.id
-                        ? styles.parentButtonSelected
-                        : styles.parentButton
-                    }
-                    onPress={() =>
-                      setFormData({
-                        ...formData,
-                        parentLocationId: location.id,
-                      })
-                    }
-                  >
-                    <Text
-                      role="label"
-                      style={
-                        formData.parentLocationId === location.id
-                          ? styles.parentLabelSelected
-                          : styles.parentLabel
-                      }
-                    >
-                      {location.name}
-                    </Text>
-                  </AppPressable>
-                ))}
-              </ScrollView>
-            </View>
-            <Text role="caption" tone="secondary" style={styles.hint}>
-              {t('storageLocationForm.parentHint')}
-            </Text>
-          </View>
         )}
-        {/* Description */}
-        <FormTextArea
-          label={t('storageLocationForm.descriptionLabel')}
-          value={formData.description}
-          onChangeText={description =>
-            setFormData({ ...formData, description })
-          }
-          placeholder={t('storageLocationForm.descriptionPlaceholder')}
-          numberOfLines={2}
-        />
-        {/* Temperature */}
-        <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
-          <Text role="label" tone="secondary" style={styles.fieldLabel}>
-            {t('storageLocationForm.temperature')}
-          </Text>
-          <View style={styles.carouselContainer}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.typeScroll}
-              contentContainerStyle={styles.typeScrollContent}
-            >
-              {TEMPERATURE_OPTION_VALUES.map(option => (
-                <AppPressable
-                  key={option.value}
+      />
+      {/* Type Carousel */}
+      <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
+        <Text role="label" tone="secondary" style={styles.fieldLabel}>
+          {t('storageLocationForm.type')}
+        </Text>
+        <View style={styles.carouselContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.typeScroll}
+            contentContainerStyle={styles.typeScrollContent}
+          >
+            {STORAGE_TYPE_VALUES.map(option => (
+              <AppPressable
+                key={option.value}
+                style={
+                  type === option.value
+                    ? styles.typeButtonSelected
+                    : styles.typeButton
+                }
+                onPress={() =>
+                  setValue('type', option.value, { shouldDirty: true })
+                }
+              >
+                <StorageLocationIcon type={option.value} size="lg" />
+                <Text
+                  role="label"
                   style={
-                    formData.temperature === option.value
-                      ? styles.parentButtonSelected
-                      : styles.parentButton
-                  }
-                  onPress={() =>
-                    setFormData({ ...formData, temperature: option.value })
+                    type === option.value
+                      ? styles.typeLabelSelected
+                      : styles.typeLabel
                   }
                 >
-                  <Text
-                    role="label"
-                    style={
-                      formData.temperature === option.value
-                        ? styles.parentLabelSelected
-                        : styles.parentLabel
-                    }
-                  >
-                    {t(`storageLocationForm.${option.key}`)}
-                  </Text>
-                </AppPressable>
-              ))}
-            </ScrollView>
-          </View>
+                  {t(`storageLocationForm.${option.key}`)}
+                </Text>
+              </AppPressable>
+            ))}
+          </ScrollView>
         </View>
-        {/* Color */}
+      </View>
+      {/* Parent Location Selector */}
+      {parentOptions.length > 0 && (
         <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
           <Text role="label" tone="secondary" style={styles.fieldLabel}>
-            {t('storageLocationForm.colorLabel')}
+            {t('storageLocationForm.parentLabel')}
           </Text>
           <View style={styles.carouselContainer}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={styles.typeScroll}
+              style={styles.parentScroll}
               contentContainerStyle={styles.typeScrollContent}
             >
               <AppPressable
                 style={
-                  !formData.color
-                    ? styles.colorSwatchNoneSelected
-                    : styles.colorSwatchNone
+                  !parentLocationId
+                    ? styles.parentButtonSelected
+                    : styles.parentButton
                 }
-                onPress={() => setFormData({ ...formData, color: null })}
+                onPress={() =>
+                  setValue('parentLocationId', null, { shouldDirty: true })
+                }
               >
-                <Text role="label" tone="secondary">
-                  -
+                <Text
+                  role="label"
+                  style={
+                    !parentLocationId
+                      ? styles.parentLabelSelected
+                      : styles.parentLabel
+                  }
+                >
+                  {t('storageLocationForm.parentNone')}
                 </Text>
               </AppPressable>
-              {COLOR_PRESETS.map(preset => {
-                // Hoisted: Reanimated's babel plugin wraps any
-                // `{ x: foo.value }` in a `style={...}` in a false-positive
-                // shared-value warning.
-                const swatchColor = preset.value;
-                return (
-                  <AppPressable
-                    key={preset.value}
-                    style={[
-                      formData.color === preset.value
-                        ? styles.colorSwatchSelected
-                        : styles.colorSwatch,
-                      { backgroundColor: swatchColor },
-                    ]}
-                    onPress={() =>
-                      setFormData({ ...formData, color: preset.value })
+              {parentOptions.map(location => (
+                <AppPressable
+                  key={location.id}
+                  style={
+                    parentLocationId === location.id
+                      ? styles.parentButtonSelected
+                      : styles.parentButton
+                  }
+                  onPress={() =>
+                    setValue('parentLocationId', location.id, {
+                      shouldDirty: true,
+                    })
+                  }
+                >
+                  <Text
+                    role="label"
+                    style={
+                      parentLocationId === location.id
+                        ? styles.parentLabelSelected
+                        : styles.parentLabel
                     }
-                    accessibilityLabel={t(`storageLocationForm.${preset.key}`)}
-                  />
-                );
-              })}
+                  >
+                    {location.name}
+                  </Text>
+                </AppPressable>
+              ))}
             </ScrollView>
           </View>
+          <Text role="caption" tone="secondary" style={styles.hint}>
+            {t('storageLocationForm.parentHint')}
+          </Text>
         </View>
-        {/* Advanced Settings Collapsible */}
-        <StorageLocationAdvancedSection
-          isClimateControlled={formData.isClimateControlled}
-          capacity={formData.capacity}
-          capacityUnit={formData.capacityUnit}
-          isDefault={formData.isDefault}
-          canChangeDefault={!initialData?.isDefault}
-          onToggleClimateControlled={() =>
-            setFormData({
-              ...formData,
-              isClimateControlled: !formData.isClimateControlled,
-            })
-          }
-          onCapacityChange={capacity => setFormData({ ...formData, capacity })}
-          onCapacityUnitChange={capacityUnit =>
-            setFormData({ ...formData, capacityUnit })
-          }
-          onToggleDefault={() =>
-            setFormData({ ...formData, isDefault: !formData.isDefault })
-          }
-        />
-        {!hideActions && (
-          <View style={[commonStyles.row, styles.formActions]}>
-            <AppPressable
-              style={[commonStyles.button, commonStyles.buttonSecondary]}
-              onPress={onCancel}
-              disabled={isSubmitting}
-            >
-              <Text role="body">{t('labels.cancel')}</Text>
-            </AppPressable>
-            <AppPressable
-              style={[commonStyles.button, commonStyles.buttonPrimary]}
-              onPress={handleSubmit}
-              disabled={isSubmitting || !formData.name.trim()}
-            >
-              {isSubmitting ? (
-                <OnPrimaryActivityIndicator size="small" />
-              ) : (
-                <Text role="body" style={commonStyles.buttonTextPrimary}>
-                  {initialData ? t('labels.update') : t('labels.create')}
-                </Text>
-              )}
-            </AppPressable>
-          </View>
+      )}
+      <Controller
+        control={control}
+        name="description"
+        render={({ field }) => (
+          <FormTextArea
+            ref={field.ref}
+            label={t('storageLocationForm.descriptionLabel')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('storageLocationForm.descriptionPlaceholder')}
+            numberOfLines={2}
+          />
         )}
+      />
+      {/* Temperature */}
+      <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
+        <Text role="label" tone="secondary" style={styles.fieldLabel}>
+          {t('storageLocationForm.temperature')}
+        </Text>
+        <View style={styles.carouselContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.typeScroll}
+            contentContainerStyle={styles.typeScrollContent}
+          >
+            {TEMPERATURE_OPTION_VALUES.map(option => (
+              <AppPressable
+                key={option.value}
+                style={
+                  temperature === option.value
+                    ? styles.parentButtonSelected
+                    : styles.parentButton
+                }
+                onPress={() =>
+                  setValue('temperature', option.value, { shouldDirty: true })
+                }
+              >
+                <Text
+                  role="label"
+                  style={
+                    temperature === option.value
+                      ? styles.parentLabelSelected
+                      : styles.parentLabel
+                  }
+                >
+                  {t(`storageLocationForm.${option.key}`)}
+                </Text>
+              </AppPressable>
+            ))}
+          </ScrollView>
+        </View>
       </View>
-    );
-  },
-);
+      {/* Color */}
+      <View style={[commonStyles.inputGroup, styles.carouselInputGroup]}>
+        <Text role="label" tone="secondary" style={styles.fieldLabel}>
+          {t('storageLocationForm.colorLabel')}
+        </Text>
+        <View style={styles.carouselContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.typeScroll}
+            contentContainerStyle={styles.typeScrollContent}
+          >
+            <AppPressable
+              style={
+                !color ? styles.colorSwatchNoneSelected : styles.colorSwatchNone
+              }
+              onPress={() => setValue('color', null, { shouldDirty: true })}
+            >
+              <Text role="label" tone="secondary">
+                -
+              </Text>
+            </AppPressable>
+            {COLOR_PRESETS.map(preset => {
+              // Hoisted: Reanimated's babel plugin wraps any
+              // `{ x: foo.value }` in a `style={...}` in a false-positive
+              // shared-value warning.
+              const swatchColor = preset.value;
+              return (
+                <AppPressable
+                  key={preset.value}
+                  style={[
+                    color === preset.value
+                      ? styles.colorSwatchSelected
+                      : styles.colorSwatch,
+                    { backgroundColor: swatchColor },
+                  ]}
+                  onPress={() =>
+                    setValue('color', preset.value, { shouldDirty: true })
+                  }
+                  accessibilityLabel={t(`storageLocationForm.${preset.key}`)}
+                />
+              );
+            })}
+          </ScrollView>
+        </View>
+      </View>
+      <StorageLocationAdvancedSection
+        isClimateControlled={isClimateControlled}
+        capacity={capacity}
+        capacityError={errors.capacity?.message}
+        capacityUnit={capacityUnit}
+        isDefault={isDefault}
+        canChangeDefault={!initialData?.isDefault}
+        onToggleClimateControlled={() =>
+          setValue('isClimateControlled', !isClimateControlled, {
+            shouldDirty: true,
+          })
+        }
+        onCapacityChange={next =>
+          // Re-checked only while refused, so a fix clears the message.
+          setValue('capacity', next, {
+            shouldDirty: true,
+            shouldValidate: !!errors.capacity,
+          })
+        }
+        onCapacityUnitChange={next =>
+          setValue('capacityUnit', next, { shouldDirty: true })
+        }
+        onToggleDefault={() =>
+          setValue('isDefault', !isDefault, { shouldDirty: true })
+        }
+      />
+    </View>
+  );
+};
 
 const styles = StyleSheet.create(theme => ({
   carouselInputGroup: {
@@ -554,9 +545,5 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     borderWidth: theme.borderWidth.thick,
     borderColor: theme.colors.textPrimary,
-  },
-  formActions: {
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.md,
   },
 }));

@@ -1,9 +1,9 @@
 'use no memo';
 import React from 'react';
-import { screen, userEvent } from '@testing-library/react-native';
+import { fireEvent, screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { drainTimers } from '#/test-utils/drainTimers';
-import { t } from '#/i18n';
+import { operationLog } from '#/test-utils/operationLog';
+import { t } from '#i18n';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GenerateShoppingListSheet } from '../GenerateShoppingListSheet';
 
@@ -46,21 +46,21 @@ function listsMock() {
   }).mock;
 }
 
+let log = operationLog();
+
+const sheet = (props: Partial<SheetProps> = {}) => (
+  <GenerateShoppingListSheet {...defaultProps} {...props} />
+);
+
 function renderSheet(props: Partial<SheetProps> = {}) {
-  return renderWithApollo(
-    <GenerateShoppingListSheet {...defaultProps} {...props} />,
-    { operationMocks: [listsMock()] },
-  );
+  return renderWithApollo(sheet(props), {
+    operationMocks: [listsMock()],
+    links: [log.link],
+  });
 }
 
-jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
-  useStandardBottomSheet: jest.fn(() => ({
-    ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
-    modalProps: {},
-    contentContainerStyle: {},
-  })),
-  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
-}));
+const generateButton = () =>
+  screen.getByRole('button', { name: t('generateShoppingList.generate') });
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
@@ -83,78 +83,6 @@ jest.mock('#components/atoms/BaseSwitch', () => ({
   },
 }));
 
-jest.mock('#components/molecules/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({
-    title,
-    onCancel,
-    onConfirm,
-    confirmLabel,
-    confirmDisabled,
-  }: {
-    title: string;
-    onCancel: () => void;
-    onConfirm: () => void;
-    confirmLabel?: string;
-    confirmDisabled?: boolean;
-  }) => {
-    const { View, Text, Pressable } = require('react-native');
-    return (
-      <View testID="bottom-sheet-header">
-        <Text>{title}</Text>
-        <Pressable onPress={onCancel} testID="cancel-button">
-          <Text>Cancel</Text>
-        </Pressable>
-        <Pressable
-          onPress={onConfirm}
-          testID="confirm-button"
-          disabled={confirmDisabled}
-        >
-          <Text>{confirmLabel}</Text>
-        </Pressable>
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
-  BottomSheetFormScrollView: ({
-    children,
-    ...props
-  }: {
-    children: React.ReactNode;
-  }) => {
-    const { View } = require('react-native');
-    return <View {...props}>{children}</View>;
-  },
-}));
-
-jest.mock('#components/atoms/FormInput', () => ({
-  FormInput: ({
-    label,
-    value,
-    onChangeText,
-    placeholder,
-  }: {
-    label: string;
-    value?: string;
-    onChangeText?: (text: string) => void;
-    placeholder?: string;
-  }) => {
-    const { TextInput, Text, View } = require('react-native');
-    return (
-      <View>
-        <Text>{label}</Text>
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          testID={`input-${label}`}
-        />
-      </View>
-    );
-  },
-}));
-
 const defaultProps = {
   visible: true,
   onClose: jest.fn(),
@@ -162,22 +90,15 @@ const defaultProps = {
   loading: false,
 };
 
-beforeEach(() => {
-  jest.useFakeTimers();
-});
-
-afterEach(() => {
-  jest.useRealTimers();
-});
-
 describe('GenerateShoppingListSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    log = operationLog();
   });
 
   it('renders the generate action', () => {
     renderSheet();
-    expect(screen.getByText('Generate')).toBeTruthy();
+    expect(generateButton()).toBeEnabled();
   });
 
   it('renders the check pantry toggle', () => {
@@ -195,14 +116,16 @@ describe('GenerateShoppingListSheet', () => {
     expect(screen.getByText('Existing List')).toBeTruthy();
   });
 
-  it('shows the generate confirm button', () => {
+  it('names the sheet', () => {
     renderSheet();
-    expect(screen.getByText('Generate')).toBeTruthy();
+    expect(
+      screen.getByText(t('mealPlanMain.generateShoppingListLabel')),
+    ).toBeTruthy();
   });
 
-  it('shows Generating... when loading', () => {
+  it('holds the generate while one is in flight', () => {
     renderSheet({ loading: true });
-    expect(screen.getByText('Generating...')).toBeTruthy();
+    expect(generateButton()).toBeDisabled();
     expect(screen.getByText('Generating shopping list...')).toBeTruthy();
   });
 
@@ -228,7 +151,7 @@ describe('GenerateShoppingListSheet', () => {
     renderSheet();
     await user.press(screen.getByText('Existing List'));
     expect(screen.getByText('Select a list')).toBeTruthy();
-    await drainTimers();
+    await log.landed(GetShoppingListsLiteDocument);
     expect(screen.getByText('Weekly Groceries')).toBeTruthy();
     expect(screen.getByText('Party Supplies')).toBeTruthy();
   });
@@ -239,26 +162,100 @@ describe('GenerateShoppingListSheet', () => {
       error: new Error('network down'),
       maxUsageCount: 1,
     });
-    renderWithApollo(<GenerateShoppingListSheet {...defaultProps} />, {
+    renderWithApollo(sheet(), {
       operationMocks: [failed.mock, listsMock()],
+      links: [log.link],
     });
     await user.press(screen.getByText('Existing List'));
-    await drainTimers();
+    await log.landed(GetShoppingListsLiteDocument);
     expect(screen.queryByText(t('generateShoppingList.noLists'))).toBeNull();
 
     await user.press(screen.getByText(t('labels.tryAgain')));
-    await drainTimers();
+    await log.landed(GetShoppingListsLiteDocument, 2);
     expect(screen.getByText('Weekly Groceries')).toBeTruthy();
   });
 
   it('calls onGenerate when confirm button is pressed', async () => {
     const user = userEvent.setup();
     renderSheet();
-    await user.press(screen.getByTestId('confirm-button'));
+    await user.press(generateButton());
     expect(defaultProps.onGenerate).toHaveBeenCalledWith({
       checkPantry: true,
       name: undefined,
       shoppingListId: undefined,
     });
+  });
+
+  it('names the new list as typed, trimmed, without the pantry check', async () => {
+    const user = userEvent.setup();
+    renderSheet();
+    await user.press(screen.getByTestId('base-switch'));
+    fireEvent.changeText(
+      screen.getByPlaceholderText(
+        t('generateShoppingList.listNamePlaceholder'),
+      ),
+      '  Party  ',
+    );
+    await user.press(generateButton());
+    expect(defaultProps.onGenerate).toHaveBeenCalledWith({
+      checkPantry: false,
+      name: 'Party',
+      shoppingListId: undefined,
+    });
+  });
+
+  it('generates into the list picked', async () => {
+    const user = userEvent.setup();
+    renderSheet();
+    await user.press(screen.getByText('Existing List'));
+    await log.landed(GetShoppingListsLiteDocument);
+    await user.press(screen.getByText('Party Supplies'));
+    await user.press(generateButton());
+    expect(defaultProps.onGenerate).toHaveBeenCalledWith({
+      checkPantry: true,
+      name: undefined,
+      shoppingListId: 'sl-2',
+    });
+  });
+
+  it('asks for a list on the field when generating into one with none picked', async () => {
+    const user = userEvent.setup();
+    renderSheet();
+    await user.press(screen.getByText('Existing List'));
+    await log.landed(GetShoppingListsLiteDocument);
+    const pickAList = t('generateShoppingList.selectListLabel');
+    expect(screen.getAllByText(pickAList)).toHaveLength(1);
+
+    await user.press(generateButton());
+
+    // The field's label, and now its message.
+    expect(screen.getAllByText(pickAList)).toHaveLength(2);
+    expect(defaultProps.onGenerate).not.toHaveBeenCalled();
+    expect(generateButton()).toBeEnabled();
+
+    await user.press(screen.getByText('Weekly Groceries'));
+    expect(screen.getAllByText(pickAList)).toHaveLength(1);
+  });
+
+  it('opens fresh: the destination and name go with the closing', async () => {
+    const user = userEvent.setup();
+    const view = renderSheet();
+    fireEvent.changeText(
+      screen.getByPlaceholderText(
+        t('generateShoppingList.listNamePlaceholder'),
+      ),
+      'Party',
+    );
+    await user.press(screen.getByText('Existing List'));
+
+    view.rerender(sheet({ visible: false }));
+    view.rerender(sheet());
+
+    expect(
+      screen.getByPlaceholderText(
+        t('generateShoppingList.listNamePlaceholder'),
+      ),
+    ).toHaveDisplayValue('');
+    expect(screen.queryByText('Select a list')).toBeNull();
   });
 });

@@ -3,7 +3,7 @@
 import React from 'react';
 import { GraphQLError } from 'graphql';
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type { ApolloClient, InMemoryCache } from '@apollo/client';
 import {
   type MockDataFor,
@@ -26,10 +26,10 @@ import {
   asAbbreviation,
   readingAsAbbreviation,
 } from '#/test-utils/fixtures/unitLabels';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { toDateKey, todayKey } from '#/utils/dateUtils';
+import { t } from '#i18n';
+import { toDateKey, todayKey } from '#utils/dateUtils';
 import {
   ExpiryKind,
   BatchStatus,
@@ -41,13 +41,13 @@ import {
   MembershipRole,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { kitTestIDs } from '#components/testIDs';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
-import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import { CatalogRecipesForItemDocument } from '#features/pantry/hooks/useRecipeSuggestionsForItem.generated';
 import { pantryTestIDs } from '#features/pantry/testIDs';
@@ -56,7 +56,7 @@ import { PantryItemDetail } from '../PantryItemDetail';
 
 // The day stays fixed: the hook's midnight timer re-arms itself.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 jest.mock('#hooks/navigation/useAppNavigation');
 // Navigation is the boundary: with no navigator, the screen is focused while
@@ -383,6 +383,24 @@ describe('the states it can be in', () => {
 
     expect(screen.getByTestId(pantryTestIDs.itemHidden)).toBeTruthy();
     expect(screen.queryByTestId(kitTestIDs.stateError)).toBeNull();
+  });
+
+  // Spec app/state-views, "A detail screen whose read fails".
+  it('shows the shared failure view, with a retry, when its read fails', async () => {
+    const failed: MockFor<typeof GetPantryItemDocument> = {
+      request: { query: GetPantryItemDocument, variables: () => true },
+      result: {
+        errors: [
+          new GraphQLError('Boom', {
+            extensions: { code: ErrorCode.InternalServerError },
+          }),
+        ],
+      },
+    };
+    await openDetail({ answers: [{ mock: failed }] });
+
+    expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    expect(screen.getByText(t('labels.tryAgain'))).toBeTruthy();
   });
 
   // Its read is held back until the create lands: the server has no row yet.

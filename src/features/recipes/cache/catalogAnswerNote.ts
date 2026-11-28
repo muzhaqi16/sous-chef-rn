@@ -1,5 +1,5 @@
-import type { AnswerNote } from '#/apollo/links/answerNotesLink';
-import { isRecord } from '#/utils/isRecord';
+import type { AnswerNote } from '#apollo/links/answerNotesLink';
+import { isRecord } from '#utils/isRecord';
 import {
   catalogFetchKey,
   recordCatalogFetch,

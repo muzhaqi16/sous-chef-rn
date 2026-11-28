@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import { useScreenFocusEffect } from '#platform/screen';
+import { useApolloClient, useFragment } from '@apollo/client/react';
 import {
-  useApolloClient,
-  useFragment,
-  useMutation,
-} from '@apollo/client/react';
-import {
-  AddDerivedItemsToShoppingListDocument,
   UseGenerateShoppingList_MealPlanFragmentDoc,
   type UseGenerateShoppingList_MealPlanFragment,
   GenerateShoppingListPlanDocument,
@@ -16,8 +11,8 @@ import {
   type PlannedMeal,
   type PantryStock,
 } from '#features/mealPlan/utils/deriveShoppingListFromMealPlan';
-import { addItemsInSlices } from '#features/shoppingList/cache/createShoppingListRow';
-import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
+import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
+import { createLocalShoppingListItem } from '#entities/shoppingList/items';
 import {
   useCreateShoppingList,
   type StartingLines,
@@ -25,14 +20,14 @@ import {
 import type {
   BatchAddShoppingListItemInput,
   CreateShoppingListInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { usePantryQuery } from '#features/pantry/hooks/usePantryQuery';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { toastService } from '#/services/toastService';
-import { Telemetry } from '#/services/telemetry';
-import { t as tGlobal, useTranslation } from '#/i18n';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { toastService } from '#services/toastService';
+import { Telemetry } from '#services/telemetry';
+import { t as tGlobal, useTranslation } from '#i18n';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import {
   MAX_RECIPE_INGREDIENTS,
@@ -102,10 +97,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     t('generateShoppingList.generateFailed'),
   );
 
-  const [addItems, { loading: adding }] = useMutation(
-    AddDerivedItemsToShoppingListDocument,
-    { context: { localFirst: true } },
-  );
+  const { addRows, adding } = useAddShoppingRows();
 
   const apiUnavailable = useIsApiUnavailable();
 
@@ -226,16 +218,11 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     if (!target) return null;
     const { listId } = target;
 
-    const addFailure = await addItemsInSlices(
-      client.cache,
+    const addFailure = await addRows(
       listId,
       target.unsent,
       line => rowOf(line, listId, displayNames),
-      addItems,
-      {
-        document: AddDerivedItemsToShoppingListDocument,
-        fallback: t('generateShoppingList.generateFailed'),
-      },
+      t('generateShoppingList.generateFailed'),
     );
 
     if (addFailure) {

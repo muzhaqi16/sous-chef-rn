@@ -4,14 +4,14 @@
  * `setDefaultHome` moves both. Auto-selection lives in `useDefaultHome`.
  */
 
-import { alertService } from '#/services/alertService';
-import { t } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { t } from '#i18n';
 import { useApolloClient } from '@apollo/client/react';
 import {
   GetHomesDocument,
   type GetHomesQuery,
 } from '#operations/home/home.generated';
-import { extractNodes } from '#/utils/connectionUtils';
+import { extractNodes } from '#utils/connectionUtils';
 import { defaultPantryOf } from '#domain/homePantries';
 import { readDefaultPantryId } from '#features/home/utils/homePantries';
 import { useMarkHomeAsDefault } from '#features/home/hooks/useMarkHomeAsDefault';

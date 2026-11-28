@@ -12,7 +12,7 @@ import {
   getScrollClearancePadding,
   TAB_BAR_HEIGHT,
 } from '../layout';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { Dimensions } from 'react-native';
 
 describe('animations constants', () => {

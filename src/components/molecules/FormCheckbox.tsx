@@ -29,6 +29,8 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
         style={styles.checkboxRow}
         onPress={onPress}
         disabled={disabled}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked, disabled }}
       >
         <View
           style={[
@@ -37,7 +39,9 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
             disabled && styles.disabledCheckbox,
           ]}
         >
-          {!!checked && <Icon name="checkmark" size={18} tone="onPrimary" />}
+          {!!checked && (
+            <Icon name="checkmark" size="xsPlus" tone="onPrimary" />
+          )}
         </View>
         <Text style={[styles.label, disabled && styles.disabledLabel]}>
           {label}

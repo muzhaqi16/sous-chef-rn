@@ -1,6 +1,6 @@
 // This suite tests the real Environment class — opt out of the global
 // auto-mock applied by jest.setup.js.
-jest.unmock('#/utils/environment');
+jest.unmock('#utils/environment');
 
 import { Environment, getWebAppUrl, logger } from '../environment';
 import { requirePlatform } from '#platform/install';

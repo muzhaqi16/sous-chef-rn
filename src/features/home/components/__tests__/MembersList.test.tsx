@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { MembersList } from '../MembersList';
-import { InviteStatus } from '#/graphql/generated/schemaTypes';
+import { InviteStatus } from '#graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 
 function textNode(label: string) {

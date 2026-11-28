@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#components/atoms/Icon';
 import { Reveal } from '#components/atoms/Reveal';
@@ -11,7 +11,7 @@ import { RadioRow } from '#components/molecules/RadioRow';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
 import { COOKS_FOR_MAX, FAMILY_DEFAULT, FAMILY_MIN } from '#domain/servings';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { hitSlop } from '#theme/foundations/sizes';
 import { OnboardingStepScaffold } from '#features/onboarding/components/OnboardingStepScaffold';
 import { useHouseholdAnswer } from '#features/onboarding/hooks/useHouseholdAnswer';
 import { useHouseholdGreeting } from '#features/onboarding/hooks/useHouseholdGreeting';

@@ -1,14 +1,19 @@
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import {
   GONE_REPLAYS,
   MERGE_REPORTERS,
   MERGED_QUANTITY_OVERWRITES,
+  REFUSED_ROW_NARROWERS,
   REPLAY_RECONCILERS,
 } from './replayRegistry';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import type { OperationVariables } from '@apollo/client';
-import { getApolloClient } from '#/apollo/clientRegistry';
-import type { ReplayReconcilerTable, RowAdoption } from './types';
+import { getApolloClient } from '#apollo/clientRegistry';
+import type {
+  QueuedMutation,
+  ReplayReconcilerTable,
+  RowAdoption,
+} from './types';
 
 /**
  * Never throws: a reconciliation failure must not turn a replay the server
@@ -64,6 +69,26 @@ export const settleGoneReplay = (
   operationName: string,
   variables: OperationVariables,
 ): boolean => runReconciler(GONE_REPLAYS, operationName, variables, undefined);
+
+/**
+ * The refused rows of a batch answer, as the entry they become; null where
+ * the operation keeps the entry whole or the narrowing failed.
+ */
+export function narrowToRefusedRows(
+  mutation: QueuedMutation,
+  payload: unknown,
+): Pick<QueuedMutation, 'variables' | 'pendingWrite'> | null {
+  const narrow = REFUSED_ROW_NARROWERS[mutation.operationName];
+  if (!narrow) return null;
+  try {
+    return narrow(mutation, payload);
+  } catch (error) {
+    errorService.reportError(error, {
+      operation: `Queue refused-row narrowing failed for ${mutation.operationName}`,
+    });
+    return null;
+  }
+}
 
 /** Whether a queued write overwrites the quantity a merged create combined. */
 export const overwritesMergedQuantity = ({

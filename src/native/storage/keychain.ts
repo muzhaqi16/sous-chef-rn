@@ -18,16 +18,16 @@ import type {
   SessionTokenLoadResult,
   SessionTokens,
 } from '#platform/ports';
-import { logger } from '#/utils/environment';
-import { errorService } from '#/services/errorService';
-import { backoffDelay, sleep } from '#/utils/backoff';
-import { t } from '#/i18n';
-import { appConfig } from '#/config/appConfig';
+import { logger } from '#utils/environment';
+import { errorService } from '#services/errorService';
+import { backoffDelay, sleep } from '#utils/backoff';
+import { t } from '#i18n';
+import { appConfig } from '#config/appConfig';
 import {
   isDataStoreContention,
   isKeychainKeyInvalidated,
   isKeychainPromptCancelled,
-} from '#/utils/errors/libraryErrorMessages';
+} from '#utils/errors/libraryErrorMessages';
 
 // From `appConfig.identity.keychainNamespace`, but byte-identical for THIS app:
 // the OS keychain is keyed by service name, so a changed string signs everyone

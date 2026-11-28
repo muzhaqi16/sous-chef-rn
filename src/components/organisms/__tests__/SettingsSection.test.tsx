@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import type { SettingRowProps } from '../SettingRow';
+import type { SettingItem, SettingRowProps } from '../SettingRow';
 import { SettingsSection } from '../SettingsSection';
 
 jest.mock('../SettingRow', () => {
@@ -17,7 +17,7 @@ jest.mock('../SettingRow', () => {
 });
 
 describe('SettingsSection', () => {
-  const defaultItems = [
+  const defaultItems: SettingItem[] = [
     { key: 'theme', label: 'Theme', type: 'navigation', onPress: jest.fn() },
     {
       key: 'language',
@@ -28,9 +28,9 @@ describe('SettingsSection', () => {
     {
       key: 'notifications',
       label: 'Notifications',
-      type: 'toggle',
+      type: 'switch',
       value: true,
-      onToggle: jest.fn(),
+      onPress: jest.fn(),
     },
   ];
 
@@ -117,7 +117,7 @@ describe('SettingsSection', () => {
   });
 
   it('renders a single item as both first and last', () => {
-    const singleItem = [
+    const singleItem: SettingItem[] = [
       { key: 'about', label: 'About', type: 'navigation', onPress: jest.fn() },
     ];
     render(<SettingsSection title="Info" items={singleItem} />);

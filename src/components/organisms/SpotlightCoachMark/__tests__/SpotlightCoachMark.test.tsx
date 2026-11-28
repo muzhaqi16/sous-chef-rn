@@ -5,7 +5,6 @@ import { AccessibilityInfo, Dimensions } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { usePanGesture } from 'react-native-gesture-handler';
-import { withRepeat } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 import { kitTestIDs } from '#components/testIDs';
@@ -297,17 +296,24 @@ describe('A gesture tip shows the gesture', () => {
   // The hand is hidden from screen readers: the tip's text names the actions.
   const hidden = { includeHiddenElements: true };
 
+  /** The style of the hand inside the demo, the one node that moves. */
+  const handStyle = () => {
+    const [hand] = screen.getByTestId(
+      kitTestIDs.spotlightGestureDemo,
+      hidden,
+    ).children;
+    if (!hand || typeof hand === 'string') throw new Error('no hand');
+    return StyleSheet.flatten(hand.props.style) as Record<string, unknown>;
+  };
+
   it('The swipe tip shows the gesture at most three times', () => {
     renderMark({ demo: 'swipe' });
 
-    expect(
-      screen.getByTestId(kitTestIDs.spotlightGestureDemo, hidden),
-    ).toBeTruthy();
-    expect(withRepeat).toHaveBeenCalledWith(
-      expect.anything(),
-      DEMO_REPEATS,
-      false,
-    );
+    // A finished demo rests on its last frame, faded out.
+    expect(handStyle()).toMatchObject({
+      animationIterationCount: DEMO_REPEATS,
+      animationFillMode: 'forwards',
+    });
     expect(DEMO_REPEATS).toBeLessThanOrEqual(3);
   });
 
@@ -315,14 +321,7 @@ describe('A gesture tip shows the gesture', () => {
     (useMotionEnabled as jest.Mock).mockReturnValue(false);
     renderMark({ demo: 'swipe' });
 
-    expect(
-      screen.getByTestId(kitTestIDs.spotlightGestureDemo, hidden),
-    ).toBeTruthy();
-    expect(withRepeat).not.toHaveBeenCalledWith(
-      expect.anything(),
-      DEMO_REPEATS,
-      false,
-    );
+    expect(handStyle()).not.toHaveProperty('animationName');
   });
 
   it('shows no hand on a tip that teaches no gesture', () => {

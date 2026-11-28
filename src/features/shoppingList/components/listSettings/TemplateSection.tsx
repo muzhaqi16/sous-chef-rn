@@ -3,8 +3,8 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
-import { commonStyles } from '#/styles/commonStyles';
+import { useTranslation } from '#i18n';
+import { commonStyles } from '#styles/commonStyles';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { listSettingsStyles as styles } from './styles';
 
@@ -65,7 +65,7 @@ export const TemplateSection: React.FC<TemplateSectionProps> = ({
             onPress={handleCreateFromTemplate}
             disabled={creating}
           >
-            <Icon name="duplicate-outline" size={20} tone="primary" />
+            <Icon name="duplicate-outline" size="sm" tone="primary" />
             <Text role="body" tone="accent" style={styles.actionText}>
               {t('shoppingListScreens.createFromTemplate')}
             </Text>
@@ -77,7 +77,7 @@ export const TemplateSection: React.FC<TemplateSectionProps> = ({
           onPress={handleSaveAsTemplate}
           disabled={marking}
         >
-          <Icon name="bookmark-outline" size={20} tone="primary" />
+          <Icon name="bookmark-outline" size="sm" tone="primary" />
           <Text role="body" tone="accent" style={styles.actionText}>
             {t('labels.saveAsTemplate')}
           </Text>

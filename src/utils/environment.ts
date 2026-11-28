@@ -1,5 +1,5 @@
-import { env } from '#/config/env';
-import { appConfig } from '#/config/appConfig';
+import { env } from '#config/env';
+import { appConfig } from '#config/appConfig';
 import { requirePlatform } from '#platform/install';
 import type { Env } from '#platform/ports';
 

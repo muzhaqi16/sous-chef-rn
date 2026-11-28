@@ -1,8 +1,5 @@
 import React from 'react';
-import { StyleSheet } from 'react-native-unistyles';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#components/atoms/Icon';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { IconButton } from '#components/atoms/IconButton';
 
 interface QuickAddButtonProps {
   onPress: () => void;
@@ -16,25 +13,14 @@ export const QuickAddButton: React.FC<QuickAddButtonProps> = ({
   accessibilityLabel,
   testID,
 }) => (
-  <AppPressable
-    style={styles.button}
+  <IconButton
+    name="add"
+    size="sm"
+    tone="primary"
     onPress={onPress}
-    hitSlop={hitSlop.md}
-    accessibilityRole="button"
     accessibilityLabel={accessibilityLabel}
+    accessibilityRole="button"
     testID={testID}
-  >
-    <Icon name="add" size={20} tone="primary" />
-  </AppPressable>
+    filled={{ size: 'md', tone: 'primaryLight' }}
+  />
 );
-
-const styles = StyleSheet.create(theme => ({
-  button: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-}));

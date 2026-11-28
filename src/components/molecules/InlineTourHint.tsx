@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
@@ -43,7 +43,7 @@ export const InlineTourHint = ({
         accessibilityLabel={`${progress}. ${text}`}
       >
         <View style={styles.iconCircle}>
-          <Icon name="hand-left-outline" size={16} tone="onPrimary" />
+          <Icon name="hand-left-outline" size="xs" tone="onPrimary" />
         </View>
         <View style={styles.text}>
           <Text role="caption" tone="secondary">

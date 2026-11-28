@@ -6,13 +6,13 @@ import {
   seedCache,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { alertService } from '#/services/alertService';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import { useUpdatePantryItemQuantity } from '../useUpdatePantryItemQuantity';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 const QUANTITY = gql`
   fragment UpdateQuantityProbe on PantryItem {

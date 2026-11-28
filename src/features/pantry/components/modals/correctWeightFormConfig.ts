@@ -1,7 +1,7 @@
 import { boolean, mixed, object, string, type ObjectSchema } from 'yup';
-import { UnitType } from '#/graphql/generated/schemaTypes';
-import { lazyMessage, positiveDecimalRule } from '#/utils/validation/common';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { UnitType } from '#graphql/generated/schemaTypes';
+import { lazyMessage, positiveDecimalRule } from '#utils/validation/common';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 
 export interface CorrectWeightFormValues {
   weightInput: string;

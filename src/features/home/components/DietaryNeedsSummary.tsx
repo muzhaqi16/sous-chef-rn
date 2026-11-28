@@ -1,12 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslationKey } from '#/i18n';
-import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
+import { useTranslation, type TranslationKey } from '#i18n';
+import { RestrictionSeverity } from '#graphql/generated/schemaTypes';
 import { Badge, type BadgeVariant } from '#components/atoms/Badge';
 import { Text } from '#components/atoms/Text';
-import { rowType } from '#/theme/foundations/type';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { rowType } from '#theme/foundations/type';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 import type {
   MemberDietaryNeeds,
   NeedGroup,

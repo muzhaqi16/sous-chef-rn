@@ -1,6 +1,6 @@
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { noteTrouble } from '#/services/toastService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { noteTrouble } from '#services/toastService';
 import { isVersionConflictCode } from './versionConflict';
 
 /** What a settled failure shows: its code picks the buttons. */

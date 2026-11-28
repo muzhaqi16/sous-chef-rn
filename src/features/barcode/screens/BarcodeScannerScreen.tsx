@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   Camera,
@@ -13,7 +13,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { useBarcodeOutput } from './useBarcodeOutput';
-import { usePermission } from '#hooks/permissions/usePermission';
+import { usePermission } from '#features/barcode/screens/usePermission';
 import { ThemedBarcodeMask } from '../components/ThemedBarcodeMask';
 import { Button } from '#components/molecules/Button';
 import { IconButton } from '#components/atoms/IconButton';
@@ -21,8 +21,8 @@ import { HapticService } from '#services/haptic/HapticService';
 
 import type { BarcodeSource } from '#features/barcode/types';
 import { Text } from '#components/atoms/Text';
-import { logger } from '#/utils/environment';
-import { motion } from '#/theme/motion';
+import { logger } from '#utils/environment';
+import { motion } from '#theme/motion';
 
 export const BarcodeScannerScreen: React.FC<
   StaticScreenProps<
@@ -277,7 +277,7 @@ export const BarcodeScannerScreen: React.FC<
           name="close"
           onPress={handleGoBack}
           size="md"
-          style={styles.headerButton}
+          filled={{ size: 'xl', tone: 'scrim' }}
           accessibilityLabel={t('barcodeScanner.closeScanner')}
         />
         <Text role="heading" style={styles.headerTitle}>
@@ -287,7 +287,7 @@ export const BarcodeScannerScreen: React.FC<
           name={flashEnabled ? 'flash' : 'flash-off'}
           onPress={toggleFlash}
           size="md"
-          style={styles.headerButton}
+          filled={{ size: 'xl', tone: 'scrim' }}
           accessibilityLabel={
             flashEnabled
               ? t('barcodeScanner.flashOff')
@@ -360,14 +360,6 @@ const styles = StyleSheet.create((theme, rt) => ({
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
     zIndex: theme.zIndex.raised,
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.overlays.medium,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   headerTitle: {
     color: theme.colors.onScrim,

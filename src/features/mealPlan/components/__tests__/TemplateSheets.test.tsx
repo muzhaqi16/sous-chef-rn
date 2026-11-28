@@ -4,7 +4,7 @@ import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mea
 import {
   MembershipRole,
   TemplateCategory,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { TemplateSheets } from '../TemplateSheets';
 
 interface PreviewProps {

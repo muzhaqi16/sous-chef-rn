@@ -2,7 +2,7 @@ import { act } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { AutocompleteCategoriesDocument } from '#operations/item/item.generated';
-import { CategoryType } from '#/graphql/generated/schemaTypes';
+import { CategoryType } from '#graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
 import { useCategoryAutocomplete } from '#features/catalog/hooks/useCategoryAutocomplete';
 

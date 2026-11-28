@@ -25,9 +25,9 @@ import {
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
-import { makeCache } from '#/apollo/cache';
-import { addDaysToKey, todayKey } from '#/utils/dateUtils';
-import { MOBILE_WARM_TARGETS } from '#/app/mobileWarmTargets';
+import { makeCache } from '#apollo/cache';
+import { addDaysToKey, todayKey } from '#utils/dateUtils';
+import { MOBILE_WARM_TARGETS } from '#app/mobileWarmTargets';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
@@ -49,7 +49,7 @@ jest.mock('#store/useAppStore', () => ({
     }),
 }));
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 /** Drains the idle callback the hook schedules, plus the awaited queries. */
 async function flushWarm() {

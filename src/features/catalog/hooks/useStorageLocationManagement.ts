@@ -1,29 +1,24 @@
-import { toastService } from '#/services/toastService';
-import {
-  skipToken,
-  useApolloClient,
-  useMutation,
-  useQuery,
-} from '@apollo/client/react';
+import { toastService } from '#services/toastService';
+import { useDataState } from '#hooks/data/useDataState';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   GetStorageLocationsDocument,
-  UpdateStorageLocationDocument,
-  DeleteStorageLocationDocument,
-  MarkStorageLocationAsDefaultDocument,
   type GetStorageLocationsQuery,
 } from '#features/catalog/graphql/storageLocation.generated';
 import type {
   LocationFieldsInputs,
   RemoveLocationInputs,
 } from '#features/catalog/offline/localWrites';
-import type { UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
-import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import type { UpdateStorageLocationInput } from '#graphql/generated/schemaTypes';
+import { usePreservedNodes } from '#hooks/apollo/usePreservedConnection';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { useTranslation } from '#/i18n';
-import { errorCopy } from '#/services/errorService';
+import { useTranslation } from '#i18n';
+import {
+  deleteStorageLocationWrite,
+  markStorageLocationAsDefaultWrite,
+  updateStorageLocationWrite,
+} from '#features/catalog/offline/localWrites';
 
 /** Flat storage-location node as returned by `GetStorageLocations`. */
 type FlatStorageLocation =
@@ -112,11 +107,6 @@ export function useStorageLocationManagement(
   // previous home is dropped.
   const data = variables.homeId === homeId ? result : undefined;
 
-  // Offline, no data means "never tried", and offlineReadLink's synthetic
-  // cache-miss error is not one to show; else the ordinary empty state invites
-  // creating a location that may already exist on the server.
-  const networkBlocked = useIsApiUnavailable();
-
   // Reuse the lightweight create hook — it handles both ROOT_QUERY and
   // Pantry.storageLocationsConnection cache updates so PantryMain tabs sync instantly.
   const { createLocation, creating } = useCreateStorageLocation(
@@ -124,27 +114,34 @@ export function useStorageLocationManagement(
     pantryId,
   );
 
-  const client = useApolloClient();
-
   // Every write here replays safely: update and set-default write absolute
   // fields on an existing `id`, and a delete converges server-side (`converged:
   // true` once gone, `NotFoundError` only for a row that never existed).
 
   // Each write below settles its own failure and toasts it — no `onError`.
-  const [updateMutation, { loading: updating }] = useMutation(
-    UpdateStorageLocationDocument,
-    { context: { localFirst: true } },
-  );
+  const update = useLocalWrite(updateStorageLocationWrite, {
+    fallback: t('errors.codes.genericRetry'),
+    present: 'toast',
+    // Else the stale version stays held and every retry conflicts again.
+    onVersionConflict: () => {
+      refetch().catch(() => {
+        // The screen's own refresh asks again.
+      });
+    },
+  });
 
-  const [deleteMutation] = useMutation(DeleteStorageLocationDocument, {
-    context: { localFirst: true },
+  // A delete converges: a row already gone is the outcome asked for.
+  const remove = useLocalWrite(deleteStorageLocationWrite, {
+    fallback: t('errors.codes.genericRetry'),
+    removal: true,
+    present: 'toast',
   });
 
   // SetDefault returns the updated location; Apollo auto-normalizes by id.
-  const [setDefaultMutation] = useMutation(
-    MarkStorageLocationAsDefaultDocument,
-    { context: { localFirst: true } },
-  );
+  const markDefault = useLocalWrite(markStorageLocationAsDefaultWrite, {
+    fallback: t('errors.codes.genericRetry'),
+    present: 'toast',
+  });
 
   const updateLocation = async (
     id: string,
@@ -186,21 +183,8 @@ export function useStorageLocationManagement(
     };
     // The lock: an edit that crossed another answers VERSION_CONFLICT.
     const version = locations.find(location => location.id === id)?.version;
-    const settled = await pendingWritesOf(client.cache).send(
-      UpdateStorageLocationDocument,
+    const settled = await update.send(
       { input: { ...input, id, ...(version !== undefined && { version }) } },
-      write =>
-        settleMutation(() => updateMutation(write), {
-          document: UpdateStorageLocationDocument,
-          fallback: t('errors.codes.genericRetry'),
-          present: 'toast',
-          // Else the stale version stays held and every retry conflicts again.
-          onVersionConflict: () => {
-            refetch().catch(() => {
-              // The screen's own refresh asks again.
-            });
-          },
-        }),
       inputs,
     );
     // Covers BOTH outcomes that keep the edit: the server confirmed it, or the
@@ -210,19 +194,7 @@ export function useStorageLocationManagement(
 
   const deleteLocation = async (id: string) => {
     const inputs: RemoveLocationInputs = { pantryId };
-    // A delete converges: a row already gone is the outcome asked for.
-    const settled = await pendingWritesOf(client.cache).send(
-      DeleteStorageLocationDocument,
-      { input: { id } },
-      write =>
-        settleMutation(() => deleteMutation(write), {
-          document: DeleteStorageLocationDocument,
-          fallback: t('errors.codes.genericRetry'),
-          removal: true,
-          present: 'toast',
-        }),
-      inputs,
-    );
+    const settled = await remove.send({ input: { id } }, inputs);
     if (settled.failure) return false;
 
     toastService.success(t('success.storageLocationDeleted'));
@@ -240,17 +212,7 @@ export function useStorageLocationManagement(
       fields: { isDefault: true },
       displacedId: displaced?.id,
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      MarkStorageLocationAsDefaultDocument,
-      { input: { id } },
-      write =>
-        settleMutation(() => setDefaultMutation(write), {
-          document: MarkStorageLocationAsDefaultDocument,
-          fallback: t('errors.codes.genericRetry'),
-          present: 'toast',
-        }),
-      inputs,
-    );
+    const settled = await markDefault.send({ input: { id } }, inputs);
     return !settled.failure;
   };
 
@@ -261,19 +223,23 @@ export function useStorageLocationManagement(
   // updaters keep fresh; no mutation touches `storageLocationTree`. Keyed on
   // ids, so same-name locations under different parents stay distinct.
   const tree = buildTreeFromFlatList(locations);
+  // A failed or offline read is never "no locations": the screen would offer
+  // to add one the household may already have.
+  const state = useDataState({
+    loading,
+    error,
+    hasResult: !!data,
+    isEmpty: locations.length === 0,
+    skipped: !homeId,
+  });
 
   return {
     // Data
     locations,
     tree,
-    initialLoading: !data && loading,
-    offline: networkBlocked && !data,
+    state,
     creating,
-    updating,
-    errorMessage:
-      error && !networkBlocked
-        ? errorCopy(error, t, t('errors.codes.genericRetry'))
-        : null,
+    updating: update.sending,
 
     // Actions
     createLocation,

@@ -3,8 +3,8 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
-import { commonStyles } from '#/styles/commonStyles';
+import { useTranslation } from '#i18n';
+import { commonStyles } from '#styles/commonStyles';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { listSettingsStyles as styles } from './styles';
 
@@ -62,7 +62,7 @@ export const ListStatusSection: React.FC<ListStatusSectionProps> = ({
         >
           <Icon
             name={isCompleted ? 'refresh-outline' : 'checkmark-done-outline'}
-            size={20}
+            size="sm"
             tone="primary"
           />
           <Text role="body" tone="accent" style={styles.actionText}>
@@ -79,7 +79,7 @@ export const ListStatusSection: React.FC<ListStatusSectionProps> = ({
       >
         <Icon
           name={isArchived ? 'arrow-undo-outline' : 'archive-outline'}
-          size={20}
+          size="sm"
           tone="primary"
         />
         <Text role="body" tone="accent" style={styles.actionText}>

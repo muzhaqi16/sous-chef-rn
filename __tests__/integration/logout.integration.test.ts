@@ -21,8 +21,8 @@
 
 import { holdsSessionTokens } from '#store/slices/authSlice';
 import { ApolloClient, ApolloLink, Observable, gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { createTestStore } from '#/test-utils/createTestStore';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 

@@ -1,7 +1,7 @@
 import { gql } from '@apollo/client';
 import { snapshotFields, writeEntityFields } from '../localFirstFields';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 
 // Unique per seed shape: graphql-tag warns when one name is reused for
 // different content, which is the very thing the duplicate-name test below

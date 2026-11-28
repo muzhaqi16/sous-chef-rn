@@ -6,14 +6,14 @@ import {
 } from '#operations/item/item.generated';
 import { GetStoresDocument } from '#operations/store/store.generated';
 import { GetCommonUnitsDocument } from '#operations/item/unit.generated';
-import type { CategorySuggestion } from '#/graphql/generated/schemaTypes';
+import type { CategorySuggestion } from '#graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { selectUnitsFetchedAt } from '#store/slices/appSlice';
-import { fromServer } from '#/apollo/utils/fromServer';
+import { fromServer } from '#apollo/utils/fromServer';
 import { useAppStore, useIsPantryQueryComplete } from '#store/useAppStore';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { errorService } from '#/services/errorService';
-import { scheduleIdle } from '#/utils/scheduleIdle';
+import { errorService } from '#services/errorService';
+import { scheduleIdle } from '#utils/scheduleIdle';
 
 /**
  * Warms reference data into Zustand so autocomplete serves offline matches.

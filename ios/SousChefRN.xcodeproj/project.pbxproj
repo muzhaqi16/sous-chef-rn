@@ -16,8 +16,6 @@
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		9058099E05341522253DC8A7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
-		A1B2C3D4E5F6A7B800000001 /* WindowBackgroundModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B800000002 /* WindowBackgroundModule.swift */; };
-		A1B2C3D4E5F6A7B800000003 /* WindowBackgroundModule.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B800000004 /* WindowBackgroundModule.m */; };
 		A1B2C3D4E5F6A7B800000005 /* PushNotificationForwarder.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B800000006 /* PushNotificationForwarder.m */; };
 		A1B2C3D4E5F6A7B800000009 /* ReviewPromptModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B80000000A /* ReviewPromptModule.swift */; };
 		A1B2C3D4E5F6A7B80000000B /* ReviewPromptModule.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B80000000C /* ReviewPromptModule.m */; };
@@ -41,8 +39,6 @@
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = SousChef/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		83BC4A1D5213DA7F57D2D74C /* FoundationModels.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FoundationModels.framework; path = System/Library/Frameworks/FoundationModels.framework; sourceTree = SDKROOT; };
 		99D8A0AE01F8C51634B3548B /* ReceiptStructuringModule.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ReceiptStructuringModule.swift; path = SousChef/ReceiptStructuringModule.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F6A7B800000002 /* WindowBackgroundModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WindowBackgroundModule.swift; path = SousChef/WindowBackgroundModule.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F6A7B800000004 /* WindowBackgroundModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = WindowBackgroundModule.m; path = SousChef/WindowBackgroundModule.m; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B800000006 /* PushNotificationForwarder.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = PushNotificationForwarder.m; path = SousChef/PushNotificationForwarder.m; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B800000007 /* PushNotificationForwarder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PushNotificationForwarder.h; path = SousChef/PushNotificationForwarder.h; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B800000008 /* SousChef-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "SousChef-Bridging-Header.h"; path = "SousChef/SousChef-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -80,8 +76,6 @@
 			children = (
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
-				A1B2C3D4E5F6A7B800000002 /* WindowBackgroundModule.swift */,
-				A1B2C3D4E5F6A7B800000004 /* WindowBackgroundModule.m */,
 				A1B2C3D4E5F6A7B80000000A /* ReviewPromptModule.swift */,
 				A1B2C3D4E5F6A7B80000000C /* ReviewPromptModule.m */,
 				A1B2C3D4E5F6A7B800000014 /* ApproximateLocationModule.swift */,
@@ -306,8 +300,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
-				A1B2C3D4E5F6A7B800000001 /* WindowBackgroundModule.swift in Sources */,
-				A1B2C3D4E5F6A7B800000003 /* WindowBackgroundModule.m in Sources */,
 				A1B2C3D4E5F6A7B800000009 /* ReviewPromptModule.swift in Sources */,
 				A1B2C3D4E5F6A7B80000000B /* ReviewPromptModule.m in Sources */,
 				A1B2C3D4E5F6A7B800000013 /* ApproximateLocationModule.swift in Sources */,

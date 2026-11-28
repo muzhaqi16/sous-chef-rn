@@ -1,5 +1,9 @@
-import fs from 'fs';
-import path from 'path';
+import * as ts from 'typescript';
+import {
+  nodesOf,
+  parseSource,
+  productionSources,
+} from '#/test-utils/sourceAst';
 
 /**
  * `getI18n().t(...)` does not come back.
@@ -14,9 +18,6 @@ import path from 'path';
  * than a number to watch.
  */
 
-const ROOT = path.join(__dirname, '..', '..');
-const SRC = path.join(ROOT, 'src');
-
 /**
  * Empty on purpose. Converting a caller is a `t(...)` swap plus an import
  * change — in a `.tsx` file the import must be aliased `tGlobal`, or the hook
@@ -24,27 +25,56 @@ const SRC = path.join(ROOT, 'src');
  */
 const LEGACY_CALLERS: string[] = [];
 
-function productionFiles(dir: string, out: string[] = []): string[] {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === '__tests__' || entry.name === '__mocks__') continue;
-      productionFiles(full, out);
-    } else if (/\.tsx?$/.test(entry.name)) {
-      out.push(full);
-    }
-  }
-  return out;
+const isGetI18nCall = (node: ts.Node): boolean =>
+  ts.isCallExpression(node) &&
+  ts.isIdentifier(node.expression) &&
+  node.expression.text === 'getI18n';
+
+/** Whether the file reads `.t` off `getI18n()`, directly or through a name. */
+function readsRawTranslator(file: string, text?: string): boolean {
+  const nodes = nodesOf(parseSource(file, text));
+  const holders = new Set(
+    nodes
+      .filter(ts.isVariableDeclaration)
+      .filter(
+        declaration =>
+          ts.isIdentifier(declaration.name) &&
+          !!declaration.initializer &&
+          isGetI18nCall(declaration.initializer),
+      )
+      .map(declaration => declaration.name.getText()),
+  );
+  return nodes.some(
+    node =>
+      ts.isPropertyAccessExpression(node) &&
+      node.name.text === 't' &&
+      (isGetI18nCall(node.expression) ||
+        (ts.isIdentifier(node.expression) &&
+          holders.has(node.expression.text))),
+  );
 }
 
-const callers = productionFiles(SRC)
+const FILES = productionSources();
+
+const callers = FILES
   // `src/i18n` is where the accessor legitimately lives.
-  .filter(file => !file.startsWith(path.join(SRC, 'i18n')))
-  .filter(file => /getI18n\(\)\.t\(/.test(fs.readFileSync(file, 'utf8')))
-  .map(file => path.relative(ROOT, file))
+  .filter(file => !file.startsWith('src/i18n/'))
+  .filter(file => readsRawTranslator(file))
   .sort();
 
 describe('the deprecated translation accessor', () => {
+  it('catches the accessor read through a name or optional chain', () => {
+    expect(
+      readsRawTranslator(
+        'planted.ts',
+        `const i18n = getI18n();\nexport const label = i18n.t('labels.save');`,
+      ),
+    ).toBe(true);
+    expect(
+      readsRawTranslator('planted.ts', `getI18n()?.t('labels.save');`),
+    ).toBe(true);
+  });
+
   it('has no callers', () => {
     const added = callers.filter(file => !LEGACY_CALLERS.includes(file));
 
@@ -60,6 +90,6 @@ describe('the deprecated translation accessor', () => {
   // A scan that finds nothing looks the same whether the tree is clean or the
   // walk broke, so assert it is still reading the tree it thinks it is.
   it('is still scanning the source tree', () => {
-    expect(productionFiles(SRC).length).toBeGreaterThan(500);
+    expect(FILES.length).toBeGreaterThan(500);
   });
 });

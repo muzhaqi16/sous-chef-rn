@@ -2,17 +2,18 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   useWindowDimensions,
   View,
+  type ViewInstance,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { TabView, type Route } from 'react-native-tab-view';
 import { FilterTabBar } from './FilterTabBar';
 import { useShoppingListItemPermissions } from '#features/shoppingList/context/ShoppingListPermissionsContext';
-import type { FilterTabActionButton } from '#components/organisms/FilterTabs/types';
+import type { TabBarAction } from './FilterTabBar';
 import { ShoppingTab } from './ShoppingTab';
 import { PurchasedTab } from './PurchasedTab';
 import {
@@ -145,7 +146,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 }) => {
   const { t } = useTranslation();
   const permissions = useShoppingListItemPermissions();
-  const tabBarRef = useRef<View>(null);
+  const tabBarRef = useRef<ViewInstance>(null);
   const layout = useWindowDimensions();
   const tour = useFirstShopTourContext();
   const tabForGuide = tour?.tabForGuide ?? null;
@@ -273,7 +274,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     if (routeIndex >= 0) handleIndexChange(routeIndex);
   };
 
-  const actionButtons: FilterTabActionButton[] = [];
+  const actionButtons: TabBarAction[] = [];
 
   if (index === 1 && purchasedItems.length > 0 && onBatchMoveToPantry) {
     actionButtons.push({

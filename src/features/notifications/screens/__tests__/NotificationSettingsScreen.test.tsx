@@ -1,12 +1,12 @@
 import React from 'react';
 import { Linking } from 'react-native';
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { useStore } from '#store';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
-import { PermissionService } from '#/services/permissions/PermissionService';
-import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
+import { PermissionService } from '#services/permissions/PermissionService';
+import { registerDeviceInBackground } from '#services/device/deviceRegistration';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import {
@@ -19,7 +19,7 @@ import {
   ErrorCode,
   ErrorDisposition,
   ExpirationFrequency,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   GetNotificationPreferencesDocument,
   UpdateNotificationPreferencesDocument,
@@ -29,7 +29,7 @@ import { NotificationSettingsScreen } from '../NotificationSettingsScreen';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 // Registration carries the device's push token, read from the OS.
-jest.mock('#/services/device/deviceRegistration');
+jest.mock('#services/device/deviceRegistration');
 
 const ME = 'user-1';
 
@@ -214,7 +214,7 @@ describe('push', () => {
 
   it('offers the system settings while push is on but the OS blocks it', async () => {
     jest.mocked(PermissionService.check).mockResolvedValue('denied');
-    jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     await openSettings({ preferences: { pushEnabled: true } });
     await focus();
 

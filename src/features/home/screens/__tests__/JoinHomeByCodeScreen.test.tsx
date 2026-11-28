@@ -2,22 +2,23 @@
 
 import { memoryIntents } from '#/test-utils/memoryPlatform';
 import React from 'react';
-import { userEvent } from '@testing-library/react-native';
+import { fireEvent, userEvent } from '@testing-library/react-native';
 import {
   MembershipRole,
   MembershipStatus,
   ShareLinkTargetType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderWithApollo,
   seedCache,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { kitTestIDs } from '#components/testIDs';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { drainTimers } from '#/test-utils/drainTimers';
+import { operationLog } from '#/test-utils/operationLog';
 import {
   GetHomesDocument,
   JoinHomeByCodeDocument,
@@ -288,7 +289,7 @@ describe('JoinHomeByCodeScreen', () => {
   });
 
   it('joins the home and navigates to the pantry on confirm', async () => {
-    const { toastService } = require('#/services/toastService');
+    const { toastService } = require('#services/toastService');
     const user = userEvent.setup();
     const tree = renderWithApollo(
       <JoinHomeByCodeScreen route={makeRoute('ABC123')} />,
@@ -384,5 +385,65 @@ describe('JoinHomeByCodeScreen', () => {
     await drainTimers();
     expect(mockToPantryMain).toHaveBeenCalled();
     expect(mockSetSelectedHomeId).not.toHaveBeenCalled();
+  });
+});
+
+describe('typing a code', () => {
+  beforeEach(() => {
+    jest.useRealTimers();
+    jest.clearAllMocks();
+    mockUseIsLoggedOut.mockReturnValue(false);
+  });
+
+  it('asks for a code on the field when Find is pressed without one', async () => {
+    const { toastService } = require('#services/toastService');
+    const tree = renderWithApollo(
+      <JoinHomeByCodeScreen route={makeRoute()} />,
+      { operationMocks: [] },
+    );
+
+    await userEvent.setup().press(tree.getByText(t('joinHome.findHome')));
+
+    expect(tree.getByText(t('labels.pleaseEnterAJoinCode'))).toBeTruthy();
+    expect(toastService.error).not.toHaveBeenCalled();
+    expect(tree.getByText(t('joinHome.enterCodeTitle'))).toBeTruthy();
+  });
+
+  it('previews the code typed, trimmed', async () => {
+    const log = operationLog();
+    const tree = renderWithApollo(
+      <JoinHomeByCodeScreen route={makeRoute()} />,
+      {
+        operationMocks: [buildPreviewMock('XYZ789', { name: 'Beach House' })],
+        links: [log.link],
+      },
+    );
+
+    fireEvent.changeText(
+      tree.getByPlaceholderText(t('labels.enterJoinCode')),
+      '  XYZ789 ',
+    );
+    await userEvent.setup().press(tree.getByText(t('joinHome.findHome')));
+    await log.landed(ResolveShareLinkDocument);
+
+    expect(tree.getByText('Beach House')).toBeTruthy();
+  });
+
+  it('opens entry on the code last tried, to correct it', async () => {
+    const log = operationLog();
+    const tree = renderWithApollo(
+      <JoinHomeByCodeScreen route={makeRoute('BADCODE')} />,
+      {
+        operationMocks: [buildPreviewMock('BADCODE', null)],
+        links: [log.link],
+      },
+    );
+    await log.landed(ResolveShareLinkDocument);
+
+    await userEvent
+      .setup()
+      .press(tree.getByText(t('joinHome.tryDifferentCode')));
+
+    expect(tree.getByDisplayValue('BADCODE')).toBeTruthy();
   });
 });

@@ -1,7 +1,7 @@
 import { useApolloClient } from '@apollo/client/react';
 import { GetExpirationNotificationsForPantryItemDocument } from '#features/notifications/graphql/expirationNotificationLookup.generated';
 import type { DisplayNotification } from '#features/notifications/utils/toDisplayNotification';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 
 /** The cache reads and writes a notification's action buttons need. */

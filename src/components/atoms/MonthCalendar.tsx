@@ -6,7 +6,7 @@ import {
 } from 'react-native-calendars';
 import { withUnistyles } from 'react-native-unistyles';
 import { useThemeEpoch } from '#hooks/ui/useThemeEpoch';
-import { fromDateKey, toDateKey } from '#/utils/dateUtils';
+import { fromDateKey, toDateKey } from '#utils/dateUtils';
 
 const ThemedCalendar = withUnistyles(Calendar, theme => ({
   theme: {

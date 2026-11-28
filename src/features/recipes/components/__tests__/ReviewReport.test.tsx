@@ -6,7 +6,7 @@ import {
   CreateOutcome,
   ModerationContentType,
   ReportType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import type { RecipeReviewFragment } from '#features/recipes/graphql/recipeFragments.generated';
 import { CreateUserReportDocument } from '#features/profile/hooks/useReportContent.generated';

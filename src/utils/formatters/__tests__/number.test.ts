@@ -1,5 +1,5 @@
-import { t } from '#/i18n';
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { UnitSystem } from '#graphql/generated/schemaTypes';
 import {
   currencySymbol,
   formatApproximateCurrency,
@@ -10,8 +10,8 @@ import {
   formatNumberForInput,
   resetNumberFormatterCache,
 } from '../number';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { resetDeviceLocaleCache } from '#/utils/deviceLocale';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+import { resetDeviceLocaleCache } from '#utils/deviceLocale';
 
 const realNumberFormat = Intl.NumberFormat;
 
@@ -128,7 +128,7 @@ describe('formatApproximateCurrency', () => {
   it('rounds to whole units, in the locale’s placement', () => {
     onLocale('en-US');
     expect(formatApproximateCurrency(7.6, 'USD')).toBe(
-      formatCurrency(8, 'USD').replace('.00', ''),
+      formatCurrency(8, 'USD', undefined).replace('.00', ''),
     );
 
     onLocale('es-ES');
@@ -140,59 +140,63 @@ describe('formatApproximateCurrency', () => {
 describe('formatCurrency', () => {
   it('places the symbol where the locale places it', () => {
     onLocale('en-US');
-    const enUS = formatCurrency(1234.5, 'USD');
+    const enUS = formatCurrency(1234.5, 'USD', undefined);
     expect(enUS).toContain('1,234.50');
     expect(enUS.indexOf('$')).toBeLessThan(enUS.indexOf('1'));
 
     onLocale('es-ES');
     // Spanish groups only from five digits up, so 1234,50 carries no grouping
     // separator — one more thing a hand-rolled `$${n.toFixed(2)}` got wrong.
-    const esES = formatCurrency(1234.5, 'EUR');
+    const esES = formatCurrency(1234.5, 'EUR', undefined);
     expect(esES).toContain('1234,50');
     expect(esES.indexOf('€')).toBeGreaterThan(esES.indexOf('1'));
 
-    expect(formatCurrency(12345.5, 'EUR')).toContain('12.345,50');
+    expect(formatCurrency(12345.5, 'EUR', undefined)).toContain('12.345,50');
   });
 
   it('falls back to the bare code for a currency Intl rejects', () => {
     onLocale('en-US');
-    expect(formatCurrency(4.5, 'NOTACURRENCY')).toBe('NOTACURRENCY 4.50');
+    expect(formatCurrency(4.5, 'NOTACURRENCY', undefined)).toBe(
+      'NOTACURRENCY 4.50',
+    );
   });
 
   it('formats a plain amount when no currency is known', () => {
     onLocale('en-US');
-    expect(formatCurrency(4.5, null)).toBe('4.50');
+    expect(formatCurrency(4.5, null, undefined)).toBe('4.50');
   });
 
   it('reads a missing amount as unknown, never as an amount of zero', () => {
     onLocale('en-US');
     // The API withholds a figure it cannot state — no cost recorded, or costs
     // in two currencies. Rendering that as $0.00 asserts something it did not.
-    expect(formatCurrency(null, 'USD')).toBe(UNKNOWN_AMOUNT);
-    expect(formatCurrency(undefined, 'USD')).toBe(UNKNOWN_AMOUNT);
-    expect(formatCurrency(NaN, 'USD')).toBe(UNKNOWN_AMOUNT);
-    expect(formatCurrency(null, 'USD')).not.toContain('0.00');
+    expect(formatCurrency(null, 'USD', undefined)).toBe(UNKNOWN_AMOUNT);
+    expect(formatCurrency(undefined, 'USD', undefined)).toBe(UNKNOWN_AMOUNT);
+    expect(formatCurrency(NaN, 'USD', undefined)).toBe(UNKNOWN_AMOUNT);
+    expect(formatCurrency(null, 'USD', undefined)).not.toContain('0.00');
   });
 
   it('shows a recorded zero as an amount', () => {
     onLocale('en-US');
-    expect(formatCurrency(0, 'USD')).toContain('0.00');
+    expect(formatCurrency(0, 'USD', undefined)).toContain('0.00');
   });
 
-  it("uses the currency's own minor unit, not a fixed two places", () => {
+  it("without a stated precision, uses Intl's for the code, not a fixed two places", () => {
     onLocale('en-US');
     // JPY has no minor unit. Forcing two places invents a precision the
     // currency's smallest coin does not have.
-    const jpy = formatCurrency(1234, 'JPY');
+    const jpy = formatCurrency(1234, 'JPY', undefined);
     expect(jpy).toContain('1,234');
     expect(jpy).not.toContain('1,234.00');
     // A three-decimal currency keeps all three.
-    expect(formatCurrency(1.234, 'BHD')).toContain('1.234');
+    expect(formatCurrency(1.234, 'BHD', undefined)).toContain('1.234');
   });
 
-  it('takes an explicit minor unit only where Intl cannot supply one', () => {
+  it('shows the precision the server states for the currency', () => {
     onLocale('en-US');
-    // No currency: nothing tells the formatter how many places to use.
+    // Intl's places for IDR differ by platform; the server's precision wins.
+    expect(formatCurrency(15000, 'IDR', 0)).not.toMatch(/15,000\.\d/);
+    expect(formatCurrency(15000, 'IDR', 2)).toContain('15,000.00');
     expect(formatCurrency(1234, null, 0)).toBe('1,234');
     expect(formatCurrency(4.5, 'NOTACURRENCY', 3)).toBe('NOTACURRENCY 4.500');
   });

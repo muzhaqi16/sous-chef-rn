@@ -10,8 +10,8 @@
  * Verified: #apollo-masked-results-keep-identity-when-only-masked-fields-change
  */
 import { ApolloClient, ApolloLink, gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const ROW = gql`

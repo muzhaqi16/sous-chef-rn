@@ -1,35 +1,37 @@
 import React from 'react';
-import { useMoney } from '#/domain/money';
-import { useTranslation } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import { IconButton } from '#components/atoms/IconButton';
+import { useMoney } from '#domain/money';
+import { useTranslation } from '#i18n';
+import type { Translate } from '#i18n/types';
 import { daysUntilExpiry, expiryLabel, isExpiryEstimate } from '#domain/expiry';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
-import { BatchStatus, UnitType } from '#/graphql/generated/schemaTypes';
+import { BatchStatus, UnitType } from '#graphql/generated/schemaTypes';
 import {
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
-} from '#features/pantry/graphql/pantryFragments.generated';
+} from '#entities/pantryItem/batches.generated';
 import {
   formatQuantityForDisplay,
   formatQuantityWithUnit,
-} from '#/utils/formatQuantity';
-import { shownStock } from '#domain/stockDisplay';
+} from '#utils/formatQuantity';
+import { shownStock } from '#entities/pantryItem/stockDisplay';
 import { currentReading, formatReading } from '#domain/measure';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { BatchListItem_PantryItemFragmentDoc } from './BatchListItem.generated';
 import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
-import { formatMonthDay } from '#/utils/formatters/date';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { formatMonthDay } from '#utils/formatters/date';
 import { useToday } from '#hooks/app/useToday';
+import { pantryTestIDs } from '../testIDs';
 
 interface BatchListItemProps {
   batch: PantryItemBatchFragment;
+  /** A use taken from this batch alone, not the stack's usual order. */
+  onUse?: (batchId: string) => void;
   onOpen?: (batchId: string) => void;
   onWaste?: (batchId: string) => void;
   /** Offered where a package can hold something: a weighed or counted stack. */
@@ -63,6 +65,7 @@ const formatDate = (dateString: string | null | undefined) => {
 
 const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   batch: batchSource,
+  onUse,
   onOpen,
   onWaste,
   onCorrectSize,
@@ -154,7 +157,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               {expiryInfo.text}
             </Text>
             {!!batch.expiresAtIsManual && (
-              <Icon name="lock-closed-outline" size={12} tone="textTertiary" />
+              <Icon name="lock-closed-outline" size="2xs" tone="textTertiary" />
             )}
             {isExpiryEstimate(batch.expiryKind) ? (
               <Text role="caption" tone="tertiary">
@@ -204,35 +207,46 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
       </View>
       {!!isActive && (
         <View style={styles.actions}>
+          {onUse ? (
+            <IconButton
+              name="restaurant-outline"
+              size="xsPlus"
+              tone="primary"
+              onPress={() => onUse(batch.id)}
+              accessibilityLabel={t('a11y.useFromBatch')}
+              testID={pantryTestIDs.batchUse(batch.id)}
+              style={styles.actionButton}
+            />
+          ) : null}
           {!batch.isOpened && !!onOpen && (
-            <AppPressable
+            <IconButton
+              name="open-outline"
+              size="xsPlus"
+              tone="primary"
               onPress={() => onOpen(batch.id)}
               accessibilityLabel={t('a11y.openBatch')}
               style={styles.actionButton}
-              hitSlop={hitSlop.md}
-            >
-              <Icon name="open-outline" size={18} tone="primary" />
-            </AppPressable>
+            />
           )}
           {onCorrectSize && holdsContents ? (
-            <AppPressable
+            <IconButton
+              name="scale-outline"
+              size="xsPlus"
+              tone="primary"
               onPress={() => onCorrectSize(batch.id)}
               accessibilityLabel={t('correctWeight.title')}
               style={styles.actionButton}
-              hitSlop={hitSlop.md}
-            >
-              <Icon name="scale-outline" size={18} tone="primary" />
-            </AppPressable>
+            />
           ) : null}
           {!!onWaste && (
-            <AppPressable
+            <IconButton
+              name="trash-outline"
+              size="xsPlus"
+              tone="error"
               onPress={() => onWaste(batch.id)}
               accessibilityLabel={t('a11y.wasteBatch')}
               style={styles.actionButton}
-              hitSlop={hitSlop.md}
-            >
-              <Icon name="trash-outline" size={18} tone="error" />
-            </AppPressable>
+            />
           )}
         </View>
       )}

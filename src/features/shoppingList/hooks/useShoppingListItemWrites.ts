@@ -3,34 +3,30 @@ import {
   skipToken,
   useApolloClient,
   useFragment,
-  useMutation,
   useQuery,
 } from '@apollo/client/react';
-import {
-  AddItemToShoppingListDocument,
-  UpdateShoppingListItemDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
 import { ShoppingListItemForEditDocument } from './useShoppingListItemWrites.generated';
 import type {
   ShoppingListItem,
   UpdateShoppingListItemInput,
-} from '#/graphql/generated/schemaTypes';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { localBrand, localUnit } from '#features/catalog/cache/localRefs';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { parseStoredQuantityText } from '#/utils/formatQuantity';
+} from '#graphql/generated/schemaTypes';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { localBrand } from '#entities/brand/localBrand';
+import { localUnit } from '#entities/unit/localUnit';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { parseStoredQuantityText } from '#utils/formatQuantity';
 import { UseShoppingListItemForm_ItemFragmentDoc } from '#features/shoppingList/hooks/useShoppingListItemForm.generated';
-import {
-  createShoppingListRow,
-  type ShoppingRowFields,
-  type ShoppingRowLine,
-} from '#features/shoppingList/cache/createShoppingListRow';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import type {
+  ShoppingRowFields,
+  ShoppingRowLine,
+} from '#entities/shoppingList/createShoppingListRow';
+import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
 import { useDataState } from '#hooks/data/useDataState';
-import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
-import { useTranslation } from '#/i18n';
+import type { UpdateRowInputs } from '#entities/shoppingList/localWrites';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
+import { useTranslation } from '#i18n';
+import { updateShoppingListItemWrite } from '#features/shoppingList/offline/localWrites';
 
 type LocalItemFields = Partial<
   Pick<
@@ -174,19 +170,19 @@ export function useShoppingListItemWrites(
     isEmpty: false,
   });
 
-  const [addItemMutation] = useMutation(AddItemToShoppingListDocument);
+  const { addRow } = useAddShoppingRows();
 
-  const [updateItemMutation] = useMutation(UpdateShoppingListItemDocument, {
-    context: { localFirst: true },
+  const update = useLocalWrite(updateShoppingListItemWrite, {
+    fallback: t('shoppingListScreens.serverNotUpdated', {
+      action: t('shoppingListScreens.updated'),
+    }),
   });
 
   const createItem = async (row: ShoppingRowFields, line: ShoppingRowLine) => {
-    const created = await createShoppingListRow(client.cache, {
+    const created = await addRow({
       listId,
       row,
       line,
-      send: addItemMutation,
-      document: AddItemToShoppingListDocument,
       fallback: t('shoppingListScreens.serverNotUpdated', {
         action: t('shoppingListScreens.added'),
       }),
@@ -212,19 +208,9 @@ export function useShoppingListItemWrites(
     };
     // A refusal naming a field gets that field's copy: this mutation carries
     // brand, net weight, unit and storage in one call.
-    const settled = await pendingWritesOf(client.cache).send(
-      UpdateShoppingListItemDocument,
-      { input },
-      write =>
-        settleMutation(() => updateItemMutation(write), {
-          document: UpdateShoppingListItemDocument,
-          fallback: t('shoppingListScreens.serverNotUpdated', {
-            action: t('shoppingListScreens.updated'),
-          }),
-          onConflictRefresh,
-        }),
-      inputs,
-    );
+    const settled = await update.send({ input }, inputs, {
+      settle: { onConflictRefresh },
+    });
     return settled.status !== 'failed';
   };
 

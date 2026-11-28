@@ -55,7 +55,6 @@ query HomeFeedChanges($input: SyncChangesInput!) {
         version
         name
         type
-        icon
         color
         temperature
         description
@@ -134,7 +133,6 @@ query HomeFeedSnapshot($input: SyncSnapshotInput!) {
         version
         name
         type
-        icon
         color
         temperature
         description

@@ -1,6 +1,5 @@
 {
   "storageLocations": {
-    "loading": "Cargando ubicaciones...",
     "listView": "Vista de lista",
     "treeView": "Vista de árbol",
     "noLocations": "Sin ubicaciones",
@@ -12,9 +11,7 @@
     "subLocationSingular": "{{count}} sububicación",
     "subLocationPlural": "{{count}} sububicaciones",
     "gotIt": "Entendido",
-    "deleteTitle": "Eliminar ubicación",
-    "offlineTitle": "Aún no se ha cargado",
-    "offlineDescription": "Tus ubicaciones de almacenamiento no se han cargado en este dispositivo. Vuelve a conectarte para verlas."
+    "deleteTitle": "Eliminar ubicación"
   },
   "storageLocationForm": {
     "name": "Nombre",
@@ -322,6 +319,7 @@
     "deleteFolder": "Eliminar carpeta",
     "deleteHint": "Las recetas se moverán a Sin carpeta",
     "renamePlaceholder": "Introduce el nuevo nombre de la carpeta...",
+    "nameRequired": "Introduce un nombre para la carpeta.",
     "noMatches": "Ninguna carpeta coincide con \"{{query}}\"",
     "deleteConfirmBody": "Las recetas de esta carpeta se moverán a \"{{folder}}\"."
   },

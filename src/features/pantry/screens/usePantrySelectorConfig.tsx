@@ -1,6 +1,6 @@
 import type { RefObject } from 'react';
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
@@ -54,7 +54,7 @@ export function usePantrySelectorConfig(
         <Text role="bodyStrong" style={styles.itemName}>
           {item.name}
         </Text>
-        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
+        {!!isSelected && <Icon name="checkmark" size="sm" tone="primary" />}
       </SelectorItemContainer>
     );
   };

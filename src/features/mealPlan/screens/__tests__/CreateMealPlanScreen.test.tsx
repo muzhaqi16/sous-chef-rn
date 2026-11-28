@@ -2,7 +2,7 @@ import React from 'react';
 import { act, screen, userEvent } from '@testing-library/react-native';
 import { Calendar } from 'react-native-calendars';
 import { addDays, addMonths } from 'date-fns';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   inputOf,
   recordMock,
@@ -13,14 +13,14 @@ import {
 import { operationLog } from '#/test-utils/operationLog';
 import { homesWithRole } from '#/test-utils/fixtures/homeFixtures';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { toDateKey } from '#/utils/dateUtils';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { toDateKey } from '#utils/dateUtils';
 import {
   ErrorCode,
   ErrorDisposition,
   MembershipRole,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetDietaryProfileDocument } from '#operations/user/user.generated';
 import { CreateMealPlanDocument } from '#features/mealPlan/graphql/mealPlan.generated';

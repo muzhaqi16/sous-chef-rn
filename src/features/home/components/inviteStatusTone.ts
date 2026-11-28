@@ -1,4 +1,4 @@
-import { InviteStatus } from '#/graphql/generated/schemaTypes';
+import { InviteStatus } from '#graphql/generated/schemaTypes';
 import type { TextTone } from '#components/atoms/Text';
 
 export const INVITE_STATUS_TONE: Record<InviteStatus, TextTone> = {

@@ -1,12 +1,12 @@
 import React, { useState, useRef } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
-import { useTabBarSetters } from '#/context/TabBarActionsContext';
+import { useTabBarSetters } from '#context/TabBarActionsContext';
 import { CaptureRows } from '#features/recipes/components/capture/CaptureRows';
 import { RecipeCaptureHost } from '#features/recipes/components/capture/RecipeCaptureHost';
 import { useRecipeCaptureMenu } from '#features/recipes/components/capture/useRecipeCaptureMenu';
@@ -17,7 +17,6 @@ import {
   SearchBar,
   type SearchBarAction,
 } from '#components/molecules/SearchBar';
-import { Icon } from '#components/atoms/Icon';
 import { ModeTabs } from '#components/molecules/ModeTabs';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
@@ -34,7 +33,7 @@ import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { GUIDE_TOURS } from '#domain/guides';
 import { hasTipFact } from '#hooks/settings/useFeatureHint';
 import { useUserId } from '#store/useAppStore';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { IngredientSelectorSheet } from '#features/recipes/components/recipeSearch/IngredientSelectorSheet';
 import { useRecipeScreen } from '#features/recipes/screens/useRecipeScreen';
 import { RecipeFilterSheet } from '#features/recipes/components/RecipeFilterSheet';
@@ -48,7 +47,6 @@ import {
   RecipeSearchInput,
   type RecipeSearchInputRef,
 } from '#features/recipes/components/RecipeSearchInput';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 type RecipeSearchMode = 'name' | 'ingredients';
 const SEARCH_MODES: readonly RecipeSearchMode[] = ['name', 'ingredients'];
@@ -323,19 +321,16 @@ const RecipeMainInner: React.FC = () => {
               : t('recipes.recipeIdeasToTry')}
           </Text>
         </View>
-        <AppPressable
-          style={styles.refreshButton}
+        <IconButton
+          name="refresh"
+          size="sm"
+          tone={busy ? 'textSecondary' : 'primary'}
           onPress={screen.discovery.refresh}
-          disabled={busy}
-          accessibilityRole="button"
           accessibilityLabel={t('recipes.refreshSuggestions')}
-        >
-          <Icon
-            name="refresh"
-            size={20}
-            tone={busy ? 'textSecondary' : 'primary'}
-          />
-        </AppPressable>
+          accessibilityRole="button"
+          disabled={busy}
+          filled={{ size: 'md', tone: 'background' }}
+        />
       </View>
     );
   })();
@@ -352,17 +347,17 @@ const RecipeMainInner: React.FC = () => {
             { count: screen.searchResults.length },
           )}
         </Text>
-        <Pressable
+        <IconButton
+          name="close"
+          size="sm"
+          tone="textSecondary"
           onPress={() => {
             screen.clearSearch();
             searchInputRef.current?.clear();
           }}
-          hitSlop={hitSlop.md}
-          accessibilityRole="button"
           accessibilityLabel={t('recipes.clearSearch')}
-        >
-          <Icon name="close" size={20} tone="textSecondary" />
-        </Pressable>
+          accessibilityRole="button"
+        />
       </View>
     );
   })();
@@ -638,11 +633,6 @@ const styles = StyleSheet.create(theme => ({
   suggestedTextContainer: { flex: 1 },
   suggestedSubtitle: {
     marginTop: theme.spacing['2xs'],
-  },
-  refreshButton: {
-    padding: theme.spacing.sm,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.background,
   },
   searchResultsHeader: {
     flexDirection: 'row',

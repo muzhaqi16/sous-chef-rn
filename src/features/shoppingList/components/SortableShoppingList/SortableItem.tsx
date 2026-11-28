@@ -1,14 +1,11 @@
 import React, { useEffect } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { RowCard } from '#components/atoms/RowCard';
 import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
-// RNGH's Pressable (not AppPressable/RN) for the archive button: it's nested in
-// the row's RNGH Swipeable, so RNGH's native button captures the tap and it
-// doesn't also fire the row's onPress (which would navigate to details).
-import { Pressable } from 'react-native-gesture-handler';
 import { useFragment } from '@apollo/client/react';
-import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport';
+import { useIncompleteCellReport } from '#hooks/apollo/useIncompleteCellReport';
 import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
@@ -16,8 +13,8 @@ import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem
 import { ListItem } from '#components/molecules/ListItem';
 import { AnimatedCheckbox } from '#features/shoppingList/components/AnimatedCheckbox';
 import { QuantityBadge } from '#features/shoppingList/components/QuantityBadge';
-import { formatQuantityWithUnit, unitLabel } from '#/utils/formatQuantity';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { formatQuantityWithUnit, unitLabel } from '#utils/formatQuantity';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
@@ -27,7 +24,7 @@ import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
 import { useFirstShopRowTargets } from '#features/shoppingList/context/FirstShopTourContext';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { shownLineReading } from '#features/shoppingList/utils/lineReading';
 import { readingNotation } from '#domain/measure';
 import { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
@@ -39,11 +36,9 @@ import {
   useSortableListTheme,
 } from './SortableListThemeContext';
 import type { ShoppingListRowItem } from './types';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { suggestedLineCost } from '#features/shoppingList/utils/purchasePrice';
-import { hitSlop } from '#/theme/foundations/sizes';
-import { layout } from '#/theme/foundations/spacing';
+import { suggestedLineCost } from '#entities/shoppingList/purchasePrice';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 /**
@@ -205,7 +200,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       : undefined,
   );
 
-  const rightElement = (() => {
+  const trailingActions = (() => {
     const stockedIndicator = isPurchased && isStocked && (
       <View
         style={styles.moveToPantryButton}
@@ -214,7 +209,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       >
         {/* Colour comes from the list's single theme read, like every other
             icon in this row — `tone=` would make each cell subscribe. */}
-        <Icon name="archive" size={24} color={themeColors?.textSecondary} />
+        <Icon name="archive" size="md" color={themeColors?.textSecondary} />
       </View>
     );
 
@@ -224,15 +219,15 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         collapsable={false}
         onLayout={isTutorialArchiveTarget ? measureArchiveIcon : undefined}
       >
-        <Pressable
+        <IconButton
+          name="archive-outline"
+          size="md"
+          color={themeColors?.primary}
           onPress={() => onMoveToPantry(itemId)}
-          style={styles.moveToPantryButton}
-          hitSlop={MOVE_TO_PANTRY_SLOP}
           accessibilityLabel={t('moveToPantry.title')}
           testID={shoppingListTestIDs.itemMoveToPantry(itemId)}
-        >
-          <Icon name="archive-outline" size={24} color={themeColors?.primary} />
-        </Pressable>
+          style={styles.moveToPantryButton}
+        />
       </View>
     );
 
@@ -368,32 +363,25 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             if (isTutorialItemCardTarget) measureItemCard();
           }}
         >
-          <ListItem
-            title={itemName}
-            subtitle={subtitle}
-            rightElement={rightElement}
-            leftElement={leftElement}
-            checkboxElement={checkboxElement}
-            dragHandleElement={null}
-            isPurchased={isPurchased}
-            themeColors={themeColors}
-          />
+          {press => (
+            <ListItem
+              swipe={press}
+              title={itemName}
+              subtitle={subtitle}
+              trailingActions={trailingActions}
+              leftElement={leftElement}
+              checkboxElement={checkboxElement}
+              isPurchased={isPurchased}
+              themeColors={themeColors}
+            />
+          )}
         </SwipeableItem>
       </RowCard>
     </Animated.View>
   );
 };
 
-/** Half the 4 dp gap to the quantity chip on the left; the row's inset on the right. */
-const MOVE_TO_PANTRY_SLOP = {
-  top: hitSlop.md,
-  bottom: hitSlop.md,
-  left: 2,
-  right: layout.rowInsetHorizontal,
-};
-
 const styles = StyleSheet.create(theme => ({
-  // 40 wide: with its slop it reaches the touch floor inside the row.
   moveToPantryButton: {
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,

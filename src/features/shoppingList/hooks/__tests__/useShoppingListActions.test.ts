@@ -10,7 +10,7 @@ import type { ShoppingListItemNode } from '../usePaginatedShoppingItems';
 
 const mockClearItems = jest.fn();
 
-jest.mock('#/utils/finallyHelpers', () => ({
+jest.mock('#utils/finallyHelpers', () => ({
   executeWithLoadingState: jest.fn(
     async (fn: () => Promise<void>, setLoading: (value: boolean) => void) => {
       setLoading(true);
@@ -98,7 +98,7 @@ describe('useShoppingListActions', () => {
     });
 
     it('tracks telemetry event', async () => {
-      const { Telemetry } = require('#/services/telemetry');
+      const { Telemetry } = require('#services/telemetry');
 
       const { result } = renderHookWithApollo(() =>
         useShoppingListActions(defaultProps),
@@ -129,7 +129,7 @@ describe('useShoppingListActions', () => {
     });
 
     it('tracks telemetry event', async () => {
-      const { Telemetry } = require('#/services/telemetry');
+      const { Telemetry } = require('#services/telemetry');
 
       const { result } = renderHookWithApollo(() =>
         useShoppingListActions(defaultProps),
@@ -145,7 +145,7 @@ describe('useShoppingListActions', () => {
     });
 
     it('records success only when the removal took effect', async () => {
-      const { Telemetry } = require('#/services/telemetry');
+      const { Telemetry } = require('#services/telemetry');
 
       const refused = renderHookWithApollo(() =>
         useShoppingListActions({
@@ -326,8 +326,8 @@ describe('useShoppingListActions', () => {
 
   describe('handleTogglePurchase - error path', () => {
     it('handles toggle error with haptic feedback and toast', async () => {
-      const { toastService } = require('#/services/toastService');
-      const { Telemetry } = require('#/services/telemetry');
+      const { toastService } = require('#services/toastService');
+      const { Telemetry } = require('#services/telemetry');
       const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
@@ -350,8 +350,8 @@ describe('useShoppingListActions', () => {
 
   describe('handleDeleteItem - error path', () => {
     it('handles delete error with haptic feedback and toast', async () => {
-      const { toastService } = require('#/services/toastService');
-      const { Telemetry } = require('#/services/telemetry');
+      const { toastService } = require('#services/toastService');
+      const { Telemetry } = require('#services/telemetry');
       const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
@@ -371,7 +371,7 @@ describe('useShoppingListActions', () => {
     });
 
     it('tracks error as string when error is not Error instance', async () => {
-      const { Telemetry } = require('#/services/telemetry');
+      const { Telemetry } = require('#services/telemetry');
       const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
@@ -392,7 +392,7 @@ describe('useShoppingListActions', () => {
 
   describe('handleTogglePurchase - error as string', () => {
     it('tracks error as string when error is not Error instance', async () => {
-      const { Telemetry } = require('#/services/telemetry');
+      const { Telemetry } = require('#services/telemetry');
       const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
@@ -413,7 +413,7 @@ describe('useShoppingListActions', () => {
 
   describe('handleClearAllPurchased - error path', () => {
     it('handles clearItems error for purchased items', async () => {
-      const { toastService } = require('#/services/toastService');
+      const { toastService } = require('#services/toastService');
       mockClearItems.mockRejectedValueOnce(new Error('Clear failed'));
 
       const { result } = renderHookWithApollo(() =>
@@ -433,7 +433,7 @@ describe('useShoppingListActions', () => {
 
   describe('handleClearAllShopping - error path', () => {
     it('handles clearItems error for unpurchased items', async () => {
-      const { toastService } = require('#/services/toastService');
+      const { toastService } = require('#services/toastService');
       mockClearItems.mockRejectedValueOnce(new Error('Clear failed'));
 
       const { result } = renderHookWithApollo(() =>

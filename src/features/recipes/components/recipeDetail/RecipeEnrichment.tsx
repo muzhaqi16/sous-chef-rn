@@ -1,11 +1,11 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { RecipeStatus } from '#/graphql/generated/schemaTypes';
+import { RecipeStatus } from '#graphql/generated/schemaTypes';
 import type { RecipeNutritionFacts } from '#domain/nutrition';
 
 type MacroField = Exclude<keyof RecipeNutritionFacts, 'calories'>;
@@ -142,7 +142,11 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
         <View style={styles.metaColumn}>
           {!!forkedFromName && (
             <View style={styles.metaLine}>
-              <Icon name="git-branch-outline" size={14} tone="textSecondary" />
+              <Icon
+                name="git-branch-outline"
+                size="2xsPlus"
+                tone="textSecondary"
+              />
               <Text role="caption" tone="secondary" style={styles.metaText}>
                 {t('recipes.forkedFrom', { name: forkedFromName })}
               </Text>
@@ -150,7 +154,11 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
           )}
           {!!videoUrl && (
             <View style={styles.metaLine}>
-              <Icon name="videocam-outline" size={14} tone="textSecondary" />
+              <Icon
+                name="videocam-outline"
+                size="2xsPlus"
+                tone="textSecondary"
+              />
               <Text role="caption" tone="secondary" style={styles.metaText}>
                 {t('recipes.hasVideo')}
               </Text>
@@ -163,7 +171,7 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
       {status === RecipeStatus.Draft && (
         <View style={styles.status}>
           <View style={styles.metaLine}>
-            <Icon name="eye-off-outline" size={14} tone="textSecondary" />
+            <Icon name="eye-off-outline" size="2xsPlus" tone="textSecondary" />
             <Text role="caption" tone="secondary" style={styles.metaText}>
               {t('recipes.draftBadge')}
             </Text>
@@ -179,7 +187,11 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
       {status === RecipeStatus.PendingReview && (
         <View style={styles.status}>
           <View style={styles.metaLine}>
-            <Icon name="hourglass-outline" size={14} tone="textSecondary" />
+            <Icon
+              name="hourglass-outline"
+              size="2xsPlus"
+              tone="textSecondary"
+            />
             <Text role="caption" tone="secondary" style={styles.metaText}>
               {t('recipes.inReviewBadge')}
             </Text>
@@ -192,7 +204,11 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
           <View style={styles.status}>
             {!!hasPendingRevision && (
               <View style={styles.metaLine}>
-                <Icon name="hourglass-outline" size={14} tone="textSecondary" />
+                <Icon
+                  name="hourglass-outline"
+                  size="2xsPlus"
+                  tone="textSecondary"
+                />
                 <Text role="caption" tone="secondary" style={styles.metaText}>
                   {t('recipes.pendingChangesBadge')}
                 </Text>

@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { sizes } from '#/theme/foundations/sizes';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Screen } from '#components/templates/Screen';
 import type { BarAction } from '#components/molecules/BarActions';
 import type { EmptyStateProps } from '#components/molecules/EmptyState';
@@ -22,7 +21,7 @@ import {
   type TargetRect,
 } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { kitTestIDs } from '#components/testIDs';
-import { useTabBarState } from '#/context/TabBarActionsContext';
+import { useTabBarState } from '#context/TabBarActionsContext';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
@@ -139,7 +138,7 @@ export const TodayMain: React.FC = () => {
       icon: 'person-circle-outline',
       photoUri: user?.profilePicture,
       // An avatar reads at a larger size than the glyphs beside it.
-      size: sizes.icon.lg,
+      size: 'lg',
       onPress: toProfile,
       accessibilityLabel: t('a11y.openProfile'),
       testID: kitTestIDs.tab('Profile'),

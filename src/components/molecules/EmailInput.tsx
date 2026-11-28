@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { BaseInputProps } from '#components/molecules/BaseInput/BaseInput';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 

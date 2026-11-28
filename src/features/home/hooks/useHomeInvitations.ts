@@ -1,7 +1,7 @@
 /** Invite, preview-by-code, and join-by-code mutations. */
 
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import { useLazyQuery, useMutation } from '@apollo/client/react';
 import {
   InviteToHomeDocument,
@@ -10,12 +10,12 @@ import {
   type GetHomesQuery,
 } from '#operations/home/home.generated';
 import { homeLink } from '#features/home/utils/shareLink';
-import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { t } from '#/i18n';
-import { errorService, localizedErrorMessage } from '#/services/errorService';
+import { ErrorCode, MembershipRole } from '#graphql/generated/schemaTypes';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { createAddToParentConnectionUpdater } from '#apollo/utils/cacheUpdaters';
+import { t } from '#i18n';
+import { errorService, localizedErrorMessage } from '#services/errorService';
 
 const addInviteToHomeCache = createAddToParentConnectionUpdater(
   'Home',
@@ -112,6 +112,12 @@ export function useHomeInvitations({
             title: t('labels.error'),
             body: t('inviteUser.inviteeSuspended'),
           },
+          // Already a member, or declined within the last day; an invite still
+          // pending is re-sent, not refused.
+          [ErrorCode.Conflict]: {
+            title: t('labels.error'),
+            body: t('inviteUser.inviteeAlreadyIn'),
+          },
         },
         present: 'none',
       },
@@ -120,11 +126,6 @@ export function useHomeInvitations({
   };
 
   const joinHomeByCode = async (joinCode: string) => {
-    if (!joinCode.trim()) {
-      alertService.alert(t('labels.error'), t('labels.pleaseEnterAJoinCode'));
-      return false;
-    }
-
     const settled = await settleMutation(
       () =>
         joinHomeByCodeMutation({
@@ -154,19 +155,18 @@ export function useHomeInvitations({
       return null;
     }
 
-    let result;
-    try {
-      result = await resolveShareLink({
-        variables: { code: joinCode.trim() },
-      });
-    } catch (error) {
-      errorService.reportError(error, { operation: 'Preview Home' });
+    // Under `errorPolicy: 'all'` a failed read resolves with its error.
+    const result = await resolveShareLink({
+      variables: { code: joinCode.trim() },
+    }).catch((error: unknown) => ({ data: undefined, error }));
+    if (result.error) {
+      errorService.reportError(result.error, { operation: 'Preview Home' });
       alertService.alert(
         t('labels.error'),
-        localizedErrorMessage(error, t('errors.codes.genericRetry')),
+        localizedErrorMessage(result.error, t('errors.codes.genericRetry')),
       );
+      return null;
     }
-    if (!result) return null;
 
     return homeLink(result.data?.resolveShareLink);
   };

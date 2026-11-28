@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { act } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
 import type { InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
 import {
@@ -19,7 +19,7 @@ import {
   type HomeFixture,
 } from '#/test-utils/fixtures/homeFixtures';
 import { memoryScreen } from '#/test-utils/memoryPlatform';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { MealType } from '#graphql/generated/schemaTypes';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {
@@ -28,7 +28,7 @@ import {
 } from '#features/mealPlan/screens/useMealPlan.generated';
 import { RecipeSuggestionsDocument } from '#features/recipes/hooks/useServerRecipeSuggestions.generated';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { PantryReadersFragmentDoc } from '#/graphql/readers/pantryReaders.generated';
+import { PantryReadersFragmentDoc } from '#graphql/readers/pantryReaders.generated';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { TodayCountsDocument } from '../useTodayOverview.generated';
 import { useTodayOverview } from '../useTodayOverview';

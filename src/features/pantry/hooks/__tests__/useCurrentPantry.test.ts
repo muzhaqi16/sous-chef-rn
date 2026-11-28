@@ -1,5 +1,5 @@
 import type { InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   renderHookWithApollo,
   seedQuery,

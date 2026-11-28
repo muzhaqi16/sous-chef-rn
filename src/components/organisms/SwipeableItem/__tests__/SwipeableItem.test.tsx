@@ -4,7 +4,9 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import { Text } from '#components/atoms/Text';
 import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
-import type { TranslationKey } from '#/i18n';
+import type { SwipeRowPress } from '#components/molecules/RowFrame';
+import { View } from 'react-native';
+import type { TranslationKey } from '#i18n';
 
 // Actions are descriptors now, so the tests build them the way callers do.
 const action = (
@@ -20,22 +22,20 @@ jest.mock('../SwipeActions', () => ({
   swipeTrayWidth: () => 80,
 }));
 
-jest.mock('../SwipeableContent', () => ({
-  SwipeableContent: ({
-    children,
-    accessibilityLabel,
-  }: {
-    children: React.ReactNode;
-    accessibilityLabel?: string;
-  }) => {
-    const { View } = require('react-native');
-    return require('react').createElement(
-      View,
-      { testID: 'swipeable-content', accessibilityLabel },
-      children,
-    );
-  },
-}));
+/** The row a swipe hands its press to: the press lands on its one element. */
+const Row: React.FC<{ press: SwipeRowPress; children: React.ReactNode }> = ({
+  press,
+  children,
+}) => (
+  <View
+    testID="swipeable-content"
+    accessibilityLabel={press.accessibilityLabel}
+    accessibilityActions={press.accessibilityActions}
+    onAccessibilityAction={press.onAccessibilityAction}
+  >
+    {children}
+  </View>
+);
 
 jest.mock('../hooks/useSwipeableActions', () => ({
   useSwipeableActions: jest.fn(() => ({
@@ -85,7 +85,11 @@ describe('SwipeableItem', () => {
   it('renders children content', () => {
     render(
       <SwipeableItem accessibilityLabel="Row" {...defaultProps}>
-        <Text>Item content</Text>
+        {press => (
+          <Row press={press}>
+            <Text>Item content</Text>
+          </Row>
+        )}
       </SwipeableItem>,
     );
     expect(screen.getByText('Item content')).toBeTruthy();
@@ -96,7 +100,11 @@ describe('SwipeableItem', () => {
   it('hands the pressable row the label it is given', () => {
     render(
       <SwipeableItem accessibilityLabel="Milk, 2 pc" {...defaultProps}>
-        <Text>Milk</Text>
+        {press => (
+          <Row press={press}>
+            <Text>Milk</Text>
+          </Row>
+        )}
       </SwipeableItem>,
     );
     expect(
@@ -107,7 +115,11 @@ describe('SwipeableItem', () => {
   it('renders the swipeable content wrapper', () => {
     render(
       <SwipeableItem accessibilityLabel="Row" {...defaultProps}>
-        <Text>Hello</Text>
+        {press => (
+          <Row press={press}>
+            <Text>Hello</Text>
+          </Row>
+        )}
       </SwipeableItem>,
     );
     expect(screen.getByTestId('swipeable-content')).toBeTruthy();
@@ -116,7 +128,11 @@ describe('SwipeableItem', () => {
   it('renders without optional callbacks', () => {
     render(
       <SwipeableItem accessibilityLabel="Row">
-        <Text>Basic item</Text>
+        {press => (
+          <Row press={press}>
+            <Text>Basic item</Text>
+          </Row>
+        )}
       </SwipeableItem>,
     );
     expect(screen.getByText('Basic item')).toBeTruthy();
@@ -135,7 +151,11 @@ describe('SwipeableItem', () => {
           leftActions={[action('archive')]}
           rightActions={[action('archive')]}
         >
-          <Text>Row</Text>
+          {press => (
+            <Row press={press}>
+              <Text>Row</Text>
+            </Row>
+          )}
         </SwipeableItem>,
       ),
     ).toThrow(/duplicate action key/i);
@@ -150,13 +170,21 @@ describe('SwipeableItem', () => {
             accessibilityLabel="Row"
             rightActions={[action('edit')]}
           >
-            <Text>Row A</Text>
+            {press => (
+              <Row press={press}>
+                <Text>Row A</Text>
+              </Row>
+            )}
           </SwipeableItem>
           <SwipeableItem
             accessibilityLabel="Row"
             rightActions={[action('edit')]}
           >
-            <Text>Row B</Text>
+            {press => (
+              <Row press={press}>
+                <Text>Row B</Text>
+              </Row>
+            )}
           </SwipeableItem>
         </>,
       ),
@@ -169,7 +197,11 @@ describe('SwipeableItem', () => {
         accessibilityLabel="Row"
         leftActions={[action('togglePurchase')]}
       >
-        <Text>Shopping item</Text>
+        {press => (
+          <Row press={press}>
+            <Text>Shopping item</Text>
+          </Row>
+        )}
       </SwipeableItem>,
     );
     expect(screen.getByText('Shopping item')).toBeTruthy();
@@ -181,7 +213,11 @@ describe('SwipeableItem', () => {
         accessibilityLabel="Row"
         leftActions={[action('consume'), action('waste'), action('restock')]}
       >
-        <Text>Pantry item</Text>
+        {press => (
+          <Row press={press}>
+            <Text>Pantry item</Text>
+          </Row>
+        )}
       </SwipeableItem>,
     );
     expect(screen.getByText('Pantry item')).toBeTruthy();
@@ -195,7 +231,11 @@ describe('SwipeableItem', () => {
           leftActions={[action('consume')]}
           rightActions={[action('edit'), action('delete')]}
         >
-          <Text>Item</Text>
+          {press => (
+            <Row press={press}>
+              <Text>Item</Text>
+            </Row>
+          )}
         </SwipeableItem>,
       );
       const host = findA11yActionHost(screen.getByTestId('swipeable-content'));
@@ -213,7 +253,11 @@ describe('SwipeableItem', () => {
     it('exposes no accessibility actions when both lists are omitted', () => {
       render(
         <SwipeableItem accessibilityLabel="Row">
-          <Text>Item</Text>
+          {press => (
+            <Row press={press}>
+              <Text>Item</Text>
+            </Row>
+          )}
         </SwipeableItem>,
       );
       const host = findA11yActionHost(screen.getByTestId('swipeable-content'));
@@ -223,7 +267,11 @@ describe('SwipeableItem', () => {
     it('tracks the action set when it changes', () => {
       const { rerender } = render(
         <SwipeableItem accessibilityLabel="Row" rightActions={[action('edit')]}>
-          <Text>Item</Text>
+          {press => (
+            <Row press={press}>
+              <Text>Item</Text>
+            </Row>
+          )}
         </SwipeableItem>,
       );
       let host = findA11yActionHost(screen.getByTestId('swipeable-content'));
@@ -236,7 +284,11 @@ describe('SwipeableItem', () => {
           accessibilityLabel="Row"
           rightActions={[action('edit'), action('delete')]}
         >
-          <Text>Item</Text>
+          {press => (
+            <Row press={press}>
+              <Text>Item</Text>
+            </Row>
+          )}
         </SwipeableItem>,
       );
       host = findA11yActionHost(screen.getByTestId('swipeable-content'));
@@ -248,7 +300,11 @@ describe('SwipeableItem', () => {
       // surface it mirrors.
       rerender(
         <SwipeableItem accessibilityLabel="Row">
-          <Text>Item</Text>
+          {press => (
+            <Row press={press}>
+              <Text>Item</Text>
+            </Row>
+          )}
         </SwipeableItem>,
       );
       host = findA11yActionHost(screen.getByTestId('swipeable-content'));
@@ -258,7 +314,11 @@ describe('SwipeableItem', () => {
     it('omits actions for callbacks not provided', () => {
       render(
         <SwipeableItem accessibilityLabel="Row" rightActions={[action('edit')]}>
-          <Text>Item</Text>
+          {press => (
+            <Row press={press}>
+              <Text>Item</Text>
+            </Row>
+          )}
         </SwipeableItem>,
       );
       const host = findA11yActionHost(screen.getByTestId('swipeable-content'));
@@ -276,7 +336,11 @@ describe('SwipeableItem', () => {
           accessibilityLabel="Row"
           rightActions={[action('delete', jest.fn(), 'labels.delete')]}
         >
-          <Text>Item</Text>
+          {press => (
+            <Row press={press}>
+              <Text>Item</Text>
+            </Row>
+          )}
         </SwipeableItem>,
       );
       const host = findA11yActionHost(screen.getByTestId('swipeable-content'));
@@ -290,7 +354,11 @@ describe('SwipeableItem', () => {
           accessibilityLabel="Row"
           rightActions={[action('edit', onEdit), action('delete')]}
         >
-          <Text>Item</Text>
+          {press => (
+            <Row press={press}>
+              <Text>Item</Text>
+            </Row>
+          )}
         </SwipeableItem>,
       );
       fireA11yAction('edit');
@@ -304,7 +372,11 @@ describe('SwipeableItem', () => {
           accessibilityLabel="Row"
           rightActions={[action('edit'), action('delete', onDelete)]}
         >
-          <Text>Item</Text>
+          {press => (
+            <Row press={press}>
+              <Text>Item</Text>
+            </Row>
+          )}
         </SwipeableItem>,
       );
       fireA11yAction('delete');
@@ -324,7 +396,11 @@ describe('SwipeableItem', () => {
             action('restock', onRestock),
           ]}
         >
-          <Text>Item</Text>
+          {press => (
+            <Row press={press}>
+              <Text>Item</Text>
+            </Row>
+          )}
         </SwipeableItem>,
       );
       fireA11yAction('consume');
@@ -342,7 +418,11 @@ describe('SwipeableItem', () => {
           accessibilityLabel="Row"
           leftActions={[action('togglePurchase', onTogglePurchase)]}
         >
-          <Text>Item</Text>
+          {press => (
+            <Row press={press}>
+              <Text>Item</Text>
+            </Row>
+          )}
         </SwipeableItem>,
       );
       fireA11yAction('togglePurchase');
@@ -356,7 +436,11 @@ describe('SwipeableItem', () => {
           accessibilityLabel="Row"
           rightActions={[action('edit', onEdit)]}
         >
-          <Text>Item</Text>
+          {press => (
+            <Row press={press}>
+              <Text>Item</Text>
+            </Row>
+          )}
         </SwipeableItem>,
       );
       expect(() => fireA11yAction('nonexistent')).not.toThrow();

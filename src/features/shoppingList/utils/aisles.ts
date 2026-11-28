@@ -1,4 +1,4 @@
-import { StoreDepartment } from '#/graphql/generated/schemaTypes';
+import { StoreDepartment } from '#graphql/generated/schemaTypes';
 
 const KNOWN_DEPARTMENTS = new Set<string>(Object.values(StoreDepartment));
 

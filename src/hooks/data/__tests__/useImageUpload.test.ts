@@ -12,15 +12,15 @@ import {
   ConfirmItemImageUploadDocument,
   CreateImageUploadUrlDocument,
 } from '#operations/image/imageUpload.generated';
-import { alertService } from '#/services/alertService';
-import { Telemetry } from '#/services/telemetry';
+import { alertService } from '#services/alertService';
+import { Telemetry } from '#services/telemetry';
 import {
   EntryImageSource,
   ErrorCode,
   ImageUploadPurpose,
-} from '#/graphql/generated/schemaTypes';
-import { makeCache } from '#/apollo/cache';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+} from '#graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { useImageUpload } from '../useImageUpload';
 
 type ImageUploadApi = ReturnType<typeof useImageUpload>;

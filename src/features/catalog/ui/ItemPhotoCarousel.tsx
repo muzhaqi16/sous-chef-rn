@@ -8,7 +8,7 @@ import {
   type NativeSyntheticEvent,
   type ViewStyle,
 } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
@@ -122,7 +122,7 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
           />
         ) : (
           <View style={[styles.placeholder, { height: imageHeight }]}>
-            <Icon name="image-outline" size={48} tone="textTertiary" />
+            <Icon name="image-outline" size="xl" tone="textTertiary" />
           </View>
         )}
       </View>
@@ -305,7 +305,7 @@ const PhotoFrame: React.FC<{
   if (failed) {
     return (
       <View style={[styles.errorContainer, { width, height }]}>
-        <Icon name="image-outline" size={48} tone="textTertiary" />
+        <Icon name="image-outline" size="xl" tone="textTertiary" />
       </View>
     );
   }

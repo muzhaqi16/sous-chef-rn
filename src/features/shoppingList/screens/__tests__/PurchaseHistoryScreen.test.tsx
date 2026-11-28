@@ -1,10 +1,10 @@
 'use no memo';
 import React from 'react';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { screen } from '@testing-library/react-native';
 import { GraphQLError } from 'graphql';
-import { t } from '#/i18n';
-import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
+import { t } from '#i18n';
+import { UNKNOWN_AMOUNT } from '#utils/formatters/number';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
@@ -15,7 +15,7 @@ import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEna
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
 // Its repeating diagnostics timer never drains: 0 is the hook's own off switch.

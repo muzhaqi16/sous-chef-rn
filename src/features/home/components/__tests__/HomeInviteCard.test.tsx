@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { screen } from '@testing-library/react-native';
 import {
   renderWithApollo,
@@ -12,7 +12,7 @@ import {
   HomeInviteCard_InviteFragmentDoc,
   type HomeInviteCard_InviteFragment,
 } from '../HomeInviteCard.generated';
-import { InviteStatus, MembershipRole } from '#/graphql/generated/schemaTypes';
+import { InviteStatus, MembershipRole } from '#graphql/generated/schemaTypes';
 import { Text as AppText } from '#components/atoms/Text';
 
 jest.mock('#components/atoms/Icon', () => ({

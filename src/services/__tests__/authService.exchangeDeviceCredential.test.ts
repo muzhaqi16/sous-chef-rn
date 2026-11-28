@@ -5,7 +5,7 @@
 
 const mockMutate = jest.fn();
 const mockReadFragment = jest.fn();
-jest.mock('#/apollo/client', () => ({
+jest.mock('#apollo/client', () => ({
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -27,21 +27,21 @@ jest.mock('#store', () => ({
   useStore: { getState: () => mockStore },
 }));
 
-jest.mock('#/apollo/offlineQueue/queueManager', () => ({
+jest.mock('#apollo/offlineQueue/queueManager', () => ({
   queueManager: { onUserChange: jest.fn() },
 }));
-jest.mock('#/apollo/offlineQueue/queueStore', () => ({
+jest.mock('#apollo/offlineQueue/queueStore', () => ({
   queueStore: { getCurrentUserId: jest.fn() },
 }));
-jest.mock('#/hooks/settings/useFeatureHint', () => ({
+jest.mock('#hooks/settings/useFeatureHint', () => ({
   incrementLoginCount: jest.fn(),
 }));
 
 import { CombinedGraphQLErrors, type ApolloClient } from '@apollo/client';
-import { registerApolloClient } from '#/apollo/clientRegistry';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { authService } from '#/services/authService';
-import { toastService } from '#/services/toastService';
+import { registerApolloClient } from '#apollo/clientRegistry';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
+import { authService } from '#services/authService';
+import { toastService } from '#services/toastService';
 
 registerApolloClient({
   mutate: (...args: unknown[]) => mockMutate(...args),

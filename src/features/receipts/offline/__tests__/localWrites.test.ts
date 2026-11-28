@@ -1,20 +1,20 @@
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { PendingWrites } from '#/apollo/pendingWrites/pendingWrites';
-import type { PendingWrite } from '#/apollo/pendingWrites/types';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { makeCache } from '#apollo/cache';
+import { PendingWrites } from '#apollo/pendingWrites/pendingWrites';
+import type { PendingWrite } from '#apollo/pendingWrites/types';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import {
   completeSeed,
   seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import { UsualStoreSource } from '#graphql/generated/schemaTypes';
 import {
   readUsualStores,
   writeUsualStores,
   type UsualStoreEntry,
-} from '#features/catalog/cache/usualStores';
-import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
+} from '#entities/store/usualStores';
+import { UsualStoresDocument } from '#entities/store/usualStores.generated';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { seedDraft } from '../../__tests__/helpers/receiptFixtures';
 import { CreateReceiptCheckInDocument } from '../../hooks/useReceiptCheckIn.generated';

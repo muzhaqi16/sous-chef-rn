@@ -3,7 +3,8 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { useRecipeCapture } from '#features/recipes/hooks/useRecipeCapture';
 import { CreateRecipeCaptureDocument } from '#features/recipes/hooks/useRecipeCapture.generated';
@@ -72,11 +73,15 @@ const SheetSendingACapture = ({ onDismiss }: { onDismiss: () => void }) => {
 };
 
 describe('PhotoCaptureSheet', () => {
-  it('sends nothing before a page is added', () => {
+  it('says a page is needed, and sends nothing, before one is added', async () => {
     renderSheet();
-    expect(sendButton().props.accessibilityState).toMatchObject({
-      disabled: true,
-    });
+
+    fireEvent.press(sendButton());
+    await drainTimers();
+
+    expect(screen.getByText(t('recipes.capturePhotosRequired'))).toBeTruthy();
+    expect(mockPhotos.upload).not.toHaveBeenCalled();
+    expect(mockStart).not.toHaveBeenCalled();
   });
 
   it('sends the uploaded pages as one capture and closes', async () => {

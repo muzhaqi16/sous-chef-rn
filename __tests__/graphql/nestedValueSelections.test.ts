@@ -15,7 +15,7 @@ import {
   type SelectionNode,
 } from 'graphql';
 import type { TypePolicies } from '@apollo/client';
-import { mergeTypePolicies } from '#/apollo/cache';
+import { mergeTypePolicies } from '#apollo/cache';
 import { FEATURE_TYPE_POLICIES } from '#features/registry.cache';
 import { OPERATION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 

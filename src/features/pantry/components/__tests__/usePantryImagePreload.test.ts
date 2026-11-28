@@ -4,7 +4,7 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { EntryImageSource } from '#/graphql/generated/schemaTypes';
+import { EntryImageSource } from '#graphql/generated/schemaTypes';
 import type { PantryListNode } from '#features/pantry/components/pantryDisplay/renderItem';
 import { usePantryImagePreload } from '../usePantryImagePreload';
 

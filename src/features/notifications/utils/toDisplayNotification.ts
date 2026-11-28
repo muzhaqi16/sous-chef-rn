@@ -8,11 +8,11 @@ import type { ExpirationLinkData } from '#features/notifications/types';
 import type {
   NotificationType,
   Priority,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   NotificationCategory,
   NotificationStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   authoredDetails,
   getNotificationAction,

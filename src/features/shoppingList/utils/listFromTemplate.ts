@@ -1,7 +1,7 @@
-import { generateEntityId } from '#/utils/generateEntityId';
-import { itemIdOf, typedItemRef } from '#/utils/refInput';
-import type { CreateShoppingListInput } from '#/graphql/generated/schemaTypes';
-import type { ShoppingRowLine } from '../cache/createShoppingListRow';
+import { generateEntityId } from '#utils/generateEntityId';
+import { itemIdOf, typedItemRef } from '#utils/refInput';
+import type { CreateShoppingListInput } from '#graphql/generated/schemaTypes';
+import type { ShoppingRowLine } from '#entities/shoppingList/createShoppingListRow';
 import { lineUnitFields } from './lineUnit';
 
 /** One line of the list being copied, as `CopyableShoppingListFragment` caches it. */

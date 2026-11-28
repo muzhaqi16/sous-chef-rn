@@ -1,12 +1,12 @@
-import { useTranslation } from '#/i18n';
-import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import { AcquisitionMethod } from '#graphql/generated/schemaTypes';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { contentsOf, statedContents } from '#domain/stockAmount';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { refByIdOrName } from '#/utils/refInput';
-import { toDateKey } from '#/utils/dateUtils';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+import { refByIdOrName } from '#utils/refInput';
+import { toDateKey } from '#utils/dateUtils';
 import type { AddPantryItemFormData } from '#features/pantry/types';
 
 export function usePantryItemSubmission({

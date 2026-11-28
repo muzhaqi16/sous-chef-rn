@@ -2,9 +2,9 @@ import React, { useEffect } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { ScanAmountSection } from '../ScanAmountSection';
 import {
   scanAmountSchema,

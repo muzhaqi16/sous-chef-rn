@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { InlineAutocomplete } from '#features/catalog/components/InlineAutocomplete';
 

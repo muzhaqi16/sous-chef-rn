@@ -2,13 +2,13 @@ import React from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { RowCard } from '#components/atoms/RowCard';
 import { ListItem } from '#components/molecules/ListItem';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useUser } from '#store/useAppStore';
-import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
+import { getMemberDisplayName } from '#utils/formatters/memberFormatters';
 import {
   useHomeDietaryNeeds,
   type MemberDietaryNeeds,

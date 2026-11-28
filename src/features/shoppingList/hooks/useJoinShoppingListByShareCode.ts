@@ -1,9 +1,9 @@
 import { useMutation } from '@apollo/client/react';
 import { JoinShoppingListByShareCodeDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 
 interface JoinOutcome {
   /** The list joined, or null when the code did not open one. */

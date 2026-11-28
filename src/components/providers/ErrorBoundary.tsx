@@ -7,14 +7,14 @@ import {
 } from 'react-native-safe-area-context';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 import { Text } from '#components/atoms/Text';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 // Aliased, not `useTranslation`: this is the app's last-resort UI, rendered
 // precisely when something upstream has already thrown, so it takes no hook
 // subscriptions it doesn't need. i18n is initialised with bundled resources in
 // `index.js` before App loads, so the keys resolve here too.
-import { t as tGlobal } from '#/i18n';
+import { t as tGlobal } from '#i18n';
 
 interface ErrorBoundaryState {
   hasError: boolean;

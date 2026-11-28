@@ -1,5 +1,5 @@
 import { mixed, object, string, type ObjectSchema } from 'yup';
-import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
+import { CollaboratorRole } from '#graphql/generated/schemaTypes';
 import { isEmailAddress, lazyMessage } from '#utils/validation/common';
 
 export interface ShareInviteFormValues {

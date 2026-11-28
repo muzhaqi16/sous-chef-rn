@@ -1,4 +1,4 @@
-import { appConfig } from '#/config/appConfig';
+import { appConfig } from '#config/appConfig';
 
 /**
  * Shareable universal-link builders. The host comes from

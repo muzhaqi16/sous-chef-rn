@@ -32,13 +32,13 @@ import {
 import {
   createPreferencesSlice,
   type PreferencesState,
-} from '#/store/slices/preferencesSlice';
+} from '#store/slices/preferencesSlice';
 import {
   ThemePreference,
   PantrySortOption,
-} from '#/store/slices/preferenceTypes';
-import { zustandStorage } from '#/store/deviceStorage';
-import { STORAGE_KEY } from '#/store/persistedKeys';
+} from '#store/slices/preferenceTypes';
+import { zustandStorage } from '#store/deviceStorage';
+import { STORAGE_KEY } from '#store/persistedKeys';
 
 function createPersistedStore(testKey: string) {
   return create<PreferencesState>()(

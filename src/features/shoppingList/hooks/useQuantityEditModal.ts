@@ -1,24 +1,19 @@
 import { useState } from 'react';
-import {
-  useApolloClient,
-  useFragment,
-  useMutation,
-} from '@apollo/client/react';
-import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { useFragment } from '@apollo/client/react';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UseQuantityEditModal_ItemFragmentDoc } from './useQuantityEditModal.generated';
-import { Telemetry } from '#/services/telemetry';
-import { useTranslation } from '#/i18n';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { Telemetry } from '#services/telemetry';
+import { useTranslation } from '#i18n';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { normalizeNumericTextForApi } from '#utils/parseDecimalInput';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { UpdateRowInputs } from '#entities/shoppingList/localWrites';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { shownLineReading } from '#features/shoppingList/utils/lineReading';
-import { unitLabel, type UnitLabelSource } from '#/utils/formatQuantity';
+import { unitLabel, type UnitLabelSource } from '#utils/formatQuantity';
+import { updateShoppingListItemWrite } from '#features/shoppingList/offline/localWrites';
 
 export interface QuantityEditItem {
   id: string;
@@ -60,14 +55,13 @@ export function useQuantityEditModal(
 ): UseQuantityEditModalResult {
   const { items } = options;
   const { t } = useTranslation();
-  const client = useApolloClient();
 
   const [visible, setVisible] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [updateQuantity] = useMutation(UpdateShoppingListItemDocument, {
-    context: { localFirst: true },
+  const updateQuantity = useLocalWrite(updateShoppingListItemWrite, {
+    fallback: t('errors.adjustQuantityFailed'),
   });
 
   // `from: null` makes `useFragment` return `complete: false`.
@@ -154,8 +148,7 @@ export function useQuantityEditModal(
         ? { quantityInput, ...(parsed !== null && { quantity: parsed }) }
         : {},
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      UpdateShoppingListItemDocument,
+    const settled = await updateQuantity.send(
       {
         input: {
           id: itemId,
@@ -165,11 +158,6 @@ export function useQuantityEditModal(
           version: selectedItemRaw.version,
         },
       },
-      write =>
-        settleMutation(() => updateQuantity(write), {
-          document: UpdateShoppingListItemDocument,
-          fallback: t('errors.adjustQuantityFailed'),
-        }),
       inputs,
     );
 

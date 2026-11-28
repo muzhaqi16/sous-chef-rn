@@ -1,7 +1,7 @@
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { PendingWrites } from '#/apollo/pendingWrites/pendingWrites';
-import type { PendingWrite } from '#/apollo/pendingWrites/types';
+import { makeCache } from '#apollo/cache';
+import { PendingWrites } from '#apollo/pendingWrites/pendingWrites';
+import type { PendingWrite } from '#apollo/pendingWrites/types';
 import {
   completeSeed,
   seedFragment,
@@ -11,7 +11,7 @@ import {
   MealPlanType,
   MealType,
   TemplateCategory,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   CreateMealPlanDocument,
   CreateMealPlanItemDocument,

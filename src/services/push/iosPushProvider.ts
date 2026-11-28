@@ -7,7 +7,7 @@
 
 import { Platform } from 'react-native';
 import PushNotificationIOS from '@react-native-community/push-notification-ios';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import type { PushTokenProvider } from './pushTokenProvider';
 
 /** Upper bound for how long getToken() waits for the APNs `register` event. */

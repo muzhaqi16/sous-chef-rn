@@ -1,14 +1,13 @@
 import React from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { Button } from '#components/molecules/Button';
 import { Badge } from '#components/atoms/Badge';
@@ -89,34 +88,23 @@ export const IngredientMatchingSheet: React.FC<
   const readingSystem = useReadingSystem();
   // Nothing included: the cook can still be recorded, deducting nothing.
   const recordsOnly = matchSummary.included === 0;
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['80%'],
-  });
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      {/* A plain View, NOT `BottomSheetView`: gorhom composes the caller's
-        style FIRST and its own is absolutely positioned with no bottom, so the
-        `flex: 1` below loses and the FlashList is never height-bounded. It also
-        registers SCROLLABLE_TYPE.VIEW after the list, losing arbitration. */}
-      <View style={[styles.container, contentContainerStyle]}>
-        <BottomSheetHeader
-          contentPadding="md"
+    <Sheet
+      mode="list"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['80%']}
+      // The choice is the pair at the foot: skip the review, or deduct.
+      header={
+        <SheetHeader
           title={t('ingredientMatching.reviewIngredients')}
-          onCancel={onClose}
-          onConfirm={recordsOnly ? onRecordOnly : onConfirm}
-          confirmLabel={
-            recordsOnly
-              ? t('ingredientMatching.recordWithoutDeducting')
-              : t('ingredientMatching.confirmAndDeduct')
-          }
-          saving={confirmLoading}
-          savingLabel={t('ingredientMatching.deducting')}
+          onClose={onClose}
         />
-
+      }
+    >
+      <View style={styles.container}>
         {/* Summary bar */}
         <View style={styles.summaryBar}>
           <Badge variant="success">
@@ -160,6 +148,7 @@ export const IngredientMatchingSheet: React.FC<
               getItemType={getMatchItemType}
               {...FLASHLIST_DEFAULTS.bottomSheet}
               style={styles.list}
+              contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
             />
           </IngredientMatchingProvider>
@@ -188,16 +177,16 @@ export const IngredientMatchingSheet: React.FC<
           </Button>
         </View>
       </View>
-    </BottomSheetModal>
+    </Sheet>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    paddingHorizontal: theme.spacing.md,
   },
   summaryBar: {
+    paddingHorizontal: theme.layout.pageGutter,
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
@@ -210,7 +199,12 @@ const styles = StyleSheet.create(theme => ({
   list: {
     flex: 1,
   },
+  // The rows' inset is the list's content, so the whole width scrolls it.
+  listContent: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
   bottomActions: {
+    paddingHorizontal: theme.layout.pageGutter,
     flexDirection: 'row',
     gap: theme.spacing.sm,
     paddingTop: theme.spacing.md,

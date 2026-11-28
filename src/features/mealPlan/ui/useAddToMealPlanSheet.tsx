@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { MealType } from '#/graphql/generated/schemaTypes';
+import type { MealType } from '#graphql/generated/schemaTypes';
 import { AddToMealPlanSheet } from '#features/mealPlan/components/AddToMealPlanSheet/AddToMealPlanSheet';
 
 interface Options {

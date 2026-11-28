@@ -11,8 +11,8 @@ import {
   ModerationContentType,
   ReportType,
   ReviewSubmissionStatus,
-} from '#/graphql/generated/schemaTypes';
-import { formatShortDate } from '#/utils/formatters/date';
+} from '#graphql/generated/schemaTypes';
+import { formatShortDate } from '#utils/formatters/date';
 import { profileTestIDs } from '#features/profile/testIDs';
 import { MyReviewSubmissionsDocument } from '../useMyReports.generated';
 import { MyReportsScreen } from '../MyReportsScreen';

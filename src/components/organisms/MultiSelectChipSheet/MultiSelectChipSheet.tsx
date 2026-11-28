@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { SearchBar } from '#components/molecules/SearchBar';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { StyleSheet } from 'react-native-unistyles';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
-import { AnimatedChip } from '#components/molecules/AnimatedChip';
-import { Icon } from '#components/atoms/Icon';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { Chip } from '#components/molecules/Chip';
 import { Text } from '#components/atoms/Text';
 import { useLocalSearch } from '#hooks/search/useLocalSearch';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { useOpening } from '#hooks/ui/useOpening';
 
 export interface MultiSelectChipSheetItem<T extends string = string> {
   id: T;
@@ -23,10 +23,13 @@ export interface MultiSelectChipSheetProps<T extends string = string> {
   visible: boolean;
   title: string;
   items: MultiSelectChipSheetItem<T>[];
-  selectedItems: T[];
-  onSelect: (items: T[]) => void;
+  /** What each opening starts from; the picks stay the sheet's until Done. */
+  initialSelected: readonly T[];
+  /** The picks as they stand when Done is tapped. */
+  onDone: (selected: T[]) => void;
   onClose: () => void;
-  onDone: () => void;
+  /** How a tap changes the picks; by default it adds or removes its chip. */
+  toggle?: (selected: readonly T[], id: T) => T[];
   loading?: boolean;
   /** When true, only one chip can be selected — tapping a chip replaces the
    *  current selection instead of appending. Used for mutually-exclusive sets
@@ -34,85 +37,79 @@ export interface MultiSelectChipSheetProps<T extends string = string> {
   singleSelect?: boolean;
 }
 
-export function MultiSelectChipSheet<T extends string = string>({
-  visible,
+type MultiSelectChipContentProps<T extends string> = Pick<
+  MultiSelectChipSheetProps<T>,
+  | 'title'
+  | 'items'
+  | 'initialSelected'
+  | 'onDone'
+  | 'onClose'
+  | 'toggle'
+  | 'loading'
+  | 'singleSelect'
+>;
+
+/** One opening: the picks start from `initialSelected`, the search empty. */
+function MultiSelectChipContent<T extends string>({
   title,
   items,
-  selectedItems,
-  onSelect,
-  onClose,
+  initialSelected,
   onDone,
+  onClose,
+  toggle,
   loading = false,
   singleSelect = false,
-}: MultiSelectChipSheetProps<T>) {
+}: MultiSelectChipContentProps<T>) {
   const { t } = useTranslation();
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['60%', '80%'],
-  });
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Reset search query when sheet opens (render-time state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  if (visible !== prevVisible) {
-    setPrevVisible(visible);
-    if (visible) {
-      setSearchQuery('');
-    }
-  }
+  const [selectedItems, setSelectedItems] = useState<T[]>([...initialSelected]);
 
   const filteredItems = useLocalSearch(items, searchQuery, ['label']);
 
   const handleToggleItem = (id: T) => {
+    if (toggle) {
+      setSelectedItems(toggle(selectedItems, id));
+      return;
+    }
     if (singleSelect) {
       // Replace the selection (or clear it when re-tapping the active chip).
-      onSelect(selectedItems.includes(id) ? [] : [id]);
+      setSelectedItems(selectedItems.includes(id) ? [] : [id]);
       return;
     }
     const newSelection = selectedItems.includes(id)
       ? selectedItems.filter(i => i !== id)
       : [...selectedItems, id];
-    onSelect(newSelection);
+    setSelectedItems(newSelection);
   };
 
   const handleClearAll = () => {
-    onSelect([]);
+    setSelectedItems([]);
   };
 
   const showSearch = items.length > 8;
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      {/*
-        A plain View, NOT `BottomSheetView`: gorhom's own container style is
-        absolutely positioned with no bottom and no height, and it composes
-        AFTER the caller's — so this `flex: 1` loses and the
-        `BottomSheetScrollView` below is never height-bounded.
-      */}
-      <View style={[styles.bottomSheetContent, contentContainerStyle]}>
-        <BottomSheetHeader
-          contentPadding="md"
+    <View style={styles.bottomSheetContent}>
+      <SheetHeaderSlot>
+        <SheetHeader
           title={title}
-          onCancel={onClose}
-          onConfirm={onDone}
-          cancelLabel={t('labels.cancel')}
-          confirmLabel={t('labels.done')}
-          confirmDisabled={loading}
+          onClose={onClose}
+          confirm={{
+            onPress: () => onDone(selectedItems),
+            accessibilityLabel: t('labels.done'),
+            disabled: loading,
+          }}
         />
-
-        {/* Search Input */}
+      </SheetHeaderSlot>
+      <View style={styles.gutter}>
         {!!showSearch && (
-          <View style={styles.searchContainer}>
-            <Icon name="search" size={18} tone="textSecondary" />
-            <ThemedBottomSheetTextInput
-              style={styles.searchInput}
-              placeholder={t('multiSelectChipSheet.searchPlaceholder')}
-              defaultValue={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-            />
-          </View>
+          <SearchBar
+            placeholder={t('multiSelectChipSheet.searchPlaceholder')}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            containerStyle={styles.search}
+          />
         )}
 
         {/* Selection Counter / Clear All */}
@@ -135,64 +132,80 @@ export function MultiSelectChipSheet<T extends string = string>({
             </Pressable>
           )}
         </View>
-
-        {/* Chip Grid */}
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text tone="secondary">{t('loading.loading')}</Text>
-          </View>
-        ) : filteredItems.length > 0 ? (
-          <BottomSheetScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-          >
-            <View style={styles.chipContainer}>
-              {filteredItems.map(item => (
-                <AnimatedChip
-                  key={item.id}
-                  label={item.label}
-                  selected={selectedItems.includes(item.id)}
-                  onPress={() => handleToggleItem(item.id)}
-                />
-              ))}
-            </View>
-          </BottomSheetScrollView>
-        ) : items.length > 0 && searchQuery ? (
-          <EmptyState
-            size="compact"
-            title={t('multiSelectChipSheet.noMatches', { query: searchQuery })}
-          />
-        ) : (
-          <EmptyState
-            size="compact"
-            title={t('multiSelectChipSheet.noItems')}
-          />
-        )}
       </View>
-    </BottomSheetModal>
+
+      {/* Chip Grid */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <Text tone="secondary">{t('loading.loading')}</Text>
+        </View>
+      ) : filteredItems.length > 0 ? (
+        <BottomSheetScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <View style={styles.chipContainer}>
+            {filteredItems.map(item => (
+              <Chip
+                key={item.id}
+                label={item.label}
+                selected={selectedItems.includes(item.id)}
+                onPress={() => handleToggleItem(item.id)}
+              />
+            ))}
+          </View>
+        </BottomSheetScrollView>
+      ) : (
+        <View style={styles.gutter}>
+          <EmptyState
+            size="compact"
+            title={
+              items.length > 0 && searchQuery
+                ? t('multiSelectChipSheet.noMatches', { query: searchQuery })
+                : t('multiSelectChipSheet.noItems')
+            }
+          />
+        </View>
+      )}
+    </View>
+  );
+}
+
+export function MultiSelectChipSheet<T extends string = string>({
+  visible,
+  onClose,
+  initialSelected,
+  ...content
+}: MultiSelectChipSheetProps<T>) {
+  const opening = useOpening(visible, initialSelected);
+
+  return (
+    <Sheet
+      mode="list"
+      visible={visible}
+      onDismiss={onClose}
+      headerFromContent
+      snapPoints={['60%', '80%']}
+    >
+      {opening ? (
+        <MultiSelectChipContent
+          key={opening.id}
+          {...content}
+          initialSelected={opening.payload ?? []}
+          onClose={onClose}
+        />
+      ) : null}
+    </Sheet>
   );
 }
 
 const styles = StyleSheet.create(theme => ({
   bottomSheetContent: {
     flex: 1,
-    paddingHorizontal: theme.spacing.md,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.base,
-    marginBottom: theme.spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: theme.spacing.base,
-    paddingHorizontal: theme.spacing.sm,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
+  // The chips' inset is the scroll's content, so the whole width scrolls it.
+  gutter: {
+    paddingHorizontal: theme.layout.pageGutter,
   },
   selectionRow: {
     flexDirection: 'row',
@@ -202,6 +215,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
   scrollContent: {
+    paddingHorizontal: theme.layout.pageGutter,
     paddingBottom: theme.spacing.md,
   },
   chipContainer: {
@@ -216,5 +230,8 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: theme.opacity.pressed,
+  },
+  search: {
+    marginBottom: theme.spacing.md,
   },
 }));

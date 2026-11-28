@@ -8,7 +8,8 @@ import {
 } from '@testing-library/react-native';
 import { QuantityEditSheet } from '../QuantityEditSheet';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+import { getDeviceDecimalSeparator } from '#utils/deviceLocale';
+import { t } from '#i18n';
 
 type QuantityEditSheetProps = React.ComponentProps<typeof QuantityEditSheet>;
 type QuantityEditSheetItem = NonNullable<QuantityEditSheetProps['item']>;
@@ -40,8 +41,8 @@ jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: ChildrenProps) => children,
 }));
 
-jest.mock('#/utils/deviceLocale', () => ({
-  ...jest.requireActual('#/utils/deviceLocale'),
+jest.mock('#utils/deviceLocale', () => ({
+  ...jest.requireActual('#utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
 
@@ -99,26 +100,6 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
     );
   },
 }));
-
-jest.mock('#features/shoppingList/components/Chip', () => {
-  const { Text, Pressable } = require('react-native');
-  return ({
-    label,
-    selected,
-    onPress,
-  }: {
-    label: string;
-    selected?: boolean;
-    onPress: () => void;
-  }) => (
-    <Pressable testID={`chip-${label}`} onPress={onPress}>
-      <Text>
-        {label}
-        {selected ? ' (selected)' : ''}
-      </Text>
-    </Pressable>
-  );
-});
 
 jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
   BottomSheetFormScrollView: ({ children }: ChildrenProps) => {
@@ -220,8 +201,8 @@ describe('QuantityEditSheet', () => {
       ],
     });
     render(<QuantityEditSheet {...defaultProps} item={item} />);
-    expect(screen.getByTestId('chip-tbsp')).toBeTruthy();
-    expect(screen.getByTestId('chip-cups')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'tbsp' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'cups' })).toBeTruthy();
   });
 
   it('renders chips sorted by preferred first, then default', () => {
@@ -251,7 +232,7 @@ describe('QuantityEditSheet', () => {
     renderWithInit({ ...defaultProps, item });
     // preferred (tbsp) should render first, then default (cups), then alphabetical (ml)
     // cups is selected because unitName='cups' matches chip symbol
-    expect(screen.getByText('cups (selected)')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'cups' })).toBeSelected();
   });
 
   it('handles chip press to change unit', async () => {
@@ -268,15 +249,14 @@ describe('QuantityEditSheet', () => {
       ],
     });
     render(<QuantityEditSheet {...defaultProps} item={item} />);
-    await user.press(screen.getByTestId('chip-tbsp'));
+    await user.press(screen.getByRole('button', { name: 'tbsp' }));
     // After pressing, tbsp should become selected
-    expect(screen.getByText('tbsp (selected)')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'tbsp' })).toBeSelected();
   });
 
-  it('renders null when item is null', () => {
+  it('shows nothing without a line', () => {
     render(<QuantityEditSheet {...defaultProps} item={null} />);
-    // BottomSheetModal still renders (mocked as View) but header shows
-    expect(screen.getByText('Edit Quantity')).toBeTruthy();
+    expect(screen.queryByText('Edit Quantity')).toBeNull();
   });
 
   it('shows 0 when quantityInput is empty', () => {
@@ -298,7 +278,7 @@ describe('QuantityEditSheet', () => {
       ],
     });
     renderWithInit({ ...defaultProps, item });
-    expect(screen.getByText('cups (selected)')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'cups' })).toBeSelected();
   });
 
   it('matches unitName by name field when symbol does not match', () => {
@@ -309,7 +289,7 @@ describe('QuantityEditSheet', () => {
       ],
     });
     renderWithInit({ ...defaultProps, item });
-    expect(screen.getByText('cups (selected)')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'cups' })).toBeSelected();
   });
 
   it('uses lowercase stored value when no matching chip', () => {
@@ -354,14 +334,14 @@ describe('QuantityEditSheet', () => {
 
   it('does not render chips when itemUnits is empty', () => {
     render(<QuantityEditSheet {...defaultProps} />);
-    expect(screen.queryByTestId('chip-cups')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'cups' })).toBeNull();
   });
 
   describe('a quantity the user did not touch', () => {
     // The seed is rounded to three places, so the text is an APPROXIMATION of
     // the stored value. Writing it back would store the approximation, and
     // repeating that drifts the quantity on a value the user never edited.
-    it('cannot be saved, so the seeded approximation never reaches the server', async () => {
+    it('closes without saving, so the seeded approximation never reaches the server', async () => {
       const user = userEvent.setup();
       // 0.3334 is within three places of 1/3, so it seeds the field as "1/3".
       renderWithInit({
@@ -373,6 +353,20 @@ describe('QuantityEditSheet', () => {
       await user.press(screen.getByTestId('header-action-0'));
 
       expect(defaultProps.onSave).not.toHaveBeenCalled();
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+
+    it('closes without saving when its unit is shown in another case', async () => {
+      const user = userEvent.setup();
+      renderWithInit({
+        ...defaultProps,
+        item: makeItem({ unitName: 'Bag', unitId: null }),
+      });
+
+      await user.press(screen.getByTestId('header-action-0'));
+
+      expect(defaultProps.onSave).not.toHaveBeenCalled();
+      expect(defaultProps.onClose).toHaveBeenCalled();
     });
 
     it('becomes saveable once the user changes it, and sends what they typed', async () => {
@@ -426,7 +420,7 @@ describe('QuantityEditSheet', () => {
     );
   });
 
-  it('blocks saving an unparseable quantity and shows the format hint', async () => {
+  it('refuses an unparseable quantity on the field, with the format hint', async () => {
     const user = userEvent.setup();
     renderWithInit();
     await user.press(screen.getByTestId('quantity-edit-value'));
@@ -434,6 +428,19 @@ describe('QuantityEditSheet', () => {
     expect(screen.getByTestId('quantity-edit-format-hint')).toBeTruthy();
     await user.press(screen.getByTestId('header-action-0'));
     expect(defaultProps.onSave).not.toHaveBeenCalled();
+    expect(screen.getByTestId('quantity-edit-error')).toHaveTextContent(
+      t('errors.invalidQuantity'),
+    );
+  });
+
+  it('refuses an emptied quantity on the field rather than greying out Save', async () => {
+    const user = userEvent.setup();
+    renderWithInit();
+    await user.press(screen.getByTestId('quantity-edit-value'));
+    fireEvent.changeText(screen.getByTestId('quantity-edit-input'), '');
+    await user.press(screen.getByTestId('header-action-0'));
+    expect(defaultProps.onSave).not.toHaveBeenCalled();
+    expect(screen.getByTestId('quantity-edit-error')).toBeTruthy();
   });
 
   // Stepping formats a number back into the field, so on text it cannot read it

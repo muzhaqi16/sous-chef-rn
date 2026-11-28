@@ -1,4 +1,5 @@
 import {
+  commaTagsRule,
   emailRule,
   fieldError,
   homeNameRule,
@@ -153,6 +154,30 @@ describe('quantityRule', () => {
     await expect(withZero.validate('0')).resolves.toBe('0');
     await expect(withZero.validate('-1')).rejects.toThrow();
   });
+
+  // The API refuses more in any unit, list or stock.
+  it('takes up to 999,999 and refuses more, saying the cap', async () => {
+    await expect(rule.validate('999999')).resolves.toBe('999999');
+    await expect(rule.validate('999999.5')).rejects.toThrow(
+      'Quantity cannot exceed 999,999',
+    );
+  });
+});
+
+describe('commaTagsRule', () => {
+  const rule = commaTagsRule(2);
+
+  it('holds a comma-separated field to its count', async () => {
+    await expect(rule.validate('a, b')).resolves.toBe('a, b');
+    await expect(rule.validate('a, b, c')).rejects.toThrow('At most 2 tags');
+  });
+
+  it('holds each tag to 50 characters, trimmed', async () => {
+    await expect(rule.validate(` ${'x'.repeat(50)} `)).resolves.toBeDefined();
+    await expect(rule.validate('x'.repeat(51))).rejects.toThrow(
+      'Each tag can be at most 50 characters',
+    );
+  });
 });
 
 describe('positiveDecimalRule', () => {
@@ -212,6 +237,13 @@ describe('optionalMoneyRule', () => {
   it.each(['-3', '4,99x'])('refuses %p', async value => {
     await expect(rule.validate(value)).rejects.toThrow(
       'Enter the amount paid, like 3.49, or leave it empty.',
+    );
+  });
+
+  it('takes up to 999,999,999 and refuses more', async () => {
+    await expect(rule.validate('999999999')).resolves.toBe('999999999');
+    await expect(rule.validate('1000000000')).rejects.toThrow(
+      'Amount cannot exceed 999,999,999',
     );
   });
 });

@@ -1,5 +1,5 @@
 import { createTestStore } from '#/test-utils/createTestStore';
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 import { isApiUnavailable, shouldTreatAsOffline } from '../networkSlice';
 
 describe('networkSlice', () => {

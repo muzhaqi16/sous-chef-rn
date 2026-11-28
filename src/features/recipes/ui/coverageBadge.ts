@@ -1,6 +1,6 @@
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 import type { BadgeContent } from '#components/atoms/Badge';
-import { READY_COVERAGE } from '#domain/recipeCoverage';
+import { READY_COVERAGE } from '#features/recipes/utils/recipeCoverage';
 
 /**
  * How much of a recipe the pantries hold, as a card's badge: only on a recipe

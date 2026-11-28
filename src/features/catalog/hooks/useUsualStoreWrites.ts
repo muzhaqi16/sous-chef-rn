@@ -1,27 +1,18 @@
-import type { OperationVariables } from '@apollo/client';
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { DocumentNode } from 'graphql';
-import { useTranslation } from '#/i18n';
-import { errorService } from '#/services/errorService';
-import {
-  pendingWritesOf,
-  type LocalWriteSend,
-} from '#/apollo/pendingWrites/pendingWrites';
-import {
-  settleMutation,
-  type SettleOptions,
-} from '#/apollo/utils/settleMutation';
-import type { LocalInputs } from '#/apollo/pendingWrites/types';
+import { useApolloClient } from '@apollo/client/react';
+import { useTranslation } from '#i18n';
+import { errorService } from '#services/errorService';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { Settled } from '#apollo/utils/settleMutation';
 import { storeChoiceTarget, type StoreChoice } from '#domain/stores';
 import type {
   PinUsualStoreInputs,
   UsualStoreInputs,
 } from '#features/catalog/offline/localWrites';
 import {
-  AddUsualStoreDocument,
-  RemoveUsualStoreDocument,
-  UpdateUsualStoreDocument,
-} from './useUsualStoreWrites.generated';
+  addUsualStoreWrite,
+  removeUsualStoreWrite,
+  updateUsualStoreWrite,
+} from '#features/catalog/offline/localWrites';
 
 /**
  * A household's usual-store writes (`homeId` null: the caller's own), each
@@ -32,16 +23,6 @@ import {
 export function useUsualStoreWrites(homeId: string | null) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const { cache } = client;
-  const [addStore] = useMutation(AddUsualStoreDocument, {
-    context: { localFirst: true },
-  });
-  const [updateStore] = useMutation(UpdateUsualStoreDocument, {
-    context: { localFirst: true },
-  });
-  const [removeStore] = useMutation(RemoveUsualStoreDocument, {
-    context: { localFirst: true },
-  });
 
   // A household keeps at most 20 it added or pinned.
   const overTheLimit = {
@@ -50,27 +31,22 @@ export function useUsualStoreWrites(homeId: string | null) {
       body: t('usualStores.limitBody'),
     },
   };
+  const fallback = t('usualStores.saveFailed');
+  const addStore = useLocalWrite(addUsualStoreWrite, {
+    fallback,
+    copy: overTheLimit,
+  });
+  const updateStore = useLocalWrite(updateUsualStoreWrite, {
+    fallback,
+    copy: overTheLimit,
+  });
+  const removeStore = useLocalWrite(removeUsualStoreWrite, {
+    fallback,
+    removal: true,
+  });
 
-  const write = async <TVariables extends OperationVariables>(
-    document: DocumentNode,
-    variables: TVariables,
-    mutate: (
-      send: LocalWriteSend<TVariables>,
-    ) => Promise<{ data?: unknown; error?: unknown }>,
-    inputs: LocalInputs,
-    options: Pick<SettleOptions, 'copy' | 'removal'>,
-  ) => {
-    const settled = await pendingWritesOf(cache).send(
-      document,
-      variables,
-      send =>
-        settleMutation(() => mutate(send), {
-          ...options,
-          document,
-          fallback: t('usualStores.saveFailed'),
-        }),
-      inputs,
-    );
+  const kept = async (sending: Promise<Settled<unknown>>) => {
+    const settled = await sending;
     // "Could you save?" compares the list at these stores. It is another
     // feature's query, so it is named rather than imported.
     if (settled.status === 'applied') {
@@ -93,30 +69,27 @@ export function useUsualStoreWrites(homeId: string | null) {
 
   return {
     add: (choice: StoreChoice) =>
-      write(
-        AddUsualStoreDocument,
-        { input: { homeId, target: storeChoiceTarget(choice) } },
-        addStore,
-        inputsOf(choice),
-        { copy: overTheLimit },
+      kept(
+        addStore.send(
+          { input: { homeId, target: storeChoiceTarget(choice) } },
+          inputsOf(choice),
+        ),
       ),
     setPinned: (choice: StoreChoice, pinned: boolean) => {
       const inputs: PinUsualStoreInputs = { ...inputsOf(choice), pinned };
-      return write(
-        UpdateUsualStoreDocument,
-        { input: { homeId, target: storeChoiceTarget(choice), pinned } },
-        updateStore,
-        inputs,
-        { copy: overTheLimit },
+      return kept(
+        updateStore.send(
+          { input: { homeId, target: storeChoiceTarget(choice), pinned } },
+          inputs,
+        ),
       );
     },
     remove: (choice: StoreChoice) =>
-      write(
-        RemoveUsualStoreDocument,
-        { input: { homeId, target: storeChoiceTarget(choice) } },
-        removeStore,
-        inputsOf(choice),
-        { removal: true },
+      kept(
+        removeStore.send(
+          { input: { homeId, target: storeChoiceTarget(choice) } },
+          inputsOf(choice),
+        ),
       ),
   };
 }

@@ -2,12 +2,12 @@ import { useMutation } from '@apollo/client/react';
 import {
   CreateOutcome,
   type CreateUserReportInput,
-} from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { isOfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { useTranslation } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { isOfflineRejectedError } from '#apollo/offlineQueue/OfflineRejectedError';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { isNetworkError } from '#utils/isNetworkError';
+import { useTranslation } from '#i18n';
 import { CreateUserReportDocument } from './useReportContent.generated';
 
 /** What became of a report. `body` is localized copy for the form to show. */

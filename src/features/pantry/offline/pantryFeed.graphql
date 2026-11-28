@@ -76,7 +76,6 @@ query PantryFeedSnapshot($input: SyncSnapshotInput!, $today: LocalDate!) {
               id
               name
               type
-              icon
               color
               temperature
               isDefault

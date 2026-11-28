@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
 import { FormInput } from '#components/atoms/FormInput';
@@ -18,8 +18,8 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
-import { toastService } from '#/services/toastService';
-import { scheduleIdle } from '#/utils/scheduleIdle';
+import { toastService } from '#services/toastService';
+import { scheduleIdle } from '#utils/scheduleIdle';
 import {
   chainOption,
   storeOption,

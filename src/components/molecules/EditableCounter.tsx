@@ -1,27 +1,22 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { IconButton } from '#components/atoms/IconButton';
+import { useTranslation } from '#i18n';
 import {
   View,
   type GestureResponderEvent,
   type TextInputProps,
 } from 'react-native';
-import {
-  Pressable,
-  ThemedBottomSheetTextInput,
-  ThemedTextInput,
-} from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { assignRef, type FocusableInputRef } from '#components/atoms/inputRef';
-import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import {
   formatQuantityForInput,
   type QuantityNotation,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import { Label } from '#components/atoms/Label';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import { Text } from '#components/atoms/Text';
-import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 
 interface EditableCounterProps {
   label?: string;
@@ -65,11 +60,6 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
-  // Inside a sheet the field must be a `BottomSheetTextInput` or gorhom misses
-  // the focus; picked from context because it throws on the full screens this
-  // counter also serves. Same rule as `FormInput`.
-  const inSheet = useIsBottomSheetInput();
-
   // `error` last so an invalid value stays visibly invalid while focused —
   // the focus ring would otherwise paint over the thing being reported.
   const variantStyles = styles.useVariants({
@@ -147,54 +137,33 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           }
         }}
       >
-        <Pressable
+        <IconButton
+          name="remove-outline"
+          size="xs"
+          tone={disabled ? 'iconDisabled' : 'onPrimary'}
           onPress={handleDecrement}
-          disabled={disabled}
-          style={({ pressed }) => [
-            variantStyles.button,
-            pressed && !disabled && variantStyles.pressed,
-          ]}
-          accessible
-          accessibilityRole="button"
           accessibilityLabel={t('editableCounter.decrease')}
           accessibilityHint={t('a11y.currentQuantity', { value })}
-          accessibilityState={{ disabled }}
-        >
-          <Icon
-            name="remove-outline"
-            size={16}
-            tone={disabled ? 'iconDisabled' : 'onPrimary'}
-          />
-        </Pressable>
-
-        {inSheet ? (
-          <ThemedBottomSheetTextInput
-            ref={node => assignRef(ref, node ?? null)}
-            {...inputProps}
-          />
-        ) : (
-          <ThemedTextInput ref={node => assignRef(ref, node)} {...inputProps} />
-        )}
-
-        <Pressable
-          onPress={handleIncrement}
-          disabled={disabled}
-          style={({ pressed }) => [
-            variantStyles.button,
-            pressed && !disabled && variantStyles.pressed,
-          ]}
-          accessible
           accessibilityRole="button"
+          disabled={disabled}
+          filled={{ size: 'md', tone: 'primary', shape: 'rounded' }}
+          style={variantStyles.stepper}
+        />
+
+        <ThemedTextInput ref={node => assignRef(ref, node)} {...inputProps} />
+
+        <IconButton
+          name="add"
+          size="xs"
+          tone={disabled ? 'iconDisabled' : 'onPrimary'}
+          onPress={handleIncrement}
           accessibilityLabel={t('editableCounter.increase')}
           accessibilityHint={t('a11y.currentQuantity', { value })}
-          accessibilityState={{ disabled }}
-        >
-          <Icon
-            name="add"
-            size={16}
-            tone={disabled ? 'iconDisabled' : 'onPrimary'}
-          />
-        </Pressable>
+          accessibilityRole="button"
+          disabled={disabled}
+          filled={{ size: 'md', tone: 'primary', shape: 'rounded' }}
+          style={variantStyles.stepper}
+        />
       </View>
       {error ? (
         <Text role="error" tone="error" style={variantStyles.errorText}>
@@ -244,20 +213,8 @@ const styles = StyleSheet.create(theme => ({
       },
     },
   },
-  button: {
+  stepper: {
     zIndex: theme.zIndex.raised,
-    backgroundColor: theme.colors.primary,
-    width: 35,
-    height: 35,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
   input: {
     ...singleLineInputStyle(theme),

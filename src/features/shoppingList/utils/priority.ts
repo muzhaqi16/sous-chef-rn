@@ -2,7 +2,7 @@
 // 2 (high). The option list is the single source: an option's index IS its
 // API value, so the add screen, the in-sheet step and the detail cannot drift.
 
-import type { TranslationKey } from '#/i18n';
+import type { TranslationKey } from '#i18n';
 
 const optionIds = <T extends string>(...ids: T[]): readonly T[] => ids;
 

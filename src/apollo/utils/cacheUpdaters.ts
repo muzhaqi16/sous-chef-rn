@@ -1,9 +1,9 @@
 import type { ApolloCache, Cache, Reference } from '@apollo/client';
 import { InMemoryCache } from '@apollo/client';
 import type { ModifierDetails } from '@apollo/client/cache';
-import { isRecord } from '#/utils/isRecord';
-import { serializeError } from '#/utils/errorSerialization';
-import { logger } from '#/utils/environment';
+import { isRecord } from '#utils/isRecord';
+import { serializeError } from '#utils/errorSerialization';
+import { logger } from '#utils/environment';
 
 /**
  * Drops the retain `writeFragment`/`writeQuery` adds per explicitly written id;

@@ -4,6 +4,7 @@ import {
   request,
   PERMISSIONS,
   RESULTS,
+  type Permission,
   type PermissionStatus as RNPermissionStatus,
 } from 'react-native-permissions';
 import notifee, { AuthorizationStatus } from '@notifee/react-native';
@@ -42,7 +43,9 @@ function normalizeRNPermissionStatus(
 function getPlatformPermission(
   permission: Exclude<AppPermission, 'notifications'>,
 ) {
-  const map = {
+  // Platform.select is typed as always returning, but a platform the spec does
+  // not name (web, windows) gets undefined.
+  const map: Record<typeof permission, Permission | undefined> = {
     camera: Platform.select({
       ios: PERMISSIONS.IOS.CAMERA,
       android: PERMISSIONS.ANDROID.CAMERA,

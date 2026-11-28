@@ -12,7 +12,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CopyableShoppingListFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UseRecurringShoppingList_ListFragmentDoc } from '../useRecurringShoppingList.generated';
-import { ErrorCode, RecurringPattern } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, RecurringPattern } from '#graphql/generated/schemaTypes';
 import { useRecurringShoppingList } from '../useRecurringShoppingList';
 import { useStore } from '#store';
 

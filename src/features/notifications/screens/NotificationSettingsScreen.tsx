@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { View, Platform, Linking } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import { useTranslation } from '#i18n';
+import type { Translate } from '#i18n/types';
 
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { SettingsSection } from '#components/organisms/SettingsSection';
@@ -30,7 +30,7 @@ import {
   thresholdApplies,
   type SettingDef,
 } from '#features/notifications/utils/notificationSettingsConfig';
-import type { ExpirationFrequency } from '#/graphql/generated/schemaTypes';
+import type { ExpirationFrequency } from '#graphql/generated/schemaTypes';
 import { useDataState } from '#hooks/data/useDataState';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { ModalPicker } from '#components/molecules/ModalPicker';
@@ -38,11 +38,11 @@ import { AlertBanner } from '#components/molecules/AlertBanner';
 import {
   executeWithLoadingState,
   executeWriteWithFinally,
-} from '#/utils/finallyHelpers';
-import { logger } from '#/utils/environment';
+} from '#utils/finallyHelpers';
+import { logger } from '#utils/environment';
 import { Text } from '#components/atoms/Text';
 import { notificationsTestIDs } from '#features/notifications/testIDs';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 /**
  * No `loading` prop: `SettingSwitch` forwards it to `disabled`, dropping taps

@@ -1,5 +1,5 @@
 import { Dimensions, Platform } from 'react-native';
-import { sizes } from '#/theme/foundations/sizes';
+import { sizes } from '#theme/foundations/sizes';
 
 /**
  * The floating tab bar's height, labels shown or hidden: M3 Expressive's

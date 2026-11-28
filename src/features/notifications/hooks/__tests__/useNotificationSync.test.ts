@@ -9,7 +9,7 @@ import {
   seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { drained } from '#/test-utils/drainTimers';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   MarkNotificationAsReadDocument,
   DeleteNotificationDocument,
@@ -26,12 +26,14 @@ import {
   ErrorCode,
   NotificationStatus,
   NotificationType,
-} from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+} from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotificationSync } from '../useNotificationSync';
+import { useMarkPushOpenedRead } from '../useMarkPushOpenedRead';
+import { useNotificationStore } from '#features/notifications/store/notificationStore';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 // Whether a notification is unread is read from the cache, which is also what
 // renders it, so the two cannot disagree. The store holds only the expiration
@@ -448,5 +450,37 @@ describe('useNotificationSync — the cached badge', () => {
     await drained(() => result.current.syncMarkAsRead('n1'));
     expect(readNotificationStatus(cache, 'n1')).toBe(READ);
     expect(readBadge(cache)).toBeUndefined();
+  });
+});
+
+// Opened from its push, a notification is read as one opened from the list.
+describe('useMarkPushOpenedRead', () => {
+  it('marks read the notification a push opened, once', async () => {
+    const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
+    useNotificationStore.getState().noteOpenedFromPush('n1');
+
+    renderHookWithApollo(() => useMarkPushOpenedRead(), {
+      cache,
+      operationMocks: [markReadMock(summary(4))],
+    });
+    await drainTimers();
+
+    expect(readNotificationStatus(cache, 'n1')).toBe(READ);
+    expect(useNotificationStore.getState().openedFromPush).toBeNull();
+  });
+
+  // One that arrived while the app was closed is not held when its push opens.
+  it('marks read a notification the device does not hold, the badge as stated', async () => {
+    const cache = seedFeed(5);
+    useNotificationStore.getState().noteOpenedFromPush('n1');
+
+    renderHookWithApollo(() => useMarkPushOpenedRead(), {
+      cache,
+      operationMocks: [markReadMock(summary(4))],
+    });
+    await drainTimers();
+
+    expect(readNotificationStatus(cache, 'n1')).toBe(READ);
+    expect(readBadge(cache)?.unreadCount).toBe(4);
   });
 });

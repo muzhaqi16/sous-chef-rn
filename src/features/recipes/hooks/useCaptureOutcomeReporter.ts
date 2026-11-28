@@ -1,6 +1,6 @@
 import { useApolloClient } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import { toastService } from '#/services/toastService';
+import { useTranslation } from '#i18n';
+import { toastService } from '#services/toastService';
 import { useNavigationIntents } from '#platform/screen';
 import { forgetMyRecipesLists } from '#features/recipes/utils/recipeCacheWriters';
 import type { CaptureOutcome } from '#features/recipes/utils/recipeCaptureOutcome';

@@ -136,6 +136,7 @@
       "sectionRecorded_one": "{{count}} rresht i regjistruar tashmë",
       "sectionRecorded_other": "{{count}} rreshta të regjistruar tashmë",
       "recordedBadge": "U regjistrua",
+      "waitingBadge": "Në pritje të sinkronizimit",
       "findingMatch": "Po kërkohet një përputhje…",
       "notMatchedYet": "Ende pa përputhje. Prek për të zgjedhur produktin.",
       "sectionMatching_one": "Po kërkohet produkti për {{count}} rresht",
@@ -152,7 +153,16 @@
       "newPurchase": "Një blerje e re",
       "earlierPurchase": "{{amount}} më {{date}}",
       "earlierPicked": "Blerja e mëparshme",
-      "earlierBody": "Kjo faturë plotëson çmimin dhe dyqanin e asaj blerjeje. Asgjë nuk shtohet sërish në qilarin tënd."
+      "earlierBody": "Kjo faturë plotëson çmimin dhe dyqanin e asaj blerjeje. Asgjë nuk shtohet sërish në qilarin tënd.",
+      "earlierLoading": "Po kontrollohen blerjet e mëparshme…",
+      "earlierOffline": "Blerjet e mëparshme do të shfaqen këtu kur të jesh sërish në linjë.",
+      "earlierFailed": "Blerjet e mëparshme nuk u kontrolluan dot.",
+      "purchaseChanged": "Kjo blerje ka ndryshuar që kur e zgjodhe. Kontrolloje sërish para se ta shtosh.",
+      "purchaseDiffersAmount": "Sasia nuk është ajo që regjistroi blerja e zgjedhur.",
+      "purchaseDiffersPaid": "Çmimi nuk është ai që regjistroi blerja e zgjedhur.",
+      "purchaseDiffersDiscount": "Zbritja nuk është ajo që regjistroi blerja e zgjedhur.",
+      "purchaseDiffersItem": "Blerja e zgjedhur është për një artikull tjetër.",
+      "purchaseDiffersStore": "Blerja e zgjedhur është nga një dyqan tjetër."
     },
     "photoSend": {
       "title": "Ta dërgojmë foton për ta lexuar?",

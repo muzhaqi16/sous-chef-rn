@@ -2,9 +2,9 @@ import { createElement, type ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react-native';
 import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { createOfflineReadLink } from '#/apollo/links/offlineReadLink';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { createOfflineReadLink } from '#apollo/links/offlineReadLink';
 import {
   recordMock,
   renderHookWithApollo,
@@ -20,16 +20,16 @@ import {
 } from '../useSearchResults.generated';
 import { useSearchResults } from '../useSearchResults';
 import { useStore } from '#store';
-import { t, type TranslationKey } from '#/i18n';
-import { TimeoutError } from '#/utils/errors/timeoutError';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
-import { alertService } from '#/services/alertService';
+import { t, type TranslationKey } from '#i18n';
+import { TimeoutError } from '#utils/errors/timeoutError';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
+import { alertService } from '#services/alertService';
 import {
   ErrorCode,
   NetWeightKind,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { isRecord } from '#/utils/isRecord';
+} from '#graphql/generated/schemaTypes';
+import { isRecord } from '#utils/isRecord';
 import { readingAsAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 type LookupNode = MockPart<ItemByLookupQuery['items']['edges'][number]['node']>;

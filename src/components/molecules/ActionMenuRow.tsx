@@ -59,7 +59,7 @@ export const ActionMenuRow: React.FC<ActionMenuRowProps> = ({
           <Icon
             name={icon}
             library={library}
-            size={20}
+            size="sm"
             tone={TONES[look].icon}
           />
           <Text role="bodyStrong" tone={TONES[look].text}>

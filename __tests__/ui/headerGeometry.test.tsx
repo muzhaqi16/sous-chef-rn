@@ -1,9 +1,16 @@
 import React from 'react';
-import type { ViewStyle } from 'react-native';
+import { View, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Header } from '#components/organisms/Header';
-import type { BarAction } from '#components/molecules/BarActions';
+import { UnistylesRuntime } from 'react-native-unistyles';
+import {
+  BarActions,
+  gutterTargetGeometry,
+  type BarAction,
+} from '#components/molecules/BarActions';
+import { applyAppearanceToRuntime } from '#theme/applyAppearance';
+import { DensityPreference } from '#store/slices/preferenceTypes';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import {
   CollapsingHeroDetail,
@@ -11,7 +18,7 @@ import {
 } from '#components/templates/CollapsingHeroDetail';
 import { kitTestIDs } from '#components/testIDs';
 import { Screen } from '#components/templates/Screen';
-import { lightTheme } from '#/theme/themes';
+import { lightTheme, type Theme } from '#theme/themes';
 
 /**
  * Every bar puts its back glyph where the page content starts, so moving
@@ -67,10 +74,12 @@ describe('header bars put the back glyph on the page gutter', () => {
       </CollapsingHeroDetail>,
     );
     const back = screen.getByLabelText('Go Back');
-    const chip = flat(back.props.style);
+    const target = flat(back.props.style);
     const bar = barOf(back);
 
-    expect(chip.width).toBe(sizes.touchTarget.md);
+    // A whole target at the floor, over a chip drawn at its own size.
+    expect(target.width).toBe(sizes.touchTarget.min);
+    expect(back.props.hitSlop).toBeUndefined();
     expect(Number(bar.paddingHorizontal) + GLYPH_SLACK).toBe(layout.pageGutter);
     expect(HEADER_BAND_HEIGHT).toBe(spacing.sm * 2 + sizes.touchTarget.md);
   });
@@ -94,7 +103,7 @@ const ancestorStyleWith = (
  * A trailing action obeys the same rule as the back glyph, whether it is an
  * icon or a label. `Header` reserves the target's slack in its inset, so each
  * target is whole and a label is padded by the slack an icon has; a bar on a
- * content gutter puts the glyph on the edge and reaches 44pt by hit slop.
+ * content gutter has whole targets too, pulled out so the glyph takes the edge.
  */
 describe('bar actions put their outermost glyph on the page gutter', () => {
   const ACTIONS: BarAction[] = [
@@ -121,18 +130,30 @@ describe('bar actions put their outermost glyph on the page gutter', () => {
     ).toBe(layout.pageGutter);
   });
 
-  it('a gutter bar: the glyph takes the edge, hit slop makes the target', () => {
+  // Hit slop past the bar's bounds is dead, so the target is a real box.
+  it('a gutter bar: whole targets, pulled out so the glyph takes the edge', () => {
     render(<TabScreenHeader title="Title" actions={ACTIONS} />);
+    const { pull } = gutterTargetGeometry(lightTheme);
 
-    for (const id of ['icon-action', 'text-action']) {
-      const target = screen.getByTestId(id);
-      const style = flat(target.props.style);
-      expect(style.paddingHorizontal ?? 0).toBe(0);
-      expect(style.marginRight ?? 0).toBe(0);
-      expect(sizes.icon.md + 2 * Number(target.props.hitSlop)).toBe(
-        sizes.touchTarget.md,
-      );
-    }
+    const icon = screen.getByTestId('icon-action');
+    expect(flat(icon.props.style).minWidth).toBe(sizes.touchTarget.min);
+    expect(icon.props.hitSlop).toBeUndefined();
+    expect(
+      Number(ancestorStyleWith(icon, 'marginHorizontal').marginHorizontal),
+    ).toBe(-pull);
+    expect(
+      flat(screen.getByTestId('text-action').props.style).paddingHorizontal,
+    ).toBe(pull);
+  });
+
+  // A sheet's title row holds one whether or not it has actions, and an empty
+  // group pulled out hands its pull to the title, which overruns the gutter.
+  it('a gutter bar with nothing in it takes no room from the title beside it', () => {
+    render(<BarActions placement="gutter" />);
+
+    expect(
+      flat(screen.UNSAFE_getByType(View).props.style).marginHorizontal,
+    ).toBeUndefined();
   });
 
   it('glyphs sit the same distance apart in either bar', () => {
@@ -144,7 +165,42 @@ describe('bar actions put their outermost glyph on the page gutter', () => {
     header.unmount();
     render(<TabScreenHeader title="Title" actions={ACTIONS} />);
 
-    expect(barGap + 2 * GLYPH_SLACK).toBe(gapOf());
+    expect(barGap + 2 * GLYPH_SLACK).toBe(
+      gapOf() + 2 * gutterTargetGeometry(lightTheme).pull,
+    );
+  });
+});
+
+/** The light theme `applyAppearanceToRuntime` hands Unistyles at `density`. */
+function themeAt(density: DensityPreference): Theme {
+  const runtime = jest.mocked(UnistylesRuntime);
+  runtime.updateTheme.mockClear();
+  applyAppearanceToRuntime({
+    primaryColorOverride: null,
+    densityPreference: density,
+    fontScalePreference: null,
+    highContrast: false,
+  });
+  const light = runtime.updateTheme.mock.calls.find(
+    ([name]) => name === 'light',
+  );
+  if (!light) throw new Error('no light theme was built');
+  return light[1](lightTheme);
+}
+
+// The glyph grows with density; a gutter target measured 40/44/48 pt when its
+// slack was fixed. It stays at the floor, with the glyph on the gutter.
+describe('a gutter target at every density', () => {
+  it.each([
+    DensityPreference.COMPACT,
+    DensityPreference.COMFORTABLE,
+    DensityPreference.SPACIOUS,
+  ])('stays at the floor with its glyph on the gutter: %s', density => {
+    const theme = themeAt(density);
+    const { box, pull } = gutterTargetGeometry(theme);
+
+    expect(box).toBe(lightTheme.sizes.touchTarget.min);
+    expect(theme.sizes.icon.md + 2 * pull).toBe(box);
   });
 });
 

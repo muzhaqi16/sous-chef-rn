@@ -4,7 +4,7 @@ import {
   useNotificationListener,
   type AwayNotification,
 } from '#features/notifications/hooks/useNotifications';
-import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
+import { showLocalNotification } from '#services/notifications/localNotificationHelper';
 import { useIsSignedIn, useUser } from '#store/useAppStore';
 import { usePushTapHandlers } from './usePushTapHandlers';
 

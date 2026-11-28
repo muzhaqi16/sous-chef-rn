@@ -1,6 +1,6 @@
 import type { ApolloCache } from '@apollo/client';
-import { isRecord } from '#/utils/isRecord';
-import { scheduleIdle } from '#/utils/scheduleIdle';
+import { isRecord } from '#utils/isRecord';
+import { scheduleIdle } from '#utils/scheduleIdle';
 
 /**
  * Drops an ended receipt's parse, line lookups and by-item list lines, which

@@ -4,14 +4,20 @@ import { registerSessionScopedStore } from '#store/sessionScopedStores';
 import type { ExpirationLinkData } from '#features/notifications/types';
 
 /**
- * The expiration-enrichment buffer, and the ONLY notification state outside the
- * Apollo cache. Its two halves arrive on different subscriptions in either
- * order, so an early enrichment waits here until `toDisplayNotification` merges
- * it. NOT persisted: a stale entry would enrich the wrong notification.
+ * The expiration-enrichment buffer and the push a person tapped, the ONLY
+ * notification state outside the Apollo cache. The enrichment's two halves
+ * arrive on different subscriptions in either order, so an early one waits here
+ * until `toDisplayNotification` merges it. NOT persisted: a stale entry would
+ * enrich, or mark read, the wrong notification.
  */
 interface NotificationStoreState {
   /** Enrichment keyed by the generic notification id it belongs to. */
   pendingExpirationLinks: Record<string, ExpirationLinkData>;
+  /**
+   * A notification opened from its push, waiting to be marked read: a tap can
+   * land before the signed-in app is there to write it.
+   */
+  openedFromPush: string | null;
 
   setExpirationAction: (notificationId: string, action: string) => void;
   linkExpirationData: (
@@ -20,11 +26,16 @@ interface NotificationStoreState {
   ) => void;
   /** Drop one entry once its notification has been acted on. */
   clearExpirationLink: (genericNotificationId: string) => void;
+  noteOpenedFromPush: (notificationId: string | null) => void;
   resetNotifications: () => void;
 }
 
-const initialState: Pick<NotificationStoreState, 'pendingExpirationLinks'> = {
+const initialState: Pick<
+  NotificationStoreState,
+  'pendingExpirationLinks' | 'openedFromPush'
+> = {
   pendingExpirationLinks: {},
+  openedFromPush: null,
 };
 
 export const useNotificationStore = create<NotificationStoreState>()(
@@ -58,6 +69,11 @@ export const useNotificationStore = create<NotificationStoreState>()(
     clearExpirationLink: genericNotificationId =>
       set(state => {
         delete state.pendingExpirationLinks[genericNotificationId];
+      }),
+
+    noteOpenedFromPush: notificationId =>
+      set(state => {
+        state.openedFromPush = notificationId;
       }),
 
     resetNotifications: () => set(() => ({ ...initialState })),

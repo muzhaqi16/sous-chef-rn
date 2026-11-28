@@ -25,8 +25,8 @@ import {
   saveDeviceId,
   clearSessionTokens,
 } from '../keychain';
-import { logger } from '#/utils/environment';
-import { errorService } from '#/services/errorService';
+import { logger } from '#utils/environment';
+import { errorService } from '#services/errorService';
 
 // Cast to jest.Mock for type safety
 const mockSetGenericPassword = setGenericPassword as jest.Mock;

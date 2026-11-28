@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useMoney } from '#/domain/money';
+import { useMoney } from '#domain/money';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { formatNetWeightDisplay, unitLabel } from '#utils/formatQuantity';
 import { useShoppingListItemDetail } from './useShoppingListItemDetail';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -28,7 +28,6 @@ import {
 import { StoreShelfPriceList } from '#features/catalog/ui/StoreShelfPriceList';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
-import { DataStateView } from '#components/organisms/DataStateView';
 import { PartialDataNote } from '#components/molecules/PartialDataNote';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
@@ -36,16 +35,16 @@ import {
   priorityOptionOf,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
-import { totalFromUnitPrice } from '#features/shoppingList/utils/purchasePrice';
+import { totalFromUnitPrice } from '#entities/shoppingList/purchasePrice';
 import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
-import { formatMonthDayYear } from '#/utils/formatters/date';
-import { purchaseDay } from '#/utils/dateUtils';
+import { formatMonthDayYear } from '#utils/formatters/date';
+import { purchaseDay } from '#utils/dateUtils';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useReportPhotoHeaderAction } from '#features/catalog/ui/useReportPhotoHeaderAction';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { personName } from '#/utils/formatters/memberFormatters';
-import { AddedContext } from '#/graphql/generated/schemaTypes';
-import type { TranslationKey } from '#/i18n';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { personName } from '#utils/formatters/memberFormatters';
+import { AddedContext } from '#graphql/generated/schemaTypes';
+import type { TranslationKey } from '#i18n';
 
 /**
  * The flow that put a line on the list. Null for a line someone typed, for a
@@ -161,16 +160,20 @@ export const ShoppingListItemDetail: React.FC<
         testID={shoppingListTestIDs.itemDetail}
         onBack={() => goBack()}
         title={t('shoppingListScreens.itemDetailsTitle')}
+        state={
+          notFound
+            ? {
+                value: 'empty',
+                onRetry: retry,
+                empty: {
+                  icon: 'help-circle-outline',
+                  title: t('errors.itemNotFound'),
+                },
+              }
+            : { value: state, onRetry: retry }
+        }
       >
-        <View style={styles.centerMessage}>
-          {notFound ? (
-            <Text role="body" tone="secondary" align="center">
-              {t('errors.itemNotFound')}
-            </Text>
-          ) : (
-            <DataStateView state={state} onRetry={retry} />
-          )}
-        </View>
+        {null}
       </CollapsingHeroDetail>
     );
   }
@@ -306,7 +309,7 @@ export const ShoppingListItemDetail: React.FC<
 
         {!!purchaseInfo?.isPurchased && (
           <View style={styles.statusBadge}>
-            <Icon name="checkmark-circle" size={18} tone="success" />
+            <Icon name="checkmark-circle" size="xsPlus" tone="success" />
             <Text role="label" tone="success" style={styles.statusBadgeText}>
               {t('labels.purchased')}
             </Text>
@@ -318,7 +321,6 @@ export const ShoppingListItemDetail: React.FC<
             <FormattedItemSubtitle
               quantity={item.quantity}
               quantityInput={item.quantityInput}
-              displayFormat={item.displayFormat}
               unit={lineUnit}
             />
           </DetailRow>
@@ -413,14 +415,12 @@ export const ShoppingListItemDetail: React.FC<
         )}
 
         {!!purchaseHistory && (
-          <DetailSection>
-            <ClickableInfoPanel
-              title={t('labels.purchaseHistory')}
-              items={purchaseHistoryItems}
-              onPress={handleViewHistory}
-              emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
-            />
-          </DetailSection>
+          <ClickableInfoPanel
+            title={t('labels.purchaseHistory')}
+            items={purchaseHistoryItems}
+            onPress={handleViewHistory}
+            emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
+          />
         )}
 
         {!!detail && (
@@ -483,12 +483,6 @@ const styles = StyleSheet.create(theme => ({
   // the title sits flush against the "Information" section.
   titleRow: {
     marginBottom: theme.spacing.md,
-  },
-  centerMessage: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
   },
   statusBadge: {
     flexDirection: 'row',

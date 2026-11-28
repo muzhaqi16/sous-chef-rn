@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -11,8 +11,8 @@ import {
   GetUserSettingsDocument,
   UpdateUserPreferencesDocument,
 } from '#operations/auth/user.generated';
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
-import { createLocalWritePrecedenceLink } from '#/apollo/links/localWritePrecedenceLink';
+import { UnitSystem } from '#graphql/generated/schemaTypes';
+import { createLocalWritePrecedenceLink } from '#apollo/links/localWritePrecedenceLink';
 import { writeUserSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { useSettingsMirror } from '#bootstrap/useSettingsMirror';
 import { useAppSettings } from '../useAppSettings';

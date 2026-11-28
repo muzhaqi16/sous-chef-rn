@@ -1,8 +1,9 @@
 import type {
   PackageSizeInput,
   StockAmountInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { boughtAmountOf, stockAmountOf, type HeldUnit } from './stockAmount';
+import { MAX_QUANTITY } from '#utils/validation/entryLimits';
 
 /** Facts about this acquisition. Shopping requests are deliberately not evidence. */
 export interface IntakeFacts {
@@ -27,7 +28,13 @@ export function resolveIntakeDraft({
   unitFromRoute?: boolean;
 }): { amount: StockAmountInput | null; unresolved: IntakeField[] } {
   const { quantity, unitId, packageSize, intent = 'bought' } = purchased;
-  if (quantity == null || !Number.isFinite(quantity) || quantity <= 0) {
+  // Past the API's cap the line would be refused, so it is asked about first.
+  if (
+    quantity == null ||
+    !Number.isFinite(quantity) ||
+    quantity <= 0 ||
+    quantity > MAX_QUANTITY
+  ) {
     return { amount: null, unresolved: ['quantity'] };
   }
   if (intent === 'measured') {

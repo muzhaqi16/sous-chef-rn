@@ -1,6 +1,6 @@
 import { ValidationError } from 'yup';
-import { UnitType } from '#/graphql/generated/schemaTypes';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { UnitType } from '#graphql/generated/schemaTypes';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import {
   addPantryItemSchema,
   addPantryItemDefaults,

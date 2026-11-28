@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { AnimatedChip } from '#components/molecules/AnimatedChip';
+import { Chip } from '#components/molecules/Chip';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
-import type { Cuisine } from '#/graphql/generated/schemaTypes';
-import { POPULAR_CUISINES, getAllCuisineOptions } from '#domain/cuisines';
+import type { Cuisine } from '#graphql/generated/schemaTypes';
+import {
+  POPULAR_CUISINES,
+  getAllCuisineOptions,
+} from '#features/recipes/utils/cuisines';
 
 interface CuisineChipsProps {
   selected: readonly Cuisine[];
@@ -27,7 +30,7 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
     <View style={styles.container}>
       <View style={styles.chipGrid}>
         {cuisinesToShow.map(cuisine => (
-          <AnimatedChip
+          <Chip
             key={cuisine.value}
             label={t(cuisine.labelKey)}
             selected={selected.includes(cuisine.value)}
@@ -43,7 +46,7 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
           onPress={() => setShowAll(true)}
           accessibilityRole="button"
         >
-          <Icon name="add-circle-outline" size={18} tone="primary" />
+          <Icon name="add-circle-outline" size="xsPlus" tone="primary" />
           <Text role="bodyStrong" tone="accent" style={styles.showMoreText}>
             {t('cuisineSelector.showAll')}
           </Text>
@@ -56,7 +59,11 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
           onPress={() => setShowAll(false)}
           accessibilityRole="button"
         >
-          <Icon name="remove-circle-outline" size={18} tone="textSecondary" />
+          <Icon
+            name="remove-circle-outline"
+            size="xsPlus"
+            tone="textSecondary"
+          />
           <Text role="body" style={styles.showMoreText}>
             {t('cuisineSelector.showLess')}
           </Text>

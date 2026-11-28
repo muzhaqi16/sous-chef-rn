@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import performance from 'react-native-performance';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { usePerformanceStore } from '#/services/performance/performanceStore';
-import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
+import { usePerformanceStore } from '#services/performance/performanceStore';
+import { MemoryMonitor } from '#services/performance/MemoryMonitor';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import type {
   MemorySnapshot,
   RenderMetrics,
   ScreenMetrics,
-} from '#/services/performance/types';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+} from '#services/performance/types';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 export interface StartupMetrics {
   nativeLaunch: number | null;

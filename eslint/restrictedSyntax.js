@@ -13,7 +13,7 @@ const PRODUCTION_SYNTAX = [
     selector:
       "CallExpression[callee.name='parseFloat'], CallExpression[callee.property.name='parseFloat']",
     message:
-      'Use parseDecimalInput from #/utils/parseDecimalInput instead of parseFloat. parseFloat reads "4,99" as 4 on any device whose keyboard offers a comma, silently saving a wrong number. If this value is machine-generated and never typed, both behave identically — so use parseDecimalInput regardless.',
+      'Use parseDecimalInput from #utils/parseDecimalInput instead of parseFloat. parseFloat reads "4,99" as 4 on any device whose keyboard offers a comma, silently saving a wrong number. If this value is machine-generated and never typed, both behave identically — so use parseDecimalInput regardless.',
   },
   {
     id: 'inlineImportType',
@@ -32,7 +32,7 @@ const PRODUCTION_SYNTAX = [
     id: 'maxFontSizeMultiplier',
     selector: "JSXAttribute[name.name='maxFontSizeMultiplier']",
     message:
-      'The font-scale ceiling is global — `MAX_FONT_SCALE` in #/theme/foundations/type, applied in the `Text` atom as `theme.maxFontScaleMultiplier`. A per-element cap bounds the OS scale only, leaving its product with the app preference unbounded.',
+      'The font-scale ceiling is global — `MAX_FONT_SCALE` in #theme/foundations/type, applied in the `Text` atom as `theme.maxFontScaleMultiplier`. A per-element cap bounds the OS scale only, leaving its product with the app preference unbounded.',
   },
   {
     id: 'allowFontScaling',
@@ -59,14 +59,14 @@ const PRODUCTION_SYNTAX = [
     id: 'hitSlopLiteral',
     selector: "JSXAttribute[name.name='hitSlop']:has(Literal[raw=/^[0-9]/])",
     message:
-      'Use a step of `hitSlop` from #/theme/foundations/sizes (sm | md | lg) rather than a literal.',
+      'Use a step of `hitSlop` from #theme/foundations/sizes (sm | md | lg) rather than a literal.',
   },
   {
     id: 'toastLiteral',
     selector:
       'CallExpression[callee.object.name=/^(toastService|alertService)$/] > Literal[value=/[A-Za-z]{3}/]',
     message:
-      'Untranslated string passed to a user-facing toast/alert. Add a key to src/i18n/locales/en.json and pass t(...) — the module-level `t` from #/i18n works outside components.',
+      'Untranslated string passed to a user-facing toast/alert. Add a key to src/i18n/locales/en.json and pass t(...) — the module-level `t` from #i18n works outside components.',
   },
   {
     id: 'toastServerMessage',
@@ -200,14 +200,14 @@ const PRODUCTION_SYNTAX = [
     selector:
       'TSAsExpression[typeAnnotation.type="TSTypeReference"][typeAnnotation.typeName.name=/^(TranslationKey|ParseKeys)$/]',
     message:
-      'Do not cast a string to a translation key — it compiles a key the copy may not declare, which renders as a raw dot-path. Type the field that stores the key `TranslationKey` where it is declared, or check a key built from runtime data with `isTranslationKey` from `#/i18n`.',
+      'Do not cast a string to a translation key — it compiles a key the copy may not declare, which renders as a raw dot-path. Type the field that stores the key `TranslationKey` where it is declared, or check a key built from runtime data with `isTranslationKey` from `#i18n`.',
   },
   {
     id: 'refetchNetworkStatus',
     selector:
       "MemberExpression[object.name='NetworkStatus'][property.name='refetch']",
     message:
-      'Do not read a refresh from `NetworkStatus.refetch`: every resync (foreground, API reachable, socket reconnect, queue drained) refetches too, so a spinner or busy state shows for a refresh nobody asked for. Let the refresh set its own flag: `executeRefreshWithFinally(refetch, setRefreshing)` from #/utils/finallyHelpers.',
+      'Do not read a refresh from `NetworkStatus.refetch`: every resync (foreground, API reachable, socket reconnect, queue drained) refetches too, so a spinner or busy state shows for a refresh nobody asked for. Let the refresh set its own flag: `executeRefreshWithFinally(refetch, setRefreshing)` from #utils/finallyHelpers.',
   },
 ];
 

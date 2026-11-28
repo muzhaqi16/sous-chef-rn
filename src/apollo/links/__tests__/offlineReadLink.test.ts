@@ -6,14 +6,14 @@ import {
   gql,
 } from '@apollo/client';
 import { OperationTypeNode, type DocumentNode } from 'graphql';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import { createOfflineReadLink } from '../offlineReadLink';
 import { useStore } from '#store';
-import { getI18n } from '#/i18n/config';
-import { Telemetry } from '#/services/telemetry';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { getI18n } from '#i18n/config';
+import { Telemetry } from '#services/telemetry';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 
 jest.mock('#store', () => ({
   useStore: { getState: jest.fn() },

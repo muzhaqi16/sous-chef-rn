@@ -243,7 +243,8 @@
   },
   "pantryAction": {
     "useByDefault": "Përdor deri më",
-    "availableDefault": "I disponueshëm:"
+    "availableDefault": "I disponueshëm:",
+    "availableAmount": "{{amount}} {{unit}}"
   },
   "correctWeight": {
     "invalidWeight": "Shkruaj një madhësi të vlefshme",
@@ -291,6 +292,7 @@
     "sortedBy": "Rendit, tani sipas {{field}}",
     "tabAll": "Të gjitha",
     "tabUnassigned": "Pa caktuar",
+    "locationInParent": "{{parent}} › {{name}}",
     "expiringCount": "{{count}} po skadojnë",
     "expiredCount": "{{count}} të skaduar",
     "lowStockCount": "{{count}} pak gjendje",
@@ -306,7 +308,7 @@
     "pantriesHiddenDescription": "Kush e menaxhon këtë shtëpi mund të të lejojë të shohësh qilarët e saj.",
     "searchNoResultsDescription": "Dëshiron ta shtosh në qilar?",
     "tabEmptyTitle": "Asnjë artikull në {{tabName}}",
-    "tabEmptyDescription": "Artikujt e ruajtur këtu do të shfaqen në këtë skedë",
+    "tabEmptyDescription": "Artikujt e ruajtur këtu do të shfaqen në këtë listë",
     "tabEmptyFallbackName": "këtë vendndodhje",
     "tutorialPantrySettingsSubtitle": "Kalo mes listave të qilarit dhe krijo qilarë të rinj",
     "tutorialAddItemsTitle": "Shto artikuj shpejt",
@@ -335,7 +337,8 @@
     "stockLevelHigh": "Ndoshta është ende këtu",
     "stockLevelMedium": "Ia vlen ta kontrollosh",
     "stockLevelLow": "Ndoshta ka mbaruar",
-    "stockLevelUnknown": "Nuk dihet"
+    "stockLevelUnknown": "Nuk dihet",
+    "stockLastConfirmed": "Konfirmimi i fundit: {{when}}"
   },
   "storageState": {
     "AMBIENT": "Ambient",
@@ -362,7 +365,9 @@
     "exceedsAvailableWaste": "Nuk mund të hedhësh më shumë se sasia e disponueshme ({{amount}} {{unit}})",
     "remainingAfter": "Mbetet: {{amount}} {{unit}}",
     "exceedsAvailable": "Tejkalon sasinë e disponueshme ({{amount}} {{unit}})",
-    "conversionUnavailable": "Kjo njësi nuk mund të konvertohet. Zgjidh një njësi tjetër."
+    "conversionUnavailable": "Kjo njësi nuk mund të konvertohet. Zgjidh një njësi tjetër.",
+    "stockMovedTitle": "Nuk ka mbetur aq",
+    "stockMoved": "Një pjesë është përdorur që kur e hape këtë. Kontrollo sa ka mbetur dhe provo përsëri."
   },
   "duplicateItem": {
     "title": "Artikulli është tashmë në qilar"

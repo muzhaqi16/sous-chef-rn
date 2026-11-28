@@ -1,6 +1,6 @@
-import { getI18n } from '#/i18n/config';
-import { isTranslationKey } from '#/i18n';
-import en from '#/i18n/locales/en.json';
+import { getI18n } from '#i18n/config';
+import { isTranslationKey } from '#i18n';
+import en from '#i18n/locales/en.json';
 // profileValidation and itemValidation moved to the features that own them. Imported directly, like `en`, so removing a namespace
 // is a compile error.
 import profileEn from '#features/profile/locales/en.json';

@@ -1,10 +1,12 @@
 import { ApolloClient, ApolloLink, Observable, gql } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { createAnswerOrderingLink } from '#/apollo/links/answerOrderingLink';
-import type { Settled } from '#/apollo/utils/settleMutation';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { createAnswerOrderingLink } from '#apollo/links/answerOrderingLink';
+import type { Settled } from '#apollo/utils/settleMutation';
 import { drainTimers } from '#/test-utils/drainTimers';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
+import { RemoveItemsFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { PendingWrites, type LocalWriteSend } from '../pendingWrites';
 import type { LocalWriteTable } from '../types';
 
@@ -424,6 +426,72 @@ describe('PendingWrites', () => {
       expect(edit.sent[0]?.variables.input).toMatchObject({ version: 1 });
       edit.answer(applied({ setQuantity: { id: 'row-2', version: 2 } }));
       await edit.result;
+    });
+
+    // A detail read keyed on a minted id waits until the server has the row.
+    it('claims the row a create mints until it answers', async () => {
+      const { pending } = seeded();
+      const create = held(pending, CREATE_ROW, { id: 'row-9' });
+      await Promise.resolve();
+
+      expect(unconfirmedCreates.has('row-9')).toBe(true);
+
+      create.answer(
+        applied({
+          createRow: { __typename: 'ProbeItem', id: 'row-9', version: 1 },
+        }),
+      );
+      await create.result;
+      expect(unconfirmedCreates.has('row-9')).toBe(false);
+    });
+
+    it('releases the claim, and answers what waits on it, when sending throws', async () => {
+      const { pending } = seeded();
+      const create = pending.send(CREATE_ROW, { input: { id: 'row-9' } }, () =>
+        Promise.reject(new Error('report failed')),
+      );
+      const edit = held(pending, SET_QUANTITY, {
+        id: 'row-9',
+        quantity: 1,
+        version: 0,
+      });
+
+      await expect(create).rejects.toThrow('report failed');
+      expect(unconfirmedCreates.has('row-9')).toBe(false);
+      await expect(edit.result).resolves.toMatchObject({ status: 'failed' });
+      expect(edit.sent).toHaveLength(0);
+    });
+
+    // A clear names rows by id: it waits on their creates, and one refused
+    // leaves only that row out.
+    it('sends a removal of several rows without a row whose create was refused', async () => {
+      const cache = makeCache();
+      const pending = new PendingWrites(cache, {
+        ...TABLE,
+        RemoveItemsFromShoppingList: { apply: () => undefined },
+      });
+      const create = held(pending, CREATE_ROW, { id: 'row-9' });
+      await Promise.resolve();
+      const clear = held(pending, RemoveItemsFromShoppingListDocument, {
+        shoppingListId: 'list-1',
+        ids: ['row-1', 'row-9'],
+      });
+      await Promise.resolve();
+      expect(clear.sent).toHaveLength(0);
+
+      create.answer({
+        status: 'failed',
+        data: undefined,
+        failure: { code: null, field: null, title: '', body: '' },
+      });
+      await create.result;
+      await new Promise(resolve => setImmediate(resolve));
+
+      expect(clear.sent[0]?.variables.input).toMatchObject({
+        ids: ['row-1'],
+      });
+      clear.answer(applied({ removeItemsFromShoppingList: {} }));
+      await clear.result;
     });
 
     describe('after an answer, while a layer still shows the old row', () => {

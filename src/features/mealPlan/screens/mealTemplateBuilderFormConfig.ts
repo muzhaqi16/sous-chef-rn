@@ -1,12 +1,13 @@
 import { mixed, object, string, type ObjectSchema } from 'yup';
-import { lazyMessage } from '#/utils/validation/common';
+import { commaTagsRule, lazyMessage } from '#utils/validation/common';
 import {
   MealType,
   TemplateCategory,
   type MealRefInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { startingServings } from '#domain/servings';
 import { DEFAULT_PLAN_SERVINGS } from './createMealPlanFormConfig';
+import { MAX_TEMPLATE_TAGS } from '#utils/validation/entryLimits';
 
 /** The template itself. */
 export interface TemplateFormValues {
@@ -43,7 +44,7 @@ export const templateSchema: ObjectSchema<TemplateFormValues> = object({
     .required(),
   defaultServings: string().defined(),
   description: string().defined(),
-  tags: string().defined(),
+  tags: commaTagsRule(MAX_TEMPLATE_TAGS),
 });
 
 export const templateItemSchema: ObjectSchema<TemplateItemFormValues> = object({

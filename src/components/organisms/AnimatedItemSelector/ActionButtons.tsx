@@ -7,7 +7,7 @@ import Animated, {
   FadeInUp,
   LinearTransition,
 } from 'react-native-reanimated';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { Icon } from '#components/atoms/Icon';
 import type { ActionButtonConfig } from './types';
 import { Text } from '#components/atoms/Text';
@@ -39,7 +39,7 @@ const ActionButton: React.FC<{
       >
         <Icon
           name={action.icon}
-          size={20}
+          size="sm"
           color={action.color}
           tone={variant === 'primary' ? 'onPrimary' : 'secondary'}
           library={action.iconLibrary}

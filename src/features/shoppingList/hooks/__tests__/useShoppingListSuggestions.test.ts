@@ -7,7 +7,7 @@ import {
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { SuggestionSource } from '#/graphql/generated/schemaTypes';
+import { SuggestionSource } from '#graphql/generated/schemaTypes';
 import { useShoppingListSuggestions } from '../useShoppingListSuggestions';
 
 jest.mock('#utils/imageUtils', () => ({

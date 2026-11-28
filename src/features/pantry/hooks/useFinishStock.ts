@@ -1,17 +1,16 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { CreatePantryItemUsageDocument } from '#features/pantry/graphql/pantry.generated';
+import { useApolloClient } from '@apollo/client/react';
+import { useTranslation } from '#i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import {
   ErrorCode,
   UsagePurpose,
   type WasteReason,
-} from '#/graphql/generated/schemaTypes';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
-import { heldQuantityOf } from '#features/pantry/cache/stock';
+} from '#graphql/generated/schemaTypes';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
+import { heldQuantityOf } from '#entities/pantryItem/stock';
 import type { DrawStockInputs } from '#features/pantry/offline/localWrites';
+import { createPantryItemUsageWrite } from '#features/pantry/offline/localWrites';
 
 interface FinishStock {
   purpose: UsagePurpose;
@@ -37,8 +36,13 @@ const NOTHING_LEFT: ReadonlySet<string> = new Set([
 export function useFinishStock() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [createPantryItemUsage] = useMutation(CreatePantryItemUsageDocument, {
-    context: { localFirst: true },
+  const gone = {
+    title: t('errors.stockAlreadyGoneTitle'),
+    body: t('errors.stockAlreadyGone'),
+  };
+  const createUsage = useLocalWrite(createPantryItemUsageWrite, {
+    fallback: t('errors.recordUsageFailedRetry'),
+    copy: { INSUFFICIENT_QUANTITY: gone, NOT_FOUND: gone },
   });
 
   /** A queued write is not a failure; nothing left to finish is no failure either. */
@@ -46,10 +50,6 @@ export function useFinishStock() {
     pantryItemId: string,
     { purpose, batchId, wasteReason }: FinishStock,
   ): Promise<FinishOutcome> => {
-    const gone = {
-      title: t('errors.stockAlreadyGoneTitle'),
-      body: t('errors.stockAlreadyGone'),
-    };
     const today = todayKey();
     // A package's share of the stack is the server's to work out, so only a
     // whole stack moves before the answer.
@@ -58,8 +58,7 @@ export function useFinishStock() {
       delta: held === null ? null : -held,
       now: new Date().toISOString(),
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      CreatePantryItemUsageDocument,
+    const settled = await createUsage.send(
       {
         today,
         input: {
@@ -73,16 +72,15 @@ export function useFinishStock() {
           idempotencyKey: generateEntityId(),
         },
       },
-      write =>
-        settleMutation(() => createPantryItemUsage(write), {
-          document: CreatePantryItemUsageDocument,
+      inputs,
+      {
+        settle: {
           fallback:
             purpose === UsagePurpose.Waste
               ? t('errors.recordWasteFailedRetry')
               : t('errors.recordUsageFailedRetry'),
-          copy: { INSUFFICIENT_QUANTITY: gone, NOT_FOUND: gone },
-        }),
-      inputs,
+        },
+      },
     );
     if (settled.status !== 'failed') return 'recorded';
     return NOTHING_LEFT.has(settled.failure?.code ?? '')

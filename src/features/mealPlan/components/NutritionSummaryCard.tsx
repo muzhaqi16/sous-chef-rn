@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { NutritionGoalProgress } from './NutritionGoalProgress';
 import { Text } from '#components/atoms/Text';
-import type { GoalProgress } from '#/graphql/generated/schemaTypes';
+import type { GoalProgress } from '#graphql/generated/schemaTypes';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
 

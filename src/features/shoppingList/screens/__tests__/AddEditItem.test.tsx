@@ -1,7 +1,7 @@
 import React from 'react';
 import { gql, type InMemoryCache } from '@apollo/client';
 import { fireEvent, screen, userEvent } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   inputOf,
   recordMock,
@@ -17,10 +17,10 @@ import {
   catalogSearches,
 } from '#/test-utils/fixtures/catalogSearches';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
-import { ErrorCode, UnitSystem } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { getDeviceDecimalSeparator } from '#utils/deviceLocale';
+import { ErrorCode, UnitSystem } from '#graphql/generated/schemaTypes';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import {
   AddItemToShoppingListDocument,
@@ -38,8 +38,8 @@ import { AddEditItem } from '../AddEditItem';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 // The keypad's decimal separator is the device's.
-jest.mock('#/utils/deviceLocale', () => ({
-  ...jest.requireActual('#/utils/deviceLocale'),
+jest.mock('#utils/deviceLocale', () => ({
+  ...jest.requireActual('#utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
 

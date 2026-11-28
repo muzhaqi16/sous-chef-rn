@@ -1,0 +1,143 @@
+import type { ApolloCache } from '@apollo/client';
+import {
+  createAddToParentConnectionUpdater,
+  createAddToQueryConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
+  createRemoveFromQueryConnectionUpdater,
+  isUnfilteredVariant,
+  skipUnmatchedArgVariants,
+} from '#apollo/utils/cacheUpdaters';
+import { writeLocalEntity } from '#apollo/utils/writeLocalEntity';
+import type { CreateStorageLocationInput } from '#graphql/generated/schemaTypes';
+import { StorageLocations_RowFragmentDoc } from './storageLocations.generated';
+import {
+  NEUTRAL_LOCAL_STORAGE_LOCATION,
+  NEUTRAL_LOCAL_STORAGE_LOCATION_BY_TYPE,
+} from './storageLocationRowNeutral.generated';
+
+/** What a create states about the location, under the id it minted. */
+export type LocalStorageLocation = Omit<
+  CreateStorageLocationInput,
+  'homeId'
+> & {
+  id: string;
+};
+
+/** The reference the connection writes identify a location by. */
+type LocationRef = { __typename: 'StorageLocation'; id: string };
+
+const addToStorageLocationsCache =
+  createAddToQueryConnectionUpdater<LocationRef>(
+    'storageLocations',
+    'StorageLocation',
+  );
+const addToPantryLocations = createAddToParentConnectionUpdater<LocationRef>(
+  'Pantry',
+  'storageLocationsConnection',
+  'StorageLocation',
+);
+const removeFromStorageLocationsCache = createRemoveFromQueryConnectionUpdater(
+  'storageLocations',
+  'StorageLocation',
+);
+const removeFromPantryLocations = createRemoveFromParentConnectionUpdater(
+  'Pantry',
+  'storageLocationsConnection',
+  'StorageLocation',
+);
+
+/**
+ * Write the location a create makes, complete for every screen that reads one,
+ * so it renders as a filter tab at once. A nested create names its parent, which
+ * the cache completes from what it holds.
+ */
+export function writeLocalStorageLocation(
+  cache: ApolloCache,
+  input: LocalStorageLocation,
+): void {
+  writeLocalEntity(cache, {
+    fragment: StorageLocations_RowFragmentDoc,
+    fragmentName: 'storageLocations_row',
+    neutral: NEUTRAL_LOCAL_STORAGE_LOCATION,
+    neutralByType: NEUTRAL_LOCAL_STORAGE_LOCATION_BY_TYPE,
+    known: {
+      __typename: 'StorageLocation',
+      id: input.id,
+      name: input.name,
+      type: input.type,
+      color: input.color ?? null,
+      temperature: input.temperature ?? null,
+      description: input.description ?? null,
+      isClimateControlled: input.isClimateControlled ?? false,
+      capacity: input.capacity ?? null,
+      capacityUnit: input.capacityUnit ?? null,
+      sortOrder: input.sortOrder ?? 0,
+      isDefault: input.isDefault ?? false,
+      currentItemCount: 0,
+      parentLocation: input.parentLocationId
+        ? { __typename: 'StorageLocation', id: input.parentLocationId }
+        : null,
+    },
+  });
+}
+
+/** Lists a location in its own home's list only: `storageLocations` is keyed by `homeId`. */
+export function listStorageLocation(
+  cache: ApolloCache,
+  id: string,
+  homeId: string,
+  pantryId: string | undefined,
+): void {
+  const location: LocationRef = { __typename: 'StorageLocation', id };
+  addToStorageLocationsCache(cache, location, {
+    position: 'end',
+    skipStoreField: skipUnmatchedArgVariants({ homeId }),
+  });
+  if (pantryId) {
+    addToPantryLocations(cache, pantryId, location, { position: 'end' });
+  }
+}
+
+/** Takes a location out of both lists; `evictItem` does nothing in a layer. */
+export function unlistStorageLocation(
+  cache: ApolloCache,
+  id: string,
+  pantryId: string | undefined,
+  { evictItem }: { evictItem: boolean },
+): void {
+  if (pantryId) removeFromPantryLocations(cache, pantryId, id);
+  removeFromStorageLocationsCache(cache, id, { evictItem });
+}
+
+/**
+ * A location the feed brought, in its home's list and each held pantry of the
+ * home. A pantry's sorted lists are the server's, so only the one every reader
+ * shares takes it.
+ */
+export function placeStorageLocation(
+  cache: ApolloCache,
+  id: string,
+  homeId: string,
+  pantryIds: readonly string[],
+): void {
+  listStorageLocation(cache, id, homeId, undefined);
+  const location: LocationRef = { __typename: 'StorageLocation', id };
+  for (const pantryId of pantryIds) {
+    addToPantryLocations(cache, pantryId, location, {
+      position: 'end',
+      skipStoreField: storeFieldName => !isUnfilteredVariant(storeFieldName),
+    });
+  }
+}
+
+/** A location the feed removed, out of every list that names it; the caller evicts it. */
+export function unplaceStorageLocation(
+  cache: ApolloCache,
+  id: string,
+  pantryIds: readonly string[],
+): void {
+  for (const pantryId of pantryIds) {
+    removeFromPantryLocations(cache, pantryId, id);
+  }
+  removeFromStorageLocationsCache(cache, id);
+}

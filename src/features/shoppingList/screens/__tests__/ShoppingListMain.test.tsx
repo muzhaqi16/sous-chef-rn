@@ -8,7 +8,7 @@ import {
   userEvent,
   within,
 } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { screenShows, withDeadline } from '#/test-utils/cacheWaits';
@@ -24,10 +24,10 @@ import {
   type ShoppingListNode,
 } from '#/test-utils/fixtures/shoppingListFixtures';
 import { useStore } from '#store';
-import { isRecord } from '#/utils/isRecord';
-import { alertService } from '#/services/alertService';
-import { t } from '#/i18n';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { isRecord } from '#utils/isRecord';
+import { alertService } from '#services/alertService';
+import { t } from '#i18n';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import { markFeatureHintShown } from '#hooks/settings/useFeatureHint';
 import {
   startTutorialSession,
@@ -42,7 +42,7 @@ import {
   useTabBarSetters,
   useTabBarState,
   type TabBarAddAction,
-} from '#/context/TabBarActionsContext';
+} from '#context/TabBarActionsContext';
 import {
   AddItemToShoppingListDocument,
   GetShoppingListDetailsDocument,

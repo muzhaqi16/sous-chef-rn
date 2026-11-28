@@ -1,6 +1,7 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { UpdateHomeDocument } from '#operations/home/home.generated';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { SettledFailure } from '#apollo/utils/settleMutation';
+import { useTranslation } from '#i18n';
+import { updateHomeWrite } from '#apollo/pendingWrites/sharedWrites';
 
 /** What a settings screen can change about a home through `updateHome`. */
 export type HomeFieldUpdates = {
@@ -14,30 +15,31 @@ export type HomeFieldUpdates = {
  * operation that file names.
  */
 export function useUpdateHomeFields(homeId: string) {
-  const client = useApolloClient();
+  const { t } = useTranslation();
   // The mutation returns updated scalar fields; Apollo merges by __typename + id.
-  const [updateHomeMutation] = useMutation(UpdateHomeDocument, {
-    context: { localFirst: true },
+  const updateHome = useLocalWrite(updateHomeWrite, {
+    fallback: t('errors.updateHomeFailed'),
   });
 
   /**
    * `home` states the version the edit builds on. `fallback` is the copy a
-   * failure shows when its code has none. True when the change landed or is
-   * queued.
+   * failure shows when its code has none. The failure, if any: a form that
+   * shows it on its field passes `onField`, and nothing else shows it.
    */
   const updateHomeFields = async (
     updates: HomeFieldUpdates,
     home: { version: number },
     fallback: string,
-  ): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'Home', id: homeId },
-      fields: updates,
-      variables: { input: { id: homeId, ...updates, version: home.version } },
-      mutate: updateHomeMutation,
-      settle: { document: UpdateHomeDocument, fallback },
-    });
-    return settled.status !== 'failed';
+    { onField = false }: { onField?: boolean } = {},
+  ): Promise<SettledFailure | undefined> => {
+    const settled = await updateHome.send(
+      {
+        input: { id: homeId, ...updates, version: home.version },
+      },
+      { entity: { __typename: 'Home', id: homeId }, fields: updates },
+      { settle: { fallback, ...(onField && { present: 'none' }) } },
+    );
+    return settled.failure;
   };
 
   return { updateHomeFields };

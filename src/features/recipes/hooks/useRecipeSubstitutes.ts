@@ -1,9 +1,9 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { toHouseholdAlert, type HouseholdAlert } from '#domain/dietary';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
-import { formatQuantityWithUnit } from '#/utils/formatQuantity';
+import { formatQuantityWithUnit } from '#utils/formatQuantity';
 import {
   useSelectedHomeId,
   useSelectedPantryId,

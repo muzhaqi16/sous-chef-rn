@@ -3,19 +3,19 @@ import { View } from 'react-native';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { useShareShoppingList } from '#features/shoppingList/hooks/useShareShoppingList';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
-import { getFormAnimationPreset } from '#/constants/animations';
-import { buildJoinListUrl } from '#/utils/deepLinkUrls';
+import { getFormAnimationPreset } from '#constants/animations';
+import { buildJoinListUrl } from '#utils/deepLinkUrls';
 import { shareUrl } from '#native/share';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 interface ShareCodeSectionProps {
   listId: string;
@@ -107,7 +107,7 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
         >
           <Icon
             name={isPublic ? 'link-outline' : 'lock-closed-outline'}
-            size={20}
+            size="sm"
             tone={isPublic ? 'primary' : 'textSecondary'}
           />
           <Text role="bodyStrong" style={styles.shareCodeToggleText}>
@@ -151,7 +151,7 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
             </Text>
             <Icon
               name={copied ? 'checkmark' : 'copy-outline'}
-              size={18}
+              size="xsPlus"
               tone={copied ? 'success' : 'primary'}
             />
           </AppPressable>
@@ -159,7 +159,7 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
             style={styles.shareLinkButton}
             onPress={handleShareLink}
           >
-            <Icon name="share-outline" size={18} tone="primary" />
+            <Icon name="share-outline" size="xsPlus" tone="primary" />
             <Text role="bodyStrong" style={styles.shareLinkText}>
               {t('labels.shareLink')}
             </Text>

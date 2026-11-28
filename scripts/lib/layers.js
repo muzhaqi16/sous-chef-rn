@@ -36,6 +36,11 @@ const LAYERS = [
     patterns: ['src/domain/**'],
   },
   {
+    name: 'entities',
+    layer: 'core',
+    patterns: ['src/entities/**'],
+  },
+  {
     name: 'graphql',
     layer: 'core',
     patterns: ['src/graphql/**'],
@@ -104,7 +109,7 @@ const LAYERS = [
     layer: 'core',
     patterns: [
       'src/features/*/{manifest.static,types,pushCopy}.ts',
-      'src/features/{registry.static,registry.cache,staticTypes}.ts',
+      'src/features/{registry.static,registry.cache,registry.data,registry.feed,staticTypes}.ts',
     ],
   },
 
@@ -126,9 +131,7 @@ const LAYERS = [
   {
     name: 'hooks (UI and device)',
     layer: 'mobile',
-    patterns: [
-      'src/hooks/{ui,animations,navigation,permissions,performance,device}/**',
-    ],
+    patterns: ['src/hooks/{ui,animations,navigation,performance,device}/**'],
   },
   {
     name: 'theme runtime',

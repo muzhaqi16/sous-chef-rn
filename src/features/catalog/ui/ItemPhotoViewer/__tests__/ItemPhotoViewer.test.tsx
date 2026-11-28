@@ -8,10 +8,10 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { ItemImageStatus } from '#/graphql/generated/schemaTypes';
+import { ItemImageStatus } from '#graphql/generated/schemaTypes';
 import { MarkPrimaryItemImageDocument } from '#features/catalog/hooks/useMarkPrimaryItemImage.generated';
 import { MarkItemForReviewDocument } from '#operations/item/item.generated';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { ItemPhotoViewer } from '../ItemPhotoViewer';
 import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 

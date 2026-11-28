@@ -1,6 +1,5 @@
 {
   "storageLocations": {
-    "loading": "Caricamento posizioni...",
     "listView": "Vista elenco",
     "treeView": "Vista ad albero",
     "noLocations": "Nessuna posizione",
@@ -12,9 +11,7 @@
     "subLocationSingular": "{{count}} sotto-posizione",
     "subLocationPlural": "{{count}} sotto-posizioni",
     "gotIt": "Capito",
-    "deleteTitle": "Elimina posizione",
-    "offlineTitle": "Non ancora caricate",
-    "offlineDescription": "Le tue posizioni di conservazione non sono state caricate su questo dispositivo. Riconnettiti per vederle."
+    "deleteTitle": "Elimina posizione"
   },
   "storageLocationForm": {
     "name": "Nome",
@@ -322,6 +319,7 @@
     "deleteFolder": "Elimina cartella",
     "deleteHint": "Le ricette verranno spostate in Senza cartella",
     "renamePlaceholder": "Inserisci il nuovo nome della cartella...",
+    "nameRequired": "Inserisci un nome per la cartella.",
     "noMatches": "Nessuna cartella corrisponde a \"{{query}}\"",
     "deleteConfirmBody": "Le ricette in questa cartella verranno spostate in \"{{folder}}\"."
   },

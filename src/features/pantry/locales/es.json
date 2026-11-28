@@ -243,7 +243,8 @@
   },
   "pantryAction": {
     "useByDefault": "Consumir antes de",
-    "availableDefault": "Disponible:"
+    "availableDefault": "Disponible:",
+    "availableAmount": "{{amount}} {{unit}}"
   },
   "correctWeight": {
     "invalidWeight": "Introduce un tamaño válido",
@@ -291,6 +292,7 @@
     "sortedBy": "Ordenar, ahora por {{field}}",
     "tabAll": "Todos",
     "tabUnassigned": "Sin asignar",
+    "locationInParent": "{{parent}} › {{name}}",
     "expiringCount": "{{count}} por vencer",
     "expiredCount": "{{count}} caducados",
     "lowStockCount": "{{count}} poca existencia",
@@ -306,7 +308,7 @@
     "pantriesHiddenDescription": "Quien gestiona este hogar puede permitirte ver sus despensas.",
     "searchNoResultsDescription": "¿Quieres añadirlo a tu despensa?",
     "tabEmptyTitle": "Sin artículos en {{tabName}}",
-    "tabEmptyDescription": "Los artículos guardados aquí aparecerán en esta pestaña",
+    "tabEmptyDescription": "Los artículos guardados aquí aparecerán en esta lista",
     "tabEmptyFallbackName": "esta ubicación",
     "tutorialPantrySettingsSubtitle": "Cambia entre listas de despensa y crea nuevas despensas",
     "tutorialAddItemsTitle": "Añade artículos rápidamente",
@@ -335,7 +337,8 @@
     "stockLevelHigh": "Seguramente sigue aquí",
     "stockLevelMedium": "Conviene revisarlo",
     "stockLevelLow": "Probablemente se acabó",
-    "stockLevelUnknown": "Sin datos"
+    "stockLevelUnknown": "Sin datos",
+    "stockLastConfirmed": "Última confirmación: {{when}}"
   },
   "storageState": {
     "AMBIENT": "Ambiente",
@@ -362,7 +365,9 @@
     "exceedsAvailableWaste": "No puedes desperdiciar más de la cantidad disponible ({{amount}} {{unit}})",
     "remainingAfter": "Restante: {{amount}} {{unit}}",
     "exceedsAvailable": "Supera lo disponible ({{amount}} {{unit}})",
-    "conversionUnavailable": "No se puede convertir esta unidad. Elige otra unidad."
+    "conversionUnavailable": "No se puede convertir esta unidad. Elige otra unidad.",
+    "stockMovedTitle": "No queda tanto",
+    "stockMoved": "Parte se ha usado desde que abriste esto. Revisa lo que queda e inténtalo de nuevo."
   },
   "duplicateItem": {
     "title": "El artículo ya está en la despensa"

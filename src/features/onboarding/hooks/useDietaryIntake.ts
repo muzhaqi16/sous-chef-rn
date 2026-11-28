@@ -5,8 +5,8 @@ import {
   type Intolerance,
   type ReligiousDiet,
   type RestrictionKindInput,
-} from '#/graphql/generated/schemaTypes';
-import { generateEntityId } from '#/utils/generateEntityId';
+} from '#graphql/generated/schemaTypes';
+import { generateEntityId } from '#utils/generateEntityId';
 import { isLifestyleDiet } from '#domain/dietary';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useRecordOnboardingProgress } from '#features/onboarding/store/onboardingProgressStore';

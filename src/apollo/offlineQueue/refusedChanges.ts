@@ -1,6 +1,6 @@
-import { requireApolloClient } from '#/apollo/clientRegistry';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { requireApolloClient } from '#apollo/clientRegistry';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import { queueManager } from './queueManager';
 import { queueStore } from './queueStore';
 import type { QueueError } from './types';

@@ -1,19 +1,17 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
-import { localIntakeRow } from '#features/pantry/cache/localIntake';
+import { useApolloClient } from '@apollo/client/react';
+import type { LocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
+import { localIntakeRow } from '#entities/pantryItem/localIntake';
 import type { CreateItemInputs } from '#features/pantry/offline/localWrites';
 import { readHeldStackUnit } from '#features/pantry/utils/pantryCacheReaders';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
+import { useTranslation } from '#i18n';
 import type {
   CreatePantryItemInput,
   PantryItemSourceInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
+import { createPantryItemWrite } from '#features/pantry/offline/localWrites';
 
 /**
  * A typed item goes under an id minted here, which the row names at once: the
@@ -55,10 +53,10 @@ export function usePantryIntake(pantryId: string | undefined) {
   const { t } = useTranslation();
   const client = useApolloClient();
 
-  const [createPantryItem, { loading: adding }] = useMutation(
-    CreatePantryItemDocument,
-    { context: { localFirst: true } },
-  );
+  const create = useLocalWrite(createPantryItemWrite, {
+    fallback: t('errors.addItemFailedRetry'),
+    present: 'none',
+  });
 
   /** Show the row, send the create, and report what became of it. */
   const addItem = async (
@@ -80,26 +78,16 @@ export function usePantryIntake(pantryId: string | undefined) {
       item: withMintedItemId(input.item),
       forceAdd: true,
     };
-    // Publishing this id to `Pantry.itemsConnection` makes the row tappable,
-    // and its detail/edit screens query by it. Hold those off until the server
-    // has the row — see `unconfirmedCreates`.
-    unconfirmedCreates.mark(id);
     const today = todayKey();
     const inputs: CreateItemInputs = {
       row: localIntakeRow(pantryId, itemName, sent, local),
       now: new Date().toISOString(),
     };
     // A refusal naming a field reads as its localized `errors.field.*` copy.
-    const settled = await pendingWritesOf(client.cache).send(
-      CreatePantryItemDocument,
+    const settled = await create.send(
       { input: { ...sent, id, pantryId, today }, today },
-      write =>
-        settleMutation(() => createPantryItem(write), {
-          document: CreatePantryItemDocument,
-          fallback,
-          present,
-        }),
       inputs,
+      { settle: { fallback, present } },
     );
     let outcome: AddPantryItemOutcome = { status: 'added' };
     if (settled.status === 'failed') {
@@ -111,9 +99,6 @@ export function usePantryIntake(pantryId: string | undefined) {
       };
     }
 
-    // Released on every outcome; a queued create is tracked by the offline
-    // queue's pending set from here on.
-    unconfirmedCreates.confirm(id);
     return outcome;
   };
 
@@ -121,5 +106,5 @@ export function usePantryIntake(pantryId: string | undefined) {
   const heldUnitOf = (itemId: string) =>
     readHeldStackUnit(client.cache, pantryId, itemId);
 
-  return { addItem, adding, heldUnitOf };
+  return { addItem, adding: create.sending, heldUnitOf };
 }

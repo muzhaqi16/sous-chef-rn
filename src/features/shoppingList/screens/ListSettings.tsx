@@ -1,16 +1,18 @@
 import React from 'react';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { DataStateView } from '#components/organisms/DataStateView';
-import { RecurringPattern } from '#/graphql/generated/schemaTypes';
+import { RecurringPattern } from '#graphql/generated/schemaTypes';
 import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
 
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -23,6 +25,12 @@ import { RecurringSection } from '#features/shoppingList/components/listSettings
 import { ReminderSection } from '#features/shoppingList/components/listSettings/ReminderSection';
 import { TemplateSection } from '#features/shoppingList/components/listSettings/TemplateSection';
 import { SubScreen } from '#components/templates/SubScreen';
+import { reportValidationErrors } from '#utils/validation/common';
+import type { ListSettingsValues } from '#features/shoppingList/hooks/listSettings/useListDetailsSection';
+import {
+  EMPTY_LIST_SETTINGS,
+  listSettingsSchema,
+} from './listSettingsFormConfig';
 
 export const ListSettings: React.FC<
   StaticScreenProps<
@@ -36,75 +44,119 @@ export const ListSettings: React.FC<
   const { t } = useTranslation();
   const { toShareList, toHomeDetail } = useAppNavigation();
   const {
-    basedOnTemplate,
-    canDelete,
-    collaborators,
-    completedShopDate,
-    completing,
-    creating,
-    formatDate,
-    generating,
-    handleArchiveToggle,
-    handleClearReminder,
-    handleCreateFromTemplate,
-    handleDelete,
-    handleGenerateNext,
-    handleLeaveList,
-    handleOpenHomePicker,
-    handleSave,
-    handleSaveAsTemplate,
-    handleSelectPattern,
-    handleSelectTemplate,
-    handleSetReminderDate,
-    handleStopRecurring,
-    handleToggleComplete,
-    hasChanges,
-    homes,
-    homesState,
-    retryHomes,
-    isArchived,
-    isCompleted,
-    isDefault,
-    isHomeMember,
-    canEdit,
-    isOwner,
-    isRecurring,
-    isShared,
-    isTemplate,
-    leaving,
-    linkedHomeId,
     listId,
-    marking,
-    name,
-    nextRecurringDate,
-    ownerInfo,
-    ownership,
-    detailsState,
-    patternLabel,
-    reactivating,
-    recurringPattern,
-    reminderDate,
-    reminderEnabled,
-    retryOwnership,
-    roleDisplay,
-    saving,
-    selectedHomeId,
-    selectedTemplate,
-    selectedTemplateId,
-    setIsDefault,
-    setName,
-    setSelectedHomeId,
-    setShowHomePicker,
-    setShowPatternPicker,
-    setShowTemplatePicker,
     shoppingList,
-    showHomePicker,
-    showPatternPicker,
-    showTemplatePicker,
-    statusDisplay,
-    templateName,
-    templates,
+    detailsState,
+    saving,
+    canEdit,
+    canDelete,
+    formatDate,
+    details: {
+      save,
+      homes,
+      homesState,
+      retryHomes,
+      showHomePicker,
+      setShowHomePicker,
+      handleOpenHomePicker,
+      templates,
+      showTemplatePicker,
+      setShowTemplatePicker,
+      isTemplate,
+      templateName,
+      basedOnTemplate,
+      marking,
+      creating,
+      handleSaveAsTemplate,
+      handleCreateFromTemplate,
+    },
+    recurrence: {
+      isRecurring,
+      recurringPattern,
+      nextRecurringDate,
+      patternLabel,
+      showPatternPicker,
+      setShowPatternPicker,
+      handleSelectPattern,
+      handleStopRecurring,
+      handleGenerateNext,
+      generating,
+    },
+    reminder: {
+      reminderEnabled,
+      reminderDate,
+      handleSetReminderDate,
+      handleClearReminder,
+    },
+    membership: {
+      collaborators,
+      isShared,
+      ownership,
+      isOwner,
+      roleDisplay,
+      ownerInfo,
+      isHomeMember,
+      linkedHomeId,
+      leaving,
+      retryOwnership,
+      handleLeaveList,
+    },
+    archive: {
+      statusDisplay,
+      isCompleted,
+      isArchived,
+      completedShopDate,
+      completing,
+      reactivating,
+      handleToggleComplete,
+      handleArchiveToggle,
+      handleDelete,
+    },
   } = useListSettings(route.params?.listId);
+
+  const readValues: ListSettingsValues | undefined =
+    listId && shoppingList
+      ? {
+          name: shoppingList.name,
+          isDefault: shoppingList.isDefault,
+          homeId: null,
+          templateId: null,
+        }
+      : undefined;
+  const { control, handleSubmit, setValue, getValues } =
+    useForm<ListSettingsValues>({
+      resolver: yupResolver(listSettingsSchema),
+      // `values` lands in an effect after the first render, so a list cached
+      // at mount seeds the defaults too.
+      defaultValues: readValues ?? EMPTY_LIST_SETTINGS,
+      // The list as read, whenever it changes; a field the user has touched
+      // keeps what they typed.
+      values: readValues,
+      resetOptions: { keepDirtyValues: true },
+      mode: 'onTouched',
+    });
+  const [name, isDefault, homeId, templateId] = useWatch({
+    control,
+    name: ['name', 'isDefault', 'homeId', 'templateId'],
+  });
+  const selectedTemplate = templates.find(tpl => tpl.id === templateId) ?? null;
+
+  // What Save would write differs from the list; a new list has nothing to compare.
+  const hasChanges = listId
+    ? name.trim() !== shoppingList?.name || isDefault !== shoppingList.isDefault
+    : undefined;
+
+  // Picking a template names the new list after it, unless the user typed
+  // their own name.
+  const handleSelectTemplate = (value: string) => {
+    setShowTemplatePicker(false);
+    const next = templates.find(tpl => tpl.id === value) ?? null;
+    setValue('templateId', next?.id ?? null);
+    const typed = getValues('name');
+    if (!typed.trim() || typed === selectedTemplate?.displayName) {
+      setValue('name', next?.displayName ?? '');
+    }
+  };
 
   // Ownership decides the whole screen — its title, its Save action and six
   // sections — so an unresolved answer waits rather than rendering the viewer's
@@ -138,7 +190,9 @@ export const ListSettings: React.FC<
                   : !listId
                   ? t('labels.create')
                   : t('labels.save'),
-                onPress: handleSave,
+                onPress: () => {
+                  void handleSubmit(save, reportValidationErrors)();
+                },
                 variant: 'primary',
                 hasChanges,
                 disabled: saving,
@@ -187,12 +241,21 @@ export const ListSettings: React.FC<
             {t('labels.general')}
           </Text>
 
-          <BaseInput
-            label={t('shoppingListScreens.listName')}
-            value={name}
-            onChangeText={setName}
-            placeholder={t('shoppingListScreens.listNamePlaceholder')}
-            maxLength={LIST_NAME_MAX_LENGTH}
+          <Controller
+            control={control}
+            name="name"
+            render={({ field, fieldState }) => (
+              <BaseInput
+                ref={field.ref}
+                label={t('shoppingListScreens.listName')}
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                errorMessage={fieldState.error?.message}
+                placeholder={t('shoppingListScreens.listNamePlaceholder')}
+                maxLength={LIST_NAME_MAX_LENGTH}
+              />
+            )}
           />
 
           {/* Home selector - only show for new lists. */}
@@ -209,10 +272,10 @@ export const ListSettings: React.FC<
                 onPress={handleOpenHomePicker}
               >
                 <Text role="body">
-                  {homes.find(h => h.id === selectedHomeId)?.name ??
+                  {homes.find(h => h.id === homeId)?.name ??
                     t('shoppingListScreens.personalNoHome')}
                 </Text>
-                <Icon name="chevron-down" size={20} tone="textSecondary" />
+                <Icon name="chevron-down" size="sm" tone="textSecondary" />
               </Pressable>
             </View>
           )}
@@ -234,7 +297,7 @@ export const ListSettings: React.FC<
               <BaseSwitch
                 accessibilityLabel={t('shoppingListScreens.defaultList')}
                 value={isDefault}
-                onValueChange={setIsDefault}
+                onValueChange={next => setValue('isDefault', next)}
               />
             </View>
           )}
@@ -265,7 +328,7 @@ export const ListSettings: React.FC<
                 {selectedTemplate?.displayName ??
                   t('shoppingListScreens.noTemplateBlankList')}
               </Text>
-              <Icon name="chevron-down" size={20} tone="textSecondary" />
+              <Icon name="chevron-down" size="sm" tone="textSecondary" />
             </Pressable>
             <Text role="caption" tone="secondary" style={styles.fieldNote}>
               {t('shoppingListScreens.startFromTemplateDesc')}
@@ -305,8 +368,10 @@ export const ListSettings: React.FC<
       <TemplateSection
         basedOnTemplate={basedOnTemplate}
         creating={creating}
-        handleCreateFromTemplate={handleCreateFromTemplate}
-        handleSaveAsTemplate={handleSaveAsTemplate}
+        handleCreateFromTemplate={() =>
+          handleCreateFromTemplate(getValues('name'))
+        }
+        handleSaveAsTemplate={() => handleSaveAsTemplate(getValues('name'))}
         canEdit={canEdit}
         isTemplate={isTemplate}
         listId={listId}
@@ -337,11 +402,11 @@ export const ListSettings: React.FC<
             ]}
             onPress={() => toShareList({ listId: listId })}
           >
-            <Icon name="person-add" size={20} tone="primary" />
+            <Icon name="person-add" size="sm" tone="primary" />
             <Text role="body" tone="accent" style={styles.actionText}>
               {t('shoppingListScreens.manageMembers')}
             </Text>
-            <Icon name="chevron-forward" size={20} tone="textSecondary" />
+            <Icon name="chevron-forward" size="sm" tone="textSecondary" />
           </Pressable>
 
           {!!isShared && (
@@ -363,7 +428,7 @@ export const ListSettings: React.FC<
           {isHomeMember ? (
             <>
               <View style={styles.disabledLeaveButton}>
-                <Icon name="log-out-outline" size={20} tone="textSecondary" />
+                <Icon name="log-out-outline" size="sm" tone="textSecondary" />
                 <Text
                   role="bodyStrong"
                   tone="secondary"
@@ -389,11 +454,11 @@ export const ListSettings: React.FC<
                   ]}
                   onPress={() => toHomeDetail({ homeId: linkedHomeId })}
                 >
-                  <Icon name="people-outline" size={20} tone="primary" />
+                  <Icon name="people-outline" size="sm" tone="primary" />
                   <Text role="body" tone="accent" style={styles.actionText}>
                     {t('shoppingListScreens.manageHome')}
                   </Text>
-                  <Icon name="chevron-forward" size={20} tone="textSecondary" />
+                  <Icon name="chevron-forward" size="sm" tone="textSecondary" />
                 </Pressable>
               )}
             </>
@@ -407,7 +472,7 @@ export const ListSettings: React.FC<
                 onPress={handleLeaveList}
                 disabled={leaving}
               >
-                <Icon name="log-out-outline" size={20} tone="error" />
+                <Icon name="log-out-outline" size="sm" tone="error" />
                 <Text
                   role="bodyStrong"
                   tone="danger"
@@ -443,7 +508,7 @@ export const ListSettings: React.FC<
             ]}
             onPress={handleDelete}
           >
-            <Icon name="trash-outline" size={20} tone="error" />
+            <Icon name="trash-outline" size="sm" tone="error" />
             <Text
               role="bodyStrong"
               tone="danger"
@@ -470,9 +535,9 @@ export const ListSettings: React.FC<
             <DataStateView state={homesState} onRetry={retryHomes} />
           ) : undefined
         }
-        selected={selectedHomeId ?? ''}
+        selected={homeId ?? ''}
         onSelect={value => {
-          setSelectedHomeId(value || null);
+          setValue('homeId', value || null);
           setShowHomePicker(false);
         }}
         onCancel={() => setShowHomePicker(false)}
@@ -488,7 +553,7 @@ export const ListSettings: React.FC<
             value: tpl.id,
           })),
         ]}
-        selected={selectedTemplateId ?? ''}
+        selected={templateId ?? ''}
         onSelect={handleSelectTemplate}
         onCancel={() => setShowTemplatePicker(false)}
       />

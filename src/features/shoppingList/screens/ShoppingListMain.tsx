@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useIsFocused, useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SearchBar } from '#components/molecules/SearchBar';
@@ -13,7 +13,7 @@ import { useStore } from '#store';
 import { useShoppingListScreen } from '#features/shoppingList/screens/useShoppingListScreen';
 import { ShoppingListModalsProvider } from '#features/shoppingList/context/ShoppingListModalsContext';
 import { FirstShopTourProvider } from '#features/shoppingList/context/FirstShopTourContext';
-import { useTabBarState } from '#/context/TabBarActionsContext';
+import { useTabBarState } from '#context/TabBarActionsContext';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 
 import { ShoppingListMainContent } from '#features/shoppingList/components/ShoppingListMainContent';

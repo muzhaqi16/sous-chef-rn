@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppStore } from '#store/useAppStore';
-import { isResourceAccessLostError } from '#/utils/errors/graphqlErrors';
+import { isResourceAccessLostError } from '#utils/errors/graphqlErrors';
 import type { StandDownOptions } from '#hooks/apollo/standDownOptions';
 import { useMealPlan } from './useMealPlan';
 
@@ -79,3 +79,5 @@ export function useActiveMealPlan({
     ...plan,
   };
 }
+
+export type ActiveMealPlan = ReturnType<typeof useActiveMealPlan>;

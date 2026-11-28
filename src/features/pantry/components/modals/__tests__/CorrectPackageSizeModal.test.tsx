@@ -1,11 +1,11 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   renderWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { CorrectPackageSizeModal } from '../CorrectPackageSizeModal';
 import {
@@ -16,23 +16,6 @@ import {
 jest.mock('#hooks/settings/useReadingSystem', () => ({
   useReadingSystem: () => 'IMPERIAL',
 }));
-jest.mock('#components/templates/Sheet', () => {
-  const { View } = require('react-native');
-  return {
-    Sheet: ({
-      children,
-      header,
-    }: {
-      children?: React.ReactNode;
-      header?: React.ReactNode;
-    }) => (
-      <View>
-        {header}
-        {children}
-      </View>
-    ),
-  };
-});
 jest.mock('#features/pantry/ui/PackageContentsFields', () => {
   const { Pressable, TextInput, View } = require('react-native');
   const { Text: RnText } = require('react-native');
@@ -104,7 +87,7 @@ const open = (onConfirm: jest.Mock, portionUnitId: string | null = null) => {
 };
 
 const confirm = async () => {
-  fireEvent.press(screen.getByText('Correct'));
+  fireEvent.press(screen.getByLabelText('Correct'));
   await drainTimers();
 };
 

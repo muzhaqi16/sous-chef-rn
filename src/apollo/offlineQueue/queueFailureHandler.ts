@@ -1,21 +1,22 @@
-import { requireApolloClient } from '#/apollo/clientRegistry';
-import { feedEngine } from '#/apollo/feed/feedEngine';
+import { requireApolloClient } from '#apollo/clientRegistry';
+import { feedEngine } from '#apollo/feed/feedEngine';
 import {
   queueManager,
   type DrainedBy,
-} from '#/apollo/offlineQueue/queueManager';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { toastService } from '#/services/toastService';
-import { errorService } from '#/services/errorService';
-import { isTranslationKey, t } from '#/i18n';
-import { logger } from '#/utils/environment';
+} from '#apollo/offlineQueue/queueManager';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { nameOfChange } from '#apollo/offlineQueue/changeName';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
+import { safeEvict } from '#apollo/utils/cacheUpdaters';
+import { toastService } from '#services/toastService';
+import { errorService } from '#services/errorService';
+import { isTranslationKey, t } from '#i18n';
+import { logger } from '#utils/environment';
 import {
   QUEUE_FULL_CODE,
   type FailedMutationInfo,
   type QueueError,
-} from '#/apollo/offlineQueue/types';
+} from '#apollo/offlineQueue/types';
 
 let openChangesNotSaved: (() => void) | undefined;
 
@@ -56,8 +57,14 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   // The app's own words: `error.message` is written for developers and can
   // carry operation names and identifiers. A conflict gets its own sentence.
   const resource = entityType ?? subjectType;
+  const queued = queueStore.getMutation(mutationId);
   toastService.error(
-    withdrawalMessage(error, resource, kept),
+    withdrawalMessage(
+      error,
+      resource,
+      kept,
+      queued ? nameOfChange(queued) : undefined,
+    ),
     kept && openChangesNotSaved
       ? { action: { label: t('labels.open'), onPress: openChangesNotSaved } }
       : undefined,
@@ -143,12 +150,18 @@ function withdrawalMessage(
   { type, code }: QueueError,
   entityType: string | null,
   kept: boolean,
+  name: string | undefined,
 ): string {
   // A persisted entry's typename; only the loaded copy knows which have a name.
   const resourceKey = `errors.resourceNames.${entityType ?? ''}`;
   const resource = isTranslationKey(resourceKey) ? t(resourceKey) : null;
 
   if (code === QUEUE_FULL_CODE) return t('errors.queueFull');
+  if (kept && name) {
+    return type === 'conflict'
+      ? t('errors.queuedClashKeptNamed', { name })
+      : t('errors.queuedChangeKeptNamed', { name });
+  }
   if (kept) {
     if (type === 'conflict') {
       return resource

@@ -1,25 +1,21 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { CreateMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import type { CreateTemplateInputs } from '#features/mealPlan/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import type { CreateMealTemplateInput } from '#/graphql/generated/schemaTypes';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { CreateMealTemplateInput } from '#graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
 import { useUser } from '#store/useAppStore';
-import { generateEntityId } from '#/utils/generateEntityId';
+import { generateEntityId } from '#utils/generateEntityId';
+import { createMealTemplateWrite } from '#features/mealPlan/offline/localWrites';
 
 /**
  * The one template create. Its minted id is the row's PK, so a replay converges
  * on it. Answers that id once the template landed or is queued, else null.
  */
 export function useCreateMealTemplate() {
-  const client = useApolloClient();
   const { t } = useTranslation();
   const user = useUser();
-  const [createMutation, { loading: creating }] = useMutation(
-    CreateMealTemplateDocument,
-    { context: { localFirst: true } },
-  );
+  const create = useLocalWrite(createMealTemplateWrite, {
+    fallback: t('mealTemplateBuilder.failedToCreate'),
+  });
 
   const createTemplate = async (
     input: CreateMealTemplateInput,
@@ -30,18 +26,9 @@ export function useCreateMealTemplate() {
       ownerId: user?.id,
       now: new Date().toISOString(),
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      CreateMealTemplateDocument,
-      { input: template },
-      write =>
-        settleMutation(() => createMutation(write), {
-          document: CreateMealTemplateDocument,
-          fallback: t('mealTemplateBuilder.failedToCreate'),
-        }),
-      inputs,
-    );
+    const settled = await create.send({ input: template }, inputs);
     return settled.status === 'failed' ? null : template.id;
   };
 
-  return { createTemplate, creating };
+  return { createTemplate, creating: create.sending };
 }

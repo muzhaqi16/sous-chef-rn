@@ -11,9 +11,9 @@ import { operationLog } from '#/test-utils/operationLog';
 import { act } from '@testing-library/react-native';
 import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
-import { SortOrder } from '#/graphql/generated/schemaTypes';
+import { SortOrder } from '#graphql/generated/schemaTypes';
 import { MealPlanDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import { addDaysToKey } from '#/utils/dateUtils';
+import { addDaysToKey } from '#utils/dateUtils';
 import { useMealPlans } from '../useMealPlans';
 
 function seedPlanCache(

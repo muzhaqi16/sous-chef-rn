@@ -1,16 +1,15 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#components/atoms/Icon';
-import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
+import { getCollaboratorDisplayName } from '#utils/formatters/memberFormatters';
 import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import type { Translate } from '#/i18n/types';
-import { formatShortDate } from '#/utils/formatters/date';
-import { CollaboratorStatus } from '#/graphql/generated/schemaTypes';
+import type { Translate } from '#i18n/types';
+import { formatShortDate } from '#utils/formatters/date';
+import { CollaboratorStatus } from '#graphql/generated/schemaTypes';
 
 type StatusVariant = 'active' | 'pending' | 'removed' | 'owner';
 
@@ -131,13 +130,13 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
         </View>
       </View>
       {!!canRemove && (
-        <Pressable
+        <IconButton
+          name="close"
+          size="sm"
+          tone="error"
           onPress={onRemove}
-          style={({ pressed }) => pressed && styles.pressed}
           accessibilityLabel={t('shoppingListScreens.removeMemberA11y')}
-        >
-          <Icon name="close" size={20} tone="error" />
-        </Pressable>
+        />
       )}
     </AppPressable>
   );
@@ -228,8 +227,5 @@ const styles = StyleSheet.create(theme => ({
   invitedText: {
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

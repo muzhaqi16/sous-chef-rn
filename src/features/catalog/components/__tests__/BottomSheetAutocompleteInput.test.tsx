@@ -63,11 +63,19 @@ jest.mock('@gorhom/bottom-sheet', () => {
       dismiss: jest.fn(),
       dismissAll: jest.fn(),
     })),
+    // No input here asks which sheet it is in.
+    useBottomSheetInternal: () => null,
     useBottomSheetScrollableCreator: jest.fn(() => {
       const ScrollableMock = (props: ScrollViewProps) =>
         R.createElement(RN.ScrollView, props);
       return ScrollableMock;
     }),
+    // The sheet shell's form scroll view builds one as its module loads.
+    SCROLLABLE_TYPE: { VIEW: 1, FLATLIST: 2, SCROLLVIEW: 3 },
+    createBottomSheetScrollableComponent: (
+      _type: number,
+      Scrollable: React.ComponentType,
+    ) => Scrollable,
   };
 });
 

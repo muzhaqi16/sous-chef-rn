@@ -5,8 +5,8 @@ import {
   isQueryOperation,
 } from '@apollo/client/utilities';
 import type { Subscriber } from 'rxjs';
-import { readFenceOf } from '#/apollo/pendingWrites/readFence';
-import { isIncremental } from '#/apollo/utils/isIncremental';
+import { readFenceOf } from '#apollo/pendingWrites/readFence';
+import { isIncremental } from '#apollo/utils/isIncremental';
 
 /** A read this link forwarded that has not answered the network yet. */
 interface Read {

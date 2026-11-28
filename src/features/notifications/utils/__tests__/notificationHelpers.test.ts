@@ -1,10 +1,10 @@
 import {
   CollaboratorRole,
   NotificationType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
-import { getI18n } from '#/i18n/config';
-import { toDateKey, todayKey } from '#/utils/dateUtils';
+import { getI18n } from '#i18n/config';
+import { toDateKey, todayKey } from '#utils/dateUtils';
 import { getPushTrayCopy } from '#features/notifications/pushCopy';
 import type { NotificationCopyData } from '#features/notifications/types';
 

@@ -8,7 +8,7 @@ import { act, createElement } from 'react';
 // The renderer React Native Testing Library runs every mobile suite on, which
 // this project cannot load: it requires React Native.
 import { create } from 'react-test-renderer';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { MealType } from '#graphql/generated/schemaTypes';
 import {
   CreateMealPlanItemDocument,
   DeleteMealPlanItemDocument,
@@ -18,10 +18,10 @@ import { MealPlanDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanF
 import { readPlanSource } from '#features/mealPlan/cache/derivationSources';
 import { useAddRecipeToMealPlan } from '#features/mealPlan/hooks/useAddRecipeToMealPlan';
 import { useMealPlanItemActions } from '#features/mealPlan/hooks/useMealPlanItemActions';
-import { _setToastDispatch } from '#/services/toastService';
+import { _setToastDispatch } from '#services/toastService';
 import type { ToastOptions } from '#platform/presenters';
 import { useStore } from '#store';
-import { toDateKey } from '#/utils/dateUtils';
+import { toDateKey } from '#utils/dateUtils';
 import {
   createApolloTestWrapper,
   inputOf,

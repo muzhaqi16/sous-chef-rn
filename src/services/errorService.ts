@@ -3,15 +3,16 @@
  * result with telemetry attached, rather than showing anything itself.
  */
 
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { logger } from '#/utils/environment';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { serializeError } from '#/utils/errorSerialization';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
+import { logger } from '#utils/environment';
+import { isNetworkError } from '#utils/isNetworkError';
+import { serializeError } from '#utils/errorSerialization';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { isOwnKey } from '#utils/isOwnKey';
 import {
   GraphQLNetworkError,
   refusalEnvelopeOf,
-} from '#/utils/errors/graphqlErrors';
+} from '#utils/errors/graphqlErrors';
 import {
   CombinedGraphQLErrors,
   CombinedProtocolErrors,
@@ -21,14 +22,11 @@ import {
 import {
   isQueryComplexityError,
   describeQueryComplexity,
-} from '#/utils/errors/queryComplexity';
-import {
-  isVersionConflictError,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
-import { Telemetry } from '#/services/telemetry';
-import { t, type KeyUnder } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+} from '#utils/errors/queryComplexity';
+import { isVersionConflictError } from '#utils/errors/versionConflict';
+import { Telemetry } from '#services/telemetry';
+import { t, type KeyUnder } from '#i18n';
+import type { Translate } from '#i18n/types';
 
 export interface ErrorResult<T = unknown> {
   success: boolean;
@@ -36,8 +34,6 @@ export interface ErrorResult<T = unknown> {
   error?: {
     code: string;
     message: string;
-    category: string;
-    shouldRetry: boolean;
     isAuthError: boolean;
     validationErrors?: Record<string, string>;
   };
@@ -47,16 +43,12 @@ export interface ErrorResult<T = unknown> {
 export interface ApolloErrorResult {
   code: string;
   message: string;
-  category: string;
-  shouldRetry: boolean;
   isAuthError: boolean;
   validationErrors?: Record<string, string>;
 }
 
 export interface ErrorConfig {
-  operation?: string;
   customMessage?: string;
-  logError?: boolean;
 }
 
 // The server sends `validationErrors` as a field → message map; a non-string
@@ -72,15 +64,19 @@ function toValidationErrors(
   return messages;
 }
 
+/** Every code the server can send: the two generated enums. */
+type ServerErrorCode = `${ErrorCode}` | `${TopLevelErrorCode}`;
+/** Codes this client raises itself, which have no SDL. */
+type ClientErrorCode = 'NETWORK_ERROR' | 'CIRCUIT_OPEN' | 'CIRCUIT_HALF_OPEN';
+
 export class ErrorService {
   /**
    * Error code → `errors.codes.<suffix>`. Suffixes, not strings: `t()` in a
-   * static field would freeze the language active at module load.
+   * static field would freeze the language active at module load. Typed by
+   * the generated enums, so a code nothing sends does not compile and a new
+   * one without a sentence fails typecheck.
    */
-  private static readonly ERROR_MESSAGE_KEY_SUFFIXES: Record<
-    string,
-    KeyUnder<'errors.codes'>
-  > = {
+  private static readonly ERROR_MESSAGE_KEY_SUFFIXES = {
     // Authentication Errors
     AUTH_TOKEN_MISSING: 'signInRequired',
     AUTH_TOKEN_INVALID: 'sessionInvalid',
@@ -111,51 +107,26 @@ export class ErrorService {
     API_KEY_INVALID: 'genericLater',
     API_KEY_EXPIRED: 'genericLater',
     API_KEY_REVOKED: 'genericLater',
-    API_KEY_RATE_LIMITED: 'genericLater',
     API_KEY_INSUFFICIENT_PERMISSIONS: 'genericLater',
 
     // Validation Errors
     VALIDATION_FAILED: 'validationFailed',
-    VALIDATION_FIELD_REQUIRED: 'fieldRequired',
-    VALIDATION_FIELD_INVALID: 'fieldInvalid',
-    VALIDATION_FORMAT_INVALID: 'formatInvalid',
-    VALIDATION_LENGTH_INVALID: 'lengthInvalid',
-    VALIDATION_RANGE_INVALID: 'rangeInvalid',
     VALIDATION_UNIQUE_CONSTRAINT: 'uniqueConstraint',
 
     // Resource Errors
     RESOURCE_NOT_FOUND: 'resourceNotFound',
-    RESOURCE_ALREADY_EXISTS: 'resourceAlreadyExists',
     RESOURCE_CONFLICT: 'resourceConflict',
-    RESOURCE_GONE: 'resourceGone',
-    RESOURCE_LOCKED: 'resourceLocked',
-
-    // Business Logic Errors
-    BUSINESS_RULE_VIOLATION: 'businessRuleViolation',
-    BUSINESS_STATE_INVALID: 'businessStateInvalid',
-    BUSINESS_OPERATION_NOT_ALLOWED: 'operationNotAllowed',
-    BUSINESS_QUOTA_EXCEEDED: 'quotaExceeded',
-    BUSINESS_FEATURE_DISABLED: 'featureDisabled',
 
     // Rate Limiting Errors
     RATE_LIMIT_EXCEEDED: 'rateLimitExceeded',
-    RATE_LIMIT_IP_BLOCKED: 'rateLimitBlocked',
-    RATE_LIMIT_USER_BLOCKED: 'rateLimitBlocked',
-    RATE_LIMIT_API_KEY_BLOCKED: 'rateLimitBlocked',
 
     // Service Errors
     SERVICE_UNAVAILABLE: 'serviceUnavailable',
-    SERVICE_TIMEOUT: 'serviceTimeout',
-    SERVICE_MAINTENANCE: 'serviceMaintenance',
-    SERVICE_OVERLOADED: 'serviceOverloaded',
 
     // Network/Offline Errors
     NETWORK_ERROR: 'offline',
     CIRCUIT_OPEN: 'offline',
     CIRCUIT_HALF_OPEN: 'reconnecting',
-
-    // Email Errors
-    EMAIL_ALREADY_EXISTS: 'emailAlreadyExists',
 
     // Query Complexity Errors
     PAGINATION_LIMIT_EXCEEDED: 'genericRetry',
@@ -163,16 +134,12 @@ export class ErrorService {
     // Version Control Errors
     VERSION_CONFLICT: 'versionConflict',
 
-    // Every `ErrorCode` and `TopLevelErrorCode` member appears here, or it falls
-    // to `errors.codes.unexpected` (errorCodeCoverage.test.ts); the table is
-    // WIDER than the enums, since client-raised codes have no SDL.
     NOT_FOUND: 'resourceNotFound',
     CONFLICT: 'resourceConflict',
     UNIT_INVALID: 'unitInvalid',
     UNSTATED_AMOUNT: 'unstatedAmount',
     FEATURE_DISABLED: 'featureDisabled',
     PREMIUM_REQUIRED: 'premiumRequired',
-    EMAIL_ALREADY_VERIFIED: 'emailAlreadyVerified',
     UNAUTHENTICATED: 'signInRequired',
     BAD_REQUEST: 'validationFailed',
     CLIENT_UPGRADE_REQUIRED: 'clientUpgradeRequired',
@@ -203,69 +170,39 @@ export class ErrorService {
     UNIT_CHANGE_NEEDS_RESOLUTION: 'unitChangeNeedsResolution',
 
     // Application-Specific Errors
-    SHOPPING_LIST_NOT_FOUND: 'shoppingListNotFound',
-    SHOPPING_ITEM_NOT_FOUND: 'shoppingItemNotFound',
-    SHOPPING_ITEM_ALREADY_EXISTS: 'shoppingItemAlreadyExists',
-    HOME_NOT_FOUND: 'homeNotFound',
     HOME_ACCESS_DENIED: 'homeAccessDenied',
-    HOME_INVITE_INVALID: 'homeInviteInvalid',
-    HOME_INVITE_EXPIRED: 'homeInviteExpired',
-    HOME_MEMBER_ALREADY_EXISTS: 'homeMemberAlreadyExists',
     HOME_MEMBER_LIMIT_REACHED: 'homeMemberLimitReached',
-  };
+  } satisfies Record<
+    ServerErrorCode | ClientErrorCode,
+    KeyUnder<'errors.codes'>
+  >;
 
-  // SERVICE_TIMEOUT and SERVICE_OVERLOADED are absent from the published
-  // TopLevelErrorCode enum until something emits them, so they stay literals.
   // Codes arrive as plain strings, so these are typed `string`.
   private static readonly UNAUTHENTICATED: string =
     TopLevelErrorCode.Unauthenticated;
   private static readonly VALIDATION_FAILED: string =
     ErrorCode.ValidationFailed;
 
-  private static readonly RETRYABLE_ERRORS: string[] = [
+  // The server's own availability rule (`isServiceFault`): every code it can
+  // send is a refusal the user acts on, logged at warn and kept out of
+  // app_errors_total, except these faults. A code it never sends (the
+  // client's NETWORK_ERROR, UNKNOWN_ERROR) is no user's error either.
+  private static readonly SERVICE_FAULTS = new Set<string>([
+    ErrorCode.InternalServerError,
+    TopLevelErrorCode.InternalServerError,
     TopLevelErrorCode.ServiceUnavailable,
-    'SERVICE_TIMEOUT',
-    'SERVICE_OVERLOADED',
-    TopLevelErrorCode.RateLimitExceeded,
-    TopLevelErrorCode.AuthTokenExpired,
-    TopLevelErrorCode.AuthRefreshTokenSuperseded,
-  ];
-
-  // Logged at warn and kept out of app_errors_total, as is any VALIDATION_*
-  // code. Both code channels appear; the SHOPPING_*/HOME_* literals are in
-  // neither enum.
-  private static readonly EXPECTED_USER_ERRORS = new Set<string>([
-    ErrorCode.EmailAlreadyExists,
-    ErrorCode.VersionConflict,
-    ErrorCode.ResourceAlreadyExists,
-    ErrorCode.PantryItemAlreadyExists,
-    TopLevelErrorCode.ResourceConflict,
-    TopLevelErrorCode.ResourceVersionConflict,
-    'SHOPPING_ITEM_ALREADY_EXISTS',
-    'HOME_MEMBER_ALREADY_EXISTS',
-    'HOME_INVITE_INVALID',
-    'HOME_INVITE_EXPIRED',
+    TopLevelErrorCode.SubscriptionError,
+    TopLevelErrorCode.SubscriptionFilterError,
   ]);
 
-  private static readonly ERROR_CATEGORIES: Record<string, string> = {
-    AUTH_: 'Authentication',
-    // The two Apollo-standard codes carry no category prefix, so they are listed
-    // in full. There is no 'AUTHZ_' family to prefix-match.
-    [TopLevelErrorCode.Unauthenticated]: 'Authentication',
-    [TopLevelErrorCode.Forbidden]: 'Authorization',
-    API_: 'API Key',
-    VALIDATION_: 'Validation',
-    RESOURCE_: 'Resource',
-    BUSINESS_: 'Business Logic',
-    RATE_: 'Rate Limiting',
-    SERVICE_: 'Service',
-    NETWORK_: 'Network',
-    CIRCUIT_: 'Circuit Breaker',
-    EMAIL_: 'Email',
-    PANTRY_: 'Pantry',
-    SHOPPING_: 'Shopping',
-    HOME_: 'Home Management',
-  };
+  // BAD_USER_INPUT is Apollo's, passed through for a malformed typed value.
+  // Its other codes (a parse or validation failure) mean a broken build, and
+  // stay faults.
+  private static readonly SERVER_CODES = new Set<string>([
+    ...Object.values(ErrorCode),
+    ...Object.values(TopLevelErrorCode),
+    'BAD_USER_INPUT',
+  ]);
 
   /**
    * Whether the app has its own sentence for this code. A caller choosing
@@ -273,7 +210,7 @@ export class ErrorService {
    * resolves to more than the fallback it was going to use anyway.
    */
   hasUserFriendlyMessage(errorCode: string): boolean {
-    return errorCode in ErrorService.ERROR_MESSAGE_KEY_SUFFIXES;
+    return isOwnKey(ErrorService.ERROR_MESSAGE_KEY_SUFFIXES, errorCode);
   }
 
   getUserFriendlyMessage(errorCode: string, fallbackMessage?: string): string {
@@ -286,31 +223,16 @@ export class ErrorService {
     translate: Translate,
     fallbackMessage?: string,
   ): string {
-    const suffix = ErrorService.ERROR_MESSAGE_KEY_SUFFIXES[errorCode];
+    const table = ErrorService.ERROR_MESSAGE_KEY_SUFFIXES;
     // An unmapped code takes the caller's own localized copy; the server's
     // message never reaches here.
-    if (!suffix) {
+    if (!isOwnKey(table, errorCode)) {
       return (
         firstNonBlank(fallbackMessage) ?? translate('errors.codes.unexpected')
       );
     }
     // The table holds suffixes; the whole key is composed here.
-    return translate(`errors.codes.${suffix}`);
-  }
-
-  getErrorCategory(errorCode: string): string {
-    for (const [prefix, category] of Object.entries(
-      ErrorService.ERROR_CATEGORIES,
-    )) {
-      if (errorCode.startsWith(prefix)) {
-        return category;
-      }
-    }
-    return 'Unknown';
-  }
-
-  shouldRetry(errorCode: string): boolean {
-    return ErrorService.RETRYABLE_ERRORS.includes(errorCode);
+    return translate(`errors.codes.${table[errorCode]}`);
   }
 
   isAuthError(errorCode: string): boolean {
@@ -322,17 +244,30 @@ export class ErrorService {
 
   isExpectedUserError(errorCode: string): boolean {
     return (
-      errorCode.startsWith('VALIDATION_') ||
-      ErrorService.EXPECTED_USER_ERRORS.has(errorCode)
+      ErrorService.SERVER_CODES.has(errorCode) &&
+      !ErrorService.SERVICE_FAULTS.has(errorCode)
     );
   }
 
-  /** Report a non-Apollo error to telemetry and console, so it reaches Loki. */
+  /**
+   * Records a failure, once: an outcome the person can fix (a refused input, a
+   * rate limit) is a warning; anything else counts in `app_errors_total`.
+   */
   reportError(
     error: unknown,
     context?: { operation?: string; [key: string]: unknown },
   ): void {
     const operation = firstNonBlank(context?.operation) ?? 'Unknown';
+    const code = this.codeOf(error);
+    if (this.isExpectedUserError(code)) {
+      logger.warn(`Refused in ${operation}:`, { code });
+      Telemetry.warn(`Refused: ${code} in ${operation}`, {
+        component: code,
+        operation,
+        code,
+      });
+      return;
+    }
     const serialized = serializeError(error);
 
     if (__DEV__) {
@@ -351,6 +286,7 @@ export class ErrorService {
     Telemetry.trackError(diagnostic, {
       component: 'reported',
       operation,
+      code,
       serialized_error: serialized,
       ...context,
     });
@@ -450,61 +386,20 @@ export class ErrorService {
     }
   }
 
-  parseApolloError(
-    error: unknown,
-    config: ErrorConfig = {},
-  ): ErrorResult<never> {
-    const { operation = 'Unknown', customMessage, logError = true } = config;
-
+  /**
+   * What a failure is, with its copy: pure, so a caller deciding how to treat
+   * a failure records nothing. Recording is `reportError`'s, once per failure.
+   */
+  classifyError(error: unknown, config: ErrorConfig = {}): ErrorResult<never> {
     try {
-      const classified = this.classify(error);
-      const { errorCode, validationErrors } = classified;
-      const diagnostic = classified.diagnostic ?? getVersionConflictMessage();
-
-      const category = this.getErrorCategory(errorCode);
-      const userFriendlyMessage =
-        firstNonBlank(customMessage) ?? this.getUserFriendlyMessage(errorCode);
-
-      const isExpectedUserError = this.isExpectedUserError(errorCode);
-
-      if (logError) {
-        if (isExpectedUserError) {
-          logger.warn(`Validation error in ${operation}:`, {
-            code: errorCode,
-            message: diagnostic,
-          });
-        } else {
-          logger.error(`Error in ${operation}:`, {
-            code: errorCode,
-            message: diagnostic,
-            originalError: serializeError(error),
-          });
-        }
-      }
-
-      // Expected user-input outcomes go to warn and skip app_errors_total.
-      if (isExpectedUserError) {
-        Telemetry.warn(`Validation: ${errorCode} in ${operation}`, {
-          component: category,
-          operation,
-          code: errorCode,
-        });
-      } else {
-        Telemetry.trackError(diagnostic, {
-          component: category,
-          operation,
-          code: errorCode,
-          serialized_error: serializeError(error),
-        });
-      }
-
+      const { errorCode, validationErrors } = this.classify(error);
       return {
         success: false,
         error: {
           code: errorCode,
-          message: userFriendlyMessage,
-          category,
-          shouldRetry: this.shouldRetry(errorCode),
+          message:
+            firstNonBlank(config.customMessage) ??
+            this.getUserFriendlyMessage(errorCode),
           isAuthError: this.isAuthError(errorCode),
           validationErrors,
         },
@@ -515,59 +410,25 @@ export class ErrorService {
         error: {
           code: 'ERROR_HANDLER_FAILED',
           message: t('errors.codes.genericRetry'),
-          category: 'Unknown',
-          shouldRetry: false,
           isAuthError: false,
         },
       };
     }
   }
 
-  /** {@link parseApolloError}, flattened to the error branch. */
+  /** {@link classifyError}, flattened to the error branch. */
   handleApolloError(
     error: unknown,
     config: ErrorConfig = {},
   ): ApolloErrorResult {
-    const result = this.parseApolloError(error, config);
+    const result = this.classifyError(error, config);
     return (
       result.error ?? {
         code: 'UNKNOWN_ERROR',
         message: t('errors.codes.unexpected'),
-        category: 'Unknown',
-        shouldRetry: false,
         isAuthError: false,
       }
     );
-  }
-
-  /** Wrap a mutation so a throw becomes a structured result. */
-  async handleMutation<T>(
-    fn: () => Promise<T>,
-    config: ErrorConfig = {},
-  ): Promise<ErrorResult<T>> {
-    try {
-      const data = await fn();
-      return { success: true, data };
-    } catch (error) {
-      return this.parseApolloError(error, config);
-    }
-  }
-
-  /** {@link handleMutation} plus an `isVersionConflict` flag. */
-  async handleMutationWithVersionConflict<T>(
-    fn: () => Promise<T>,
-    config: ErrorConfig = {},
-  ): Promise<ErrorResult<T> & { isVersionConflict?: boolean }> {
-    try {
-      const data = await fn();
-      return { success: true, data };
-    } catch (error) {
-      const result = this.parseApolloError(error, config);
-      return {
-        ...result,
-        isVersionConflict: result.error?.code === ErrorCode.VersionConflict,
-      };
-    }
   }
 }
 
@@ -586,8 +447,7 @@ const TRANSPORT_CODES = new Set(['NETWORK_ERROR', 'CIRCUIT_OPEN']);
  * unrecognised shape reads as "no verdict" rather than as a lockout.
  */
 export const isTransportFailure = (error: unknown): boolean => {
-  const code = errorService.parseApolloError(error, { logError: false }).error
-    ?.code;
+  const code = errorService.codeOf(error);
   return !code || code === 'UNKNOWN_ERROR' || TRANSPORT_CODES.has(code);
 };
 
@@ -595,8 +455,7 @@ export const localizedErrorMessage = (
   error: unknown,
   fallback?: string,
 ): string => {
-  const result = errorService.parseApolloError(error, { logError: false });
-  const code = result.error?.code;
+  const code = errorService.codeOf(error);
   if (!code) return fallback ?? t('errors.codes.unexpected');
   if (fallback && TRANSPORT_CODES.has(code)) return fallback;
   return errorService.getUserFriendlyMessage(code, fallback);

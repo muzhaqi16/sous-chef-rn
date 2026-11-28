@@ -1,5 +1,5 @@
 import React from 'react';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { screen, userEvent } from '@testing-library/react-native';
 import {
   renderWithApollo,
@@ -10,8 +10,8 @@ import {
   HomeCard_HomeFragmentDoc,
   type HomeCard_HomeFragment,
 } from '../HomeCard.generated';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: 'Icon',
@@ -19,42 +19,22 @@ jest.mock('#components/atoms/Icon', () => ({
 
 jest.mock('#constants/animations', () => ({}));
 
-jest.mock('../HomeActions', () => {
-  const { View, Text, Pressable } = require('react-native');
-  return {
-    HomeActions: ({
-      onInvite,
-      onDelete,
-      homeId,
-      canInvite,
-      canDelete,
-    }: React.ComponentProps<typeof import('../HomeActions').HomeActions>) => (
-      <View testID="home-actions">
-        {canInvite !== false && (
-          <Pressable onPress={() => onInvite(homeId)} testID="invite-btn">
-            <Text>Invite</Text>
-          </Pressable>
-        )}
-        {canDelete !== false && (
-          <Pressable onPress={() => onDelete(homeId)} testID="delete-btn">
-            <Text>Delete</Text>
-          </Pressable>
-        )}
-      </View>
-    ),
-  };
-});
-
 jest.mock('../MembersList', () => {
-  const { View, Text } = require('react-native');
+  const { View, Text, Pressable } = require('react-native');
   return {
     MembersList: ({
       members,
+      onInvite,
     }: React.ComponentProps<typeof import('../MembersList').MembersList>) => (
       <View testID="members-list">
         {members.map(m => (
           <Text key={m.id}>{m.displayName || m.id}</Text>
         ))}
+        {onInvite ? (
+          <Pressable onPress={onInvite} testID="invite-btn">
+            <Text>Invite</Text>
+          </Pressable>
+        ) : null}
       </View>
     ),
   };
@@ -141,10 +121,10 @@ function renderCard(props: Partial<React.ComponentProps<typeof HomeCard>>) {
       homeId={home.id}
       isDefault={false}
       isCurrent
+      canInvite
       onPress={props.onPress ?? jest.fn()}
       onSetDefault={props.onSetDefault ?? jest.fn()}
       onInvite={props.onInvite ?? jest.fn()}
-      onDelete={props.onDelete ?? jest.fn()}
       {...props}
     />,
     { cache: buildCache(home) },
@@ -205,20 +185,17 @@ describe('HomeCard', () => {
     expect(onSetDefault).toHaveBeenCalledWith('home-1');
   });
 
-  it('calls onDelete with home id and name', async () => {
-    const onDelete = jest.fn();
-    const user = userEvent.setup();
-    renderCard({ onDelete });
-    await user.press(screen.getByTestId('delete-btn'));
-    expect(onDelete).toHaveBeenCalledWith('home-1', 'My Kitchen');
-  });
-
   it('calls onInvite with home id', async () => {
     const onInvite = jest.fn();
     const user = userEvent.setup();
     renderCard({ onInvite });
     await user.press(screen.getByTestId('invite-btn'));
     expect(onInvite).toHaveBeenCalledWith('home-1');
+  });
+
+  it('offers no invite to whoever may not', () => {
+    renderCard({ canInvite: false });
+    expect(screen.queryByTestId('invite-btn')).toBeNull();
   });
 
   it('renders members list', () => {
@@ -235,10 +212,10 @@ describe('HomeCard', () => {
         homeId={home.id}
         isDefault={false}
         isCurrent
+        canInvite
         onPress={jest.fn()}
         onSetDefault={jest.fn()}
         onInvite={jest.fn()}
-        onDelete={jest.fn()}
       />,
       { cache: buildCache(home) },
     );

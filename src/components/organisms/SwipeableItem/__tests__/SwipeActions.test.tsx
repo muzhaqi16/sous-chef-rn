@@ -2,10 +2,10 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { makeMutable, useAnimatedStyle } from 'react-native-reanimated';
 import { SwipeActions } from '#components/organisms/SwipeableItem/SwipeActions';
-import { HapticService } from '#/services/haptic/HapticService';
+import { HapticService } from '#services/haptic/HapticService';
 import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
 
-jest.mock('#/services/haptic/HapticService', () => ({
+jest.mock('#services/haptic/HapticService', () => ({
   HapticService: { light: jest.fn() },
 }));
 

@@ -6,7 +6,7 @@
  * subscription push, a replayed offline mutation) must not double-count.
  */
 import type { InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   GetNotificationsDocument,
   NotificationSummaryDocument,
@@ -16,7 +16,7 @@ import {
   NotificationStatus,
   NotificationType,
   Priority,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { QueryDataFor } from '#/test-utils/apolloMockProvider';
 import { UseNotificationsOnLaunch_NotificationFragmentDoc } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { RecipeCredit } from '../RecipeCredit';
 
 const SOURCE_URL = 'https://example.com/pie';

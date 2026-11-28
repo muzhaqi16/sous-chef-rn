@@ -3,9 +3,9 @@ import {
   DeleteAccountDocument,
   CanDeleteAccountDocument,
 } from '#operations/auth/user.generated';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { useTranslation } from '#/i18n';
-import { errorCopy } from '#/services/errorService';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { useTranslation } from '#i18n';
+import { errorCopy } from '#services/errorService';
 
 /** Whether this account may be deleted, what blocks it, and the delete itself. */
 export function useDeleteAccount() {

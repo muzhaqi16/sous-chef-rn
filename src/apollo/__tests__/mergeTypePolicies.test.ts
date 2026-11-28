@@ -1,4 +1,4 @@
-import { mergeTypePolicies } from '#/apollo/cache';
+import { mergeTypePolicies } from '#apollo/cache';
 
 /**
  * Assembling per-feature policies is a merge, so a key two features both

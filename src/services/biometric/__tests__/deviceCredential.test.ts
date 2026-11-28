@@ -3,7 +3,7 @@
 // shared device the next person's finger would unlock the previous account. A
 // caller that wants the slot kept passes `keepBiometricCredentials: true`.
 
-jest.mock('#/apollo/client', () => ({
+jest.mock('#apollo/client', () => ({
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -18,27 +18,27 @@ import { registerTestClient } from '#/test-utils/registeredClient';
 import { memoryKeychain } from '#/test-utils/memoryKeychain';
 import { operationLog } from '#/test-utils/operationLog';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { logger } from '#/utils/environment';
-import { toastService } from '#/services/toastService';
-import * as deviceIdentity from '#/services/auth/deviceId';
+import { t } from '#i18n';
+import { logger } from '#utils/environment';
+import { toastService } from '#services/toastService';
+import * as deviceIdentity from '#services/auth/deviceId';
 import {
   ErrorCode,
   ErrorDisposition,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   ExchangeDeviceCredentialDocument,
   IssueDeviceCredentialDocument,
   MyDeviceCredentialsDocument,
   RevokeDeviceCredentialDocument,
 } from '#operations/auth/auth.generated';
-import { authService } from '#/services/authService';
+import { authService } from '#services/authService';
 import {
   biometricService,
   renewStoredSignIn,
-} from '#/services/biometric/deviceCredential';
-import { registerMobileSessionHost } from '#/app/mobileSessionHost';
+} from '#services/biometric/deviceCredential';
+import { registerMobileSessionHost } from '#app/mobileSessionHost';
 
 // A sign-out drops the slot through the step the app registers.
 registerMobileSessionHost();

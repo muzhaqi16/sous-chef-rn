@@ -1,7 +1,7 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState } from '#graphql/generated/schemaTypes';
 
 // Excludes `StorageState.None`: it has no label, so it renders as a blank segment.
 const STORAGE_STATE_OPTIONS: readonly StorageState[] = [

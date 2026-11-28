@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
@@ -20,7 +20,7 @@ import { useLocalSearch } from '#hooks/search/useLocalSearch';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { SearchIncompleteNotice } from '#features/recipes/components/SearchIncompleteNotice';
 

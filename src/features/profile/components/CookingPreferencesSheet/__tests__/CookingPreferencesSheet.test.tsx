@@ -1,151 +1,107 @@
-'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { DIETARY_LIMITS } from '#domain/dietary';
 import { CookingPreferencesSheet } from '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet';
-import { drainTimers } from '#/test-utils/drainTimers';
 
-jest.mock('#hooks/ui/useSharedBottomSheetConfigs', () => ({
-  useSharedBottomSheetConfigs: jest.fn(() => ({})),
-}));
+const onClose = jest.fn();
+const onSave = jest.fn(() => Promise.resolve(true));
 
-jest.mock('#components/atoms/FormInput', () => ({
-  FormInput: ({
-    label,
-    value,
-    onChangeText,
-    placeholder,
-  }: {
-    label: string;
-    value?: string;
-    onChangeText?: (text: string) => void;
-    placeholder?: string;
-  }) => {
-    const RN = require('react-native');
-    const R = require('react');
-    return R.createElement(
-      RN.View,
-      null,
-      R.createElement(RN.Text, null, label),
-      R.createElement(RN.TextInput, {
-        value,
-        onChangeText,
-        placeholder,
-        testID: `input-${label}`,
-      }),
-    );
-  },
-}));
+type Stored = { maxCookTimeMinutes?: number | null };
 
-jest.mock('#components/molecules/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({
-    title,
-    onCancel,
-    onConfirm,
-    confirmLabel,
-  }: {
-    title: string;
-    onCancel: () => void;
-    onConfirm: () => void;
-    confirmLabel?: string;
-  }) => {
-    const RN = require('react-native');
-    const R = require('react');
-    return R.createElement(
-      RN.View,
-      { testID: 'header' },
-      R.createElement(RN.Text, null, title),
-      R.createElement(
-        RN.Pressable,
-        { onPress: onCancel, testID: 'cancel-btn' },
-        R.createElement(RN.Text, null, 'Cancel'),
-      ),
-      R.createElement(
-        RN.Pressable,
-        { onPress: onConfirm, testID: 'save-btn' },
-        R.createElement(RN.Text, null, confirmLabel),
-      ),
-    );
-  },
-}));
+const sheet = (props: { visible?: boolean; initialValues?: Stored } = {}) => (
+  <CookingPreferencesSheet
+    visible
+    onClose={onClose}
+    onSave={onSave}
+    initialValues={{}}
+    {...props}
+  />
+);
+
+const cookTime = () =>
+  screen.getByPlaceholderText(t('cookingPreferences.cookTimePlaceholder'));
+const save = () =>
+  userEvent.setup().press(screen.getByLabelText(t('labels.save')));
+const OUT_OF_RANGE = () =>
+  t('cookingPreferences.cookTimeRange', DIETARY_LIMITS.cookTime);
 
 beforeEach(() => {
-  jest.useFakeTimers();
-});
-
-afterEach(() => {
-  jest.useRealTimers();
+  jest.clearAllMocks();
 });
 
 describe('CookingPreferencesSheet', () => {
-  const defaultProps = {
-    visible: true,
-    onClose: jest.fn(),
-    onSave: jest.fn(() => Promise.resolve(true)),
-    initialValues: {},
-  };
-
-  /** The sheet as it opens over a stored limit: its field is seeded then. */
-  const openWith = (stored: { maxCookTimeMinutes?: number | null }) => {
-    const { rerender } = render(
-      <CookingPreferencesSheet
-        {...defaultProps}
-        visible={false}
-        initialValues={stored}
-      />,
-    );
-    rerender(
-      <CookingPreferencesSheet {...defaultProps} initialValues={stored} />,
-    );
-  };
-
-  beforeEach(() => {
-    jest.clearAllMocks();
+  it('asks only for the longest cooking time', () => {
+    render(sheet());
+    expect(screen.getByText(t('labels.cookingPreferences'))).toBeTruthy();
+    expect(cookTime()).toBeTruthy();
   });
 
-  it('asks only for the longest cooking time', () => {
-    render(<CookingPreferencesSheet {...defaultProps} />);
-    expect(screen.getByText('Cooking Preferences')).toBeTruthy();
-    expect(screen.getAllByTestId(/^input-/)).toHaveLength(1);
+  it('opens on the stored limit', () => {
+    render(sheet({ initialValues: { maxCookTimeMinutes: 60 } }));
+    expect(cookTime()).toHaveDisplayValue('60');
   });
 
   it('saves a cook time typed in', async () => {
-    openWith({});
-    fireEvent.changeText(screen.getAllByTestId(/^input-/)[0]!, '40');
-
-    fireEvent.press(screen.getByTestId('save-btn'));
-    await drainTimers();
-
-    expect(defaultProps.onSave).toHaveBeenCalledWith({
-      maxCookTimeMinutes: 40,
-    });
+    render(sheet());
+    fireEvent.changeText(cookTime(), '40');
+    await save();
+    expect(onSave).toHaveBeenCalledWith({ maxCookTimeMinutes: 40 });
   });
 
   // The API reads null as "clear it", so an emptied limit is removed, not kept.
   it('clears a limit emptied from its stored value', async () => {
-    openWith({ maxCookTimeMinutes: 60 });
-    fireEvent.changeText(screen.getByDisplayValue('60'), '');
-
-    fireEvent.press(screen.getByTestId('save-btn'));
-    await drainTimers();
-
-    expect(defaultProps.onSave).toHaveBeenCalledWith({
-      maxCookTimeMinutes: null,
-    });
+    render(sheet({ initialValues: { maxCookTimeMinutes: 60 } }));
+    fireEvent.changeText(cookTime(), '');
+    await save();
+    expect(onSave).toHaveBeenCalledWith({ maxCookTimeMinutes: null });
   });
 
   it('sends nothing for a limit left blank', async () => {
-    openWith({});
-
-    fireEvent.press(screen.getByTestId('save-btn'));
-    await drainTimers();
-
-    expect(defaultProps.onSave).toHaveBeenCalledWith({});
+    render(sheet());
+    await save();
+    expect(onSave).toHaveBeenCalledWith({});
   });
 
-  it('renders without initial values', () => {
-    render(
-      <CookingPreferencesSheet {...defaultProps} initialValues={undefined} />,
+  it('says on the field that a time is out of range, not in an alert', async () => {
+    render(sheet());
+    fireEvent.changeText(cookTime(), String(DIETARY_LIMITS.cookTime.max + 1));
+    await save();
+    expect(screen.getByText(OUT_OF_RANGE())).toBeOnTheScreen();
+    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('says a refused save failed, and stays open on what was typed', async () => {
+    onSave.mockResolvedValueOnce(false);
+    render(sheet());
+    fireEvent.changeText(cookTime(), '40');
+    await save();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('cookingPreferences.updateFailed'),
     );
-    expect(screen.getByText('Cooking Preferences')).toBeTruthy();
+    expect(cookTime()).toHaveDisplayValue('40');
+  });
+
+  it('opens fresh: what was typed and its error go with the closing', async () => {
+    const view = render(sheet({ initialValues: { maxCookTimeMinutes: 60 } }));
+    fireEvent.changeText(cookTime(), String(DIETARY_LIMITS.cookTime.max + 1));
+    await save();
+    expect(screen.getByText(OUT_OF_RANGE())).toBeOnTheScreen();
+
+    view.rerender(
+      sheet({ visible: false, initialValues: { maxCookTimeMinutes: 60 } }),
+    );
+    view.rerender(sheet({ initialValues: { maxCookTimeMinutes: 60 } }));
+
+    expect(cookTime()).toHaveDisplayValue('60');
+    expect(screen.queryByText(OUT_OF_RANGE())).toBeNull();
   });
 });

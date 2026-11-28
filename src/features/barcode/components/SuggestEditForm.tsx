@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
+import { DataStateView } from '#components/organisms/DataStateView';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { ErrorState } from '#components/molecules/ErrorState';
 import AddItemForm from '#features/catalog/ui/AddItemForm/AddItemForm';
 import type { AddItemSubmitPayload } from '#features/catalog/types';
@@ -12,9 +14,9 @@ import {
   buildInitialDataFromSnapshot,
   withScannedPack,
   type ScannedPack,
-} from '#utils/items/suggestItemChanges';
+} from '#domain/items/suggestItemChanges';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
-import { presentFailure } from '#/utils/errors/presentFailure';
+import { presentFailure } from '#utils/errors/presentFailure';
 
 interface SuggestEditFormProps {
   itemId: string;
@@ -80,24 +82,37 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
   // Without the snapshot there is nothing to diff against, so the form can't be
   // shown at all. Failing here has to say so — the alternative is a spinner that
   // never resolves and gives the user nothing to act on.
+  // Before the form, the sheet's bar still closes it.
+  const bar = (
+    <SheetHeaderSlot>
+      <SheetHeader title={t('labels.editItem')} onClose={onClose} />
+    </SheetHeaderSlot>
+  );
+
   if (!snapshot && error && !loading) {
     return (
-      <ErrorState
-        title={t('suggestItemEdit.loadFailedTitle')}
-        message={t('suggestItemEdit.loadFailedBody')}
-        onRetry={refetch}
-        retryLabel={t('labels.tryAgain')}
-        secondaryAction={{ label: t('labels.cancel'), onPress: onClose }}
-        style={styles.error}
-      />
+      <>
+        {bar}
+        <ErrorState
+          title={t('suggestItemEdit.loadFailedTitle')}
+          message={t('suggestItemEdit.loadFailedBody')}
+          onRetry={refetch}
+          retryLabel={t('labels.tryAgain')}
+          secondaryAction={{ label: t('labels.cancel'), onPress: onClose }}
+          style={styles.error}
+        />
+      </>
     );
   }
 
   if (!snapshot) {
     return (
-      <View style={styles.loading}>
-        <ThemedActivityIndicator size="large" />
-      </View>
+      <>
+        {bar}
+        <View style={styles.loading}>
+          <DataStateView state="loading" onRetry={refetch} />
+        </View>
+      </>
     );
   }
 
@@ -106,12 +121,15 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
   // submit.
   if (!snapshot.canEdit && !snapshot.canSuggest) {
     return (
-      <ErrorState
-        title={t('suggestItemEdit.readOnlyTitle')}
-        message={t('suggestItemEdit.readOnlyBody')}
-        secondaryAction={{ label: t('labels.close'), onPress: onClose }}
-        style={styles.error}
-      />
+      <>
+        {bar}
+        <ErrorState
+          title={t('suggestItemEdit.readOnlyTitle')}
+          message={t('suggestItemEdit.readOnlyBody')}
+          secondaryAction={{ label: t('labels.close'), onPress: onClose }}
+          style={styles.error}
+        />
+      </>
     );
   }
 

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRoute } from '@react-navigation/native';
 import { useNavigationIntents } from '#platform/screen';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import { sleep } from '#/utils/backoff';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
+import { sleep } from '#utils/backoff';
 import { catalogKey } from '#domain/catalogRecipes';
 import { useOpenedRecipeId } from '#features/recipes/store/openedCatalogRecipes';
 import { useRecipeData } from '../../hooks/useRecipeData';
@@ -176,8 +176,6 @@ export function useRecipeDetail() {
     ...cookingActions,
 
     // Folder/tag editing
-    showFolderPicker: savedMetadata.showFolderPicker,
-    setShowFolderPicker: savedMetadata.setShowFolderPicker,
     updatingFolderTags: savedMetadata.updatingFolderTags,
     handleUpdateFolder: savedMetadata.handleUpdateFolder,
     handleUpdateTags: savedMetadata.handleUpdateTags,
@@ -194,3 +192,5 @@ export function useRecipeDetail() {
     handleUnfavoriteRecipe: savedMetadata.handleUnfavoriteRecipe,
   };
 }
+
+export type RecipeDetailState = ReturnType<typeof useRecipeDetail>;

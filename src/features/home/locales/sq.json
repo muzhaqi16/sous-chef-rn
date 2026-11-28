@@ -37,6 +37,7 @@
     "sendFailed": "Dërgimi i ftesës dështoi. Provo sërish.",
     "inviteeRemoved": "Ky person është hequr nga shtëpia. Vetëm pronari ose një administrator mund ta ftojë përsëri.",
     "inviteeSuspended": "Anëtarësia e këtij personi në këtë shtëpi është pezulluar.",
+    "inviteeAlreadyIn": "Ky person është tashmë në këtë shtëpi ose refuzoi një ftesë gjatë ditës së fundit.",
     "emailLabel": "Adresa e email-it",
     "emailPlaceholder": "Fut adresën e email-it"
   },
@@ -68,8 +69,7 @@
     "statsHome_other": "Shtëpi",
     "statsPantry_one": "Qilar",
     "statsPantry_other": "Qilarë",
-    "cardDefault": "Parazgjedhur",
-    "cardInvite": "Fto"
+    "cardDefault": "Parazgjedhur"
   },
   "homeDetail": {
     "shareLinkMessage": "Bashkohu me shtëpinë time",
@@ -96,7 +96,7 @@
     "storesSectionTitle": "Ku blen",
     "usualStoresRowSubtitle": "Dyqanet që përdorin krahasimet e çmimeve të kësaj shtëpie",
     "leaveHomeDescription": "Largimi nga kjo shtëpi do të heqë aksesin tënd në të gjitha qilarët, listat e blerjeve, planet e ushqimit dhe modelet e ndara.",
-    "ownerCannotLeaveMessage": "Pronarët nuk mund të largohen nga shtëpia. Transfero pronësinë tek një anëtar tjetër ose fshi shtëpinë.",
+    "deleteHomeDescription": "Fshirja e kësaj shtëpie e heq atë, bashkë me gjithçka që ka, për të gjithë anëtarët. Ky veprim nuk mund të zhbëhet. Për t'u larguar, bëje më parë pronar një anëtar tjetër.",
     "dietaryNeedsRowTitle": "Çfarë nuk mund të hanë anëtarët",
     "dietaryNeedsRowSubtitle": "Alergjitë dhe kufizimet që anëtarët ndajnë me këtë shtëpi"
   },

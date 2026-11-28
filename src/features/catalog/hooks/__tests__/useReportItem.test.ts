@@ -4,11 +4,11 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { MarkItemForReviewDocument } from '#operations/item/item.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { useReportItem } from '#features/catalog/hooks/useReportItem';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
-import { errorService } from '#/services/errorService';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
+import { errorService } from '#services/errorService';
 
 const REASON = 'The photo shows a completely different product.';
 

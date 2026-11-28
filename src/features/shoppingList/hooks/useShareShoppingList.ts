@@ -1,6 +1,6 @@
 import { useMutation } from '@apollo/client/react';
 import { ShareShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { settleMutation } from '#apollo/utils/settleMutation';
 
 /**
  * Open a list to its share code, or close it again. No cache update needed: the

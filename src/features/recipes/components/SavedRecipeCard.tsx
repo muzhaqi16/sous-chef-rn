@@ -4,7 +4,7 @@ import type { FragmentType } from '@apollo/client/masking';
 import { SavedRecipeCard_SavedRecipeFragmentDoc } from './SavedRecipeCard.generated';
 import { RecipeCardView, type RecipeCardAction } from './RecipeCardView';
 import { recipeTotalMinutes } from '#features/recipes/utils/recipeTime';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 interface SavedRecipeCardProps {
   savedRecipeRef: FragmentType<typeof SavedRecipeCard_SavedRecipeFragmentDoc>;
@@ -44,7 +44,7 @@ export const SavedRecipeCard: React.FC<SavedRecipeCardProps> = ({
 
   return (
     <RecipeCardView
-      name={recipe ? recipe.name : t('errors.codes.resourceGone')}
+      name={recipe ? recipe.name : t('errors.resourceGone')}
       imageUrl={recipe?.imageUrl}
       servings={recipe ? recipe.servings : null}
       totalMinutes={recipe ? recipeTotalMinutes(recipe) : null}

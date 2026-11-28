@@ -1,10 +1,10 @@
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import type { AlertButton } from '#platform/presenters';
 import {
   ErrorCode,
   PantryUnitChangeMethod,
   PantryUnitChangeResolution,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type {
   ChangeOutcome,
   PreviewOutcome,

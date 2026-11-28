@@ -1,18 +1,18 @@
 import { renderHook } from '@testing-library/react-native';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { mockAppStore } from '#/test-utils/mockAppStore';
 import type { StartupHost } from '../startupHost';
 import { useCoreStartup } from '../useCoreStartup';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 jest.mock('#store/useAppStore', () =>
   mockAppStore({
     isHydrated: true,
     getTelemetryConfig: jest.fn(() => ({})),
   }),
 );
-jest.mock('#/services/auth/deviceId', () => ({ ensureDeviceId: jest.fn() }));
-jest.mock('#/apollo/offlineQueue/queueFailureHandler', () => ({
+jest.mock('#services/auth/deviceId', () => ({ ensureDeviceId: jest.fn() }));
+jest.mock('#apollo/offlineQueue/queueFailureHandler', () => ({
   registerQueueFailureHandler: jest.fn(),
 }));
 
@@ -20,11 +20,11 @@ const { Telemetry } = jest.requireMock<{
   Telemetry: Record<string, jest.Mock>;
 }>('#services/telemetry');
 const { ensureDeviceId } = jest.requireMock<{ ensureDeviceId: jest.Mock }>(
-  '#/services/auth/deviceId',
+  '#services/auth/deviceId',
 );
 const { registerQueueFailureHandler } = jest.requireMock<{
   registerQueueFailureHandler: jest.Mock;
-}>('#/apollo/offlineQueue/queueFailureHandler');
+}>('#apollo/offlineQueue/queueFailureHandler');
 
 const failing = (step: string) => () => {
   throw new Error(`${step} failed`);

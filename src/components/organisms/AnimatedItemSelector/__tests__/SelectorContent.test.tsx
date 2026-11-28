@@ -5,7 +5,7 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { ActionTrayScrollContext } from '#components/templates/ActionTray/ActionTrayScrollContext';
 import { useStore } from '#store';

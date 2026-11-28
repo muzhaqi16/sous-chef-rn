@@ -1,4 +1,4 @@
-import type { SubscriptionConfig } from '#/services/subscriptions/types';
+import type { SubscriptionConfig } from '#services/subscriptions/types';
 
 /** The handler with its client loosened, so a test can hand it a stub client. */
 export type CapturedOnData = (data: unknown, client?: unknown) => void;

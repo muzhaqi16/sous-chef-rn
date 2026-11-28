@@ -4,10 +4,10 @@ import {
   optionalMoneyRule,
   positiveDecimalRule,
   quantityRule,
-} from '#/utils/validation/common';
-import { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+} from '#utils/validation/common';
+import { StorageState, UnitType } from '#graphql/generated/schemaTypes';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 
 export interface MoveToPantryFormValues {
   pantryId: string | null;

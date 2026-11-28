@@ -1,14 +1,14 @@
 import type { ApolloCache, Reference } from '@apollo/client';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { safeEvict } from '#apollo/utils/cacheUpdaters';
 import {
   hideEntity,
   isHeld,
   writeLocalEntity,
-} from '#/apollo/utils/writeLocalEntity';
+} from '#apollo/utils/writeLocalEntity';
 import type {
   RestrictionKindInput,
   RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { GetDietaryProfileDocument } from '#operations/user/user.generated';
 import {
   NEUTRAL_LOCAL_RESTRICTION,

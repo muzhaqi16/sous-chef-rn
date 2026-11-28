@@ -1,4 +1,4 @@
-import { NotificationType } from '#/graphql/generated/schemaTypes';
+import { NotificationType } from '#graphql/generated/schemaTypes';
 import { getNotificationIcon } from '../notificationIcon';
 
 describe('getNotificationIcon', () => {

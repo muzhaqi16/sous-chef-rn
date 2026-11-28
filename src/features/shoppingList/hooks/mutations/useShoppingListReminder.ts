@@ -4,22 +4,20 @@
  * the pre-change snapshot and alerts.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import {
-  UpdateShoppingListReminderDocument,
-  DeleteShoppingListReminderDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
+  deleteShoppingListReminderWrite,
+  updateShoppingListReminderWrite,
+} from '#features/shoppingList/offline/localWrites';
 
 export function useShoppingListReminder() {
   const { t } = useTranslation();
-  const client = useApolloClient();
-  const [setMutation] = useMutation(UpdateShoppingListReminderDocument, {
-    context: { localFirst: true },
+  const set = useLocalWrite(updateShoppingListReminderWrite, {
+    fallback: t('shoppingListScreens.failedToSetReminder'),
   });
-  const [clearMutation] = useMutation(DeleteShoppingListReminderDocument, {
-    context: { localFirst: true },
+  const clear = useLocalWrite(deleteShoppingListReminderWrite, {
+    fallback: t('shoppingListScreens.failedToClearReminder'),
   });
 
   const setReminder = async (
@@ -27,30 +25,24 @@ export function useShoppingListReminder() {
     reminderDate: string,
     reminderEnabled = true,
   ): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'ShoppingList', id },
-      fields: { reminderEnabled, reminderDate },
-      variables: { input: { id, reminderDate, reminderEnabled } },
-      mutate: setMutation,
-      settle: {
-        document: UpdateShoppingListReminderDocument,
-        fallback: t('shoppingListScreens.failedToSetReminder'),
+    const settled = await set.send(
+      { input: { id, reminderDate, reminderEnabled } },
+      {
+        entity: { __typename: 'ShoppingList', id },
+        fields: { reminderEnabled, reminderDate },
       },
-    });
+    );
     return settled.status !== 'failed';
   };
 
   const clearReminder = async (id: string): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'ShoppingList', id },
-      fields: { reminderEnabled: false, reminderDate: null },
-      variables: { input: { id } },
-      mutate: clearMutation,
-      settle: {
-        document: DeleteShoppingListReminderDocument,
-        fallback: t('shoppingListScreens.failedToClearReminder'),
+    const settled = await clear.send(
+      { input: { id } },
+      {
+        entity: { __typename: 'ShoppingList', id },
+        fields: { reminderEnabled: false, reminderDate: null },
       },
-    });
+    );
     return settled.status !== 'failed';
   };
 

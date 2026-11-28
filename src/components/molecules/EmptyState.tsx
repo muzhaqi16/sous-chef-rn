@@ -1,13 +1,13 @@
 import React from 'react';
 import { View } from 'react-native';
-import type { StyleProp, ViewStyle } from 'react-native';
+import type { StyleProp, ViewInstance, ViewStyle } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
-import type { IconName } from '#components/atoms/Icon';
+import type { IconName, IconSizeName } from '#components/atoms/Icon';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 export interface EmptyStateProps {
   /** Icon to display (can be IconName, emoji string, or React node) */
@@ -32,7 +32,7 @@ export interface EmptyStateProps {
     /** Shown but not tappable; the `hint` says why. */
     disabled?: boolean;
     /** Measures the button for a spotlight: `useMeasuredRect`'s ref and `measure`. */
-    measure?: { ref: React.Ref<View>; onLayout: () => void };
+    measure?: { ref: React.Ref<ViewInstance>; onLayout: () => void };
     testID?: string;
   };
 
@@ -46,7 +46,7 @@ export interface EmptyStateProps {
   };
 
   /** Icon size */
-  iconSize?: number;
+  iconSize?: IconSizeName;
 
   /** Icon color override */
   iconColor?: string;
@@ -85,7 +85,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   style,
   testID,
 }) => {
-  const glyphSize = iconSize ?? (size === 'compact' ? 32 : 64);
+  const glyphSize: IconSizeName =
+    iconSize ?? (size === 'compact' ? 'lg' : '2xl');
   const variantStyles = styles.useVariants({ size });
   // An entering animation is safe here: an empty state mounts once, never in a
   // recycled cell that would re-fire it on scroll.
@@ -110,7 +111,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     return (
       <Animated.View entering={badgeEntering} style={variantStyles.iconBadge}>
         {isEmoji ? (
-          <Text style={[variantStyles.emoji, { fontSize: glyphSize }]}>
+          <Text
+            style={[variantStyles.emoji, variantStyles.emojiSize(glyphSize)]}
+          >
             {icon}
           </Text>
         ) : (
@@ -223,6 +226,9 @@ const styles = StyleSheet.create(theme => ({
   emoji: {
     textAlign: 'center',
   },
+  emojiSize: (size: IconSizeName) => ({
+    fontSize: theme.sizes.icon[size],
+  }),
 
   title: {
     variants: {

@@ -5,11 +5,11 @@ import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { RelinkItemSheet } from '../RelinkItemSheet';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { useStore } from '#store';
 import { pantryTestIDs } from '#features/pantry/testIDs';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import type { MoveOutcome } from '#features/pantry/hooks/mutations/useMovePantryItem';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({

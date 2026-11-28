@@ -15,7 +15,6 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   itemName
   quantity
   quantityInput
-  displayFormat
   purchaseInfo {
     isPurchased
     # The row renders a stocked line differently, and a field the write omits
@@ -141,34 +140,20 @@ fragment ShoppingListItemPurchaseInfoFragment on ShoppingListItemPurchaseInfo {
   }
 }
 
-# The item shape returned by every copy of `AddItemsToShoppingList`.
-#
-# Spread by: shoppingList.graphql (AddItemToShoppingList),
-# useAddScannedItem.graphql (BarcodeAddItemToShoppingList),
-# useAddPantryItemToShoppingList.graphql (AddItemToShoppingListFromFilteredPantry),
-# usePantryItemDetailActions.graphql (AddItemToShoppingListFromPantryItem),
-# useGenerateShoppingList.graphql (AddDerivedItemsToShoppingList),
-# useRecipeShoppingList.graphql (useRecipeShoppingList_addedItem).
-#
-# The Feature API Boundary Convention stops those features importing the
-# shopping-list feature's operations, so each has its own copy of the mutation
-# spreading this one selection. `addRows.commit` adds no count on the
-# assumption that the answer states the parent list's counters, so a copy that
-# drops them leaves a list's counts stale after an add.
+# The item shape an add answers with: AddItemToShoppingList and
+# CreateShoppingList spread it, and every feature adds through
+# `useAddShoppingRows`, so there is one document per operation.
+# `addRows.commit` adds no count on the assumption that the answer states the
+# parent list's counters.
 #
 # Scoped to the ITEM rather than the whole payload on purpose: `results` stays
 # unmasked so `addRows.commit` and `createShoppingListRow` read it directly, and
 # only the item fields ride behind the spread.
-#
-# `<feature>Fragments.generated.ts` is public surface per the boundary
-# convention, so spreading this across features is allowed.
-# Guarded by __tests__/graphql/localFirstCopyDrift.test.ts.
 fragment AddedShoppingListItemFields on ShoppingListItem {
   id
   itemName
   quantity
   quantityInput
-  displayFormat
   purchaseInfo {
     isPurchased
     # The row renders a stocked line differently, and a field the write omits

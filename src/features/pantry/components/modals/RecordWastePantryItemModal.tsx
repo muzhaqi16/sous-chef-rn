@@ -1,112 +1,144 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import {
+  Controller,
+  useController,
+  useForm,
+  type Control,
+} from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { CollapsibleChipPicker } from '#features/pantry/components/CollapsibleChipPicker';
 import { QuantityInputFeedback } from '#features/pantry/components/QuantityInputFeedback';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { validateDeductionQuantity } from '#features/pantry/utils/validateDeductionQuantity';
-import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
-import { WasteReason } from '#/graphql/generated/schemaTypes';
-import { commonStyles } from '#/styles/commonStyles';
-import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
-import { PantryActionModal } from '#features/pantry/components/modals/PantryActionModal';
-import { Text } from '#components/atoms/Text';
-import { localizeNumericHint } from '#/utils/formatters/number';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import {
-  formatQuantityForInput,
-  resolveQuantityNotation,
-} from '#/utils/formatQuantity';
-import type { PantryActionSharedState } from '#features/pantry/types';
+  allHeld,
+  deductionCap,
+  judgeDeduction,
+} from '#features/pantry/utils/judgeDeduction';
+import { useQuantityFeedback } from '#features/pantry/hooks/useQuantityFeedback';
+import type { WasteReason } from '#graphql/generated/schemaTypes';
+import { commonStyles } from '#styles/commonStyles';
+import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
+import {
+  PantryActionHeader,
+  PantryActionModal,
+} from '#features/pantry/components/modals/PantryActionModal';
+import { Text } from '#components/atoms/Text';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import { localizeNumericHint } from '#utils/formatters/number';
+import { formatQuantityForInput } from '#utils/formatQuantity';
+import { reportValidationErrors } from '#utils/validation/common';
+import type {
+  PantryActionSharedState,
+  StatedWaste,
+  UsedBatch,
+} from '#features/pantry/types';
+import { WASTE_REASON_OPTIONS } from '#features/pantry/utils/wasteReasons';
+import {
+  untypedAmount,
+  wasteDefaults,
+  wasteSchema,
+  type WasteFormValues,
+} from './wasteFormConfig';
 
 interface RecordWastePantryItemModalProps {
   visible: boolean;
   pantryItemId: string | null;
+  /** A waste from this batch alone; absent, the stack's oldest batches go first. */
+  batch?: UsedBatch | null;
   onClose: () => void;
-  onConfirm: (
-    wasteAmount: number,
-    wasteReason: WasteReason,
-    isComposted: boolean,
-    isRecycled: boolean,
-    notes: string,
-    wasteUnitId?: string,
-  ) => void;
+  /** The caller closes the sheet once the waste is recorded. */
+  onConfirm: (waste: StatedWaste) => Promise<unknown>;
 }
-
-const WASTE_REASON_OPTIONS: Array<{
-  labelKey: TranslationKey;
-  value: WasteReason;
-}> = [
-  { labelKey: 'labels.expired', value: WasteReason.Expired },
-  { labelKey: 'recordWaste.reasonSpoiled', value: WasteReason.Spoiled },
-  { labelKey: 'labels.mold', value: WasteReason.Mold },
-  { labelKey: 'labels.pest', value: WasteReason.Pest },
-  { labelKey: 'labels.cookingFail', value: WasteReason.CookingFail },
-  { labelKey: 'recordWaste.reasonSpilled', value: WasteReason.Spilled },
-  { labelKey: 'recordWaste.reasonBurnt', value: WasteReason.Burnt },
-  { labelKey: 'labels.overstock', value: WasteReason.Overstock },
-  { labelKey: 'recordWaste.reasonBadTaste', value: WasteReason.Taste },
-  { labelKey: 'labels.gaveAway', value: WasteReason.GaveAway },
-  { labelKey: 'labels.unknownLoss', value: WasteReason.UnknownLoss },
-  { labelKey: 'itemType.OTHER', value: WasteReason.Other },
-];
 
 export const RecordWastePantryItemModal: React.FC<
   RecordWastePantryItemModalProps
-> = ({ visible, pantryItemId, onClose, onConfirm }) => {
+> = ({ visible, pantryItemId, batch = null, onClose, onConfirm }) => {
   const { t } = useTranslation();
-  // Null until typed: the amount then reads all the stack holds.
-  const [typedAmount, setTypedAmount] = useState<string | null>(null);
-  const [wasteReason, setWasteReason] = useState<WasteReason>(
-    WasteReason.Expired,
+  return (
+    <PantryActionModal
+      visible={visible}
+      pantryItemId={pantryItemId}
+      onClose={onClose}
+      snapPoint="80%"
+      unitToggleLabel={t('recordWaste.wasteBy')}
+      operation={PantryOperation.Waste}
+      batch={batch}
+      renderForm={(shared, pantryItem) => (
+        <WasteForm
+          shared={shared}
+          fromBatch={!!batch}
+          ready={!!pantryItem}
+          onClose={onClose}
+          onConfirm={onConfirm}
+        />
+      )}
+    />
   );
-  const [isComposted, setIsComposted] = useState(false);
-  const [isRecycled, setIsRecycled] = useState(false);
+};
 
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItemId);
-  if (visible !== prevVisible || pantryItemId !== prevPantryItemId) {
-    setPrevVisible(visible);
-    setPrevPantryItemId(pantryItemId);
-    setTypedAmount(null);
-    setWasteReason(WasteReason.Expired);
-    setIsComposted(false);
-    setIsRecycled(false);
-  }
+interface WasteFormProps {
+  shared: PantryActionSharedState;
+  /** Taken from one batch, where all it holds is the batch thrown out. */
+  fromBatch: boolean;
+  /** The stack is read, so there is something to record. */
+  ready: boolean;
+  onClose: () => void;
+  onConfirm: RecordWastePantryItemModalProps['onConfirm'];
+}
 
-  const amountOf = (shared: PantryActionSharedState) =>
-    typedAmount ??
-    formatQuantityForInput(shared.trackingQuantity, {
-      notation: resolveQuantityNotation(
-        null,
-        shared.displayAsFractionOf(shared.trackingUnitId),
-      ),
-    });
+const WasteForm: React.FC<WasteFormProps> = ({
+  shared,
+  fromBatch,
+  ready,
+  onClose,
+  onConfirm,
+}) => {
+  const { t } = useTranslation();
+  const {
+    control,
+    handleSubmit,
+    trigger,
+    formState: { isDirty, isSubmitted },
+  } = useForm<WasteFormValues>({
+    resolver: yupResolver(wasteSchema),
+    defaultValues: wasteDefaults,
+    context: { shared },
+  });
+  useSheetUnsavedInput(isDirty);
+  // A refusal shown stays true to the stock: a conversion landing or the stock
+  // moving checks the amount again.
+  const cap = deductionCap(shared);
+  useEffect(() => {
+    if (isSubmitted) void trigger('amountInput');
+  }, [cap, isSubmitted, trigger]);
 
-  const handleConfirm = (shared: PantryActionSharedState) => {
-    if (!pantryItemId) return;
-
-    const wasteAmountInput = amountOf(shared);
-    const wasteValue = validateDeductionQuantity(
-      wasteAmountInput,
-      shared,
-      'waste',
-    );
-    if (wasteValue === null) return;
-
-    onConfirm(
-      wasteValue,
-      wasteReason,
-      isComposted,
-      isRecycled,
-      shared.notes,
-      shared.activeUnitId,
-    );
-    onClose();
-  };
+  // A refusal keeps the sheet open with what was entered.
+  const submit = handleSubmit(
+    async ({ amountInput, wasteReason, isComposted, isRecycled, notes }) => {
+      const judged = judgeDeduction(
+        amountInput ?? untypedAmount(shared),
+        shared,
+        'waste',
+      );
+      if (!judged.ok) return;
+      await onConfirm({
+        quantity: judged.amount,
+        all: fromBatch && judged.amount === allHeld(shared),
+        wasteReason,
+        isComposted,
+        isRecycled,
+        notes,
+        usageUnitId: shared.activeUnitId,
+      });
+    },
+    reportValidationErrors,
+  );
 
   const wasteReasonOptions = WASTE_REASON_OPTIONS.map(
     ({ labelKey, value }) => ({
@@ -116,59 +148,38 @@ export const RecordWastePantryItemModal: React.FC<
   );
 
   return (
-    <PantryActionModal
-      visible={visible}
-      pantryItemId={pantryItemId}
-      onClose={onClose}
-      title={t('labels.recordWaste')}
-      confirmLabel={t('labels.recordWaste')}
-      confirmColor="warning"
-      snapPoints={['80%', '95%']}
-      unitToggleLabel={t('recordWaste.wasteBy')}
-      operation={PantryOperation.Waste}
-      onConfirm={handleConfirm}
-      renderActionFields={shared => (
-        <WasteActionFields
-          wasteAmountInput={amountOf(shared)}
-          setWasteAmountInput={setTypedAmount}
-          wasteReason={wasteReason}
-          setWasteReason={setWasteReason}
-          isComposted={isComposted}
-          setIsComposted={setIsComposted}
-          isRecycled={isRecycled}
-          setIsRecycled={setIsRecycled}
+    <>
+      <PantryActionHeader
+        title={t('labels.recordWaste')}
+        confirmLabel={t('labels.recordWaste')}
+        onClose={onClose}
+        onConfirm={ready ? () => submit() : null}
+      />
+      {ready ? (
+        <WasteFields
+          control={control}
           shared={shared}
           wasteReasonOptions={wasteReasonOptions}
         />
-      )}
-    />
+      ) : null}
+    </>
   );
 };
 
-const WasteActionFields: React.FC<{
-  wasteAmountInput: string;
-  setWasteAmountInput: (v: string) => void;
-  wasteReason: WasteReason;
-  setWasteReason: (v: WasteReason) => void;
-  isComposted: boolean;
-  setIsComposted: (v: boolean) => void;
-  isRecycled: boolean;
-  setIsRecycled: (v: boolean) => void;
+const WasteFields: React.FC<{
+  control: Control<WasteFormValues>;
   shared: PantryActionSharedState;
   wasteReasonOptions: Array<{ label: string; value: WasteReason }>;
-}> = ({
-  wasteAmountInput,
-  setWasteAmountInput,
-  wasteReason,
-  setWasteReason,
-  isComposted,
-  setIsComposted,
-  isRecycled,
-  setIsRecycled,
-  shared,
-  wasteReasonOptions,
-}) => {
+}> = ({ control, shared, wasteReasonOptions }) => {
   const { t } = useTranslation();
+  const {
+    field: { ref: amountRef, ...amount },
+    fieldState: amountState,
+  } = useController({
+    control,
+    name: 'amountInput',
+  });
+  const wasteAmountInput = amount.value ?? untypedAmount(shared);
   const wasteAmount = parseFractionalInput(wasteAmountInput);
   const { conversion, remaining, available } = useQuantityFeedback(
     wasteAmount,
@@ -182,13 +193,15 @@ const WasteActionFields: React.FC<{
         <FractionInput
           label={t('recordWaste.wasteAmount')}
           required
+          ref={amountRef}
           value={wasteAmountInput}
-          onChangeText={setWasteAmountInput}
+          onChangeText={amount.onChange}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
-          useBottomSheetInput
+          error={amountState.error?.message}
         />
         <QuantityInputFeedback
-          remaining={remaining}
+          // A message on the field says it; the line below would repeat it.
+          remaining={amountState.error ? null : remaining}
           available={available}
           consumeUnit={shared.activeUnit}
           isConvertedUnit={shared.isConvertedUnit}
@@ -197,18 +210,24 @@ const WasteActionFields: React.FC<{
           conversionConfidence={conversion.confidence}
           commonFractions={shared.commonFractions}
           onFractionSelect={value =>
-            setWasteAmountInput(formatQuantityForInput(value))
+            amount.onChange(formatQuantityForInput(value))
           }
           selectedFractionValue={wasteAmount ?? undefined}
         />
       </View>
 
       {/* Waste Reason Selection */}
-      <CollapsibleChipPicker
-        label={t('recordWaste.wasteReason')}
-        options={wasteReasonOptions}
-        selectedValue={wasteReason}
-        onSelect={setWasteReason}
+      <Controller
+        control={control}
+        name="wasteReason"
+        render={({ field }) => (
+          <CollapsibleChipPicker
+            label={t('recordWaste.wasteReason')}
+            options={wasteReasonOptions}
+            selectedValue={field.value}
+            onSelect={field.onChange}
+          />
+        )}
       />
 
       {/* Sustainability Tracking */}
@@ -217,31 +236,50 @@ const WasteActionFields: React.FC<{
           {t('recordWaste.sustainability')}
         </Text>
         <View style={styles.checkboxContainer}>
-          <FormCheckbox
-            label={t('recordWaste.composted')}
-            checked={isComposted}
-            onPress={() => setIsComposted(!isComposted)}
+          <Controller
+            control={control}
+            name="isComposted"
+            render={({ field }) => (
+              <FormCheckbox
+                label={t('recordWaste.composted')}
+                checked={field.value}
+                onPress={() => field.onChange(!field.value)}
+              />
+            )}
           />
         </View>
         <View style={styles.checkboxContainer}>
-          <FormCheckbox
-            label={t('recordWaste.recycledPackaging')}
-            checked={isRecycled}
-            onPress={() => setIsRecycled(!isRecycled)}
+          <Controller
+            control={control}
+            name="isRecycled"
+            render={({ field }) => (
+              <FormCheckbox
+                label={t('recordWaste.recycledPackaging')}
+                checked={field.value}
+                onPress={() => field.onChange(!field.value)}
+              />
+            )}
           />
         </View>
       </View>
 
       {/* Notes */}
       <View style={commonStyles.bottomSheetSection}>
-        <FormInput
-          label={t('labels.notes')}
-          value={shared.notes}
-          onChangeText={shared.setNotes}
-          placeholder={t('recordWaste.notesPlaceholder')}
-          multiline
-          numberOfLines={3}
-          useBottomSheetInput
+        <Controller
+          control={control}
+          name="notes"
+          render={({ field }) => (
+            <FormInput
+              ref={field.ref}
+              label={t('labels.notes')}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              placeholder={t('recordWaste.notesPlaceholder')}
+              multiline
+              numberOfLines={3}
+            />
+          )}
         />
       </View>
     </>

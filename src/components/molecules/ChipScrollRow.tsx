@@ -1,12 +1,12 @@
+import type { ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 // RNGH's ScrollView (not RN's) so the row scrolls when nested inside a
 // @gorhom/bottom-sheet — RN's ScrollView doesn't coordinate with the sheet's
 // gesture-handler pan and won't scroll horizontally there.
 import { ScrollView } from 'react-native-gesture-handler';
-import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { Text } from '#components/atoms/Text';
-import { Icon, type IconName } from '#components/atoms/Icon';
+import type { IconName } from '#components/atoms/Icon';
+import { Chip } from '#components/molecules/Chip';
 import { EdgeFade } from '#components/atoms/EdgeFade';
 import { useScrollEdgeFades } from '#hooks/ui/useScrollEdgeFades';
 import { useCenterActiveItem } from '#hooks/ui/useCenterActiveItem';
@@ -19,86 +19,65 @@ const AnimatedChipScrollView = Animated.createAnimatedComponent(ScrollView);
 export interface ChipOption<T> {
   key: T;
   label: string;
+  /** A second line under the label, such as a plan's dates. */
+  detail?: string;
   icon?: IconName;
+  count?: number;
   testID?: string;
 }
 
 interface ChipScrollRowProps<T> {
   options: ChipOption<T>[];
-  selected: T;
+  /** One choice, or each filter that is on when several can be. */
+  selected: T | readonly T[];
   onSelect: (key: T) => void;
-  size?: 'sm' | 'md';
   style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
-  /** Per-chip style override — e.g. a fixed height to match form inputs. */
-  chipStyle?: StyleProp<ViewStyle>;
   /**
    * Enables soft edge fades that signal more chips can be scrolled into view.
    * The value names the surface the row sits on so the fade blends into it:
    * `background` for a screen, `surface` for a bottom sheet. Omit to disable.
    */
   edgeFadeColor?: 'background' | 'surface';
+  /** After the choices, such as a chip that loads more of them. */
+  trailing?: ReactNode;
 }
 
 export function ChipScrollRow<T>({
   options,
   selected,
   onSelect,
-  size = 'sm',
   style,
   contentContainerStyle,
-  chipStyle,
   edgeFadeColor,
+  trailing,
 }: ChipScrollRowProps<T>) {
-  const variantStyles = styles.useVariants({ size });
-
   const { edges, metrics, onScroll, onContentSizeChange, onLayout } =
     useScrollEdgeFades(!!edgeFadeColor);
 
-  // Keep the selected chip centered, like the pantry location filter strip.
+  const selectedKeys: readonly T[] = isKeyList(selected)
+    ? selected
+    : [selected];
+
+  // Keep the (first) selected chip centered.
   const { onItemLayout, animatedRef } = useCenterActiveItem({
-    activeKey: selected,
+    activeKey: selectedKeys[0],
     metrics,
   });
 
-  const chips = options.map(opt => {
-    const isActive = selected === opt.key;
-    return (
-      <Pressable
-        key={String(opt.key)}
-        onPress={() => onSelect(opt.key)}
-        onLayout={e => onItemLayout(opt.key, e)}
-        testID={opt.testID}
-        accessibilityRole="button"
-        accessibilityState={{ selected: isActive }}
-      >
-        <View
-          style={[
-            variantStyles.chip,
-            isActive && variantStyles.chipActive,
-            chipStyle,
-          ]}
-        >
-          {opt.icon ? (
-            <Icon
-              name={opt.icon}
-              size={size === 'md' ? 18 : 16}
-              tone={isActive ? 'primary' : 'textSecondary'}
-            />
-          ) : null}
-          <Text
-            role="caption"
-            style={[
-              variantStyles.chipText,
-              isActive && variantStyles.chipTextActive,
-            ]}
-          >
-            {opt.label}
-          </Text>
-        </View>
-      </Pressable>
-    );
-  });
+  const chips = options.map(opt => (
+    <Chip
+      key={String(opt.key)}
+      label={opt.label}
+      detail={opt.detail}
+      icon={opt.icon}
+      count={opt.count}
+      selected={selectedKeys.includes(opt.key)}
+      onPress={() => onSelect(opt.key)}
+      onLayout={e => onItemLayout(opt.key, e)}
+      testID={opt.testID}
+    />
+  ));
 
   // Centering reads the live widths and offset, so all three handlers always
   // run; with fades off `useScrollEdgeFades` still updates `metrics` but never
@@ -108,14 +87,15 @@ export function ChipScrollRow<T>({
       ref={animatedRef}
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={[variantStyles.chipRow, contentContainerStyle]}
-      style={edgeFadeColor ? undefined : style}
+      contentContainerStyle={[styles.chipRow, contentContainerStyle]}
+      style={edgeFadeColor ? undefined : [styles.row, style]}
       onLayout={onLayout}
       onContentSizeChange={onContentSizeChange}
       onScroll={onScroll}
       scrollEventThrottle={16}
     >
       {chips}
+      {trailing}
     </AnimatedChipScrollView>
   );
 
@@ -124,7 +104,7 @@ export function ChipScrollRow<T>({
   if (!edgeFadeColor) return scroller;
 
   return (
-    <View style={style}>
+    <View style={[styles.row, style]}>
       {scroller}
       {!!edges.left && <EdgeFade side="left" colorKey={edgeFadeColor} />}
       {!!edges.right && <EdgeFade side="right" colorKey={edgeFadeColor} />}
@@ -132,49 +112,19 @@ export function ChipScrollRow<T>({
   );
 }
 
+function isKeyList<T>(selected: T | readonly T[]): selected is readonly T[] {
+  return Array.isArray(selected);
+}
+
 const styles = StyleSheet.create(theme => ({
+  // As tall as its chips in a column: a horizontal ScrollView grows by default.
+  row: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+  // One axis for every chip and the trailing control, whatever their heights.
   chipRow: {
-    gap: theme.spacing.sm,
-  },
-  chip: {
-    flexDirection: 'row',
-    gap: theme.spacing.xs,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.surface,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
     alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    variants: {
-      size: {
-        sm: {
-          paddingHorizontal: theme.spacing.md,
-          paddingVertical: theme.spacing.xs,
-        },
-        md: {
-          paddingHorizontal: theme.spacing.mdPlus,
-          paddingVertical: theme.spacing.sm,
-        },
-      },
-    },
-  },
-  chipActive: {
-    borderColor: theme.colors.primary,
-  },
-  chipText: {
-    color: theme.colors.textSecondary,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    variants: {
-      size: {
-        sm: {},
-        md: {},
-      },
-    },
-  },
-  chipTextActive: {
-    color: theme.colors.primaryText,
+    gap: theme.spacing.sm,
   },
 }));

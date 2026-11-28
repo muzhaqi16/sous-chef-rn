@@ -1,4 +1,4 @@
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import { receiptLineAmount } from '../receiptLineAmount';
 import {
   pantryTrackingExamples as examples,

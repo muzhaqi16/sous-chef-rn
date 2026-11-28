@@ -1,6 +1,6 @@
 import { gql } from '@apollo/client';
-import { createApolloClient } from '#/apollo/client';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { createApolloClient } from '#apollo/client';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import { drainTimers } from '#/test-utils/drainTimers';
 
 const ROW = gql`
@@ -36,7 +36,7 @@ const row = (name: string, ticked: boolean) => ({
 
 const mockAnswers: Record<string, unknown>[] = [];
 
-jest.mock('#/apollo/links/index', () => {
+jest.mock('#apollo/links/index', () => {
   const apollo =
     jest.requireActual<typeof import('@apollo/client')>('@apollo/client');
   return {
@@ -51,7 +51,7 @@ jest.mock('#/apollo/links/index', () => {
   };
 });
 
-jest.mock('#/apollo/pendingWrites/localWriteRegistry', () => ({
+jest.mock('#apollo/pendingWrites/localWriteRegistry', () => ({
   LOCAL_WRITES: {
     TickRow: {
       apply: (cache: {

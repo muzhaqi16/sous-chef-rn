@@ -1,12 +1,12 @@
 import type { FragmentType } from '@apollo/client/masking';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   MEAL_TYPE_LABEL_KEYS,
   MEAL_TYPE_ORDER,
 } from '#features/mealPlan/utils/mealPlanEnumLabels';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { MealType } from '#graphql/generated/schemaTypes';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
-import { toDateKey } from '#/utils/dateUtils';
+import { toDateKey } from '#utils/dateUtils';
 import {
   DailyMeals_ItemFragmentDoc,
   type DailyMeals_ItemFragment,

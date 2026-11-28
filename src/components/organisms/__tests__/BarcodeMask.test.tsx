@@ -2,7 +2,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import BarcodeMask from '#features/barcode/components/BarcodeMask';
-import { lightTheme } from '#/theme/themes';
+import { lightTheme } from '#theme/themes';
 
 const themed = {
   edgeColor: lightTheme.colors.primary,

@@ -19,7 +19,7 @@ jest.mock('#store', () => ({
 
 // Environment is auto-mocked via jest.setup.js. Override `getApiConfig` so
 // the WS link picks up the local test URL.
-import { Environment } from '#/utils/environment';
+import { Environment } from '#utils/environment';
 
 // graphql-ws's lifecycle handlers are passed as the `on` config to
 // createClient at module-import time. Capture that object reference in
@@ -57,14 +57,14 @@ beforeAll(() => {
 });
 
 // Mock errorSerialization
-jest.mock('#/utils/errorSerialization', () => ({
+jest.mock('#utils/errorSerialization', () => ({
   serializeError: jest.fn((e: unknown) =>
     e instanceof Error ? e.message : 'unknown',
   ),
 }));
 
 // Mock deviceId
-jest.mock('#/services/auth/deviceId', () => ({
+jest.mock('#services/auth/deviceId', () => ({
   getDeviceId: jest.fn(() => 'test-device-id'),
 }));
 
@@ -73,7 +73,7 @@ jest.mock('#/services/auth/deviceId', () => ({
 // proactiveTokenRefresh at module init). Tests register their own mock.
 
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 import { isLibraryFatalCloseCode } from '../wsCloseCodes';
 import { wsLink } from '../wsLink';
 import {
@@ -141,61 +141,76 @@ describe('wsLink', () => {
   describe('getWebSocketState', () => {
     it('returns current state object', () => {
       const state = getWebSocketState();
-      expect(state).toHaveProperty('lastReconnectTime');
+      expect(state).toHaveProperty('redialGeneration');
       expect(state).toHaveProperty('hasClient');
       expect(state.hasClient).toBe(true);
     });
   });
 
   describe('reconnectWebSocket', () => {
-    it('calls terminate on the ws client', () => {
-      reconnectWebSocket();
-      // The graphql-ws mock's terminate should be called
+    // Earlier cases replace the client and `clearAllMocks` forgets which, so
+    // each case drops it and has the facade build a known one.
+    let client: () => { terminate: jest.Mock };
+    beforeEach(() => {
+      disposeWebSocket();
+      wsLink.client.on('closed', jest.fn());
       const { createClient } = require('graphql-ws');
-      const mockClient = createClient.mock.results[0]?.value;
-      if (mockClient) {
-        expect(mockClient.terminate).toHaveBeenCalled();
-      }
+      const built = createClient.mock.results.at(-1)?.value;
+      client = () => built;
     });
 
-    // Asserted on `lastReconnectTime`, which only moves for a call that was not
-    // dropped. `isWebSocketReconnecting()` cannot stand in for it — that flag is
-    // set and cleared inside one synchronous block, so it reads `false` whether
-    // or not the debounce works and the assertion could not fail.
-    it('debounces rapid reconnection attempts', () => {
-      jest.useFakeTimers();
-      try {
-        // Past any window a previous test left open.
-        jest.advanceTimersByTime(5_000);
+    /** A dial: its `url()` reads the generation, then the server acks. */
+    const dialAndConnect = async () => {
+      onHandlers.connecting();
+      await dialGate();
+      onHandlers.connected({}, undefined);
+    };
 
-        reconnectWebSocket();
-        const accepted = getWebSocketState().lastReconnectTime;
+    it('re-dials an open socket at once', async () => {
+      await dialAndConnect();
+      client().terminate.mockClear();
 
-        reconnectWebSocket(); // Inside the window — dropped.
-        expect(getWebSocketState().lastReconnectTime).toBe(accepted);
+      reconnectWebSocket();
 
-        jest.advanceTimersByTime(5_000);
-        reconnectWebSocket(); // Outside it — accepted.
-        expect(getWebSocketState().lastReconnectTime).toBeGreaterThan(accepted);
-      } finally {
-        jest.useRealTimers();
-      }
+      expect(client().terminate).toHaveBeenCalledTimes(1);
+    });
+
+    // A language switch right after a token re-dial lands while that re-dial
+    // is in flight: it is not dropped, and the burst costs one extra dial.
+    it('re-dials once more for every change asked mid-dial', async () => {
+      await dialAndConnect();
+      reconnectWebSocket(); // The token re-dial.
+      client().terminate.mockClear();
+
+      onHandlers.connecting();
+      await dialGate(); // That re-dial reads its generation.
+      const before = getWebSocketState().redialGeneration;
+      reconnectWebSocket(); // The language switch, mid-dial.
+      reconnectWebSocket(); // And another in the same burst.
+      expect(getWebSocketState().redialGeneration).toBe(before + 2);
+      expect(client().terminate).not.toHaveBeenCalled();
+
+      onHandlers.connected({}, undefined); // Lands on the older generation.
+      expect(client().terminate).toHaveBeenCalledTimes(1);
+
+      await dialAndConnect(); // The one extra dial, on the current generation.
+      expect(client().terminate).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('resumeWebSocketAfterOnline', () => {
     it('no-ops when no reconnect was deferred while offline', () => {
-      const before = getWebSocketState().lastReconnectTime;
+      const before = getWebSocketState().redialGeneration;
       resumeWebSocketAfterOnline();
       // Without a deferred cycle there is nothing to resume — no reconnect fired.
-      expect(getWebSocketState().lastReconnectTime).toBe(before);
+      expect(getWebSocketState().redialGeneration).toBe(before);
     });
 
     it('stays a no-op after auto-reconnect is disabled (logout)', () => {
       disableAutoReconnect();
-      const before = getWebSocketState().lastReconnectTime;
+      const before = getWebSocketState().redialGeneration;
       resumeWebSocketAfterOnline();
-      expect(getWebSocketState().lastReconnectTime).toBe(before);
+      expect(getWebSocketState().redialGeneration).toBe(before);
     });
   });
 
@@ -280,16 +295,6 @@ describe('wsLink', () => {
       // Should not throw
       expect(() => disposeWebSocket()).not.toThrow();
     });
-
-    it('resets lastReconnectTime to 0', () => {
-      // First trigger a reconnect to set lastReconnectTime
-      enableAutoReconnect();
-      reconnectWebSocket();
-      // Now dispose
-      disposeWebSocket();
-      const state = getWebSocketState();
-      expect(state.lastReconnectTime).toBe(0);
-    });
   });
 
   // `dispose()` latches `disposed` inside graphql-ws with no reset, and a
@@ -359,7 +364,7 @@ describe('wsLink', () => {
     it('returns correct hasClient state', () => {
       const state = getWebSocketState();
       expect(state.hasClient).toBe(true);
-      expect(typeof state.lastReconnectTime).toBe('number');
+      expect(typeof state.redialGeneration).toBe('number');
     });
   });
 

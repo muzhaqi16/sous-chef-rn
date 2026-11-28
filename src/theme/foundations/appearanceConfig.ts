@@ -2,7 +2,7 @@ import {
   DensityPreference,
   FontScalePreference,
 } from '#store/slices/preferenceTypes';
-import type { TranslationKey } from '#/i18n';
+import type { TranslationKey } from '#i18n';
 
 /**
  * The single source for each density / font-scale option's runtime multiplier and

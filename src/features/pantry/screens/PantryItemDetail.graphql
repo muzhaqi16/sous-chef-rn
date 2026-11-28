@@ -274,30 +274,6 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       }
     }
   }
-  quantityBreakdown {
-    fullPackages
-    looseContentUnits
-    contentUnit {
-      id
-      name
-      symbol
-      localizedSymbolForms {
-        one
-        other
-      }
-    }
-    totalContentUnits
-    remainingWeight
-    remainingWeightUnit {
-      id
-      name
-      symbol
-      localizedSymbolForms {
-        one
-        other
-      }
-    }
-  }
   brand {
     version
     id

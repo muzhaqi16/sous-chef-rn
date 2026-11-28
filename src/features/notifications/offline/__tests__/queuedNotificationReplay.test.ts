@@ -1,8 +1,8 @@
 import { ApolloClient, gql } from '@apollo/client';
 import { MockLink } from '@apollo/client/testing';
 import type { DocumentNode } from 'graphql';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import {
   completeMockedResponse,
   seedFragment,
@@ -18,9 +18,9 @@ import {
 } from '#features/notifications/graphql/notificationMutations.generated';
 import { DeleteMultipleNotificationsDocument } from '#features/notifications/graphql/bulkNotificationMutations.generated';
 import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
-import { ErrorCode, NotificationStatus } from '#/graphql/generated/schemaTypes';
-import { QueueManager } from '#/apollo/offlineQueue/queueManager';
-import { isRecord } from '#/utils/isRecord';
+import { ErrorCode, NotificationStatus } from '#graphql/generated/schemaTypes';
+import { QueueManager } from '#apollo/offlineQueue/queueManager';
+import { isRecord } from '#utils/isRecord';
 
 /**
  * A notification action queued offline replays its own document through a real
@@ -28,7 +28,7 @@ import { isRecord } from '#/utils/isRecord';
  */
 
 let mockClient: ApolloClient | null = null;
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),

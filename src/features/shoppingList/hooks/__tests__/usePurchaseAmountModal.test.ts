@@ -1,6 +1,6 @@
 import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { DisplayFormat, UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { usePurchaseAmountModal } from '../usePurchaseAmountModal';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
@@ -14,7 +14,6 @@ const makeItem = (
   itemName: 'Milk',
   quantity: 2,
   quantityInput: '2',
-  displayFormat: DisplayFormat.Decimal,
   version: 1,
   updatedAt: '2026-01-01T00:00:00.000Z',
   category: null,

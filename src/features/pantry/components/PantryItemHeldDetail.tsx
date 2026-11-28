@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { Text } from '#components/atoms/Text';

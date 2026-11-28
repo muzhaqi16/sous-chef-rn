@@ -12,14 +12,13 @@
  * queries treat as hidden, so only the newest alert is ever queryable. What
  * matters is how many dismissals it takes to clear the queue.
  */
-jest.unmock('#/services/alertService');
+jest.unmock('#services/alertService');
 import React from 'react';
-import { Platform } from 'react-native';
+import { Modal, Platform } from 'react-native';
 import { act, render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
-import { Modal } from '#components/atoms/themedComponents';
 import { AlertProvider } from '../AlertProvider';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { drainTimers } from '#/test-utils/drainTimers';
 
 const FAILED = 'Failed to update settings. Please try again.';

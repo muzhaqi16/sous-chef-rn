@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 
@@ -18,8 +18,8 @@ import {
   useShoppingListSearchQuery,
 } from './ShoppingListDataContext';
 import { useShoppingListModalActions } from '#features/shoppingList/context/ShoppingListModalsContext';
-import { useTabBarSetters } from '#/context/TabBarActionsContext';
-import { motion } from '#/theme/motion';
+import { useTabBarSetters } from '#context/TabBarActionsContext';
+import { motion } from '#theme/motion';
 
 // Module scope so it survives unmount/remount through stack navigation (and
 // resets on app restart): once content has shown, skeletons are skipped.

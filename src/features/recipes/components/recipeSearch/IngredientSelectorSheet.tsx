@@ -1,16 +1,16 @@
-import React, { useRef } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Pressable } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
-import { Title } from '#components/atoms/Title';
-import { SearchBar, type SearchBarRef } from '#components/molecules/SearchBar';
+import { SearchBar } from '#components/molecules/SearchBar';
+import { useOpening } from '#hooks/ui/useOpening';
+import { pantryItemSearch } from '#utils/searchUtils';
+import { useDeferredSearch } from '#features/recipes/hooks/useDeferredSearch';
 import { IngredientSelectionProvider } from '#features/recipes/context/IngredientSelectionContext';
 import {
   renderIngredientItem,
@@ -18,7 +18,7 @@ import {
 } from '#features/recipes/components/recipeSearch/IngredientListItem';
 import type { useRecipeScreen } from '#features/recipes/screens/useRecipeScreen';
 import { Text } from '#components/atoms/Text';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 // ── Types ──
 
@@ -29,7 +29,17 @@ interface IngredientSelectorSheetProps {
   /** State-driven presentation — auto-presents/dismisses via the hook's
    *  guarded `visible` path (see useStandardBottomSheet). */
   visible: boolean;
-  screen: ReturnType<typeof useRecipeScreen>;
+  /** What the sheet reads of the recipe screen. */
+  screen: Pick<
+    ReturnType<typeof useRecipeScreen>,
+    | 'pantryItems'
+    | 'pantryHasMore'
+    | 'loadMorePantryItems'
+    | 'selectedIngredients'
+    | 'toggleIngredient'
+    | 'clearSelectedIngredients'
+    | 'handleIngredientSearch'
+  >;
   onSheetChange: (open: boolean) => void;
 }
 
@@ -39,64 +49,68 @@ export const IngredientSelectorSheet: React.FC<
   IngredientSelectorSheetProps
 > = ({ visible, screen, onSheetChange }) => {
   const { t } = useTranslation();
-  const BottomSheetScrollable = useBottomSheetScrollableCreator();
-  const ingredientSearchBarRef = useRef<SearchBarRef>(null);
+  const opening = useOpening(visible);
 
-  // Forward `onChange` through the hook so it composes with the backdrop
-  // claim handler. Setting `onChange` directly on `<BottomSheetModal>`
-  // below would overwrite the composition and silently break the dim
-  // layer.
-  const handleSheetChange = (index: number) => {
-    onSheetChange(index >= 0);
-    if (index >= 0) {
-      screen.resetIngredientSearch();
-      ingredientSearchBarRef.current?.clear();
-    }
+  const close = () => {
+    onSheetChange(false);
   };
 
-  const { ref: sheetRef, modalProps } = useStandardBottomSheet({
-    visible,
-    onDismiss: () => {
-      onSheetChange(false);
-    },
-    snapPoints: ['50%', '75%', '90%'],
-    onChange: index => handleSheetChange(index),
-  });
-
   const handleSearchAndClose = async () => {
-    sheetRef.current?.close();
+    close();
     await screen.handleIngredientSearch();
   };
 
   return (
-    <BottomSheetModal ref={sheetRef} {...modalProps} index={0}>
+    <Sheet
+      mode="list"
+      visible={visible}
+      onDismiss={close}
+      title={t('recipes.selectIngredients')}
+      actions={[
+        {
+          label: t('recipes.searchWithCount', {
+            count: screen.selectedIngredients.size,
+          }),
+          variant: 'primary',
+          disabled: screen.selectedIngredients.size === 0,
+          onPress: () => {
+            void handleSearchAndClose();
+          },
+        },
+      ]}
+      snapPoints={['50%', '75%', '90%']}
+      // `onChange` goes through the sheet's options, which compose it with the
+      // backdrop claim; set on the modal directly it would break the dim layer.
+      onChange={index => onSheetChange(index >= 0)}
+    >
+      {opening ? <IngredientSelector key={opening.id} screen={screen} /> : null}
+    </Sheet>
+  );
+};
+
+/** One opening: its search starts empty, and a snap change keeps it. */
+const IngredientSelector: React.FC<{
+  screen: IngredientSelectorSheetProps['screen'];
+}> = ({ screen }) => {
+  const { t } = useTranslation();
+  const BottomSheetScrollable = useBottomSheetScrollableCreator();
+  const [query, setQuery] = useState('');
+  const { results: shownPantryItems } = useDeferredSearch({
+    items: screen.pantryItems,
+    searchQuery: query,
+    searchFn: pantryItemSearch,
+  });
+
+  return (
+    <>
       {/* Non-scrollable header */}
       <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <Title style={styles.title}>{t('recipes.selectIngredients')}</Title>
-          <AppPressable
-            style={[
-              styles.searchButton,
-              screen.selectedIngredients.size === 0 &&
-                styles.searchButtonDisabled,
-            ]}
-            onPress={handleSearchAndClose}
-            disabled={screen.selectedIngredients.size === 0}
-          >
-            <Text role="label" style={styles.searchButtonText}>
-              {t('recipes.searchWithCount', {
-                count: screen.selectedIngredients.size,
-              })}
-            </Text>
-          </AppPressable>
-        </View>
-
         {/* Search bar — shown when > 8 items */}
         {screen.pantryItems.length > 8 && (
           <SearchBar
-            ref={ingredientSearchBarRef}
             placeholder={t('recipes.searchIngredientsPlaceholder')}
-            onChangeText={screen.setIngredientSearchQuery}
+            testID={recipesTestIDs.ingredientSearchInput}
+            onChangeText={setQuery}
             debounceMs={250}
             autoCapitalize="none"
             returnKeyType="search"
@@ -113,7 +127,8 @@ export const IngredientSelectorSheet: React.FC<
             </Text>
             <Pressable
               onPress={screen.clearSelectedIngredients}
-              hitSlop={hitSlop.md}
+              accessibilityRole="button"
+              style={styles.clearAll}
             >
               <Text role="label" tone="accent">
                 {t('labels.clearAll')}
@@ -122,14 +137,14 @@ export const IngredientSelectorSheet: React.FC<
           </View>
         )}
       </View>
-      {/* Scrollable list — direct child of BottomSheetModal */}
+      {/* The list fills what the header leaves. */}
       <IngredientSelectionProvider
         selectedIngredients={screen.selectedIngredients}
         toggleIngredient={screen.toggleIngredient}
       >
         <FlashList
           renderScrollComponent={BottomSheetScrollable}
-          data={screen.filteredPantryItems}
+          data={shownPantryItems}
           keyExtractor={ingredientKeyExtractor}
           getItemType={getItemType}
           renderItem={renderIngredientItem}
@@ -143,7 +158,7 @@ export const IngredientSelectorSheet: React.FC<
             FLASHLIST_DEFAULTS.bottomSheet.onEndReachedThreshold
           }
           ListEmptyComponent={
-            screen.ingredientSearchQuery ? (
+            query ? (
               <Text
                 role="body"
                 tone="secondary"
@@ -151,7 +166,7 @@ export const IngredientSelectorSheet: React.FC<
                 style={styles.emptyMessage}
               >
                 {t('recipes.noIngredientsMatch', {
-                  query: screen.ingredientSearchQuery,
+                  query,
                 })}
               </Text>
             ) : (
@@ -167,7 +182,7 @@ export const IngredientSelectorSheet: React.FC<
           }
         />
       </IngredientSelectionProvider>
-    </BottomSheetModal>
+    </>
   );
 };
 
@@ -175,16 +190,7 @@ export const IngredientSelectorSheet: React.FC<
 
 const styles = StyleSheet.create(theme => ({
   header: {
-    paddingHorizontal: theme.spacing.md,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  title: {
-    flex: 1,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   selectionRow: {
     flexDirection: 'row',
@@ -192,16 +198,14 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     marginBottom: theme.spacing.sm,
   },
-  listContent: { paddingBottom: theme.spacing.xl },
-  searchButton: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primary,
+  clearAll: {
+    minHeight: theme.sizes.touchTarget.min,
+    justifyContent: 'center',
   },
-  searchButtonDisabled: { opacity: theme.opacity.disabled },
-  searchButtonText: {
-    color: theme.colors.onPrimary,
+  // The rows' inset is the list's content, so the whole width scrolls it.
+  listContent: {
+    paddingHorizontal: theme.layout.pageGutter,
+    paddingBottom: theme.spacing.xl,
   },
   emptyMessage: {
     marginTop: theme.spacing.xl,

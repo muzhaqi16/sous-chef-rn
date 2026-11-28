@@ -3,6 +3,7 @@ import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import AddItemForm from '../AddItemForm';
 import { drainTimers } from '#/test-utils/drainTimers';
+import { InFormSheet } from '#/test-utils/inFormSheet';
 
 /**
  * `createItemSchema` runs for real here — the sibling suite mocks it away. The
@@ -15,11 +16,11 @@ jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#/utils/deviceLocale', () => ({
-  ...jest.requireActual('#/utils/deviceLocale'),
+jest.mock('#utils/deviceLocale', () => ({
+  ...jest.requireActual('#utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
-const { getDeviceDecimalSeparator } = jest.requireMock('#/utils/deviceLocale');
+const { getDeviceDecimalSeparator } = jest.requireMock('#utils/deviceLocale');
 
 jest.mock('#features/catalog/components/MultiImagePicker', () => ({
   MultiImagePicker: () => null,
@@ -96,7 +97,11 @@ const defaultProps = {
 };
 
 const openInventory = async (user: ReturnType<typeof userEvent.setup>) => {
-  render(<AddItemForm {...defaultProps} />);
+  render(
+    <InFormSheet>
+      <AddItemForm {...defaultProps} />
+    </InFormSheet>,
+  );
   await user.press(screen.getByText('Inventory'));
 };
 
@@ -155,18 +160,20 @@ describe('AddItemForm — an edit that leaves the net weight alone', () => {
     const user = userEvent.setup();
     const onSubmit = jest.fn();
     render(
-      <AddItemForm
-        {...defaultProps}
-        onSubmit={onSubmit}
-        mode="directEdit"
-        initialData={{
-          name: 'Rice',
-          netWeights: [{ value: 1.816, unitName: 'kg', unitId: 'unit-kg' }],
-        }}
-      />,
+      <InFormSheet>
+        <AddItemForm
+          {...defaultProps}
+          onSubmit={onSubmit}
+          mode="directEdit"
+          initialData={{
+            name: 'Rice',
+            netWeights: [{ value: 1.816, unitName: 'kg', unitId: 'unit-kg' }],
+          }}
+        />
+      </InFormSheet>,
     );
 
-    const save = screen.getByText('Save Changes');
+    const save = screen.getByLabelText('Save Changes');
     await drainTimers();
     expect(save).not.toBeDisabled();
     await user.press(save);
@@ -182,18 +189,20 @@ describe('AddItemForm — an edit that leaves the net weight alone', () => {
     const user = userEvent.setup();
     const onSubmit = jest.fn();
     render(
-      <AddItemForm
-        {...defaultProps}
-        onSubmit={onSubmit}
-        mode="directEdit"
-        initialData={{
-          name: 'Rice',
-          netWeights: [{ value: 500, unitName: 'g', unitId: 'unit-g' }],
-        }}
-      />,
+      <InFormSheet>
+        <AddItemForm
+          {...defaultProps}
+          onSubmit={onSubmit}
+          mode="directEdit"
+          initialData={{
+            name: 'Rice',
+            netWeights: [{ value: 500, unitName: 'g', unitId: 'unit-g' }],
+          }}
+        />
+      </InFormSheet>,
     );
 
-    await user.press(screen.getByText('Save Changes'));
+    await user.press(screen.getByLabelText('Save Changes'));
 
     await drainTimers();
     expect(onSubmit).toHaveBeenCalled();
@@ -208,20 +217,22 @@ describe('AddItemForm — a prefilled field the rules refuse', () => {
     const user = userEvent.setup();
     const onSubmit = jest.fn();
     render(
-      <AddItemForm
-        {...defaultProps}
-        onSubmit={onSubmit}
-        mode="directEdit"
-        initialData={{
-          name: 'Rice',
-          netWeights: [{ value: 500, unitName: '' }],
-        }}
-      />,
+      <InFormSheet>
+        <AddItemForm
+          {...defaultProps}
+          onSubmit={onSubmit}
+          mode="directEdit"
+          initialData={{
+            name: 'Rice',
+            netWeights: [{ value: 500, unitName: '' }],
+          }}
+        />
+      </InFormSheet>,
     );
     // The unitless weight is on Inventory; the form opens on Basics.
     expect(screen.queryByTestId('net-weight-entry-list')).toBeNull();
 
-    const save = screen.getByText('Save Changes');
+    const save = screen.getByLabelText('Save Changes');
     expect(save).not.toBeDisabled();
     await user.press(save);
 
@@ -235,15 +246,17 @@ describe('AddItemForm — a prefilled field the rules refuse', () => {
     const user = userEvent.setup();
     const onSubmit = jest.fn();
     render(
-      <AddItemForm
-        {...defaultProps}
-        onSubmit={onSubmit}
-        mode="directEdit"
-        initialData={{ name: 'Cashew Splits R/s' }}
-      />,
+      <InFormSheet>
+        <AddItemForm
+          {...defaultProps}
+          onSubmit={onSubmit}
+          mode="directEdit"
+          initialData={{ name: 'Cashew Splits R/s' }}
+        />
+      </InFormSheet>,
     );
 
-    await user.press(screen.getByText('Save Changes'));
+    await user.press(screen.getByLabelText('Save Changes'));
 
     await drainTimers();
     expect(onSubmit).toHaveBeenCalled();
@@ -259,16 +272,18 @@ describe('AddItemForm — a barcode the server refuses', () => {
       message: 'That barcode isn’t valid.',
     }));
     render(
-      <AddItemForm
-        {...defaultProps}
-        onSubmit={onSubmit}
-        initialData={{ name: 'Rice', upc: '012345678901' }}
-      />,
+      <InFormSheet>
+        <AddItemForm
+          {...defaultProps}
+          onSubmit={onSubmit}
+          initialData={{ name: 'Rice', upc: '012345678901' }}
+        />
+      </InFormSheet>,
     );
     // The barcode field is on the Product page, not the one the form opens on.
     expect(screen.queryByText('UPC/Barcode')).toBeNull();
 
-    const add = screen.getByText('Add Item');
+    const add = screen.getByLabelText('Add Item');
     await drainTimers();
     expect(add).not.toBeDisabled();
     await user.press(add);

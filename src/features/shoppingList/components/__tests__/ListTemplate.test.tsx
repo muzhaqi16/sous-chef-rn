@@ -173,17 +173,16 @@ describe('ListTemplate', () => {
       seen.push(onItemPress);
       return <Text role="body">custom</Text>;
     };
+    // The type refuses a colliding key written out; a wider object carrying
+    // one still gets through, and the RUNTIME backstop must reject it.
+    const wider: Record<string, unknown> = { onItemPress: callerHandler };
 
     render(
       <ListTemplate
         items={items}
         onItemPress={templateHandler}
         customListComponent={CustomList}
-        // The type refuses a colliding key now; this asserts the RUNTIME
-        // backstop still holds if one ever gets through (a cast, a spread of a
-        // wider object).
-        // @ts-expect-error deliberate collision — the guard must reject it
-        customListProps={{ onItemPress: callerHandler }}
+        customListProps={wider}
       />,
     );
 

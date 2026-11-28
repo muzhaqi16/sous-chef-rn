@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import {
+  Controller,
+  useController,
+  useForm,
+  type Control,
+} from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
@@ -9,38 +16,45 @@ import { DatePickerField } from '#components/molecules/DatePickerField';
 import { ConversionPreview } from '#features/pantry/components/ConversionPreview';
 import { FractionQuickSelect } from '#features/pantry/components/FractionQuickSelect';
 import { PackageContentsFields } from '#features/pantry/ui/PackageContentsFields';
-import {
-  isPickedWhenSized,
-  isWholeWhenSized,
-} from '#features/pantry/ui/packageContentsRules';
 import { pantryTestIDs } from '#features/pantry/testIDs';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import {
   formatQuantityForInput,
   formatQuantityWithUnit,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import { useConversionPreview } from '#features/pantry/hooks/useConversionPreview';
 import { actionConversionOptions } from '#features/pantry/hooks/useQuantityFeedback';
-import { inCountedUnit } from '#domain/stockDisplay';
+import { inCountedUnit } from '#entities/pantryItem/stockDisplay';
 import {
   restockContentsOf,
   statedContents,
-  type PackageContentsValues,
   type RestockContents,
 } from '#domain/stockAmount';
-import { UnitType } from '#/graphql/generated/schemaTypes';
-import { commonStyles } from '#/styles/commonStyles';
+import { UnitType } from '#graphql/generated/schemaTypes';
+import { commonStyles } from '#styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
-import { PantryActionModal } from '#features/pantry/components/modals/PantryActionModal';
+import {
+  PantryActionHeader,
+  PantryActionModal,
+} from '#features/pantry/components/modals/PantryActionModal';
 import { Text } from '#components/atoms/Text';
-import { localizeNumericHint } from '#/utils/formatters/number';
-import { parseMoneyInput } from '#/utils/validation/common';
+import { localizeNumericHint } from '#utils/formatters/number';
+import {
+  parseMoneyInput,
+  reportValidationErrors,
+} from '#utils/validation/common';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import type {
   PantryActionSharedState,
   ShownQuantity,
 } from '#features/pantry/types';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import {
+  restockDefaults,
+  restockSchema,
+  type RestockFormContext,
+  type RestockFormValues,
+} from './restockFormConfig';
 
 interface RestockPantryItemModalProps {
   visible: boolean;
@@ -60,15 +74,6 @@ interface RestockPantryItemModalProps {
   ) => Promise<string | null>;
 }
 
-type StatedSize = Omit<PackageContentsValues, 'unitType'>;
-
-const NO_SIZE: StatedSize = {
-  sizeInput: '',
-  sizeUnitDisplay: '',
-  sizeUnitId: null,
-  sizeUnitType: null,
-};
-
 /** The server sizes only packages counted in the stack's own unit. */
 const countedInOwnUnit = ({ selectedUnitInfo }: PantryActionSharedState) =>
   selectedUnitInfo?.isTrackingUnit === true &&
@@ -82,101 +87,85 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   onConfirm,
 }) => {
   const { t } = useTranslation();
+  return (
+    <PantryActionModal
+      visible={visible}
+      pantryItemId={pantryItemId}
+      onClose={onClose}
+      snapPoint="80%"
+      unitToggleLabel={t('restockItem.restockBy')}
+      currentQuantityLabel={t('restockItem.currentLabel')}
+      operation={PantryOperation.Restock}
+      renderForm={(shared, pantryItem) => (
+        <RestockForm
+          shared={shared}
+          ready={!!pantryItem}
+          reason={reason}
+          onClose={onClose}
+          onConfirm={onConfirm}
+        />
+      )}
+    />
+  );
+};
+
+interface RestockFormProps {
+  shared: PantryActionSharedState;
+  /** The stack is read, so there is something to restock. */
+  ready: boolean;
+  reason: string | undefined;
+  onClose: () => void;
+  onConfirm: RestockPantryItemModalProps['onConfirm'];
+}
+
+const RestockForm: React.FC<RestockFormProps> = ({
+  shared,
+  ready,
+  reason,
+  onClose,
+  onConfirm,
+}) => {
+  const { t } = useTranslation();
   const asksCost = useBudgetAndPricesEnabled();
-  const [quantityInput, setQuantityInput] = useState('1');
-  const [quantityEdited, setQuantityEdited] = useState(false);
-  const [costPerUnitInput, setCostPerUnitInput] = useState('');
-  const [totalCostInput, setTotalCostInput] = useState('');
-  const [expiresAt, setExpiresAt] = useState<Date | null>(null);
-  const [confirmRefused, setConfirmRefused] = useState(false);
   const [askingSize, setAskingSize] = useState(false);
-  const [statedSize, setStatedSize] = useState(NO_SIZE);
-  const [sizeRefusal, setSizeRefusal] = useState<string | null>(null);
-
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItemId);
-  if (visible !== prevVisible || pantryItemId !== prevPantryItemId) {
-    setPrevVisible(visible);
-    setPrevPantryItemId(pantryItemId);
-    setQuantityInput('1');
-    setQuantityEdited(false);
-    setCostPerUnitInput('');
-    setTotalCostInput('');
-    setExpiresAt(null);
-    setConfirmRefused(false);
-    setAskingSize(false);
-    setStatedSize(NO_SIZE);
-    setSizeRefusal(null);
-  }
-
-  const editSize = (edit: Partial<StatedSize>) => {
-    setSizeRefusal(null);
-    setStatedSize(stated => ({ ...stated, ...edit }));
-  };
-
-  const quantityValue = parseFractionalInput(quantityInput);
-  const quantityIsUsable =
-    quantityValue !== null && !isNaN(quantityValue) && quantityValue > 0;
-  // Off, the cost fields are hidden: they neither block a restock nor send one.
-  const costPerUnit = asksCost ? parseMoneyInput(costPerUnitInput) : null;
-  const totalCost = asksCost ? parseMoneyInput(totalCostInput) : null;
-  const { sizeInput, sizeUnitId } = statedSize;
-  const size = parseDecimalInput(sizeInput);
-  const sizeIsUsable = !sizeInput.trim() || (!Number.isNaN(size) && size > 0);
-  const countIsWhole = isWholeWhenSized(
-    quantityInput,
-    UnitType.Count,
-    sizeInput,
-  );
-  const sizeUnitIsPicked = isPickedWhenSized(
-    sizeUnitId,
-    UnitType.Count,
-    sizeInput,
-  );
-  // On the fields once a confirm is refused, then live; until then the
-  // quantity field's own format hint speaks.
-  const errorOn = (refused: boolean, key: TranslationKey) =>
-    confirmRefused && refused ? t(key) : undefined;
-  // A count need be whole only on a sized restock, as handleConfirm checks it.
-  const errorsFor = (sized: boolean) => ({
-    quantity:
-      errorOn(!quantityIsUsable, 'errors.invalidQuantity') ??
-      errorOn(sized && !countIsWhole, 'packageSize.wholePackages') ??
-      (quantityEdited ? undefined : reason),
-    costPerUnit: errorOn(costPerUnit === undefined, 'errors.invalidAmountPaid'),
-    totalCost: errorOn(totalCost === undefined, 'errors.invalidAmountPaid'),
-    size:
-      errorOn(!sizeIsUsable, 'packageSize.sizeInvalid') ??
-      sizeRefusal ??
-      undefined,
-    sizeUnit: errorOn(!sizeUnitIsPicked, 'packageSize.unitRequired'),
+  const countsPackages = countedInOwnUnit(shared);
+  const {
+    control,
+    handleSubmit,
+    setError,
+    formState: { isDirty },
+  } = useForm<RestockFormValues, RestockFormContext>({
+    resolver: yupResolver(restockSchema),
+    defaultValues: restockDefaults,
+    context: { countsPackages },
   });
+  useSheetUnsavedInput(isDirty);
 
-  const handleConfirm = async (shared: PantryActionSharedState) => {
-    if (!pantryItemId) return;
-    const sized = countedInOwnUnit(shared);
-    if (
-      !quantityIsUsable ||
-      costPerUnit === undefined ||
-      totalCost === undefined ||
-      (sized && !(sizeIsUsable && countIsWhole && sizeUnitIsPicked))
-    ) {
-      setConfirmRefused(true);
-      return;
-    }
-
-    const contents = sized
-      ? statedContents({ ...statedSize, unitType: UnitType.Count })
+  const submit = handleSubmit(async values => {
+    const quantity = parseFractionalInput(values.quantityInput);
+    if (quantity === null) return;
+    const { sizeInput, sizeUnitDisplay, sizeUnitId, sizeUnitType } = values;
+    const contents = countsPackages
+      ? statedContents({
+          sizeInput,
+          sizeUnitDisplay,
+          sizeUnitId,
+          sizeUnitType,
+          unitType: UnitType.Count,
+        })
       : null;
+    // Off, the cost fields are hidden: they send nothing.
+    const paid = (input: string) =>
+      asksCost ? parseMoneyInput(input) ?? undefined : undefined;
     // Pass the quantity and unit directly — the backend handles conversion
     const answer = onConfirm(
-      quantityValue,
-      quantityInput,
-      shared.notes,
+      quantity,
+      values.quantityInput,
+      values.notes,
       shared.activeUnitId,
-      costPerUnit ?? undefined,
-      totalCost ?? undefined,
-      expiresAt,
+      paid(values.costPerUnitInput),
+      paid(values.totalCostInput),
+      values.expiresAt,
       contents && restockContentsOf(contents, shared.portionUnitId),
     );
     if (!contents) {
@@ -185,85 +174,51 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       return;
     }
     // The sheet closes on success; a refusal stays to say why on the field.
-    setSizeRefusal(await answer);
-  };
+    const refusal = await answer;
+    if (refusal !== null) {
+      setError('sizeInput', { type: 'server', message: refusal });
+    }
+  }, reportValidationErrors);
 
   return (
-    <PantryActionModal
-      visible={visible}
-      pantryItemId={pantryItemId}
-      onClose={onClose}
-      title={t('restockItem.title')}
-      confirmLabel={t('labels.restock')}
-      snapPoints={['80%', '95%']}
-      unitToggleLabel={t('restockItem.restockBy')}
-      currentQuantityLabel={t('restockItem.currentLabel')}
-      operation={PantryOperation.Restock}
-      onConfirm={handleConfirm}
-      renderActionFields={shared => (
-        <RestockActionFields
-          quantityInput={quantityInput}
-          setQuantityInput={value => {
-            setQuantityEdited(true);
-            setQuantityInput(value);
-          }}
-          costPerUnitInput={costPerUnitInput}
-          setCostPerUnitInput={setCostPerUnitInput}
-          totalCostInput={totalCostInput}
-          setTotalCostInput={setTotalCostInput}
-          asksCost={asksCost}
-          expiresAt={expiresAt}
-          setExpiresAt={setExpiresAt}
-          errors={errorsFor(countedInOwnUnit(shared))}
+    <>
+      <PantryActionHeader
+        title={t('restockItem.title')}
+        confirmLabel={t('labels.restock')}
+        onClose={onClose}
+        onConfirm={ready ? () => submit() : null}
+      />
+      {ready ? (
+        <RestockFields
+          control={control}
           shared={shared}
+          reason={reason}
+          asksCost={asksCost}
           askingSize={askingSize}
           onAskSize={() => setAskingSize(true)}
-          statedSize={statedSize}
-          onSizeEdit={editSize}
         />
-      )}
-    />
+      ) : null}
+    </>
   );
 };
 
-const RestockActionFields: React.FC<{
-  quantityInput: string;
-  setQuantityInput: (v: string) => void;
-  costPerUnitInput: string;
-  setCostPerUnitInput: (v: string) => void;
-  totalCostInput: string;
-  setTotalCostInput: (v: string) => void;
-  asksCost: boolean;
-  expiresAt: Date | null;
-  setExpiresAt: (v: Date | null) => void;
-  errors: Record<
-    'quantity' | 'costPerUnit' | 'totalCost' | 'size' | 'sizeUnit',
-    string | undefined
-  >;
+const RestockFields: React.FC<{
+  control: Control<RestockFormValues, RestockFormContext>;
   shared: PantryActionSharedState;
+  reason: string | undefined;
+  asksCost: boolean;
   askingSize: boolean;
   onAskSize: () => void;
-  statedSize: StatedSize;
-  onSizeEdit: (edit: Partial<StatedSize>) => void;
-}> = ({
-  quantityInput,
-  setQuantityInput,
-  costPerUnitInput,
-  setCostPerUnitInput,
-  totalCostInput,
-  setTotalCostInput,
-  asksCost,
-  expiresAt,
-  setExpiresAt,
-  errors,
-  shared,
-  askingSize,
-  onAskSize,
-  statedSize,
-  onSizeEdit,
-}) => {
+}> = ({ control, shared, reason, asksCost, askingSize, onAskSize }) => {
   const { t } = useTranslation();
-  const addAmount = parseFractionalInput(quantityInput);
+  const {
+    field: { ref: amountRef, ...amount },
+    fieldState: amountState,
+  } = useController({
+    control,
+    name: 'quantityInput',
+  });
+  const addAmount = parseFractionalInput(amount.value);
 
   // For dual-tracked items, show conversion to net weight unit (e.g. cups → grams)
   const conversion = useConversionPreview(
@@ -317,13 +272,16 @@ const RestockActionFields: React.FC<{
       {/* Quantity Input */}
       <View style={commonStyles.bottomSheetSection}>
         <FractionInput
+          ref={amountRef}
           label={t('restockItem.quantityToAdd')}
-          value={quantityInput}
-          onChangeText={setQuantityInput}
+          value={amount.value}
+          onChangeText={amount.onChange}
           placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
-          useBottomSheetInput
           required
-          error={errors.quantity}
+          error={
+            amountState.error?.message ??
+            (amountState.isDirty ? undefined : reason)
+          }
         />
         {newQuantity !== null || shared.isConvertedUnit ? (
           <View style={commonStyles.bottomSheetInfoRow}>
@@ -345,7 +303,7 @@ const RestockActionFields: React.FC<{
         {shared.commonFractions != null && shared.commonFractions.length > 0 ? (
           <FractionQuickSelect
             fractions={shared.commonFractions}
-            onSelect={value => setQuantityInput(formatQuantityForInput(value))}
+            onSelect={value => amount.onChange(formatQuantityForInput(value))}
             selectedValue={addAmount ?? undefined}
             unit={shared.activeUnit}
             displayAsFraction
@@ -356,19 +314,7 @@ const RestockActionFields: React.FC<{
       {countedInOwnUnit(shared) ? (
         <View style={commonStyles.bottomSheetSection}>
           {askingSize ? (
-            <PackageContentsFields
-              variant="modal"
-              useBottomSheetInput
-              size={statedSize.sizeInput}
-              onSizeChange={sizeInput => onSizeEdit({ sizeInput })}
-              sizeError={errors.size}
-              unit={statedSize.sizeUnitDisplay}
-              onUnitChange={sizeUnitDisplay => onSizeEdit({ sizeUnitDisplay })}
-              onUnitSelected={(sizeUnitId, _name, sizeUnitType = null) =>
-                onSizeEdit({ sizeUnitId, sizeUnitType })
-              }
-              unitError={errors.sizeUnit}
-            />
+            <SizeFields control={control} />
           ) : (
             <Link
               testID={pantryTestIDs.restockDifferentSize}
@@ -385,25 +331,37 @@ const RestockActionFields: React.FC<{
         <View style={commonStyles.bottomSheetSection}>
           <View style={styles.costRow}>
             <View style={styles.costField}>
-              <FormInput
-                label={t('restockItem.costPerUnit')}
-                value={costPerUnitInput}
-                onChangeText={setCostPerUnitInput}
-                placeholder={localizeNumericHint('0.00')}
-                keyboardType="decimal-pad"
-                useBottomSheetInput
-                error={errors.costPerUnit}
+              <Controller
+                control={control}
+                name="costPerUnitInput"
+                render={({ field, fieldState }) => (
+                  <FormInput
+                    ref={field.ref}
+                    label={t('restockItem.costPerUnit')}
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    placeholder={localizeNumericHint('0.00')}
+                    keyboardType="decimal-pad"
+                    error={fieldState.error?.message}
+                  />
+                )}
               />
             </View>
             <View style={styles.costField}>
-              <FormInput
-                label={t('labels.totalPaid')}
-                value={totalCostInput}
-                onChangeText={setTotalCostInput}
-                placeholder={localizeNumericHint('0.00')}
-                keyboardType="decimal-pad"
-                useBottomSheetInput
-                error={errors.totalCost}
+              <Controller
+                control={control}
+                name="totalCostInput"
+                render={({ field, fieldState }) => (
+                  <FormInput
+                    ref={field.ref}
+                    label={t('labels.totalPaid')}
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    placeholder={localizeNumericHint('0.00')}
+                    keyboardType="decimal-pad"
+                    error={fieldState.error?.message}
+                  />
+                )}
               />
             </View>
           </View>
@@ -412,28 +370,88 @@ const RestockActionFields: React.FC<{
 
       {/* Notes */}
       <View style={commonStyles.bottomSheetSection}>
-        <FormInput
-          label={t('labels.notes')}
-          value={shared.notes}
-          onChangeText={shared.setNotes}
-          placeholder={t('restockItem.notesPlaceholder')}
-          multiline
-          numberOfLines={3}
-          useBottomSheetInput
+        <Controller
+          control={control}
+          name="notes"
+          render={({ field }) => (
+            <FormInput
+              ref={field.ref}
+              label={t('labels.notes')}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              placeholder={t('restockItem.notesPlaceholder')}
+              multiline
+              numberOfLines={3}
+            />
+          )}
         />
       </View>
 
       {/* Expiration Date */}
       <View style={commonStyles.bottomSheetSection}>
-        <DatePickerField
-          label={t('labels.expirationDate')}
-          value={expiresAt}
-          onChange={setExpiresAt}
-          placeholder={t('instructions.expiryOptional')}
-          minimumDate={new Date()}
+        <Controller
+          control={control}
+          name="expiresAt"
+          render={({ field }) => (
+            <DatePickerField
+              label={t('labels.expirationDate')}
+              value={field.value}
+              onChange={field.onChange}
+              placeholder={t('instructions.expiryOptional')}
+              minimumDate={new Date()}
+            />
+          )}
         />
       </View>
     </>
+  );
+};
+
+/** What each new package holds, for a restock in packages of another size. */
+const SizeFields: React.FC<{
+  control: Control<RestockFormValues, RestockFormContext>;
+}> = ({ control }) => {
+  // The whole-packages and unit rules read the size; a change to the size or
+  // its unit also answers a refusal of it.
+  const {
+    field: { ref: sizeRef, ...size },
+    fieldState: sizeState,
+  } = useController({
+    control,
+    name: 'sizeInput',
+    rules: { deps: ['quantityInput', 'sizeUnitId'] },
+  });
+  const { field: sizeUnitDisplay } = useController({
+    control,
+    name: 'sizeUnitDisplay',
+    rules: { deps: ['sizeInput'] },
+  });
+  const { field: sizeUnitId, fieldState: sizeUnitState } = useController({
+    control,
+    name: 'sizeUnitId',
+    rules: { deps: ['sizeInput'] },
+  });
+  const { field: sizeUnitType } = useController({
+    control,
+    name: 'sizeUnitType',
+  });
+
+  return (
+    <PackageContentsFields
+      variant="modal"
+      sizeRef={sizeRef}
+      size={size.value}
+      onSizeChange={size.onChange}
+      sizeError={sizeState.error?.message}
+      unit={sizeUnitDisplay.value}
+      onUnitChange={sizeUnitDisplay.onChange}
+      onUnitSelected={(unitId, _name, unitType = null) => {
+        sizeUnitId.onChange(unitId);
+        sizeUnitType.onChange(unitType);
+      }}
+      unitError={sizeUnitState.error?.message}
+    />
   );
 };
 

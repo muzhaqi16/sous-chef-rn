@@ -1,10 +1,10 @@
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import type {
   PhotoMask,
   PreparedPhoto,
   RecognizedLine,
   RecognizedPage,
-} from '#/types/textRecognition';
+} from '#types/textRecognition';
 import { nativeMethod, parseList } from './nativeModule';
 
 type NativeMethod = 'recognizeAndDelete' | 'preparePhotos' | 'deletePhotos';

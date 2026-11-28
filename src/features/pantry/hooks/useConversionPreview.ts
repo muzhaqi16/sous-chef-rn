@@ -9,7 +9,7 @@ import {
   formatQuantityWithUnit,
   resolveQuantityNotation,
   type UnitLabelSource,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 
 export interface UseConversionPreviewOptions {
   pantryItemId: string | undefined;
@@ -52,7 +52,7 @@ const formatSide = (
   displayAsFraction: boolean | null | undefined,
 ): string =>
   formatQuantityWithUnit(quantity, unit, {
-    notation: resolveQuantityNotation(null, displayAsFraction),
+    notation: resolveQuantityNotation(displayAsFraction),
   });
 
 export function useConversionPreview({

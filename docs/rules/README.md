@@ -8,6 +8,21 @@ fails on a rule without a page here, a spec, or a place in the config.
 A disable comment is itself an error (`eslint-comments/no-use`). A justified
 exemption is a file-scoped override in `eslint/project.js`, where review sees it.
 
+## Which gate a new rule takes
+
+The first that can hold it, in this order:
+
+1. Make the bad state impossible: an API that cannot express it.
+2. A type.
+3. A boundaries policy on resolved paths, with `specifiers`.
+4. An AST rule here, with RuleTester cases that include each alias spelling.
+5. A Jest test that parses the code with a real parser, and runs on a known
+   violation it must catch.
+6. A regex, only for the exact content of a named file, or for prose.
+
+A regex that scans source for code catches what it was written against and
+nothing it was not. Removing or loosening a gate needs a yes that names it.
+
 | Rule                                                                                      | Enforces                                                                                        |
 | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | [`sous-chef/no-schema-enum-cast`](no-schema-enum-cast.md)                                 | No casts to a generated schema enum.                                                            |
@@ -28,6 +43,7 @@ exemption is a file-scoped override in `eslint/project.js`, where review sees it
 | [`sous-chef/no-string-keyed-lookup`](no-string-keyed-lookup.md)                           | A closed lookup table is keyed by the real key type, never by string.                           |
 | [`sous-chef/no-number-noun-concat`](no-number-noun-concat.md)                             | A count and its noun are one translated sentence, never a number joined to a string.            |
 | [`sous-chef/queueable-write-is-local-first`](queueable-write-is-local-first.md)           | A write the offline queue can take writes the cache first and says so.                          |
+| [`sous-chef/resolved-failure-is-read`](resolved-failure-is-read.md)                       | A send caught with `try` / `.catch` reads the failure its result resolves with.                 |
 | [`sous-chef/cache-read-states-optimism`](cache-read-states-optimism.md)                   | A direct cache read states whether it sees pending writes.                                      |
 | [`sous-chef/local-write-is-deterministic`](local-write-is-deterministic.md)               | A local write reads only its write and the cache, and hides a row without `evict`.              |
 | [`sous-chef/recycling-list-host-is-bounded`](recycling-list-host-is-bounded.md)           | A recycling list is bounded by the view that hosts it.                                          |
@@ -38,6 +54,7 @@ exemption is a file-scoped override in `eslint/project.js`, where review sees it
 | [`sous-chef/on-fill-text-uses-its-token`](on-fill-text-uses-its-token.md)                 | Text on a fill reads that fill's own `on*` token.                                               |
 | [`sous-chef/animated-node-takes-no-themed-style`](animated-node-takes-no-themed-style.md) | A node Reanimated animates takes no Unistyles style that reads the theme.                       |
 | [`sous-chef/use-variants-return-is-read`](use-variants-return-is-read.md)                 | Variants are read from the styles `useVariants` returns, never from the sheet.                  |
+| [`sous-chef/shared-value-is-read-with-get`](shared-value-is-read-with-get.md)             | A shared value is read with `.get()`, never `.value`.                                           |
 | [`sous-chef/selects-key-field-directly`](selects-key-field-directly.md)                   | A selection that spreads a fragment on a type with an `id` selects `id` itself.                 |
 | [`sous-chef/network-read-selects-version`](network-read-selects-version.md)               | A selection on a type with a server `version` that reaches the network selects `version`.       |
 
@@ -83,7 +100,7 @@ exact options and file scopes are in `eslint/project.js`.
 | `switch-exhaustiveness-check`                             | production `src`             | A `switch` over a union handles every member; `default` does not count                                                                                                         |
 | `no-unsafe-enum-comparison`                               | production `src`             | An enum is compared with its own members                                                                                                                                       |
 | `prefer-nullish-coalescing`                               | production `src`             | `??` over `\|\|`; a blank string falls back through `firstNonBlank`                                                                                                            |
-| `ban-ts-comment`                                          | production `src`, tests, e2e | `@ts-expect-error` only with a description                                                                                                                                     |
+| `ban-ts-comment`                                          | production `src`, tests, e2e | no `@ts-expect-error`, `@ts-ignore` or `@ts-nocheck`                                                                                                                           |
 | `no-deprecated`                                           | everywhere                   | No deprecated API                                                                                                                                                              |
 | `no-shadow` / `no-unused-vars`                            | everywhere                   | —                                                                                                                                                                              |
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   inputOf,
   recordMock,
@@ -19,9 +19,10 @@ import {
   type ShoppingListNode,
 } from '#/test-utils/fixtures/shoppingListFixtures';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
+import { settledInAct } from '#/test-utils/settledInAct';
 import { Text as AppText } from '#components/atoms/Text';
 import {
   CollaboratorRole,
@@ -29,7 +30,7 @@ import {
   ListStatus,
   MembershipRole,
   RecurringPattern,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   CancelRecurringDocument,
   CompleteShoppingListDocument,
@@ -50,11 +51,11 @@ import { CopyableShoppingListFragmentDoc } from '#features/shoppingList/graphql/
 import { COPYABLE_ITEM_LIMIT } from '#features/shoppingList/cache/copySource';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
-import { formatMonthDayYear } from '#/utils/formatters/date';
+import { formatMonthDayYear } from '#utils/formatters/date';
 import { ListSettings } from '../ListSettings';
 
 jest.mock('#hooks/navigation/useAppNavigation');
-jest.mock('#/services/subscriptions/SubscriptionService', () => ({
+jest.mock('#services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     registerParentDeletion: jest.fn(),
     unregisterParentDeletion: jest.fn(),
@@ -307,14 +308,15 @@ describe('an owner’s list', () => {
     });
   });
 
-  it('refuses an empty name, writing nothing', async () => {
+  it('refuses an empty name on the field, writing nothing', async () => {
     const update = recordMock(UpdateShoppingListDocument, { held: true });
     await openSettings(settingsList(), [update]);
 
     fireEvent.changeText(screen.getByDisplayValue('Weekly Groceries'), '  ');
-    fireEvent.press(save());
+    await settledInAct(() => fireEvent.press(save()));
 
-    expect(toastService.error).toHaveBeenCalledWith(t('errors.listNameEmpty'));
+    expect(screen.getByText(t('errors.listNameEmpty'))).toBeTruthy();
+    expect(toastService.error).not.toHaveBeenCalled();
     expect(update.fired).toEqual([]);
   });
 
@@ -356,7 +358,8 @@ describe('an owner’s list', () => {
     ]);
 
     fireEvent.changeText(screen.getByDisplayValue('Weekly Groceries'), 'Shop');
-    fireEvent.press(save());
+    // The form validates before the save starts; the press settles both.
+    await settledInAct(() => fireEvent.press(save()));
     await log.requested(UpdateShoppingListDocument);
 
     expect(

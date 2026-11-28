@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
-import { t as tGlobal } from '#/i18n';
-import { useDeferredSearch } from '#features/recipes/hooks/useDeferredSearch';
-import { pantryItemSearch } from '#utils/searchUtils';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
+import { t as tGlobal } from '#i18n';
 import { useRecipeDiscovery } from '#features/recipes/hooks/useRecipeDiscovery';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useRecipeFilters } from '#features/recipes/hooks/useRecipeFilters';
@@ -16,7 +14,7 @@ import {
   type SearchOutcome,
 } from '#features/recipes/hooks/useRecipeSearch';
 import type { IconName } from '#components/atoms/Icon';
-import type { Intolerance } from '#/graphql/generated/schemaTypes';
+import type { Intolerance } from '#graphql/generated/schemaTypes';
 import type { RecipeFilters } from '#features/recipes/utils/recipeFilterOptions';
 import { oneDietPerGroup } from '#domain/dietary';
 import {
@@ -94,19 +92,6 @@ export function useRecipeScreen() {
   const [selectedIngredients, setSelectedIngredients] = useState<Set<string>>(
     new Set(),
   );
-
-  // ── Ingredient search (local filtering for bottom sheet) ──
-  const [ingredientSearchQuery, setIngredientSearchQuery] = useState('');
-
-  const { results: filteredPantryItems } = useDeferredSearch({
-    items: discovery.pantryItems,
-    searchQuery: ingredientSearchQuery,
-    searchFn: pantryItemSearch,
-  });
-
-  const resetIngredientSearch = () => {
-    setIngredientSearchQuery('');
-  };
 
   // Re-run the current search with an explicit filter set (state updates are
   // async, so the caller passes the next filters rather than reading state).
@@ -300,10 +285,6 @@ export function useRecipeScreen() {
     searchHasMore,
     loadMoreSearch,
     selectedIngredients,
-    ingredientSearchQuery,
-    setIngredientSearchQuery,
-    filteredPantryItems,
-    resetIngredientSearch,
 
     // Display
     showSearchResults,

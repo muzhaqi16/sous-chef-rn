@@ -5,17 +5,14 @@ import {
   CombinedProtocolErrors,
 } from '@apollo/client/errors';
 import { Kind, OperationTypeNode, type DefinitionNode } from 'graphql';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import { isNonIterableSubscriptionResolver } from '#utils/errors/libraryErrorMessages';
-import { isNetworkError } from '#/utils/isNetworkError';
+import { isNetworkError } from '#utils/isNetworkError';
 import {
   isRefreshableAuthCode,
   isDeadRefreshTokenCode,
-} from '#/utils/authErrorCodes';
-import {
-  isRateLimitError,
-  getRateLimitMessage,
-} from '#/utils/errors/rateLimit';
+} from '#utils/authErrorCodes';
+import { isRateLimitError, getRateLimitMessage } from '#utils/errors/rateLimit';
 import { clientVersion } from '../clientIdentity';
 import { LogoutCleanup } from '../logoutCleanup';
 import { isOfflineRejectedError } from '../offlineQueue/OfflineRejectedError';
@@ -23,10 +20,10 @@ import { operationNameOf } from '../utils/documentOperation';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
 import { attemptTokenRefresh, getRefreshState } from './refreshToken';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { useStore } from '#store';
 
-// What a refresh can clear is #/utils/authErrorCodes: this link, the refresh
+// What a refresh can clear is #utils/authErrorCodes: this link, the refresh
 // path and the offline queue classify from that one list, by code only.
 
 // FORBIDDEN is a missing permission, not an auth fault: no refresh can grant

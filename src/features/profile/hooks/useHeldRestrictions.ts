@@ -5,7 +5,7 @@ import type {
   Diet,
   Intolerance,
   ReligiousDiet,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { HomeDietaryNeedsDocument } from '#features/home/hooks/useHomeDietaryNeeds.generated';
 import { GetDietaryProfileDocument } from '#operations/user/user.generated';
 import { useUser } from '#store/useAppStore';

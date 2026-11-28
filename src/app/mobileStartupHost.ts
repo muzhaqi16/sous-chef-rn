@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { LogBox } from 'react-native';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { LaunchArguments } from 'react-native-launch-arguments';
-import { logger, Environment } from '#/utils/environment';
+import { logger, Environment } from '#utils/environment';
 import { useAppStore } from '#store/useAppStore';
 import { useStore } from '#store';
 import type {
@@ -12,20 +12,20 @@ import type {
 import {
   replayTipsFor,
   suppressFeatureHintsForE2E,
-} from '#/hooks/settings/useFeatureHint';
+} from '#hooks/settings/useFeatureHint';
 import { tutorialSession } from '#hooks/ui/tutorialSession';
 import { HapticService } from '#services/haptic/HapticService';
-import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
-import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
+import { NativePerformanceService } from '#services/performance/NativePerformanceService';
+import { MemoryMonitor } from '#services/performance/MemoryMonitor';
 import {
   hasCredentials,
   getLastBiometricEmail,
 } from '#native/storage/keychain';
-import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
+import { registerDeviceInBackground } from '#services/device/deviceRegistration';
 import { isSignedIn, type AuthUserInput } from '#store/slices/authSlice';
 import type { StartupHost } from '#bootstrap/startupHost';
-import { setChangesNotSavedOpener } from '#/apollo/offlineQueue/queueFailureHandler';
-import NavigationService from '#/services/NavigationService';
+import { setChangesNotSavedOpener } from '#apollo/offlineQueue/queueFailureHandler';
+import NavigationService from '#services/NavigationService';
 
 /** What an end-to-end run's launch arguments asked of this start. */
 interface EndToEndFlags {

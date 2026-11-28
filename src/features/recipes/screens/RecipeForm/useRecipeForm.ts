@@ -7,7 +7,7 @@ import type {
   Diet,
   HealthGoal,
   Intolerance,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { UseRecipeFormWrites_RecipeFragment } from '#features/recipes/hooks/useRecipeFormWrites.generated';
 import type { RecipeCaptureQuery } from '#features/recipes/hooks/useRecipeCapture.generated';
 import type { RecipeUpdateFields } from '#features/recipes/hooks/useRecipeFormWrites';
@@ -16,18 +16,15 @@ import type {
   StepFormState,
   RecipeFormState,
 } from '../../types';
-import {
-  recipeFormSchema,
-  recipeFormDefaults,
-  parseCommaTags,
-} from './recipeFormConfig';
+import { recipeFormSchema, recipeFormDefaults } from './recipeFormConfig';
+import { parseCommaTags } from '#utils/validation/common';
 import { stripPriceFromName } from '#features/recipes/utils/stripPriceFromName';
 import { toPastedIngredient } from '#features/recipes/utils/pastedIngredients';
-import { extractNodes } from '#/utils/connectionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import { formatNumberForInput } from '#/utils/formatters/number';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { unitLabel } from '#/utils/formatQuantity';
+import { extractNodes } from '#utils/connectionUtils';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+import { formatNumberForInput } from '#utils/formatters/number';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { unitLabel } from '#utils/formatQuantity';
 
 let nextTempId = 1;
 function generateTempId(): string {
@@ -78,7 +75,7 @@ export function useRecipeForm() {
   });
   const { control, setValue, getValues, reset } = form;
 
-  // The children render plain inputs against a value object rather than one
+  // The pickers and lists render against a value object rather than one
   // `Controller` each, so the whole form is watched. `useWatch`, never
   // `watch()` — the React Compiler cannot memoize the function that returns.
   const state = useWatch({ control }) as RecipeFormState;
@@ -409,6 +406,7 @@ export function useRecipeForm() {
   };
 
   return {
+    control,
     state,
     errors: form.formState.errors,
     isDirty: form.formState.isDirty,

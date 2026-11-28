@@ -5,7 +5,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { isAbortError } from '#features/shoppingList/utils/abort';
 import { useListReadPolicy } from './useListReadPolicy';
 

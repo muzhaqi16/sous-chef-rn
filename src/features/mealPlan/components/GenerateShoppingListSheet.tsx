@@ -1,20 +1,31 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { Controller, useController, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useTranslation } from '#i18n';
 import {
   Pressable,
   PrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { RadioRow } from '#components/molecules/RadioRow';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { FormInput } from '#components/atoms/FormInput';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
+import { useOpening } from '#hooks/ui/useOpening';
+import { reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import {
+  generateShoppingListDefaults,
+  generateShoppingListSchema,
+  type GenerateShoppingListFormValues,
+} from './generateShoppingListFormConfig';
 
 interface GenerateShoppingListSheetProps {
   visible: boolean;
@@ -26,79 +37,78 @@ interface GenerateShoppingListSheetProps {
   }) => void;
   loading: boolean;
   homeName?: string | null;
-  /** Server unreachable (offline / API down) — disables confirm (no replay path). */
-  disabled?: boolean;
 }
 
-export const GenerateShoppingListSheet: React.FC<
-  GenerateShoppingListSheetProps
-> = ({ visible, onClose, onGenerate, loading, homeName, disabled = false }) => {
+type GenerateShoppingListFormProps = Omit<
+  GenerateShoppingListSheetProps,
+  'visible'
+>;
+
+const GenerateShoppingListForm: React.FC<GenerateShoppingListFormProps> = ({
+  onClose,
+  onGenerate,
+  loading,
+  homeName,
+}) => {
   const { t } = useTranslation();
-
-  const [checkPantry, setCheckPantry] = useState(true);
-  const [mode, setMode] = useState<'new' | 'existing'>('new');
-  const [customName, setCustomName] = useState('');
-  const [selectedListId, setSelectedListId] = useState<string | null>(null);
-
-  // Reset state when sheet opens (render-time conditional state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  if (visible !== prevVisible) {
-    setPrevVisible(visible);
-    if (visible) {
-      setCheckPantry(true);
-      setMode('new');
-      setCustomName('');
-      setSelectedListId(null);
-    }
-  }
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<GenerateShoppingListFormValues>({
+    resolver: yupResolver(generateShoppingListSchema),
+    defaultValues: generateShoppingListDefaults,
+  });
+  useSheetUnsavedInput(isDirty);
+  const { field: mode } = useController({
+    control,
+    name: 'mode',
+    // The list rule reads the destination, so a new one re-runs it.
+    rules: { deps: ['shoppingListId'] },
+  });
 
   const {
     lists: shoppingLists,
     state: listsState,
     refetch: refetchLists,
-  } = useShoppingListsLite({
-    skip: !visible,
-    fetchPolicy: 'cache-first',
-  });
+  } = useShoppingListsLite({ fetchPolicy: 'cache-first' });
 
-  const handleGenerate = () => {
-    onGenerate({
-      checkPantry,
-      name: mode === 'new' && customName.trim() ? customName.trim() : undefined,
-      shoppingListId:
-        mode === 'existing' ? selectedListId ?? undefined : undefined,
-    });
-  };
-
-  const canGenerate = mode === 'new' || selectedListId != null;
+  const generate = handleSubmit(
+    ({ checkPantry, mode: destination, name, shoppingListId }) => {
+      onGenerate({
+        checkPantry,
+        name: destination === 'new' && name ? name : undefined,
+        shoppingListId:
+          destination === 'existing' ? shoppingListId ?? undefined : undefined,
+      });
+    },
+    reportValidationErrors,
+  );
 
   return (
-    <Sheet
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={['65%']}
-      mode="form"
-      style={styles.scrollView}
-      contentContainerStyle={styles.contentContainer}
-      // No title; the "Generate" action already names the intent.
-      header={
-        <BottomSheetHeader
-          onCancel={onClose}
-          onConfirm={handleGenerate}
-          confirmLabel={
-            loading
-              ? t('generateShoppingList.generating')
-              : t('generateShoppingList.generate')
-          }
-          confirmDisabled={loading || disabled || !canGenerate}
-          confirmColor="primary"
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={t('mealPlanMain.generateShoppingListLabel')}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void generate();
+            },
+            accessibilityLabel: t('generateShoppingList.generate'),
+            loading,
+          }}
         />
-      }
-    >
+      </SheetHeaderSlot>
+
       {/* Home sharing info */}
       {!!homeName && (
         <View style={styles.infoNote}>
-          <Icon name="information-circle-outline" size={18} tone="primary" />
+          <Icon
+            name="information-circle-outline"
+            size="xsPlus"
+            tone="primary"
+          />
           <Text role="caption" tone="accent" style={styles.infoNoteText}>
             {t('generateShoppingList.sharedWithHome', { name: homeName })}
           </Text>
@@ -117,10 +127,16 @@ export const GenerateShoppingListSheet: React.FC<
             {t('generateShoppingList.checkPantryDesc')}
           </Text>
         </View>
-        <BaseSwitch
-          accessibilityLabel={t('generateShoppingList.checkPantry')}
-          value={checkPantry}
-          onValueChange={setCheckPantry}
+        <Controller
+          control={control}
+          name="checkPantry"
+          render={({ field }) => (
+            <BaseSwitch
+              accessibilityLabel={t('generateShoppingList.checkPantry')}
+              value={field.value}
+              onValueChange={field.onChange}
+            />
+          )}
         />
       </View>
 
@@ -131,41 +147,44 @@ export const GenerateShoppingListSheet: React.FC<
         </Text>
         <View style={styles.modeRow}>
           <Pressable
-            onPress={() => setMode('new')}
+            onPress={() => mode.onChange('new')}
             style={[
               styles.modeOption,
-              mode === 'new' && styles.modeOptionActive,
+              mode.value === 'new' && styles.modeOptionActive,
             ]}
           >
             <Icon
               name="add-circle-outline"
-              size={20}
-              tone={mode === 'new' ? 'onPrimary' : 'textSecondary'}
-            />
-            <Text
-              role="label"
-              style={[styles.modeText, mode === 'new' && styles.modeTextActive]}
-            >
-              {t('generateShoppingList.newList')}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setMode('existing')}
-            style={[
-              styles.modeOption,
-              mode === 'existing' && styles.modeOptionActive,
-            ]}
-          >
-            <Icon
-              name="list-outline"
-              size={20}
-              tone={mode === 'existing' ? 'onPrimary' : 'textSecondary'}
+              size="sm"
+              tone={mode.value === 'new' ? 'onPrimary' : 'textSecondary'}
             />
             <Text
               role="label"
               style={[
                 styles.modeText,
-                mode === 'existing' && styles.modeTextActive,
+                mode.value === 'new' && styles.modeTextActive,
+              ]}
+            >
+              {t('generateShoppingList.newList')}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => mode.onChange('existing')}
+            style={[
+              styles.modeOption,
+              mode.value === 'existing' && styles.modeOptionActive,
+            ]}
+          >
+            <Icon
+              name="list-outline"
+              size="sm"
+              tone={mode.value === 'existing' ? 'onPrimary' : 'textSecondary'}
+            />
+            <Text
+              role="label"
+              style={[
+                styles.modeText,
+                mode.value === 'existing' && styles.modeTextActive,
               ]}
             >
               {t('generateShoppingList.existingList')}
@@ -175,60 +194,79 @@ export const GenerateShoppingListSheet: React.FC<
       </View>
 
       {/* Custom name for new list */}
-      {mode === 'new' && (
-        <FormInput
-          label={t('generateShoppingList.listNameLabel')}
-          value={customName}
-          onChangeText={setCustomName}
-          placeholder={t('generateShoppingList.listNamePlaceholder')}
+      {mode.value === 'new' && (
+        <Controller
+          control={control}
+          name="name"
+          render={({ field }) => (
+            <FormInput
+              ref={field.ref}
+              label={t('generateShoppingList.listNameLabel')}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              placeholder={t('generateShoppingList.listNamePlaceholder')}
+            />
+          )}
         />
       )}
 
       {/* Existing list picker */}
-      {mode === 'existing' && (
-        <View style={styles.section}>
-          <Text role="label" tone="secondary">
-            {t('generateShoppingList.selectListLabel')}
-          </Text>
-          {listsState === 'error' || listsState === 'offline' ? (
-            <DataStateView
-              state={listsState}
-              onRetry={() => {
-                void refetchLists();
-              }}
-            />
-          ) : shoppingLists.length === 0 ? (
-            <Text
-              role="caption"
-              tone="tertiary"
-              align="center"
-              style={styles.emptyMessage}
-            >
-              {t('generateShoppingList.noLists')}
-            </Text>
-          ) : (
-            shoppingLists.map(list => (
-              <RadioRow
-                key={list.id}
-                selected={selectedListId === list.id}
-                onPress={() => setSelectedListId(list.id)}
-                style={[
-                  styles.listItem,
-                  selectedListId === list.id && styles.listItemSelected,
-                ]}
-              >
-                <View style={styles.listItemContent}>
-                  <Text role="bodyStrong">{list.name}</Text>
-                  <Text role="caption" tone="secondary">
-                    {t('labels.itemCount', {
-                      count: list.totalItems,
-                    })}
-                  </Text>
-                </View>
-              </RadioRow>
-            ))
+      {mode.value === 'existing' && (
+        <Controller
+          control={control}
+          name="shoppingListId"
+          render={({ field, fieldState }) => (
+            <View style={styles.section}>
+              <Text role="label" tone="secondary">
+                {t('generateShoppingList.selectListLabel')}
+              </Text>
+              {listsState === 'error' || listsState === 'offline' ? (
+                <DataStateView
+                  state={listsState}
+                  onRetry={() => {
+                    void refetchLists();
+                  }}
+                />
+              ) : shoppingLists.length === 0 ? (
+                <Text
+                  role="caption"
+                  tone="tertiary"
+                  align="center"
+                  style={styles.emptyMessage}
+                >
+                  {t('generateShoppingList.noLists')}
+                </Text>
+              ) : (
+                shoppingLists.map(list => (
+                  <RadioRow
+                    key={list.id}
+                    selected={field.value === list.id}
+                    onPress={() => field.onChange(list.id)}
+                    style={[
+                      styles.listItem,
+                      field.value === list.id && styles.listItemSelected,
+                    ]}
+                  >
+                    <View style={styles.listItemContent}>
+                      <Text role="bodyStrong">{list.name}</Text>
+                      <Text role="caption" tone="secondary">
+                        {t('labels.itemCount', {
+                          count: list.totalItems,
+                        })}
+                      </Text>
+                    </View>
+                  </RadioRow>
+                ))
+              )}
+              {fieldState.error ? (
+                <Text role="error" tone="error">
+                  {fieldState.error.message}
+                </Text>
+              ) : null}
+            </View>
           )}
-        </View>
+        />
       )}
 
       {!!loading && (
@@ -239,6 +277,26 @@ export const GenerateShoppingListSheet: React.FC<
           </Text>
         </View>
       )}
+    </>
+  );
+};
+
+export const GenerateShoppingListSheet: React.FC<
+  GenerateShoppingListSheetProps
+> = ({ visible, ...form }) => {
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      visible={visible}
+      onDismiss={form.onClose}
+      snapPoints={['65%']}
+      mode="form"
+      headerFromContent
+      style={styles.scrollView}
+      contentContainerStyle={styles.contentContainer}
+    >
+      {opening ? <GenerateShoppingListForm key={opening.id} {...form} /> : null}
     </Sheet>
   );
 };
@@ -248,7 +306,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   contentContainer: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.md,
   },
   infoNote: {
@@ -269,10 +327,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
   },
   toggleInfo: {
     flex: 1,
@@ -311,16 +365,18 @@ const styles = StyleSheet.create(theme => ({
   modeTextActive: {
     color: theme.colors.onPrimary,
   },
+  // A card only once chosen: the border is there at rest, so choosing one
+  // recolours it rather than moving the row.
   listItem: {
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+    borderWidth: theme.borderWidth.hairline,
+    borderColor: theme.colors.transparent,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     gap: theme.spacing.sm,
   },
   listItemSelected: {
-    borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.primary,
   },
   listItemContent: {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, type CellRendererProps } from 'react-native';
+import { View, type FlatListProps } from 'react-native';
 import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
 import Animated, {
   LayoutAnimationConfig,
@@ -7,14 +7,17 @@ import Animated, {
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { hitSlop } from '#/theme/foundations/sizes';
-import { motion } from '#/theme/motion';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { motion } from '#theme/motion';
 import type { BaseSuggestionItem } from '#features/catalog/types';
 
 const CELL_LAYOUT = LinearTransition.duration(motion.timing.MODERATE);
+
+// React Native's typings expose the cell's props only through FlatListProps.
+type CellRendererProps<T> = React.ComponentProps<
+  NonNullable<FlatListProps<T>['CellRendererComponent']>
+>;
 
 /**
  * Glides each cell to its new place when a row above it leaves or returns.
@@ -30,7 +33,7 @@ function AnimatedCell<T>({ children, onLayout, style }: CellRendererProps<T>) {
 }
 
 interface SuggestionDrilldownProps<T extends BaseSuggestionItem> {
-  /** Section title (e.g. "POPULAR") shown next to the back button */
+  /** Section title (e.g. "POPULAR") shown in the step's bar */
   title: string;
   /** Full list of suggestions for the drilled-into source */
   items: T[];
@@ -38,8 +41,6 @@ interface SuggestionDrilldownProps<T extends BaseSuggestionItem> {
   renderItem: (item: T) => React.ReactElement;
   /** Returns to the overview */
   onBack: () => void;
-  /** Accessibility label for the back button */
-  backLabel: string;
   /** Message shown when the list has been emptied */
   emptyLabel: string;
 }
@@ -55,27 +56,13 @@ export function SuggestionDrilldown<T extends BaseSuggestionItem>({
   items,
   renderItem,
   onBack,
-  backLabel,
   emptyLabel,
 }: SuggestionDrilldownProps<T>) {
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <AppPressable
-          onPress={onBack}
-          style={styles.backButton}
-          hitSlop={hitSlop.md}
-          accessibilityRole="button"
-          accessibilityLabel={backLabel}
-        >
-          <Icon name="chevron-back" size={24} tone="textPrimary" />
-        </AppPressable>
-        <Text role="subheading" style={styles.title}>
-          {title}
-        </Text>
-      </View>
+      <SheetHeader title={title} onClose={onBack} leading="back" />
       {/* The rows painted on open do not fade in; one that returns later does. */}
       <LayoutAnimationConfig skipEntering>
         <BottomSheetFlatList
@@ -106,23 +93,9 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-  backButton: {
-    padding: theme.spacing.xs,
-  },
-  title: {
-    flexShrink: 1,
-  },
   // Each row is a RowCard, which carries the gap below it.
   listContent: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   emptyInset: {
     padding: theme.spacing.xl,

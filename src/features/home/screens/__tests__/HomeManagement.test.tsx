@@ -16,14 +16,14 @@ import { operationLog } from '#/test-utils/operationLog';
 import { homesData } from '#/test-utils/fixtures/homeFixtures';
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import {
   ErrorCode,
   ErrorDisposition,
   MembershipRole,
   ShareLinkTargetType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   CreateHomeDocument,
   GetHomesDocument,
@@ -229,7 +229,8 @@ describe('the homes', () => {
     expect(mockNav.toHomeDetail).toHaveBeenCalledWith({ homeId: CABIN.id });
   });
 
-  it('offer delete to the owner alone, and invite to whoever may', async () => {
+  // Deleting lives on the home's details; a card offers only the invite.
+  it('offer invite to whoever may, and delete on no card', async () => {
     await openHomes({
       homes: [
         KITCHEN,
@@ -243,17 +244,15 @@ describe('the homes', () => {
       ],
     });
 
+    expect(screen.queryByText(t('labels.delete'))).not.toBeOnTheScreen();
     expect(
-      within(cardOf(KITCHEN.id)).getByText(t('labels.delete')),
+      within(cardOf(KITCHEN.id)).getByLabelText(t('labels.inviteMemberToHome')),
     ).toBeTruthy();
     expect(
-      within(cardOf(CABIN.id)).queryByText(t('labels.delete')),
-    ).not.toBeOnTheScreen();
-    expect(
-      within(cardOf(CABIN.id)).getByText(t('homeManagement.cardInvite')),
+      within(cardOf(CABIN.id)).getByLabelText(t('labels.inviteMemberToHome')),
     ).toBeTruthy();
     expect(
-      within(cardOf('home-3')).queryByText(t('homeManagement.cardInvite')),
+      within(cardOf('home-3')).queryByLabelText(t('labels.inviteMemberToHome')),
     ).not.toBeOnTheScreen();
   });
 
@@ -276,7 +275,7 @@ describe('an invite', () => {
     await userEvent
       .setup()
       .press(
-        within(cardOf(CABIN.id)).getByText(t('homeManagement.cardInvite')),
+        within(cardOf(CABIN.id)).getByLabelText(t('labels.inviteMemberToHome')),
       );
     const modal = screen.UNSAFE_getByType(InviteUserModal);
     expect(modal.props.visible).toBe(true);
@@ -299,7 +298,7 @@ describe('an invite', () => {
     await userEvent
       .setup()
       .press(
-        within(cardOf(CABIN.id)).getByText(t('homeManagement.cardInvite')),
+        within(cardOf(CABIN.id)).getByLabelText(t('labels.inviteMemberToHome')),
       );
 
     askedToVerify();
@@ -450,6 +449,21 @@ describe('joining by code', () => {
     await user.press(screen.getByText(t('homeManagement.join')));
 
     askedToVerify();
+    expect(join.fired).toEqual([]);
+  });
+
+  it('asks for a code on the field when Join is pressed without one', async () => {
+    const join = recordMock(JoinHomeByCodeDocument, { held: true });
+    await openHomes({ answers: [join] });
+    const user = userEvent.setup();
+
+    fireEvent.changeText(await joinMode(user), '   ');
+    await user.press(screen.getByText(t('homeManagement.join')));
+
+    expect(
+      screen.getByText(t('labels.pleaseEnterAJoinCode')),
+    ).toBeOnTheScreen();
+    expect(alertService.alert).not.toHaveBeenCalled();
     expect(join.fired).toEqual([]);
   });
 });

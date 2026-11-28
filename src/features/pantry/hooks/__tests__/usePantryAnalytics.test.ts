@@ -5,10 +5,10 @@ import {
   GetPantryWasteAnalyticsDocument,
   GetPantryLedgerAnalyticsDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { PeriodGranularity, DateRange } from '#/graphql/generated/schemaTypes';
+import { PeriodGranularity, DateRange } from '#graphql/generated/schemaTypes';
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { usePantryAnalytics } from '../usePantryAnalytics';
 
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({

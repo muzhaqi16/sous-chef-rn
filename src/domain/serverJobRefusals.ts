@@ -1,6 +1,6 @@
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { isAuthRefusalCode } from '#/utils/authErrorCodes';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
+import { isAuthRefusalCode } from '#utils/authErrorCodes';
 
 /*
  * How a refused ask for server work queued under a client-minted id (a receipt

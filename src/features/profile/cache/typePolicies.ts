@@ -1,5 +1,5 @@
 import type { Reference, StoreObject, TypePolicies } from '@apollo/client';
-import { mergeConnectionByNodeId } from '#/apollo/cacheFieldPolicies';
+import { mergeConnectionByNodeId } from '#apollo/cacheFieldPolicies';
 
 /**
  * The signed-in user's profile merges field-wise: one query returns the display

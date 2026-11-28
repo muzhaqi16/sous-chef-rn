@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import {
   RestrictionSection,
   type RestrictionSectionItem,
@@ -13,11 +13,11 @@ import type {
   Diet,
   Intolerance,
   HealthGoal,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   RestrictionSeverity,
   type RestrictionKindInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   DIET_OPTIONS,
   HEALTH_GOAL_OPTIONS,
@@ -26,8 +26,8 @@ import {
   restrictionLabelKey,
   withDietPicked,
 } from '#domain/dietary';
-import { executeWriteWithFinally } from '#/utils/finallyHelpers';
-import { logger } from '#/utils/environment';
+import { executeWriteWithFinally } from '#utils/finallyHelpers';
+import { logger } from '#utils/environment';
 
 // Diets held one per group (an animal-food diet, an eating style) vs stackable
 // constraints, derived from the shared classification.
@@ -63,16 +63,6 @@ export const DietaryRestrictionSelector: React.FC<
   const [isIntoleranceSheetVisible, setIntoleranceSheetVisible] =
     useState(false);
   const [isGoalSheetVisible, setGoalSheetVisible] = useState(false);
-
-  // Local selection states for each sheet
-  const [selectedDietIds, setSelectedDietIds] = useState<Diet[]>([]);
-  const [selectedConstraintIds, setSelectedConstraintIds] = useState<Diet[]>(
-    [],
-  );
-  const [selectedIntoleranceIds, setSelectedIntoleranceIds] = useState<
-    Intolerance[]
-  >([]);
-  const [selectedGoalIds, setSelectedGoalIds] = useState<HealthGoal[]>([]);
 
   // Saving states
   const [isSavingDiets, setIsSavingDiets] = useState(false);
@@ -164,20 +154,9 @@ export const DietaryRestrictionSelector: React.FC<
   }));
 
   // Handle opening sheets
-  const handleOpenDietSheet = () => {
-    setSelectedDietIds(currentLifestyleDiets);
-    setDietSheetVisible(true);
-  };
-
-  const handleOpenConstraintSheet = () => {
-    setSelectedConstraintIds([]);
-    setConstraintSheetVisible(true);
-  };
-
-  const handleOpenIntoleranceSheet = () => {
-    setSelectedIntoleranceIds([]);
-    setIntoleranceSheetVisible(true);
-  };
+  const handleOpenDietSheet = () => setDietSheetVisible(true);
+  const handleOpenConstraintSheet = () => setConstraintSheetVisible(true);
+  const handleOpenIntoleranceSheet = () => setIntoleranceSheetVisible(true);
 
   const [isAvoidSheetVisible, setAvoidSheetVisible] = useState(false);
 
@@ -192,10 +171,7 @@ export const DietaryRestrictionSelector: React.FC<
     return success;
   };
 
-  const handleOpenGoalSheet = () => {
-    setSelectedGoalIds([]);
-    setGoalSheetVisible(true);
-  };
+  const handleOpenGoalSheet = () => setGoalSheetVisible(true);
 
   // Each save below already alerts when the mutation RESOLVES unsuccessfully.
   // This covers the other route — a throw — which the finalizer would otherwise
@@ -209,12 +185,12 @@ export const DietaryRestrictionSelector: React.FC<
   // Save handlers
   // A tap replaces only the diet of its group it rules out: Vegan replaces
   // Vegetarian, Keto sits beside it.
-  const handleSelectDiets = (next: Diet[]) => {
-    const picked = next.find(diet => !selectedDietIds.includes(diet));
-    setSelectedDietIds(picked ? withDietPicked(selectedDietIds, picked) : next);
-  };
+  const toggleDiet = (selected: readonly Diet[], diet: Diet): Diet[] =>
+    selected.includes(diet)
+      ? selected.filter(held => held !== diet)
+      : withDietPicked([...selected], diet);
 
-  const handleSaveDiet = () => {
+  const handleSaveDiet = (selectedDietIds: Diet[]) => {
     const added = selectedDietIds.filter(
       diet => !currentLifestyleDiets.includes(diet),
     );
@@ -231,7 +207,6 @@ export const DietaryRestrictionSelector: React.FC<
         const success = await onChangeDiets(added, removedIds);
 
         if (success) {
-          setSelectedDietIds([]);
           setDietSheetVisible(false);
         } else {
           alertService.alert(
@@ -245,7 +220,7 @@ export const DietaryRestrictionSelector: React.FC<
     );
   };
 
-  const handleSaveConstraints = () => {
+  const handleSaveConstraints = (selectedConstraintIds: Diet[]) => {
     if (selectedConstraintIds.length === 0) {
       setConstraintSheetVisible(false);
       return;
@@ -263,7 +238,6 @@ export const DietaryRestrictionSelector: React.FC<
         );
 
         if (success) {
-          setSelectedConstraintIds([]);
           setConstraintSheetVisible(false);
         } else {
           alertService.alert(
@@ -277,7 +251,7 @@ export const DietaryRestrictionSelector: React.FC<
     );
   };
 
-  const handleSaveIntolerances = () => {
+  const handleSaveIntolerances = (selectedIntoleranceIds: Intolerance[]) => {
     if (selectedIntoleranceIds.length === 0) {
       setIntoleranceSheetVisible(false);
       return;
@@ -297,7 +271,6 @@ export const DietaryRestrictionSelector: React.FC<
         );
 
         if (success) {
-          setSelectedIntoleranceIds([]);
           setIntoleranceSheetVisible(false);
         } else {
           alertService.alert(
@@ -311,7 +284,7 @@ export const DietaryRestrictionSelector: React.FC<
     );
   };
 
-  const handleSaveGoals = () => {
+  const handleSaveGoals = (selectedGoalIds: HealthGoal[]) => {
     if (selectedGoalIds.length === 0) {
       setGoalSheetVisible(false);
       return;
@@ -328,7 +301,6 @@ export const DietaryRestrictionSelector: React.FC<
         const success = await onAdd(restrictions, RestrictionSeverity.Goal);
 
         if (success) {
-          setSelectedGoalIds([]);
           setGoalSheetVisible(false);
         } else {
           alertService.alert(
@@ -393,8 +365,8 @@ export const DietaryRestrictionSelector: React.FC<
         visible={isDietSheetVisible}
         title={t('dietaryProfile.dietSheetTitle')}
         items={availableLifestyle}
-        selectedItems={selectedDietIds}
-        onSelect={handleSelectDiets}
+        initialSelected={currentLifestyleDiets}
+        toggle={toggleDiet}
         onClose={() => setDietSheetVisible(false)}
         onDone={handleSaveDiet}
         loading={isSavingDiets}
@@ -405,8 +377,7 @@ export const DietaryRestrictionSelector: React.FC<
         visible={isConstraintSheetVisible}
         title={t('dietaryProfile.constraintsSheetTitle')}
         items={availableConstraints}
-        selectedItems={selectedConstraintIds}
-        onSelect={setSelectedConstraintIds}
+        initialSelected={[]}
         onClose={() => setConstraintSheetVisible(false)}
         onDone={handleSaveConstraints}
         loading={isSavingConstraints}
@@ -417,8 +388,7 @@ export const DietaryRestrictionSelector: React.FC<
         visible={isIntoleranceSheetVisible}
         title={t('dietaryProfile.intolerancesSheetTitle')}
         items={availableIntolerances}
-        selectedItems={selectedIntoleranceIds}
-        onSelect={setSelectedIntoleranceIds}
+        initialSelected={[]}
         onClose={() => setIntoleranceSheetVisible(false)}
         onDone={handleSaveIntolerances}
         loading={isSavingIntolerances}
@@ -429,8 +399,7 @@ export const DietaryRestrictionSelector: React.FC<
         visible={isGoalSheetVisible}
         title={t('dietaryProfile.goalsSheetTitle')}
         items={availableGoals}
-        selectedItems={selectedGoalIds}
-        onSelect={setSelectedGoalIds}
+        initialSelected={[]}
         onClose={() => setGoalSheetVisible(false)}
         onDone={handleSaveGoals}
         loading={isSavingGoals}

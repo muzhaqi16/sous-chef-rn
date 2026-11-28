@@ -1,8 +1,8 @@
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useMutation } from '@apollo/client/react';
 import { MarkPrimaryItemImageDocument } from '#features/catalog/hooks/useMarkPrimaryItemImage.generated';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 
 /**
  * Promotes one of an item's photos to its hero. No `update` and no optimistic

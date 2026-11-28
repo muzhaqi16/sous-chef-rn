@@ -10,9 +10,9 @@ import {
   GetRecipeDocument,
   UpdateRecipeDocument,
 } from '#features/recipes/graphql/recipe.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 
 /**
  * An edit is one write: the fields and the ingredient list under the version,

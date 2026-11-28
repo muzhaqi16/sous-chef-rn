@@ -1,4 +1,4 @@
-import { extractNodes, getConnectionTotalCount } from '#/utils/connectionUtils';
+import { extractNodes, getConnectionTotalCount } from '#utils/connectionUtils';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import type {
   ConnectionResult,

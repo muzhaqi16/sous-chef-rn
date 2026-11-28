@@ -1,11 +1,11 @@
 import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
 import { MockLink } from '@apollo/client/testing';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { storage } from '#/store/deviceStorage';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { storage } from '#store/deviceStorage';
 import {
   completeMockedResponse,
   recordMock,
@@ -30,7 +30,7 @@ import { queueStore } from '../queueStore';
  */
 
 let mockClient: ApolloClient | null = null;
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),

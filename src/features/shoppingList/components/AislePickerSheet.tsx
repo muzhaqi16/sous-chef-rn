@@ -1,6 +1,6 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
-import { StoreDepartment } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import { StoreDepartment } from '#graphql/generated/schemaTypes';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import type { SelectorConfig } from '#components/organisms/AnimatedItemSelector/types';
 import type { AisleLine } from '#features/shoppingList/hooks/useMoveToAisleModal';

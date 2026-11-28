@@ -6,7 +6,7 @@ import {
 import {
   defaultUserPreferences,
   type UserPreferences,
-} from '#/store/slices/preferencesSlice';
+} from '#store/slices/preferencesSlice';
 import type { RootState } from '#store/index';
 
 const mockSetUserPreference = jest.fn();

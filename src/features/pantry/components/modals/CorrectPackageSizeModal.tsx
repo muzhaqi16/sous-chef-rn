@@ -1,32 +1,35 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useFragment } from '@apollo/client/react';
 import { FormInput } from '#components/atoms/FormInput';
 import { PackageContentsFields } from '#features/pantry/ui/PackageContentsFields';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { Text } from '#components/atoms/Text';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import {
   CorrectPackageSizeModal_BatchFragmentDoc,
   CorrectPackageSizeModal_PantryItemFragmentDoc,
 } from './CorrectPackageSizeModal.generated';
-import { formatNumberForInput } from '#/utils/formatters/number';
-import { formatNetWeightDisplay, unitLabel } from '#/utils/formatQuantity';
+import { formatNumberForInput } from '#utils/formatters/number';
+import { formatNetWeightDisplay, unitLabel } from '#utils/formatQuantity';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
 import {
   correctWeightSchema,
   correctWeightDefaults,
   parseWeight,
   type CorrectWeightFormValues,
 } from './correctWeightFormConfig';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import type { PackageSizeCorrectionInput } from '#features/pantry/types';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { currentReading, formatReading } from '#domain/measure';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface CorrectPackageSizeModalProps {
   visible: boolean;
@@ -44,6 +47,50 @@ interface CorrectPackageSizeModalProps {
 export const CorrectPackageSizeModal: React.FC<
   CorrectPackageSizeModalProps
 > = ({ visible, pantryItemId, batchId, onClose, onConfirm }) => {
+  const itemRead = useFragment({
+    fragment: CorrectPackageSizeModal_PantryItemFragmentDoc,
+    fragmentName: 'CorrectPackageSizeModal_pantryItem',
+    from: { __typename: 'PantryItem', id: pantryItemId },
+  });
+  const batchRead = useFragment({
+    fragment: CorrectPackageSizeModal_BatchFragmentDoc,
+    fragmentName: 'CorrectPackageSizeModal_batch',
+    from: batchId ? { __typename: 'PantryItemBatch', id: batchId } : null,
+  });
+  // Shown once the stack and batch are read, so each opening seeds its form
+  // once: a cache update to the batch while it is open keeps what was typed.
+  const presented =
+    visible && !!batchId && itemRead.complete && batchRead.complete;
+  const opening = useOpening(presented, batchId);
+
+  return (
+    <Sheet
+      mode="form"
+      visible={presented}
+      onDismiss={onClose}
+      headerFromContent
+      snapPoints={['65%']}
+      contentContainerStyle={commonStyles.bottomSheetContent}
+    >
+      {opening?.payload ? (
+        <CorrectPackageSizeForm
+          key={opening.id}
+          pantryItemId={pantryItemId}
+          batchId={opening.payload}
+          onClose={onClose}
+          onConfirm={onConfirm}
+        />
+      ) : null}
+    </Sheet>
+  );
+};
+
+/** One opening's correction, seeded from the batch as it opened. */
+const CorrectPackageSizeForm: React.FC<
+  Omit<CorrectPackageSizeModalProps, 'visible' | 'batchId'> & {
+    batchId: string;
+  }
+> = ({ pantryItemId, batchId, onClose, onConfirm }) => {
   const { t } = useTranslation();
   const itemFragment = useFragment({
     fragment: CorrectPackageSizeModal_PantryItemFragmentDoc,
@@ -53,10 +100,10 @@ export const CorrectPackageSizeModal: React.FC<
   const batchFragment = useFragment({
     fragment: CorrectPackageSizeModal_BatchFragmentDoc,
     fragmentName: 'CorrectPackageSizeModal_batch',
-    from: batchId ? { __typename: 'PantryItemBatch', id: batchId } : null,
+    from: { __typename: 'PantryItemBatch', id: batchId },
   });
   const pantryItem = itemFragment.complete ? itemFragment.data : null;
-  const batch = batchId && batchFragment.complete ? batchFragment.data : null;
+  const batch = batchFragment.complete ? batchFragment.data : null;
   const readingSystem = useReadingSystem();
   const netWeightUnitId = pantryItem?.netWeightUnit?.id;
   const sizeReading = currentReading(
@@ -70,41 +117,34 @@ export const CorrectPackageSizeModal: React.FC<
     readingSystem,
   );
 
-  const { control, handleSubmit, setValue, setError, reset, getValues } =
-    useForm<CorrectWeightFormValues>({
-      resolver: yupResolver(correctWeightSchema),
-      defaultValues: correctWeightDefaults(),
-    });
+  // As stored, not as the reading above rounds it: a correction that leaves the
+  // size as it opened leaves it as it was.
+  const seed: CorrectWeightFormValues | undefined =
+    pantryItem && batch
+      ? {
+          weightInput: formatNumberForInput(batch.netWeight),
+          unitDisplay: unitLabel(pantryItem.netWeightUnit),
+          selectedUnitId: pantryItem.netWeightUnit?.id ?? null,
+          selectedUnitType: null,
+          definesCount: false,
+          reason: '',
+        }
+      : undefined;
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    setError,
+    getValues,
+    getFieldState,
+    trigger,
+    formState: { isDirty },
+  } = useForm<CorrectWeightFormValues>({
+    resolver: yupResolver(correctWeightSchema),
+    defaultValues: seed ?? correctWeightDefaults(),
+  });
+  useSheetUnsavedInput(isDirty);
   const definesCount = useWatch({ control, name: 'definesCount' });
-
-  // `reset` notifies mounted `Controller`s synchronously, so the seed is
-  // computed during render and applied from an effect. Keyed on the batch id so
-  // a cache update to the same batch keeps typed input.
-  const [pendingSeed, setPendingSeed] =
-    useState<CorrectWeightFormValues | null>(null);
-  const [seedKey, setSeedKey] = useState<string | null>(null);
-  const nextSeedKey = visible && pantryItem && batch ? batch.id : null;
-  if (nextSeedKey !== seedKey) {
-    setSeedKey(nextSeedKey);
-    setPendingSeed(
-      nextSeedKey && pantryItem && batch
-        ? {
-            // As stored, not as the reading above rounds it: a correction
-            // that leaves the size as it opened leaves it as it was.
-            weightInput: formatNumberForInput(batch.netWeight),
-            unitDisplay: unitLabel(pantryItem.netWeightUnit),
-            selectedUnitId: pantryItem.netWeightUnit?.id ?? null,
-            selectedUnitType: null,
-            definesCount: false,
-            reason: '',
-          }
-        : null,
-    );
-  }
-
-  useEffect(() => {
-    if (pendingSeed) reset(pendingSeed);
-  }, [pendingSeed, reset]);
 
   const handleUnitSelected = (
     unitId: string | null,
@@ -117,6 +157,8 @@ export const CorrectPackageSizeModal: React.FC<
       'definesCount',
       unitType === UnitType.Count && unitId !== pantryItem?.portionUnitId,
     );
+    // The reason rule reads `definesCount`; `setValue` re-runs only what it writes.
+    if (getFieldState('reason').invalid) void trigger('reason');
     if (unitName) setValue('unitDisplay', unitName, { shouldDirty: true });
   };
 
@@ -157,22 +199,18 @@ export const CorrectPackageSizeModal: React.FC<
       );
 
   return (
-    <Sheet
-      mode="form"
-      visible={visible ? !!pantryItem && !!batch : false}
-      onDismiss={onClose}
-      snapPoints={['65%', '85%']}
-      contentContainerStyle={commonStyles.bottomSheetContent}
-      header={
-        <BottomSheetHeader
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
           title={t('correctWeight.title')}
-          onCancel={onClose}
-          onConfirm={handleConfirm}
-          confirmLabel={t('correctWeight.correct')}
-          saving={isSaving}
+          onClose={onClose}
+          confirm={{
+            onPress: handleConfirm,
+            accessibilityLabel: t('correctWeight.correct'),
+            loading: isSaving,
+          }}
         />
-      }
-    >
+      </SheetHeaderSlot>
       {!!pantryItem && !!batch && (
         <>
           <View style={commonStyles.bottomSheetItemInfo}>
@@ -215,7 +253,7 @@ export const CorrectPackageSizeModal: React.FC<
                   render={({ field: unit, fieldState: unitState }) => (
                     <PackageContentsFields
                       variant="modal"
-                      useBottomSheetInput
+                      sizeRef={size.ref}
                       size={size.value}
                       onSizeChange={size.onChange}
                       sizeError={sizeState.error?.message}
@@ -237,13 +275,13 @@ export const CorrectPackageSizeModal: React.FC<
                 name="reason"
                 render={({ field, fieldState }) => (
                   <FormInput
+                    ref={field.ref}
                     label={t('labels.reason')}
                     required
                     value={field.value}
                     onChangeText={field.onChange}
                     error={fieldState.error?.message}
                     placeholder={t('correctWeight.reasonPlaceholder')}
-                    useBottomSheetInput
                   />
                 )}
               />
@@ -251,6 +289,6 @@ export const CorrectPackageSizeModal: React.FC<
           )}
         </>
       )}
-    </Sheet>
+    </>
   );
 };

@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/atoms/FormInput';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { Text } from '#components/atoms/Text';
 import {
   macroTargetsSchema,
@@ -16,7 +18,8 @@ import {
   type MacroTargetUpdates,
   type MacroTargetsFormValues,
 } from './macroTargetsFormConfig';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 interface MacroTargetsSheetProps {
   visible: boolean;
@@ -31,47 +34,65 @@ interface MacroTargetsSheetProps {
   };
 }
 
+type MacroTargetsInitial = MacroTargetsSheetProps['initialValues'];
+
 export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
   visible,
   onClose,
   onSave,
   initialValues,
 }) => {
+  // Each opening starts from the targets as they stood when it opened: a
+  // background profile refresh, which rebuilds `initialValues`, never resets
+  // what the person is typing.
+  const opening = useOpening(visible, initialValues);
+
+  return (
+    <Sheet
+      mode="form"
+      visible={visible}
+      onDismiss={onClose}
+      headerFromContent
+      snapPoints={['65%']}
+      style={styles.scrollView}
+      contentContainerStyle={styles.contentContainer}
+    >
+      {opening ? (
+        <MacroTargetsForm
+          key={opening.id}
+          initialValues={opening.payload}
+          onClose={onClose}
+          onSave={onSave}
+        />
+      ) : null}
+    </Sheet>
+  );
+};
+
+const seedOf = (initial: MacroTargetsInitial): MacroTargetsFormValues => ({
+  ...macroTargetsDefaults(),
+  calories: initial?.calorieTarget?.toString() ?? '',
+  protein: initial?.proteinTarget?.toString() ?? '',
+  carbs: initial?.carbsTarget?.toString() ?? '',
+  fat: initial?.fatTarget?.toString() ?? '',
+});
+
+/** One opening's form, seeded once from the targets it opened on. */
+const MacroTargetsForm: React.FC<
+  Pick<MacroTargetsSheetProps, 'onClose' | 'onSave' | 'initialValues'>
+> = ({ onClose, onSave, initialValues }) => {
   const { t } = useTranslation();
 
-  const { control, handleSubmit, reset } = useForm<MacroTargetsFormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<MacroTargetsFormValues>({
     resolver: yupResolver(macroTargetsSchema),
-    defaultValues: macroTargetsDefaults(),
+    defaultValues: seedOf(initialValues),
   });
+  useSheetUnsavedInput(isDirty);
   const [saving, setSaving] = useState(false);
-
-  // The sheet has ONE subject, so opening it is the only thing that should
-  // re-seed the fields. Keying on the `initialValues` object instead makes a
-  // background profile refresh — which rebuilds that literal — discard what the
-  // person is typing. The seed is applied from an effect rather than during
-  // render: `reset` notifies mounted `Controller` children synchronously, and
-  // updating them mid-parent-render interleaves two passes.
-  const [pendingSeed, setPendingSeed] = useState<MacroTargetsFormValues | null>(
-    null,
-  );
-  const [wasVisible, setWasVisible] = useState(visible);
-  if (visible !== wasVisible) {
-    setWasVisible(visible);
-    setPendingSeed(
-      visible
-        ? {
-            calories: initialValues?.calorieTarget?.toString() ?? '',
-            protein: initialValues?.proteinTarget?.toString() ?? '',
-            carbs: initialValues?.carbsTarget?.toString() ?? '',
-            fat: initialValues?.fatTarget?.toString() ?? '',
-          }
-        : null,
-    );
-  }
-
-  useEffect(() => {
-    if (pendingSeed) reset(pendingSeed);
-  }, [pendingSeed, reset]);
 
   // Reaching here means every target is in range; a refusal renders under the
   // field it is about. A failed SAVE is not a field the user can edit, so it
@@ -89,23 +110,19 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
   }, reportValidationErrors);
 
   return (
-    <Sheet
-      mode="form"
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={['65%']}
-      style={styles.scrollView}
-      contentContainerStyle={styles.contentContainer}
-      header={
-        <BottomSheetHeader
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
           title={t('macroTargets.title')}
-          onCancel={onClose}
-          onConfirm={handleSave}
-          confirmLabel={t('labels.save')}
-          confirmDisabled={saving}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void handleSave();
+            },
+            loading: saving,
+          }}
         />
-      }
-    >
+      </SheetHeaderSlot>
       {/* Description */}
       <Text role="caption" tone="secondary" style={styles.description}>
         {t('macroTargets.subtitle')}
@@ -118,13 +135,13 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
           name="calories"
           render={({ field, fieldState }) => (
             <FormInput
+              ref={field.ref}
               label={t('macroTargets.dailyCalories')}
               value={field.value}
               onChangeText={field.onChange}
               error={fieldState.error?.message}
               keyboardType="number-pad"
               placeholder={t('macroTargets.caloriesPlaceholder')}
-              useBottomSheetInput
             />
           )}
         />
@@ -137,13 +154,13 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
           name="protein"
           render={({ field, fieldState }) => (
             <FormInput
+              ref={field.ref}
               label={t('labels.proteinG')}
               value={field.value}
               onChangeText={field.onChange}
               error={fieldState.error?.message}
               keyboardType="number-pad"
               placeholder={t('macroTargets.proteinPlaceholder')}
-              useBottomSheetInput
             />
           )}
         />
@@ -156,13 +173,13 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
           name="carbs"
           render={({ field, fieldState }) => (
             <FormInput
+              ref={field.ref}
               label={t('labels.carbsG')}
               value={field.value}
               onChangeText={field.onChange}
               error={fieldState.error?.message}
               keyboardType="number-pad"
               placeholder={t('macroTargets.carbsPlaceholder')}
-              useBottomSheetInput
             />
           )}
         />
@@ -175,18 +192,18 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
           name="fat"
           render={({ field, fieldState }) => (
             <FormInput
+              ref={field.ref}
               label={t('macroTargets.fat')}
               value={field.value}
               onChangeText={field.onChange}
               error={fieldState.error?.message}
               keyboardType="number-pad"
               placeholder={t('macroTargets.fatPlaceholder')}
-              useBottomSheetInput
             />
           )}
         />
       </View>
-    </Sheet>
+    </>
   );
 };
 
@@ -195,7 +212,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   contentContainer: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   description: {
     marginBottom: theme.spacing.lg,

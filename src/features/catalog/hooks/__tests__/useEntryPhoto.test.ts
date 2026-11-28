@@ -19,13 +19,13 @@ import {
   UpdateHomeItemPhotoDocument,
 } from '#features/catalog/hooks/useEntryPhoto.generated';
 import { useEntryPhoto } from '#features/catalog/hooks/useEntryPhoto';
-import { alertService } from '#/services/alertService';
-import { todayKey } from '#/utils/dateUtils';
+import { alertService } from '#services/alertService';
+import { todayKey } from '#utils/dateUtils';
 import {
   EntryImageSource,
   ErrorCode,
   ImageUploadPurpose,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 // Each write answers with every entry of the household for the item, so the
 // cache settles from the response: these read the entry back from it.

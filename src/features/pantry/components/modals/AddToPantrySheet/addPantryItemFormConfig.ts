@@ -3,13 +3,13 @@ import {
   itemNameText,
   lazyMessage,
   quantityRule,
-} from '#/utils/validation/common';
+} from '#utils/validation/common';
 import {
   StorageState,
   ItemCondition,
   AcquisitionMethod,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   ACQUISITION_METHOD_OPTIONS,
   type OfferedAcquisitionMethod,

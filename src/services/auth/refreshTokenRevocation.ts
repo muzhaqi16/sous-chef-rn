@@ -1,11 +1,11 @@
-import { env } from '#/config/env';
-import { getApiRestUrl } from '#/apollo/links/apiHealthProbe';
+import { env } from '#config/env';
+import { getApiRestUrl } from '#apollo/links/apiHealthProbe';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { registerSessionTeardown } from '#store/sessionTeardown';
 import { requirePlatform } from '#platform/install';
 import type { PendingRevocation } from '#platform/ports';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 const secureStore = () => requirePlatform('secureStore');
 

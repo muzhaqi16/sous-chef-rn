@@ -52,7 +52,7 @@ testRule('text-needs-role', {
       errors: ['missingRole'],
     },
     {
-      code: "import { Text as AppText } from '#/components/atoms/Text';\nconst c = <AppText>x</AppText>;",
+      code: "import { Text as AppText } from '#components/atoms/Text';\nconst c = <AppText>x</AppText>;",
       errors: ['missingRole'],
     },
     {

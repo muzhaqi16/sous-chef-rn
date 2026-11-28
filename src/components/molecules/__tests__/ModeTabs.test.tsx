@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, type View } from 'react-native';
+import { ScrollView, type ViewInstance } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { fireEvent, render, screen } from '@testing-library/react-native';
@@ -78,14 +78,14 @@ describe('ModeTabs', () => {
         onTabLayout={receiver}
       />
     );
-    type MeasureCallback = Parameters<View['measure']>[0];
+    type MeasureCallback = Parameters<ViewInstance['measure']>[0];
     render(tabs());
     // The preset's mocked View: each tab's wrapper is a class instance.
     for (const { instance } of screen.UNSAFE_getAllByProps({
       collapsable: false,
     })) {
       if (instance) {
-        (instance as View).measure = (callback: MeasureCallback) =>
+        (instance as ViewInstance).measure = (callback: MeasureCallback) =>
           callback(0, 0, 80, 40, 10, 100);
       }
     }

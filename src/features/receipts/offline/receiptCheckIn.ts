@@ -1,7 +1,7 @@
 import type { ApolloCache, OperationVariables } from '@apollo/client';
-import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
-import { extractMutationPayload } from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
+import type { ReplayReconcilerTable } from '#apollo/offlineQueue/types';
+import { extractMutationPayload } from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
 import {
   useReceiptDraftStore,
   type CheckInLineOutcome,
@@ -27,7 +27,11 @@ interface CheckInSent {
 /** One line's outcome, with the item and stack the API recorded it as. */
 export interface CheckInLineResult extends CheckInLineOutcome {
   /** `errorId` names the server's log entry, for diagnostics only. */
-  failure?: { code: string; errorId?: string | null } | null;
+  failure?: {
+    code: string;
+    field?: string | null;
+    errorId?: string | null;
+  } | null;
   item?: { id: string } | null;
   pantryItem?: { id: string } | null;
 }
@@ -113,7 +117,13 @@ export const resultsOf = (data: unknown): CheckInLineResult[] => {
             failure:
               isRecord(result.failure) &&
               typeof result.failure.code === 'string'
-                ? { code: result.failure.code }
+                ? {
+                    code: result.failure.code,
+                    field:
+                      typeof result.failure.field === 'string'
+                        ? result.failure.field
+                        : null,
+                  }
                 : null,
             item: refOf(result.item),
             pantryItem: refOf(result.pantryItem),

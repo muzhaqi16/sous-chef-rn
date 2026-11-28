@@ -2,8 +2,8 @@
 import React from 'react';
 import { act, screen, userEvent } from '@testing-library/react-native';
 import type { ApolloCache } from '@apollo/client';
-import { t } from '#/i18n';
-import { makeCache } from '#/apollo/cache';
+import { t } from '#i18n';
+import { makeCache } from '#apollo/cache';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { memoryScreen } from '#/test-utils/memoryPlatform';
@@ -16,7 +16,7 @@ import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { useOnboardingProgressStore } from '#features/onboarding/store/onboardingProgressStore';
 import { HouseholdStepScreen } from '../HouseholdStepScreen';
 import { HouseholdGreetingHomeDocument } from '#features/onboarding/hooks/useHouseholdGreeting.generated';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 
 const mockNavigateToNextStep = jest.fn();
 jest.mock('../useOnboardingNavigation', () => ({

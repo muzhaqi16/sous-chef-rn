@@ -20,7 +20,7 @@ import {
 } from '../tokenScheduler';
 import { useStore } from '#store';
 import type { RootState } from '#store/index';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedGetState = useStore.getState as jest.MockedFunction<

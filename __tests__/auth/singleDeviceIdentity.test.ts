@@ -3,7 +3,7 @@
 // them diverging is invisible to typecheck and to every other suite — each one
 // keeps passing against its own id.
 
-jest.mock('#/apollo/client', () => ({
+jest.mock('#apollo/client', () => ({
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -16,9 +16,9 @@ import { recordMock } from '#/test-utils/apolloMockProvider';
 import { registerTestClient } from '#/test-utils/registeredClient';
 import { memoryKeychain } from '#/test-utils/memoryKeychain';
 import { useStore } from '#store';
-import { ensureDeviceId, getDeviceId } from '#/services/auth/deviceId';
-import { biometricService } from '#/services/biometric/deviceCredential';
-import { ErrorCode, ErrorDisposition } from '#/graphql/generated/schemaTypes';
+import { ensureDeviceId, getDeviceId } from '#services/auth/deviceId';
+import { biometricService } from '#services/biometric/deviceCredential';
+import { ErrorCode, ErrorDisposition } from '#graphql/generated/schemaTypes';
 import {
   ExchangeDeviceCredentialDocument,
   IssueDeviceCredentialDocument,

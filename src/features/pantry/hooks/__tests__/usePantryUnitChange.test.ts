@@ -5,9 +5,9 @@ import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
-import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import {
   ChangePantryItemUnitDocument,
   PreviewPantryItemUnitChangeDocument,
@@ -22,7 +22,7 @@ const mockApiUnavailable = jest.fn(() => false);
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: () => mockApiUnavailable(),
 }));
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 beforeEach(() => {
   jest.clearAllMocks();

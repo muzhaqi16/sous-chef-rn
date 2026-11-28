@@ -1,4 +1,4 @@
-import { RecurringPattern } from '#/graphql/generated/schemaTypes';
+import { RecurringPattern } from '#graphql/generated/schemaTypes';
 import {
   listFromTemplate,
   type CopyableList,

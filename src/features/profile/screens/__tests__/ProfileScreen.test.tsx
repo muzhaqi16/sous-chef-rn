@@ -1,6 +1,6 @@
 import React from 'react';
 import { screen, userEvent } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderWithApollo,
@@ -13,18 +13,18 @@ import {
   queuedMutationFor,
 } from '#/test-utils/queuedMutation';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { Environment } from '#/utils/environment';
-import { authService } from '#/services/authService';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { QueueStatus } from '#/apollo/offlineQueue/types';
-import { storage } from '#/store/deviceStorage';
+import { t } from '#i18n';
+import { Environment } from '#utils/environment';
+import { authService } from '#services/authService';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { QueueStatus } from '#apollo/offlineQueue/types';
+import { storage } from '#store/deviceStorage';
 import { GetUserProfileDocument } from '#operations/auth/user.generated';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { profileTestIDs } from '#features/profile/testIDs';
-import { isRecord } from '#/utils/isRecord';
-import { alertService } from '#/services/alertService';
-import { biometricService } from '#/services/biometric/deviceCredential';
+import { isRecord } from '#utils/isRecord';
+import { alertService } from '#services/alertService';
+import { biometricService } from '#services/biometric/deviceCredential';
 import { authoritativeBiometryName } from '#components/organisms/biometric/biometryLabel';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { BiometricSetupModal } from '#features/profile/components/BiometricSetupModal';
@@ -238,12 +238,17 @@ describe('the profile screen', () => {
     expect(mockNav[opened]).toHaveBeenCalledTimes(1);
   });
 
-  it('saves a language picked', async () => {
-    await openProfile();
+  it('switches to a language picked at once, and saves it', async () => {
+    const saved = recordMock(UpdateUserPreferencesDocument, { held: true });
+    await openProfile({ answers: [saved] });
 
     await call('language', 'onSave', 'es');
+    await log.requested(UpdateUserPreferencesDocument);
 
     expect(row('language').value).toBe('es');
+    expect(inputOf(saved.fired[0] ?? {})).toMatchObject({
+      regional: { language: 'es' },
+    });
   });
 
   it('saves a currency picked', async () => {

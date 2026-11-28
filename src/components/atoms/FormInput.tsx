@@ -4,13 +4,8 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
-import {
-  ThemedBottomSheetTextInput,
-  ThemedTextInput,
-  type ThemedBottomSheetTextInputRef,
-} from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { assignRef, type FocusableInputRef } from './inputRef';
-import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 import { useFieldAccessibility } from '#hooks/ui/useFieldAccessibility';
 
 interface FormInputProps extends Omit<TextInputProps, 'style'> {
@@ -21,17 +16,13 @@ interface FormInputProps extends Omit<TextInputProps, 'style'> {
   inputStyle?: ViewStyle;
   accessibilityLabel?: string;
   accessibilityHint?: string;
-  /** Use BottomSheetTextInput for proper keyboard handling inside bottom sheets */
-  useBottomSheetInput?: boolean;
   /** Optional element rendered inside the input on the right (e.g. an icon button). */
   trailing?: React.ReactNode;
   /**
    * The input, for a host that only focuses it (react-hook-form, a chained
-   * form). Attached inside a sheet too, where the input is gorhom's.
+   * form), inside a sheet or out.
    */
   ref?: React.Ref<FocusableInputRef>;
-  /** The input inside a sheet, as gorhom's own type. */
-  sheetRef?: React.Ref<ThemedBottomSheetTextInputRef>;
 }
 
 export const FormInput: React.FC<FormInputProps> = ({
@@ -42,15 +33,10 @@ export const FormInput: React.FC<FormInputProps> = ({
   inputStyle,
   accessibilityLabel,
   accessibilityHint,
-  useBottomSheetInput = false,
   trailing,
   ref,
-  sheetRef,
   ...textInputProps
 }) => {
-  const contextValue = useIsBottomSheetInput();
-  const inSheet = useBottomSheetInput || contextValue;
-
   const variantStyles = styles.useVariants({
     error: !!error,
     hasTrailing: !!trailing,
@@ -80,17 +66,7 @@ export const FormInput: React.FC<FormInputProps> = ({
       containerStyle={containerStyle}
     >
       <View style={variantStyles.inputContainer}>
-        {inSheet ? (
-          <ThemedBottomSheetTextInput
-            ref={node => {
-              assignRef(sheetRef, node);
-              assignRef(ref, node ?? null);
-            }}
-            {...inputProps}
-          />
-        ) : (
-          <ThemedTextInput ref={node => assignRef(ref, node)} {...inputProps} />
-        )}
+        <ThemedTextInput ref={node => assignRef(ref, node)} {...inputProps} />
         {!!trailing && <View style={variantStyles.trailing}>{trailing}</View>}
       </View>
     </FormFieldWrapper>

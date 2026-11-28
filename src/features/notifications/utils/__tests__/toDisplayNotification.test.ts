@@ -6,7 +6,7 @@ import {
   NotificationStatus,
   NotificationType,
   Priority,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 const base: UseNotificationsOnLaunch_NotificationFragment = {
   __typename: 'Notification',

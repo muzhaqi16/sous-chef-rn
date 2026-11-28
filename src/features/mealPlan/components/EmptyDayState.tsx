@@ -1,9 +1,9 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { getTabBarBottomPadding } from '#constants/layout';
-import { formatFullWeekdayMonthDay } from '#/utils/formatters/date';
+import { formatFullWeekdayMonthDay } from '#utils/formatters/date';
 
 interface EmptyDayStateProps {
   selectedDate: Date;

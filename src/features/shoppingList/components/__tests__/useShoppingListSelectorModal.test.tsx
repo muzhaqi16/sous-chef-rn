@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderWithApollo,
@@ -17,18 +17,18 @@ import {
   type ShoppingListNode,
 } from '#/test-utils/fixtures/shoppingListFixtures';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import {
   CollaboratorRole,
   ErrorCode,
   MembershipRole,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   TabBarActionsProvider,
   useTabBarState,
-} from '#/context/TabBarActionsContext';
+} from '#context/TabBarActionsContext';
 import {
   DeleteShoppingListDocument,
   GetShoppingListDetailsDocument,
@@ -52,7 +52,7 @@ jest.mock('@react-navigation/native', () => {
     useRoute: () => ({ params: {} }),
   };
 });
-jest.mock('#/services/subscriptions/SubscriptionService', () => ({
+jest.mock('#services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     registerParentDeletion: jest.fn(),
     unregisterParentDeletion: jest.fn(),
@@ -459,8 +459,11 @@ describe('deleting from the switcher', () => {
     await openSwitcher();
     longPress('Groceries');
 
+    // gorhom's modal, which the mock renders carrying its props: a close is
+    // gorhom's to report.
     const [tray] = screen.UNSAFE_root.findAll(
       node =>
+        node.props.detached === true &&
         typeof node.props.onDismiss === 'function' &&
         node.findAll(
           child =>

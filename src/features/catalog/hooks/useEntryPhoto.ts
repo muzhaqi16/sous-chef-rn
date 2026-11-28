@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { useMutation } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   DeleteHomeItemPhotoDocument,
   UpdateHomeItemPhotoDocument,
 } from '#features/catalog/hooks/useEntryPhoto.generated';
-import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { todayKey } from '#/utils/dateUtils';
+import { ImageUploadPurpose } from '#graphql/generated/schemaTypes';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { todayKey } from '#utils/dateUtils';
 import { imageErrorMessage, useImageUpload } from '#hooks/data/useImageUpload';
-import { alertService } from '#/services/alertService';
-import type { ImageFile } from '#/types/media';
+import { alertService } from '#services/alertService';
+import type { ImageFile } from '#types/media';
 
 /**
  * The photo a household's entries for one catalog item show: its own upload,

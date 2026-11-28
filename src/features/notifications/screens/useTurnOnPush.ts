@@ -1,8 +1,8 @@
 import { Linking, Platform } from 'react-native';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
-import { logger } from '#/utils/environment';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { registerDeviceInBackground } from '#services/device/deviceRegistration';
+import { logger } from '#utils/environment';
 import type { NotificationSettings } from '#features/notifications/hooks/useNotificationSettings';
 import { useNotificationPermissions } from './useNotificationPermissions';
 

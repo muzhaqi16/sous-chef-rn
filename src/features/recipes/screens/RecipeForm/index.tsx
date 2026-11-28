@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormScreen } from '#components/templates/FormScreen';
 import { SubScreen } from '#components/templates/SubScreen';
@@ -22,15 +22,9 @@ import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
 import { useRecipeCaptureActions } from '#features/recipes/store/recipeCaptureStore';
 import { PasteIngredientsSheet } from '#features/recipes/components/recipeForm/PasteIngredientsSheet';
 import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
-import {
-  RecipeIngredientEditor,
-  type RecipeIngredientEditorRef,
-} from '#features/recipes/components/recipeForm/RecipeIngredientEditor';
+import { RecipeIngredientEditor } from '#features/recipes/components/recipeForm/RecipeIngredientEditor';
 import { RecipeStepList } from '#features/recipes/components/recipeForm/RecipeStepList';
-import {
-  RecipeStepEditor,
-  type RecipeStepEditorRef,
-} from '#features/recipes/components/recipeForm/RecipeStepEditor';
+import { RecipeStepEditor } from '#features/recipes/components/recipeForm/RecipeStepEditor';
 import { RecipeTagsSection } from '#features/recipes/components/recipeForm/RecipeTagsSection';
 import type {
   IngredientFormState,
@@ -38,11 +32,11 @@ import type {
   StepFormState,
 } from '../../types';
 import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
-import { localizedErrorMessage } from '#/services/errorService';
+import { localizedErrorMessage } from '#services/errorService';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { reportValidationErrors } from '#/utils/validation/common';
-import { presentFailure } from '#/utils/errors/presentFailure';
+import { reportValidationErrors } from '#utils/validation/common';
+import { presentFailure } from '#utils/errors/presentFailure';
 
 /** The fields whose sections render their own validation message. */
 const FIELDS_WITH_MESSAGES: ReadonlyArray<keyof RecipeFormState> = [
@@ -63,8 +57,13 @@ export const RecipeFormScreen: React.FC<
 
   const { t } = useTranslation();
   const { goBack } = useAppNavigation();
-  const ingredientEditorRef = useRef<RecipeIngredientEditorRef>(null);
-  const stepEditorRef = useRef<RecipeStepEditorRef>(null);
+  // The editors open on what they edit: absent, a new line.
+  const [ingredientEditor, setIngredientEditor] = useState<{
+    ingredient?: IngredientFormState;
+  } | null>(null);
+  const [stepEditor, setStepEditor] = useState<{
+    step?: StepFormState;
+  } | null>(null);
 
   const form = useRecipeForm();
 
@@ -189,11 +188,11 @@ export const RecipeFormScreen: React.FC<
 
   // Ingredient handlers
   const handleEditIngredient = (ingredient: IngredientFormState) => {
-    ingredientEditorRef.current?.open(ingredient);
+    setIngredientEditor({ ingredient });
   };
 
   const handleAddIngredient = () => {
-    ingredientEditorRef.current?.open();
+    setIngredientEditor({});
   };
 
   const [pasteVisible, setPasteVisible] = useState(false);
@@ -216,11 +215,11 @@ export const RecipeFormScreen: React.FC<
 
   // Step handlers
   const handleEditStep = (step: StepFormState) => {
-    stepEditorRef.current?.open(step);
+    setStepEditor({ step });
   };
 
   const handleAddStep = () => {
-    stepEditorRef.current?.open();
+    setStepEditor({});
   };
 
   const handleSaveStep = (step: StepFormState) => {
@@ -269,19 +268,7 @@ export const RecipeFormScreen: React.FC<
         testID={recipesTestIDs.recipeFormScreen}
       >
         {/* Basic fields */}
-        <RecipeBasicFields
-          state={form.state}
-          updateField={form.updateField}
-          // By value: a refusal set on the form changes its errors object in
-          // place, so the object alone would leave the fields as they were.
-          errors={{
-            name: form.errors.name?.message,
-            imageUrl: form.errors.imageUrl?.message,
-            videoUrl: form.errors.videoUrl?.message,
-            tips: form.errors.tips?.message,
-            tags: form.errors.tags?.message,
-          }}
-        />
+        <RecipeBasicFields control={form.control} />
 
         {/* Category fields */}
         <RecipeCategoryFields
@@ -323,11 +310,18 @@ export const RecipeFormScreen: React.FC<
 
       {/* Bottom sheet editors */}
       <RecipeIngredientEditor
-        ref={ingredientEditorRef}
+        visible={ingredientEditor !== null}
+        ingredient={ingredientEditor?.ingredient}
+        onDismiss={() => setIngredientEditor(null)}
         onSave={handleSaveIngredient}
         candidatesFor={captureReview?.candidatesFor}
       />
-      <RecipeStepEditor ref={stepEditorRef} onSave={handleSaveStep} />
+      <RecipeStepEditor
+        visible={stepEditor !== null}
+        step={stepEditor?.step}
+        onDismiss={() => setStepEditor(null)}
+        onSave={handleSaveStep}
+      />
       {pasteEnabled ? (
         <PasteIngredientsSheet
           visible={pasteVisible}

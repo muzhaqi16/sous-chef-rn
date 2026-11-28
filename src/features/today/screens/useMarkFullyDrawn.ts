@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
+import { NativePerformanceService } from '#services/performance/NativePerformanceService';
 
 /**
  * Today is where a launch lands, and it renders no instrumented list, so it

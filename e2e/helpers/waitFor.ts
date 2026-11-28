@@ -132,6 +132,39 @@ export async function waitForKeyboardDismiss(timeout: number = QUICK_TIMEOUT) {
   }
 }
 
+/** Waits until `target` holds one frame on two reads in a row. */
+export async function waitForStill(
+  target: Detox.IndexableNativeElement,
+  timeout: number = QUICK_TIMEOUT,
+) {
+  const frameOf = async () => {
+    const attributes = await target.getAttributes();
+    return JSON.stringify('frame' in attributes ? attributes.frame : null);
+  };
+  const deadline = Date.now() + timeout;
+  let last = await frameOf();
+  while (Date.now() < deadline) {
+    await delay(100);
+    const next = await frameOf();
+    if (next === last) return;
+    last = next;
+  }
+}
+
+/**
+ * Returns from a field in a sheet. gorhom moves the sheet back as the keyboard
+ * leaves, and a tap on a moving button is cancelled, so this waits until the
+ * keyboard is gone and `anchor`, the control tapped next, has stopped moving.
+ */
+export async function returnFromField(
+  field: Detox.IndexableNativeElement,
+  anchor: Detox.IndexableNativeElement,
+) {
+  await field.tapReturnKey();
+  await waitForKeyboardDismiss();
+  await waitForStill(anchor);
+}
+
 /** Retries the tap, which absorbs the visible-then-moved race. */
 export async function waitForElementAndTap(
   targetElement: Detox.IndexableNativeElement,

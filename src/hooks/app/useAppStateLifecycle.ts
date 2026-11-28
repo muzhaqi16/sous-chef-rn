@@ -2,13 +2,13 @@ import { useEffect } from 'react';
 import { requirePlatform } from '#platform/install';
 import type { AppLifecycleState } from '#platform/ports';
 import { Telemetry } from '#services/telemetry';
-import { apiReachabilityBreaker } from '#/apollo/links/apiReachabilityBreaker';
-import { queueManager } from '#/apollo/offlineQueue/queueManager';
-import { flushCachePersistence } from '#/apollo/client';
+import { apiReachabilityBreaker } from '#apollo/links/apiReachabilityBreaker';
+import { queueManager } from '#apollo/offlineQueue/queueManager';
+import { flushCachePersistence } from '#apollo/client';
 import { useStore } from '#store';
 import { useIsHydrated } from '#store/useAppStore';
 import { handleTokenRefreshOnResume } from '#store/slices/authSlice';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 /**
  * Session and persistence work on app lifecycle changes; the resync's own listener

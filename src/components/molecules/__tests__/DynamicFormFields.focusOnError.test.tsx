@@ -59,7 +59,7 @@ function Harness() {
         control={form.control}
         errors={form.formState.errors}
       />
-      <Pressable onPress={form.handleSubmit(jest.fn())}>
+      <Pressable onPress={() => form.handleSubmit(jest.fn())()}>
         <Text>Save</Text>
       </Pressable>
     </>

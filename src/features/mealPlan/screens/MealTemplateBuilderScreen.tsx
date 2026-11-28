@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   MEAL_TYPE_LABEL_KEYS,
   MEAL_TYPE_ORDER,
@@ -22,12 +23,15 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMealTemplateEditor } from '#features/mealPlan/hooks/useMealTemplateEditor';
 import { useMealTemplateForEdit } from '#features/mealPlan/hooks/useMealTemplateForEdit';
 import { useCooksFor } from '#features/profile/hooks/useCooksFor';
-import { TemplateCategory, MealType } from '#/graphql/generated/schemaTypes';
-import { generateId } from '#/utils/generateId';
+import { TemplateCategory, MealType } from '#graphql/generated/schemaTypes';
+import { generateId } from '#utils/generateId';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { reportValidationErrors } from '#/utils/validation/common';
+import {
+  parseCommaTags,
+  reportValidationErrors,
+} from '#utils/validation/common';
 import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import {
   changedMealRef,
@@ -40,7 +44,6 @@ import {
   type TemplateItemFormValues,
 } from './mealTemplateBuilderFormConfig';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 const CATEGORY_OPTIONS = [
   TemplateCategory.Weekly,
@@ -260,12 +263,6 @@ export const MealTemplateBuilderScreen: React.FC<
     if (editingKey === item.key) resetItemForm();
   };
 
-  const parseTags = (tags: string) =>
-    tags
-      .split(',')
-      .map((tag: string) => tag.trim())
-      .filter(Boolean);
-
   // Reaching here means the template schema passed, so the missing-name rule
   // has already reported itself on the name field.
   const onValidTemplate = async ({
@@ -283,7 +280,7 @@ export const MealTemplateBuilderScreen: React.FC<
         category,
         description: description.trim() || null,
         defaultServings: servingsValue,
-        tags: parseTags(tags),
+        tags: parseCommaTags(tags),
       });
       if (ok) goBack();
       return;
@@ -294,7 +291,7 @@ export const MealTemplateBuilderScreen: React.FC<
       category,
       description: description.trim() || undefined,
       defaultServings: servingsValue,
-      tags: parseTags(tags),
+      tags: parseCommaTags(tags),
       items: draftItems.map(item => ({
         dayOffset: item.dayOffset,
         mealType: item.mealType,
@@ -342,6 +339,7 @@ export const MealTemplateBuilderScreen: React.FC<
         name="name"
         render={({ field, fieldState }) => (
           <FormInput
+            ref={field.ref}
             label={t('labels.templateName')}
             value={field.value}
             onChangeText={field.onChange}
@@ -375,6 +373,7 @@ export const MealTemplateBuilderScreen: React.FC<
         name="defaultServings"
         render={({ field }) => (
           <EditableCounter
+            ref={field.ref}
             label={t('labels.defaultServings')}
             value={field.value}
             onChangeText={field.onChange}
@@ -389,6 +388,7 @@ export const MealTemplateBuilderScreen: React.FC<
         name="description"
         render={({ field }) => (
           <FormTextArea
+            ref={field.ref}
             label={t('labels.description')}
             value={field.value}
             onChangeText={field.onChange}
@@ -400,12 +400,14 @@ export const MealTemplateBuilderScreen: React.FC<
       <Controller
         control={templateForm.control}
         name="tags"
-        render={({ field }) => (
+        render={({ field, fieldState }) => (
           <FormInput
+            ref={field.ref}
             label={t('labels.tags')}
             value={field.value}
             onChangeText={field.onChange}
             placeholder={t('labels.commaSeparated')}
+            error={fieldState.error?.message}
           />
         )}
       />
@@ -433,7 +435,7 @@ export const MealTemplateBuilderScreen: React.FC<
               >
                 <View style={styles.itemTitle}>
                   {!!item.recipeId && (
-                    <Icon name="book-outline" size={14} tone="primary" />
+                    <Icon name="book-outline" size="2xsPlus" tone="primary" />
                   )}
                   <Text role="label">{mealName}</Text>
                 </View>
@@ -445,16 +447,16 @@ export const MealTemplateBuilderScreen: React.FC<
                   })}
                 </Text>
               </Pressable>
-              <Pressable
+              <IconButton
+                name="close-circle"
+                size="md"
+                tone="error"
                 onPress={() => handleRemoveItem(item)}
                 accessibilityLabel={t('a11y.removeNamed', {
                   name: mealName || t(MEAL_TYPE_LABEL_KEYS[item.mealType]),
                 })}
-                hitSlop={hitSlop.md}
                 testID={mealPlanTestIDs.templateRemoveItem(item.key)}
-              >
-                <Icon name="close-circle" size={22} tone="error" />
-              </Pressable>
+              />
             </View>
           );
         })
@@ -467,20 +469,20 @@ export const MealTemplateBuilderScreen: React.FC<
             style={styles.recipeRow}
             testID={mealPlanTestIDs.templateItemRecipe}
           >
-            <Icon name="book-outline" size={18} tone="primary" />
+            <Icon name="book-outline" size="xsPlus" tone="primary" />
             <Text role="label" style={styles.recipeName} numberOfLines={1}>
               {itemRecipeName || t('mealTemplateBuilder.savedRecipe')}
             </Text>
-            <Pressable
+            <IconButton
+              name="close-circle"
+              size="sm"
+              tone="textSecondary"
               onPress={clearRecipe}
               accessibilityLabel={t('a11y.removeNamed', {
                 name: itemRecipeName || t('mealTemplateBuilder.savedRecipe'),
               })}
-              hitSlop={hitSlop.md}
               testID={mealPlanTestIDs.templateClearRecipeButton}
-            >
-              <Icon name="close-circle" size={20} tone="textSecondary" />
-            </Pressable>
+            />
           </View>
         ) : (
           <Controller
@@ -488,6 +490,7 @@ export const MealTemplateBuilderScreen: React.FC<
             name="itemName"
             render={({ field, fieldState }) => (
               <FormInput
+                ref={field.ref}
                 label={t('mealTemplateBuilder.mealName')}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -507,7 +510,7 @@ export const MealTemplateBuilderScreen: React.FC<
           onPress={() => setRecipePickerVisible(true)}
           testID={mealPlanTestIDs.templateChooseRecipeButton}
         >
-          <Icon name="book-outline" size={18} tone="primary" />
+          <Icon name="book-outline" size="xsPlus" tone="primary" />
           <Text role="label" tone="primary">
             {itemRecipeId
               ? t('mealTemplateBuilder.changeRecipe')
@@ -534,6 +537,7 @@ export const MealTemplateBuilderScreen: React.FC<
           name="itemDay"
           render={({ field }) => (
             <EditableCounter
+              ref={field.ref}
               label={t('mealTemplateBuilder.dayNumber')}
               // The field holds a zero-based offset; the control shows day 1.
               value={String((parseInt(field.value) || 0) + 1)}
@@ -550,6 +554,7 @@ export const MealTemplateBuilderScreen: React.FC<
           name="itemServings"
           render={({ field }) => (
             <EditableCounter
+              ref={field.ref}
               label={t('labels.servings')}
               value={field.value}
               onChangeText={field.onChange}
@@ -563,12 +568,14 @@ export const MealTemplateBuilderScreen: React.FC<
             styles.addMealButton,
             pressed && styles.pressed,
           ]}
-          onPress={itemForm.handleSubmit(onValidItem, reportValidationErrors)}
+          onPress={() =>
+            itemForm.handleSubmit(onValidItem, reportValidationErrors)()
+          }
           testID={mealPlanTestIDs.templateSubmitItemButton}
         >
           <Icon
             name={editingKey ? 'checkmark' : 'add'}
-            size={18}
+            size="xsPlus"
             tone="primary"
           />
           <Text role="body" tone="primary" style={styles.addMealText}>

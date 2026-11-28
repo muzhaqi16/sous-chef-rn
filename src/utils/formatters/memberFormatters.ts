@@ -2,9 +2,9 @@ import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/gr
 import type {
   MembershipRole,
   MembershipStatus,
-} from '#/graphql/generated/schemaTypes';
-import type { Translate } from '#/i18n/types';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+} from '#graphql/generated/schemaTypes';
+import type { Translate } from '#i18n/types';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
 /**
  * Loose `Membership` shape: different queries select different subsets, so every

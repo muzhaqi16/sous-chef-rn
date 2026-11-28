@@ -33,7 +33,7 @@ export const RadioRow: React.FC<RadioRowProps> = ({
   >
     <Icon
       name={selected ? 'radio-button-on' : 'radio-button-off'}
-      size={20}
+      size="sm"
       tone={selected ? 'primary' : 'textTertiary'}
     />
     {children}

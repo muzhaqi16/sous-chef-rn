@@ -2,8 +2,8 @@ import {
   useConversionPreview,
   type UseConversionPreviewOptions,
 } from './useConversionPreview';
-import { snapDeductionToCap } from '#features/pantry/utils/validateDeductionQuantity';
-import { inCountedUnit } from '#domain/stockDisplay';
+import { snapDeductionToCap } from '#features/pantry/utils/judgeDeduction';
+import { inCountedUnit } from '#entities/pantryItem/stockDisplay';
 import type {
   PantryActionSharedState,
   ShownQuantity,

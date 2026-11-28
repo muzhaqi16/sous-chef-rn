@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
+import { Chip } from '#components/molecules/Chip';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Sheet } from '#components/templates/Sheet';
+import { useOpening } from '#hooks/ui/useOpening';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import type { Diet } from '#/graphql/generated/schemaTypes';
+import type { Diet } from '#graphql/generated/schemaTypes';
 import { withDietPicked } from '#domain/dietary';
 import {
   type RecipeFilters,
@@ -43,12 +45,27 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
   isIngredientSearch = false,
 }) => {
   const { t } = useTranslation();
-  // Lazy mount: don't render filter content until sheet opens for the first time
-  const [mounted, setMounted] = useState(false);
+  // Null until the first opening, so nothing renders before one.
+  const opening = useOpening(visible);
 
-  // Local draft state — chip toggles stay local, committed only on sheet close
-  const [draftFilters, setDraftFilters] =
-    useState<RecipeFilters>(activeFilters);
+  // Chip toggles stay local, committed on close. The draft belongs to one
+  // opening: the next starts from the committed filters, while a snap change
+  // keeps it.
+  const [draft, setDraft] = useState<{
+    opening: number;
+    filters: RecipeFilters;
+  } | null>(null);
+  const draftFilters =
+    draft && draft.opening === opening?.id ? draft.filters : activeFilters;
+  const setDraftFilters = (
+    next: RecipeFilters | ((prev: RecipeFilters) => RecipeFilters),
+  ) => {
+    if (!opening) return;
+    setDraft({
+      opening: opening.id,
+      filters: typeof next === 'function' ? next(draftFilters) : next,
+    });
+  };
 
   const hasDraftChanges =
     draftFilters.diet.length !== activeFilters.diet.length ||
@@ -61,14 +78,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
     );
 
   const handleChange = (index: number) => {
-    if (index >= 0) {
-      // Sheet opening — sync draft from parent's committed filters
-      if (!mounted) setMounted(true);
-      setDraftFilters(activeFilters);
-    } else {
-      // Sheet closing — commit a changed draft to parent
-      if (hasDraftChanges) onApplyFilters(draftFilters);
-    }
+    if (index < 0 && hasDraftChanges) onApplyFilters(draftFilters);
     onSheetChange(index);
   };
 
@@ -108,12 +118,12 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
         },
       ]}
     >
-      {mounted ? (
+      {opening ? (
         <>
           {isIngredientSearch ? (
             <View style={styles.infoBanner}>
               <View style={styles.infoBannerIconCircle}>
-                <Icon name="information-circle" size={16} tone="onPrimary" />
+                <Icon name="information-circle" size="xs" tone="onPrimary" />
               </View>
               <Text role="label" style={styles.infoBannerTitle}>
                 {t('recipeFilters.infoBanner')}
@@ -138,23 +148,12 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 {LIFESTYLE_DIET_OPTIONS.map(diet => {
                   const isSelected = draftFilters.diet.includes(diet.value);
                   return (
-                    <AppPressable
+                    <Chip
                       key={diet.value}
-                      style={[
-                        styles.filterChip,
-                        isSelected && styles.filterChipActive,
-                      ]}
+                      label={t(diet.labelKey)}
+                      selected={isSelected}
                       onPress={() => toggleDiet(diet.value)}
-                    >
-                      <Text
-                        role="label"
-                        style={
-                          isSelected ? styles.filterChipTextActive : undefined
-                        }
-                      >
-                        {t(diet.labelKey)}
-                      </Text>
-                    </AppPressable>
+                    />
                   );
                 })}
               </View>
@@ -170,23 +169,12 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 {CONSTRAINT_DIET_OPTIONS.map(diet => {
                   const isSelected = draftFilters.diet.includes(diet.value);
                   return (
-                    <AppPressable
+                    <Chip
                       key={diet.value}
-                      style={[
-                        styles.filterChip,
-                        isSelected && styles.filterChipActive,
-                      ]}
+                      label={t(diet.labelKey)}
+                      selected={isSelected}
                       onPress={() => toggleDiet(diet.value)}
-                    >
-                      <Text
-                        role="label"
-                        style={
-                          isSelected ? styles.filterChipTextActive : undefined
-                        }
-                      >
-                        {t(diet.labelKey)}
-                      </Text>
-                    </AppPressable>
+                    />
                   );
                 })}
               </View>
@@ -226,7 +214,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                     >
                       <Icon
                         name={isSelected ? 'checkbox' : 'square-outline'}
-                        size={24}
+                        size="md"
                         tone={isSelected ? 'primary' : 'textSecondary'}
                       />
                       <Text role="caption" style={styles.checkboxText}>
@@ -254,12 +242,10 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 {MEAL_TYPES.map(type => {
                   const isSelected = draftFilters.mealType === type.value;
                   return (
-                    <AppPressable
+                    <Chip
                       key={type.value}
-                      style={[
-                        styles.filterChip,
-                        isSelected && styles.filterChipActive,
-                      ]}
+                      label={t(type.labelKey)}
+                      selected={isSelected}
                       onPress={() =>
                         setDraftFilters(prev => ({
                           ...prev,
@@ -267,16 +253,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                             prev.mealType === type.value ? null : type.value,
                         }))
                       }
-                    >
-                      <Text
-                        role="label"
-                        style={
-                          isSelected ? styles.filterChipTextActive : undefined
-                        }
-                      >
-                        {t(type.labelKey)}
-                      </Text>
-                    </AppPressable>
+                    />
                   );
                 })}
               </View>
@@ -298,12 +275,10 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 {COOK_TIMES.map(minutes => {
                   const isSelected = draftFilters.maxReadyTime === minutes;
                   return (
-                    <AppPressable
+                    <Chip
                       key={minutes}
-                      style={[
-                        styles.filterChip,
-                        isSelected && styles.filterChipActive,
-                      ]}
+                      label={t('recipeFilters.cookTimeOption', { minutes })}
+                      selected={isSelected}
                       onPress={() =>
                         setDraftFilters(prev => ({
                           ...prev,
@@ -311,16 +286,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                             prev.maxReadyTime === minutes ? null : minutes,
                         }))
                       }
-                    >
-                      <Text
-                        role="label"
-                        style={
-                          isSelected ? styles.filterChipTextActive : undefined
-                        }
-                      >
-                        {t('recipeFilters.cookTimeOption', { minutes })}
-                      </Text>
-                    </AppPressable>
+                    />
                   );
                 })}
               </View>
@@ -350,19 +316,6 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
     justifyContent: 'flex-start',
   },
-  filterChip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.full,
-    borderWidth: theme.borderWidth.thin,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-  },
-  filterChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  filterChipTextActive: { color: theme.colors.onPrimary },
   checkboxGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -372,10 +325,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     width: '48%',
-    padding: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.surface,
+    paddingVertical: theme.spacing.sm,
   },
   checkboxText: {
     marginLeft: theme.spacing.sm,

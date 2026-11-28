@@ -1,4 +1,4 @@
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { ExpiryKind, UnitType } from '#graphql/generated/schemaTypes';
 
 /**
  * Shared acceptance facts for strengthen-pantry-tracking-and-consumption.
@@ -131,11 +131,14 @@ export const pantryTrackingExamples = {
   'IN-06': {
     actionId: 'IN-06-expiry-edit',
     acquiredOn: context.today,
-    before: { expiresOn: '2026-11-22', source: 'SHELF_LIFE_ESTIMATE' },
+    before: {
+      expiresOn: '2026-11-22',
+      expiryKind: ExpiryKind.PerishableEstimate,
+    },
     labelDate: '2026-11-25',
     expected: {
       expiresOn: '2026-11-25',
-      source: 'USER_PROVIDED',
+      expiryKind: ExpiryKind.Label,
       movementCount: 0,
       acquiredOn: '2026-11-15',
     },

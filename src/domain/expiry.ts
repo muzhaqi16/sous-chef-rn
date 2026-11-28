@@ -1,7 +1,7 @@
 import { differenceInCalendarDays } from 'date-fns';
-import type { Translate } from '#/i18n/types';
-import { ExpiryKind } from '#/graphql/generated/schemaTypes';
-import { fromDateKey } from '#/utils/dateUtils';
+import type { Translate } from '#i18n/types';
+import { ExpiryKind } from '#graphql/generated/schemaTypes';
+import { fromDateKey } from '#utils/dateUtils';
 
 /**
  * The server's expiring-soon window (`PantryStats.expiringCount`): dated today

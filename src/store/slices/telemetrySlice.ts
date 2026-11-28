@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
-import type { TelemetryConfig } from '#/services/telemetry/types';
-import { Environment } from '#/utils/environment';
+import type { TelemetryConfig } from '#services/telemetry/types';
+import { Environment } from '#utils/environment';
 
 export interface TelemetryState {
   isEnabled: boolean;

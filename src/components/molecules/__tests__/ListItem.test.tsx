@@ -1,8 +1,19 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
+import { IconButton } from '#components/atoms/IconButton';
+import type { SwipeRowPress } from '#components/molecules/RowFrame';
 
 import { ListItem } from '../ListItem';
+
+const swipePress = (overrides: Partial<SwipeRowPress> = {}): SwipeRowPress => ({
+  onPress: jest.fn(),
+  accessibilityLabel: 'Milk',
+  accessibilityHint: 'Swipe for actions',
+  accessibilityActions: [],
+  onAccessibilityAction: jest.fn(),
+  ...overrides,
+});
 
 describe('ListItem', () => {
   it('renders title text', () => {
@@ -81,5 +92,74 @@ describe('ListItem', () => {
     expect(button.props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true }),
     );
+  });
+
+  // A control inside the row's press is swallowed by it, for a tap and for a
+  // screen reader: it sits beside the press, its own element.
+  describe('a control in the row', () => {
+    it("fires its own action, not the row's", async () => {
+      const onPress = jest.fn();
+      const onDismiss = jest.fn();
+      render(
+        <ListItem
+          title="Milk"
+          onPress={onPress}
+          trailingActions={
+            <IconButton
+              name="close"
+              onPress={onDismiss}
+              accessibilityLabel="Dismiss"
+            />
+          }
+        />,
+      );
+
+      await userEvent.setup().press(screen.getByLabelText('Dismiss'));
+
+      expect(onDismiss).toHaveBeenCalledTimes(1);
+      expect(onPress).not.toHaveBeenCalled();
+    });
+
+    it('is reached apart from the row', () => {
+      render(
+        <ListItem
+          title="Milk"
+          onPress={jest.fn()}
+          trailingActions={
+            <IconButton
+              name="close"
+              onPress={jest.fn()}
+              accessibilityLabel="Dismiss"
+            />
+          }
+        />,
+      );
+
+      const row = screen.getByLabelText('Milk');
+      const control = screen.getByLabelText('Dismiss');
+      expect(row).not.toContainElement(control);
+    });
+
+    it("takes a swipe row's press on the row, with the control beside it", () => {
+      const press = swipePress();
+      render(
+        <ListItem
+          title="Milk"
+          swipe={press}
+          trailingActions={
+            <IconButton
+              name="archive-outline"
+              onPress={jest.fn()}
+              accessibilityLabel="Move to pantry"
+            />
+          }
+        />,
+      );
+
+      const row = screen.getByLabelText('Milk');
+      expect(row.props.accessibilityActions).toBe(press.accessibilityActions);
+      expect(row.props.accessibilityHint).toBe('Swipe for actions');
+      expect(row).not.toContainElement(screen.getByLabelText('Move to pantry'));
+    });
   });
 });

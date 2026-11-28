@@ -2,7 +2,7 @@
 
 import { captureOnData } from '#/test-utils/subscriptionCapture';
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { useShoppingListSubscriptions } from '#features/shoppingList/hooks/useShoppingListSubscriptions';
@@ -10,8 +10,8 @@ import { MyShoppingListsEventsDocument } from '#features/shoppingList/graphql/sh
 import {
   MutationType,
   ShoppingListSubtype,
-} from '#/graphql/generated/schemaTypes';
-import type { SubscriptionConfig } from '#/services/subscriptions/types';
+} from '#graphql/generated/schemaTypes';
+import type { SubscriptionConfig } from '#services/subscriptions/types';
 import type { RootState } from '#store/index';
 
 type MockBatchCache = {
@@ -20,14 +20,14 @@ type MockBatchCache = {
 
 const mockRegister = jest.fn().mockReturnValue({});
 const mockIsParentDeleting = jest.fn().mockReturnValue(false);
-jest.mock('#/services/subscriptions/SubscriptionService', () => ({
+jest.mock('#services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     register: (config: SubscriptionConfig) => mockRegister(config),
     isParentDeleting: (entityId: string) => mockIsParentDeleting(entityId),
   },
 }));
 
-jest.mock('#/services/subscriptions/types', () => ({
+jest.mock('#services/subscriptions/types', () => ({
   CacheStrategy: { NONE: 'NONE' },
 }));
 
@@ -47,7 +47,7 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-jest.mock('#features/shoppingList/cache/connections', () => ({
+jest.mock('#entities/shoppingList/connections', () => ({
   removeFromShoppingListItemsConnection: jest.fn(),
   moveShoppingListItemToPurchased: jest.fn(),
   moveShoppingListItemToUnpurchased: jest.fn(),
@@ -55,8 +55,8 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
   addNewItemToShoppingListCache: jest.fn(),
 }));
 
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
+jest.mock('#apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#apollo/utils/cacheUpdaters'),
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
@@ -126,7 +126,7 @@ describe('useShoppingListSubscriptions', () => {
   it('reads a created item back before adding it', async () => {
     const {
       addNewItemToShoppingListCache,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -174,7 +174,7 @@ describe('useShoppingListSubscriptions', () => {
   it('skips self-echo for MyShoppingListsEvents item changes', () => {
     const {
       addNewItemToShoppingListCache,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -197,7 +197,7 @@ describe('useShoppingListSubscriptions', () => {
   it('ignores item events for lists other than the selected one', () => {
     const {
       addNewItemToShoppingListCache,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -220,7 +220,7 @@ describe('useShoppingListSubscriptions', () => {
   it('handles Deleted mutation without animation', () => {
     const {
       removeFromShoppingListItemsConnection,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -250,7 +250,7 @@ describe('useShoppingListSubscriptions', () => {
   it('handles ITEMS_BATCH_CLEARED payload', () => {
     const {
       clearAllPurchasedItemsFromCache,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -276,7 +276,7 @@ describe('useShoppingListSubscriptions', () => {
   it('ignores ITEMS_BATCH_CLEARED for lists other than the selected one', () => {
     const {
       clearAllPurchasedItemsFromCache,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -320,14 +320,14 @@ describe('useShoppingListSubscriptions', () => {
       mockClient,
     );
 
-    const { safeEvict } = require('#/apollo/utils/cacheUpdaters');
+    const { safeEvict } = require('#apollo/utils/cacheUpdaters');
     expect(safeEvict).toHaveBeenCalledWith(mockCache, 'ShoppingList', 'list-1');
   });
 
   it('removes a deleted item as the event arrives, with no deferral', () => {
     const {
       removeFromShoppingListItemsConnection,
-    } = require('#features/shoppingList/cache/connections');
+    } = require('#entities/shoppingList/connections');
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));
@@ -366,8 +366,8 @@ describe('useShoppingListSubscriptions: another device toggles a row twice', () 
     const {
       moveShoppingListItemToPurchased,
       moveShoppingListItemToUnpurchased,
-    } = require('#features/shoppingList/cache/connections');
-    const fetchModule = require('#/services/subscriptions/fetchEventEntity');
+    } = require('#entities/shoppingList/connections');
+    const fetchModule = require('#services/subscriptions/fetchEventEntity');
     const fetchSpy = jest
       .spyOn(fetchModule, 'fetchEventEntity')
       .mockResolvedValue({ shoppingListItemsByIds: [{ id: 'i1' }] });

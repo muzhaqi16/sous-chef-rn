@@ -1,9 +1,4 @@
-import {
-  AccessibilityInfo,
-  AppState,
-  Platform,
-  type AppStateStatus,
-} from 'react-native';
+import { AccessibilityInfo, AppState, Platform } from 'react-native';
 import { getVersion, isEmulatorSync, isTablet } from 'react-native-device-info';
 import NetInfo from '@react-native-community/netinfo';
 import { installPlatform } from '#platform/install';
@@ -14,9 +9,9 @@ import { keychainSecureStore } from '#native/storage/secureStore';
 import {
   applyAppearanceToRuntime,
   applyThemeToRuntime,
-} from '#/theme/applyAppearance';
+} from '#theme/applyAppearance';
 import { preloadImages } from '#components/atoms/CachedImage';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { presentNativeAlert } from '#native/nativeAlert';
 import { reactNavigationScreenHooks } from '#hooks/navigation/screenHooks';
 import { streamedFileParts } from '#native/fileParts';
@@ -24,9 +19,12 @@ import { HapticService } from '#services/haptic/HapticService';
 import { ReviewPrompt } from '#native/ReviewPrompt';
 import { ApproximateLocation } from '#native/ApproximateLocation';
 
-// `null` is untyped but real: Android reports no state until its first change.
-const lifecycleState = (status: AppStateStatus | null): AppLifecycleState =>
-  status === null || status === 'extension' ? 'unknown' : status;
+// `currentState` is typed as any string, and Android reports none until its
+// first change: a state the port does not name is 'unknown'.
+const lifecycleState = (status: string | null | undefined): AppLifecycleState =>
+  status === 'active' || status === 'inactive' || status === 'background'
+    ? status
+    : 'unknown';
 
 // Every adapter delegates through an arrow or a getter: Metro's inline requires
 // then load each native module at its first use, not during this install,

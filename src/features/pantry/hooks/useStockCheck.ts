@@ -1,33 +1,27 @@
-import {
-  skipToken,
-  useApolloClient,
-  useMutation,
-  useQuery,
-} from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import {
   StockCheckAnswer,
   type StockConfidence,
   type StockDoubtReason,
-} from '#/graphql/generated/schemaTypes';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import {
-  settleMutation,
-  type SettleStatus,
-} from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { generateEntityId } from '#/utils/generateEntityId';
+  type WasteReason,
+} from '#graphql/generated/schemaTypes';
+import { errorService } from '#services/errorService';
+import { isVersionConflictCode } from '#utils/errors/versionConflict';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { SettleStatus } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { generateEntityId } from '#utils/generateEntityId';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { useToday } from '#hooks/app/useToday';
 import { useDayConfirmedRead } from '#hooks/apollo/useDayConfirmedRead';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { formatReading, readingOf } from '#domain/measure';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import type { StockCheckInputs } from '#features/pantry/offline/localWrites';
-import {
-  RecordPantryStockCheckDocument,
-  StockToConfirmDocument,
-} from './useStockCheck.generated';
+import { StockToConfirmDocument } from './useStockCheck.generated';
+import { recordPantryStockCheckWrite } from '#features/pantry/offline/localWrites';
 
 /** A stack to check, as the sheet shows it. */
 export interface StockCheckRow {
@@ -39,10 +33,15 @@ export interface StockCheckRow {
   amount: string;
   /** The stack's own unit, which "Some left" is counted in. */
   unitSymbol: string;
-  /** What one package holds, where it is known: "Some left" can count it too. */
-  contents: { unitId: string; unitSymbol: string } | null;
+  /** The unit what a package holds is counted in: "Some left" can count it too. */
+  contents: {
+    unitId: string;
+    unitSymbol: string;
+  } | null;
   level: StockConfidence | null;
   reasons: readonly StockDoubtReason[];
+  /** When the stack's amount was last confirmed, as the server dates it. */
+  lastConfirmedAt: string | null;
 }
 
 /**
@@ -57,23 +56,23 @@ export type StockCheckChoice =
       contents?: { amount: number; unitId: string };
     }
   | { answer: typeof StockCheckAnswer.UsedUp }
-  | { answer: typeof StockCheckAnswer.ThrewOut };
+  | { answer: typeof StockCheckAnswer.ThrewOut; reason: WasteReason };
 
 export interface StockCheckAnswered {
   status: SettleStatus;
-  /** Rows the server refused (a stack that moved since it was seen): to look at again. */
-  refused: string[];
+  /** Rows the server refused, each with why and the field it names: to look at again. */
+  refused: { pantryItemId: string; message: string; field: string | null }[];
 }
 
 /**
- * What remains once answered: an absolute count, never a delta. Still have
- * confirms and moves nothing.
+ * What the server records for an answer: an absolute count, never a delta, and
+ * the packages as stated, what is left in an open one going with them. Still
+ * have confirms and moves nothing.
  */
 const heldAfter = (choice: StockCheckChoice): number | null => {
   switch (choice.answer) {
     case StockCheckAnswer.SomeLeft:
-      // Only the server turns contents into what the stack holds.
-      return choice.contents ? null : choice.quantity;
+      return choice.quantity;
     case StockCheckAnswer.UsedUp:
     case StockCheckAnswer.ThrewOut:
       return 0;
@@ -81,6 +80,19 @@ const heldAfter = (choice: StockCheckChoice): number | null => {
     default:
       return null;
   }
+};
+
+/** Why the server refused one row, in the app's words. */
+const refusalOf = (
+  code: string | null | undefined,
+  t: ReturnType<typeof useTranslation>['t'],
+): string => {
+  if (isVersionConflictCode(code)) return t('pantryScreen.stockCheckStale');
+  return errorService.messageForCode(
+    code ?? '',
+    t,
+    t('pantryScreen.stockCheckFailed'),
+  );
 };
 
 /**
@@ -91,12 +103,13 @@ const heldAfter = (choice: StockCheckChoice): number | null => {
  */
 export function useStockCheck(enabled = true) {
   const { t } = useTranslation();
-  const client = useApolloClient();
   const { pantry } = useCurrentPantry();
   const today = useToday();
   const system = useReadingSystem();
+  const apiUnavailable = useIsApiUnavailable();
   const pantryId = pantry?.id;
-  // Cached without its day: a new day shows the last check until it is confirmed.
+  // Cached without its day: a new day shows the last check until it is
+  // confirmed, and until then how sure the server is reads as unknown.
   const dayRead = useDayConfirmedRead(
     enabled && pantryId ? `${today}:${pantryId}` : null,
   );
@@ -106,13 +119,15 @@ export function useStockCheck(enabled = true) {
       ? { variables: { pantryId, today }, ...dayRead.policy }
       : skipToken,
   );
+  // Offline the device answers the read itself, with whatever day it holds:
+  // only the API's answer is today's.
   dayRead.markAnswered(
-    data && !loading && !error
+    data && !loading && !error && !apiUnavailable
       ? `${variables.today}:${variables.pantryId}`
       : null,
   );
-  const [record] = useMutation(RecordPantryStockCheckDocument, {
-    context: { localFirst: true },
+  const record = useLocalWrite(recordPantryStockCheckWrite, {
+    fallback: t('pantryScreen.stockCheckFailed'),
   });
 
   // The subject guard: an answer for another pantry or day is not this one's.
@@ -130,8 +145,13 @@ export function useStockCheck(enabled = true) {
             unitSymbol: stack.netWeightUnit.symbol,
           }
         : null,
-    level: stack.stockConfidence?.level ?? null,
-    reasons: stack.stockConfidence?.reasons ?? [],
+    ...(dayRead.isConfirmed
+      ? {
+          level: stack.stockConfidence?.level ?? null,
+          reasons: stack.stockConfidence?.reasons ?? [],
+          lastConfirmedAt: stack.stockConfidence?.lastConfirmedAt ?? null,
+        }
+      : { level: null, reasons: [], lastConfirmedAt: null }),
   }));
   const state: DataState = useDataState({
     loading,
@@ -153,11 +173,13 @@ export function useStockCheck(enabled = true) {
       now: checkedAt,
       rows: answers.map(({ row, choice }) => ({
         pantryItemId: row.id,
+        itemName: row.name,
         held: heldAfter(choice),
+        ...(choice.answer === StockCheckAnswer.SomeLeft &&
+          choice.contents && { remainingNetWeight: choice.contents.amount }),
       })),
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      RecordPantryStockCheckDocument,
+    const settled = await record.send(
       {
         today,
         input: {
@@ -180,14 +202,12 @@ export function useStockCheck(enabled = true) {
                     : {}),
                 }
               : {}),
+            ...(choice.answer === StockCheckAnswer.ThrewOut
+              ? { wasteReason: choice.reason }
+              : {}),
           })),
         },
       },
-      write =>
-        settleMutation(() => record(write), {
-          document: RecordPantryStockCheckDocument,
-          fallback: t('pantryScreen.stockCheckFailed'),
-        }),
       inputs,
     );
     const results = appliedPayload(settled.data)?.results ?? [];
@@ -195,12 +215,18 @@ export function useStockCheck(enabled = true) {
       status: settled.status,
       refused: results
         .filter(result => !result.success)
-        .map(result => result.pantryItemId),
+        .map(result => ({
+          pantryItemId: result.pantryItemId,
+          message: refusalOf(result.failure?.code, t),
+          field: result.failure?.field ?? null,
+        })),
     };
   };
 
   return {
     rows,
+    /** Today's answer is still on its way: what the rows say of doubt is not known yet. */
+    asking: !dayRead.isConfirmed && loading,
     state,
     /** Asks again after a failed read. */
     retry: () => {

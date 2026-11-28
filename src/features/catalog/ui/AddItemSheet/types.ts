@@ -1,8 +1,5 @@
-import type { RefObject } from 'react';
-import type { BottomSheetModalRef } from '#hooks/ui/useStandardBottomSheet';
-import type { SearchBarRef } from '#components/molecules/SearchBar';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
-import type { TranslationKey } from '#/i18n';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
+import type { TranslationKey } from '#i18n';
 import type {
   BaseSuggestionItem,
   SuggestionsHookResult,
@@ -68,39 +65,28 @@ export interface AddItemSheetProps<
   onQuickAddSuggestion: (item: T) => void;
   /** Hides the suggestion from this surface. */
   onDismissSuggestion?: (item: T) => void;
-  onAddManually: (searchValue: string) => void;
+  /** Readies what the details step reads besides the name, as it opens. */
+  onAddManually?: (searchValue: string) => void;
   /**
    * The step the sheet opens on. `details` is the + menu's "Add manually": the
    * sheet opens on the form, after asking `onAddManually('')` to prep it.
    */
   startStep?: 'search' | 'details';
-  shouldFetch?: boolean;
   initialSearchQuery?: string;
-  bottomSheetRef?: RefObject<BottomSheetModalRef>;
-  searchBarRef?: RefObject<SearchBarRef>;
   /** Defaults to true. */
   showImages?: boolean;
   /** Rendered above the action buttons. */
   tutorialHint?: React.ReactNode;
   /**
-   * Renders the "details" step IN PLACE in this sheet: one BottomSheetModal,
-   * one backdrop, no stacking. The consumer still gets
-   * `onAddManually(searchValue)` first, to prep the form's inputs.
+   * The details step, rendered IN PLACE in this sheet: one BottomSheetModal,
+   * one backdrop, no stacking. Its form asks the sheet before input is lost.
+   * `itemName` is what the search held: gorhom renders a sheet's content a
+   * render behind its owner, so a name the owner stores reaches a form that
+   * has already read its defaults.
+   * Verified: #gorhom-calls-the-ondismiss-of-the-render-before-the-close
    */
-  /**
-   * The in-place details step. `holdOpen(true)` stops a pan-down from closing
-   * the sheet, for a form holding input it would lose.
-   */
-  renderDetails?: (controls: {
+  renderDetails?: (step: {
     goBack: () => void;
-    holdOpen: (held: boolean) => void;
+    itemName: string;
   }) => React.ReactNode;
-}
-
-export interface AddItemSheetState {
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  /** Deferred until after the sheet's open animation. */
-  shouldFetch: boolean;
-  shouldRenderSuggestions: boolean;
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { HapticService } from '#/services/haptic/HapticService';
+import { HapticService } from '#services/haptic/HapticService';
 import { SwipeActionButton } from '#components/organisms/SwipeableItem/SwipeActionButton';
 import { styles } from '#components/organisms/SwipeableItem/styles';
 import type { SwipeActionsProps } from '#components/organisms/SwipeableItem/types';

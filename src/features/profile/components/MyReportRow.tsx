@@ -2,18 +2,18 @@ import React from 'react';
 import { RowCard } from '#components/atoms/RowCard';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import {
   ModerationContentType,
   ReviewSubmissionStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { ListItem } from '#components/molecules/ListItem';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { Text } from '#components/atoms/Text';
 import type { BadgeVariant } from '#components/atoms/Badge';
-import { commonStyles } from '#/styles/commonStyles';
-import { rowType } from '#/theme/foundations/type';
-import { formatShortDate } from '#/utils/formatters/date';
+import { commonStyles } from '#styles/commonStyles';
+import { rowType } from '#theme/foundations/type';
+import { formatShortDate } from '#utils/formatters/date';
 import { photoDisplayUrl, type PhotoLike } from '#utils/imageUtils';
 import { REPORT_TYPE_LABEL_KEYS } from '#features/profile/utils/reportLabels';
 import { profileTestIDs } from '#features/profile/testIDs';

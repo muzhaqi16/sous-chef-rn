@@ -2,12 +2,11 @@
  * Local-first: `isOpened`/`openedAt` show until the server answers.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { OpenPantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
-import { useTranslation } from '#/i18n';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
+import { openPantryItemBatchWrite } from '#features/pantry/offline/localWrites';
 
 interface UseOpenPantryItemBatchOptions {
   onSuccess?: () => void;
@@ -17,16 +16,13 @@ export function useOpenPantryItemBatch({
   onSuccess,
 }: UseOpenPantryItemBatchOptions = {}) {
   const { t } = useTranslation();
-  const client = useApolloClient();
-  const [openMutation] = useMutation(OpenPantryItemBatchDocument, {
-    context: { localFirst: true },
+  const markOpened = useLocalWrite(openPantryItemBatchWrite, {
+    fallback: t('errors.openBatchFailed'),
   });
 
   const openBatch = async (batchId: string): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'PantryItemBatch', id: batchId },
-      fields: { isOpened: true, openedAt: new Date().toISOString() },
-      variables: {
+    const settled = await markOpened.send(
+      {
         today: todayKey(),
         input: {
           batchId,
@@ -34,12 +30,11 @@ export function useOpenPantryItemBatch({
           idempotencyKey: generateEntityId(),
         },
       },
-      mutate: openMutation,
-      settle: {
-        document: OpenPantryItemBatchDocument,
-        fallback: t('errors.openBatchFailed'),
+      {
+        entity: { __typename: 'PantryItemBatch', id: batchId },
+        fields: { isOpened: true, openedAt: new Date().toISOString() },
       },
-    });
+    );
     if (settled.status === 'failed') return false;
     onSuccess?.();
     return true;

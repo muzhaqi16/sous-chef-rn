@@ -1,10 +1,10 @@
 import { useMutation } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { ChangePantryItemItemDocument } from '#features/pantry/hooks/mutations/useMovePantryItem.generated';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { presentFailure } from '#/utils/errors/presentFailure';
-import { todayKey } from '#/utils/dateUtils';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { presentFailure } from '#utils/errors/presentFailure';
+import { todayKey } from '#utils/dateUtils';
 
 /**
  * `receiptCorrectionRecorded`: the household's next receipt reads the stock's

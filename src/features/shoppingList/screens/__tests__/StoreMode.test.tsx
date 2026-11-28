@@ -1,7 +1,7 @@
 import React from 'react';
 import { RefreshControl } from 'react-native';
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { controlNear } from '#/test-utils/controlNear';
@@ -17,12 +17,12 @@ import {
   type ShoppingListNode,
 } from '#/test-utils/fixtures/shoppingListFixtures';
 import { useStore } from '#store';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { kitTestIDs } from '#components/testIDs';
 import {
   StoreDepartment,
   StoreRouteSource,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   GetShoppingListDetailsDocument,
   GetShoppingListItemsFilteredDocument,

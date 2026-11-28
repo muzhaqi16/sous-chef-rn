@@ -1,10 +1,10 @@
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import type {
   LabeledLine,
   ReceiptLineLabel,
   ReceiptLineLabels,
   StructuringAvailability,
-} from '#/types/receiptStructuring';
+} from '#types/receiptStructuring';
 import { nativeMethod, parseList } from './nativeModule';
 
 // A record so a label added to the union must be added here too.

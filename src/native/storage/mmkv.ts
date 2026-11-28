@@ -1,7 +1,7 @@
 import { createMMKV, existsMMKV, type MMKV } from 'react-native-mmkv';
-import { logger } from '#/utils/environment';
-import { sleep } from '#/utils/backoff';
-import { STORAGE_KEY } from '#/store/persistedKeys';
+import { logger } from '#utils/environment';
+import { sleep } from '#utils/backoff';
+import { STORAGE_KEY } from '#store/persistedKeys';
 import {
   DeviceKeyManager,
   type DeviceEncryptionKey,

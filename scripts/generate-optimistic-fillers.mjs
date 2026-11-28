@@ -101,18 +101,11 @@ const ENUM_DEFAULTS = {
  */
 const TARGETS = [
   {
-    graphql: fromRoot(
-      'src',
-      'features',
-      'shoppingList',
-      'cache',
-      'items.graphql',
-    ),
+    graphql: fromRoot('src', 'entities', 'shoppingList', 'items.graphql'),
     out: fromRoot(
       'src',
-      'features',
+      'entities',
       'shoppingList',
-      'cache',
       'shoppingListItemRowNeutral.generated.ts',
     ),
     typesFrom: './items.generated',
@@ -124,24 +117,22 @@ const TARGETS = [
   {
     graphql: fromRoot(
       'src',
-      'features',
-      'catalog',
-      'hooks',
-      'useCreateStorageLocation.graphql',
+      'entities',
+      'storageLocation',
+      'storageLocations.graphql',
     ),
     out: fromRoot(
       'src',
-      'features',
-      'catalog',
-      'hooks',
-      'useCreateStorageLocationNeutral.generated.ts',
+      'entities',
+      'storageLocation',
+      'storageLocationRowNeutral.generated.ts',
     ),
-    typesFrom: './useCreateStorageLocation.generated',
+    typesFrom: './storageLocations.generated',
     unmasked: true,
     fragments: {
-      useCreateStorageLocation_row: [
+      storageLocations_row: [
         'NEUTRAL_LOCAL_STORAGE_LOCATION',
-        'UseCreateStorageLocation_RowFragment',
+        'StorageLocations_RowFragment',
       ],
     },
   },
@@ -167,18 +158,11 @@ const TARGETS = [
     },
   },
   {
-    graphql: fromRoot(
-      'src',
-      'features',
-      'catalog',
-      'cache',
-      'usualStores.graphql',
-    ),
+    graphql: fromRoot('src', 'entities', 'store', 'usualStores.graphql'),
     out: fromRoot(
       'src',
-      'features',
-      'catalog',
-      'cache',
+      'entities',
+      'store',
       'usualStoreRowNeutral.generated.ts',
     ),
     typesFrom: './usualStores.generated',
@@ -205,16 +189,14 @@ const TARGETS = [
   {
     graphql: fromRoot(
       'src',
-      'features',
-      'pantry',
-      'cache',
+      'entities',
+      'pantryItem',
       'writeLocalPantryItem.graphql',
     ),
     out: fromRoot(
       'src',
-      'features',
-      'pantry',
-      'cache',
+      'entities',
+      'pantryItem',
       'writeLocalPantryItemNeutral.generated.ts',
     ),
     typesFrom: './writeLocalPantryItem.generated',
@@ -246,18 +228,11 @@ const TARGETS = [
     },
   },
   {
-    graphql: fromRoot(
-      'src',
-      'features',
-      'shoppingList',
-      'cache',
-      'list.graphql',
-    ),
+    graphql: fromRoot('src', 'entities', 'shoppingList', 'list.graphql'),
     out: fromRoot(
       'src',
-      'features',
+      'entities',
       'shoppingList',
-      'cache',
       'shoppingListRowNeutral.generated.ts',
     ),
     typesFrom: './list.generated',
@@ -693,11 +668,11 @@ function generate(schema, target) {
       ? `import {\n${[...enumTypes]
           .sort()
           .map(t => `  ${t},`)
-          .join('\n')}\n} from '#/graphql/generated/schemaTypes';\n`
+          .join('\n')}\n} from '#graphql/generated/schemaTypes';\n`
       : '') +
     (target.unmasked
       ? "import type { Unmasked } from '@apollo/client/masking';\n" +
-        "import type { NeutralByType } from '#/apollo/utils/writeLocalEntity';\n"
+        "import type { NeutralByType } from '#apollo/utils/writeLocalEntity';\n"
       : '') +
     `import type {\n${typeNames.map(t => `  ${t},`).join('\n')}\n} from '${
       target.typesFrom

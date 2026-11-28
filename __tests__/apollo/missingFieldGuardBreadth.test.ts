@@ -14,7 +14,7 @@
  * through that one branch. This file is the demonstration the replacement owes.
  */
 import { gql } from '@apollo/client';
-import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
+import { writePurchaseInfo } from '#entities/shoppingList/purchase';
 import {
   createApolloTestWrapper,
   recordMock,

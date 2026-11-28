@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 
@@ -15,7 +15,7 @@ import {
   useShoppingListData,
   useShoppingListSearchQuery,
 } from './ShoppingListDataContext';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 // Module-level flag: once purchased tab content has been shown, skip skeletons on remount.
 // Persists across component unmount/remount (stack navigation), resets on app restart.

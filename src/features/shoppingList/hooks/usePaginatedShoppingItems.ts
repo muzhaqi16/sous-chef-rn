@@ -5,17 +5,17 @@ import {
   type GetShoppingListItemsFilteredQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
-import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
   useConnectionData,
   type ConnectionData,
 } from '#hooks/utils/useConnectionData';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { isAbortError } from '#features/shoppingList/utils/abort';
 import type { HookReturn } from '#hooks/utils/types';
-import { scheduleIdle } from '#/utils/scheduleIdle';
+import { scheduleIdle } from '#utils/scheduleIdle';
 import { useListReadPolicy } from './useListReadPolicy';
+import { SHOPPING_ITEMS_PAGE_SIZE } from './shoppingItemsPage';
 
 /**
  * Carries inline meta fields for direct hook-layer access plus the masked
@@ -92,7 +92,7 @@ export function usePaginatedShoppingItems({
       ? {
           variables: {
             id: unpurchasedListId,
-            first: PAGINATION.ITEMS_PAGE_SIZE,
+            first: SHOPPING_ITEMS_PAGE_SIZE,
             isPurchased: false,
           },
           ...readPolicy,
@@ -113,7 +113,7 @@ export function usePaginatedShoppingItems({
       ? {
           variables: {
             id: purchasedListId,
-            first: PAGINATION.ITEMS_PAGE_SIZE,
+            first: SHOPPING_ITEMS_PAGE_SIZE,
             isPurchased: true,
           },
           ...readPolicy,

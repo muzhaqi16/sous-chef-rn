@@ -12,10 +12,10 @@ import {
 import { homeLink } from '#features/home/utils/shareLink';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useDataState } from '#hooks/data/useDataState';
-import { errorService } from '#/services/errorService';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { useTranslation } from '#/i18n';
+import { errorService } from '#services/errorService';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { useTranslation } from '#i18n';
 import { addToHomesCache } from '#features/home/hooks/homeCacheUpdaters';
 
 interface UseJoinHomeByCodeArgs {

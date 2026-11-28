@@ -5,23 +5,22 @@
  * to fan out.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import { MarkAsTemplateDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { useApolloClient } from '@apollo/client/react';
+import { useTranslation } from '#i18n';
 import { readCopyableList } from '#features/shoppingList/cache/copySource';
 import { listFromTemplate } from '#features/shoppingList/utils/listFromTemplate';
 import { useCopyShoppingList } from './useCopyShoppingList';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
-import { toastService } from '#/services/toastService';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { toastService } from '#services/toastService';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { markAsTemplateWrite } from '#features/shoppingList/offline/localWrites';
 
 export function useShoppingListTemplate() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [markMutation, { loading: marking }] = useMutation(
-    MarkAsTemplateDocument,
-    { context: { localFirst: true } },
-  );
+  const mark = useLocalWrite(markAsTemplateWrite, {
+    fallback: t('shoppingListScreens.failedToSaveTemplate'),
+  });
   const { copyList, copying: creating } = useCopyShoppingList(
     t('shoppingListScreens.failedToCreateFromTemplate'),
   );
@@ -30,16 +29,13 @@ export function useShoppingListTemplate() {
     id: string,
     templateName: string,
   ): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'ShoppingList', id },
-      fields: { isTemplate: true, templateName },
-      variables: { input: { id, templateName } },
-      mutate: markMutation,
-      settle: {
-        document: MarkAsTemplateDocument,
-        fallback: t('shoppingListScreens.failedToSaveTemplate'),
+    const settled = await mark.send(
+      { input: { id, templateName } },
+      {
+        entity: { __typename: 'ShoppingList', id },
+        fields: { isTemplate: true, templateName },
       },
-    });
+    );
     return settled.status !== 'failed';
   };
 
@@ -76,5 +72,10 @@ export function useShoppingListTemplate() {
     return listId;
   };
 
-  return { markAsTemplate, createFromTemplate, marking, creating };
+  return {
+    markAsTemplate,
+    createFromTemplate,
+    marking: mark.sending,
+    creating,
+  };
 }

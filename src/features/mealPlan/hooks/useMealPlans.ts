@@ -6,7 +6,7 @@ import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.genera
 import {
   SortOrder,
   type MealPlanFilters,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import {
   heldFetchPolicy,

@@ -1,27 +1,22 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import {
-  CreateMealPlanDocument,
-  UpdateMealPlanDocument,
-  DeleteMealPlanDocument,
-  GetMealPlansDocument,
-} from '#features/mealPlan/graphql/mealPlan.generated';
+import { useApolloClient } from '@apollo/client/react';
+import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import type { CreatePlanInputs } from '#features/mealPlan/offline/localWrites';
 import type {
   CreateMealPlanInput,
   UpdateMealPlanInput,
-} from '#/graphql/generated/schemaTypes';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
-import { readVersion } from '#/apollo/utils/entityWriteChain';
-import {
-  settleMutation,
-  type SettledFailure,
-} from '#/apollo/utils/settleMutation';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { generateEntityId } from '#/utils/generateEntityId';
+} from '#graphql/generated/schemaTypes';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { readVersion } from '#apollo/utils/entityWriteChain';
+import type { SettledFailure } from '#apollo/utils/settleMutation';
+import { generateEntityId } from '#utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
+import {
+  createMealPlanWrite,
+  deleteMealPlanWrite,
+  updateMealPlanWrite,
+} from '#features/mealPlan/offline/localWrites';
 
 /** A plan create as its caller acts on it; `failure` is what to show. */
 export type MealPlanCreateOutcome =
@@ -52,19 +47,25 @@ export function useMealPlanActions() {
   const user = useUser();
   const { t } = useTranslation();
 
-  const [createMealPlanMutation, { loading: creating }] = useMutation(
-    CreateMealPlanDocument,
-    { context: { localFirst: true } },
-  );
-
-  const [updateMealPlanMutation] = useMutation(UpdateMealPlanDocument, {
-    context: { localFirst: true },
+  const createPlan = useLocalWrite(createMealPlanWrite, {
+    fallback: t('mealPlan.failedToCreate'),
   });
 
-  const [deleteMealPlanMutation, { loading: deleting }] = useMutation(
-    DeleteMealPlanDocument,
-    { context: { localFirst: true } },
-  );
+  // A save made elsewhere since is refused, not overwritten.
+  const updatePlan = useLocalWrite(updateMealPlanWrite, {
+    fallback: t('errors.saveFailed'),
+    // A stale version means another member saved the plan since: show theirs.
+    onVersionConflict: () => {
+      void client.refetchQueries({
+        include: ['GetMealPlan', GetMealPlansDocument],
+      });
+    },
+  });
+
+  const deletePlan = useLocalWrite(deleteMealPlanWrite, {
+    fallback: t('mealPlanMain.deleteMealPlanFailed'),
+    removal: true,
+  });
 
   const createMealPlan = async (
     input: CreateMealPlanInput,
@@ -72,32 +73,15 @@ export function useMealPlanActions() {
   ): Promise<MealPlanCreateOutcome> => {
     // A caller deriving a plan mints it first, since its items name it as parent.
     const plan = { ...input, id: input.id ?? generateEntityId() };
-    // The local write publishes this id to every consumer, including the detail
-    // query on MealPlanMain. Hold that query off until the server has a row to
-    // answer with — see `unconfirmedCreates`.
-    unconfirmedCreates.mark(plan.id);
     const inputs: CreatePlanInputs = {
       plan,
       creatorId: user?.id,
       now: new Date().toISOString(),
     };
 
-    const settled = await pendingWritesOf(client.cache).send(
-      CreateMealPlanDocument,
-      { input: plan },
-      write =>
-        settleMutation(() => createMealPlanMutation(write), {
-          document: CreateMealPlanDocument,
-          fallback: t('mealPlan.failedToCreate'),
-          present,
-        }),
-      inputs,
-    );
-
-    // Released on every outcome: acknowledged and rejected both leave nothing
-    // for a detail read to miss, and a queued create has already been handed
-    // off to `queueStore` by the time the mutation resolves.
-    unconfirmedCreates.confirm(plan.id);
+    const settled = await createPlan.send({ input: plan }, inputs, {
+      settle: { ...(present && { present }) },
+    });
 
     if (settled.failure) return { status: 'failed', failure: settled.failure };
     return { status: settled.status === 'queued' ? 'queued' : 'applied' };
@@ -115,38 +99,15 @@ export function useMealPlanActions() {
       return false;
     }
 
-    // A stale version means another member saved the plan since: show theirs.
-    const showServerPlan = () => {
-      void client.refetchQueries({
-        include: ['GetMealPlan', GetMealPlansDocument],
-      });
-    };
-    // A save made elsewhere since is refused, not overwritten.
-    const settled = await sendFields(client.cache, {
-      entity,
-      fields: shownPlanFields(input),
-      variables: { input: { ...input, id, version } },
-      mutate: updateMealPlanMutation,
-      settle: {
-        document: UpdateMealPlanDocument,
-        fallback: t('errors.saveFailed'),
-        onVersionConflict: showServerPlan,
-      },
-    });
+    const settled = await updatePlan.send(
+      { input: { ...input, id, version } },
+      { entity: entity, fields: shownPlanFields(input) },
+    );
     return settled.status !== 'failed';
   };
 
   const deleteMealPlan = async (id: string) => {
-    const settled = await pendingWritesOf(client.cache).send(
-      DeleteMealPlanDocument,
-      { input: { id } },
-      write =>
-        settleMutation(() => deleteMealPlanMutation(write), {
-          document: DeleteMealPlanDocument,
-          fallback: t('mealPlanMain.deleteMealPlanFailed'),
-          removal: true,
-        }),
-    );
+    const settled = await deletePlan.send({ input: { id } });
     return settled.status !== 'failed';
   };
 
@@ -154,7 +115,7 @@ export function useMealPlanActions() {
     createMealPlan,
     updateMealPlan,
     deleteMealPlan,
-    creating,
-    deleting,
+    creating: createPlan.sending,
+    deleting: deletePlan.sending,
   };
 }

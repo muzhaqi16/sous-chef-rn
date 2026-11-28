@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
-import { AppPressable } from '#components/atoms/AppPressable';
+import { useTranslation } from '#i18n';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -19,25 +19,24 @@ const ThemedNavigationRow = withUnistyles(NavigationRow, theme => ({
 import { HomeMembersSection } from '#features/home/components/HomeMembersSection';
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { useUser } from '#store/useAppStore';
-import { Icon } from '#components/atoms/Icon';
 import { Button } from '#components/molecules/Button';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
   executeRefreshWithFinally,
   executeWriteWithFinally,
-} from '#/utils/finallyHelpers';
-import { logger } from '#/utils/environment';
+} from '#utils/finallyHelpers';
+import { logger } from '#utils/environment';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { Text } from '#components/atoms/Text';
 import { getInviteDisplayName } from '#features/home/utils/inviteFormatters';
-import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
-import { buildJoinHomeUrl } from '#/utils/deepLinkUrls';
+import { getMemberDisplayName } from '#utils/formatters/memberFormatters';
+import { buildJoinHomeUrl } from '#utils/deepLinkUrls';
 import { shareUrl } from '#native/share';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import { canManageHome } from '#features/home/utils/homePermissions';
 import { homeTestIDs } from '#features/home/testIDs';
-import { fieldError, homeNameRule } from '#/utils/validation/common';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { fieldError, homeNameRule } from '#utils/validation/common';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 type RouteParams = {
   homeId: string;
@@ -63,12 +62,14 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     home,
     homeState,
     leaving,
+    deleting,
     refetch,
     saveName,
     changeRole,
     removeMember,
     revokeInvite,
     leaveHome,
+    deleteHome,
     toggleJoinCode,
     rotateJoinCode,
     rotatingJoinCode,
@@ -153,21 +154,12 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 
   const handleLeaveHome = async () => {
     if (!home) return;
+    if (await leaveHome(home.name)) goBack();
+  };
 
-    // Check if user is owner
-    if (isOwner) {
-      alertService.alert(
-        t('labels.cannotLeave'),
-        t('homeDetail.ownerCannotLeaveMessage'),
-        [{ text: t('labels.ok') }],
-      );
-      return;
-    }
-
-    const success = await leaveHome(home.name);
-    if (success) {
-      goBack();
-    }
+  const handleDeleteHome = async () => {
+    if (!home) return;
+    if (await deleteHome(home.name)) goBack();
   };
 
   // Gate on the absence of the home, never `loading`: Apollo reports `loading:
@@ -189,7 +181,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                 }}
                 empty={{
                   icon: 'home-outline',
-                  title: t('errors.codes.homeNotFound'),
+                  title: t('errors.homeNotFound'),
                 }}
               />
             ),
@@ -242,32 +234,31 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
                   {home.joinCode}
                 </Text>
               </View>
-              <AppPressable
-                style={styles.copyButton}
+              <IconButton
+                name={copied ? 'checkmark-circle' : 'copy-outline'}
+                size="sm"
+                tone={copied ? 'success' : 'textPrimary'}
                 onPress={handleCopyJoinCode}
                 accessibilityLabel={t('homeDetail.labelJoinCode')}
-              >
-                <Icon
-                  name={copied ? 'checkmark-circle' : 'copy-outline'}
-                  size={20}
-                  tone={copied ? 'success' : 'textPrimary'}
-                />
-              </AppPressable>
-              <AppPressable
                 style={styles.copyButton}
+              />
+              <IconButton
+                name="share-outline"
+                size="sm"
+                tone="primary"
                 onPress={handleShareJoinLink}
                 accessibilityLabel={t('labels.shareLink')}
-              >
-                <Icon name="share-outline" size={20} tone="primary" />
-              </AppPressable>
-              <AppPressable
                 style={styles.copyButton}
+              />
+              <IconButton
+                name="refresh-outline"
+                size="sm"
+                tone="textPrimary"
                 onPress={handleRotateJoinCode}
-                disabled={rotatingJoinCode}
                 accessibilityLabel={t('homeDetail.rotateJoinCodeConfirm')}
-              >
-                <Icon name="refresh-outline" size={20} tone="textPrimary" />
-              </AppPressable>
+                disabled={rotatingJoinCode}
+                style={styles.copyButton}
+              />
             </View>
           ) : null}
         </>
@@ -349,32 +340,38 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
         />
       ),
     },
-    // Only show Leave Home section for non-owners
-    ...(!isOwner
-      ? [
-          {
-            title: t('labels.dangerZone'),
-            content: (
-              <View style={styles.leaveHomeSection}>
-                <Text
-                  role="caption"
-                  tone="secondary"
-                  style={styles.leaveHomeDescription}
-                >
-                  {t('homeDetail.leaveHomeDescription')}
-                </Text>
-                <Button
-                  title={t('labels.leaveHome')}
-                  onPress={handleLeaveHome}
-                  variant="danger"
-                  loading={leaving}
-                  disabled={leaving}
-                />
-              </View>
-            ),
-          },
-        ]
-      : []),
+    // The server lets only the OWNER delete a home — the role, not the
+    // canManageHome flag ADMINs hold — and an owner cannot leave one.
+    {
+      title: t('labels.dangerZone'),
+      content: isOwner ? (
+        <View style={styles.dangerZone}>
+          <Text role="caption" tone="secondary">
+            {t('homeDetail.deleteHomeDescription')}
+          </Text>
+          <Button
+            title={t('confirmations.deleteHomeTitle')}
+            onPress={handleDeleteHome}
+            variant="danger"
+            loading={deleting}
+            disabled={deleting}
+          />
+        </View>
+      ) : (
+        <View style={styles.dangerZone}>
+          <Text role="caption" tone="secondary">
+            {t('homeDetail.leaveHomeDescription')}
+          </Text>
+          <Button
+            title={t('labels.leaveHome')}
+            onPress={handleLeaveHome}
+            variant="danger"
+            loading={leaving}
+            disabled={leaving}
+          />
+        </View>
+      ),
+    },
   ];
 
   return (
@@ -412,8 +409,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: 'transparent',
     borderBottomWidth: theme.borderWidth.none,
   },
-  leaveHomeSection: {
+  dangerZone: {
     gap: theme.spacing.md,
   },
-  leaveHomeDescription: {},
 }));

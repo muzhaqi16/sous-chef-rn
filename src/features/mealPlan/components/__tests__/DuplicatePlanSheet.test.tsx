@@ -1,95 +1,15 @@
 'use no memo';
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
-import type { ViewProps } from 'react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
+import { t } from '#i18n';
 import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import { MealPlanType, MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MealPlanType, MembershipRole } from '#graphql/generated/schemaTypes';
 import { DuplicatePlanSheet } from '../DuplicatePlanSheet';
-
-jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
-  useStandardBottomSheet: jest.fn(() => ({
-    ref: { current: null },
-    modalProps: {},
-    contentContainerStyle: {},
-  })),
-  BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
-}));
-
-jest.mock('#components/atoms/BottomSheetFormScrollView', () => {
-  const RN = require('react-native');
-  return {
-    BottomSheetFormScrollView: (props: ViewProps) =>
-      require('react').createElement(RN.View, props),
-  };
-});
-
-jest.mock('#components/molecules/BottomSheetHeader', () => {
-  const RN = require('react-native');
-  const R = require('react');
-  return {
-    BottomSheetHeader: ({
-      title,
-      onCancel,
-      onConfirm,
-      confirmLabel,
-      confirmDisabled,
-    }: {
-      title: string;
-      onCancel: () => void;
-      onConfirm: () => void;
-      confirmLabel?: string;
-      confirmDisabled?: boolean;
-    }) =>
-      R.createElement(
-        RN.View,
-        { testID: 'bottom-sheet-header' },
-        R.createElement(RN.Text, null, title),
-        R.createElement(
-          RN.Pressable,
-          { onPress: onCancel, testID: 'cancel-button' },
-          R.createElement(RN.Text, null, 'Cancel'),
-        ),
-        R.createElement(
-          RN.Pressable,
-          {
-            onPress: onConfirm,
-            testID: 'confirm-button',
-            disabled: confirmDisabled,
-          },
-          R.createElement(RN.Text, null, confirmLabel),
-        ),
-      ),
-  };
-});
-
-jest.mock('#components/atoms/FormInput', () => {
-  const RN = require('react-native');
-  const R = require('react');
-  return {
-    FormInput: ({
-      label,
-      value,
-      onChangeText,
-      placeholder,
-    }: {
-      label: string;
-      value?: string;
-      onChangeText?: (text: string) => void;
-      placeholder?: string;
-    }) =>
-      R.createElement(
-        RN.View,
-        null,
-        R.createElement(RN.Text, null, label),
-        R.createElement(RN.TextInput, {
-          value,
-          onChangeText,
-          placeholder,
-          testID: `form-input-${label?.replace(/\s+/g, '-').toLowerCase()}`,
-        }),
-      ),
-  };
-});
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: (props: { name: string }) => {
@@ -164,7 +84,8 @@ describe('DuplicatePlanSheet', () => {
 
   it('renders the New Plan Name input', () => {
     render(<DuplicatePlanSheet {...defaultProps} />);
-    expect(screen.getByText('New Plan Name')).toBeTruthy();
+    // A required field's label ends in its marker.
+    expect(screen.getByText('New Plan Name', { exact: false })).toBeTruthy();
   });
 
   it('renders Start Date label', () => {
@@ -191,31 +112,32 @@ describe('DuplicatePlanSheet', () => {
     expect(screen.queryByText('Current Plan')).toBeNull();
   });
 
-  it('shows Duplicating... label when loading', () => {
+  const duplicateButton = () =>
+    screen.getByRole('button', { name: t('duplicatePlan.duplicate') });
+  const nameInput = () => screen.getByDisplayValue('Weekly Plan (Copy)');
+
+  it('holds the duplicate while one is in flight', () => {
     render(<DuplicatePlanSheet {...defaultProps} loading={true} />);
-    expect(screen.getByText('Duplicating...')).toBeTruthy();
+    expect(duplicateButton()).toBeDisabled();
   });
 
-  it('shows Duplicate label when not loading', () => {
+  it('offers Duplicate when not loading', () => {
     render(<DuplicatePlanSheet {...defaultProps} loading={false} />);
-    expect(screen.getByText('Duplicate')).toBeTruthy();
+    expect(duplicateButton()).toBeEnabled();
   });
 
-  it('calls onClose when cancel is pressed', async () => {
+  it('calls onClose when close is pressed', async () => {
     const user = userEvent.setup();
     render(<DuplicatePlanSheet {...defaultProps} />);
-    await user.press(screen.getByTestId('cancel-button'));
+    await user.press(screen.getByRole('button', { name: t('labels.close') }));
     expect(defaultProps.onClose).toHaveBeenCalled();
+    expect(defaultProps.onDuplicate).not.toHaveBeenCalled();
   });
 
   it('calls onDuplicate with correct data when confirm is pressed after entering name', async () => {
     const user = userEvent.setup();
-    const { rerender } = render(
-      <DuplicatePlanSheet {...defaultProps} visible={false} />,
-    );
-    // Transition to visible to trigger render-time state reset
-    rerender(<DuplicatePlanSheet {...defaultProps} visible={true} />);
-    await user.press(screen.getByTestId('confirm-button'));
+    render(<DuplicatePlanSheet {...defaultProps} />);
+    await user.press(duplicateButton());
     expect(defaultProps.onDuplicate).toHaveBeenCalledWith({
       mealPlanId: 'mp-1',
       newName: 'Weekly Plan (Copy)',
@@ -224,21 +146,58 @@ describe('DuplicatePlanSheet', () => {
     });
   });
 
-  const confirmWith = async (mealPlan: MealPlanDisplayFragment) => {
+  it('sends the name as typed, trimmed', async () => {
     const user = userEvent.setup();
-    const props = { ...defaultProps, mealPlan };
-    const { rerender } = render(
-      <DuplicatePlanSheet {...props} visible={false} />,
-    );
-    rerender(<DuplicatePlanSheet {...props} visible={true} />);
+    render(<DuplicatePlanSheet {...defaultProps} />);
+    fireEvent.changeText(nameInput(), '  Spring Plan  ');
+    await user.press(duplicateButton());
+    const [[sent]] = defaultProps.onDuplicate.mock.calls;
+    expect(sent.newName).toBe('Spring Plan');
+  });
+
+  it('asks for a name on the field when duplicated without one', async () => {
+    const user = userEvent.setup();
+    render(<DuplicatePlanSheet {...defaultProps} />);
+    fireEvent.changeText(nameInput(), '   ');
+    await user.press(duplicateButton());
+    expect(
+      screen.getByText(t('mealPlan.nameRequiredMessage')),
+    ).toBeOnTheScreen();
+    expect(defaultProps.onDuplicate).not.toHaveBeenCalled();
+    expect(duplicateButton()).toBeEnabled();
+  });
+
+  it('opens fresh: the name, week and error go with the closing', async () => {
+    const user = userEvent.setup();
+    const view = render(<DuplicatePlanSheet {...defaultProps} />);
+    fireEvent.changeText(nameInput(), '');
+    await user.press(screen.getByTestId('icon-chevron-forward'));
+    await user.press(duplicateButton());
+    expect(
+      screen.getByText(t('mealPlan.nameRequiredMessage')),
+    ).toBeOnTheScreen();
+
+    view.rerender(<DuplicatePlanSheet {...defaultProps} visible={false} />);
+    view.rerender(<DuplicatePlanSheet {...defaultProps} visible={true} />);
+
+    expect(nameInput()).toBeOnTheScreen();
+    expect(screen.queryByText(t('mealPlan.nameRequiredMessage'))).toBeNull();
+    await user.press(duplicateButton());
+    const [[sent]] = defaultProps.onDuplicate.mock.calls;
+    expect(sent.newStartDate).toBe('2025-03-08');
+  });
+
+  const confirmWith = (mealPlan: MealPlanDisplayFragment) => {
+    const user = userEvent.setup();
+    render(<DuplicatePlanSheet {...defaultProps} mealPlan={mealPlan} />);
     return user;
   };
 
   // The copy starts the day after the source ends and covers as many days.
   // 9 March 2025 is a 23-hour day in the US: the last day is still the 14th.
   it('sends the copy first and last day as day keys, the same number of days long', async () => {
-    const user = await confirmWith(mockMealPlan);
-    await user.press(screen.getByTestId('confirm-button'));
+    const user = confirmWith(mockMealPlan);
+    await user.press(duplicateButton());
 
     const [[sent]] = defaultProps.onDuplicate.mock.calls;
     expect(sent.newStartDate).toBe('2025-03-08');
@@ -246,13 +205,13 @@ describe('DuplicatePlanSheet', () => {
   });
 
   it('steps the copy a week at a time, across a month boundary', async () => {
-    const user = await confirmWith({
+    const user = confirmWith({
       ...mockMealPlan,
       startDate: '2025-03-22',
       endDate: '2025-03-28',
     });
     await user.press(screen.getByTestId('icon-chevron-forward'));
-    await user.press(screen.getByTestId('confirm-button'));
+    await user.press(duplicateButton());
 
     const [[sent]] = defaultProps.onDuplicate.mock.calls;
     expect(sent.newStartDate).toBe('2025-04-05');
@@ -260,12 +219,12 @@ describe('DuplicatePlanSheet', () => {
   });
 
   it('copies a one-day plan onto one day', async () => {
-    const user = await confirmWith({
+    const user = confirmWith({
       ...mockMealPlan,
       startDate: '2025-03-07',
       endDate: '2025-03-07',
     });
-    await user.press(screen.getByTestId('confirm-button'));
+    await user.press(duplicateButton());
 
     const [[sent]] = defaultProps.onDuplicate.mock.calls;
     expect(sent.newStartDate).toBe('2025-03-08');
@@ -278,10 +237,11 @@ describe('DuplicatePlanSheet', () => {
     expect(screen.getByTestId('icon-chevron-forward')).toBeTruthy();
   });
 
-  it('does not call onDuplicate when mealPlan is null', async () => {
-    const user = userEvent.setup();
+  it('offers nothing to duplicate when mealPlan is null', () => {
     render(<DuplicatePlanSheet {...defaultProps} mealPlan={null} />);
-    await user.press(screen.getByTestId('confirm-button'));
+    expect(
+      screen.queryByRole('button', { name: t('duplicatePlan.duplicate') }),
+    ).toBeNull();
     expect(defaultProps.onDuplicate).not.toHaveBeenCalled();
   });
 });

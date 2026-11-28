@@ -1,5 +1,5 @@
 import type { DimensionValue } from 'react-native';
-import type { Theme } from '#/theme/themes';
+import type { Theme } from '#theme/themes';
 
 // Typed so the percentage keeps its `DimensionValue` type instead of widening
 // to `string` when returned from the factory below.
@@ -14,8 +14,9 @@ export const detailsPageBaseStyles = (theme: Theme) => ({
     flexGrow: 1,
   },
   pageContent: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
     paddingTop: theme.spacing.sm,
+    paddingBottom: theme.spacing.md,
     flexGrow: 1,
   },
   section: {

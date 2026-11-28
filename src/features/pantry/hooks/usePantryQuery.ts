@@ -4,7 +4,7 @@ import {
   type StandDownOptions,
 } from '#hooks/apollo/standDownOptions';
 import { skipToken, useQuery } from '@apollo/client/react';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import {
   GetPantryDocument,
   type GetPantryQuery,
@@ -12,11 +12,11 @@ import {
 import type {
   PantryItemFilters,
   PantryItemOrderBy,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
-import { usePagination } from '#/hooks/utils/usePagination';
-import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
-import { usePreservedConnection } from '#/hooks/apollo/usePreservedConnection';
+import { usePagination } from '#hooks/utils/usePagination';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
+import { usePreservedConnection } from '#hooks/apollo/usePreservedConnection';
 import {
   useIsHomeSelectionReady,
   useSetIsPantryQueryComplete,

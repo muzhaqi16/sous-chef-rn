@@ -1,6 +1,6 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { extractNodes } from '#/utils/connectionUtils';
+import { extractNodes } from '#utils/connectionUtils';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import type { ShoppingListItemNode } from './usePaginatedShoppingItems';

@@ -1,10 +1,10 @@
 import { useMutation } from '@apollo/client/react';
 import { ChangePasswordDocument } from '#operations/auth/auth.generated';
-import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { useTranslation } from '#/i18n';
-import { authService } from '#/services/authService';
+import { PasswordActionStatus } from '#graphql/generated/schemaTypes';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { useTranslation } from '#i18n';
+import { authService } from '#services/authService';
 import { useUserId } from '#store/useAppStore';
 
 /**

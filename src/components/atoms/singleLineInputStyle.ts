@@ -1,5 +1,5 @@
 import type { TextStyle } from 'react-native';
-import type { Theme } from '#/theme/themes';
+import type { Theme } from '#theme/themes';
 
 /** Native text metrics center single-line inputs; paragraph lineHeight does not. */
 export const singleLineInputStyle = (theme: Theme) =>

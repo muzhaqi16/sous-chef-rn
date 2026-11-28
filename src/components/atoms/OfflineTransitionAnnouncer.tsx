@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { AccessibilityInfo } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useOfflineStatus } from '#hooks/ui/useOfflineStatus';
 
 /**

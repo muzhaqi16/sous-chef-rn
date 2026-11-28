@@ -2,11 +2,12 @@ import type { DocumentNode } from 'graphql';
 import { QueueStore } from '../queueStore';
 import type { QueueError, QueuedMutation } from '../types';
 import { QueueCapacityError, QueueStatus } from '../types';
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   AddItemToShoppingListDocument,
+  RemoveItemsFromShoppingListDocument,
   RemoveItemFromShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -500,6 +501,68 @@ describe('QueueStore', () => {
         store.addMutation(toggle('tick', 'sli-new', 2_000));
 
         store.addMutation(remove('delete', 'sli-new'));
+
+        expect(store.getMutationsForUser('user-1')).toEqual([]);
+      });
+
+      // A clear names several rows: a row the server never had leaves it, and
+      // the clear still removes the rest.
+      it('takes a never-sent row out of a clear of several, keeping the rest', () => {
+        store.addMutation(
+          makeMutation({
+            id: 'create',
+            ...queuedMutationFor(AddItemToShoppingListDocument),
+            variables: {
+              input: {
+                shoppingListId: 'list-1',
+                items: [{ id: 'sli-new', itemName: 'Milk' }],
+              },
+            },
+            createdAt: 1_000,
+          }),
+        );
+
+        store.addMutation(
+          makeMutation({
+            id: 'clear',
+            ...queuedMutationFor(RemoveItemsFromShoppingListDocument),
+            variables: {
+              input: { shoppingListId: 'list-1', ids: ['sli-new', 'sli-1'] },
+            },
+            createdAt: 9_000,
+          }),
+        );
+
+        const queue = store.getMutationsForUser('user-1');
+        expect(queue.map(m => m.id)).toEqual(['clear']);
+        expect(queue[0]?.variables.input).toMatchObject({ ids: ['sli-1'] });
+      });
+
+      it('drops a clear whose every row the server never had', () => {
+        store.addMutation(
+          makeMutation({
+            id: 'create',
+            ...queuedMutationFor(AddItemToShoppingListDocument),
+            variables: {
+              input: {
+                shoppingListId: 'list-1',
+                items: [{ id: 'sli-new', itemName: 'Milk' }],
+              },
+            },
+            createdAt: 1_000,
+          }),
+        );
+
+        store.addMutation(
+          makeMutation({
+            id: 'clear',
+            ...queuedMutationFor(RemoveItemsFromShoppingListDocument),
+            variables: {
+              input: { shoppingListId: 'list-1', ids: ['sli-new'] },
+            },
+            createdAt: 9_000,
+          }),
+        );
 
         expect(store.getMutationsForUser('user-1')).toEqual([]);
       });

@@ -1,0 +1,8 @@
+# The detail screen's read. A push opens it with an id alone, maybe before the
+# device holds the row, so the cache answers when it can and the server when not.
+query NotificationDetail($id: ID!) {
+  notification(id: $id) {
+    id
+    ...useNotificationsOnLaunch_notification
+  }
+}

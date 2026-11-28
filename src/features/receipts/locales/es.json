@@ -136,6 +136,7 @@
       "sectionRecorded_one": "{{count}} línea ya registrada",
       "sectionRecorded_other": "{{count}} líneas ya registradas",
       "recordedBadge": "Registrada",
+      "waitingBadge": "Pendiente de sincronizar",
       "findingMatch": "Buscando una coincidencia…",
       "notMatchedYet": "Aún sin coincidencia. Toca para elegir el producto.",
       "sectionMatching_one": "Buscando el producto de {{count}} línea",
@@ -152,7 +153,16 @@
       "newPurchase": "Una compra nueva",
       "earlierPurchase": "{{amount}} el {{date}}",
       "earlierPicked": "La compra anterior",
-      "earlierBody": "Este recibo completa el precio y la tienda de esa compra. No se añade nada de nuevo a tu despensa."
+      "earlierBody": "Este recibo completa el precio y la tienda de esa compra. No se añade nada de nuevo a tu despensa.",
+      "earlierLoading": "Comprobando compras anteriores…",
+      "earlierOffline": "Las compras anteriores aparecerán aquí cuando vuelvas a tener conexión.",
+      "earlierFailed": "No se pudieron comprobar las compras anteriores.",
+      "purchaseChanged": "Esta compra cambió desde que la elegiste. Revísala de nuevo antes de añadirla.",
+      "purchaseDiffersAmount": "La cantidad no es la que registró la compra elegida.",
+      "purchaseDiffersPaid": "El precio no es el que registró la compra elegida.",
+      "purchaseDiffersDiscount": "El descuento no es el que registró la compra elegida.",
+      "purchaseDiffersItem": "La compra elegida es de otro producto.",
+      "purchaseDiffersStore": "La compra elegida es de otra tienda."
     },
     "photoSend": {
       "title": "¿Enviar la foto para leerla?",

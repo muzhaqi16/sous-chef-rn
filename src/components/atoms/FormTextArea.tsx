@@ -2,11 +2,8 @@ import React from 'react';
 import type { TextInputProps, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
-import {
-  ThemedBottomSheetTextInput,
-  ThemedTextInput,
-} from '#components/atoms/themedComponents';
-import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
+import { assignRef, type FocusableInputRef } from './inputRef';
 
 interface FormTextAreaProps
   extends Omit<TextInputProps, 'style' | 'multiline'> {
@@ -16,8 +13,8 @@ interface FormTextAreaProps
   containerStyle?: ViewStyle;
   inputStyle?: ViewStyle;
   numberOfLines?: number;
-  /** Use BottomSheetTextInput for proper keyboard handling inside bottom sheets */
-  useBottomSheetInput?: boolean;
+  /** The input, for a host that only focuses it (react-hook-form). */
+  ref?: React.Ref<FocusableInputRef>;
 }
 
 export const FormTextArea: React.FC<FormTextAreaProps> = ({
@@ -27,15 +24,9 @@ export const FormTextArea: React.FC<FormTextAreaProps> = ({
   containerStyle,
   inputStyle,
   numberOfLines = 4,
-  useBottomSheetInput = false,
+  ref,
   ...textInputProps
 }) => {
-  const contextValue = useIsBottomSheetInput();
-  const InputComponent =
-    useBottomSheetInput || contextValue
-      ? ThemedBottomSheetTextInput
-      : ThemedTextInput;
-
   const variantStyles = styles.useVariants({ error: !!error });
 
   // Calculate height based on number of lines
@@ -48,7 +39,8 @@ export const FormTextArea: React.FC<FormTextAreaProps> = ({
       required={required}
       containerStyle={containerStyle}
     >
-      <InputComponent
+      <ThemedTextInput
+        ref={node => assignRef(ref, node)}
         style={[variantStyles.input, { height: inputHeight }, inputStyle]}
         multiline
         numberOfLines={numberOfLines}

@@ -1,16 +1,11 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import type { CreatePantryInputs } from '#features/pantry/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import {
-  settleMutation,
-  type SettledFailure,
-} from '#/apollo/utils/settleMutation';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import type { CreatePantryInput } from '#/graphql/generated/schemaTypes';
-import { useTranslation } from '#/i18n';
-import { todayKey } from '#/utils/dateUtils';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { SettledFailure } from '#apollo/utils/settleMutation';
+import { generateEntityId } from '#utils/generateEntityId';
+import type { CreatePantryInput } from '#graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import { todayKey } from '#utils/dateUtils';
+import { createPantryWrite } from '#features/pantry/offline/localWrites';
 
 /** A write's verdict. A refusal carries the localized copy the caller shows. */
 export interface PantryWriteOutcome {
@@ -34,9 +29,9 @@ export interface CreatePantryOutcome extends PantryWriteOutcome {
  */
 export function useCreatePantry() {
   const { t } = useTranslation();
-  const client = useApolloClient();
-  const [createPantry, { loading }] = useMutation(CreatePantryDocument, {
-    context: { localFirst: true },
+  const createPantry = useLocalWrite(createPantryWrite, {
+    fallback: t('errors.createPantryFailed'),
+    present: 'none',
   });
 
   const create = async (
@@ -44,40 +39,24 @@ export function useCreatePantry() {
   ): Promise<CreatePantryOutcome> => {
     const id = generateEntityId();
     const input = { ...fields, id };
-    // Selecting the pantry opens its event subscription, which the server
-    // refuses until the create lands — see `unconfirmedCreates`.
-    unconfirmedCreates.mark(id);
     const today = todayKey();
     const inputs: CreatePantryInputs = { pantry: input, today };
 
     let result: CreatePantryOutcome['result'] = {};
-    const settled = await pendingWritesOf(client.cache).send(
-      CreatePantryDocument,
-      { input, today },
-      write =>
-        settleMutation(
-          async () => {
-            result = await createPantry(write);
-            return result;
-          },
-          {
-            document: CreatePantryDocument,
-            fallback: t('errors.createPantryFailed'),
-            present: 'none',
-          },
-        ),
-      inputs,
-    );
-    // Released on every outcome; a queued create is tracked by the offline
-    // queue's pending set from here on.
-    unconfirmedCreates.confirm(id);
+    const settled = await createPantry.send({ input, today }, inputs, {
+      run: async (mutate, write) => {
+        const answer = await mutate(write);
+        result = answer;
+        return answer;
+      },
+    });
     if (settled.status === 'failed') {
       return { status: 'rejected', failure: settled.failure, result, id };
     }
     return { status: 'ok', result, id };
   };
 
-  return { createPantry: create, creating: loading };
+  return { createPantry: create, creating: createPantry.sending };
 }
 
 /** The mutate function `useCreatePantry` returns, for callers that pass it on. */

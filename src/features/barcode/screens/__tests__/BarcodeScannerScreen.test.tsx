@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, render, screen, userEvent } from '@testing-library/react-native';
-import { t } from '#/i18n';
-import { PermissionService } from '#/services/permissions/PermissionService';
+import { t } from '#i18n';
+import { PermissionService } from '#services/permissions/PermissionService';
 import { HapticService } from '#services/haptic/HapticService';
 import type { BarcodeSource } from '#features/barcode/types';
 import { BarcodeScannerScreen } from '../BarcodeScannerScreen';

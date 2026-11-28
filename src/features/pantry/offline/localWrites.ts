@@ -7,18 +7,18 @@ import type {
   OperationVariables,
   Reference,
 } from '@apollo/client';
-import { rowBaseline } from '#/apollo/pendingWrites/conflictRead';
-import { inputIdOf } from '#/apollo/pendingWrites/inputId';
+import { rowBaseline } from '#apollo/pendingWrites/conflictRead';
+import { inputIdOf } from '#apollo/pendingWrites/inputId';
 import {
   entityFields,
   type EntityFieldsInputs,
-} from '#/apollo/pendingWrites/entityFields';
-import type { ConflictRead, LocalWrite } from '#/apollo/pendingWrites/types';
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
-import { ItemCondition } from '#/graphql/generated/schemaTypes';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
+} from '#apollo/pendingWrites/entityFields';
+import type { ConflictRead, LocalWrite } from '#apollo/pendingWrites/types';
+import { writeEntityFields } from '#apollo/utils/localFirstFields';
+import { isHeld } from '#apollo/utils/writeLocalEntity';
+import { BatchStatus, ItemCondition } from '#graphql/generated/schemaTypes';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
 import {
   PantryItemConflict_PantryItemFragmentDoc,
   PantryItemForConflictDocument,
@@ -32,7 +32,7 @@ import {
   listAnsweredPantryItem,
   showLocalPantryItem,
   type PantryItemRef,
-} from '#features/pantry/cache/items';
+} from '#entities/pantryItem/items';
 import {
   addPantryToHomeCache,
   removeOptimisticPantry,
@@ -44,7 +44,7 @@ import {
   typedExpiryKind,
   isBatchesPage,
   writeRestatedBatches,
-} from '#features/pantry/cache/restatedStack';
+} from '#entities/pantryItem/restatedStack';
 import {
   bumpStock,
   countNewBatch,
@@ -52,8 +52,27 @@ import {
   moveContentsTo,
   rememberConsumeUnit,
   writeHeldStock,
-} from '#features/pantry/cache/stock';
-import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
+} from '#entities/pantryItem/stock';
+import type { LocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
+import { bindLocalWrite } from '#apollo/pendingWrites/bindLocalWrite';
+import {
+  AdjustPantryItemQuantityDocument,
+  ConvertExpiredToWasteDocument,
+  CorrectPantryItemPackageSizeDocument,
+  CreatePantryDocument,
+  CreatePantryItemDocument,
+  CreatePantryItemUsageDocument,
+  DeletePantryDocument,
+  DeletePantryItemDocument,
+  MarkPantryAsDefaultDocument,
+  OpenPantryItemBatchDocument,
+  RestockPantryItemDocument,
+  UpdatePantryDocument,
+  UpdatePantryItemDocument,
+  UpdatePantryItemQuantityDocument,
+  WastePantryItemBatchDocument,
+} from '#features/pantry/graphql/pantry.generated';
+import { RecordPantryStockCheckDocument } from '#features/pantry/hooks/useStockCheck.generated';
 
 const stackRef = (id: string): PantryItemRef => ({
   __typename: 'PantryItem',
@@ -142,11 +161,18 @@ export const setStock: LocalWrite<SetStockInputs> = {
 
 /**
  * A stock check's rows, as found: what each stack holds now, absolute, or null
- * where the answer moves nothing (still have) or only the server can say.
+ * where the answer moves nothing (still have) or only the server can say; with
+ * `remainingNetWeight`, what its packages were found to hold, in its own unit.
  */
 export type StockCheckInputs = {
   pantryId: string;
-  rows: readonly { pantryItemId: string; held: number | null }[];
+  rows: readonly {
+    pantryItemId: string;
+    /** What a refusal names the row by. */
+    itemName: string;
+    held: number | null;
+    remainingNetWeight?: number;
+  }[];
   now: string;
 };
 
@@ -171,11 +197,15 @@ function leaveStockCheck(
 export const recordStockCheck: LocalWrite<StockCheckInputs> = {
   apply(cache, { inputs: { pantryId, rows, now } }) {
     const emptied = new Set<string>();
-    for (const { pantryItemId, held } of rows) {
+    for (const { pantryItemId, held, remainingNetWeight } of rows) {
       const stack = stackRef(pantryItemId);
       if (held === null || !isHeld(cache, stack)) continue;
       moveContentsTo(cache, pantryItemId, held);
-      writeEntityFields(cache, stack, { quantity: held, updatedAt: now });
+      writeEntityFields(cache, stack, {
+        quantity: held,
+        remainingNetWeight,
+        updatedAt: now,
+      });
       writeHeldStock(cache, pantryItemId, held);
       if (held === 0) emptied.add(pantryItemId);
     }
@@ -194,22 +224,105 @@ export type DrawStockInputs = StockDeltaInputs & {
   stated?: { amount: number; unitId: string } | null;
   /** The unit a use remembers; waste leaves the stack's alone. */
   usedUnitId?: string | null;
+  /** A use taken from this batch alone, which moves with its stack. */
+  batchId?: string | null;
 };
 
+/**
+ * A use drawn from one batch, as the server draws it: the batch is opened, and
+ * emptied it is depleted. What opening does to its date is the server's.
+ */
+function drawBatch(
+  cache: ApolloCache,
+  batchId: string,
+  delta: number,
+  now: string,
+): void {
+  const id = cache.identify({ __typename: 'PantryItemBatch', id: batchId });
+  if (!id) return;
+  const left = (held: number) => Math.max(0, held + delta);
+  cache.modify<{
+    quantity: number;
+    status: BatchStatus;
+    depletedAt: string | null;
+    isOpened: boolean;
+    openedAt: string | null;
+  }>({
+    id,
+    fields: {
+      quantity: held => left(held),
+      status: (status, { readField }) =>
+        left(readField('quantity') ?? 0) === 0 ? BatchStatus.Depleted : status,
+      depletedAt: (at, { readField }) =>
+        left(readField('quantity') ?? 0) === 0 ? now : at,
+      isOpened: () => true,
+      openedAt: at => at ?? now,
+    },
+  });
+}
+
 export const drawStock: LocalWrite<DrawStockInputs> = {
-  apply(cache, { variables, inputs: { delta, stated, usedUnitId, now } }) {
+  apply(
+    cache,
+    { variables, inputs: { delta, stated, usedUnitId, batchId, now } },
+  ) {
     const stack = stackOf(variables);
     if (!stack) return;
     if (delta !== null) {
       bumpStock(cache, stack.id, delta, now);
+      if (batchId) drawBatch(cache, batchId, delta, now);
     } else if (stated) {
       drawInside(cache, stack.id, stated.amount, stated.unitId, now);
     }
     if (usedUnitId) rememberConsumeUnit(cache, stack.id, usedUnitId);
   },
+  // The answer states no batch: which ones a use drew on, their dates once
+  // opened and their versions are read again, as after a restock.
   commit(cache, { variables }, data) {
     const stack = stackOf(variables);
-    if (stack) leaveMergedStack(cache, stack.id, appliedPayload(data));
+    if (!stack) return;
+    leaveMergedStack(cache, stack.id, appliedPayload(data));
+    dropBatchesPage(cache, stack.id);
+  },
+};
+
+export type WasteBatchInputs = {
+  /** The batch's stack, which loses what the batch held. */
+  pantryItemId: string;
+  /** What the batch held, in the stack's tracking unit. */
+  held: number;
+  now: string;
+};
+
+/** A whole batch thrown out: it is wasted, and its stack holds that much less. */
+export const wasteBatch: LocalWrite<WasteBatchInputs> = {
+  subject: { key: 'batchId' },
+  // It moves its stack, so it stays behind that stack's writes.
+  orderedBy: ({ inputs: { pantryItemId } }) => pantryItemId,
+  apply(cache, { variables, inputs: { pantryItemId, held, now } }) {
+    const input: unknown = variables.input;
+    const batchId =
+      isRecord(input) && typeof input.batchId === 'string'
+        ? input.batchId
+        : null;
+    const batch = batchId && { __typename: 'PantryItemBatch', id: batchId };
+    if (!batch || !isHeld(cache, batch)) return;
+    writeEntityFields(cache, batch, {
+      status: BatchStatus.Wasted,
+      quantity: 0,
+      depletedAt: now,
+    });
+    if (!isHeld(cache, stackRef(pantryItemId))) return;
+    bumpStock(cache, pantryItemId, -held, now);
+    cache.modify<{ activeBatchCount: number }>({
+      id: cache.identify(stackRef(pantryItemId)),
+      fields: { activeBatchCount: count => Math.max(0, count - 1) },
+    });
+  },
+  // The answer states the stack, not the batch: the batches are read again.
+  commit(cache, { inputs: { pantryItemId } }, data) {
+    leaveMergedStack(cache, pantryItemId, appliedPayload(data));
+    dropBatchesPage(cache, pantryItemId);
   },
 };
 
@@ -378,3 +491,72 @@ export const updatePantryRow: LocalWrite<EntityFieldsInputs> = {
     }
   },
 };
+
+// Each document this feature sends as a local write, bound to its write.
+export const createPantryItemWrite = bindLocalWrite(
+  CreatePantryItemDocument,
+  createItem,
+);
+export const updatePantryItemWrite = bindLocalWrite(
+  UpdatePantryItemDocument,
+  updatePantryRow,
+);
+export const updatePantryItemQuantityWrite = bindLocalWrite(
+  UpdatePantryItemQuantityDocument,
+  { ...setStock, subject: { key: 'pantryItemId' } },
+);
+export const adjustPantryItemQuantityWrite = bindLocalWrite(
+  AdjustPantryItemQuantityDocument,
+  setStock,
+);
+export const recordPantryStockCheckWrite = bindLocalWrite(
+  RecordPantryStockCheckDocument,
+  {
+    ...recordStockCheck,
+    subject: { key: 'entries', rowKey: 'pantryItemId' },
+  },
+);
+export const deletePantryItemWrite = bindLocalWrite(
+  DeletePantryItemDocument,
+  removeItem,
+);
+export const createPantryItemUsageWrite = bindLocalWrite(
+  CreatePantryItemUsageDocument,
+  { ...drawStock, subject: { key: 'pantryItemId' } },
+);
+export const restockPantryItemWrite = bindLocalWrite(
+  RestockPantryItemDocument,
+  addStock,
+);
+export const convertExpiredToWasteWrite = bindLocalWrite(
+  ConvertExpiredToWasteDocument,
+  { ...discardExpired, subject: { key: 'pantryItemId' } },
+);
+export const openPantryItemBatchWrite = bindLocalWrite(
+  OpenPantryItemBatchDocument,
+  { ...entityFields, subject: { key: 'batchId' } },
+);
+export const wastePantryItemBatchWrite = bindLocalWrite(
+  WastePantryItemBatchDocument,
+  wasteBatch,
+);
+export const correctPantryItemPackageSizeWrite = bindLocalWrite(
+  CorrectPantryItemPackageSizeDocument,
+  entityFields,
+);
+export const createPantryWrite = bindLocalWrite(
+  CreatePantryDocument,
+  createPantry,
+);
+export const updatePantryWrite = bindLocalWrite(
+  UpdatePantryDocument,
+  entityFields,
+);
+export const deletePantryWrite = bindLocalWrite(
+  DeletePantryDocument,
+  removePantry,
+);
+export const markPantryAsDefaultWrite = bindLocalWrite(
+  MarkPantryAsDefaultDocument,
+  entityFields,
+);

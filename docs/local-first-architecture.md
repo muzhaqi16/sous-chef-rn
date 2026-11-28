@@ -163,13 +163,20 @@ maps an operation to what it changes on the device; a feature keeps its own in `
 `__tests__/apollo/localWriteCoverage.test.ts` holds every local-first operation to one, or to a stated
 reason for having none (those show on the answer).
 
-| Member      | Runs                                                     | Does                                                                                |
-| ----------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `apply`     | In a layer: when made, on every rebuild, after a restart | Shows the change                                                                    |
-| `capture`   | Once, when the write is made                             | Reads from the cache what its caller did not pass                                   |
-| `commit`    | On the root, after the server confirms                   | Writes what the answer does not state, such as a new row's edge                     |
-| `refused`   | When the server refuses a queued write for good          | Undoes what the write left outside the cache, which dropping its layer cannot reach |
-| `orderedBy` | At send, and stored with a queued write                  | Names what the write stays in order behind, when its input names no row             |
+| Member      | Runs                                                     | Does                                                                                 |
+| ----------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `apply`     | In a layer: when made, on every rebuild, after a restart | Shows the change                                                                     |
+| `capture`   | Once, when the write is made                             | Reads from the cache what its caller did not pass                                    |
+| `commit`    | On the root, after the server confirms                   | Writes what the answer does not state, such as a new row's edge                      |
+| `refused`   | When the server refuses a queued write for good          | Undoes what the write left outside the cache, which dropping its layer cannot reach  |
+| `orderedBy` | At send, and stored with a queued write                  | Names what the write stays in order behind, when its input names no row              |
+| `subject`   | Read by the queue at send, withdrawal and eviction       | Names the row, where it is not the input's `id`, and whether it is minted or deleted |
+
+An operation's registry entry is its descriptor. One that shares another's behaviour spreads it and
+adds only what differs: `{ ...entityFields, subject: { key: 'batchId' } }`. Unstated, a subject is the
+input's `id`, minted by a `Create*Input` and deleted by a `Delete*Input` (`queuedSubject.ts`).
+Replay behaviour keeps its own registries, keyed by the same operation (`preparationRegistry.ts`,
+`replayRegistry.ts`): it loads unit lookups and reconcilers, and `LOCAL_WRITES` is on the launch path.
 
 `recoverable: false` marks a write whose `refused` hands it back to a retry of its own, as a receipt
 check-in does, so it stays out of the list of changes not saved. `conflict` declares the row a stale
@@ -187,11 +194,21 @@ store to the household's usual stores, so that store is in the check-in's `apply
 since the answer states no list: it shows while the check-in is queued, survives a restart, and goes
 with a refusal, with no layer of its own to end.
 
+**A write is sent through its binding.** `bindLocalWrite(Document, write)`
+(`src/apollo/pendingWrites/bindLocalWrite.ts`) pairs a document with the `LocalWrite` it sends as, so a
+send's variables, inputs and answer are checked against that one write; a missing or mistyped input
+fails typecheck (`localWriteCoverage.test.ts`). A binding sits beside its write: a feature's in its
+`offline/localWrites.ts`, which its own hooks import and no other feature may; the shared `#operations`
+documents' in `src/apollo/pendingWrites/sharedWrites.ts`. No hook sends another feature's document: one
+feature changes another's rows through that feature's public hook (`useAddShoppingRows`).
+`registry.data.ts` lists the bindings, and `LOCAL_WRITES` is derived from them, keyed by operation name,
+because a write restored from the queue carries a deserialized document.
+
 Lifecycle of a local-first mutation:
 
 ```
 1. id = generateEntityId()                  // creates only: a permanent cuid2, the row's PK
-2. pendingWritesOf(cache).send(document, variables, settle, inputs)
+2. useLocalWrite(binding, settle).send(variables, inputs)   // or its core, sendLocalWrite
    │  the layer shows the change now; the mutation leaves once the earlier writes it builds on
    │  have answered (an edit behind its row's create, a version behind the write that moved it)
    ├─ applied → the answer is in the root; `commit` adds what it does not state; the layer goes
@@ -231,7 +248,8 @@ call that needs another context key passes the callback form, `context: hook => 
 finds the write. `sous-chef/queueable-write-is-local-first` enforces it: a queueable write carries the
 marker, a per-call `localFirst` on a hook that already sets it is redundant, a per-call context object on
 such a hook drops it, and a local-first write takes no `optimisticResponse`. A helper that fires whatever
-mutate function its caller passes (`createShoppingListRow`) and `client.mutate` callers pass it per call.
+mutate function its caller passes (`createShoppingListRow`, under `useAddShoppingRows`) and `client.mutate`
+callers pass it per call.
 
 **Settling.** Under the global `errorPolicy: 'all'` a `ValidationError` / `ConflictError` **resolves**
 (it's a valid union member, not a thrown error), so `onError` never fires and only inspecting the result
@@ -246,10 +264,9 @@ site-specific.
 **Field edits share one `LocalWrite`.** `entityFields` (`apollo/pendingWrites/entityFields.ts`) is the
 write whose change is fields on one row, in that row's own field names: `apply` writes them with
 `cache.writeFragment` (never `cache.modify`, which skips a field's write-time invariant), and the answer
-states the row, so nothing is left to commit. `sendFields` (`sendFields.ts`) sends one. It returns the
-outcome rather than reporting it: its callers (`useUpdateSettings`, `useNotificationSettings`,
-`useUpdateHomeFields`, `useMealTemplateEditor`, `useDeviceTimezoneSync`, `useCompleteOnboarding`) surface
-a refusal differently, and deciding that centrally is what produces double alerts.
+states the row, so nothing is left to commit. A document bound to it is sent like any other:
+`send(variables, { entity, fields })`. A send returns the outcome rather than reporting it, because its
+callers surface a refusal differently, and deciding that centrally is what produces double alerts.
 
 ## 3. Identity — client-generated permanent ids
 
@@ -272,24 +289,26 @@ The same cuid rides the create input as `input.id`, and its replay sends the sam
 ## 4. Optimistic-offline appearance
 
 A create's `apply` writes the whole row, so a newly-added item is visible immediately and survives a
-fully-offline create. Two shared writers keep this DRY:
+fully-offline create. An entity two or more features write keeps its writers in
+`src/entities/<entity>/`, named for one schema type, so every add surface builds the same row:
 
 - **`createLocalShoppingListItem(id, fields)` + `addLocalShoppingListItem(cache, listId, item)`**
-  (both `features/shoppingList/cache/items.ts`) — the row a create adds, written through
+  (both `src/entities/shoppingList/items.ts`) — the row a create adds, written through
   `writeLocalEntity` over the readers-based `items_row` fragment: what the create knows, else what the
   cache holds, else the SDL neutral. A related `unit` / `item` is named by reference only when the cache
   holds it, so a create never overwrites a held `Unit`'s name or an `Item`'s images. The writer also adds
-  the connection edge and recomputes list stats. A feature's `cache/` is outside the closed internals
-  (`context/`, `hooks/mutations/`, `utils/`, `components/`, `offline/`, `graphql/`), so add surfaces in
-  other features
-  (barcode, pantry-detail, filtered-pantry) build the same entity from it.
-- **`writeLocalPantryItem(cache, id, row)`** (`src/features/pantry/cache/writeLocalPantryItem.ts`) —
+  the connection edge and recomputes list stats. Barcode, pantry detail and filtered pantry add through it.
+- **`writeLocalStorageLocation`** (`src/entities/storageLocation/storageLocations.ts`) — a created
+  location over `storageLocations_row`, listed in the locations query and in its pantry's connection.
+- **`localBrand`, `localUnit`, `localStorageLocation`** (`src/entities/brand`, `unit`, `storageLocation`)
+  — the nested record a pending edit names: as held, else complete enough that no row reads a hole.
+- **`writeLocalPantryItem(cache, id, row)`** (`src/entities/pantryItem/writeLocalPantryItem.ts`) —
   writes the row complete for every query reading a pantry item (list and detail), through
   `writeLocalEntity`: what the create knows, else what the cache holds per field, else the SDL-derived
   neutral value. An incomplete row makes a list cell report `complete: false` and blank it.
 
 **A pantry use moves the amount a person reads.** `amountLeft` is the server's, and `amountLeftOf`
-(`src/domain/stockDisplay.ts`) is the client's copy of its rule for the moments before an answer, so
+(`src/entities/pantryItem/stockDisplay.ts`) is the client's copy of its rule for the moments before an answer, so
 `writeHeldStock` writes it beside `displayAmount` and a screen never computes one. A use goes in by
 same-unit subtraction: the tracking unit, a dozen of it, the portion unit, or the net-weight unit on a
 stack with no portions. A use in any other unit keeps the row where it is until the server answers, the
@@ -303,6 +322,7 @@ answer replaces the layer, so a mutation that moves stock returns `amountLeft` a
 the row falls back to the old read when the layer drops.
 
 **Four figures, one stack.**
+
 - `quantity` is the physical count, a part-used package counted whole (the API's `countOf`).
 - `heldQuantity` is the exact fraction held, each batch by its own size (the API's `packagesHeld`).
 - `stockBreakdown.fullPackages` is the unopened count.
@@ -321,6 +341,14 @@ sync" (`usePendingUses`); a use the device can prove is never held behind it (US
 and the pantry `localWrites.test.ts`. The API contracts behind this work are tracked in
 `docs/pantry-tracking-api-alignment.md`.
 
+**From one batch.** The use and waste sheets take the batch they were opened on: what it holds is their
+cap and their "all", and a use from it shows no oldest-first hint. A use (`targetBatchId`) moves that
+batch with its stack, as the server draws it: opened, and depleted once empty; all it holds is sent as
+`amount: { all: true }`. A whole batch thrown out is `WastePantryItemBatch` (`wasteBatch`), which marks it
+wasted and takes what it held off its stack; part of one is a waste use from it. Neither answer states a
+batch, so each commit drops the batch page and the detail reads it again, as after a restock: which
+batches moved, their dates once opened and their versions are the server's.
+
 **Stock checks.** `useStockCheck` reads `Pantry.stockToConfirm(limit: 5, today)`: at most five stacks
 in the server's order, each with its `stockConfidence(today)` level and reasons. Both are views no
 mutation owes, judged on the viewer's day. The check (`StockCheckSheet`, opened from `StockCheckEntry`
@@ -331,17 +359,19 @@ replay applies nothing twice, and a row whose stack moved since fails alone with
 row stays in the sheet to be counted again; the absolute count is never rebased onto newer stock
 (CHECK-03), and accepted rows stand (REL-02). Its local write (`recordStockCheck`) sets each answered
 row's absolute count ahead of the answer:
+
 - **Still have** moves nothing.
 - **Some left** sets the count in the stack's unit.
 - **Used up** and **Threw out** set zero.
-A count stated with what the packages hold (CHECK-04: one carton holding 40 fl oz) moves nothing until
-the server answers, which owns the package arithmetic. The ledger meaning is the API's:
+  A count stated with what the packages hold (CHECK-04: one carton holding 40 fl oz) sets at once what
+  the server records for it: the packages as stated and what is left in the open one, never a fraction the
+  device works out; the server owns any arithmetic past that. The ledger meaning is the API's:
 - Some left records an adjustment of the difference (10 eggs found as 6 is a correction of 4, CHECK-01).
 - Used up is a correction to zero, never consumption.
 - Threw out is waste.
 - Still have is a confirmation with no movement (CHECK-02).
-A confirmation does not force the level HIGH: the answer reads the stack's confidence again. The sheet
-keeps its answers in component state only, so a session end leaves nothing behind (REL-03).
+  A confirmation does not force the level HIGH: the answer reads the stack's confidence again. The sheet
+  keeps its answers in component state only, so a session end leaves nothing behind (REL-03).
 
 **Cooking.** A recipe is cooked one way, from its page or a planned meal: `useRecipeCookingActions`
 under `RecipeCookFlow`. The review scales each draw once, by servings / `Recipe.servings`, and the
@@ -385,16 +415,16 @@ live in the write's layer, so the answer replaces them.
 
 The shopping add path is shared rather than copied:
 
-- **`createShoppingListRow(cache, { listId, row, line, send, document, fallback })`**
-  (`features/shoppingList/cache/createShoppingListRow.ts`) — the whole lifecycle of one row: mint the id,
-  hold the row as a pending write, send `AddItemToShoppingList` local-first, settle with
-  `settleMutation`. Returns `{ id, outcome, failure, data }`, where `id` is the row the line landed on
-  (the server's when it folded the add into a line it held, else the minted id), and never presents the
-  failure, so each surface keeps its own success and error UX. `useAddShoppingItem`,
-  `useShoppingListItemWrites.createItem`, `useAddPantryItemToShoppingList`, `useAddToShoppingList`,
-  `usePantryItemDetailActions` and
-  `useAddScannedItem` go through it. A row names the item its line names, unless it states its own
-  `itemId` (a scanned line naming a product record still names the record's item).
+- **`useAddShoppingRows`** (`features/shoppingList/hooks/useAddShoppingRows.ts`) is the one door, from
+  any feature: `addRow({ listId, row, line, fallback })` for one line, `addRows` for a batch the API
+  accepts in slices, each settled on its own and reported once to `onBatch`. Under it,
+  `createShoppingListRow` (`entities/shoppingList/createShoppingListRow.ts`) holds the whole lifecycle
+  of one row: mint the id, hold the row as a pending write, send `AddItemToShoppingList` local-first,
+  settle with `settleMutation`. It returns `{ id, outcome, failure, data }`, where `id` is the row the
+  line landed on (the server's when it folded the add into a line it held, else the minted id), and never
+  presents the failure, so each surface keeps its own success and error UX. Only `useAddShoppingRows`
+  calls it. A row names the item its line names, unless it states its own `itemId` (a scanned line
+  naming a product record still names the record's item).
 - **Catalog merge** — when the server folded the line into a row it held (a different id), the minted
   row was only ever in the write's layer, so it goes with it, and `addRows.commit` lists the row the
   answer names. On replay, `reconcileShoppingAddReplay` moves the writes queued behind it (§ 7).
@@ -523,8 +553,11 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   dropping that row would discard a write the server never refused. A row answering `APPLIED` has
   landed. Any other row is refused (`BatchRowRefusedError`), after the rows that landed are confirmed:
   the entry goes to the changes not saved whole, and a retry resends it all, as the landed rows
-  converge. A retry never trims the input: a batch keyed at the top would then send other input under
-  a spent key, which the API counts and will refuse.
+  converge. A retry never trims the input under its key: a batch keyed at the top would then send other
+  input under a spent key, which the API counts and will refuse. A batch whose key answers a resend with
+  what the first send did (`RecordPantryStockCheck`) could never land a refused row that way, so its
+  operation lists a narrower (`FEATURE_REFUSED_ROWS`): the refused rows become a write of their own
+  under a new key, named by those rows, and a row that landed is never counted again.
 - **A replay refused because its row is gone can settle silently.** An operation listed in
   `GONE_REPLAYS` (`replayRegistry.ts`: notification mark-read and delete, meal-plan item delete) treats a replayed
   `NotFoundError` as settled: its reconciler removes the row locally and the entry dequeues with no
@@ -567,7 +600,9 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   account clears it. Writes on a refused create's row follow it unsent (`heldBy`): the list shows the
   parent, and its retry or discard takes them along. `retryRefusedChange` returns the entries to
   `PENDING`, newest, with `overwrites` set, and shows their layers again; on a conflict such a write
-  goes out at the row's version with no comparison, as the person chose it. A retry that finds the row
+  goes out at the row's version with no comparison, as the person chose it (a stock check's entries go
+  without `expectedVersion`, which the API applies to each stack as it stands). The toast and the list
+  name the change the same way (`nameOfChange`). A retry that finds the row
   gone stays listed with discard as the only choice (`namesNoRow`).
 - **Queue-health telemetry** at each drain: `offline_queue_depth` + `offline_queue_oldest_age_ms`
   gauges, `offline_queue_conflicts_total` (version conflicts met) and
@@ -766,7 +801,7 @@ Who reads what:
   is the one registration, made from `useCoreStartup` (`src/bootstrap/`). `handleQueueFailure` refuses the
   write (`pendingWrites.refuse`: its `refused`, then its layer goes), toasts the user in the app's own
   copy and **removes the entry from the queue**. A write with no layer evicts the entity it created or
-  changed instead — its subject, read from the operation's input type (`queuedSubject.ts`), never a
+  changed instead — its subject, as its descriptor states it or its input's name implies (`queuedSubject.ts`), never a
   parent or source it merely names. Once the drain pass settles it re-reads the active queries, so a
   refused update's row shows the server's value.
 - **Reconnect ordering.** The resync that follows a reconnect waits for the queue to drain
@@ -796,7 +831,7 @@ every queueable write to it, and `queueLink` queues only those and the registere
 Everything else is online-only and fails fast offline. On 2026-10-30, 92 of the 147 authored mutations
 were queueable. Areas, with what is worth knowing beyond the pattern:
 
-- **Shopping:** every add surface goes through `createShoppingListRow` (§4); remove, toggle and record
+- **Shopping:** every add surface goes through `useAddShoppingRows` (§4); remove, toggle and record
   purchased, update, quantity, aisle, clear, complete/reactivate, budget, reminder, template,
   recurring, copy, set default, move to pantry (single; the batch move writes nothing before it
   lands).
@@ -825,11 +860,11 @@ were queueable. Areas, with what is worth knowing beyond the pattern:
   their items. An item create that collides on (mealPlanId, date, mealType, recipeId) returns the
   existing row.
 - **Recipes:** create, fork, publish, delete, favorites (add, remove, saved metadata, folders),
-  `MarkRecipeAsCooked`, ingredient matching, add-to-list from a recipe (`AddItemsToShoppingListFromRecipe`,
-  rows written locally). `UpdateRecipe` from the form is queued but writes nothing local: the detail
+  `MarkRecipeAsCooked`, ingredient matching, add-to-list from a recipe (through
+  `useAddShoppingRows`, rows written locally). `UpdateRecipe` from the form is queued but writes nothing local: the detail
   catches up when the replay lands.
 - **Receipts:** check-in (`useReceiptCheckIn`), which stamps list lines, moves and intakes locally.
-- **Settings, profile, notifications:** field edits through `sendFields`
+- **Settings, profile, notifications:** field edits sent through a binding to `entityFields`
   (§2), profile, dietary profile and sharing, brand lists, language, onboarding completion, notification
   read/delete, the device time zone.
 
@@ -921,8 +956,9 @@ replay only after their parent has landed — the drain reads the parent referen
 
 ## 13. Divergences from the original plan (for the record)
 
-- **No `useLocalFirstMutation` primitive** (planned §3.1). Replaced by `pendingWrites.send` over one
-  `LocalWrite` per operation (§2), the shared row writers (§4) and `settleMutation`.
+- **No `useLocalFirstMutation` primitive** (planned §3.1). Replaced by `useLocalWrite` over
+  `pendingWrites.send`, one `LocalWrite` per operation (§2), the shared row writers (§4) and
+  `settleMutation`.
 - **Identity is client-generated cuid2** (planned §8), not temp-id + reconciliation. This removed the
   largest planned subsystem — the `idMapping` / `resolveIds` / temp-id machinery has been fully deleted
   (no references remain in the codebase).
@@ -948,17 +984,17 @@ replay only after their parent has landed — the drain reads the parent referen
 | Pending layers                                     | `src/apollo/pendingWrites/pendingWrites.ts`, `readFence.ts`, `localWriteRegistry.ts`; each feature's `offline/localWrites.ts`; coverage: `__tests__/apollo/localWriteCoverage.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Cache persistence (debounce + `flushPending`)      | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Background flush trigger                           | `src/hooks/app/useAppStateLifecycle.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Shared shopping writers                            | `src/features/shoppingList/cache/items.ts` (`createLocalShoppingListItem`, `addLocalShoppingListItem`), `createShoppingListRow.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Shared shopping writers                            | `src/entities/shoppingList/items.ts` (`createLocalShoppingListItem`, `addLocalShoppingListItem`), `createShoppingListRow.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Replay reconcilers                                 | `src/apollo/offlineQueue/replayRegistry.ts` (`REPLAY_RECONCILERS`), `queueReplayReconcilers.ts`, each feature's `offline/replayReconcilers.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Change feed engine and scope adapters              | `src/apollo/feed/feedEngine.ts`, `feedRegistry.ts`, `feedStorage.ts`; `src/features/shoppingList/offline/listFeed.ts`, `src/features/pantry/offline/pantryFeed.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | List shards                                        | `src/features/shoppingList/offline/listShards.ts`, `scopeStorage` in `ApolloCachePersistence.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Resync after foreground / reconnect                | `src/apollo/refetchEvents.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Local row writers (`writeLocalEntity`)             | `src/apollo/utils/writeLocalEntity.ts`; `writeLocalPantryItem`, `writeLocalPantry` (`src/features/pantry/cache/`), `writeLocalHome` (`src/features/home/cache/optimisticHome.ts`), `writeLocalStorageLocation` (`src/features/catalog/hooks/useCreateStorageLocation.ts`), `writeLocalShoppingList` and `addLocalShoppingListItem` (`src/features/shoppingList/cache/`), `writeLocalRecipe` (`src/features/recipes/utils/recipeCacheWriters.ts`), `writeLocalFavorite` (`src/features/recipes/cache/favorites.ts`), `writeLocalMealPlan` (`src/features/mealPlan/cache/`), `writeLocalMealTemplate` and `addTemplateItemToCache` (`src/features/mealPlan/cache/`) |
-| Field-edit write                                   | `src/apollo/pendingWrites/entityFields.ts`, `sendFields.ts`; `src/apollo/utils/localFirstFields.ts` (`writeEntityFields`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Field-edit write                                   | `src/apollo/pendingWrites/entityFields.ts`, `bindLocalWrite.ts`, `useLocalWrite.ts`; `src/apollo/utils/localFirstFields.ts` (`writeEntityFields`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Write-outcome settling and classification          | `src/apollo/utils/settleMutation.ts` (`settleMutation`, `settledStatus`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Optimistic-entity completeness guard               | `__tests__/apollo/optimisticEntityCompleteness.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Offline indicator                                  | `src/components/molecules/OfflineStatusPill.tsx` (in each screen header), `src/components/atoms/OfflineTransitionAnnouncer.tsx` (mounted in `App.tsx`), both reading `src/hooks/ui/useOfflineStatus.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Query short-circuit when offline                   | `src/apollo/links/offlineReadLink.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | API-reachability circuit breaker                   | `src/apollo/links/apiReachabilityBreaker.ts`, `networkStatusLink.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Unified `isApiUnavailable` predicate               | `src/store/slices/networkSlice.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| Primary add hooks                                  | `src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts`, `src/features/pantry/hooks/mutations/useAddToPantry.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Primary add hooks                                  | `src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts`, `src/features/pantry/hooks/usePantryIntake.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |

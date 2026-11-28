@@ -9,7 +9,7 @@ import {
   ReceiptParseStatus,
   ReceiptParseWarningCode,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   inputOf,
   recordMock,
@@ -19,15 +19,15 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { useStore } from '#store';
-import { Telemetry } from '#/services/telemetry';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
-import { TimeoutError } from '#/utils/errors/timeoutError';
+import { Telemetry } from '#services/telemetry';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
+import { TimeoutError } from '#utils/errors/timeoutError';
 import {
   useReceiptDraftStore,
   type ReceiptDraft,
 } from '../../store/receiptDraftStore';
 import { seedDraft } from '../../__tests__/helpers/receiptFixtures';
-import { announceWorkSettled } from '#/services/subscriptions/settledWork';
+import { announceWorkSettled } from '#services/subscriptions/settledWork';
 import { useIsLiveChannelOpen } from '#hooks/subscriptions/useIsLiveChannelOpen';
 
 // Closed unless a case opens it: then the poll is the 2.5 s one.
@@ -40,7 +40,7 @@ import {
 } from '../useServerReceiptParse.generated';
 import { useServerReceiptParse } from '../useServerReceiptParse';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 const PAGES = ['WALMART\nGV WHOLE MILK 007874235186 F  3.48 N\nTOTAL  3.48'];
 

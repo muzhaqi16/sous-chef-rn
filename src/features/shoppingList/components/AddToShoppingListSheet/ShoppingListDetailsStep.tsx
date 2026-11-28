@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { Controller } from 'react-hook-form';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { FormInput } from '#components/atoms/FormInput';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { CategoryAutocompleteField } from '#features/catalog/ui/autocomplete/CategoryAutocompleteField';
 import { BrandAutocompleteField } from '#features/catalog/ui/autocomplete/BrandAutocompleteField';
@@ -14,7 +14,7 @@ import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreA
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/atoms/FieldRow';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import { CategoryType } from '#/graphql/generated/schemaTypes';
+import { CategoryType } from '#graphql/generated/schemaTypes';
 import {
   PRIORITY_OPTIONS,
   priorityValueOf,
@@ -23,13 +23,14 @@ import {
 } from '#features/shoppingList/utils/priority';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import { useAddShoppingItem } from '#features/shoppingList/hooks/mutations/useAddShoppingItem';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { alertService } from '#/services/alertService';
-import { localizeNumericHint } from '#/utils/formatters/number';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
+import { alertService } from '#services/alertService';
+import { localizeNumericHint } from '#utils/formatters/number';
+import { reportValidationErrors } from '#utils/validation/common';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
-import { useDiscardGuard } from '#hooks/ui/useDiscardGuard';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import { MAX_SHOPPING_NOTE_LENGTH } from '#utils/validation/entryLimits';
 
 interface ShoppingListDetailsStepProps {
   shoppingListId: string | undefined;
@@ -39,8 +40,6 @@ interface ShoppingListDetailsStepProps {
   onClose: () => void;
   /** Item was created — the parent closes the whole sheet. */
   onSuccess: () => void;
-  /** Holds the parent sheet open against a pan-down while input would be lost. */
-  onHoldOpen?: (held: boolean) => void;
 }
 
 /**
@@ -50,13 +49,7 @@ interface ShoppingListDetailsStepProps {
  */
 export const ShoppingListDetailsStep: React.FC<
   ShoppingListDetailsStepProps
-> = ({
-  shoppingListId,
-  prefilledItemName = '',
-  onClose,
-  onSuccess,
-  onHoldOpen,
-}) => {
+> = ({ shoppingListId, prefilledItemName = '', onClose, onSuccess }) => {
   const { t } = useTranslation();
   // Off, the line is added with no price.
   const showPrices = useBudgetAndPricesEnabled();
@@ -89,11 +82,7 @@ export const ShoppingListDetailsStep: React.FC<
     hasDirtyFields,
   } = useShoppingListItemForm({ itemName: prefilledItemName });
 
-  const handleCancel = useDiscardGuard({
-    isDirty: hasDirtyFields,
-    onDiscard: onClose,
-    onHoldOpen,
-  });
+  useSheetUnsavedInput(hasDirtyFields);
 
   // The typed fields render through `Controller`, so react-hook-form holds
   // their inputs: the return key moves on by name, and a failed submit focuses
@@ -152,16 +141,19 @@ export const ShoppingListDetailsStep: React.FC<
 
   return (
     <View style={styles.container} testID={shoppingListTestIDs.addSheetDetails}>
-      <BottomSheetHeader
+      <SheetHeader
         title={t('labels.addItem')}
-        cancelLabel={t('labels.cancel')}
-        confirmLabel={t('labels.add')}
-        onCancel={handleCancel}
-        onConfirm={handleSave}
-        saving={saving}
-        cancelTestID={shoppingListTestIDs.addSheetCancelButton}
-        confirmTestID={shoppingListTestIDs.addSheetSubmitButton}
+        onClose={onClose}
+        leadingTestID={shoppingListTestIDs.addSheetCancelButton}
         titleTestID={shoppingListTestIDs.addSheetTitle}
+        confirm={{
+          onPress: () => {
+            void handleSave();
+          },
+          accessibilityLabel: t('labels.add'),
+          loading: saving,
+          testID: shoppingListTestIDs.addSheetSubmitButton,
+        }}
       />
 
       <BottomSheetFormScrollView
@@ -189,7 +181,6 @@ export const ShoppingListDetailsStep: React.FC<
               value={value}
               onChangeText={onChange}
               placeholder={t('shoppingListScreens.itemNamePlaceholder')}
-              useBottomSheetInput
               ref={ref}
               returnKeyType="next"
               submitBehavior="submit"
@@ -264,7 +255,6 @@ export const ShoppingListDetailsStep: React.FC<
                 error={errors.netWeight?.message}
                 placeholder={t('shoppingListScreens.netWeightPlaceholder')}
                 keyboardType="decimal-pad"
-                useBottomSheetInput
                 ref={ref}
                 returnKeyType="next"
                 submitBehavior="submit"
@@ -303,7 +293,6 @@ export const ShoppingListDetailsStep: React.FC<
                   t('shoppingListScreens.estimatedPricePlaceholder'),
                 )}
                 keyboardType="numeric"
-                useBottomSheetInput
                 ref={ref}
                 returnKeyType="next"
                 submitBehavior="submit"
@@ -336,7 +325,7 @@ export const ShoppingListDetailsStep: React.FC<
         <Controller
           control={control}
           name="notes"
-          render={({ field: { value, onChange, ref } }) => (
+          render={({ field: { value, onChange, ref }, fieldState }) => (
             <FormInput
               label={t('labels.notes')}
               value={value}
@@ -344,7 +333,8 @@ export const ShoppingListDetailsStep: React.FC<
               placeholder={t('shoppingListScreens.notesPlaceholder')}
               multiline
               numberOfLines={3}
-              useBottomSheetInput
+              maxLength={MAX_SHOPPING_NOTE_LENGTH}
+              error={fieldState.error?.message}
               ref={ref}
             />
           )}
@@ -362,6 +352,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   content: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
+    paddingTop: theme.spacing.md,
   },
 }));

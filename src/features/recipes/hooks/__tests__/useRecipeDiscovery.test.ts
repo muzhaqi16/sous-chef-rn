@@ -4,7 +4,7 @@ import {
   Diet,
   ExternalSource,
   Intolerance,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 import { useRecipeDiscovery } from '../useRecipeDiscovery';
 import { useServerRecipeSuggestions } from '../useServerRecipeSuggestions';

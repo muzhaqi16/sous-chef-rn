@@ -1,4 +1,4 @@
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { useEffect, useState } from 'react';
 import { useLazyQuery } from '@apollo/client/react';
 import type { SearchItemsSemanticQuery } from '#operations/item/item.generated';
@@ -6,10 +6,11 @@ import {
   AutocompleteItemsDocument,
   SearchItemsSemanticDocument,
 } from '#operations/item/item.generated';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { useAppStore } from '#store/useAppStore';
 import { filterByName } from '#features/catalog/utils/arrayUtils';
+import { onFailedRead } from '#utils/onFailedRead';
 
 type SemanticItem = NonNullable<
   SearchItemsSemanticQuery['searchItemsSemantic']['edges'][number]
@@ -74,9 +75,10 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
 
   const search = (term: string) => {
     setActiveTerm(term);
-    void fetchItems({
-      variables: { input: { query: term, limit: 10 } },
-    }).catch(error => logger.warn('Item autocomplete failed', error));
+    onFailedRead(
+      fetchItems({ variables: { input: { query: term, limit: 10 } } }),
+      error => logger.warn('Item autocomplete failed', error),
+    );
   };
 
   // Semantic search catches typos, OCR noise and natural language the tsvector
@@ -95,9 +97,10 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
   useEffect(() => {
     if (!semanticPending) return;
     const timer = setTimeout(() => {
-      void fetchSemantic({
-        variables: { prompt: activeTerm, first: 10 },
-      }).catch(error => logger.warn('Semantic item search failed', error));
+      onFailedRead(
+        fetchSemantic({ variables: { prompt: activeTerm, first: 10 } }),
+        error => logger.warn('Semantic item search failed', error),
+      );
     }, SEMANTIC_QUIET_MS);
     return () => clearTimeout(timer);
   }, [semanticPending, activeTerm, fetchSemantic]);

@@ -1,8 +1,8 @@
-import type { TranslationKey } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import type { TranslationKey } from '#i18n';
+import type { Translate } from '#i18n/types';
 import type { NotificationSettings } from '#features/notifications/hooks/useNotificationSettings';
 import { EXPIRATION_THRESHOLD_DAYS } from '#features/notifications/utils/expirationLadder';
-import { ExpirationFrequency } from '#/graphql/generated/schemaTypes';
+import { ExpirationFrequency } from '#graphql/generated/schemaTypes';
 
 /** The notification settings screen's rows, grouped by section. */
 export interface SettingDef {

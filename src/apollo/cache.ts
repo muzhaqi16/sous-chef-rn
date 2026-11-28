@@ -7,7 +7,7 @@ import type {
   TypePolicy,
 } from '@apollo/client';
 // Import generated fragment matcher for proper interface/union type handling
-import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
+import fragmentMatcherData from '#graphql/generated/fragmentMatcher.json';
 import { FEATURE_TYPE_POLICIES } from '#features/registry.cache';
 import { feedTypePolicies } from './feed/feedTypePolicies';
 import { HELD_BY_LAYER } from './utils/heldByLayer';

@@ -6,7 +6,7 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   inputOf,
   recordMock,
@@ -20,15 +20,16 @@ import {
 } from '#/test-utils/fixtures/catalogSearches';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { ErrorCode, UnitSystem } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { ErrorCode, UnitSystem } from '#graphql/generated/schemaTypes';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { SearchBrandsDocument } from '#operations/item/item.generated';
 import { SearchUnitsDocument } from '#operations/item/unit.generated';
 import { SearchStoresDocument } from '#operations/store/store.generated';
+import { Sheet } from '#components/templates/Sheet';
 import { ShoppingListDetailsStep } from '../ShoppingListDetailsStep';
 
 let log = operationLog();
@@ -48,7 +49,6 @@ interface Step {
   prefilledItemName?: string;
   onClose?: () => void;
   onSuccess?: () => void;
-  onHoldOpen?: (held: boolean) => void;
 }
 
 /** The step as the add sheet opens it, on list-1. */
@@ -57,18 +57,19 @@ function renderStep({
   prefilledItemName,
   onClose = jest.fn(),
   onSuccess = jest.fn(),
-  onHoldOpen,
 }: Step = {}) {
   const cache = makeCache();
   writeUnitSystemSettings(cache, UnitSystem.Metric, UnitSystem.Metric);
+  // In its sheet, as the add sheet hosts it: the sheet asks before a close.
   renderWithApollo(
-    <ShoppingListDetailsStep
-      shoppingListId="list-1"
-      prefilledItemName={prefilledItemName}
-      onClose={onClose}
-      onSuccess={onSuccess}
-      onHoldOpen={onHoldOpen}
-    />,
+    <Sheet visible onDismiss={() => undefined} snapPoints={['90%']}>
+      <ShoppingListDetailsStep
+        shoppingListId="list-1"
+        prefilledItemName={prefilledItemName}
+        onClose={onClose}
+        onSuccess={onSuccess}
+      />
+    </Sheet>,
     {
       cache,
       links: [log.link],
@@ -314,18 +315,6 @@ describe('the return key', () => {
 });
 
 describe('Cancel', () => {
-  /** Resolves once typed input holds the sheet open, the form marked dirty. */
-  const heldOpen = (onHoldOpen: jest.Mock) =>
-    withDeadline(
-      done => {
-        onHoldOpen.mockImplementation((held: boolean) => {
-          if (held) done();
-        });
-        return () => undefined;
-      },
-      () => 'the sheet was never held open',
-    );
-
   it('closes an untouched form at once', () => {
     const onClose = jest.fn();
     renderStep({ onClose, prefilledItemName: 'Bananas' });
@@ -338,14 +327,11 @@ describe('Cancel', () => {
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
-  it('asks before dropping what was typed, holding the sheet open', async () => {
+  it('asks before dropping what was typed', async () => {
     const onClose = jest.fn();
-    const onHoldOpen = jest.fn();
-    renderStep({ onClose, onHoldOpen });
-    const dirty = heldOpen(onHoldOpen);
+    renderStep({ onClose });
 
-    fireEvent.changeText(screen.getByTestId(NAME), 'Bananas');
-    await dirty;
+    await userEvent.setup().type(screen.getByTestId(NAME), 'Bananas');
     fireEvent.press(
       screen.getByTestId(shoppingListTestIDs.addSheetCancelButton),
     );
@@ -360,12 +346,9 @@ describe('Cancel', () => {
 
   it("asks on Android's Back too while input would be lost", async () => {
     const added = jest.spyOn(BackHandler, 'addEventListener');
-    const onHoldOpen = jest.fn();
-    renderStep({ onHoldOpen });
-    const dirty = heldOpen(onHoldOpen);
+    renderStep();
 
-    fireEvent.changeText(screen.getByTestId(NAME), 'Bananas');
-    await dirty;
+    await userEvent.setup().type(screen.getByTestId(NAME), 'Bananas');
     const [, onBack] = added.mock.calls.at(-1) ?? [];
 
     expect(onBack?.({ type: 'hardwareBackPress', timeStamp: 0 })).toBe(true);

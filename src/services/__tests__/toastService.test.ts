@@ -1,7 +1,7 @@
 jest.unmock('../toastService');
 jest.unmock('../alertService');
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { presentFailure } from '#/utils/errors/presentFailure';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { presentFailure } from '#utils/errors/presentFailure';
 import { alertService } from '../alertService';
 import {
   _resetToastMoments,

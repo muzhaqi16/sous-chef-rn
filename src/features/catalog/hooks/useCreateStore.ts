@@ -1,12 +1,10 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { useTranslation } from '#/i18n';
-import type { CreateStoreInput } from '#/graphql/generated/schemaTypes';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { generateEntityId } from '#utils/generateEntityId';
+import { useTranslation } from '#i18n';
+import type { CreateStoreInput } from '#graphql/generated/schemaTypes';
 import type { CreateStoreInputs } from '#features/catalog/offline/localWrites';
-import { CreateStoreDocument } from './useCreateStore.generated';
+import { createStoreWrite } from '#features/catalog/offline/localWrites';
 
 /** A store to add; the hook mints its id. */
 export type NewStore = Omit<CreateStoreInput, 'id'>;
@@ -24,9 +22,8 @@ export interface CreatedStore {
  */
 export function useCreateStore() {
   const { t } = useTranslation();
-  const client = useApolloClient();
-  const [create] = useMutation(CreateStoreDocument, {
-    context: { localFirst: true },
+  const create = useLocalWrite(createStoreWrite, {
+    fallback: t('errors.generic'),
   });
 
   const createStore = async (store: NewStore): Promise<CreatedStore | null> => {
@@ -34,16 +31,7 @@ export function useCreateStore() {
     const inputs: CreateStoreInputs = {
       store: { id, name: store.name, address: store.address ?? null },
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      CreateStoreDocument,
-      { input: { ...store, id } },
-      write =>
-        settleMutation(() => create(write), {
-          document: CreateStoreDocument,
-          fallback: t('errors.generic'),
-        }),
-      inputs,
-    );
+    const settled = await create.send({ input: { ...store, id } }, inputs);
     if (settled.status === 'failed') return null;
     // Answered: the store on file, merged or new; queued: the minted id.
     const answered = appliedPayload(settled.data)?.store;

@@ -1,8 +1,8 @@
 import { NativeModules } from 'react-native';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 import { ApproximateLocation, findPlace } from '../ApproximateLocation';
 
-jest.mock('#/services/permissions/PermissionService', () => ({
+jest.mock('#services/permissions/PermissionService', () => ({
   PermissionService: {},
 }));
 

@@ -1,6 +1,6 @@
 import { testTypedRule } from '#/test-utils/eslintRuleTester';
 
-const PRELUDE = `import { MealType, InviteStatus } from '#/graphql/generated/schemaTypes';
+const PRELUDE = `import { MealType, InviteStatus } from '#graphql/generated/schemaTypes';
 declare const Text: (props: { children?: unknown }) => null;
 declare const Chip: (props: { label?: string; value?: string }) => null;
 declare const toastService: { show: (title: string) => void };

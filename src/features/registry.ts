@@ -1,4 +1,4 @@
-import { appConfig } from '#/config/appConfig';
+import { appConfig } from '#config/appConfig';
 import type { FeatureManifest, TabAppearance, TabbedFeature } from './types';
 import { pantryFeature } from './pantry/manifest';
 import { shoppingListFeature } from './shoppingList/manifest';

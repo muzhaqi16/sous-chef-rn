@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { memoryIntents } from '#/test-utils/memoryPlatform';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import {
   useEmailVerificationActions,
   useVerifiedEmailGate,

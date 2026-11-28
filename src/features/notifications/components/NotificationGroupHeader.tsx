@@ -21,7 +21,6 @@ export const NotificationGroupHeader: React.FC<
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.background,
   },

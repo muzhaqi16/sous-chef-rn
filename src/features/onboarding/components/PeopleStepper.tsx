@@ -1,9 +1,8 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { Icon } from '#components/atoms/Icon';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 
@@ -41,35 +40,29 @@ export const PeopleStepper = ({
         change(event.nativeEvent.actionName === 'increment' ? 1 : -1)
       }
     >
-      <AppPressable
+      <IconButton
+        name="remove-circle-outline"
+        size="lg"
+        tone={value <= min ? 'textTertiary' : 'primary'}
         onPress={() => change(-1)}
-        disabled={value <= min}
         accessibilityLabel={t('onBoarding.householdFewer')}
-        style={styles.button}
+        disabled={value <= min}
         testID={onboardingTestIDs.householdFewer}
-      >
-        <Icon
-          name="remove-circle-outline"
-          size={32}
-          tone={value <= min ? 'textTertiary' : 'primary'}
-        />
-      </AppPressable>
+        style={styles.button}
+      />
       <Text role="subheading" style={styles.value}>
         {valueLabel}
       </Text>
-      <AppPressable
+      <IconButton
+        name="add-circle-outline"
+        size="lg"
+        tone={value >= max ? 'textTertiary' : 'primary'}
         onPress={() => change(1)}
-        disabled={value >= max}
         accessibilityLabel={t('onBoarding.householdMore')}
-        style={styles.button}
+        disabled={value >= max}
         testID={onboardingTestIDs.householdMore}
-      >
-        <Icon
-          name="add-circle-outline"
-          size={32}
-          tone={value >= max ? 'textTertiary' : 'primary'}
-        />
-      </AppPressable>
+        style={styles.button}
+      />
     </View>
   );
 };

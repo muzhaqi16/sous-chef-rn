@@ -1,18 +1,23 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
-import { View } from 'react-native';
+import { useRowsOnCardFill } from '#components/atoms/RowCard';
+import { useTranslation } from '#i18n';
+import {
+  View,
+  type AccessibilityActionEvent,
+  type AccessibilityActionInfo,
+} from 'react-native';
 import { ThemedIcon } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
+import { RowFrame, type SwipeRowPress } from '#components/molecules/RowFrame';
 import type { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
 import { Badge, BadgeStack, type BadgeContent } from '#components/atoms/Badge';
 import type { RowThemeColors } from '#components/atoms/rowTheme';
 import { Text } from '#components/atoms/Text';
-import { commonStyles } from '#/styles/commonStyles';
-import { rowType } from '#/theme/foundations/type';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { commonStyles } from '#styles/commonStyles';
+import { rowType } from '#theme/foundations/type';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 
-interface ListItemProps {
+export interface ListItemProps {
   children?: React.ReactNode;
   /** A pressable row's spoken label; title, subtitle and badge when absent. */
   accessibilityLabel?: string;
@@ -26,12 +31,26 @@ interface ListItemProps {
   titleNumberOfLines?: number;
   subtitle?: string | React.ReactNode;
   onPress?: () => void;
+  /** A pressable row's second action, such as a folder's manage menu. */
+  onLongPress?: () => void;
+  /** A row picked in a list of choices: tinted, and reported as selected. */
+  selected?: boolean;
+  /** Drawn on the brand tint with nothing spoken for it, as an unread row is. */
+  tinted?: boolean;
   leftIcon?: React.ComponentProps<typeof Icon>['name'];
   badge?: BadgeContent;
+  /** Shown after the text, inside the row's press: nothing that presses. */
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode; // Optional left element for image or icon
-  checkboxElement?: React.ReactNode; // Optional checkbox before leftElement (for shopping list)
-  dragHandleElement?: React.ReactNode; // Optional drag handle before checkbox (for reordering)
+  /** A control before the row's text, such as a checkbox; its own element. */
+  checkboxElement?: React.ReactNode;
+  /** Controls after the row's text, each its own element beside the press. */
+  trailingActions?: React.ReactNode;
+  /** A pressable row's secondary actions, offered to a screen reader. */
+  accessibilityActions?: AccessibilityActionInfo[];
+  onAccessibilityAction?: (event: AccessibilityActionEvent) => void;
+  /** From `SwipeableItem`, whose button is the row's press. */
+  swipe?: SwipeRowPress;
   isPurchased?: boolean; // For strikethrough styling
   // Forwarded to `withUnistyles(Icon)`; null keeps the theme-reactive default.
   themeColors?: RowThemeColors | null;
@@ -45,21 +64,30 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   titleNumberOfLines = 2,
   subtitle,
   onPress,
+  onLongPress,
+  selected,
+  tinted = false,
   leftIcon,
   badge,
   rightElement,
   leftElement,
   checkboxElement,
-  dragHandleElement,
+  trailingActions,
+  accessibilityActions,
+  onAccessibilityAction,
+  swipe,
   isPurchased = false,
   themeColors,
 }) => {
   const { t } = useTranslation();
   const overrideIconColor = themeColors?.textSecondary;
+  // On a card that lights up, the card's fill shows through the row.
+  const onCardFill = useRowsOnCardFill();
+  const surface = [commonStyles.rowSurface, onCardFill && styles.onCardFill];
 
   if (children) {
     return (
-      <View style={commonStyles.rowSurface}>
+      <View style={surface}>
         <View style={commonStyles.rowContent}>{children}</View>
       </View>
     );
@@ -67,14 +95,11 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
   const content = (
     <>
-      {!!checkboxElement && (
-        <View style={styles.checkboxContainer}>{checkboxElement}</View>
-      )}
       {leftElement}
       {!!leftIcon && (
         <ThemedIcon
           name={leftIcon}
-          size={24}
+          size="md"
           uniProps={theme => ({
             color: overrideIconColor ?? theme.colors.textSecondary,
           })}
@@ -103,43 +128,42 @@ const ListItemComponent: React.FC<ListItemProps> = ({
           <Badge variant={badge.variant}>{badge.text}</Badge>
         ))}
       {rightElement}
-      {dragHandleElement}
     </>
   );
 
-  if (onPress) {
-    const subtitleText = typeof subtitle === 'string' ? subtitle : '';
+  const subtitleText = typeof subtitle === 'string' ? subtitle : '';
+  const press = onPress
+    ? {
+        onPress,
+        onLongPress,
+        accessibilityLabel:
+          accessibilityLabel ??
+          accessibilityLabelOf(title, subtitleText, badge?.text),
+        accessibilityHint: accessibilityHint ?? t('labels.tapToViewDetails'),
+        accessibilityState: {
+          disabled: isPurchased,
+          ...(selected === undefined ? {} : { selected }),
+        },
+        accessibilityActions,
+        onAccessibilityAction,
+      }
+    : undefined;
 
-    return (
-      <View style={commonStyles.rowSurface}>
-        <AppPressable
-          style={commonStyles.rowContent}
-          onPress={onPress}
-          accessibilityRole="button"
-          accessibilityLabel={
-            accessibilityLabel ??
-            accessibilityLabelOf(title, subtitleText, badge?.text)
-          }
-          accessibilityHint={accessibilityHint ?? t('labels.tapToViewDetails')}
-          accessibilityState={{ disabled: isPurchased }}
-        >
-          {content}
-        </AppPressable>
-      </View>
-    );
-  }
-
-  // A named row with nothing to press still reads as one element.
   return (
-    <View style={commonStyles.rowSurface}>
-      <View
-        style={commonStyles.rowContent}
-        accessible={!!accessibilityLabel}
-        accessibilityLabel={accessibilityLabel}
-      >
-        {content}
-      </View>
-    </View>
+    <RowFrame
+      leading={checkboxElement}
+      trailing={trailingActions}
+      swipe={swipe}
+      press={press}
+      // A named row with nothing to press still reads as one element.
+      accessibilityLabel={accessibilityLabel}
+      surfaceStyle={[
+        onCardFill && styles.onCardFill,
+        (selected === true || tinted) && styles.tintedSurface,
+      ]}
+    >
+      {content}
+    </RowFrame>
   );
 };
 
@@ -187,10 +211,11 @@ const ListItemSubtitle: React.FC<{
 export const ListItem = ListItemComponent;
 
 const styles = StyleSheet.create(theme => ({
-  checkboxContainer: {
-    justifyContent: 'center',
-    // Never compressed when the row has no image.
-    flexShrink: 0,
+  onCardFill: {
+    backgroundColor: 'transparent',
+  },
+  tintedSurface: {
+    backgroundColor: theme.colors.primaryLight,
   },
   content: {
     flex: 1,

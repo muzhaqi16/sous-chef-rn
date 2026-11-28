@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { getPerspectiveLabel, CAPTURE_PERSPECTIVES } from '#utils/imageUtils';
 import { ImagePicker } from '#features/catalog/components/ImagePicker';
-import type { ImageFile } from '#/types/media';
+import type { ImageFile } from '#types/media';
 import type { SelectedImage } from '#features/catalog/types';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { Text } from '#components/atoms/Text';
 import { LocalImage } from '#components/atoms/LocalImage';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 interface MultiImagePickerProps {
   images: SelectedImage[];
@@ -140,7 +140,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
           isProfile={false}
         >
           <View style={styles.placeholderContainer}>
-            <Icon name="camera-outline" size={32} tone="textSecondary" />
+            <Icon name="camera-outline" size="lg" tone="textSecondary" />
             <Text role="body" tone="secondary" align="center">
               {t('imagePicker.addPhotos')}
             </Text>
@@ -167,36 +167,34 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
           <View key={`${image.uri}-${index}`} style={styles.imageEntry}>
             <View style={styles.thumbnailWrapper}>
               <LocalImage uri={image.uri} style={styles.thumbnail} />
-              <AppPressable
-                style={styles.removeButton}
+              <IconButton
+                name="close"
+                size="2xsPlus"
+                tone="onScrim"
                 onPress={() => handleRemoveImage(index)}
-                disabled={disabled}
-                hitSlop={hitSlop.lg}
-                accessibilityRole="button"
                 accessibilityLabel={t('imagePicker.removeImage')}
-              >
-                <Icon name="close" size={14} tone="onScrim" />
-              </AppPressable>
+                accessibilityRole="button"
+                disabled={disabled}
+                filled={{ size: 'xs', tone: 'scrim' }}
+                style={styles.removeButton}
+              />
               {!!allowPrimarySelection && (
-                <AppPressable
-                  style={styles.primaryButton}
+                <IconButton
+                  name={image.isPrimary ? 'star' : 'star-outline'}
+                  size="2xsPlus"
+                  tone={image.isPrimary ? 'rating' : 'onScrim'}
                   onPress={() => handleSetPrimary(index)}
-                  disabled={disabled || image.isPrimary}
-                  hitSlop={hitSlop.lg}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: !!image.isPrimary }}
                   accessibilityLabel={t(
                     image.isPrimary
                       ? 'itemPhotos.mainPhoto'
                       : 'itemPhotos.setAsMain',
                   )}
-                >
-                  <Icon
-                    name={image.isPrimary ? 'star' : 'star-outline'}
-                    size={14}
-                    tone={image.isPrimary ? 'rating' : 'onScrim'}
-                  />
-                </AppPressable>
+                  accessibilityRole="button"
+                  disabled={disabled || image.isPrimary}
+                  selected={!!image.isPrimary}
+                  filled={{ size: 'xs', tone: 'scrim' }}
+                  style={styles.primaryButton}
+                />
               )}
             </View>
             <AppPressable
@@ -213,7 +211,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
               >
                 {getPerspectiveLabel(image.perspective, t)}
               </Text>
-              <Icon name="chevron-down" size={14} tone="textSecondary" />
+              <Icon name="chevron-down" size="2xsPlus" tone="textSecondary" />
             </AppPressable>
           </View>
         ))}
@@ -228,7 +226,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
             isProfile={false}
           >
             <View style={styles.addMoreButton}>
-              <Icon name="camera-outline" size={24} tone="primary" />
+              <Icon name="camera-outline" size="md" tone="primary" />
               <Text role="label" tone="accent">
                 {t('imagePicker.addMore')}
               </Text>
@@ -299,28 +297,17 @@ const styles = StyleSheet.create(theme => ({
     height: 80,
     backgroundColor: theme.colors.surfaceVariant,
   },
+  // Each fill sits 2pt in from its corner; its floor-sized target is pulled
+  // out by half the difference, opposite corners so the two never meet.
   removeButton: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    backgroundColor: theme.colors.overlays.dark,
-    borderRadius: theme.radii.full,
-    width: 22,
-    height: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    top: 2 - (theme.sizes.touchTarget.min - theme.sizes.iconFill.xs) / 2,
+    right: 2 - (theme.sizes.touchTarget.min - theme.sizes.iconFill.xs) / 2,
   },
-  // Opposite corner from remove: two 22pt targets on an 80pt thumbnail.
   primaryButton: {
     position: 'absolute',
-    bottom: 2,
-    left: 2,
-    backgroundColor: theme.colors.overlays.dark,
-    borderRadius: theme.radii.full,
-    width: 22,
-    height: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    bottom: 2 - (theme.sizes.touchTarget.min - theme.sizes.iconFill.xs) / 2,
+    left: 2 - (theme.sizes.touchTarget.min - theme.sizes.iconFill.xs) / 2,
   },
   perspectiveButton: {
     flexDirection: 'row',

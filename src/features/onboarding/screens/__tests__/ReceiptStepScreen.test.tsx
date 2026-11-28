@@ -1,15 +1,15 @@
 'use no memo';
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { t } from '#/i18n';
-import { appConfig } from '#/config/appConfig';
+import { t } from '#i18n';
+import { appConfig } from '#config/appConfig';
 import {
   initialOnboardingProgress,
   useOnboardingProgressStore,
   useOnboardingSetupStore,
 } from '#features/onboarding/store/onboardingProgressStore';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState } from '#graphql/generated/schemaTypes';
 import type { useStaplesSelection } from '#features/onboarding/hooks/useStaplesSelection';
 import type { OnboardingSetupOutcome } from '#features/onboarding/hooks/useOnboardingSetup';
 import type { DataState } from '#hooks/data/useDataState';

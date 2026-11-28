@@ -44,8 +44,11 @@ optional:
   no bar takes a bare node. In `Header` each is a whole 44pt target and a label
   is padded by the slack an icon has, so Save lands on the gutter just as a
   glyph does. The tab header, `Sheet` and `ActionTray` sit on a content gutter,
-  so there the glyph takes the edge and `hitSlop` makes the 44pt. Glyphs sit the
-  same distance apart in both; the same test pins all of it.
+  so there each target is a whole box at the platform floor and the group is
+  pulled out by the glyph's slack in it, worked out from the theme, so the glyph
+  takes the edge at every density (`gutterTargetGeometry`). `hitSlop` cannot do
+  it: a touch never reaches past the parent's bounds. The same test pins all of
+  it, density included.
 - **Three trailing slots.** Past three actions, `Header` and
   `CollapsingHeroDetail` keep the first two and put the rest behind "more" (an
   `ActionTray` of `ActionMenuRow`s, `src/components/organisms/HeaderActionMenu.tsx`),
@@ -93,16 +96,53 @@ optional:
   `Screen` with a hand-built `back`. A form sheet's header is `SheetHeader`
   (close, centred title, primary confirm); only templates render `Header`.
   `__tests__/ui/screenUsesTheScaffold.test.ts` holds all of this.
-- **`Sheet`** (`src/components/templates/Sheet.tsx`) takes
-  `view | form | action | list`. `form` supplies both the keyboard offset and
-  the input context, so inputs inside resolve to gorhom's `BottomSheetTextInput`.
-  `list` hands its child to the modal directly. `view` renders
-  `BottomSheetView`, which is absolutely positioned with no height, so a
-  `flex: 1` list inside it sizes to its own content and never scrolls — a sheet
-  holding a scrollable that fills its parent therefore uses `list`
+- **`Sheet`** (`src/components/templates/Sheet.tsx`) is every bottom sheet:
+  only it and `ActionTray` render a `BottomSheetModal` (a one-door policy in
+  `eslint/boundaries.js`). It takes
+  `view | form | action | list`. `form` supplies the keyboard offset; in every
+  mode the inputs inside resolve to gorhom's `BottomSheetTextInput` themselves.
+  `list` puts its child in a plain `flex: 1` view the modal bounds, and clears
+  the home indicator there unless `bottomInset="content"` says the content pads
+  its own scroll. `view` renders `BottomSheetView`, which is absolutely
+  positioned with no height, so a `flex: 1` list inside it sizes to its own
+  content and never scrolls — a sheet holding a scrollable that fills its
+  parent therefore uses `list`
   ([gorhom BottomSheetView cannot bound a scrollable](verified-library-behaviour.md#gorhom-bottomsheetview-cannot-bound-a-scrollable)).
-  `__tests__/sheets/bottomSheetShell.test.ts` holds the shell and
   `__tests__/ui/viewSheetScrollableIsBounded.test.ts` holds the `list` rule.
+  - **A list sheet insets its own content, as a page list does.** `Sheet`
+    gutters `view`, `form` and `action` content; a `list` host puts
+    `layout.pageGutter` on its header and its list's content container, never
+    on a wrapper, so the whole width scrolls the list rather than dragging the
+    sheet (`pageGutterHasOneAuthor.test.ts`).
+  - **One header.** A sheet's bar is `SheetHeader`, passed as `header`, or
+    rendered by the content through `SheetHeaderSlot` (`headerFromContent`)
+    when the form's state owns its handlers. Either way it sits above the
+    scroll, so a field scrolled above the keyboard never carries it off.
+  - **Fresh on every opening.** gorhom unmounts a dismissed sheet's content
+    ([gorhom unmounts a modal's content once it is dismissed](verified-library-behaviour.md#gorhom-unmounts-a-modals-content-once-it-is-dismissed)),
+    so state held in that content starts clean with no reset. A sheet whose
+    state sat beside its `Sheet` moves it into a content component keyed by
+    `useOpening(visible)`; what a sheet keeps on purpose lives in its parent.
+    A payload a sheet opens on, such as the batch it acts on, rides the
+    opening (`useOpening(visible, payload)`), so the sheet stays mounted,
+    driven by `visible`, and keeps its payload while it animates out.
+  - **One open sheet per screen, from `useActiveSheet`.** The sheets a screen
+    opens from its own actions are one union in `useActiveSheet`: opening one
+    closes the others, and a sheet's late dismiss never closes the one that
+    replaced it. A sheet a flow owns, such as a write's batch-use or recount
+    sheet, keeps that flow's state instead, since the flow produces its data;
+    gorhom stacks presentations, not payloads.
+  - **Typed input is never dropped without asking.** A form in a sheet reports
+    `useSheetUnsavedInput(formState.isDirty)`, and closing it by the header's
+    close, the backdrop, Back or a drag then asks "Discard changes?", as
+    `FormScreen` does. A drag is snapped back first: gorhom reports the close
+    in `onAnimate` as it starts, and a gesture's close is not a forced one. A
+    close the owner makes, after a save, never asks. A pick written with
+    `setValue` counts only with `shouldDirty: true`; a prefill never does.
+  - **A sheet the shell does not fit grows the shell an option**, never a
+    hand-rendered modal: `modalOptions` passes a typed pick of gorhom's props
+    (`stackBehavior: 'push'` over a host sheet, an Android keyboard that
+    resizes); a key left out keeps the standard value.
 - **`Dialog`** (`src/components/templates/Dialog.tsx`) is a centred card over a
   scrim, for a short decision or a small form. The scrim and card fade together;
   a `slide` would carry the scrim up with the card. The Modal is
@@ -177,6 +217,19 @@ they read it.
 - **A row's status is its status line alone** (`StatusLine`): one coloured line
   under the title, with no border, tint or badge repeating it.
 - **The whole row opens its detail.** No row shows a chevron.
+- **A control in a row sits beside the row's press, never inside it.**
+  `RowFrame` (`src/components/molecules/RowFrame.tsx`) lays a row out as a
+  leading control (`ListItem`'s `checkboxElement`), the press surface, and the
+  trailing controls (`trailingActions`); `rightElement` stays inside the press
+  and holds nothing that presses. The press surface is one accessible element
+  and, in a swipe row, RNGH's button: either swallows a control nested in it,
+  for a tap and for a screen reader alike, so the control would never fire or
+  be reached. A row's secondary actions that have no control of their own go
+  to the surface as `accessibilityActions`, as a swipe row's actions do.
+- **A swipe row is handed its press.** `SwipeableItem`'s child is a function of
+  the press (`SwipeRowPress`), which the row passes to `ListItem` or
+  `RowFrame` as `swipe`. Inside it, `GestureRowContext` makes `IconButton`
+  press through RNGH, which a control inside a `Swipeable` needs.
 - **Text** is `rowType` (`src/theme/foundations/type.ts`): `title` for the row's
   name and its trailing value, `subtitle` for everything supporting them. A shell
   names the role through `rowType`, never as a literal, so no screen can pick its
@@ -204,8 +257,10 @@ they read it.
   action does not go inside the field: Pantry's "Select pantry" is in its header.
 - **At most one control sits beside the field, and it sorts or filters the list
   below.** That control is `SearchBar`'s `accessory` (a `SearchBarAction`): a plain
-  primary icon at its own width, ending on the gutter, with an optional count
-  `badge`; `hitSlop` gives it the 44pt target. Pantry's sorts (the `sort`
+  primary icon ending on the gutter, with an optional count `badge`. Its target
+  is a whole box at the platform floor, and the bar reaches into the gutter by
+  the glyph's slack so the box lies inside it (`gutterTargetGeometry`, as the
+  gutter bars). Pantry's sorts (the `sort`
   glyph), and its label names the active sort. Recipes' filters by diet in name mode, and
   its badge counts the active filters. The shopping list and the add sheet have
   none, because scanning is in the tab's `+` menu.
@@ -220,6 +275,14 @@ they read it.
   storage locations stay chips; a choice inside a form stays a
   `SegmentedControl`. `tabTestID` names each tab for tests and flows, and
   `onTabLayout` reports a tab's rect for a tutorial step.
+- **A chip is `Chip`; a row of them is `ChipScrollRow`.** Every filter strip
+  uses them: Pantry's locations, the notification categories, the store-mode
+  aisles and Saved Recipes' folder and tag filters. A chip's `count` sits in a
+  surface badge, so a label such as "Freezer 2" never runs into its number. A
+  chip never takes a per-item colour or drawing: a location's colour fails
+  contrast under white text on half its swatches, and the storage drawings are
+  faint at chip size, so both stay on the location's card. A filtered list hides
+  what describes the whole pantry, such as the stock-check banner.
 - **A count badge is the only sign a control is active.** The control itself
   does not change when active; a fill in the badge's colour would swallow it.
 - **An icon `Ionicons` lacks is an app glyph.** `Icon` draws the SVGs in
@@ -244,7 +307,7 @@ they read it.
 - **`withUnistyles(Component)`** wraps a third-party component taking
   theme-derived props, so only the wrapper re-renders on a theme tick. Shared
   wrappers live in `src/components/atoms/themedComponents.tsx`
-  (`ThemedBottomSheetTextInput`, `ThemedActivityIndicator`,
+  (`ThemedTextInput`, `ThemedActivityIndicator`,
   `OnPrimaryActivityIndicator`, …); a new one goes there, not in a feature file.
   Switches use `BaseSwitch` (`src/components/atoms/BaseSwitch.tsx`); themed icon
   colours use `<Icon tone="X" />` (`src/components/atoms/Icon.tsx`), and the glyph
@@ -269,10 +332,12 @@ they read it.
   screen is hidden and never reads the theme again, so the app's reads it when
   the screen is shown
   ([Unistyles' useAnimatedTheme misses a theme change made while its screen is paused](verified-library-behaviour.md#unistyles-useanimatedtheme-misses-a-theme-change-made-while-its-screen-is-paused)).
-- **Never wrap `Pressable`/`TouchableX` with `withUnistyles`.** The wrapper
-  copies a function-style `style={({ pressed }) => [...]}` into `{}`. RN's
-  `Pressable` needs no wrapper, because Unistyles binds it to the ShadowTree
-  itself
+- **Never wrap a `Pressable`, RN's or RNGH's, with `withUnistyles`.** The
+  wrapper copies a function-style `style={({ pressed }) => [...]}` into `{}`,
+  which upstream holds by design. RN's `Pressable` needs no wrapper: the Metro
+  integration swaps in Unistyles' own, which runs the function. Unistyles'
+  guide suggests `withUnistyles(GHPressable)` for RNGH's, which drops the same
+  style
   ([withUnistyles drops function styles](verified-library-behaviour.md#unistyles-withunistyles-drops-function-styles)).
 - **`useUnistyles()` is for runtime metadata** (`rt.colorScheme`, `rt.themeName`,
   `rt.insets`). Reading `theme.*` through it re-renders the whole component on
@@ -295,21 +360,13 @@ they read it.
   and `useVariants` returns a new object per call, so the compiler cannot freeze
   a read from it. A bare call selects nothing
   (`sous-chef/use-variants-return-is-read`).
-- **A host that mounts its children later than they were created wraps them in
-  `CurrentThemeScope`.** A `styles.x` read is a snapshot, and the compiler caches
-  an element against its other dependencies, so a parent that outlives a theme
-  change can hand a host elements carrying the old theme's colours. Unistyles
-  updates MOUNTED views natively, but corrects a snapshot at mount only inside a
-  scoped theme (`HybridShadowRegistry::link`), so the stale colours stick until
-  the next theme change. The sheet wrapper (`#hooks/ui/useStandardBottomSheet`,
-  which `ActionTray` uses too), the `Modal` re-export in `themedComponents`
-  (RN's is banned) and `CollapsibleSection` carry it; a new host that gates
-  `children` on its own open state adds it. A component rendering its own JSX
-  needs nothing: the condition it mounts on is a dependency of that JSX. A
-  `withUnistyles` or `useUnistyles` reader inside a scoped theme
-  [ignores theme events](verified-library-behaviour.md#a-unistyles-reader-inside-a-scopedtheme-ignores-theme-events),
-  so the scope is keyed on the theme epoch and every theme commit remounts its
-  children.
+- **A host that mounts its children later than they were created needs no
+  theme wrapper.** A parent that outlives a theme change can hand a sheet,
+  `Modal` or expanded section elements the compiler kept with the old theme's
+  styles; Unistyles draws them in the current theme when they mount
+  ([verified](verified-library-behaviour.md#unistyles-draws-a-kept-element-that-mounts-late-in-the-current-theme)).
+  A `ScopedTheme` pins a FIXED theme and its readers ignore theme events, so it
+  is never a way to follow the current one.
 
 ## Typography roles
 
@@ -356,11 +413,13 @@ they read it.
   dark overlay — and it stays light in both appearances. There is no
   `colors.white`.
 - **The brand has three roles.**
+
   - **`primary`** is the fill, and `onPrimary` is what sits on it.
   - **`primaryText`** is the brand as text or an icon: the `accent` tone, `Icon`'s `primary` tone, and a link.
   - **`primaryLight`** is the tint, and `onPrimaryLight` is its content.
 
   A brand-coloured foreground reads `primaryText`, never `primary`, and a tint reads `primaryLight`, never `primary + 'NN'`. The roles let a picked brand and High Contrast lift a foreground to AA without changing the fill.
+
 - **The default brand orange sits below AA by decision.** Its text on the page reads 2.35:1 and white on it 2.58:1. Each such pairing is listed where a contrast test reads it: `toneContrast.test.ts` `BELOW_AA_BY_DECISION`, `onColor.test.ts`, and `onFillTextUsesItsToken.test.ts`. High Contrast maps the default brand to `brand[700]` (`applyAppearance.ts`), and `applyAppearance.test.ts` holds every brand pairing at AA there.
 - **`sous-chef/on-fill-text-uses-its-token`** catches the two per-file shapes: a
   raw white literal, and an `on*` token over a fill it does not name.
@@ -376,7 +435,7 @@ they read it.
   `src/theme/foundations/motion.ts`, the curves (Reanimated's) in
   `src/theme/motion.ts`, which composes all of them. Read as
   `theme.motion.timing.FAST` in a stylesheet and as `motion.timing.FAST` from
-  `#/theme/motion` elsewhere.
+  `#theme/motion` elsewhere.
 - **The scale stops at 300 ms.** A longer number is a loop's own period — a
   1500 ms shimmer, a 1200 ms bob — and stays a literal at its call site rather
   than becoming a token only one animation uses.
@@ -492,12 +551,15 @@ they read it.
   tutorials off. Not now puts a tour away until the next session; End marks
   every step shown.
 - **Inputs in a sheet resolve to `BottomSheetTextInput`.** A plain RN `TextInput`
-  leaves the sheet blind to the keyboard. `BottomSheetTextInput` throws outside a
-  sheet, so shared inputs pick it from context —
-  `useIsBottomSheetInput() ? ThemedBottomSheetTextInput : ThemedTextInput` — as
-  `FormInput`, `FractionInput`, `EditableCounter` and
-  `BottomSheetAutocompleteInput` do
-  ([gorhom keyboard handling requires BottomSheetTextInput](verified-library-behaviour.md#gorhom-keyboard-handling-requires-bottomsheettextinput)).
+  leaves the sheet blind to the keyboard, and `BottomSheetTextInput` throws
+  outside a sheet. `ThemedTextInput` picks one by asking gorhom where it renders
+  (`useInBottomSheet`, over `useBottomSheetInternal(true)`), so every kit input,
+  search field and counter is right in any sheet mode with no prop, and one ref
+  reaches the input either way. A text input is only ever `ThemedTextInput`
+  ([gorhom keyboard handling requires BottomSheetTextInput](verified-library-behaviour.md#gorhom-keyboard-handling-requires-bottomsheettextinput),
+  [gorhom's internal context answers whether a render is in a sheet](verified-library-behaviour.md#gorhoms-internal-context-answers-whether-a-render-is-in-a-sheet)).
+  In a sheet its `autoFocus` waits for the sheet to stop moving, once
+  ([A field focused while its sheet opens is scrolled out of view](verified-library-behaviour.md#a-field-focused-while-its-sheet-opens-is-scrolled-out-of-view)).
 - **A content-sized sheet (`enableDynamicSizing`) takes no keyboard-aware
   scrollable.** `KeyboardAwareScrollView` pads its content by the keyboard's
   height, and gorhom sizes the sheet to that content, so focusing a field grows
@@ -505,9 +567,19 @@ they read it.
   uses `BottomSheetView` (`PurchaseAmountSheet`, `QuantityEditSheet`) and lets
   gorhom's `interactive` lift seat it on the keyboard
   ([A keyboard-aware scrollable cannot size a sheet](verified-library-behaviour.md#a-keyboard-aware-scrollable-cannot-size-a-sheet)).
-- **A fixed-snap-point sheet with inputs uses `BottomSheetFormScrollView`.** It is
-  a gorhom-registered `KeyboardAwareScrollView` that also supplies the input
-  context. The raw `BottomSheetKeyboardAwareScrollView` supplies the keyboard
+- **A tall fixed-snap-point sheet with inputs uses `BottomSheetFormScrollView`.**
+  `Sheet mode="form"` picks it when the tallest snap point passes 60%. A shorter
+  sheet scrolls in gorhom's own view: gorhom's `interactive` lift raises it whole
+  above the keyboard, so a keyboard-aware scroll would make that room a second
+  time and push the field out of view
+  ([gorhom's lift and a keyboard-aware scroll both make room](verified-library-behaviour.md#gorhoms-lift-and-a-keyboard-aware-scroll-both-make-room)).
+  A taller one has one stop and `extend`, so gorhom leaves it where it is and
+  the scroll alone makes the room; a second stop would make gorhom move it,
+  locking its content below the top stop, and the scroll would overshoot by the
+  move (`formSheetHasOneStop.test.ts`). The same holds for any sheet set to
+  `extend`.
+  `BottomSheetFormScrollView` is a gorhom-registered `KeyboardAwareScrollView`
+  that also supplies the input context. The raw `BottomSheetKeyboardAwareScrollView` supplies the keyboard
   offset but not the input context, so its inputs would resolve to RN's; only
   `BottomSheetFormScrollView` may import it.
 - **`bottomOffset` defaults to the density-scaled `theme.spacing.md`**, applied as
@@ -520,11 +592,9 @@ they read it.
 - **Never wrap a scrollable in `BottomSheetView`.** This covers `FlashList` via
   `useBottomSheetScrollableCreator`, `BottomSheetScrollView` and
   `BottomSheetFlatList`. `BottomSheetView` is absolutely positioned with no
-  bottom or height, so the list is never height-bounded and cannot scroll. Put
-  the list in a plain `View style={{ flex: 1 }}`, as `IngredientSelectorSheet`
-  and `AddMealSheet` do; a `maxHeight` list merely gets away with it.
-  `BottomSheetAutocompleteInput.test.tsx`
-  (`src/features/catalog/components/__tests__/`) guards it.
+  bottom or height, so the list is never height-bounded and cannot scroll.
+  `Sheet`'s `list` mode is the plain `flex: 1` view it needs;
+  `sous-chef/no-scrollable-in-bottom-sheet-view` guards it.
 
 ## Lists (FlashList v2)
 
@@ -568,9 +638,9 @@ they read it.
   that goes empty to empty, FlashList commits once. That commit lands while the
   skeletons are still up, and the placeholder guard discards it — so a list
   waiting on a commit, with no rows to reveal, waits forever.
-- **`InteractionManager` is a no-op stub in RN 0.86.3** (`runAfterInteractions`
-  is `setImmediate`). Defer non-urgent work with `requestIdleCallback`
-  ([InteractionManager is a no-op stub](verified-library-behaviour.md#interactionmanager-is-a-no-op-stub)).
+- **`InteractionManager` is gone from React Native** (reading it throws in a
+  development build). Defer non-urgent work with `requestIdleCallback`
+  ([InteractionManager is gone](verified-library-behaviour.md#interactionmanager-is-gone)).
 
 ## Autocomplete & dropdowns
 
@@ -654,10 +724,31 @@ they read it.
   - Fields render through `Controller`, and Save goes through
     `handleSubmit(onValid, reportValidationErrors)`.
   - The submit hook does not validate: reaching it means the form is already
-    valid.
-- **The schemas** are `shoppingItemFormConfig.ts` (shared by the AddEditItem
-  screen and the AddToShoppingList sheet), `addPantryItemFormConfig.ts` and
-  `pantryItemFormConfig.ts` (the edit form).
+    valid. It takes the values it saves (`useListSettings`' `save`), never
+    holds the fields.
+  - Save is disabled only while saving, never for invalid input: pressed, it
+    says on the field what is wrong.
+- **The schema sits in a `*FormConfig.ts` beside its form**;
+  `shoppingItemFormConfig.ts` is shared by the AddEditItem screen and the
+  AddToShoppingList sheet.
+- **Every `Controller` hands its input `field.ref`.** A failed submit focuses the
+  first field in error, and the keyboard-aware scroller brings it into view, only
+  through that ref. A kit input takes it as `ref` (`FormInput`, `FractionInput`,
+  `FormTextArea`, `EditableCounter`, `BaseInput`), an inline autocomplete as
+  `chaining.inputRef`; a `modal` autocomplete is a button and takes none
+  (`__tests__/forms/controllersFocusTheirInput.test.ts`).
+- **A cap a field is held to goes in the resolver's `context`** (what a stack
+  holds, what a batch can give), never in a schema built per render. When the
+  cap moves after a submit, `trigger` re-runs the field, so a shown message
+  follows it (`ConsumePantryItemModal`, `RecordWastePantryItemModal`).
+- **A form over data it reads** seeds `defaultValues` from the cached copy and
+  passes the same object as `values`, with
+  `resetOptions: { keepDirtyValues: true }`, so a later read restates every
+  field the user has not touched (`PantryItemForm`, `PantrySettings`). A rule
+  that judges a field against what it was seeded with reads that from the
+  resolver's `context` (the edit form's amount).
+- **A message that belongs to no field** (nothing answered) is a `root.*` error;
+  a server refusal of one row is set on that row's field.
 - **Schema messages resolve lazily** (`const msg = key => () => t(key)`, pattern
   in `src/utils/validation/common.ts`). A schema is built once at module scope,
   so an eagerly-resolved message freezes whichever language was active at
@@ -699,9 +790,9 @@ they read it.
   (`snapDeductionToCap`). A waste field seeded with 2.4566 shows `2.457`, which
   parses above the stock; it matches the stock in the seed's decimal or fraction
   form, or in the displayed form, so "use all of it" is never refused.
-- **`QuantityDisplay`** maps the item's `DisplayFormat` and the unit's
-  `displayAsFraction` onto its `notation`. Only an explicit
-  `displayAsFraction: false` — a unit nobody halves — opts out of fractions.
+- **`QuantityDisplay`** maps the unit's `displayAsFraction` onto its
+  `notation`. Only an explicit `displayAsFraction: false` — a unit nobody
+  halves — opts out of fractions.
 - **`quantityInput` is re-formatted, never shown verbatim.** It holds the user's
   own text ("1 1/4"), but the API echoes it back as a stringified float, so a
   1/3-cup recipe line comes back carrying `"0.33333334"`. Text no parser can read
@@ -713,6 +804,20 @@ they read it.
 - **An editable field is seeded by the same function**, so a badge and its edit
   sheet cannot disagree. A decimal-only field (`PurchaseAmountSheet`, whose
   keypad has no `/`) seeds from `formatQuantity` instead.
+
+## Money
+
+- **Money is shown at its currency's `decimalPlaces`**, the precision the server
+  stores it in, so iOS, Android and the admin show the same digits; Intl still
+  places the symbol and separators for the locale. `useAccountCurrencySync`
+  mirrors the table into the store (`currencyDecimals`), so a list cell reads it
+  without an Apollo watcher per row. Until the device holds it, Intl's digits for
+  the code apply.
+- **Render code formats through `useMoney`** (a figure's own currency, else the
+  account's) **or `useFormatCurrency`** (a known code; null shows a bare number).
+  `formatCurrency` takes the precision as a required argument, so a call outside
+  them states where its digits come from (a figure selecting
+  `currency { decimalPlaces }`).
 
 ## Navigation
 

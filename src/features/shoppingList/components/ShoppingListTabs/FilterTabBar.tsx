@@ -3,12 +3,22 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import type { NavigationState, Route } from 'react-native-tab-view';
-import type { FilterTabActionButton } from '#components/organisms/FilterTabs/types';
 import { ModeTabs } from '#components/molecules/ModeTabs';
 import { IconButton } from '#components/atoms/IconButton';
 import { Text } from '#components/atoms/Text';
 import { kitTestIDs } from '#components/testIDs';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+
+/** A labelled action after the tabs, or an icon-only one its `accessibilityLabel` names. */
+export type TabBarAction = {
+  iconLibrary?: string;
+  onPress: () => void;
+  testID?: string;
+  disabled?: boolean;
+} & (
+  | { label: string; icon?: string; accessibilityLabel?: string }
+  | { label?: undefined; icon: string; accessibilityLabel: string }
+);
 
 interface FilterTabBarRoute<TKey extends string> extends Route {
   key: TKey;
@@ -19,7 +29,7 @@ interface FilterTabBarProps<TKey extends string> {
   navigationState: NavigationState<FilterTabBarRoute<TKey>>;
   jumpTo: (key: TKey) => void;
   counts?: Partial<Record<TKey, number>>;
-  actionButtons?: FilterTabActionButton[];
+  actionButtons?: TabBarAction[];
 }
 
 export function FilterTabBar<TKey extends string>({

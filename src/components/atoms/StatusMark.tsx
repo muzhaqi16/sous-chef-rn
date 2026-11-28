@@ -16,12 +16,11 @@ interface StatusMarkProps {
 export const StatusMark: React.FC<StatusMarkProps> = ({ icon }) =>
   icon ? (
     <View style={styles.mark} pointerEvents="none">
-      <Icon name={icon} size={MARK_GLYPH} tone="onWarning" />
+      <Icon name={icon} size="2xs" tone="onWarning" />
     </View>
   ) : null;
 
 // Smaller than any icon step: the mark is a corner of a 24pt glyph's target.
-const MARK_GLYPH = 11;
 
 const styles = StyleSheet.create(theme => ({
   mark: {

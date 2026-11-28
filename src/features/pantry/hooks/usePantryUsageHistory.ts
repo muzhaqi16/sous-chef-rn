@@ -2,7 +2,7 @@ import { useQuery } from '@apollo/client/react';
 import { usePagination } from '#hooks/utils/usePagination';
 import { GetPantryItemUsageHistoryDocument } from '#features/pantry/graphql/pantry.generated';
 import { useDataState } from '#hooks/data/useDataState';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import type { UsageRecord } from '#features/pantry/types';
 
 const PAGE_SIZE = 30;

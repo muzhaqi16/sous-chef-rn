@@ -64,4 +64,4 @@ Every schema `String` field was classified against `sous-chef-api`. A row is a f
 - Test files and `.graphql` documents.
 - Files without type information.
 
-Source: [`eslint/plugin/rules/no-rendered-server-message.js`](../../eslint/plugin/rules/no-rendered-server-message.js) · spec: [`__tests__/lint/rules/no-rendered-server-message.test.ts`](../../__tests__/lint/rules/no-rendered-server-message.test.ts)
+Source: [`eslint/plugin/rules/no-rendered-server-message.js`](../../eslint/plugin/rules/no-rendered-server-message.js) · spec: [`__tests__/lint/typedRules/no-rendered-server-message.ts`](../../__tests__/lint/typedRules/no-rendered-server-message.ts)

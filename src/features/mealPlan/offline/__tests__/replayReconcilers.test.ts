@@ -1,8 +1,8 @@
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   GONE_REPLAYS,
   REPLAY_RECONCILERS,
-} from '#/apollo/offlineQueue/replayRegistry';
+} from '#apollo/offlineQueue/replayRegistry';
 import {
   reconcileCreateMealPlanItemReplay,
   settleGoneMealPlanItem,

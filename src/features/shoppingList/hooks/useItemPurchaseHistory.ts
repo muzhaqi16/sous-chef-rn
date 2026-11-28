@@ -5,7 +5,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { usePagination } from '#hooks/utils/usePagination';
 import { useDataState } from '#hooks/data/useDataState';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 
 const PAGE_SIZE = 30;
 

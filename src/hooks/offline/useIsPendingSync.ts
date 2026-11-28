@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
 
 const subscribe = (onStoreChange: () => void) =>
   queueStore.subscribe(onStoreChange);

@@ -3,11 +3,11 @@ import type { ApolloClient } from '@apollo/client';
 import { useApolloClient } from '@apollo/client/react';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
-import { errorService } from '#/services/errorService';
-import { isDeadCursorError } from '#/utils/errors/graphqlErrors';
-import { isRateLimitError } from '#/utils/errors/rateLimit';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import type { RecipeFilters as RecipeFiltersInput } from '#/graphql/generated/schemaTypes';
+import { errorService } from '#services/errorService';
+import { isDeadCursorError } from '#utils/errors/graphqlErrors';
+import { isRateLimitError } from '#utils/errors/rateLimit';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
+import type { RecipeFilters as RecipeFiltersInput } from '#graphql/generated/schemaTypes';
 import { catalogIngredientNames } from '#domain/catalogRecipes';
 import type { RecipeFilters } from '#features/recipes/utils/recipeFilterOptions';
 import {

@@ -1,4 +1,4 @@
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 
 export const versionOf = (record: unknown): number | undefined =>
   isRecord(record) && typeof record.version === 'number'

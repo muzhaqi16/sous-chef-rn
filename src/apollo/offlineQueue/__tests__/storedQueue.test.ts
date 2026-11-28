@@ -3,9 +3,9 @@
  * build's document for its operation, with its variables as stored.
  */
 import { gql } from '@apollo/client';
-import { storage } from '#/store/deviceStorage';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { MUTATION_DOCUMENTS } from '#/graphql/generated/mutationDocuments.generated';
+import { storage } from '#store/deviceStorage';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { MUTATION_DOCUMENTS } from '#graphql/generated/mutationDocuments.generated';
 import { authoredMutations } from '#/test-utils/queueableOperations';
 import {
   makeQueuedMutation,

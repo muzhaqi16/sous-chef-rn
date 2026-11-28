@@ -35,7 +35,7 @@ await pendingWritesOf(cache).send(
 );
 ```
 
-`client.mutate` and a helper that fires a caller's mutate function (`createShoppingListRow`'s `send`) keep the marker on the call.
+`client.mutate` and a helper that fires a caller's mutate function (`createShoppingListRow`'s `send`, which only `useAddShoppingRows` passes) keep the marker on the call.
 
 ## Exempt
 

@@ -1,9 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { SubScreen } from '#components/templates/SubScreen';
-import { Environment } from '#/utils/environment';
+import { Environment } from '#utils/environment';
 import { useCanAccessDevTools } from '#store/useAppStore';
 import { Text } from '#components/atoms/Text';
 import { usePerformanceDashboard } from '#features/devtools/screens/usePerformanceDashboard';

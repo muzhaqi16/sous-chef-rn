@@ -1,7 +1,7 @@
 import React from 'react';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { RowCard } from '#components/atoms/RowCard';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { ListItem } from '#components/molecules/ListItem';

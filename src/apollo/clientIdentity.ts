@@ -1,5 +1,5 @@
 import { requirePlatform } from '#platform/install';
-import { DeviceType } from '#/graphql/generated/schemaTypes';
+import { DeviceType } from '#graphql/generated/schemaTypes';
 
 /**
  * Name the server matches against its MIN_CLIENT_VERSIONS table. One name is

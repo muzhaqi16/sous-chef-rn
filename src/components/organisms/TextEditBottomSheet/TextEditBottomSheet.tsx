@@ -1,16 +1,26 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { Controller, useForm, type FieldValues } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type AnyObjectSchema } from 'yup';
-import { Button } from '#components/molecules/Button';
 import { reportValidationErrors } from '#utils/validation/common';
 import { Text } from '#components/atoms/Text';
-import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+
+/** The keypads a one-field edit offers. */
+export type TextEditKeyboardType =
+  | 'default'
+  | 'email-address'
+  | 'numeric'
+  | 'phone-pad'
+  | 'decimal-pad';
 
 interface TextEditBottomSheetProps {
   visible: boolean;
@@ -24,17 +34,41 @@ interface TextEditBottomSheetProps {
   onClose: () => void;
   multiline?: boolean;
   maxLength?: number;
-  keyboardType?:
-    | 'default'
-    | 'email-address'
-    | 'numeric'
-    | 'phone-pad'
-    | 'decimal-pad';
+  keyboardType?: TextEditKeyboardType;
 }
 
 /** Bottom sheet for editing a single text field, validated by a yup schema. */
 export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   visible,
+  onClose,
+  initialValue,
+  ...content
+}) => {
+  // Each opening edits the value as it stood when it opened.
+  const opening = useOpening(visible, initialValue);
+
+  return (
+    <Sheet
+      mode="form"
+      visible={visible}
+      onDismiss={onClose}
+      headerFromContent
+      snapPoints={['30%']}
+    >
+      {opening ? (
+        <TextEditForm
+          key={opening.id}
+          {...content}
+          initialValue={opening.payload ?? ''}
+          onClose={onClose}
+        />
+      ) : null}
+    </Sheet>
+  );
+};
+
+/** One opening's edit, from the sheet's one header. */
+const TextEditForm: React.FC<Omit<TextEditBottomSheetProps, 'visible'>> = ({
   title,
   label,
   placeholder,
@@ -55,12 +89,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
     resolver: yupResolver(schema),
     defaultValues: { [fieldKey]: initialValue },
   });
-
-  useEffect(() => {
-    if (visible) {
-      form.reset({ [fieldKey]: initialValue });
-    }
-  }, [visible, initialValue, fieldKey, form]);
+  useSheetUnsavedInput(form.formState.isDirty);
 
   const handleSave = (data: FieldValues) => {
     const value: unknown = data[fieldKey];
@@ -68,48 +97,23 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
     onClose();
   };
 
-  const handleCancel = () => {
-    form.reset();
-    onClose();
-  };
-
   const fieldError = form.formState.errors[fieldKey];
   const variantStyles = styles.useVariants({ multiline, error: !!fieldError });
 
   return (
-    <Sheet
-      mode="view"
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={['30%']}
-      contentContainerStyle={variantStyles.content}
-    >
-      <View style={variantStyles.header}>
-        <Button
-          variant="ghost"
-          size="small"
-          onPress={handleCancel}
-          accessibilityLabel={t('labels.cancel')}
-        >
-          {t('labels.cancel')}
-        </Button>
-
-        <Text role="heading" align="center" style={variantStyles.title}>
-          {title}
-        </Text>
-
-        <Button
-          variant="ghost"
-          size="small"
-          onPress={form.handleSubmit(handleSave, reportValidationErrors)}
-          accessibilityLabel={t('labels.save')}
-        >
-          {t('labels.save')}
-        </Button>
-      </View>
-
-      <Divider style={variantStyles.divider} />
-
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={title}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void form.handleSubmit(handleSave, reportValidationErrors)();
+            },
+            accessibilityLabel: t('labels.save'),
+          }}
+        />
+      </SheetHeaderSlot>
       <View style={variantStyles.inputContainer}>
         {!!label && (
           <Text role="label" tone="secondary" style={variantStyles.label}>
@@ -122,7 +126,8 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
           name={fieldKey}
           render={({ field, fieldState }) => (
             <View>
-              <ThemedBottomSheetTextInput
+              <ThemedTextInput
+                ref={field.ref}
                 style={variantStyles.input}
                 value={
                   typeof field.value === 'string' ? field.value : undefined
@@ -145,26 +150,11 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
           )}
         />
       </View>
-    </Sheet>
+    </>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  content: {
-    paddingHorizontal: theme.spacing.lg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
-  },
-  title: {
-    flex: 1,
-  },
-  divider: {
-    marginBottom: theme.spacing.lg,
-  },
   inputContainer: {
     marginBottom: theme.spacing.md,
   },

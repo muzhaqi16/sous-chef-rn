@@ -1,5 +1,5 @@
 import type { TypePolicies } from '@apollo/client';
-import type { AnswerNote } from '#/apollo/links/answerNotesLink';
+import type { AnswerNote } from '#apollo/links/answerNotesLink';
 import { noteCatalogAnswer } from './recipes/cache/catalogAnswerNote';
 import { pantryTypePolicies } from './pantry/cache/typePolicies';
 import { shoppingListTypePolicies } from './shoppingList/cache/typePolicies';
@@ -8,6 +8,7 @@ import { mealPlanTypePolicies } from './mealPlan/cache/typePolicies';
 import { catalogTypePolicies } from './catalog/cache/typePolicies';
 import { profileTypePolicies } from './profile/cache/typePolicies';
 import { homeTypePolicies } from './home/cache/typePolicies';
+import { notificationsTypePolicies } from './notifications/cache/typePolicies';
 
 /**
  * Every feature's cache shape. Its own list, not a manifest field: i18n
@@ -26,4 +27,5 @@ export const FEATURE_TYPE_POLICIES: TypePolicies[] = [
   catalogTypePolicies,
   profileTypePolicies,
   homeTypePolicies,
+  notificationsTypePolicies,
 ];

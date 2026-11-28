@@ -1,4 +1,4 @@
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { act } from '@testing-library/react-native';
 import {
   recordMock,
@@ -6,7 +6,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { RemoveItemsFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useClearShoppingListItems } from '../useClearShoppingListItems';
 
 beforeEach(() => {

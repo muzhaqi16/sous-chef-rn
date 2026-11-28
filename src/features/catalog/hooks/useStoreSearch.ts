@@ -1,12 +1,12 @@
 import { skipToken, useLazyQuery, useQuery } from '@apollo/client/react';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { useAppStore } from '#store/useAppStore';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
 import { filterByTerm, matchesTerm } from '#hooks/search/useLocalSearch';
-import { ErrorCode, StorePlaceCategory } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, StorePlaceCategory } from '#graphql/generated/schemaTypes';
 import { SearchStoresDocument } from '#operations/store/store.generated';
-import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
+import { getTopLevelGraphQLError } from '#utils/errors/graphqlErrors';
 import {
   chainOption,
   placeOption,
@@ -18,6 +18,7 @@ import { filterByName } from '#features/catalog/utils/arrayUtils';
 import { useAutocompleteSearch } from './useAutocompleteSearch';
 import { useUsualStores } from './useUsualStores';
 import { StorePlacesDocument } from './useStoreSearch.generated';
+import { onFailedRead } from '#utils/onFailedRead';
 
 /** Where nearby stores are found from: a typed zip, or the device's place. */
 export type StoreSearchPlace =
@@ -85,9 +86,12 @@ export function useStoreSearch({
   const byName = useAutocompleteSearch<FoundStore>({
     search: term => {
       if (place) return;
-      void searchStores({
-        variables: { search: term, limit: 20, withPrices: markPrices },
-      }).catch(error => logger.warn('Store search failed', error));
+      onFailedRead(
+        searchStores({
+          variables: { search: term, limit: 20, withPrices: markPrices },
+        }),
+        error => logger.warn('Store search failed', error),
+      );
     },
     getResults: () => named.data?.stores.edges.map(edge => edge.node) ?? [],
     loading: named.loading,

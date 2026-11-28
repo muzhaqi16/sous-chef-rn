@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GetMealTemplatesDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
-import type { TemplateCategory } from '#/graphql/generated/schemaTypes';
+import type { TemplateCategory } from '#graphql/generated/schemaTypes';
 import type { FragmentType } from '@apollo/client/masking';
 import type { MealTemplateDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { useConnectionData } from '#hooks/utils/useConnectionData';

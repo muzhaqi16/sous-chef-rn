@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useIsSignedIn, useUser } from '#store/useAppStore';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
 import {
   enableAutoReconnect,
   disableAutoReconnect,
-} from '#/apollo/links/wsLink';
+} from '#apollo/links/wsLink';
 import { AuthenticatedSubscriptions } from './AuthenticatedSubscriptions';
 import { AuthenticatedDataProvider } from './AuthenticatedDataProvider';
 

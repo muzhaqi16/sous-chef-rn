@@ -1,5 +1,5 @@
 import { skipToken, useQuery } from '@apollo/client/react';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { useUpdateHomeFields } from '#features/home/hooks/useUpdateHomeFields';
@@ -32,6 +32,6 @@ export function useHouseholdGreeting() {
     canRename: home?.myMembership?.role === MembershipRole.Owner,
     /** True when the new name landed or is queued; `fallback` is the failure copy. */
     rename: async (name: string, fallback: string): Promise<boolean> =>
-      home ? updateHomeFields({ name }, home, fallback) : false,
+      home ? !(await updateHomeFields({ name }, home, fallback)) : false,
   };
 }

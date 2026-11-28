@@ -4,13 +4,13 @@ import DocumentScanner, {
   ScanDocumentResponseStatus,
   type ScanDocumentResponse,
 } from 'react-native-document-scanner-plugin';
-import { errorService } from '#/services/errorService';
-import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
+import { errorService } from '#services/errorService';
+import { ImageUploadPurpose } from '#graphql/generated/schemaTypes';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
 import { useImageUpload } from '#hooks/data/useImageUpload';
-import { TextRecognition } from '#/native/TextRecognition';
-import { uploadTogether } from '#/utils/uploadTogether';
-import type { PreparedPhoto } from '#/types/textRecognition';
+import { TextRecognition } from '#native/TextRecognition';
+import { uploadTogether } from '#utils/uploadTogether';
+import type { PreparedPhoto } from '#types/textRecognition';
 
 /** The pages one capture reads, as `createRecipeCapture` takes them. */
 export const MAX_CAPTURE_PHOTOS = 3;

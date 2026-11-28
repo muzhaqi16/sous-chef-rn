@@ -11,6 +11,7 @@ import {
   spacing as baseSpacing,
 } from './foundations/spacing';
 import { typography as baseTypography } from './foundations/typography';
+import { sizes as baseSizes } from './foundations/sizes';
 import {
   MAX_FONT_SCALE,
   type as baseType,
@@ -24,7 +25,7 @@ import {
   ThemePreference,
 } from '#store/slices/preferenceTypes';
 import type { AppearanceSettings } from '#platform/ports';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { DENSITY_META, FONT_SCALE_META } from './foundations/appearanceConfig';
 
 /** Scales every role's size and leading, leaving weight and tracking alone. */
@@ -58,10 +59,6 @@ function scaleObject<T extends Record<string, number>>(
 const PRIMARY_LIGHT_ALPHA_HEX = '20';
 const PRIMARY_LIGHT_ALPHA = parseInt(PRIMARY_LIGHT_ALPHA_HEX, 16) / 255;
 
-function withAlpha(hex: string, alpha: string): string {
-  return `${hex}${alpha}`;
-}
-
 /**
  * Applies brand color, density, font scale and high contrast to both themes.
  * A plain function, so a store setter can call it directly for an instant runtime
@@ -90,6 +87,8 @@ export function applyAppearanceToRuntime(prefs: AppearanceSettings): void {
       colors: { ...base.colors },
       spacing: scaleObject(baseSpacing, densityMul),
       layout: scaleObject(baseLayout, densityMul),
+      // Icons grow with density, by the same step in rows and headers alike.
+      sizes: { ...base.sizes, icon: scaleObject(baseSizes.icon, densityMul) },
       typography: {
         ...base.typography,
         fontSize: scaleObject(baseTypography.fontSize, fontMul),
@@ -130,11 +129,6 @@ export function applyAppearanceToRuntime(prefs: AppearanceSettings): void {
         primary: palette['500'],
         onPrimary: onFill,
         iconOnPrimary: onFill,
-        chipSelectedText: onColor(
-          isDark ? palette['400'] : palette['300'],
-          colors.neutral[0],
-          colors.neutral[900],
-        ),
         primaryLight: isDark
           ? palette['400'] + PRIMARY_LIGHT_ALPHA_HEX
           : palette['100'],
@@ -151,16 +145,6 @@ export function applyAppearanceToRuntime(prefs: AppearanceSettings): void {
             )
           : foregroundShade(palette, [palette['100']], '800', 'darker'),
         iconPrimary: isDark ? palette['400'] : primaryText,
-        chipSelectedBackground: isDark ? palette['400'] : palette['300'],
-        filterTab: {
-          ...next.colors.filterTab,
-          activeBg: palette['500'],
-          activeText: onFill,
-          filteredBg: isDark ? withAlpha(palette['400'], '26') : palette['50'],
-          filteredText: isDark
-            ? palette['300']
-            : foregroundShade(palette, [palette['50']], '600', 'darker'),
-        },
       };
     }
 
@@ -176,11 +160,6 @@ export function applyAppearanceToRuntime(prefs: AppearanceSettings): void {
           iconPrimary: brand[700],
           onPrimaryLight: brand[800],
         }),
-        filterTab: {
-          ...next.colors.filterTab,
-          activeBg: brand[700],
-          ...(isLight && { filteredText: brand[700] }),
-        },
       };
     }
 

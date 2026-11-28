@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import type { AisleHeaderRow } from './types';
 

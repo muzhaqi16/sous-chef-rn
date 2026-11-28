@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 
 /**
  * Fires `Telemetry.trackScreen` once per component lifecycle, deferred until

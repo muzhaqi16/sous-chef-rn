@@ -9,14 +9,14 @@
  * particular implementation was used.
  */
 import type { InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import {
   NotificationCategory,
   NotificationStatus,
   NotificationType,
   Priority,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { QueryDataFor } from '#/test-utils/apolloMockProvider';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 import { seedQuery } from '#/test-utils/apolloMockProvider';

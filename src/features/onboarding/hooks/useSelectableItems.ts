@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 export interface SelectableItem {
   id: string;

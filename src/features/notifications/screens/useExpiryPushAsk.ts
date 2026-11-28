@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useRef } from 'react';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import { storeApi } from '#store';
 import { useAppStore, useUser } from '#store/useAppStore';
 import { useNotificationSettings } from '#features/notifications/hooks/useNotificationSettings';

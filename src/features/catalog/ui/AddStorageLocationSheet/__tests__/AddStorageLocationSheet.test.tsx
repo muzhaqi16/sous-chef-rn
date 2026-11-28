@@ -1,4 +1,3 @@
-'use no memo';
 import React from 'react';
 import {
   fireEvent,
@@ -6,101 +5,117 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
+import { t } from '#i18n';
+import { StorageType } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import { AddStorageLocationSheet } from '../AddStorageLocationSheet';
 
-jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
-  useStandardBottomSheet: jest.fn(() => ({
-    ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
-    modalProps: {},
-    contentContainerStyle: {},
-    theme: {
-      colors: {
-        textPrimary: '#000',
-        textSecondary: '#666',
-        textTertiary: '#999',
-        primary: '#007AFF',
-        border: '#ccc',
-        surfaceVariant: '#f0f0f0',
-        error: '#ff0000',
-      },
-    },
-  })),
-  BottomSheetModal: ({ children }: { children?: React.ReactNode }) => children,
-}));
+const onClose = jest.fn();
+const onCreateLocation = jest.fn(() => Promise.resolve());
 
-// requestIdleCallback is not available in the test environment
-global.requestIdleCallback = (cb: IdleRequestCallback): number => {
-  setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 }), 0);
-  return 0;
-};
+const sheet = (visible = true) => (
+  <AddStorageLocationSheet
+    visible={visible}
+    onClose={onClose}
+    onCreateLocation={onCreateLocation}
+    creating={false}
+  />
+);
+
+const nameInput = () =>
+  screen.getByPlaceholderText(t('addStorageLocation.namePlaceholder'));
+const create = () =>
+  userEvent.setup().press(screen.getByLabelText(t('labels.create')));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
 describe('AddStorageLocationSheet', () => {
-  const defaultProps = {
-    visible: true,
-    onClose: jest.fn(),
-    onCreateLocation: jest.fn(() => Promise.resolve()),
-    creating: false,
-  };
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('renders the title', () => {
-    render(<AddStorageLocationSheet {...defaultProps} />);
-    expect(screen.getByText('Add Location')).toBeTruthy();
-  });
-
-  it('renders Cancel and Create buttons', () => {
-    render(<AddStorageLocationSheet {...defaultProps} />);
-    expect(screen.getByText('Cancel')).toBeTruthy();
-    expect(screen.getByText('Create')).toBeTruthy();
-  });
-
-  it('renders location name label', () => {
-    render(<AddStorageLocationSheet {...defaultProps} />);
-    expect(screen.getByText('Location Name')).toBeTruthy();
-  });
-
-  it('renders placeholder text', () => {
-    render(<AddStorageLocationSheet {...defaultProps} />);
-    expect(
-      screen.getByPlaceholderText('e.g., Kitchen Cabinet, Garage Shelf'),
-    ).toBeTruthy();
-  });
-
-  it('renders hint text', () => {
-    render(<AddStorageLocationSheet {...defaultProps} />);
+  it('names the sheet and the field', () => {
+    render(sheet());
+    expect(screen.getByText(t('labels.addLocation'))).toBeTruthy();
+    expect(screen.getByText(t('addStorageLocation.locationName'))).toBeTruthy();
     expect(screen.getByText(/You can edit details later/)).toBeTruthy();
   });
 
-  it('calls onClose when Cancel is pressed', async () => {
-    const user = userEvent.setup();
-    render(<AddStorageLocationSheet {...defaultProps} />);
-    await user.press(screen.getByText('Cancel'));
-    expect(defaultProps.onClose).toHaveBeenCalled();
+  it('asks before closing over a typed name, then closes without creating', async () => {
+    render(sheet());
+    await userEvent.setup().type(nameInput(), 'Kitchen');
+    await userEvent.setup().press(screen.getByLabelText(t('labels.close')));
+
+    expect(onClose).not.toHaveBeenCalled();
+    const [title, , buttons] =
+      jest.mocked(alertService.alert).mock.calls[0] ?? [];
+    expect(title).toBe(t('confirmations.discardChangesTitle'));
+    buttons?.[1]?.onPress?.();
+
+    expect(onClose).toHaveBeenCalled();
+    expect(onCreateLocation).not.toHaveBeenCalled();
   });
 
-  it('shows error when trying to create with empty name via onSubmitEditing', async () => {
-    render(<AddStorageLocationSheet {...defaultProps} />);
-    const input = screen.getByPlaceholderText(
-      'e.g., Kitchen Cabinet, Garage Shelf',
-    );
-    fireEvent(input, 'submitEditing');
-    expect(screen.getByText('Location name is required')).toBeTruthy();
-  });
-
-  it('calls onCreateLocation with valid name', async () => {
-    const user = userEvent.setup();
-    render(<AddStorageLocationSheet {...defaultProps} />);
-    const input = screen.getByPlaceholderText(
-      'e.g., Kitchen Cabinet, Garage Shelf',
-    );
-    fireEvent.changeText(input, 'Kitchen');
-    await user.press(screen.getByText('Create'));
-    expect(defaultProps.onCreateLocation).toHaveBeenCalledWith({
+  it('creates the location under the name typed, trimmed, then closes', async () => {
+    render(sheet());
+    fireEvent.changeText(nameInput(), '  Kitchen  ');
+    await create();
+    expect(onCreateLocation).toHaveBeenCalledWith({
       name: 'Kitchen',
-      type: 'CUSTOM',
+      type: StorageType.Custom,
     });
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('asks for a name on the field when created without one', async () => {
+    render(sheet());
+    await create();
+    expect(
+      screen.getByText(t('addStorageLocation.nameRequired')),
+    ).toBeOnTheScreen();
+    expect(onCreateLocation).not.toHaveBeenCalled();
+  });
+
+  it('creates from the keyboard', async () => {
+    render(sheet());
+    await userEvent
+      .setup()
+      .type(nameInput(), 'Garage', { submitEditing: true });
+    expect(onCreateLocation).toHaveBeenCalledWith({
+      name: 'Garage',
+      type: StorageType.Custom,
+    });
+  });
+
+  it('offers Create for a name too short, and says why on the field', async () => {
+    render(sheet());
+    fireEvent.changeText(nameInput(), 'K');
+    expect(screen.getByLabelText(t('labels.create'))).toBeEnabled();
+    await create();
+    expect(screen.getByText(t('commonValidation.nameMin'))).toBeOnTheScreen();
+    expect(onCreateLocation).not.toHaveBeenCalled();
+  });
+
+  it('stays open on a refused create, saying so on the field', async () => {
+    onCreateLocation.mockRejectedValueOnce(new Error('refused'));
+    render(sheet());
+    fireEvent.changeText(nameInput(), 'Kitchen');
+    await create();
+    expect(
+      screen.getByText(t('addStorageLocation.createFailed')),
+    ).toBeOnTheScreen();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('opens fresh: the name and its error go with the closing', async () => {
+    const view = render(sheet());
+    await create();
+    expect(
+      screen.getByText(t('addStorageLocation.nameRequired')),
+    ).toBeOnTheScreen();
+
+    view.rerender(sheet(false));
+    view.rerender(sheet());
+
+    expect(nameInput()).toHaveDisplayValue('');
+    expect(screen.queryByText(t('addStorageLocation.nameRequired'))).toBeNull();
   });
 });

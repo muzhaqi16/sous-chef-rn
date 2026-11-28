@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
@@ -15,7 +15,7 @@ import {
   acquisitionMethodLabelKey,
   type OfferedAcquisitionMethod,
 } from '#features/pantry/utils/itemEnumLabels';
-import { localizeNumericHint } from '#/utils/formatters/number';
+import { localizeNumericHint } from '#utils/formatters/number';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
@@ -79,7 +79,6 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
         onChangeText={setMinQuantity}
         placeholder={t('labels.eG2')}
         keyboardType="decimal-pad"
-        useBottomSheetInput
       />
 
       <FormInput
@@ -88,7 +87,6 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
         onChangeText={setRestockQuantity}
         placeholder={t('labels.eG6')}
         keyboardType="decimal-pad"
-        useBottomSheetInput
       />
 
       <Text role="caption" tone="secondary" style={styles.helpText}>
@@ -120,7 +118,6 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
             onChangeText={setCostPerUnit}
             placeholder={localizeNumericHint(t('addToPantry.costPlaceholder'))}
             keyboardType="decimal-pad"
-            useBottomSheetInput
           />
         ) : null}
 

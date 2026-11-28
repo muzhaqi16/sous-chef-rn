@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { ClickableInfoPanel } from '#components/molecules/ClickableInfoPanel';
 import { formatDate } from '#features/pantry/hooks/usePantryItemTransformation';
 import type { UsageRecord } from '#features/pantry/types';

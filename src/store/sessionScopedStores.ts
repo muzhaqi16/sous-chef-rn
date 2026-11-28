@@ -3,8 +3,8 @@
  * the ROOT store). With `inlineRequires` an unused module never registers, so
  * PERSISTED keys are declared as DATA below and deleted without their module.
  */
-import { storage } from '#/store/deviceStorage';
-import { logger } from '#/utils/environment';
+import { storage } from '#store/deviceStorage';
+import { logger } from '#utils/environment';
 
 type StoreReset = () => void;
 

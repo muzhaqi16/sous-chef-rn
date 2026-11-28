@@ -1,8 +1,8 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { useStore } from '#store';
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import { UnitSystem } from '#graphql/generated/schemaTypes';
 import {
   recordMock,
   renderWithApollo,
@@ -23,6 +23,7 @@ import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEna
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { ListSavingsDocument } from '#features/shoppingList/hooks/useListSavings.generated';
 import { ListSavingsSection } from '../ListSavingsSection';
+import { t } from '#i18n';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
@@ -135,13 +136,12 @@ describe('ListSavingsSection', () => {
     useStore.setState({ isOnline: true });
   });
 
-  it('says comparing stores needs a connection when there is no answer', async () => {
+  it('says the comparison could not be read, and offers to try again', async () => {
     renderSection([failing().mock]);
 
     await drainTimers();
-    expect(
-      screen.getByText('Comparing stores needs a connection'),
-    ).toBeTruthy();
+    expect(screen.getByText(t('dataState.errorTitle'))).toBeTruthy();
+    expect(screen.getByText(t('labels.tryAgain'))).toBeTruthy();
   });
 
   it('asks for stores when the household has none to compare', async () => {

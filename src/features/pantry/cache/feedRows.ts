@@ -5,16 +5,19 @@ import {
   safeEvictMany,
   skipUnmatchedArgVariants,
   type ConnectionData,
-} from '#/apollo/utils/cacheUpdaters';
-import { isRecord } from '#/utils/isRecord';
+} from '#apollo/utils/cacheUpdaters';
+import { isRecord } from '#utils/isRecord';
 import {
   PantryFeed_ItemsFragmentDoc,
   type PantryFeed_ItemsFragment,
   type PantryFeedSnapshotQuery,
 } from '../offline/pantryFeed.generated';
-import { addToPantryItemsCache, removeFromPantryItemsCache } from './items';
+import {
+  addToPantryItemsCache,
+  removeFromPantryItemsCache,
+} from '#entities/pantryItem/items';
 import { removeOptimisticPantry } from './pantry';
-import { dropBatchesPage } from './restatedStack';
+import { dropBatchesPage } from '#entities/pantryItem/restatedStack';
 
 type ItemEdge = PantryFeed_ItemsFragment['itemsConnection']['edges'][number];
 type RowTypename =

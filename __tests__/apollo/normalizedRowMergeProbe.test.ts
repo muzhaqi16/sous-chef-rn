@@ -4,7 +4,7 @@ import {
   isReference,
   type Reference,
 } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 
 /**
  * What a type-level `merge` receives for a normalized row, and what an older

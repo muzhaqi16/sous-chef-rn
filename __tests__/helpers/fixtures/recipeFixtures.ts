@@ -2,7 +2,7 @@ import {
   Difficulty,
   RecipeCategory,
   RecipeStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { UseRecipeFormWrites_RecipeFragment } from '#features/recipes/hooks/useRecipeFormWrites.generated';
 import { typedConnectionOf } from './connectionOf';
 import type { MockDataFor } from '../apolloMockProvider';

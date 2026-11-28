@@ -1,7 +1,7 @@
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useAppStore } from '#store/useAppStore';
-import { usePendingMutationCount } from '#/hooks/offline/usePendingMutationCount';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { usePendingMutationCount } from '#hooks/offline/usePendingMutationCount';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 
 export interface OfflineStatus {
   /** Whether the server can't currently be reached. */

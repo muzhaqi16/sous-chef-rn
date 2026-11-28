@@ -6,8 +6,8 @@
  * adapters reach (keychain → errorService → telemetry → deviceId), so they are
  * the real modules here.
  */
-jest.unmock('#/services/telemetry');
-jest.unmock('#/utils/environment');
+jest.unmock('#services/telemetry');
+jest.unmock('#utils/environment');
 
 const INSTALLED = Symbol.for('sous-chef.platform');
 const registry = globalThis as { [INSTALLED]?: unknown };

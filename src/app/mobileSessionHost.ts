@@ -1,13 +1,13 @@
-import { registerSessionHost } from '#/services/auth/sessionHost';
+import { registerSessionHost } from '#services/auth/sessionHost';
 import {
   forgetStoredSignIn,
   renewStoredSignIn,
   resolvePostSignInGate,
-} from '#/services/biometric/deviceCredential';
+} from '#services/biometric/deviceCredential';
 import {
   endDeviceSession,
   registerDeviceInBackground,
-} from '#/services/device/deviceRegistration';
+} from '#services/device/deviceRegistration';
 
 /**
  * What a session does on this device beyond the core: register it for push

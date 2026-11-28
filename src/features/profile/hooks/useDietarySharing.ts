@@ -1,13 +1,11 @@
-import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import { useQuery } from '@apollo/client/react';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { useTranslation } from '#/i18n';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { errorService } from '#/services/errorService';
-import {
-  DietarySharingHomesDocument,
-  UpdateDietarySharingDocument,
-} from './useDietarySharing.generated';
+import { useTranslation } from '#i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { generateEntityId } from '#utils/generateEntityId';
+import { errorService } from '#services/errorService';
+import { DietarySharingHomesDocument } from './useDietarySharing.generated';
+import { updateDietarySharingWrite } from '#features/profile/offline/localWrites';
 
 /** One of the caller's homes, and whether it sees their restrictions. */
 export interface DietarySharingHome {
@@ -23,11 +21,19 @@ export interface DietarySharingHome {
  */
 export function useDietarySharing() {
   const { t } = useTranslation();
-  const client = useApolloClient();
   const { data, error, refetch } = useQuery(DietarySharingHomesDocument);
   useApolloErrorLogger(DietarySharingHomesDocument, error);
-  const [mutate] = useMutation(UpdateDietarySharingDocument, {
-    context: { localFirst: true },
+  const updateSharing = useLocalWrite(updateDietarySharingWrite, {
+    fallback: t('dietary.sharingFailed'),
+    present: 'toast',
+    // A later toggle the server took may stand: show what it holds.
+    onFailed: () => {
+      void refetch().catch(error =>
+        errorService.reportError(error, {
+          operation: 'DietarySharing.refetch',
+        }),
+      );
+    },
   });
 
   const memberships = (data?.homes.edges ?? []).flatMap(({ node }) =>
@@ -40,25 +46,13 @@ export function useDietarySharing() {
     // One key per toggle: a queued toggle resent on reconnect writes nothing
     // twice, and a late "off" never undoes a later "on".
     const idempotencyKey = generateEntityId();
-    await sendFields(client.cache, {
-      entity: { __typename: 'Membership', id: entry.membership.id },
-      fields: { sharesDietaryNeeds: shared },
-      variables: { input: { homeId, shared, idempotencyKey } },
-      mutate,
-      settle: {
-        document: UpdateDietarySharingDocument,
-        fallback: t('dietary.sharingFailed'),
-        present: 'toast',
-        // A later toggle the server took may stand: show what it holds.
-        onFailed: () => {
-          void refetch().catch(error =>
-            errorService.reportError(error, {
-              operation: 'DietarySharing.refetch',
-            }),
-          );
-        },
+    await updateSharing.send(
+      { input: { homeId, shared, idempotencyKey } },
+      {
+        entity: { __typename: 'Membership', id: entry.membership.id },
+        fields: { sharesDietaryNeeds: shared },
       },
-    });
+    );
   };
 
   const homes: DietarySharingHome[] = memberships.map(

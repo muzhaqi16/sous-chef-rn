@@ -1,11 +1,11 @@
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useMutation } from '@apollo/client/react';
 import { MarkItemForReviewDocument } from '#operations/item/item.generated';
-import { toastService } from '#/services/toastService';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { presentFailure } from '#/utils/errors/presentFailure';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { presentFailure } from '#utils/errors/presentFailure';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 
 /**
  * Flags a catalog item for admin moderation with a free-text reason — a REPORT,

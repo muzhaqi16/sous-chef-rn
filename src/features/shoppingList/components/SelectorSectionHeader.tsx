@@ -15,7 +15,7 @@ export const SelectorSectionHeader: React.FC<SelectorSectionHeaderProps> = ({
   title,
 }) => (
   <View style={styles.sectionHeader}>
-    <Icon name={icon} size={14} tone="textTertiary" />
+    <Icon name={icon} size="2xsPlus" tone="textTertiary" />
     <Text role="label" tone="tertiary" style={styles.sectionHeaderText}>
       {title}
     </Text>

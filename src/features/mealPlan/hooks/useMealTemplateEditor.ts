@@ -3,18 +3,10 @@
  * mint an id the server accepts, so a queued replay converges on the same row.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import {
-  UpdateMealTemplateDocument,
-  AddTemplateItemDocument,
-  UpdateTemplateItemDocument,
-  RemoveTemplateItemDocument,
-} from '#features/mealPlan/graphql/mealTemplate.generated';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { generateEntityId } from '#/utils/generateEntityId';
+import { useApolloClient } from '@apollo/client/react';
+import { useTranslation } from '#i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { generateEntityId } from '#utils/generateEntityId';
 import { readRecipeRef } from '#features/mealPlan/cache/mealTemplateItem';
 import { useCreateMealTemplate } from '#features/mealPlan/hooks/useCreateMealTemplate';
 import type {
@@ -26,25 +18,31 @@ import type {
   UpdateMealTemplateInput,
   AddTemplateItemInput,
   UpdateTemplateItemInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
+import {
+  addTemplateItemWrite,
+  removeTemplateItemWrite,
+  updateMealTemplateWrite,
+  updateTemplateItemWrite,
+} from '#features/mealPlan/offline/localWrites';
 
 export function useMealTemplateEditor() {
   const { t } = useTranslation();
   const client = useApolloClient();
   const { createTemplate: create, creating } = useCreateMealTemplate();
 
-  const [updateMutation, { loading: updating }] = useMutation(
-    UpdateMealTemplateDocument,
-    { context: { localFirst: true } },
-  );
-  const [addItemMutation] = useMutation(AddTemplateItemDocument, {
-    context: { localFirst: true },
+  const updateMealTemplate = useLocalWrite(updateMealTemplateWrite, {
+    fallback: t('mealTemplateBuilder.failedToSave'),
   });
-  const [updateItemMutation] = useMutation(UpdateTemplateItemDocument, {
-    context: { localFirst: true },
+  const addTemplateItem = useLocalWrite(addTemplateItemWrite, {
+    fallback: t('mealTemplateBuilder.failedToAddItem'),
   });
-  const [removeItemMutation] = useMutation(RemoveTemplateItemDocument, {
-    context: { localFirst: true },
+  const updateTemplateItem = useLocalWrite(updateTemplateItemWrite, {
+    fallback: t('mealTemplateBuilder.failedToSaveItem'),
+  });
+  const removeTemplateItem = useLocalWrite(removeTemplateItemWrite, {
+    fallback: t('mealTemplateBuilder.failedToRemoveItem'),
+    removal: true,
   });
 
   // Returns the created template's id (for navigation) or null on failure.
@@ -55,23 +53,20 @@ export function useMealTemplateEditor() {
     id: string,
     input: Omit<UpdateMealTemplateInput, 'id'>,
   ): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'MealTemplate', id },
-      fields: {
-        name: input.name ?? undefined,
-        description: input.description,
-        category: input.category,
-        defaultServings: input.defaultServings,
-        tags: input.tags,
-        updatedAt: new Date().toISOString(),
+    const settled = await updateMealTemplate.send(
+      { input: { ...input, id } },
+      {
+        entity: { __typename: 'MealTemplate', id },
+        fields: {
+          name: input.name ?? undefined,
+          description: input.description,
+          category: input.category,
+          defaultServings: input.defaultServings,
+          tags: input.tags,
+          updatedAt: new Date().toISOString(),
+        },
       },
-      variables: { input: { ...input, id } },
-      mutate: updateMutation,
-      settle: {
-        document: UpdateMealTemplateDocument,
-        fallback: t('mealTemplateBuilder.failedToSave'),
-      },
-    });
+    );
     return settled.status !== 'failed';
   };
 
@@ -80,16 +75,7 @@ export function useMealTemplateEditor() {
   const addItem = async (input: AddTemplateItemInput): Promise<boolean> => {
     const item = { ...input, id: generateEntityId() };
     const inputs: AddTemplateItemInputs = { item };
-    const settled = await pendingWritesOf(client.cache).send(
-      AddTemplateItemDocument,
-      { input: item },
-      write =>
-        settleMutation(() => addItemMutation(write), {
-          document: AddTemplateItemDocument,
-          fallback: t('mealTemplateBuilder.failedToAddItem'),
-        }),
-      inputs,
-    );
+    const settled = await addTemplateItem.send({ input: item }, inputs);
     return settled.status !== 'failed';
   };
 
@@ -110,16 +96,10 @@ export function useMealTemplateEditor() {
         : {}),
     };
 
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'MealTemplateItem', id },
-      fields,
-      variables: { input },
-      mutate: updateItemMutation,
-      settle: {
-        document: UpdateTemplateItemDocument,
-        fallback: t('mealTemplateBuilder.failedToSaveItem'),
-      },
-    });
+    const settled = await updateTemplateItem.send(
+      { input },
+      { entity: { __typename: 'MealTemplateItem', id }, fields: fields },
+    );
     return settled.status !== 'failed';
   };
 
@@ -129,15 +109,8 @@ export function useMealTemplateEditor() {
     templateId: string,
   ): Promise<boolean> => {
     const inputs: RemoveTemplateItemInputs = { templateId };
-    const settled = await pendingWritesOf(client.cache).send(
-      RemoveTemplateItemDocument,
+    const settled = await removeTemplateItem.send(
       { input: { id: itemId } },
-      write =>
-        settleMutation(() => removeItemMutation(write), {
-          document: RemoveTemplateItemDocument,
-          fallback: t('mealTemplateBuilder.failedToRemoveItem'),
-          removal: true,
-        }),
       inputs,
     );
     return settled.status !== 'failed';
@@ -155,6 +128,6 @@ export function useMealTemplateEditor() {
     removeItem,
     readRecipeName,
     creating,
-    updating,
+    updating: updateMealTemplate.sending,
   };
 }

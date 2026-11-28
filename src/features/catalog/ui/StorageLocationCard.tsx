@@ -1,18 +1,18 @@
 import React from 'react';
-import { knownEntry } from '#/utils/closedEnum';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { knownEntry } from '#utils/closedEnum';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { Badge } from '#components/atoms/Badge';
 import { Text } from '#components/atoms/Text';
 import { STORAGE_TYPE_LABEL_KEYS } from '#features/catalog/components/storageLocationFormConfig';
-import { StorageState, StorageType } from '#/graphql/generated/schemaTypes';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { StorageState, StorageType } from '#graphql/generated/schemaTypes';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
 /** Key paths, not resolved strings — `t` is only available inside the
  *  component, and resolving at module load would freeze the language. */
@@ -106,7 +106,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             disabled={!onPress}
           >
             <View style={styles.headerRow}>
-              <StorageLocationIcon type={location.type} size={20} />
+              <StorageLocationIcon type={location.type} size="sm" />
               <View style={styles.info}>
                 <View style={commonStyles.rowSpaceBetween}>
                   <Text role="heading">{location.name}</Text>
@@ -176,7 +176,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               >
                 <Icon
                   name="star-outline"
-                  size={18}
+                  size="xsPlus"
                   tone={actionsDisabled ? 'textSecondary' : undefined}
                 />
                 <Text
@@ -194,7 +194,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             >
               <Icon
                 name="create-outline"
-                size={18}
+                size="xsPlus"
                 tone={actionsDisabled ? 'textSecondary' : undefined}
               />
               <Text
@@ -211,7 +211,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             >
               <Icon
                 name="trash-outline"
-                size={18}
+                size="xsPlus"
                 tone={actionsDisabled ? 'textSecondary' : 'error'}
               />
               <Text role="label" tone={actionsDisabled ? 'tertiary' : 'danger'}>

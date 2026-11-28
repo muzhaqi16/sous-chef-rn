@@ -1,11 +1,12 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { ReceiptLineSheet } from '../ReceiptLineSheet';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { receiptsTestIDs } from '../../testIDs';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { seedChoice } from '../../utils/receiptReviewLines';
 import { drainTimers } from '#/test-utils/drainTimers';
+import type { EarlierPurchases } from '../useEarlierPurchases';
 
 // The real slot, so the form's bar renders where the sheet holds it.
 jest.mock('#components/templates/Sheet', () => {
@@ -76,8 +77,8 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
 // The units the device holds: "lb", "fl oz" and "carton" resolve, anything else does not.
 jest.mock('#features/catalog/hooks/useResolveUnit', () => {
   const { UnitType } = jest.requireActual<
-    typeof import('#/graphql/generated/schemaTypes')
-  >('#/graphql/generated/schemaTypes');
+    typeof import('#graphql/generated/schemaTypes')
+  >('#graphql/generated/schemaTypes');
   const held = new Map([
     ['lb', { id: 'unit-lb', type: UnitType.Weight }],
     ['fl oz', { id: 'unit-floz', type: UnitType.Volume }],
@@ -96,12 +97,7 @@ jest.mock('#features/catalog/hooks/useResolveUnit', () => {
 });
 
 // The earlier purchases a line may be the receipt for, read through the API.
-let mockEarlier: {
-  id: string;
-  version: number;
-  amount: string;
-  boughtOn: string;
-}[] = [];
+let mockEarlier: EarlierPurchases = { purchases: [], state: 'empty' };
 jest.mock('../useEarlierPurchases', () => ({
   useEarlierPurchases: () => mockEarlier,
 }));
@@ -150,14 +146,24 @@ const TOTAL_NEEDED =
 
 const MILK = { index: 0, printed: 'MILK 2%', price: 2.5 };
 
-const renderSheet = (line: typeof MILK & { discount?: number } = MILK) => {
+const renderSheet = (
+  line: typeof MILK & { discount?: number } = MILK,
+  {
+    choice = lineChoice({ price: line.price }),
+    refusal,
+  }: {
+    choice?: ReturnType<typeof lineChoice>;
+    refusal?: { message: string; on?: string };
+  } = {},
+) => {
   const onSave = jest.fn();
   const onClose = jest.fn();
   render(
     <ReceiptLineSheet
       visible
       line={line}
-      choice={lineChoice({ price: line.price })}
+      choice={choice}
+      refusal={refusal}
       candidates={[]}
       listItemNameFor={() => undefined}
       onPickItem={jest.fn()}
@@ -279,10 +285,23 @@ describe('the receipt for an earlier purchase', () => {
     boughtOn: '11/15/2026',
   };
   beforeEach(() => {
-    mockEarlier = [EGGS_BOUGHT];
+    mockEarlier = { purchases: [EGGS_BOUGHT], state: 'ready' };
   });
   afterEach(() => {
-    mockEarlier = [];
+    mockEarlier = { purchases: [], state: 'empty' };
+  });
+
+  // Offering none would read as "you bought none".
+  it.each([
+    ['loading', 'receipts.review.earlierLoading'],
+    ['offline', 'receipts.review.earlierOffline'],
+    ['error', 'receipts.review.earlierFailed'],
+  ] as const)('says when it has not checked, %s', (state, copy) => {
+    mockEarlier = { purchases: [], state };
+    renderSheet();
+
+    expect(screen.getByText(t(copy))).toBeOnTheScreen();
+    expect(screen.queryByText('12 pc on 11/15/2026')).toBeNull();
   });
 
   // IN-04: picked, the line fills in that purchase and stocks nothing again.
@@ -299,6 +318,55 @@ describe('the receipt for an earlier purchase', () => {
         notStocked: true,
       }),
     );
+  });
+
+  // Refused as stale, the purchase it fills is offered as it reads now.
+  it('sends a purchase that changed since it was picked as it reads now', async () => {
+    mockEarlier = {
+      purchases: [{ ...EGGS_BOUGHT, version: 4 }],
+      state: 'ready',
+    };
+    const { onSave } = renderSheet(MILK, {
+      choice: lineChoice({
+        price: MILK.price,
+        notStocked: true,
+        existingPurchase: { id: EGGS_BOUGHT.id, version: 3 },
+      }),
+      refusal: { message: t('receipts.review.purchaseChanged') },
+    });
+
+    expect(screen.getByTestId(receiptsTestIDs.lineRefusal)).toHaveTextContent(
+      t('receipts.review.purchaseChanged'),
+    );
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        existingPurchase: { id: EGGS_BOUGHT.id, version: 4 },
+      }),
+    );
+  });
+
+  // A conflicting fact fails the line on that field, for review.
+  it('shows a refusal on the field it names', async () => {
+    renderSheet(MILK, {
+      choice: lineChoice({
+        price: MILK.price,
+        notStocked: true,
+        existingPurchase: { id: EGGS_BOUGHT.id, version: 3 },
+      }),
+      refusal: {
+        message: t('receipts.review.purchaseDiffersPaid'),
+        on: 'totalPaid',
+      },
+    });
+
+    await drainTimers();
+    expect(screen.getByTestId('field-Total paid-error')).toHaveTextContent(
+      t('receipts.review.purchaseDiffersPaid'),
+    );
+    expect(screen.queryByTestId(receiptsTestIDs.lineRefusal)).toBeNull();
   });
 
   // A similar purchase may be another one: it is offered, never assumed.

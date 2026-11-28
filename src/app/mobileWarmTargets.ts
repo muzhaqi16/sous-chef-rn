@@ -1,4 +1,4 @@
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import type { WarmTarget } from '#bootstrap/useOfflineTabPreloading';
 import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
 import { warmPlannedMeals } from '#features/mealPlan/screens/warmPlannedMeals';

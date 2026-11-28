@@ -1,7 +1,7 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
@@ -85,7 +85,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
           >
             <Icon
               name={option.icon}
-              size={18}
+              size="xsPlus"
               library={option.library}
               tone="primary"
             />
@@ -105,7 +105,7 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
                     ? 'arrow-up'
                     : 'arrow-down'
                 }
-                size={18}
+                size="xsPlus"
                 tone="primary"
               />
             )}

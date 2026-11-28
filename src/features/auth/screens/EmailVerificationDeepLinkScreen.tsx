@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { Button } from '#components/molecules/Button';
-import { t as tGlobal } from '#/i18n';
+import { t as tGlobal } from '#i18n';
 import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
@@ -13,7 +13,7 @@ import {
   useVerifyEmail,
   type VerifyEmailFn,
 } from '#features/auth/hooks/useVerifyEmail';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 import { Screen } from '#components/templates/Screen';
@@ -206,7 +206,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
         {verificationResult === 'success' && (
           <>
             <View style={styles.iconContainer}>
-              <Icon name="checkmark-circle" size={64} tone="success" />
+              <Icon name="checkmark-circle" size="2xl" tone="success" />
             </View>
             <Text role="subheading" align="center" style={styles.title}>
               {t('auth.emailVerifiedTitle')}
@@ -243,7 +243,7 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
         {verificationResult === 'error' && (
           <>
             <View style={styles.iconContainer}>
-              <Icon name="close-circle-outline" size={64} tone="error" />
+              <Icon name="close-circle-outline" size="2xl" tone="error" />
             </View>
             <Text role="subheading" align="center" style={styles.title}>
               {t('auth.verificationFailedTitle')}

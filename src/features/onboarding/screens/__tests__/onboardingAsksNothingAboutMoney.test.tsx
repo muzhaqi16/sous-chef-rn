@@ -1,11 +1,11 @@
 import React from 'react';
 import { act, screen, userEvent } from '@testing-library/react-native';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import { useStore } from '#store';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
-import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
+import { UsualStoreSource } from '#graphql/generated/schemaTypes';
+import { UsualStoresDocument } from '#entities/store/usualStores.generated';
 import { OnboardingCompleteScreen } from '../OnboardingCompleteScreen';
 import { HouseholdStepScreen } from '../HouseholdStepScreen';
 import { DietaryStepScreen } from '../DietaryStepScreen';
@@ -13,7 +13,7 @@ import { ReceiptStepScreen } from '../ReceiptStepScreen';
 
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#hooks/navigation/useAppNavigation');
-jest.mock('#/services/device/deviceRegistration', () => ({
+jest.mock('#services/device/deviceRegistration', () => ({
   registerDeviceInBackground: jest.fn(),
 }));
 jest.mock('#features/notifications/screens/useNotificationPermissions', () => ({

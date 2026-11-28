@@ -4,7 +4,7 @@
  * JSON file under `src/i18n/locales/` plus an entry in `resources`; plural
  * categories are completed automatically by `completePluralCategories`.
  */
-import { appConfig } from '#/config/appConfig';
+import { appConfig } from '#config/appConfig';
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 

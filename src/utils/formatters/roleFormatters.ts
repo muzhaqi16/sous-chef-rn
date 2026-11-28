@@ -1,6 +1,6 @@
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
-import type { Translate } from '#/i18n/types';
-import { unknownMember } from '#/utils/closedEnum';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
+import type { Translate } from '#i18n/types';
+import { unknownMember } from '#utils/closedEnum';
 
 export function formatRole(role: MembershipRole, translate: Translate): string {
   switch (role) {

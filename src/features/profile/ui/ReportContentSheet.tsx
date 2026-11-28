@@ -3,8 +3,8 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useTranslation } from '#/i18n';
-import type { CreateUserReportInput } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import type { CreateUserReportInput } from '#graphql/generated/schemaTypes';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
@@ -12,11 +12,10 @@ import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
 import { AlertBanner } from '#components/molecules/AlertBanner';
-import { Button } from '#components/molecules/Button';
 import { RadioRow } from '#components/molecules/RadioRow';
 import { toastService } from '#services/toastService';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { reportValidationErrors } from '#utils/validation/common';
 import { useReportContent } from '#features/profile/hooks/useReportContent';
 import { REPORT_TYPE_LABEL_KEYS } from '#features/profile/utils/reportLabels';
 import { profileTestIDs } from '#features/profile/testIDs';
@@ -27,6 +26,7 @@ import {
   type ReportContentFormValues,
 } from './reportContentFormConfig';
 import { useOpening } from '#hooks/ui/useOpening';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 /** Who is reported and, with both content fields, which of their content. */
 export type ReportTarget = Pick<
@@ -48,10 +48,15 @@ const ReportContentForm: React.FC<ReportContentFormProps> = ({
   const [sending, setSending] = useState(false);
   // The submission's failure; a field's own message stays on the field.
   const [failure, setFailure] = useState<string | null>(null);
-  const { control, handleSubmit } = useForm<ReportContentFormValues>({
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<ReportContentFormValues>({
     resolver: yupResolver(reportContentSchema),
     defaultValues: reportContentDefaults,
   });
+  useSheetUnsavedInput(isDirty);
 
   const send = handleSubmit(async ({ type, description }) => {
     if (!type) return;
@@ -82,7 +87,18 @@ const ReportContentForm: React.FC<ReportContentFormProps> = ({
   return (
     <>
       <SheetHeaderSlot>
-        <SheetHeader title={t('reports.sheetTitle')} onClose={onClose} />
+        <SheetHeader
+          title={t('reports.sheetTitle')}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void send();
+            },
+            accessibilityLabel: t('reports.send'),
+            loading: sending,
+            testID: profileTestIDs.reportSendButton,
+          }}
+        />
       </SheetHeaderSlot>
 
       <Controller
@@ -121,6 +137,7 @@ const ReportContentForm: React.FC<ReportContentFormProps> = ({
         name="description"
         render={({ field, fieldState }) => (
           <FormTextArea
+            ref={field.ref}
             label={t('reports.descriptionLabel')}
             value={field.value}
             onChangeText={field.onChange}
@@ -141,16 +158,6 @@ const ReportContentForm: React.FC<ReportContentFormProps> = ({
           testID={profileTestIDs.reportFailure}
         />
       )}
-
-      <Button
-        onPress={() => {
-          void send();
-        }}
-        loading={sending}
-        testID={profileTestIDs.reportSendButton}
-      >
-        {t('reports.send')}
-      </Button>
     </>
   );
 };
@@ -192,7 +199,6 @@ export const ReportContentSheet: React.FC<ReportContentSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.md,
   },
   field: {

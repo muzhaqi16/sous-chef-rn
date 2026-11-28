@@ -8,7 +8,7 @@ import {
   isUnionType,
   type GraphQLObjectType,
 } from 'graphql';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import { appliedPayload } from '../mutationPayload';
 
 const schema = buildSchema(

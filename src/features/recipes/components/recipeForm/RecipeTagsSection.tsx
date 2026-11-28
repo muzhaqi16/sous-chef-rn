@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { MultiSelectChipSheet } from '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet';
 import { Text } from '#components/atoms/Text';
-import { Diet, HealthGoal, Intolerance } from '#/graphql/generated/schemaTypes';
+import { Diet, HealthGoal, Intolerance } from '#graphql/generated/schemaTypes';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 
 interface RecipeTagsSectionProps {
@@ -77,10 +77,12 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
         visible={showDiets}
         title={t('recipes.diets')}
         items={ALL_DIETS.map(d => ({ id: d, label: formatDiet(d) }))}
-        selectedItems={diets}
-        onSelect={onDietsChange}
+        initialSelected={diets}
         onClose={() => setShowDiets(false)}
-        onDone={() => setShowDiets(false)}
+        onDone={picked => {
+          onDietsChange(picked);
+          setShowDiets(false);
+        }}
       />
 
       <MultiSelectChipSheet<HealthGoal>
@@ -90,10 +92,12 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
           id: g,
           label: formatHealthGoal(g),
         }))}
-        selectedItems={healthGoals}
-        onSelect={onHealthGoalsChange}
+        initialSelected={healthGoals}
         onClose={() => setShowHealthGoals(false)}
-        onDone={() => setShowHealthGoals(false)}
+        onDone={picked => {
+          onHealthGoalsChange(picked);
+          setShowHealthGoals(false);
+        }}
       />
 
       <MultiSelectChipSheet<Intolerance>
@@ -103,10 +107,12 @@ export const RecipeTagsSection: React.FC<RecipeTagsSectionProps> = ({
           id: i,
           label: formatIntolerance(i),
         }))}
-        selectedItems={intolerances}
-        onSelect={onIntolerancesChange}
+        initialSelected={intolerances}
         onClose={() => setShowIntolerances(false)}
-        onDone={() => setShowIntolerances(false)}
+        onDone={picked => {
+          onIntolerancesChange(picked);
+          setShowIntolerances(false);
+        }}
       />
     </View>
   );

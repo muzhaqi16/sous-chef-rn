@@ -4,7 +4,7 @@ import * as path from 'node:path';
 /**
  * `MarkHomeAsDefault` has exactly one writer.
  *
- * A second `useMutation` of it is how the routes drift: only the local-first
+ * A second hook sending it is how the routes drift: only the local-first
  * one queues offline, and only the one that calls `applyDefaultHome` moves the
  * flag the UI reads (the payload never returns it).
  */
@@ -28,11 +28,28 @@ const walk = (dir: string, out: string[] = []): string[] => {
 
 describe('MarkHomeAsDefault', () => {
   it('is fired from useMarkHomeAsDefault and nowhere else', () => {
-    const callers = walk(SRC).filter(file =>
-      /useMutation\(\s*MarkHomeAsDefaultDocument/.test(
-        fs.readFileSync(file, 'utf8'),
-      ),
+    const sources = walk(SRC).map(file => ({
+      file,
+      text: fs.readFileSync(file, 'utf8'),
+    }));
+    // A local write sends its document through the binding made for it.
+    const bindings = sources.flatMap(({ text }) =>
+      [
+        ...text.matchAll(
+          /const (\w+) = bindLocalWrite\(\s*MarkHomeAsDefaultDocument\b/g,
+        ),
+      ].map(([, name = '']) => name),
     );
+    expect(bindings.length).toBeGreaterThan(0);
+
+    const sends = new RegExp(
+      `useMutation\\(\\s*MarkHomeAsDefaultDocument\\b|useLocalWrite\\(\\s*(${bindings.join(
+        '|',
+      )})\\b`,
+    );
+    const callers = sources
+      .filter(({ text }) => sends.test(text))
+      .map(({ file }) => file);
 
     expect(callers.map(file => path.relative(SRC, file))).toEqual([
       path.join('features', 'home', 'hooks', 'useMarkHomeAsDefault.ts'),

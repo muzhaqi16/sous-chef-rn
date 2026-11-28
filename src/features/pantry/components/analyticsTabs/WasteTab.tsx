@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { moneyByCurrency } from '#/domain/money';
-import { formatPercent, UNKNOWN_AMOUNT } from '#/utils/formatters/number';
-import { useTranslation } from '#/i18n';
+import { moneyByCurrency, useFormatCurrency } from '#domain/money';
+import { formatPercent, UNKNOWN_AMOUNT } from '#utils/formatters/number';
+import { useTranslation } from '#i18n';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { ChartSection } from '#features/pantry/components/analytics/ChartSection';
@@ -35,6 +35,7 @@ export const WasteTab: React.FC<
   onRefresh,
 }) => {
   const { t } = useTranslation();
+  const money = useFormatCurrency();
   const showsCost = useBudgetAndPricesEnabled();
 
   const wasteReasonData =
@@ -48,7 +49,7 @@ export const WasteTab: React.FC<
       label: item.itemName,
       value: item.count,
       secondaryLabel: showsCost
-        ? moneyByCurrency(item.valueByCurrency)
+        ? moneyByCurrency(item.valueByCurrency, money)
         : undefined,
     }),
   );
@@ -92,7 +93,7 @@ export const WasteTab: React.FC<
             title={t('pantryAnalytics.estValueLost')}
             // No costed batch among the waste is an unknown value, never zero.
             value={
-              moneyByCurrency(wasteData?.valueByCurrency ?? []) ??
+              moneyByCurrency(wasteData?.valueByCurrency ?? [], money) ??
               UNKNOWN_AMOUNT
             }
             icon="cash-outline"

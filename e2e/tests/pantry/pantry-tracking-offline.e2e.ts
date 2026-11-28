@@ -16,7 +16,11 @@ import { openSwipeAction } from '../../helpers/actions';
 import { getAuthTokens } from '../../helpers/tokenProvider';
 import { launchAppWithFabricWorkaround } from '../../init';
 import { generateItemName } from '../../helpers/data';
-import { waitForModalClosed, waitForModalReady } from '../../helpers/waitFor';
+import {
+  returnFromField,
+  waitForModalClosed,
+  waitForModalReady,
+} from '../../helpers/waitFor';
 import { t } from '../../helpers/i18n';
 import { startApiProxy, type ApiProxy } from '../../helpers/apiProxy';
 import {
@@ -125,7 +129,7 @@ describe('Pantry tracking when delivery goes wrong', () => {
     const left = element(by.id(pantryTestIDs.stockCheckLeft(checked.id)));
     await waitFor(left).toBeVisible().withTimeout(WAIT);
     await left.replaceText('6');
-    await left.tapReturnKey();
+    await returnFromField(left, element(by.id(pantryTestIDs.stockCheckSave)));
 
     // The API applies the check; its answer never reaches the app.
     const lost = proxy.loseNextAnswer(STOCK_CHECK);
@@ -176,7 +180,10 @@ describe('Pantry tracking when delivery goes wrong', () => {
       .scroll(200, 'down');
     await openSwipeAction(row, 'consume', pantryTestIDs.actionConfirm, WAIT);
     await element(by.id(pantryTestIDs.consumeQuantity)).replaceText('2');
-    await element(by.id(pantryTestIDs.consumeQuantity)).tapReturnKey();
+    await returnFromField(
+      element(by.id(pantryTestIDs.consumeQuantity)),
+      element(by.id(pantryTestIDs.actionConfirm)),
+    );
 
     // The API records the use; its answer never reaches the app.
     const lost = proxy.loseNextAnswer(USE);
@@ -232,7 +239,7 @@ describe('Pantry tracking when delivery goes wrong', () => {
     await waitForModalReady(recipesTestIDs.cookConfirm, WAIT);
     const servings = element(by.id(recipesTestIDs.cookServings));
     await servings.replaceText('4');
-    await servings.tapReturnKey();
+    await returnFromField(servings, element(by.id(recipesTestIDs.cookConfirm)));
     await element(by.id(recipesTestIDs.cookConfirm)).tap();
     await waitForModalReady(recipesTestIDs.cookReviewConfirm, WAIT);
 
@@ -290,7 +297,10 @@ describe('Pantry tracking when delivery goes wrong', () => {
     const eggsLeft = element(by.id(pantryTestIDs.stockCheckLeft(staleEggs.id)));
     await waitFor(eggsLeft).toBeVisible().withTimeout(WAIT);
     await eggsLeft.replaceText('6');
-    await eggsLeft.tapReturnKey();
+    await returnFromField(
+      eggsLeft,
+      element(by.id(pantryTestIDs.stockCheckSave)),
+    );
     // While the check is open, another member uses an egg.
     await useOnServer(staleEggs.id, 1);
     await element(by.id(pantryTestIDs.stockCheckSave)).tap();
@@ -317,7 +327,10 @@ describe('Pantry tracking when delivery goes wrong', () => {
 
     // Counting the eggs again settles them, and repeats nothing for the milk.
     await eggsLeft.replaceText('6');
-    await eggsLeft.tapReturnKey();
+    await returnFromField(
+      eggsLeft,
+      element(by.id(pantryTestIDs.stockCheckSave)),
+    );
     await element(by.id(pantryTestIDs.stockCheckSave)).tap();
     await waitForModalClosed(pantryTestIDs.stockCheckSave, WAIT);
     jestExpect(await stackOnServer(staleEggs.id)).toEqual({

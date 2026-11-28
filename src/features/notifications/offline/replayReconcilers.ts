@@ -4,8 +4,8 @@
  */
 import { applyNotificationRemoved } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
-import { isRecord } from '#/utils/isRecord';
-import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
+import { isRecord } from '#utils/isRecord';
+import type { ReplayReconcilerTable } from '#apollo/offlineQueue/types';
 
 export const removeGoneNotification: ReplayReconcilerTable[string] = (
   cache,

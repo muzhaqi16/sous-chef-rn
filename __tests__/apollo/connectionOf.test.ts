@@ -4,7 +4,7 @@ import {
   typedConnectionOf,
 } from '#/test-utils/fixtures/connectionOf';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 
 const LISTS = gql`
   query Lists {

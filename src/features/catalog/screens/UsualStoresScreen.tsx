@@ -1,19 +1,17 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { Pressable } from 'react-native-gesture-handler';
-import { useTranslation, type TranslateFn, type TranslationKey } from '#/i18n';
-import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import { useTranslation, type TranslateFn, type TranslationKey } from '#i18n';
+import { UsualStoreSource } from '#graphql/generated/schemaTypes';
 import { SubScreen } from '#components/templates/SubScreen';
-import { Icon } from '#components/atoms/Icon';
 import { deleteAction } from '#components/organisms/SwipeableItem/commonActions';
 import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
 import { useDataState } from '#hooks/data/useDataState';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
-import { toastService } from '#/services/toastService';
-import { hitSlop } from '#/theme/foundations/sizes';
-import { formatMonthDay } from '#/utils/formatters/date';
+import { toastService } from '#services/toastService';
+import { formatMonthDay } from '#utils/formatters/date';
 import { storeChoiceName } from '#domain/stores';
 import {
   useUsualStores,
@@ -148,20 +146,16 @@ export const UsualStoresScreen: React.FC<
               }}
               trailing={
                 // RNGH's, so the row's swipe does not also take the tap.
-                <Pressable
+                <IconButton
+                  name={pin.icon}
+                  size="md"
+                  tone={item.pinned ? 'primary' : 'textSecondary'}
                   onPress={pin.onPress}
-                  hitSlop={hitSlop.md}
-                  accessibilityRole="button"
                   accessibilityLabel={t(pin.labelKey)}
-                  accessibilityState={{ selected: item.pinned }}
+                  accessibilityRole="button"
                   testID={catalogTestIDs.usualStorePin(item.key)}
-                >
-                  <Icon
-                    name={pin.icon}
-                    size={22}
-                    tone={item.pinned ? 'primary' : 'textSecondary'}
-                  />
-                </Pressable>
+                  selected={item.pinned}
+                />
               }
             />
           );

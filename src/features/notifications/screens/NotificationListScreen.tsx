@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { NotificationItem } from '#features/notifications/components/NotificationItem';
@@ -14,7 +14,8 @@ import { UrgentNotificationsBanner } from '#features/notifications/components/Ur
 import { useNotifications } from '#features/notifications/hooks/useNotifications';
 import { useNotificationHistory } from '#features/notifications/hooks/useNotificationHistory';
 import type { DisplayNotification as NotificationType } from '#features/notifications/utils/toDisplayNotification';
-import { NotificationCategory } from '#/graphql/generated/schemaTypes';
+import type { NotificationCategory } from '#graphql/generated/schemaTypes';
+import { notificationDestination } from '#services/push/notificationDestination';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
@@ -45,7 +46,8 @@ const NotificationFeed: React.FC<{
 }> = ({ onAction }) => {
   const { t } = useTranslation();
   const listInset = useScreenListInset();
-  const { toNotificationDetail, toNotificationSettings } = useAppNavigation();
+  const { toNotificationDestination, toNotificationSettings } =
+    useAppNavigation();
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);
 
@@ -80,6 +82,7 @@ const NotificationFeed: React.FC<{
     isEmpty: notifications.length === 0,
   });
 
+  // Where it leads is `notificationDestination`'s, which a tapped push asks too.
   const handleNotificationPress = (notification: NotificationType) => {
     // Never awaited: the read shows at once, and a tap must not wait on the
     // server. A read row is left alone by the hook.
@@ -87,15 +90,11 @@ const NotificationFeed: React.FC<{
 
     if (notification.requiresAction && notification.actionType) {
       onAction(notification);
-    } else if (
-      notification.category !== NotificationCategory.Pantry &&
-      notification.category !== NotificationCategory.Shopping
-    ) {
-      // Pantry/Shopping notifications have no dedicated destination to jump
-      // to — tapping just marks them read. Other categories open the detail
-      // screen, which has real content to show.
-      toNotificationDetail({ id: notification.id, notification });
+      return;
     }
+    toNotificationDestination(
+      notificationDestination(notification.category, notification.id),
+    );
   };
 
   // Headers inlined into one array; FlashList tells the two apart by item type.
@@ -178,6 +177,7 @@ const NotificationFeed: React.FC<{
         onEndReached={loadMore}
         onEndReachedThreshold={0.4}
         contentContainerStyle={[
+          styles.gutter,
           !hasNotifications && styles.emptyInset,
           listInset,
         ]}
@@ -186,8 +186,12 @@ const NotificationFeed: React.FC<{
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
+  // Each row is its own card on the page.
+  gutter: {
+    paddingHorizontal: theme.layout.pageGutter,
+  },
   emptyInset: {
     flex: 1,
   },
-});
+}));

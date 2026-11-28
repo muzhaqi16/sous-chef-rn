@@ -1,7 +1,7 @@
-import { storage } from '#/store/deviceStorage';
-import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
-import { QueueStore } from '#/apollo/offlineQueue/queueStore';
-import { QueueStatus, type QueuedMutation } from '#/apollo/offlineQueue/types';
+import { storage } from '#store/deviceStorage';
+import { apolloCachePersistence } from '#apollo/offline/ApolloCachePersistence';
+import { QueueStore } from '#apollo/offlineQueue/queueStore';
+import { QueueStatus, type QueuedMutation } from '#apollo/offlineQueue/types';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 

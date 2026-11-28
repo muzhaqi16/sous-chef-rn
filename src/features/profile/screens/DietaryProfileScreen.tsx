@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { alertService } from '#/services/alertService';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
@@ -11,10 +11,9 @@ import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import type {
   Diet,
   RestrictionKindInput,
-} from '#/graphql/generated/schemaTypes';
-import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
-import { commonStyles } from '#/styles/commonStyles';
-import { Icon } from '#components/atoms/Icon';
+} from '#graphql/generated/schemaTypes';
+import { RestrictionSeverity } from '#graphql/generated/schemaTypes';
+import { commonStyles } from '#styles/commonStyles';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { dietGroup } from '#domain/dietary';
 import { ReligiousDietPicker } from '#features/profile/ui/ReligiousDietPicker';
@@ -25,8 +24,8 @@ import { useDietarySharing } from '#features/profile/hooks/useDietarySharing';
 import { CookingPreferencesSheet } from '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet';
 import { MacroTargetsSheet } from '#features/profile/components/MacroTargetsSheet/MacroTargetsSheet';
 import { Text } from '#components/atoms/Text';
-import { errorService } from '#/services/errorService';
-import { motion } from '#/theme/motion';
+import { errorService } from '#services/errorService';
+import { motion } from '#theme/motion';
 import { DataStateView } from '#components/organisms/DataStateView';
 
 export const DietaryProfileScreen: React.FC = () => {
@@ -249,15 +248,16 @@ export const DietaryProfileScreen: React.FC = () => {
             <Text role="bodyStrong" tone="secondary">
               {t('labels.cookingPreferences')}
             </Text>
-            <AppPressable
+            <IconButton
+              name="create-outline"
+              size="sm"
+              tone="primary"
               onPress={handleOpenCookingPrefs}
               accessibilityLabel={t('a11y.editNamed', {
                 name: t('labels.cookingPreferences'),
               })}
               style={styles.editButton}
-            >
-              <Icon name="create-outline" size={20} tone="primary" />
-            </AppPressable>
+            />
           </View>
           {profile.maxCookTimeMinutes ? (
             <InfoRow
@@ -284,15 +284,16 @@ export const DietaryProfileScreen: React.FC = () => {
             <Text role="bodyStrong" tone="secondary">
               {t('dietary.macroTargets')}
             </Text>
-            <AppPressable
+            <IconButton
+              name="create-outline"
+              size="sm"
+              tone="primary"
               onPress={handleOpenMacros}
               accessibilityLabel={t('a11y.editNamed', {
                 name: t('macroTargets.title'),
               })}
               style={styles.editButton}
-            >
-              <Icon name="create-outline" size={20} tone="primary" />
-            </AppPressable>
+            />
           </View>
           {!hasMacroTarget && (
             <Text role="caption" tone="secondary">

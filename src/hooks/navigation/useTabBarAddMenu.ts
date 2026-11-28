@@ -8,9 +8,9 @@ import {
 import {
   useTabBarSetters,
   type TabBarAddAction,
-} from '#/context/TabBarActionsContext';
+} from '#context/TabBarActionsContext';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { useStore } from '#store';
 import { usePendingTabAdd } from '#store/useAppStore';
 import type { PendingTabAdd } from '#store/slices/uiSlice';

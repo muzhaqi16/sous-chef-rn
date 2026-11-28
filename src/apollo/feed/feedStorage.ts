@@ -2,8 +2,8 @@ import type { ApolloCache } from '@apollo/client';
 import {
   scopeStorage,
   type CacheShards,
-} from '#/apollo/offline/ApolloCachePersistence';
-import { logger } from '#/utils/environment';
+} from '#apollo/offline/ApolloCachePersistence';
+import { logger } from '#utils/environment';
 import {
   clearPositions,
   heldScopes,

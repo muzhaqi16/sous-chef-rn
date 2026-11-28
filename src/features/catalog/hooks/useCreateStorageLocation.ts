@@ -1,12 +1,10 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { CreateStorageLocationDocument } from '#features/catalog/graphql/storageLocation.generated';
 import type { CreateLocationInputs } from '#features/catalog/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import type { CreateStorageLocationInput } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { CreateStorageLocationInput } from '#graphql/generated/schemaTypes';
+import { generateEntityId } from '#utils/generateEntityId';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
+import { createStorageLocationWrite } from '#features/catalog/offline/localWrites';
 
 type CreateLocationInput = Omit<CreateStorageLocationInput, 'homeId'>;
 
@@ -20,12 +18,10 @@ export function useCreateStorageLocation(
   pantryId: string | undefined,
 ) {
   const { t } = useTranslation();
-  const client = useApolloClient();
 
-  const [createMutation, { loading: creating }] = useMutation(
-    CreateStorageLocationDocument,
-    { context: { localFirst: true } },
-  );
+  const create = useLocalWrite(createStorageLocationWrite, {
+    fallback: t('errors.createStorageLocationFailed'),
+  });
 
   const createLocation = async (input: CreateLocationInput) => {
     if (!homeId) {
@@ -39,18 +35,12 @@ export function useCreateStorageLocation(
       homeId,
       pantryId,
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      CreateStorageLocationDocument,
+    const settled = await create.send(
       { input: { ...input, homeId, id } },
-      write =>
-        settleMutation(() => createMutation(write), {
-          document: CreateStorageLocationDocument,
-          fallback: t('errors.createStorageLocationFailed'),
-        }),
       inputs,
     );
     return settled.status !== 'failed';
   };
 
-  return { createLocation, creating };
+  return { createLocation, creating: create.sending };
 }

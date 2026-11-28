@@ -1,28 +1,28 @@
 import { useState } from 'react';
-import { useTranslation } from '#/i18n';
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
+import { useTranslation } from '#i18n';
 import {
   plannedMealInput,
   plannedMealSettle,
+  refusalEndsCook,
   useRecipeIngredientMatching,
   type CookContext,
   type CookEntry,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
-import { toastService } from '#/services/toastService';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { toastService } from '#services/toastService';
+import { executeWriteWithFinally } from '#utils/finallyHelpers';
+import { errorService } from '#services/errorService';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { CookRecipeInputs } from '#features/recipes/offline/localWrites';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
-import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { logger } from '#/utils/environment';
+import { askForReviewAfterSuccess } from '#domain/reviewPrompt';
+import { generateEntityId } from '#utils/generateEntityId';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { logger } from '#utils/environment';
 import { useSelectedPantryId } from '#store/useAppStore';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { cappedNames } from '#/utils/cappedNames';
+import { cappedNames } from '#utils/cappedNames';
+import type { CookConfirmOutcome } from '#features/recipes/types';
+import { markRecipeAsCookedWrite } from '#features/recipes/offline/localWrites';
 
 interface UseRecipeCookingActionsOptions extends CookContext {
   recipeId: string | undefined;
@@ -70,16 +70,16 @@ export function useRecipeCookingActions({
   // A confirm or a skip of the review records it.
   const [reviewedCook, setReviewedCook] = useState<CookEntry | null>(null);
 
-  const client = useApolloClient();
   const ingredientMatching = useRecipeIngredientMatching(recipeId, {
     plannedMeal,
     onMealChanged,
   });
   const pantryId = useSelectedPantryId();
-  const isOffline = useIsApiUnavailable();
 
-  const [markRecipeAsCookedMutation] = useMutation(MarkRecipeAsCookedDocument, {
-    context: { localFirst: true },
+  const markCooked = useLocalWrite(markRecipeAsCookedWrite, {
+    fallback: t('recipes.markCookedFailed'),
+    present: 'toast',
+    ...plannedMealSettle(t, { plannedMeal, onMealChanged }),
   });
 
   /**
@@ -95,8 +95,7 @@ export function useRecipeCookingActions({
       now: new Date().toISOString(),
       ...(plannedMeal && { meal: { id: plannedMeal.id, cookingLogId: id } }),
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      MarkRecipeAsCookedDocument,
+    const settled = await markCooked.send(
       {
         input: {
           ...vars,
@@ -105,13 +104,6 @@ export function useRecipeCookingActions({
           id,
         },
       },
-      write =>
-        settleMutation(() => markRecipeAsCookedMutation(write), {
-          document: MarkRecipeAsCookedDocument,
-          fallback: t('recipes.markCookedFailed'),
-          present: 'toast',
-          ...plannedMealSettle(t, { plannedMeal, onMealChanged }),
-        }),
       inputs,
     );
 
@@ -153,6 +145,14 @@ export function useRecipeCookingActions({
       failure: settled.failure,
       queued: settled.status === 'queued',
       skipped,
+      // The stacks it recorded a draw on: a draw stops at what a stack holds,
+      // and an ingredient no stack serves draws nothing and is not skipped.
+      drawn: new Set(
+        (payload?.cookingLog.pantryItemsUsedConnection.edges ?? []).map(
+          // A stack deleted since still counts as drawn on.
+          ({ node }) => node.pantryItem?.id ?? node.id,
+        ),
+      ).size,
     };
   };
 
@@ -196,78 +196,122 @@ export function useRecipeCookingActions({
     );
   };
 
-  /** Success copy that says so only when nothing was left undeducted. */
-  const deductionToast = (skipped: SkippedDeductions) => {
+  /**
+   * What a deducting cook recorded, never what it asked for: the lines it
+   * skipped, else how many stacks it drew on, or that it drew on none.
+   */
+  const deductionToast = (skipped: SkippedDeductions, drawn: number) => {
     if (skipped.count > 0) {
       toastService.warning(skippedCopy(skipped));
       return;
     }
-    toastService.success(t('recipes.markedCookedDeducted'));
+    toastService.success(
+      drawn > 0
+        ? t('recipes.markedCookedDeducted', { count: drawn })
+        : t('recipes.markedCookedNotDeducted'),
+    );
   };
 
-  const handleMarkAsCooked = (input: MarkCookedInput) => {
+  /** Records the cook as entered, deducting or not; the sheet waits for it. */
+  const cookAsEntered = async (
+    vars: FireMarkCookedVars,
+  ): Promise<CookConfirmOutcome> => {
+    const { failure, queued, skipped, drawn } = await fireMarkCooked(vars);
+    // Refused: the sheet keeps what was entered, under the failure toast.
+    if (failure)
+      return refusalEndsCook(failure, plannedMeal) ? 'done' : 'retry';
+    if (queued) queuedToast(vars.deductFromPantry);
+    else if (vars.deductFromPantry) deductionToast(skipped, drawn);
+    else toastService.success(t('recipes.markedCooked'));
+    return 'done';
+  };
+
+  /**
+   * A cook asking for the review deducts only what the review confirms: one
+   * the review cannot be read for stays open with the review turned off, to be
+   * confirmed again; a recipe with nothing to draw is recorded as cooked.
+   */
+  const cookAfterReview = async (
+    recipe: string,
+    input: MarkCookedInput,
+  ): Promise<CookConfirmOutcome> => {
+    setReviewedCook({ servings: input.servings, notes: input.notes });
+    const review = await ingredientMatching.loadMatches(input.servings);
+    if (review === 'loaded') return 'done';
+    if (review === 'unavailable') return 'reviewUnavailable';
+    return recordWithoutDeducting(recipe, input);
+  };
+
+  /** The cook alone, saying the pantry was left as it was. */
+  const recordWithoutDeducting = async (
+    recipe: string,
+    cook: CookEntry | null,
+  ): Promise<CookConfirmOutcome> => {
+    const { failure, queued } = await fireMarkCooked({
+      recipeId: recipe,
+      servings: cook?.servings,
+      deductFromPantry: false,
+      notes: cook?.notes,
+    });
+    if (failure)
+      return refusalEndsCook(failure, plannedMeal) ? 'done' : 'retry';
+    if (queued) queuedToast(false);
+    else toastService.success(t('recipes.markedCookedNotDeducted'));
+    return 'done';
+  };
+
+  /** A send that throws: the sheet stays as entered, and says so. */
+  const reportCookFailure = (error: unknown) => {
+    errorService.reportError(error, { operation: 'Mark recipe cooked' });
+    toastService.error(t('recipes.markCookedFailed'));
+  };
+
+  const handleMarkAsCooked = async (
+    input: MarkCookedInput,
+  ): Promise<CookConfirmOutcome> => {
     if (!recipeId) {
       toastService.error(t('recipes.cookExternalError'));
-      return;
+      return 'done';
     }
-
-    // Granular deduction: load ingredient matches and open review sheet
-    if (input.useGranularDeduction) {
-      setReviewedCook({ servings: input.servings, notes: input.notes });
-      void executeWithLoadingState(async () => {
-        const loaded = await ingredientMatching.loadMatches(input.servings);
-        if (!loaded) {
-          // Fallback to simple deduction if matching fails
-          const { failure, queued, skipped } = await fireMarkCooked({
-            recipeId,
-            servings: input.servings,
-            deductFromPantry: input.deductFromPantry,
-            notes: input.notes,
-          });
-          if (failure) return;
-          if (isOffline || queued)
-            toastService.info(t('recipes.cookReviewNeedsConnection'));
-          else deductionToast(skipped);
-        }
-      }, setMarkingAsCooked);
-      return;
-    }
-
-    // Simple deduction path
-    void executeWithLoadingState(async () => {
-      const { failure, queued, skipped } = await fireMarkCooked({
-        recipeId,
-        servings: input.servings,
-        deductFromPantry: input.deductFromPantry,
-        notes: input.notes,
-      });
-      if (failure) return;
-
-      if (queued) {
-        queuedToast(input.deductFromPantry);
-      } else if (input.deductFromPantry) {
-        deductionToast(skipped);
-      } else {
-        toastService.success(t('recipes.markedCooked'));
-      }
-    }, setMarkingAsCooked);
+    let outcome: CookConfirmOutcome = 'retry';
+    await executeWriteWithFinally(
+      async () => {
+        outcome = input.useGranularDeduction
+          ? await cookAfterReview(recipeId, input)
+          : await cookAsEntered({
+              recipeId,
+              servings: input.servings,
+              deductFromPantry: input.deductFromPantry,
+              notes: input.notes,
+            });
+      },
+      setMarkingAsCooked,
+      reportCookFailure,
+    );
+    return outcome;
   };
 
   // Skipping the review lets the server pick the stacks (markRecipeAsCooked).
+  // The review stays open until the cook is taken, so a refusal keeps it.
   const handleSkipReview = () => {
     if (!recipeId) return;
-    ingredientMatching.closeSheet();
-    void executeWithLoadingState(async () => {
-      const { failure, queued, skipped } = await fireMarkCooked({
-        recipeId,
-        servings: reviewedCook?.servings,
-        deductFromPantry: true,
-        notes: reviewedCook?.notes,
-      });
-      if (failure) return;
-      if (queued) queuedToast(true);
-      else deductionToast(skipped);
-    }, setMarkingAsCooked);
+    void executeWriteWithFinally(
+      async () => {
+        const { failure, queued, skipped, drawn } = await fireMarkCooked({
+          recipeId,
+          servings: reviewedCook?.servings,
+          deductFromPantry: true,
+          notes: reviewedCook?.notes,
+        });
+        if (failure && !refusalEndsCook(failure, plannedMeal)) return;
+        ingredientMatching.closeSheet();
+        if (failure) return;
+        if (queued) queuedToast(true);
+        else deductionToast(skipped, drawn);
+      },
+      setMarkingAsCooked,
+      reportCookFailure,
+    );
   };
 
   const handleConfirmReview = () =>
@@ -277,18 +321,14 @@ export function useRecipeCookingActions({
   // was left as it was.
   const handleRecordWithoutDeducting = () => {
     if (!recipeId) return;
-    ingredientMatching.closeSheet();
-    void executeWithLoadingState(async () => {
-      const { failure, queued } = await fireMarkCooked({
-        recipeId,
-        servings: reviewedCook?.servings,
-        deductFromPantry: false,
-        notes: reviewedCook?.notes,
-      });
-      if (failure) return;
-      if (queued) queuedToast(false);
-      else toastService.success(t('recipes.markedCookedNotDeducted'));
-    }, setMarkingAsCooked);
+    void executeWriteWithFinally(
+      async () => {
+        const outcome = await recordWithoutDeducting(recipeId, reviewedCook);
+        if (outcome === 'done') ingredientMatching.closeSheet();
+      },
+      setMarkingAsCooked,
+      reportCookFailure,
+    );
   };
 
   return {

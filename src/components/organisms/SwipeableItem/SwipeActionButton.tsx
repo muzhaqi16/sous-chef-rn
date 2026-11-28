@@ -21,7 +21,6 @@ import { Text } from '#components/atoms/Text';
 // — 1.28:1 on that navy, an icon you cannot see.
 const ThemedIcon = withUnistyles(Icon, theme => ({
   color: theme.colors.onScrim,
-  size: theme.fonts.size.xl,
 }));
 
 interface SwipeActionButtonProps extends ActionButtonProps {
@@ -89,7 +88,7 @@ const SwipeActionButtonComponent: React.FC<SwipeActionButtonProps> = ({
   return (
     <Pressable onPress={handlePress} style={buttonStyle} testID={testID}>
       <Animated.View style={animatedStyle}>
-        <ThemedIcon name={icon} library={library} />
+        <ThemedIcon name={icon} library={library} size="sm" />
         {label ? (
           <Text role="label" style={styles.deleteText}>
             {label}

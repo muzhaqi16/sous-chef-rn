@@ -55,7 +55,6 @@ jest.mock('react-native-unistyles', () => {
     })),
     useInitialTheme: jest.fn(),
     withUnistyles: jest.fn(component => component),
-    ScopedTheme: ({ children }) => children,
     UnistyleDependency: {
       Theme: 0,
       ThemeName: 1,

@@ -1,4 +1,4 @@
-import { SyncPageStatus } from '#/graphql/generated/schemaTypes';
+import { SyncPageStatus } from '#graphql/generated/schemaTypes';
 import type { FeedAnswer } from './types';
 
 interface SnapshotPage<Row> {

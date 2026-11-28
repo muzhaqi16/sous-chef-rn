@@ -8,7 +8,7 @@ import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import type { Client } from 'graphql-ws';
 import { buildSchema, parse, subscribe } from 'graphql';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 import {
   isNonIterableSubscriptionResolver,
   socketCloseOf,

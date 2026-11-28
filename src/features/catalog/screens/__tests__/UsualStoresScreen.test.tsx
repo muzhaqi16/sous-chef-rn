@@ -1,17 +1,17 @@
 import React from 'react';
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
-import { createLocalWritePrecedenceLink } from '#/apollo/links/localWritePrecedenceLink';
+import { makeCache } from '#apollo/cache';
+import { createLocalWritePrecedenceLink } from '#apollo/links/localWritePrecedenceLink';
 import { useStore } from '#store';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import { UsualStoreSource } from '#graphql/generated/schemaTypes';
 import {
   writeUsualStores,
   type UsualStoreEntry,
-} from '#features/catalog/cache/usualStores';
-import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
+} from '#entities/store/usualStores';
+import { UsualStoresDocument } from '#entities/store/usualStores.generated';
 import {
   AddUsualStoreDocument,
   RemoveUsualStoreDocument,

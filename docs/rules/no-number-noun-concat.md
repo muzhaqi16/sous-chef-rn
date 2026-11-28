@@ -38,4 +38,4 @@ Conditionals and `??` / `||` on the string side are followed branch by branch, s
 - A template in a non-copy position: a `key`, a `testID`, a cache id.
 - Files without type information.
 
-Source: [`eslint/plugin/rules/no-number-noun-concat.js`](../../eslint/plugin/rules/no-number-noun-concat.js) · spec: [`__tests__/lint/rules/no-number-noun-concat.test.ts`](../../__tests__/lint/rules/no-number-noun-concat.test.ts)
+Source: [`eslint/plugin/rules/no-number-noun-concat.js`](../../eslint/plugin/rules/no-number-noun-concat.js) · spec: [`__tests__/lint/typedRules/no-number-noun-concat.ts`](../../__tests__/lint/typedRules/no-number-noun-concat.ts)

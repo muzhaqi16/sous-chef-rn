@@ -1,22 +1,22 @@
 import { skipToken, useQuery } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import { useTranslation } from '#i18n';
+import type { Translate } from '#i18n/types';
 import {
   StoreLineMatch,
   type UnitSystem,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { chainOption, storeOption, type StoreOption } from '#domain/stores';
-import { formatMonthDay } from '#/utils/formatters/date';
+import { formatMonthDay } from '#utils/formatters/date';
 import {
   formatApproximateCurrency,
   formatCurrency,
   formatDistance,
-} from '#/utils/formatters/number';
-import { formatPackageSize } from '#/utils/formatQuantity';
+} from '#utils/formatters/number';
+import { formatPackageSize } from '#utils/formatQuantity';
 import { resolveImageUrl } from '#utils/imageUtils';
 import {
   ListSavingsDocument,

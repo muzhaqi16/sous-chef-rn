@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
+import { Controller, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
+import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { FormInput } from '#components/atoms/FormInput';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
-import { DIETARY_LIMITS } from '#domain/dietary';
+import { useOpening } from '#hooks/ui/useOpening';
+import { reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import {
+  cookingPreferencesSchema,
+  type CookingPreferencesFormValues,
+} from './cookingPreferencesFormConfig';
 
 interface CookingPreferencesSheetProps {
   visible: boolean;
@@ -16,49 +25,34 @@ interface CookingPreferencesSheetProps {
   initialValues?: { maxCookTimeMinutes?: number | null };
 }
 
-/** The longest cooking time the user wants, which Recipes' search filters by. */
-export const CookingPreferencesSheet: React.FC<
-  CookingPreferencesSheetProps
-> = ({ visible, onClose, onSave, initialValues }) => {
+type CookingPreferencesFormProps = Omit<
+  CookingPreferencesSheetProps,
+  'visible'
+>;
+
+const CookingPreferencesForm: React.FC<CookingPreferencesFormProps> = ({
+  onClose,
+  onSave,
+  initialValues,
+}) => {
   const { t } = useTranslation();
-
-  const [cookTime, setCookTime] = useState('');
   const [saving, setSaving] = useState(false);
+  const stored = initialValues?.maxCookTimeMinutes;
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<CookingPreferencesFormValues>({
+    resolver: yupResolver(cookingPreferencesSchema),
+    defaultValues: { cookTime: stored?.toString() ?? '' },
+  });
+  useSheetUnsavedInput(isDirty);
 
-  // Reset form when modal opens (render-time conditional state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevInitialValues, setPrevInitialValues] = useState(initialValues);
-  if (visible !== prevVisible || initialValues !== prevInitialValues) {
-    setPrevVisible(visible);
-    setPrevInitialValues(initialValues);
-    if (visible) {
-      setCookTime(initialValues?.maxCookTimeMinutes?.toString() ?? '');
-    }
-  }
-
-  const handleSave = async () => {
+  const save = handleSubmit(async ({ cookTime }) => {
     const updates: { maxCookTimeMinutes?: number | null } = {};
-    if (cookTime) {
-      const cookTimeValue = parseInt(cookTime);
-      if (
-        isNaN(cookTimeValue) ||
-        cookTimeValue < DIETARY_LIMITS.cookTime.min ||
-        cookTimeValue > DIETARY_LIMITS.cookTime.max
-      ) {
-        alertService.alert(
-          t('labels.invalidInput'),
-          t('cookingPreferences.cookTimeRange', {
-            min: DIETARY_LIMITS.cookTime.min,
-            max: DIETARY_LIMITS.cookTime.max,
-          }),
-        );
-        return;
-      }
-      updates.maxCookTimeMinutes = cookTimeValue;
-    } else if (initialValues?.maxCookTimeMinutes != null) {
-      // Left blank sends nothing; emptied from a stored limit, it clears it.
-      updates.maxCookTimeMinutes = null;
-    }
+    if (cookTime) updates.maxCookTimeMinutes = parseInt(cookTime);
+    // Left blank sends nothing; emptied from a stored limit, it clears it.
+    else if (stored != null) updates.maxCookTimeMinutes = null;
 
     setSaving(true);
     const success = await onSave(updates);
@@ -70,36 +64,67 @@ export const CookingPreferencesSheet: React.FC<
         t('cookingPreferences.updateFailed'),
       );
     }
-  };
+  }, reportValidationErrors);
+
+  return (
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={t('labels.cookingPreferences')}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void save();
+            },
+            loading: saving,
+          }}
+        />
+      </SheetHeaderSlot>
+      <View style={styles.section}>
+        <Controller
+          control={control}
+          name="cookTime"
+          render={({ field, fieldState }) => (
+            <FormInput
+              ref={field.ref}
+              label={t('cookingPreferences.maxCookTime')}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              error={fieldState.error?.message}
+              keyboardType="number-pad"
+              placeholder={t('cookingPreferences.cookTimePlaceholder')}
+            />
+          )}
+        />
+      </View>
+    </>
+  );
+};
+
+/** The longest cooking time the user wants, which Recipes' search filters by. */
+export const CookingPreferencesSheet: React.FC<
+  CookingPreferencesSheetProps
+> = ({ visible, ...form }) => {
+  const opening = useOpening(visible, form.initialValues);
 
   return (
     <Sheet
       mode="form"
+      headerFromContent
       visible={visible}
-      onDismiss={onClose}
+      onDismiss={form.onClose}
       snapPoints={['40%']}
       style={styles.scrollView}
       contentContainerStyle={styles.contentContainer}
-      header={
-        <BottomSheetHeader
-          title={t('labels.cookingPreferences')}
-          onCancel={onClose}
-          onConfirm={handleSave}
-          confirmLabel={t('labels.save')}
-          confirmDisabled={saving}
-        />
-      }
     >
-      <View style={styles.section}>
-        <FormInput
-          label={t('cookingPreferences.maxCookTime')}
-          value={cookTime}
-          onChangeText={setCookTime}
-          keyboardType="number-pad"
-          placeholder={t('cookingPreferences.cookTimePlaceholder')}
-          useBottomSheetInput
+      {opening ? (
+        <CookingPreferencesForm
+          key={opening.id}
+          {...form}
+          initialValues={opening.payload}
         />
-      </View>
+      ) : null}
     </Sheet>
   );
 };
@@ -109,7 +134,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   contentContainer: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   section: {
     marginBottom: theme.spacing.lg,

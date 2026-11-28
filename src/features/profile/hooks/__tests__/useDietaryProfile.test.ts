@@ -20,9 +20,9 @@ import {
   Intolerance,
   RestrictionSeverity,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useDietaryProfile } from '../useDietaryProfile';
 
 jest.mock('#store/useAppStore', () => {

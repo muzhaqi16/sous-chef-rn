@@ -1,5 +1,5 @@
 import type { ToastOptions, ToastPresenter } from '#platform/presenters';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 
 /**
  * The toast API, in and out of the React tree alike. `ToastProvider` mounts it

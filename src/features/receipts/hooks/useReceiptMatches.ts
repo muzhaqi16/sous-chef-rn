@@ -4,10 +4,10 @@ import {
   ReceiptMatchConfidence,
   ReceiptParser,
   type ReceiptMatchMethod,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
-import { formatNetWeightDisplay } from '#/utils/formatQuantity';
+import { formatNetWeightDisplay } from '#utils/formatQuantity';
 import {
   ResolveReceiptLinesDocument,
   type ResolveReceiptLinesQuery,

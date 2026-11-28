@@ -1,7 +1,7 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { IconButton } from '#components/atoms/IconButton';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { Icon } from '#components/atoms/Icon';
@@ -17,7 +17,11 @@ import {
   PantryDetailInfo_PantryItemFragmentDoc,
   type PantryDetailInfo_PantryItemFragment,
 } from './PantryDetailInfo.generated';
-import { resolveCurrency, usePreferredCurrency } from '#/domain/money';
+import {
+  resolveCurrency,
+  useFormatCurrency,
+  usePreferredCurrency,
+} from '#domain/money';
 import {
   formatCondition,
   formatAcquisitionMethod,
@@ -26,8 +30,7 @@ import {
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import type { BatchPricingSummary } from '#features/pantry/utils/summarizeBatchPricing';
-import { ItemCondition } from '#/graphql/generated/schemaTypes';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { ItemCondition } from '#graphql/generated/schemaTypes';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 interface PantryDetailInfoProps {
@@ -63,6 +66,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
 }) => {
   const { t } = useTranslation();
   const preferredCurrency = usePreferredCurrency();
+  const money = useFormatCurrency();
   const showsCost = useBudgetAndPricesEnabled();
   // Per-entity cache subscription: re-renders only when this PantryItem's
   // fields change. Falls back to the source prop on cache miss so the
@@ -110,17 +114,17 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   // shown under an assumed one.
   const purchaseTotalIsDenominated = !fromBatch || !!batchCurrency;
   const costPerUnitText = showsCost
-    ? formatCostOrNull(costPerUnit, itemCurrency)
+    ? formatCostOrNull(costPerUnit, itemCurrency, money)
     : null;
   const stockValueText = showsCost
-    ? formatCostOrNull(item.totalCost, itemCurrency)
+    ? formatCostOrNull(item.totalCost, itemCurrency, money)
     : null;
   const purchaseTotalText =
     showsCost &&
     purchaseTotal != null &&
     purchaseTotal > 0 &&
     purchaseTotalIsDenominated
-      ? formatCostOrNull(purchaseTotal, purchaseCurrency)
+      ? formatCostOrNull(purchaseTotal, purchaseCurrency, money)
       : null;
 
   return (
@@ -159,14 +163,14 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         >
           <Text role="bodyStrong">{netWeightText}</Text>
           {!!onCorrectPackageSize && (
-            <AppPressable
+            <IconButton
+              name="create-outline"
+              size="xs"
+              tone="primary"
               onPress={onCorrectPackageSize}
               accessibilityLabel={t('correctWeight.title')}
-              hitSlop={hitSlop.md}
               style={styles.correctWeightButton}
-            >
-              <Icon name="create-outline" size={16} tone="primary" />
-            </AppPressable>
+            />
           )}
         </InfoRow>
       )}
@@ -353,7 +357,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {!!item.storageNotes && (
         <View style={styles.notesSection}>
           <View style={styles.notesHeader}>
-            <Icon name="document-text-outline" size={16} tone="textSecondary" />
+            <Icon name="document-text-outline" size="xs" tone="textSecondary" />
             <Text role="label" tone="secondary" style={styles.notesLabel}>
               {t('labels.notes')}
             </Text>

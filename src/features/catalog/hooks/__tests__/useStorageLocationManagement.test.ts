@@ -1,4 +1,4 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { GraphQLError } from 'graphql';
 ('use no memo');
 
@@ -21,10 +21,13 @@ globalThis.cancelIdleCallback = (handle: number): void => {
   }
 };
 
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { act } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import type { GetStorageLocationsQuery } from '#features/catalog/graphql/storageLocation.generated';
 import {
@@ -33,40 +36,17 @@ import {
   DeleteStorageLocationDocument,
   MarkStorageLocationAsDefaultDocument,
 } from '#features/catalog/graphql/storageLocation.generated';
-import { ErrorCode, StorageType } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, StorageType } from '#graphql/generated/schemaTypes';
 import { useStorageLocationManagement } from '#features/catalog/hooks/useStorageLocationManagement';
 import { storeApi } from '#store';
 
 type ManagementApi = ReturnType<typeof useStorageLocationManagement>;
 
-jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
+jest.mock('#hooks/apollo/usePreservedQueryData', () => ({
   // usePreservedNodes composes usePreservedQueryData internally — passthrough.
   usePreservedQueryData: jest.fn(
     <T>(data: T | undefined, initial: T): T => data ?? initial,
   ),
-}));
-
-type MockAddOperationConfig<TInput, TResult> = {
-  mutation: (options: {
-    variables: { input: Record<string, unknown> };
-  }) => Promise<{ data?: TResult }>;
-  transformInput: (input: TInput) => Record<string, unknown>;
-  onSuccess: (data?: TResult) => unknown;
-};
-
-jest.mock('#/hooks/utils/useCrudOperations', () => ({
-  useCrudOperations: jest.fn(() => ({
-    createAddOperation: jest.fn(
-      <TInput, TResult>(config: MockAddOperationConfig<TInput, TResult>) => {
-        return async (input: TInput) => {
-          const result = await config.mutation({
-            variables: { input: config.transformInput(input) },
-          });
-          return config.onSuccess(result.data);
-        };
-      },
-    ),
-  })),
 }));
 
 // Spread the real module. Stubbing every factory to `jest.fn()` meant the
@@ -74,8 +54,8 @@ jest.mock('#/hooks/utils/useCrudOperations', () => ({
 // executed nothing, so the suite was green on writes that never happened. The
 // factories are spied on top of the real implementations instead, which keeps
 // the call assertions AND exercises the cache.
-jest.mock('#/apollo/utils/cacheUpdaters', () =>
-  jest.requireActual('#/apollo/utils/cacheUpdaters'),
+jest.mock('#apollo/utils/cacheUpdaters', () =>
+  jest.requireActual('#apollo/utils/cacheUpdaters'),
 );
 
 const mockToastSuccess = jest.mocked(toastService.success);
@@ -98,7 +78,6 @@ function buildLocationNode(
     id: 'loc-1',
     name: 'Fridge',
     type: StorageType.Refrigerator,
-    icon: null,
     color: null,
     temperature: null,
     description: null,
@@ -292,7 +271,7 @@ describe('useStorageLocationManagement', () => {
     );
 
     await drainTimers();
-    expect(result.current.errorMessage).not.toBeNull();
+    expect(result.current.state).toBe('error');
   });
 
   it('returns loading state', async () => {
@@ -301,10 +280,10 @@ describe('useStorageLocationManagement', () => {
       { operationMocks: [buildGetLocationsMock()] },
     );
 
-    expect(result.current.initialLoading).toBe(true);
+    expect(result.current.state).toBe('loading');
     await drainTimers();
     expect(result.current.locations).toHaveLength(2);
-    expect(result.current.initialLoading).toBe(false);
+    expect(result.current.state).toBe('ready');
   });
 
   it('skips query when homeId is undefined', () => {
@@ -313,7 +292,7 @@ describe('useStorageLocationManagement', () => {
       useStorageLocationManagement(undefined),
     );
 
-    expect(result.current.initialLoading).toBe(false);
+    expect(result.current.state).toBe('empty');
     expect(result.current.locations).toEqual([]);
   });
 
@@ -557,6 +536,27 @@ describe('useStorageLocationManagement', () => {
       // Refusing offline would return false and toast "Not available offline".
       expect(outcome).toBe(true);
       expect(mockToastError).not.toHaveBeenCalledWith('Not available offline');
+    });
+
+    // The delete is held unsent: what the list shows is the device's own effect.
+    it('takes a location deleted offline off the list at once, the rest still read', async () => {
+      const held = recordMock(DeleteStorageLocationDocument, { held: true });
+      const { result } = renderHookWithApollo(
+        () => useStorageLocationManagement('home-1'),
+        { operationMocks: [buildGetLocationsMock(), held.mock] },
+      );
+      await drainTimers();
+      offline();
+
+      act(() => {
+        void result.current.deleteLocation('loc-1');
+      });
+      await drainTimers();
+
+      expect(result.current.locations.map(location => location.id)).toEqual([
+        'loc-2',
+      ]);
+      expect(result.current.state).toBe('ready');
     });
 
     it('setDefaultLocation moves the flag while offline', async () => {

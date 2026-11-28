@@ -1,5 +1,19 @@
 import { readFileSync } from 'fs';
-import { execSync } from 'child_process';
+import { sync as glob } from 'glob';
+import {
+  Kind,
+  parse,
+  visit,
+  type FieldNode,
+  type SelectionSetNode,
+} from 'graphql';
+import * as ts from 'typescript';
+import {
+  calleeName,
+  nodesOf,
+  parseSource,
+  productionSources,
+} from '#/test-utils/sourceAst';
 
 /**
  * An event subscription whose payload is an envelope plus a bare `node { id }`
@@ -26,68 +40,108 @@ import { execSync } from 'child_process';
 // versioned row selects it (`sous-chef/network-read-selects-version`).
 const IDENTITY_FIELDS = new Set(['id', '__typename', 'version']);
 
-/** Selection body of `node { ... }` within a subscription, or null. */
-function nodeSelection(doc: string): string | null {
-  const start = doc.search(/\bnode\s*\{/);
-  if (start === -1) return null;
-  let i = doc.indexOf('{', start);
-  let depth = 0;
-  for (let j = i; j < doc.length; j++) {
-    if (doc[j] === '{') depth++;
-    else if (doc[j] === '}') {
-      depth--;
-      if (depth === 0) return doc.slice(i + 1, j);
+/** Only identity fields, directly or in inline fragments; a named spread is data. */
+const isIdentityOnly = (set: SelectionSetNode): boolean =>
+  set.selections.length > 0 &&
+  set.selections.every(selection =>
+    selection.kind === Kind.FIELD
+      ? IDENTITY_FIELDS.has(selection.name.value) && !selection.selectionSet
+      : selection.kind === Kind.INLINE_FRAGMENT
+      ? isIdentityOnly(selection.selectionSet)
+      : false,
+  );
+
+/** Each subscription in a document, and whether its `node` is identity-only. */
+function subscriptionsIn(text: string) {
+  return parse(text).definitions.flatMap(definition => {
+    if (
+      definition.kind !== Kind.OPERATION_DEFINITION ||
+      definition.operation !== 'subscription' ||
+      !definition.name
+    ) {
+      return [];
     }
-  }
-  return null;
-}
-
-/**
- * True when `node` carries only key fields — no data a screen could read.
- *
- * A NAMED spread (`...useNotificationsOnLaunch_notification`) pulls in real
- * fields, so it disqualifies immediately. An INLINE fragment (`... on
- * Membership`) is only a type branch; what matters is the fields inside it.
- */
-function isIdentityOnly(selection: string): boolean {
-  const lines = selection
-    .split('\n')
-    .map(l => l.replace(/#.*$/, '').trim())
-    .filter(Boolean);
-
-  if (lines.some(l => /^\.\.\.(?!\s*on\b)/.test(l))) return false;
-
-  const fields = lines
-    .filter(l => !l.startsWith('...'))
-    .map(l => l.replace(/[{}]/g, '').trim())
-    .filter(Boolean);
-  return fields.length > 0 && fields.every(f => IDENTITY_FIELDS.has(f));
-}
-
-const graphqlFiles = execSync(
-  "find src -name '*.graphql' -not -path '*/generated/*'",
-  { encoding: 'utf8' },
-)
-  .split('\n')
-  .filter(Boolean);
-
-const subscriptions: Array<{ name: string; identityOnly: boolean }> = [];
-for (const file of graphqlFiles) {
-  const src = readFileSync(file, 'utf8');
-  for (const match of src.matchAll(/^subscription\s+(\w+)/gm)) {
-    const name = match[1]!;
-    const body = src.slice(match.index);
-    const end = body.indexOf('\n}');
-    const doc = end === -1 ? body : body.slice(0, end);
-    const selection = nodeSelection(doc);
-    subscriptions.push({
-      name,
-      identityOnly: selection !== null && isIdentityOnly(selection),
+    let node: FieldNode | undefined;
+    visit(definition, {
+      Field(field) {
+        if (!node && field.name.value === 'node') node = field;
+      },
     });
-  }
+    return [
+      {
+        name: definition.name.value,
+        identityOnly: !!node?.selectionSet && isIdentityOnly(node.selectionSet),
+      },
+    ];
+  });
 }
+
+const subscriptions = glob('src/**/*.graphql', {
+  ignore: ['**/generated/**'],
+}).flatMap(file => subscriptionsIn(readFileSync(file, 'utf8')));
+
+/** The `fetchPolicy` a call passes, from its options object or the name holding it. */
+function fetchPolicyOf(call: ts.CallExpression): string | undefined {
+  let options = call.arguments[1];
+  if (options && ts.isIdentifier(options)) {
+    const name = options.text;
+    const declaration = nodesOf(call.getSourceFile()).find(
+      (node): node is ts.VariableDeclaration =>
+        ts.isVariableDeclaration(node) && node.name.getText() === name,
+    );
+    options = declaration?.initializer;
+  }
+  if (!options || !ts.isObjectLiteralExpression(options)) return undefined;
+  const policy = options.properties.find(
+    (property): property is ts.PropertyAssignment =>
+      ts.isPropertyAssignment(property) &&
+      property.name.getText() === 'fetchPolicy',
+  );
+  return policy && ts.isStringLiteral(policy.initializer)
+    ? policy.initializer.text
+    : undefined;
+}
+
+/** Each `useSubscription(<name>Document, …)` call's fetch policy. */
+const callPolicies = (name: string, file: string, text?: string) =>
+  nodesOf(parseSource(file, text))
+    .filter(ts.isCallExpression)
+    .filter(
+      call =>
+        calleeName(call) === 'useSubscription' &&
+        call.arguments[0]?.getText() === `${name}Document`,
+    )
+    .map(fetchPolicyOf);
+
+const SOURCES = productionSources();
 
 describe('event subscriptions with an identity-only node', () => {
+  it('reads a node past a comment, and a policy past its neighbour', () => {
+    expect(
+      subscriptionsIn(`
+        subscription ListEvents {
+          listEvents {
+            # the envelope: node { id } only
+            node { id ...ListReaders }
+          }
+        }
+        fragment ListReaders on List { name }`),
+    ).toEqual([{ name: 'ListEvents', identityOnly: false }]);
+
+    const planted = `
+      const options = { fetchPolicy: 'no-cache' };
+      useSubscription(ListEventsDocument, {
+          variables,
+        });
+      useSubscription(HomeEventsDocument, options);`;
+    expect(callPolicies('ListEvents', 'planted.ts', planted)).toEqual([
+      undefined,
+    ]);
+    expect(callPolicies('HomeEvents', 'planted.ts', planted)).toEqual([
+      'no-cache',
+    ]);
+  });
+
   it('finds the subscription documents to check', () => {
     expect(subscriptions.length).toBeGreaterThan(0);
   });
@@ -110,17 +164,10 @@ describe('event subscriptions with an identity-only node', () => {
   it.each(identityOnly.map(s => s.name))(
     '%s runs with fetchPolicy no-cache',
     name => {
-      const callSite = execSync(
-        `grep -rln "useSubscription(${name}Document" src --include='*.ts' --include='*.tsx' || true`,
-        { encoding: 'utf8' },
-      ).trim();
+      const policies = SOURCES.flatMap(file => callPolicies(name, file));
 
-      expect(callSite).not.toBe('');
-
-      const src = readFileSync(callSite.split('\n')[0]!, 'utf8');
-      const call = src.slice(src.indexOf(`useSubscription(${name}Document`));
-      const options = call.slice(0, call.indexOf('\n  });'));
-      expect(options).toContain("fetchPolicy: 'no-cache'");
+      expect(policies.length).toBeGreaterThan(0);
+      expect(policies.every(policy => policy === 'no-cache')).toBe(true);
     },
   );
 });

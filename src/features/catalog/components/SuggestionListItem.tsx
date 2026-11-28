@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import Animated, {
   FadeIn,
   LinearTransition,
@@ -11,7 +11,7 @@ import { RowCard } from '#components/atoms/RowCard';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { ListItem } from '#components/molecules/ListItem';
 import { SLIDE_PRESETS } from '#constants/animations';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { QuickAddButton } from '#features/catalog/components/QuickAddButton';
 
 export interface SuggestionListItemProps {
@@ -80,7 +80,7 @@ export const SuggestionListItem = ({
           // The tap adds, so the label says so and no "view details" follows.
           accessibilityLabel={addLabel}
           accessibilityHint=""
-          rightElement={
+          trailingActions={
             <>
               {!!onDismiss && (
                 <IconButton

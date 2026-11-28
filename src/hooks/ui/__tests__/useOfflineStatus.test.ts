@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react-native';
 import { useOfflineStatus } from '../useOfflineStatus';
-import { usePendingMutationCount } from '#/hooks/offline/usePendingMutationCount';
+import { usePendingMutationCount } from '#hooks/offline/usePendingMutationCount';
 import type { OfflineBannerCause } from '#store/slices/networkSlice';
 
 let mockCause: OfflineBannerCause | null = null;
@@ -12,7 +12,7 @@ jest.mock('#store/useAppStore', () => ({
     }) => unknown,
   ) => selector({ offlineBannerCause: mockCause }),
 }));
-jest.mock('#/hooks/offline/usePendingMutationCount');
+jest.mock('#hooks/offline/usePendingMutationCount');
 
 const pendingCount = jest.mocked(usePendingMutationCount);
 

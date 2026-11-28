@@ -1,23 +1,20 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type {
   MeasurementProfileInput,
   PriceSource,
   ReceiptRefInput,
   StockAmountInput,
   StorageState,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { Telemetry } from '#/services/telemetry';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { localMoveRow } from '#features/shoppingList/cache/localMove';
-import type { MoveToPantryInputs } from '#features/shoppingList/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { useTranslation } from '#/i18n';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
+import { Telemetry } from '#services/telemetry';
+import { localMoveRow } from '#entities/shoppingList/localMove';
+import type { MoveToPantryInputs } from '#entities/shoppingList/localWrites';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
+import { moveShoppingItemToPantryWrite } from '#features/shoppingList/offline/localWrites';
 
 export interface MoveToPantryInput {
   pantryId: string;
@@ -46,13 +43,10 @@ export function useMoveToPantry({
   currentListId,
   onSuccess,
 }: UseMoveToPantryOptions) {
-  const [moveShoppingItemToPantry] = useMutation(
-    MoveShoppingItemToPantryDocument,
-    { context: { localFirst: true } },
-  );
-
-  const client = useApolloClient();
   const { t } = useTranslation();
+  const move = useLocalWrite(moveShoppingItemToPantryWrite, {
+    fallback: t('errors.moveToPantryFailedRetry'),
+  });
 
   /**
    * Move a shopping list item to the pantry (local-first) under a pantry row id
@@ -63,9 +57,6 @@ export function useMoveToPantry({
     input: MoveToPantryInput,
   ): Promise<boolean> => {
     const pantryItemId = generateEntityId();
-    // A detail read on a client-minted id 404s and renders the deleted state;
-    // `useIsCreateUnconfirmed` skips it until the server confirms.
-    unconfirmedCreates.mark(pantryItemId);
     const inputs: MoveToPantryInputs = {
       row: localMoveRow({ item, ...input }),
       listId: currentListId,
@@ -76,8 +67,7 @@ export function useMoveToPantry({
     // `$today` (`prepareReplay`); `input.today` keeps this day, so a default
     // expiry counts from the day of the move, not the day it syncs.
     const today = todayKey();
-    const settled = await pendingWritesOf(client.cache).send(
-      MoveShoppingItemToPantryDocument,
+    const settled = await move.send(
       {
         today,
         input: {
@@ -97,16 +87,8 @@ export function useMoveToPantry({
           priceSource: input.priceSource,
         },
       },
-      write =>
-        settleMutation(() => moveShoppingItemToPantry(write), {
-          document: MoveShoppingItemToPantryDocument,
-          fallback: t('errors.moveToPantryFailedRetry'),
-        }),
       inputs,
     );
-    // Released on every outcome; a queued move is tracked by the offline
-    // queue's pending set from here on.
-    unconfirmedCreates.confirm(pantryItemId);
     // Not `onCompleted`, which a refusal's answer fires too.
     if (settled.status === 'failed') return false;
     onSuccess?.();

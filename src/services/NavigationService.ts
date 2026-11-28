@@ -1,81 +1,39 @@
 import {
   createNavigationContainerRef,
-  CommonActions,
-  StackActions,
+  type NavigationAction,
 } from '@react-navigation/native';
-import type { ParamListBase, Route } from '@react-navigation/native';
+import { rootNavigate, type RootNavigateArgs } from '#navigation/rootNavigate';
 
-// Typed as ParamListBase because createStaticNavigation's ref prop expects it.
-export const navigationRef = createNavigationContainerRef<ParamListBase>();
+/** Typed by the root navigator `RootNavigator.tsx` registers. */
+export const navigationRef = createNavigationContainerRef();
 
 class NavigationServiceClass {
-  // Latest navigate() requested before the container was ready (single slot,
+  // Latest action requested before the container was ready (single slot,
   // last-wins). Cold-launch notification taps land here — Notifee's buffered
   // PRESS and the consumed iOS initial tap both fire before onReady — and are
-  // dispatched by flushPendingNavigation() instead of being dropped. Only
-  // navigate() defers; replaying a stale goBack/reset after startup is more
-  // dangerous than dropping it.
-  private pendingNavigation: { name: string; params?: object } | null = null;
+  // dispatched by flushPendingNavigation() instead of being dropped.
+  private pendingAction: NavigationAction | null = null;
 
-  navigate(name: string, params?: object) {
+  dispatch(action: NavigationAction) {
     if (navigationRef.isReady()) {
-      navigationRef.dispatch(CommonActions.navigate(name, params));
+      navigationRef.dispatch(action);
     } else {
-      this.pendingNavigation = { name, params };
+      this.pendingAction = action;
     }
   }
 
-  /** Dispatch the pending navigate, if any. Wired to the container's onReady. */
+  navigate(...args: RootNavigateArgs) {
+    this.dispatch(rootNavigate(...args));
+  }
+
+  /** Dispatch the pending action, if any. Wired to the container's onReady. */
   flushPendingNavigation = () => {
-    const pending = this.pendingNavigation;
-    this.pendingNavigation = null;
+    const pending = this.pendingAction;
+    this.pendingAction = null;
     if (pending && navigationRef.isReady()) {
-      navigationRef.dispatch(
-        CommonActions.navigate(pending.name, pending.params),
-      );
+      navigationRef.dispatch(pending);
     }
   };
-
-  goBack() {
-    if (navigationRef.isReady() && navigationRef.canGoBack()) {
-      navigationRef.goBack();
-    }
-  }
-
-  reset(routes: Omit<Route<string>, 'key'>[]) {
-    if (navigationRef.isReady()) {
-      navigationRef.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes,
-        }),
-      );
-    }
-  }
-
-  push(name: string, params?: object) {
-    if (navigationRef.isReady()) {
-      navigationRef.dispatch(StackActions.push(name, params));
-    }
-  }
-
-  replace(name: string, params?: object) {
-    if (navigationRef.isReady()) {
-      navigationRef.dispatch(StackActions.replace(name, params));
-    }
-  }
-
-  popToTop() {
-    if (navigationRef.isReady()) {
-      navigationRef.dispatch(StackActions.popToTop());
-    }
-  }
-
-  preload(name: string) {
-    if (navigationRef.isReady()) {
-      navigationRef.dispatch(CommonActions.preload(name));
-    }
-  }
 }
 
 const NavigationService = new NavigationServiceClass();

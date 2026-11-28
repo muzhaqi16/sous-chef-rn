@@ -1,15 +1,10 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import {
-  MarkSuggestionDismissedDocument,
-  MarkSuggestionActiveDocument,
-  type MarkSuggestionActiveMutationVariables,
-} from '#operations/item/item.generated';
-import type { SuggestionSurface } from '#/graphql/generated/schemaTypes';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation, type Settled } from '#/apollo/utils/settleMutation';
-import { toastService } from '#/services/toastService';
-import { generateEntityId } from '#/utils/generateEntityId';
+import { useApolloClient } from '@apollo/client/react';
+import { useTranslation } from '#i18n';
+import type { SuggestionSurface } from '#graphql/generated/schemaTypes';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { Settled } from '#apollo/utils/settleMutation';
+import { toastService } from '#services/toastService';
+import { generateEntityId } from '#utils/generateEntityId';
 import {
   readHeldSuggestions,
   type HeldSuggestion,
@@ -19,8 +14,10 @@ import type {
   DismissSuggestionInputs,
   UndoDismissalInputs,
 } from '#features/catalog/offline/localWrites';
-
-type UndoVariables = MarkSuggestionActiveMutationVariables;
+import {
+  markSuggestionActiveWrite,
+  markSuggestionDismissedWrite,
+} from '#features/catalog/offline/localWrites';
 
 interface DismissTarget {
   itemId: string;
@@ -39,11 +36,13 @@ export function useSuggestionDismissal(
 ) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const [dismiss] = useMutation(MarkSuggestionDismissedDocument, {
-    context: { localFirst: true },
+  const dismiss = useLocalWrite(markSuggestionDismissedWrite, {
+    fallback: t('addItemSheet.dismissFailed'),
+    present: 'toast',
   });
-  const [undismiss] = useMutation(MarkSuggestionActiveDocument, {
-    context: { localFirst: true },
+  const undismiss = useLocalWrite(markSuggestionActiveWrite, {
+    fallback: t('addItemSheet.undoFailed'),
+    present: 'toast',
   });
 
   const undo = async (
@@ -53,21 +52,15 @@ export function useSuggestionDismissal(
     dismissed: Promise<Settled<unknown>>,
   ) => {
     const inputs: UndoDismissalInputs = { parent: from, held };
-    await pendingWritesOf(client.cache).send<unknown, UndoVariables>(
-      MarkSuggestionActiveDocument,
+    await undismiss.send(
       { input: { itemId, surface, idempotencyKey: generateEntityId() } },
-      async write => {
+      inputs,
+      {
         // A dismissal that failed left nothing to undo. One on its way or
         // queued keeps this behind it, as both share an `orderedBy`.
-        const outcome = await dismissed;
-        if (outcome.status === 'failed') return outcome;
-        return settleMutation(() => undismiss(write), {
-          document: MarkSuggestionActiveDocument,
-          fallback: t('addItemSheet.undoFailed'),
-          present: 'toast',
-        });
+        ready: async write =>
+          (await dismissed).status === 'failed' ? null : write,
       },
-      inputs,
     );
   };
 
@@ -79,15 +72,8 @@ export function useSuggestionDismissal(
     const inputs: DismissSuggestionInputs = { parent };
     // One key per tap, kept by the queued write and its replays: a re-send
     // under a spent key writes nothing, so it never undoes a later Undo.
-    const dismissed = pendingWritesOf(client.cache).send(
-      MarkSuggestionDismissedDocument,
+    const dismissed = dismiss.send(
       { input: { itemId, surface, idempotencyKey: generateEntityId() } },
-      write =>
-        settleMutation(() => dismiss(write), {
-          document: MarkSuggestionDismissedDocument,
-          fallback: t('addItemSheet.dismissFailed'),
-          present: 'toast',
-        }),
       inputs,
     );
     toastService.success(t('addItemSheet.dismissed', { name }), {

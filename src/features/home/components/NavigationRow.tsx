@@ -6,7 +6,7 @@ import { Icon } from '#components/atoms/Icon';
 import type { Icon as IconType } from '#components/atoms/Icon';
 import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 interface NavigationRowProps {
   icon: React.ComponentProps<typeof IconType>['name'];
@@ -43,7 +43,7 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
       testID={testID}
     >
       <View style={styles.navigationContent}>
-        <Icon name={icon} size={24} color={iconColor} />
+        <Icon name={icon} size="md" color={iconColor} />
         <View style={styles.navigationText}>
           <Text role="bodyStrong">{title}</Text>
           {!!subtitle && (
@@ -57,7 +57,7 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
           )}
         </View>
       </View>
-      <Icon name="chevron-forward" size={20} />
+      <Icon name="chevron-forward" size="sm" />
     </AppPressable>
   );
 };

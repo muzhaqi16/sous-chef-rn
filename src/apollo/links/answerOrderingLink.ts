@@ -12,10 +12,10 @@ import {
   type FragmentDefinitionNode,
   type SelectionSetNode,
 } from 'graphql';
-import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
-import { VERSIONED_TYPES } from '#/graphql/generated/versionedTypes.generated';
-import { isIncremental } from '#/apollo/utils/isIncremental';
-import { isRecord } from '#/utils/isRecord';
+import fragmentMatcherData from '#graphql/generated/fragmentMatcher.json';
+import { VERSIONED_TYPES } from '#graphql/generated/versionedTypes.generated';
+import { isIncremental } from '#apollo/utils/isIncremental';
+import { isRecord } from '#utils/isRecord';
 
 type Fragments = ReadonlyMap<string, FragmentDefinitionNode>;
 

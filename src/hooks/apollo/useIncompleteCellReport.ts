@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { MissingTree } from '@apollo/client/cache';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 
 const reported = new Set<string>();
 

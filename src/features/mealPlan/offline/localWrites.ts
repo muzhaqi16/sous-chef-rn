@@ -3,17 +3,17 @@
  * layer. The server's answer writes its own rows; `commit` adds what it cannot
  * state.
  */
-import { inputIdOf } from '#/apollo/pendingWrites/inputId';
-import type { LocalWrite } from '#/apollo/pendingWrites/types';
+import { inputIdOf } from '#apollo/pendingWrites/inputId';
+import type { LocalWrite } from '#apollo/pendingWrites/types';
 import {
   TemplateCategory,
   type AddTemplateItemInput,
   type CreateMealPlanInput,
   type CreateMealPlanItemInput,
   type CreateMealTemplateInput,
-} from '#/graphql/generated/schemaTypes';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
+} from '#graphql/generated/schemaTypes';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
 import {
   addToMealPlans,
   hideMealPlan,
@@ -41,6 +41,24 @@ import {
   removeFromMealPlans,
   removeFromMealTemplates,
 } from '#features/mealPlan/cache/removals';
+import { bindLocalWrite } from '#apollo/pendingWrites/bindLocalWrite';
+import { entityFields } from '#apollo/pendingWrites/entityFields';
+import {
+  CreateMealPlanDocument,
+  CreateMealPlanItemDocument,
+  DeleteMealPlanDocument,
+  DeleteMealPlanItemDocument,
+  UpdateMealPlanDocument,
+  UpdateMealPlanItemDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  AddTemplateItemDocument,
+  CreateMealTemplateDocument,
+  DeleteMealTemplateDocument,
+  RemoveTemplateItemDocument,
+  UpdateMealTemplateDocument,
+  UpdateTemplateItemDocument,
+} from '#features/mealPlan/graphql/mealTemplate.generated';
 
 const idOf = (value: unknown): string | undefined =>
   isRecord(value) && typeof value.id === 'string' ? value.id : undefined;
@@ -190,3 +208,53 @@ export const removeTemplateItem: LocalWrite<RemoveTemplateItemInputs> = {
     if (id) removeTemplateItemFromCache(cache, templateId, id);
   },
 };
+
+// Each document this feature sends as a local write, bound to its write.
+export const createMealPlanWrite = bindLocalWrite(
+  CreateMealPlanDocument,
+  createPlan,
+);
+export const updateMealPlanWrite = bindLocalWrite(
+  UpdateMealPlanDocument,
+  entityFields,
+);
+export const deleteMealPlanWrite = bindLocalWrite(
+  DeleteMealPlanDocument,
+  removePlan,
+);
+export const createMealPlanItemWrite = bindLocalWrite(
+  CreateMealPlanItemDocument,
+  createPlanItem,
+);
+export const updateMealPlanItemWrite = bindLocalWrite(
+  UpdateMealPlanItemDocument,
+  entityFields,
+);
+export const deleteMealPlanItemWrite = bindLocalWrite(
+  DeleteMealPlanItemDocument,
+  removePlanItem,
+);
+export const createMealTemplateWrite = bindLocalWrite(
+  CreateMealTemplateDocument,
+  createTemplate,
+);
+export const updateMealTemplateWrite = bindLocalWrite(
+  UpdateMealTemplateDocument,
+  entityFields,
+);
+export const deleteMealTemplateWrite = bindLocalWrite(
+  DeleteMealTemplateDocument,
+  removeTemplate,
+);
+export const addTemplateItemWrite = bindLocalWrite(AddTemplateItemDocument, {
+  ...addTemplateItem,
+  subject: { mints: true },
+});
+export const updateTemplateItemWrite = bindLocalWrite(
+  UpdateTemplateItemDocument,
+  entityFields,
+);
+export const removeTemplateItemWrite = bindLocalWrite(
+  RemoveTemplateItemDocument,
+  removeTemplateItem,
+);

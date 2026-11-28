@@ -1,11 +1,11 @@
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   skipToken,
   useApolloClient,
   useMutation,
   useQuery,
 } from '@apollo/client/react';
-import { generateEntityId } from '#/utils/generateEntityId';
+import { generateEntityId } from '#utils/generateEntityId';
 import {
   CreateRecipeReviewDocument,
   UpdateRecipeReviewDocument,
@@ -22,10 +22,10 @@ import { useUser } from '#store/useAppStore';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useDataState } from '#hooks/data/useDataState';
-import { toastService } from '#/services/toastService';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { toastService } from '#services/toastService';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import {
   addReviewEdge,
   addReviewToRecipe,

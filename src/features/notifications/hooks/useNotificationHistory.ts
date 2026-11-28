@@ -15,7 +15,7 @@ import {
   UseNotificationsOnLaunch_NotificationFragmentDoc,
   type UseNotificationsOnLaunch_NotificationFragment,
 } from './useNotificationsOnLaunch.generated';
-import type { NotificationCategory } from '#/graphql/generated/schemaTypes';
+import type { NotificationCategory } from '#graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import {

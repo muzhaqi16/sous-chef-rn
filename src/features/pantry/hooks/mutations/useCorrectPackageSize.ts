@@ -5,25 +5,25 @@
  * used by: a new one defines it, and the one it has corrects the batch's.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import {
-  CorrectPantryItemPackageSizeDocument,
-  UpdatePantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
+import { useApolloClient } from '@apollo/client/react';
 import {
   UseCorrectPackageSize_BatchFragmentDoc,
   UseCorrectPackageSize_StackFragmentDoc,
   type UseCorrectPackageSize_BatchFragment,
   type UseCorrectPackageSize_StackFragment,
 } from './useCorrectPackageSize.generated';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
-import { localUnit } from '#features/catalog/cache/localRefs';
-import { UnitType } from '#/graphql/generated/schemaTypes';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { errorService } from '#/services/errorService';
-import { useTranslation } from '#/i18n';
-import { todayKey } from '#/utils/dateUtils';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { localUnit } from '#entities/unit/localUnit';
+import { UnitType } from '#graphql/generated/schemaTypes';
+import { generateEntityId } from '#utils/generateEntityId';
+import { errorService } from '#services/errorService';
+import { useTranslation } from '#i18n';
+import { todayKey } from '#utils/dateUtils';
 import type { PackageSizeCorrectionInput } from '#features/pantry/types';
+import {
+  correctPantryItemPackageSizeWrite,
+  updatePantryItemWrite,
+} from '#features/pantry/offline/localWrites';
 
 export interface PackageSizeCorrection extends PackageSizeCorrectionInput {
   pantryItemId: string;
@@ -41,12 +41,15 @@ function scaledRemaining(
 export function useCorrectPackageSize() {
   const { t } = useTranslation();
   const client = useApolloClient();
+  const fallback = t('errors.correctWeightFailed');
 
-  const [correctMutation] = useMutation(CorrectPantryItemPackageSizeDocument, {
-    context: { localFirst: true },
+  const correct = useLocalWrite(correctPantryItemPackageSizeWrite, {
+    fallback,
+    present: 'none',
   });
-  const [updateMutation] = useMutation(UpdatePantryItemDocument, {
-    context: { localFirst: true },
+  const update = useLocalWrite(updatePantryItemWrite, {
+    fallback,
+    present: 'none',
   });
 
   /** Resolves null once it stands, else why it was refused, for its field. */
@@ -58,7 +61,6 @@ export function useCorrectPackageSize() {
     unitType,
     reason,
   }: PackageSizeCorrection): Promise<string | null> => {
-    const fallback = t('errors.correctWeightFailed');
     const item = client.cache.readFragment<UseCorrectPackageSize_StackFragment>(
       {
         id: client.cache.identify({
@@ -78,13 +80,8 @@ export function useCorrectPackageSize() {
     }
 
     if (unitType === UnitType.Count && item.portionUnitId !== unitId) {
-      const settled = await sendFields(client.cache, {
-        entity: { __typename: 'PantryItem', id: pantryItemId },
-        fields: {
-          portionUnitId: unitId,
-          portionUnit: localUnit(client.cache, unitId, ''),
-        },
-        variables: {
+      const settled = await update.send(
+        {
           today: todayKey(),
           input: {
             id: pantryItemId,
@@ -95,13 +92,14 @@ export function useCorrectPackageSize() {
             },
           },
         },
-        mutate: updateMutation,
-        settle: {
-          document: UpdatePantryItemDocument,
-          fallback,
-          present: 'none',
+        {
+          entity: { __typename: 'PantryItem', id: pantryItemId },
+          fields: {
+            portionUnitId: unitId,
+            portionUnit: localUnit(client.cache, unitId, ''),
+          },
         },
-      });
+      );
       return settled.status === 'failed'
         ? settled.failure?.body ?? fallback
         : null;
@@ -130,10 +128,8 @@ export function useCorrectPackageSize() {
           }
         : {};
 
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'PantryItemBatch', id: batchId },
-      fields: corrected,
-      variables: {
+    const settled = await correct.send(
+      {
         today: todayKey(),
         input: {
           batchId,
@@ -146,13 +142,11 @@ export function useCorrectPackageSize() {
           idempotencyKey: generateEntityId(),
         },
       },
-      mutate: correctMutation,
-      settle: {
-        document: CorrectPantryItemPackageSizeDocument,
-        fallback,
-        present: 'none',
+      {
+        entity: { __typename: 'PantryItemBatch', id: batchId },
+        fields: corrected,
       },
-    });
+    );
     return settled.status === 'failed'
       ? settled.failure?.body ?? fallback
       : null;

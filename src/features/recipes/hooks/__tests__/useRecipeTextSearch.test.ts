@@ -1,12 +1,12 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
+import { makeCache } from '#apollo/cache';
+import { isHeld } from '#apollo/utils/writeLocalEntity';
 import {
   Diet,
   ExternalSource,
   Intolerance,
   MealType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { readRecipeRef } from '#features/mealPlan/cache/mealTemplateItem';
 import { showLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
 import { MealPlanItem_RowFragmentDoc } from '#features/mealPlan/cache/mealPlanItem.generated';
@@ -16,7 +16,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import type { FoundHit, FoundRecipe } from '#features/recipes/utils/recipeRows';
 import { SearchRecipesDocument } from '../useRecipeSearch.generated';
 import { useRecipeTextSearch } from '../useRecipeTextSearch';

@@ -23,6 +23,8 @@ export function useDayConfirmedRead(
 
   return {
     policy,
+    /** Whether the network has answered for `key`: until then a day's answer may be the last day's. */
+    isConfirmed,
     /** Call while rendering with the key the read has settled on, or null. */
     markAnswered: (answeredKey: string | null) => {
       if (key && !isConfirmed && answeredKey === key) setConfirmedKey(key);

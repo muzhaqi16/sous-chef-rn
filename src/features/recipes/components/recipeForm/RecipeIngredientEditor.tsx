@@ -1,35 +1,41 @@
-import React, { forwardRef, useImperativeHandle, useState } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { useTranslation } from '#i18n';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { DropdownStack } from '#components/atoms/DropdownStack';
-import {
-  BottomSheetModal,
-  useStandardBottomSheet,
-} from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
+import { reportValidationErrors } from '#utils/validation/common';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { FormInput } from '#components/atoms/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/atoms/FieldRow';
-import { AnimatedChip } from '#components/molecules/AnimatedChip';
+import { Chip } from '#components/molecules/Chip';
 import { SheetHeader } from '#components/templates/SheetHeader';
-import { generateId } from '#/utils/generateId';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import { generateId } from '#utils/generateId';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
 import type { IngredientFormState } from '#features/recipes/types';
 import { Text } from '#components/atoms/Text';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import type { CaptureCandidate } from '#features/recipes/hooks/useCaptureReview';
-import { formatQuantityForInput, unitLabel } from '#/utils/formatQuantity';
-
-export interface RecipeIngredientEditorRef {
-  open: (ingredient?: IngredientFormState) => void;
-  close: () => void;
-}
+import { unitLabel } from '#utils/formatQuantity';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import {
+  ingredientSchema,
+  valuesOf,
+  type IngredientFormValues,
+} from './ingredientFormConfig';
 
 interface RecipeIngredientEditorProps {
+  visible: boolean;
+  /** The ingredient being edited; absent, a new one. */
+  ingredient?: IngredientFormState;
+  onDismiss: () => void;
   onSave: (ingredient: IngredientFormState) => void;
   /** Items a capture proposed for a line it did not link, by the line as written. */
   candidatesFor?: (
@@ -37,242 +43,273 @@ interface RecipeIngredientEditorProps {
   ) => CaptureCandidate[];
 }
 
-/** The sheet's fields, as typed; a new ingredient starts from `EMPTY_DRAFT`. */
-interface IngredientDraft {
-  editingId: string | null;
-  name: string;
-  itemId: string | null;
-  quantity: string;
-  unit: string;
-  unitId: string | null;
-  preparation: string;
-  section: string;
-  notes: string;
-  isOptional: boolean;
-  originalText: string | null;
-}
-
-const EMPTY_DRAFT: IngredientDraft = {
-  editingId: null,
-  name: '',
-  itemId: null,
-  quantity: '1',
-  unit: '',
-  unitId: null,
-  preparation: '',
-  section: '',
-  notes: '',
-  isOptional: false,
-  originalText: null,
+type IngredientFormProps = Pick<
+  RecipeIngredientEditorProps,
+  'candidatesFor'
+> & {
+  /** The ingredient being edited; absent for a new one. */
+  ingredient: IngredientFormState | undefined;
+  onSave: RecipeIngredientEditorProps['onSave'];
+  onClose: () => void;
 };
 
-const draftOf = (ingredient: IngredientFormState): IngredientDraft => ({
-  editingId: ingredient.id,
-  name: ingredient.name,
-  itemId: ingredient.itemId ?? null,
-  quantity: formatQuantityForInput(ingredient.quantity),
-  unit: ingredient.unitLabel ?? '',
-  unitId: ingredient.unitId ?? null,
-  preparation: ingredient.preparation ?? '',
-  section: ingredient.section ?? '',
-  notes: ingredient.notes ?? '',
-  isOptional: ingredient.isOptional,
-  originalText: ingredient.originalText ?? null,
-});
-
-export const RecipeIngredientEditor = forwardRef<
-  RecipeIngredientEditorRef,
-  RecipeIngredientEditorProps
->(({ onSave, candidatesFor }, ref) => {
+/** One opening, on the ingredient's fields or a new one's. */
+const IngredientForm: React.FC<IngredientFormProps> = ({
+  ingredient,
+  onSave,
+  onClose,
+  candidatesFor,
+}) => {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState(EMPTY_DRAFT);
-  const [visible, setVisible] = useState(false);
-  const update = (changes: Partial<IngredientDraft>) =>
-    setDraft(prev => ({ ...prev, ...changes }));
-
-  // The hook presents and dismisses off `visible` through its guarded path,
-  // immune to gorhom 5.2.14's dismiss-before-present wedge. The imperative
-  // `open` / `close` ref API just toggles `visible`.
-  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
-    visible,
-    onDismiss: () => setVisible(false),
-    snapPoints: ['80%'],
-    enableDynamicSizing: false,
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    formState: { isDirty },
+  } = useForm<IngredientFormValues>({
+    resolver: yupResolver(ingredientSchema),
+    defaultValues: valuesOf(ingredient),
   });
-
-  useImperativeHandle(ref, () => ({
-    open: (ingredient?: IngredientFormState) => {
-      setDraft(ingredient ? draftOf(ingredient) : EMPTY_DRAFT);
-      setVisible(true);
-    },
-    close: () => setVisible(false),
-  }));
+  useSheetUnsavedInput(isDirty);
+  const itemId = useWatch({ control, name: 'itemId' });
+  const originalText = ingredient?.originalText ?? null;
 
   // Offered only while the line is unlinked as the capture left it.
-  const candidates = candidatesFor ? candidatesFor(draft.originalText) : [];
+  const candidates = candidatesFor ? candidatesFor(originalText) : [];
 
   const handleItemSelect = ({ id, defaultUnit }: ItemSuggestion) => {
-    const changes: Partial<IngredientDraft> = { itemId: id };
+    setValue('itemId', id, { shouldDirty: true });
     const seededUnit = unitLabel(defaultUnit);
-    if (seededUnit) changes.unit = seededUnit;
-    if (defaultUnit?.id) changes.unitId = defaultUnit.id;
-    update(changes);
+    if (seededUnit) setValue('unit', seededUnit);
+    if (defaultUnit?.id) setValue('unitId', defaultUnit.id);
   };
 
-  const handleSave = () => {
-    const name = draft.name.trim();
-    if (!name) return;
+  const save = handleSubmit(values => {
     // The counter reads and steps fractions ("1 1/4"), so the save does too.
     // No amount above zero is a line stating none ("salt, to taste"), never an
     // invented 1: the API deducts, prices and converts only a stated amount.
-    const parsedQuantity = parseFractionalInput(draft.quantity);
+    const parsedQuantity = parseFractionalInput(values.quantity);
     onSave({
-      id: draft.editingId ?? `temp-ing-${generateId()}`,
-      name,
+      id: ingredient?.id ?? `temp-ing-${generateId()}`,
+      name: values.name,
       quantity:
         parsedQuantity !== null && parsedQuantity > 0 ? parsedQuantity : null,
-      itemId: draft.itemId,
-      unitId: draft.unitId,
-      unitLabel: draft.unit.trim(),
-      originalText: draft.originalText,
-      preparation: draft.preparation.trim(),
-      section: draft.section.trim(),
-      notes: draft.notes.trim(),
-      isOptional: draft.isOptional,
+      itemId: values.itemId,
+      unitId: values.unitId,
+      unitLabel: values.unit,
+      originalText,
+      preparation: values.preparation,
+      section: values.section,
+      notes: values.notes,
+      isOptional: values.isOptional,
       sortOrder: 0,
     });
-    setVisible(false);
-  };
+    onClose();
+  }, reportValidationErrors);
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      {...modalProps}
-      handleIndicatorStyle={styles.handleIndicator}
-      backgroundStyle={styles.sheetBackground}
-    >
-      <SheetHeader
-        title={
-          draft.editingId
-            ? t('recipes.editIngredient')
-            : t('recipes.addIngredient')
-        }
-        onClose={() => setVisible(false)}
-        confirm={{ onPress: handleSave }}
-      />
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={
+            ingredient
+              ? t('recipes.editIngredient')
+              : t('recipes.addIngredient')
+          }
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void save();
+            },
+          }}
+        />
+      </SheetHeaderSlot>
 
-      <BottomSheetFormScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <DropdownStack>
-          {draft.originalText ? (
+      <DropdownStack>
+        {originalText ? (
+          <Text role="caption" tone="secondary">
+            {t('recipes.ingredientAsWritten', { line: originalText })}
+          </Text>
+        ) : null}
+        {candidates.length > 0 ? (
+          <View style={styles.candidates}>
             <Text role="caption" tone="secondary">
-              {t('recipes.ingredientAsWritten', { line: draft.originalText })}
+              {t('recipes.captureMatchTo')}
             </Text>
-          ) : null}
-          {candidates.length > 0 ? (
-            <View style={styles.candidates}>
-              <Text role="caption" tone="secondary">
-                {t('recipes.captureMatchTo')}
-              </Text>
-              {candidates.map(candidate => (
-                <AnimatedChip
-                  key={candidate.itemId}
-                  label={candidate.name}
-                  selected={draft.itemId === candidate.itemId}
-                  onPress={() =>
-                    update({
-                      itemId:
-                        draft.itemId === candidate.itemId
-                          ? null
-                          : candidate.itemId,
-                    })
-                  }
-                />
-              ))}
-            </View>
-          ) : null}
-          <View style={styles.autocompleteWrapper}>
-            <ItemAutocompleteField
-              variant="inline"
-              label={t('recipes.ingredientName')}
-              value={draft.name}
-              onChangeText={name => update({ name, itemId: null })}
-              onSelectItem={handleItemSelect}
-              placeholder={t('recipes.ingredientNamePlaceholder')}
-              required
-            />
+            {candidates.map(candidate => (
+              <Chip
+                key={candidate.itemId}
+                label={candidate.name}
+                selected={itemId === candidate.itemId}
+                onPress={() =>
+                  setValue(
+                    'itemId',
+                    itemId === candidate.itemId ? null : candidate.itemId,
+                    { shouldDirty: true },
+                  )
+                }
+              />
+            ))}
           </View>
-
-          <FieldRow>
-            <EditableCounter
-              label={t('labels.quantity')}
-              value={draft.quantity}
-              onChangeText={quantity => update({ quantity })}
-              placeholder={t('recipes.quantityNoAmountPlaceholder')}
-              min={0}
-              step={0.25}
-            />
-            <UnitAutocompleteField
-              variant="modal"
-              label={t('labels.unit')}
-              value={draft.unit}
-              onChangeText={unit => update({ unit })}
-              onUnitSelected={unitId => update({ unitId })}
-              placeholder={t('labels.pcsKgEtc')}
-            />
-          </FieldRow>
-
-          <FormInput
-            label={t('recipes.preparation')}
-            value={draft.preparation}
-            onChangeText={preparation => update({ preparation })}
-            placeholder={t('recipes.preparationPlaceholder')}
-            useBottomSheetInput
+        ) : null}
+        <View style={styles.autocompleteWrapper}>
+          <Controller
+            control={control}
+            name="name"
+            render={({ field, fieldState }) => (
+              <ItemAutocompleteField
+                chaining={{ inputRef: field.ref }}
+                variant="inline"
+                label={t('recipes.ingredientName')}
+                value={field.value}
+                onChangeText={name => {
+                  field.onChange(name);
+                  setValue('itemId', null);
+                }}
+                onSelectItem={handleItemSelect}
+                placeholder={t('recipes.ingredientNamePlaceholder')}
+                error={fieldState.error?.message}
+                required
+              />
+            )}
           />
+        </View>
 
-          <FormInput
-            label={t('recipes.section')}
-            value={draft.section}
-            onChangeText={section => update({ section })}
-            placeholder={t('recipes.sectionPlaceholder')}
-            useBottomSheetInput
+        <FieldRow>
+          <Controller
+            control={control}
+            name="quantity"
+            render={({ field, fieldState }) => (
+              <EditableCounter
+                ref={field.ref}
+                label={t('labels.quantity')}
+                value={field.value}
+                onChangeText={field.onChange}
+                error={fieldState.error?.message}
+                placeholder={t('recipes.quantityNoAmountPlaceholder')}
+                min={0}
+                step={0.25}
+              />
+            )}
           />
-
-          <FormInput
-            label={t('labels.notes')}
-            value={draft.notes}
-            onChangeText={notes => update({ notes })}
-            placeholder={t('labels.anyAdditionalNotes')}
-            useBottomSheetInput
+          <Controller
+            control={control}
+            name="unit"
+            render={({ field }) => (
+              <UnitAutocompleteField
+                variant="modal"
+                label={t('labels.unit')}
+                value={field.value}
+                onChangeText={field.onChange}
+                onUnitSelected={unitId =>
+                  setValue('unitId', unitId, { shouldDirty: true })
+                }
+                placeholder={t('labels.pcsKgEtc')}
+              />
+            )}
           />
+        </FieldRow>
 
-          <View style={styles.switchRow}>
-            <Text role="body">{t('recipes.optional')}</Text>
-            <BaseSwitch
-              accessibilityLabel={t('recipes.optional')}
-              value={draft.isOptional}
-              onValueChange={isOptional => update({ isOptional })}
+        <Controller
+          control={control}
+          name="preparation"
+          render={({ field }) => (
+            <FormInput
+              ref={field.ref}
+              label={t('recipes.preparation')}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              placeholder={t('recipes.preparationPlaceholder')}
             />
-          </View>
-        </DropdownStack>
-      </BottomSheetFormScrollView>
-    </BottomSheetModal>
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="section"
+          render={({ field }) => (
+            <FormInput
+              ref={field.ref}
+              label={t('recipes.section')}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              placeholder={t('recipes.sectionPlaceholder')}
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="notes"
+          render={({ field }) => (
+            <FormInput
+              ref={field.ref}
+              label={t('labels.notes')}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              placeholder={t('labels.anyAdditionalNotes')}
+            />
+          )}
+        />
+
+        <View style={styles.switchRow}>
+          <Text role="body">{t('recipes.optional')}</Text>
+          <Controller
+            control={control}
+            name="isOptional"
+            render={({ field }) => (
+              <BaseSwitch
+                accessibilityLabel={t('recipes.optional')}
+                value={field.value}
+                onValueChange={field.onChange}
+              />
+            )}
+          />
+        </View>
+      </DropdownStack>
+    </>
   );
-});
+};
+
+export const RecipeIngredientEditor: React.FC<RecipeIngredientEditorProps> = ({
+  visible,
+  ingredient,
+  onDismiss,
+  onSave,
+  candidatesFor,
+}) => {
+  const opening = useOpening(visible, ingredient);
+
+  return (
+    <Sheet
+      mode="form"
+      headerFromContent
+      visible={visible}
+      onDismiss={onDismiss}
+      snapPoints={['80%']}
+      enableDynamicSizing={false}
+      contentContainerStyle={styles.content}
+    >
+      {opening ? (
+        <IngredientForm
+          key={opening.id}
+          ingredient={opening.payload}
+          onSave={onSave}
+          onClose={onDismiss}
+          candidatesFor={candidatesFor}
+        />
+      ) : null}
+    </Sheet>
+  );
+};
 
 RecipeIngredientEditor.displayName = 'RecipeIngredientEditor';
 
 const styles = StyleSheet.create(theme => ({
-  handleIndicator: {
-    backgroundColor: theme.colors.textTertiary,
-  },
-  sheetBackground: {
-    backgroundColor: theme.colors.background,
-  },
   content: {
-    paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
     overflow: 'visible',
   },

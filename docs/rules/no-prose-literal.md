@@ -38,4 +38,4 @@ Either branch of `?:` and both sides of `??` / `||` are checked.
 - `eslint/project.js` overrides: `src/i18n/config.ts` (language endonyms ship untranslated), `src/services/performance/**`, `src/services/telemetry/**`, `src/utils/errorSerialization.ts`.
 - Test files and `.graphql` documents.
 
-Source: [`eslint/plugin/rules/no-prose-literal.js`](../../eslint/plugin/rules/no-prose-literal.js) · spec: [`__tests__/lint/rules/no-prose-literal.test.ts`](../../__tests__/lint/rules/no-prose-literal.test.ts)
+Source: [`eslint/plugin/rules/no-prose-literal.js`](../../eslint/plugin/rules/no-prose-literal.js) · spec: [`__tests__/lint/typedRules/no-prose-literal.ts`](../../__tests__/lint/typedRules/no-prose-literal.ts)

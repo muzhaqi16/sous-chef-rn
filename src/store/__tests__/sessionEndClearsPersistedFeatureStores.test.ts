@@ -24,11 +24,11 @@ jest.mock('#native/storage/keychain', () => ({
   clearCredentials: jest.fn(() => Promise.resolve()),
 }));
 
-jest.mock('#/apollo/client', () => ({
+jest.mock('#apollo/client', () => ({
   client: { clearStore: jest.fn(() => Promise.resolve()) },
 }));
 
-jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
+jest.mock('#apollo/offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: { clear: jest.fn() },
 }));
 
@@ -37,7 +37,7 @@ import {
   registeredSessionScopedStores,
   SESSION_SCOPED_PERSISTED_KEYS,
 } from '#store/sessionScopedStores';
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 
 describe('session end clears persisted feature stores that were never loaded', () => {
   beforeEach(() => {

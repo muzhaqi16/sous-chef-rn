@@ -1,17 +1,12 @@
 import { useState } from 'react';
-import {
-  useApolloClient,
-  useFragment,
-  useMutation,
-} from '@apollo/client/react';
-import { StoreDepartment } from '#/graphql/generated/schemaTypes';
-import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { useFragment } from '@apollo/client/react';
+import { StoreDepartment } from '#graphql/generated/schemaTypes';
 import { knownDepartment } from '#features/shoppingList/utils/aisles';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { UpdateRowInputs } from '#entities/shoppingList/localWrites';
+import { useTranslation } from '#i18n';
 import { UseMoveToAisleModal_ItemFragmentDoc } from './useMoveToAisleModal.generated';
+import { updateShoppingListItemWrite } from '#features/shoppingList/offline/localWrites';
 
 /** The line the aisle picker is open for. */
 export interface AisleLine {
@@ -26,11 +21,12 @@ export interface AisleLine {
  */
 export function useMoveToAisleModal() {
   const { t } = useTranslation();
-  const client = useApolloClient();
   const [lineId, setLineId] = useState<string | null>(null);
 
-  const [updateLine] = useMutation(UpdateShoppingListItemDocument, {
-    context: { localFirst: true },
+  const updateLine = useLocalWrite(updateShoppingListItemWrite, {
+    fallback: t('shoppingListScreens.serverNotUpdated', {
+      action: t('shoppingListScreens.updated'),
+    }),
   });
 
   const { data, complete } = useFragment({
@@ -54,8 +50,7 @@ export function useMoveToAisleModal() {
         storeDepartmentOverride: department,
       },
     };
-    await pendingWritesOf(client.cache).send(
-      UpdateShoppingListItemDocument,
+    await updateLine.send(
       {
         input: {
           id: current.id,
@@ -63,13 +58,6 @@ export function useMoveToAisleModal() {
           storePrefs: { storeDepartmentOverride: department },
         },
       },
-      write =>
-        settleMutation(() => updateLine(write), {
-          document: UpdateShoppingListItemDocument,
-          fallback: t('shoppingListScreens.serverNotUpdated', {
-            action: t('shoppingListScreens.updated'),
-          }),
-        }),
       inputs,
     );
   };

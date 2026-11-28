@@ -4,15 +4,14 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
 import { useOfflineStatus } from '#hooks/ui/useOfflineStatus';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#components/atoms/Icon';
+import { Icon, type IconSizeName } from '#components/atoms/Icon';
 import { kitTestIDs } from '#components/testIDs';
-import { hitSlop } from '#/theme/foundations/sizes';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 interface OfflineStatusPillProps {
-  size?: number;
+  size?: IconSizeName;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -22,7 +21,7 @@ interface OfflineStatusPillProps {
  * the transition once, from `OfflineTransitionAnnouncer` at the app root.
  */
 export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
-  size = 22,
+  size = 'md',
   style,
 }) => {
   const { offline, title, detail, message, pendingCount } = useOfflineStatus();
@@ -42,7 +41,6 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
         testID={kitTestIDs.offlineBanner}
         onPress={handlePress}
         style={[styles.pressable, style]}
-        hitSlop={hitSlop.md}
         accessibilityRole="button"
         accessibilityLabel={message}
       >
@@ -69,8 +67,8 @@ const styles = StyleSheet.create(theme => ({
   pressable: {
     position: 'relative',
     padding: theme.spacing.xs,
-    minWidth: theme.sizes.touchTarget.md,
-    minHeight: theme.sizes.touchTarget.md,
+    minWidth: theme.sizes.touchTarget.min,
+    minHeight: theme.sizes.touchTarget.min,
     justifyContent: 'center',
     alignItems: 'center',
   },

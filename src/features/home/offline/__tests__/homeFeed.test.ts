@@ -1,12 +1,12 @@
 import { gql, type ApolloClient } from '@apollo/client';
-import { FeedEngine } from '#/apollo/feed/feedEngine';
+import { FeedEngine } from '#apollo/feed/feedEngine';
 import {
   clearPositions,
   holdPosition,
   positionOf,
-} from '#/apollo/feed/feedPositions';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { SyncPageStatus, SyncScopeKind } from '#/graphql/generated/schemaTypes';
+} from '#apollo/feed/feedPositions';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { SyncPageStatus, SyncScopeKind } from '#graphql/generated/schemaTypes';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 import {
   clientOver,
@@ -30,10 +30,10 @@ import {
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { useStore } from '#store';
 
-jest.mock('#/services/auth/deviceId');
+jest.mock('#services/auth/deviceId');
 
 let mockClient: ApolloClient | null = null;
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),

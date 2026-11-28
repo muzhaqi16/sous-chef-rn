@@ -13,12 +13,12 @@ import {
   type ItemByLookupQuery,
   type UseSearchResults_ItemFragment,
 } from './useSearchResults.generated';
-import { UpcFormat } from '#/graphql/generated/schemaTypes';
+import { UpcFormat } from '#graphql/generated/schemaTypes';
 import { useBottomSheetState } from '#features/barcode/store/barcodeScannerStore';
 import type { ScannedItem } from '#features/barcode/types';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { useTranslation } from '#/i18n';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { useTranslation } from '#i18n';
 import { useImageUpload } from '#hooks/data/useImageUpload';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import {
@@ -27,12 +27,12 @@ import {
   uploadPendingImages,
   cleanupPendingImageStorage,
   type AddItemFormData,
-} from '#/utils/items/createItemMapping';
-import { errorService } from '#/services/errorService';
-import { alertService } from '#/services/alertService';
+} from '#domain/items/createItemMapping';
+import { errorService } from '#services/errorService';
+import { alertService } from '#services/alertService';
 import type { AddItemFieldRefusal } from '#features/catalog/types';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { isNetworkError } from '#utils/isNetworkError';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { toShownNutrition } from '#domain/nutrition';
 import { storeApi } from '#store';
 import { useSelectedHomeId } from '#store/useAppStore';

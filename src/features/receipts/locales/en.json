@@ -136,6 +136,7 @@
       "sectionRecorded_one": "{{count}} line already recorded",
       "sectionRecorded_other": "{{count}} lines already recorded",
       "recordedBadge": "Recorded",
+      "waitingBadge": "Waiting to sync",
       "findingMatch": "Finding a match…",
       "notMatchedYet": "Not matched yet. Tap to choose the product.",
       "sectionMatching_one": "Finding a product for {{count}} line",
@@ -152,7 +153,16 @@
       "newPurchase": "A new purchase",
       "earlierPurchase": "{{amount}} on {{date}}",
       "earlierPicked": "The earlier purchase",
-      "earlierBody": "This receipt fills in that purchase's price and store. Nothing is added to your pantry again."
+      "earlierBody": "This receipt fills in that purchase's price and store. Nothing is added to your pantry again.",
+      "earlierLoading": "Checking earlier purchases…",
+      "earlierOffline": "Earlier purchases show here once you're back online.",
+      "earlierFailed": "Earlier purchases couldn't be checked.",
+      "purchaseChanged": "This purchase changed since you picked it. Check it again before adding.",
+      "purchaseDiffersAmount": "The amount isn't what the picked purchase recorded.",
+      "purchaseDiffersPaid": "The price isn't what the picked purchase recorded.",
+      "purchaseDiffersDiscount": "The discount isn't what the picked purchase recorded.",
+      "purchaseDiffersItem": "The picked purchase is of another item.",
+      "purchaseDiffersStore": "The picked purchase is from another store."
     },
     "photoSend": {
       "title": "Send the photo to be read?",

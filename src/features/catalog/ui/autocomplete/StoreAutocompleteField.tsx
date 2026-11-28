@@ -1,4 +1,4 @@
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import React from 'react';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
@@ -6,6 +6,7 @@ import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { describeStoreOption, type FoundOption } from '#domain/stores';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
+import type { FieldChaining } from '#features/catalog/components/InlineAutocomplete';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
 import { useStoreSearch } from '#features/catalog/hooks/useStoreSearch';
 
@@ -27,6 +28,8 @@ interface StoreAutocompleteFieldProps {
   helperText?: string;
   /** The field itself was finished: blurred or submitted. */
   onEndEditing?: () => void;
+  /** Inline only: the input's ref, and where the return key moves on to. */
+  chaining?: FieldChaining;
 }
 
 export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
@@ -41,6 +44,7 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
   onStoreSelected,
   helperText,
   onEndEditing,
+  chaining,
 }) => {
   const { t } = useTranslation();
   const readingSystem = useReadingSystem();
@@ -58,6 +62,7 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
     <>
       <GenericAutocompleteField<FoundOption>
         variant={variant}
+        chaining={chaining}
         label={label}
         value={value}
         placeholder={placeholder}

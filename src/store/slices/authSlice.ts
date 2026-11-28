@@ -1,17 +1,17 @@
 import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
-import { mirroredFrom, type MirroredSettings } from '#/domain/serverSettings';
+import { mirroredFrom, type MirroredSettings } from '#domain/serverSettings';
 import {
   cancelProactiveRefresh,
   refreshTokenNow,
   scheduleProactiveRefresh,
 } from '../tokenRefreshBridge';
 import { isSessionEnding } from '../sessionEnding';
-import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
-import { retryCooldownMs } from '#/utils/backoff';
+import { isTokenExpiringSoon } from '#utils/tokenExpiry';
+import { retryCooldownMs } from '#utils/backoff';
 import { requirePlatform } from '#platform/install';
-import { logger } from '#/utils/environment';
-import type { UserRole } from '#/graphql/generated/schemaTypes';
+import { logger } from '#utils/environment';
+import type { UserRole } from '#graphql/generated/schemaTypes';
 
 const secureStore = () => requirePlatform('secureStore');
 

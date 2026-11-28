@@ -1,76 +1,40 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
+import { MealType } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { useMealPlans } from '#features/mealPlan/hooks/useMealPlans';
 import { AddToMealPlanSheet } from '../AddToMealPlanSheet';
 
-jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
-  useStandardBottomSheet: jest.fn(() => ({
-    ref: { current: { present: jest.fn(), dismiss: jest.fn() } },
-    modalProps: {},
-    contentContainerStyle: {},
-  })),
-  BottomSheetModal: ({ children }: { children?: React.ReactNode }) => children,
-}));
-
-jest.mock('#components/molecules/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({
-    title,
-    onCancel,
-    onConfirm,
-    confirmLabel,
-    confirmDisabled,
-  }: {
-    title: string;
-    onCancel: () => void;
-    onConfirm: () => void;
-    confirmLabel?: string;
-    confirmDisabled?: boolean;
-  }) => {
-    const RN = require('react-native');
-    const R = require('react');
-    return R.createElement(
-      RN.View,
-      { testID: 'header' },
-      R.createElement(RN.Text, null, title),
-      R.createElement(
-        RN.Pressable,
-        { onPress: onCancel, testID: 'cancel-btn' },
-        R.createElement(RN.Text, null, 'Cancel'),
-      ),
-      R.createElement(
-        RN.Pressable,
-        {
-          onPress: onConfirm,
-          testID: 'confirm-btn',
-          disabled: confirmDisabled,
-        },
-        R.createElement(RN.Text, null, confirmLabel),
-      ),
-    );
-  },
-}));
+const mockAddRecipe = jest.fn(() => Promise.resolve(true));
+const mockPlanState = () => ({
+  addRecipeToMealPlan: mockAddRecipe,
+  adding: false,
+  hasPlan: true,
+  mealPlans: [
+    {
+      id: 'plan-1',
+      name: 'Week Plan',
+      startDate: '2024-01-01',
+      endDate: '2024-01-07',
+    },
+  ],
+  activePlanId: 'plan-1',
+});
 
 jest.mock('#features/mealPlan/hooks/useAddRecipeToMealPlan', () => ({
-  useAddRecipeToMealPlan: jest.fn(() => ({
-    addRecipeToMealPlan: jest.fn(() => Promise.resolve(true)),
-    adding: false,
-    hasPlan: true,
-    mealPlans: [
-      {
-        id: 'plan-1',
-        name: 'Week Plan',
-        startDate: '2024-01-01',
-        endDate: '2024-01-07',
-      },
-    ],
-    activePlanId: 'plan-1',
-  })),
+  useAddRecipeToMealPlan: jest.fn(() => mockPlanState()),
 }));
 
+jest.mock('#features/mealPlan/hooks/useMealPlans', () => ({
+  useMealPlans: jest.fn(),
+}));
+
+const mockSelectedDate = new Date('2024-01-03');
 jest.mock('#features/mealPlan/hooks/useMealPlanCalendar', () => ({
   useMealPlanCalendar: jest.fn(() => ({
     weekDays: [],
-    selectedDate: new Date('2024-01-03'),
+    selectedDate: mockSelectedDate,
     selectDate: jest.fn(),
     goToPrevWeek: jest.fn(),
     goToNextWeek: jest.fn(),
@@ -85,6 +49,8 @@ jest.mock('#features/mealPlan/components/WeekStrip', () => ({
     return require('react').createElement(Text, null, 'WeekStrip');
   },
 }));
+
+const addButton = () => screen.getByRole('button', { name: t('labels.add') });
 
 describe('AddToMealPlanSheet', () => {
   const defaultProps = {
@@ -120,12 +86,56 @@ describe('AddToMealPlanSheet', () => {
     expect(screen.getByText('Date')).toBeTruthy();
   });
 
+  it('adds the recipe on the meal picked, then closes', async () => {
+    const user = userEvent.setup();
+    render(<AddToMealPlanSheet {...defaultProps} />);
+
+    await user.press(screen.getByText('Lunch'));
+    await user.press(addButton());
+
+    expect(mockAddRecipe).toHaveBeenCalledWith({
+      recipeId: 'recipe-1',
+      mealType: MealType.Lunch,
+      date: mockSelectedDate,
+    });
+    expect(defaultProps.onClose).toHaveBeenCalled();
+  });
+
+  it('opens fresh: the meal picked goes with the closing', async () => {
+    const user = userEvent.setup();
+    const view = render(
+      <AddToMealPlanSheet {...defaultProps} initialMealType={MealType.Snack} />,
+    );
+    await user.press(screen.getByText('Lunch'));
+
+    view.rerender(
+      <AddToMealPlanSheet
+        {...defaultProps}
+        visible={false}
+        initialMealType={MealType.Snack}
+      />,
+    );
+    view.rerender(
+      <AddToMealPlanSheet {...defaultProps} initialMealType={MealType.Snack} />,
+    );
+    await user.press(addButton());
+
+    expect(mockAddRecipe).toHaveBeenCalledWith(
+      expect.objectContaining({ mealType: MealType.Snack }),
+    );
+  });
+
+  // So an opening finds the plans held rather than saying there are none.
+  it('reads the plans while closed', () => {
+    render(<AddToMealPlanSheet {...defaultProps} visible={false} />);
+    expect(useMealPlans).toHaveBeenCalledWith({ fetchPolicy: 'cache-first' });
+  });
+
   it('shows warning when no active plan', () => {
     const useAddRecipeToMealPlan =
       require('#features/mealPlan/hooks/useAddRecipeToMealPlan').useAddRecipeToMealPlan;
     useAddRecipeToMealPlan.mockReturnValue({
-      addRecipeToMealPlan: jest.fn(),
-      adding: false,
+      ...mockPlanState(),
       hasPlan: false,
       mealPlans: [],
       activePlanId: null,
@@ -134,5 +144,6 @@ describe('AddToMealPlanSheet', () => {
     expect(
       screen.getByText('No active meal plan. Create one first.'),
     ).toBeTruthy();
+    expect(addButton()).toBeDisabled();
   });
 });

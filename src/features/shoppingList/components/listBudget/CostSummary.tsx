@@ -3,9 +3,9 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { InfoRow } from '#components/atoms/InfoRow';
-import { useTranslation } from '#/i18n';
-import { commonStyles } from '#/styles/commonStyles';
-import { formatCurrency } from '#/utils/formatters/number';
+import { useTranslation } from '#i18n';
+import { commonStyles } from '#styles/commonStyles';
+import { useFormatCurrency } from '#domain/money';
 import {
   formatCostToGo,
   type ListCostToGo,
@@ -35,8 +35,9 @@ export const CostSummary: React.FC<CostSummaryProps> = ({
   canEdit,
 }) => {
   const { t } = useTranslation();
-  const money = (amount: number) => formatCurrency(amount, currency);
-  const price = costToGo ? formatCostToGo(costToGo) : null;
+  const format = useFormatCurrency();
+  const money = (amount: number | null) => format(amount, currency);
+  const price = costToGo ? formatCostToGo(costToGo, format) : null;
 
   const toGoText = () => {
     if (!costToGo) return null;
@@ -117,10 +118,7 @@ export const CostSummary: React.FC<CostSummaryProps> = ({
         </InfoRow>
       ) : null}
 
-      <InfoRow
-        label={t('labels.totalSpent')}
-        value={formatCurrency(totalCost, currency)}
-      />
+      <InfoRow label={t('labels.totalSpent')} value={money(totalCost)} />
 
       {budgetLine()}
       {budgetAmount === null && canEdit ? (

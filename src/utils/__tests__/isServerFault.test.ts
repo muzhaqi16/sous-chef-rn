@@ -1,5 +1,5 @@
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
 import { isGatewayFault, isServerFault } from '../isServerFault';
 
 const answered = (status: number) =>

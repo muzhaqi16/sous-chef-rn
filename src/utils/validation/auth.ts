@@ -5,7 +5,7 @@ import {
   newPasswordRule,
   passwordRule,
 } from './common';
-import type { KeyUnder } from '#/i18n';
+import type { KeyUnder } from '#i18n';
 
 const msg = (key: KeyUnder<'auth'>, options?: Record<string, unknown>) =>
   lazyMessage(`auth.${key}`, options);
@@ -51,8 +51,15 @@ export const emailVerificationSchema = object({
 export const resetPasswordSchema = object({
   newPassword: newPasswordRule,
   confirmPassword: string()
-    .oneOf([ref('newPassword')], msg('passwordsMustMatch'))
-    .required(msg('newPasswordConfirmRequired')),
+    .required(msg('newPasswordConfirmRequired'))
+    // A test of its own, not `oneOf`: yup checks `oneOf` before `required`, so
+    // an empty confirmation would read as a mismatch.
+    .test(
+      'matchesNewPassword',
+      msg('passwordsMustMatch'),
+      (value, context: { parent: { newPassword?: string } }) =>
+        value === context.parent.newPassword,
+    ),
 });
 
 // ----------------------------------------------------------------------------
@@ -65,6 +72,13 @@ export const changePasswordSchema = object({
     msg('newPasswordMustDiffer'),
   ),
   confirmPassword: string()
-    .oneOf([ref('newPassword')], msg('passwordsMustMatch'))
-    .required(msg('newPasswordConfirmRequired')),
+    .required(msg('newPasswordConfirmRequired'))
+    // A test of its own, not `oneOf`: yup checks `oneOf` before `required`, so
+    // an empty confirmation would read as a mismatch.
+    .test(
+      'matchesNewPassword',
+      msg('passwordsMustMatch'),
+      (value, context: { parent: { newPassword?: string } }) =>
+        value === context.parent.newPassword,
+    ),
 });

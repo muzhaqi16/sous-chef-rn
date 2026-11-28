@@ -1,8 +1,8 @@
 import { act } from '@testing-library/react-native';
 import { pantryTrackingExamples as examples } from '#/test-utils/fixtures/pantryTrackingFixtures';
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { makeCache } from '#apollo/cache';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import {
   recordMock,
   renderHookWithApollo,
@@ -12,10 +12,10 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import {
   CreatePantryItemDocument,
-  GetPantryItemBatchesDocument,
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
+import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import { usePantryRestock } from '../usePantryRestock';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 

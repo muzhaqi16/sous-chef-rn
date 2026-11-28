@@ -22,7 +22,8 @@ const {
   COLOCATED_DATA_HOOK_ZONES,
   BOUNDARY_ELEMENTS,
   BOUNDARY_POLICIES,
-  LAYER_FILES,
+  ONE_DOOR_POLICIES,
+  BOUNDARY_FILES,
   LAYER_POLICIES,
   CORE_RESTRICTED_GLOBALS,
   CORE_PATTERNS,
@@ -47,6 +48,7 @@ const PRODUCTION_RULES = [
   'no-schema-enum-cast',
   'testid-from-registry',
   'queueable-write-is-local-first',
+  'resolved-failure-is-read',
   'recycling-list-host-is-bounded',
   'flashlist-declares-scroll-component',
   'no-scrollable-in-bottom-sheet-view',
@@ -70,7 +72,7 @@ const base = {
       },
     },
     'boundaries/elements': BOUNDARY_ELEMENTS,
-    'boundaries/files': LAYER_FILES,
+    'boundaries/files': BOUNDARY_FILES,
   },
   rules: {
     'no-barrel-files/no-barrel-files': 'error',
@@ -91,7 +93,11 @@ const base = {
       {
         default: 'allow',
         checkAllOrigins: true,
-        policies: [...BOUNDARY_POLICIES, ...LAYER_POLICIES],
+        policies: [
+          ...BOUNDARY_POLICIES,
+          ...ONE_DOOR_POLICIES,
+          ...LAYER_POLICIES,
+        ],
       },
     ],
     // `import {} from 'x'` is what an autofix leaves after removing every unused
@@ -192,12 +198,6 @@ const overrides = [
       'src/components/templates/PaginatedHistoryScreen.tsx',
     ],
     rules: { 'sous-chef/flashlist-declares-scroll-component': 'off' },
-  },
-  {
-    // The list carries an explicit `maxHeight`, so it is bounded without the
-    // container — the variant CLAUDE.md records as getting away with it.
-    files: ['src/features/recipes/components/FolderPicker.tsx'],
-    rules: { 'sous-chef/no-scrollable-in-bottom-sheet-view': 'off' },
   },
   {
     // iOS's photo picker is drawn by another process, which no Detox matcher
@@ -556,17 +556,13 @@ const overrides = [
     },
   },
   {
-    // The gorhom re-export site and its circular-import helper.
+    // The sheet wrapper and its back handler.
     files: [
       'src/hooks/ui/useStandardBottomSheet.tsx',
       'src/hooks/ui/useBottomSheetBackHandler.ts',
     ],
     rules: {
       'no-restricted-imports': restrictedImports({
-        allow: {
-          '@gorhom/bottom-sheet': true,
-          '#hooks/ui/useBottomSheetBackdropClaim': true,
-        },
         add: [
           {
             // Not a dependency; the ban is the tripwire that keeps it out.
@@ -600,12 +596,10 @@ const overrides = [
     rules: {
       'no-restricted-imports': restrictedImports({
         allow: {
-          'react-native': ['TextInput', 'ActivityIndicator'],
-          '#/i18n/config': ['getI18n'],
+          'react-native': ['ActivityIndicator'],
+          '#i18n/config': ['getI18n'],
           'react-native-permissions': true,
           'react-native-turbo-image': true,
-          '#store/deviceStorage': true,
-          '#/store/deviceStorage': true,
           'date-fns': true,
           'fraction.js': true,
         },
@@ -613,7 +607,7 @@ const overrides = [
     },
   },
   {
-    // The two files that DEFINE the '#/i18n' entry point.
+    // The two files that DEFINE the '#i18n' entry point.
     files: ['src/i18n/index.ts', 'src/i18n/config.ts'],
     rules: {
       'no-restricted-imports': 'off',
@@ -668,18 +662,6 @@ const overrides = [
     },
   },
   {
-    // This file IS the wrapper that composes the raw scroller with the input
-    // context.
-    files: ['src/components/atoms/BottomSheetFormScrollView.tsx'],
-    rules: {
-      'no-restricted-imports': restrictedImports({
-        allow: {
-          '#components/atoms/BottomSheetKeyboardAwareScrollView': true,
-        },
-      }),
-    },
-  },
-  {
     // A paged photo carousel: FlashList has no `pagingEnabled`.
     files: [
       'src/features/catalog/ui/ItemPhotoCarousel.tsx',
@@ -715,11 +697,8 @@ const overrides = [
     },
   },
   {
-    // The navigation wrappers are the one place that reaches the raw hook.
-    files: [
-      'src/hooks/navigation/useAppNavigation.ts',
-      'src/features/onboarding/hooks/useOnboardingNavigation.ts',
-    ],
+    // The navigation wrapper is the one place that reaches the raw hook.
+    files: ['src/hooks/navigation/useAppNavigation.ts'],
     rules: {
       'no-restricted-imports': restrictedImports({
         allow: { '@react-navigation/native': ['useNavigation'] },
@@ -784,50 +763,18 @@ const overrides = [
             message:
               'An atom or molecule takes state as props; it does not read the store. If it genuinely needs application state it is an organism — move it to src/components/organisms/.',
           },
-          {
-            name: '#/store/useAppStore',
-            message:
-              'An atom or molecule takes state as props; it does not read the store. If it genuinely needs application state it is an organism — move it to src/components/organisms/.',
-          },
         ],
       }),
     },
   },
   {
-    // Device storage's writers: the kernel persisters, the reset manager, the
-    // device id's mirror and the feature caches that register with it.
-    files: [
-      'src/apollo/**/*.{ts,tsx}',
-      'src/services/auth/deviceId.ts',
-      'src/store/**/*.{ts,tsx}',
-      'src/features/*/store/**/*.{ts,tsx}',
-    ],
-    ignores: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': restrictedImports({
-        allow: { '#store/deviceStorage': true, '#/store/deviceStorage': true },
-      }),
-    },
-  },
-  {
-    // The composition root installs the device's key-value store as the port.
-    files: ['src/app/installNativePlatform.ts'],
-    rules: {
-      'no-restricted-imports': restrictedImports({
-        allow: { '#native/storage/keyValueStore': true },
-      }),
-    },
-  },
-  {
     // The sheet machinery IS the guarded path the `present()` / `dismiss()` ban
-    // points callers at. FolderPicker hands off between two STACKED sheets in
-    // an order a `visible` boolean cannot express.
+    // points callers at.
     files: [
       'src/hooks/ui/useStandardBottomSheet.tsx',
       'src/hooks/ui/useBottomSheetBackHandler.ts',
       'src/hooks/ui/useBottomSheetBackdropClaim.ts',
       'src/components/templates/ActionTray/ActionTray.tsx',
-      'src/features/recipes/components/FolderPicker.tsx',
     ],
     rules: {
       'no-restricted-syntax': restrictedSyntax({ allow: ['imperativeSheet'] }),
@@ -886,7 +833,7 @@ const overrides = [
       '@typescript-eslint/restrict-template-expressions': 'error',
       '@typescript-eslint/ban-ts-comment': [
         'error',
-        { 'ts-expect-error': 'allow-with-description' },
+        { 'ts-expect-error': true },
       ],
       '@typescript-eslint/no-floating-promises': 'error',
       // A JSX handler returning a promise is how React Native components are
@@ -906,7 +853,7 @@ const overrides = [
       ],
       '@typescript-eslint/no-unsafe-enum-comparison': 'error',
       '@typescript-eslint/no-base-to-string': 'error',
-      // A blank string falls back through `firstNonBlank` (#/utils/firstNonBlank),
+      // A blank string falls back through `firstNonBlank` (#utils/firstNonBlank),
       // never `||`, which also swallows `0` and `false`.
       '@typescript-eslint/prefer-nullish-coalescing': 'error',
       'sous-chef/no-error-message-branching': 'error',
@@ -931,6 +878,7 @@ const overrides = [
       'sous-chef/no-prose-literal': ['error', { followRendered: true }],
       'sous-chef/no-string-keyed-lookup': 'error',
       'sous-chef/no-number-noun-concat': 'error',
+      'sous-chef/shared-value-is-read-with-get': 'error',
     },
   },
   {
@@ -990,7 +938,7 @@ const overrides = [
       '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/ban-ts-comment': [
         'error',
-        { 'ts-expect-error': 'allow-with-description' },
+        { 'ts-expect-error': true },
       ],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': [

@@ -1,9 +1,9 @@
-import { env as buildEnv } from '#/config/env';
+import { env as buildEnv } from '#config/env';
 import { TelemetryService } from './TelemetryService';
 import type { LogEntry, TelemetryConfig } from './types';
 import { requirePlatform } from '#platform/install';
-import { Environment } from '#/utils/environment';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { Environment } from '#utils/environment';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
 const createTelemetryConfig = (): TelemetryConfig => {
   const env = Environment.getConfig();

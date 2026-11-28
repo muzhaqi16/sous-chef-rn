@@ -7,7 +7,7 @@ import type { PantryDetailInfo_PantryItemFragment } from '../PantryDetailInfo.ge
 import {
   AcquisitionMethod,
   ItemCondition,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 

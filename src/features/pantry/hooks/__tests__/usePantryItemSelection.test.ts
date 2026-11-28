@@ -1,7 +1,7 @@
 'use no memo';
 
 import type { Unmasked } from '@apollo/client/masking';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
@@ -20,16 +20,16 @@ import {
   ErrorCode,
   ItemCondition,
   StorageState,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { usePantryItemSelection } from '../usePantryItemSelection';
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
-jest.mock('#/services/errorService');
-jest.mock('#/services/subscriptions/SubscriptionService', () => ({
+jest.mock('#services/errorService');
+jest.mock('#services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     registerPendingDelete: jest.fn(),
     unregisterPendingDelete: jest.fn(),
@@ -111,7 +111,7 @@ describe('usePantryItemSelection, a read that fails', () => {
 
   it('keeps what it held selected', async () => {
     const cache = makeCache();
-    const today = jest.requireActual('#/utils/dateUtils').todayKey();
+    const today = jest.requireActual('#utils/dateUtils').todayKey();
     seedQuery(cache, {
       query: GetPantryDocument,
       variables: { ...PANTRY_VARS, today },
@@ -238,7 +238,7 @@ describe('usePantryItemSelection.addItem', () => {
 
     expect(outcome).toEqual({ status: 'added' });
     expect(joined.fired[0]).toMatchObject({ input: { forceAdd: true } });
-    const { alertService } = jest.requireMock('#/services/alertService');
+    const { alertService } = jest.requireMock('#services/alertService');
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 });

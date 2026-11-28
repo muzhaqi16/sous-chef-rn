@@ -1,11 +1,12 @@
 import React, { type ComponentProps } from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { formatCurrency } from '#/utils/formatters/number';
+import { formatCurrency } from '#utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { settledInAct } from '#/test-utils/settledInAct';
 import { ListPriceSettings } from '../ListPriceSettings';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 type Props = ComponentProps<typeof ListPriceSettings>;
 
@@ -18,7 +19,7 @@ const renderSettings = (overrides: Partial<Props> = {}) => {
     store: STORE,
     priceTracking: true,
     canEdit: true,
-    onBudgetDone: jest.fn(() => true),
+    onBudgetDone: jest.fn(),
     onPickStore: jest.fn(),
     onPriceTrackingChange: jest.fn(),
     ...overrides,
@@ -51,15 +52,14 @@ describe('ListPriceSettings', () => {
   });
 
   // Reported on the field, never through an alert.
-  it('says on the field when the budget is not a number', () => {
-    const onBudgetDone = jest.fn(() => false);
-    renderSettings({ onBudgetDone });
+  it('says on the field when the budget is not a number, saving nothing', async () => {
+    const { onBudgetDone } = renderSettings();
 
     const field = screen.getByTestId(shoppingListTestIDs.budgetInput);
     fireEvent.changeText(field, 'abc');
-    fireEvent(field, 'endEditing');
+    await settledInAct(() => fireEvent(field, 'endEditing'));
 
-    expect(onBudgetDone).toHaveBeenCalledWith('abc');
+    expect(onBudgetDone).not.toHaveBeenCalled();
     expect(
       screen.getByText('Enter a budget, like 60, or leave it empty.'),
     ).toBeTruthy();
@@ -72,7 +72,7 @@ describe('ListPriceSettings', () => {
     expect(
       screen.getByTestId(shoppingListTestIDs.budgetInput).props.value,
     ).toBe('60');
-    expect(screen.queryByText(formatCurrency(60, 'USD'))).toBeNull();
+    expect(screen.queryByText(formatCurrency(60, 'USD', undefined))).toBeNull();
   });
 
   // Retyping a store sends only its pick, never a clear on the way.
@@ -116,7 +116,7 @@ describe('ListPriceSettings', () => {
       priceTracking: false,
     });
 
-    expect(screen.getByText(formatCurrency(60, 'USD'))).toBeTruthy();
+    expect(screen.getByText(formatCurrency(60, 'USD', undefined))).toBeTruthy();
     expect(screen.getByText('No store chosen')).toBeTruthy();
     expect(screen.getByText('Ask for prices on this list')).toBeTruthy();
     expect(screen.getByText('No')).toBeTruthy();

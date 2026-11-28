@@ -1,7 +1,7 @@
 import type {
   PantryItemSourceInput,
   ReceiptCheckInLineInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { HeldUnit } from '#domain/stockAmount';
 import { toCents } from './money';
 import type {

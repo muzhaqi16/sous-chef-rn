@@ -187,30 +187,6 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     }
     totalNetWeight
   }
-  quantityBreakdown {
-    fullPackages
-    looseContentUnits
-    contentUnit {
-      id
-      name
-      symbol
-      localizedSymbolForms {
-        one
-        other
-      }
-    }
-    totalContentUnits
-    remainingWeight
-    remainingWeightUnit {
-      id
-      name
-      symbol
-      localizedSymbolForms {
-        one
-        other
-      }
-    }
-  }
   # What the edit form reads off a listed row.
   restockQuantity
   condition

@@ -2,7 +2,7 @@ import type { ApolloCache } from '@apollo/client';
 import type {
   NotificationSummary,
   Query,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /**
  * Moves the cached badge (`Query.notificationSummary`) for a write the server

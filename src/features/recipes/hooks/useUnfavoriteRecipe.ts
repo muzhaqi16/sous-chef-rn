@@ -1,9 +1,7 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { RemoveRecipeFromFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
 import type { RemoveFavoriteInputs } from '#features/recipes/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
+import { removeRecipeFromFavoritesWrite } from '#features/recipes/offline/localWrites';
 
 interface UnfavoriteOptions {
   /** The caller's copy for a failure nothing more specific describes. */
@@ -12,12 +10,10 @@ interface UnfavoriteOptions {
 }
 
 export function useUnfavoriteRecipe() {
-  const client = useApolloClient();
   const { t } = useTranslation();
-  const [unfavoriteRecipeMutation] = useMutation(
-    RemoveRecipeFromFavoritesDocument,
-    { context: { localFirst: true } },
-  );
+  const removeFavorite = useLocalWrite(removeRecipeFromFavoritesWrite, {
+    fallback: t('recipes.removeRecipeFailed'),
+  });
 
   /** True when the removal was kept; false when it was refused and reported. */
   const unfavoriteRecipe = async (
@@ -25,17 +21,12 @@ export function useUnfavoriteRecipe() {
     { fallback, present }: UnfavoriteOptions = {},
   ): Promise<boolean> => {
     const inputs: RemoveFavoriteInputs = { recipeId };
-    const settled = await pendingWritesOf(client.cache).send(
-      RemoveRecipeFromFavoritesDocument,
-      { input: { recipeId } },
-      write =>
-        settleMutation(() => unfavoriteRecipeMutation(write), {
-          document: RemoveRecipeFromFavoritesDocument,
-          fallback: fallback ?? t('recipes.removeRecipeFailed'),
-          present,
-        }),
-      inputs,
-    );
+    const settled = await removeFavorite.send({ input: { recipeId } }, inputs, {
+      settle: {
+        fallback: fallback ?? t('recipes.removeRecipeFailed'),
+        present,
+      },
+    });
     return settled.status !== 'failed';
   };
 

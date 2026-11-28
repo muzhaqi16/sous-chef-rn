@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { UsagePurpose } from '#/graphql/generated/schemaTypes';
+import { UsagePurpose } from '#graphql/generated/schemaTypes';
 import { PantryUsageHistory } from '../PantryUsageHistory';
 import type { UsageRecord } from '#features/pantry/types';
 

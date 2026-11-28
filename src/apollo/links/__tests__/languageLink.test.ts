@@ -1,12 +1,12 @@
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
 import type { DocumentNode, FormattedExecutionResult } from 'graphql';
 import { Observable } from 'rxjs';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { changeLanguage } from '#/i18n';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { changeLanguage } from '#i18n';
 import {
   startAnswersForSwitch,
   wasAnsweredSinceSwitch,
-} from '#/apollo/answeredSinceSwitch';
+} from '#apollo/answeredSinceSwitch';
 import { languageLink } from '../languageLink';
 
 const query = gql`

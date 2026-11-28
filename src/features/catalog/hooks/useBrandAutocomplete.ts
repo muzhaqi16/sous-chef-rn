@@ -1,10 +1,11 @@
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { useLazyQuery } from '@apollo/client/react';
 import { SearchBrandsDocument } from '#operations/item/item.generated';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { useAppStore } from '#store/useAppStore';
 import { filterByName } from '#features/catalog/utils/arrayUtils';
 import { dedupeById } from '#utils/dedupeById';
+import { onFailedRead } from '#utils/onFailedRead';
 
 interface SuggestedBrand {
   id: string;
@@ -39,8 +40,9 @@ export function useBrandAutocomplete(
   ]).map(brand => ({ id: brand.id, name: brand.name, isSuggested: true }));
 
   const search = (term: string) => {
-    void searchBrands({ variables: { search: term, limit: 20 } }).catch(error =>
-      logger.warn('Brand autocomplete failed', error),
+    onFailedRead(
+      searchBrands({ variables: { search: term, limit: 20 } }),
+      error => logger.warn('Brand autocomplete failed', error),
     );
   };
 

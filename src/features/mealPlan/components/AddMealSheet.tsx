@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import {
@@ -12,11 +12,12 @@ import { StyleSheet } from 'react-native-unistyles';
 import { FlashList } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { useOpening } from '#hooks/ui/useOpening';
 import { Icon } from '#components/atoms/Icon';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { MealType } from '#graphql/generated/schemaTypes';
 import {
   MEAL_TYPE_LABEL_KEYS,
   MEAL_TYPE_ORDER,
@@ -36,13 +37,14 @@ import {
   type PickerDietTag,
   type PickerRecipe,
 } from '#features/recipes/hooks/useRecipeTextSearch';
-import { toastService } from '#/services/toastService';
-import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
+import { toastService } from '#services/toastService';
+import { executeAsyncWithCleanup } from '#utils/finallyHelpers';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
 import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { Loading } from '#components/molecules/Loading';
+import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 
 interface AddMealSheetProps {
   visible: boolean;
@@ -59,40 +61,23 @@ const DIET_TAG_LABEL_KEYS: Record<PickerDietTag, TranslationKey> = {
   dairyFree: 'addMealSheet.dietDairyFree',
 };
 
-/** Module-level helper to reset sheet state when it opens */
-function resetSheetState(
-  initialMealType: MealType | undefined,
-  setSearchQuery: (v: string) => void,
-  setSearchedQuery: (v: string) => void,
-  setSelectedMealType: (v: MealType) => void,
-  setLoadingItemKey: (v: string | null) => void,
-) {
-  setSearchQuery('');
-  setSearchedQuery('');
-  setSelectedMealType(initialMealType ?? MealType.Dinner);
-  setLoadingItemKey(null);
-}
-
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
 const keyExtractor = (savedRecipe: SavedRecipeNode) => savedRecipe.id;
 
-export const AddMealSheet: React.FC<AddMealSheetProps> = ({
-  visible,
+type AddMealContentProps = Omit<AddMealSheetProps, 'visible'>;
+
+/** One opening, on the meal asked for, with no search. */
+const AddMealContent: React.FC<AddMealContentProps> = ({
   onClose,
   initialMealType,
   onAddRecipe,
   onAddCustomMeal,
 }) => {
   const { t } = useTranslation();
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['65%', '85%'],
-  });
 
   const [selectedMealType, setSelectedMealType] = useState<MealType>(
-    MealType.Dinner,
+    initialMealType ?? MealType.Dinner,
   );
   const [searchQuery, setSearchQuery] = useState('');
   const hasQuery = searchQuery.trim().length > 0;
@@ -120,21 +105,6 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   const searchBarRef = useRef<SearchBarRef>(null);
-
-  // Reset state when sheet opens
-  useEffect(() => {
-    if (visible) {
-      resetSheetState(
-        initialMealType,
-        setSearchQuery,
-        setSearchedQuery,
-        setSelectedMealType,
-        setLoadingItemKey,
-      );
-      clearSearchResults();
-      searchBarRef.current?.clear();
-    }
-  }, [visible, initialMealType, clearSearchResults]);
 
   const handleSearchCatalog = () => {
     // The field's own value: the debounce may not have reported it yet.
@@ -226,233 +196,241 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   }));
 
   return (
-    <BottomSheetModal
-      ref={ref}
-      {...modalProps}
-      android_keyboardInputMode="adjustResize"
-    >
-      <View style={[styles.content, contentContainerStyle]}>
-        <View style={styles.header}>
-          <Text role="heading" style={styles.headerTitle}>
-            {t('labels.addAMeal')}
-          </Text>
-        </View>
+    <View style={styles.content}>
+      {/* Meal type selector */}
+      <ChipScrollRow
+        options={mealTypeOptions}
+        selected={selectedMealType}
+        onSelect={setSelectedMealType}
+        style={styles.mealTypeScroll}
+        contentContainerStyle={styles.mealTypeContent}
+        edgeFadeColor="surface"
+      />
 
-        {/* Meal type selector */}
-        <ChipScrollRow
-          options={mealTypeOptions}
-          selected={selectedMealType}
-          onSelect={setSelectedMealType}
-          style={styles.mealTypeScroll}
-          contentContainerStyle={styles.mealTypeContent}
-          edgeFadeColor="surface"
+      {/* Search input */}
+      <View style={styles.searchBarWrapper}>
+        <SearchBar
+          ref={searchBarRef}
+          placeholder={t('addMealSheet.searchPlaceholder')}
+          testID={mealPlanTestIDs.addMealSearchInput}
+          onChangeText={setSearchQuery}
+          onSubmitEditing={handleSearchCatalog}
+          returnKeyType="search"
+          onClear={handleClearSearch}
+          isLoading={searchingCatalog}
+          debounceMs={500}
+          autoCapitalize="none"
+          maxLength={MAX_RECIPE_QUERY_LENGTH}
         />
+      </View>
 
-        {/* Search input */}
-        <View style={styles.searchBarWrapper}>
-          <SearchBar
-            ref={searchBarRef}
-            placeholder={t('addMealSheet.searchPlaceholder')}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearchCatalog}
-            returnKeyType="search"
-            onClear={handleClearSearch}
-            isLoading={searchingCatalog}
-            debounceMs={500}
-            autoCapitalize="none"
-            maxLength={MAX_RECIPE_QUERY_LENGTH}
-          />
-        </View>
-
-        {/* Only the saved-recipe rows repeat; everything else is a fixed block
+      {/* Only the saved-recipe rows repeat; everything else is a fixed block
             above or below them, so header/footer cover it without a mixed
             item type. */}
-        <FlashList
-          renderScrollComponent={BottomSheetScrollable}
-          data={filteredRecipes}
-          keyExtractor={keyExtractor}
-          getItemType={getItemType}
-          renderItem={({ item }) => (
-            <SavedRecipeRow
-              savedRecipeRef={item}
-              onPress={handleSelectRecipe}
-            />
-          )}
-          contentContainerStyle={styles.listContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          onEndReached={handleEndReached}
-          onEndReachedThreshold={
-            FLASHLIST_DEFAULTS.bottomSheet.onEndReachedThreshold
-          }
-          drawDistance={FLASHLIST_DEFAULTS.bottomSheet.drawDistance}
-          maxItemsInRecyclePool={
-            FLASHLIST_DEFAULTS.bottomSheet.maxItemsInRecyclePool
-          }
-          ListHeaderComponent={
-            <>
-              {/* Custom meal row */}
-              {hasQuery ? (
-                <AppPressable
-                  onPress={handleAddCustomMeal}
-                  style={styles.customMealRow}
+      <FlashList
+        renderScrollComponent={BottomSheetScrollable}
+        data={filteredRecipes}
+        keyExtractor={keyExtractor}
+        getItemType={getItemType}
+        renderItem={({ item }) => (
+          <SavedRecipeRow savedRecipeRef={item} onPress={handleSelectRecipe} />
+        )}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={
+          FLASHLIST_DEFAULTS.bottomSheet.onEndReachedThreshold
+        }
+        drawDistance={FLASHLIST_DEFAULTS.bottomSheet.drawDistance}
+        maxItemsInRecyclePool={
+          FLASHLIST_DEFAULTS.bottomSheet.maxItemsInRecyclePool
+        }
+        ListHeaderComponent={
+          <>
+            {/* Custom meal row */}
+            {hasQuery ? (
+              <AppPressable
+                onPress={handleAddCustomMeal}
+                style={styles.customMealRow}
+              >
+                <Icon name="add-circle-outline" size="md" tone="primary" />
+                <Text
+                  role="bodyStrong"
+                  style={styles.customMealText}
+                  numberOfLines={1}
                 >
-                  <Icon name="add-circle-outline" size={24} tone="primary" />
-                  <Text
-                    role="bodyStrong"
-                    style={styles.customMealText}
-                    numberOfLines={1}
-                  >
-                    {t('addMealSheet.addCustom', { query: searchQuery.trim() })}
-                  </Text>
-                </AppPressable>
-              ) : null}
+                  {t('addMealSheet.addCustom', { query: searchQuery.trim() })}
+                </Text>
+              </AppPressable>
+            ) : null}
 
-              {/* Shown whenever there are rows beneath it, searching or not.
+            {/* Shown whenever there are rows beneath it, searching or not.
                   During a search it separates saved matches from the API
                   results that follow; with no matches there's no section to
                   label, so it drops out. */}
-              {filteredRecipes.length > 0 ? (
-                <SectionHeader
-                  variant="overline"
-                  style={styles.sectionHeaderSpacing}
-                >
-                  {t('addMealSheet.yourRecipes')}
-                </SectionHeader>
-              ) : null}
-            </>
-          }
-          ListFooterComponent={
-            <>
-              <PaginationFooter
-                hasMore={hasMore}
-                isFetchingMore={!hasQuery && isLoadingMore}
-                itemCount={filteredRecipes.length}
+            {filteredRecipes.length > 0 ? (
+              <SectionHeader
+                variant="overline"
+                style={styles.sectionHeaderSpacing}
+              >
+                {t('addMealSheet.yourRecipes')}
+              </SectionHeader>
+            ) : null}
+          </>
+        }
+        ListFooterComponent={
+          <>
+            <PaginationFooter
+              hasMore={hasMore}
+              isFetchingMore={!hasQuery && isLoadingMore}
+              itemCount={filteredRecipes.length}
+            />
+            {hasQuery && isLoadingRemainingPages ? (
+              <Loading
+                size="small"
+                message={t('recipes.savedRecipesSearchingAll')}
+                style={styles.loadingRemaining}
               />
-              {hasQuery && isLoadingRemainingPages ? (
-                <Loading
-                  size="small"
-                  message={t('recipes.savedRecipesSearchingAll')}
-                  style={styles.loadingRemaining}
-                />
-              ) : null}
+            ) : null}
 
-              {canSearchCatalog && !catalogSearched && !noMatch.heldOnly ? (
-                <AppPressable
-                  onPress={handleSearchCatalog}
-                  style={styles.customMealRow}
+            {canSearchCatalog && !catalogSearched && !noMatch.heldOnly ? (
+              <AppPressable
+                onPress={handleSearchCatalog}
+                style={styles.customMealRow}
+              >
+                <Icon name="search" size="md" tone="primary" />
+                <Text
+                  role="bodyStrong"
+                  style={styles.customMealText}
+                  numberOfLines={1}
                 >
-                  <Icon name="search" size={24} tone="primary" />
-                  <Text
-                    role="bodyStrong"
-                    style={styles.customMealText}
-                    numberOfLines={1}
-                  >
-                    {t('addMealSheet.searchAllRecipes', {
-                      query: searchQuery.trim(),
-                    })}
-                  </Text>
-                </AppPressable>
-              ) : null}
-
-              {hasQuery && noMatch.heldOnly && filteredRecipes.length > 0 ? (
-                <Text role="caption" tone="secondary" align="center">
-                  {t('errors.offlineSearchUnavailable')}
+                  {t('addMealSheet.searchAllRecipes', {
+                    query: searchQuery.trim(),
+                  })}
                 </Text>
-              ) : null}
+              </AppPressable>
+            ) : null}
 
-              {/* Additional search results */}
-              {hasQuery && (searchingCatalog || otherResults.length > 0) ? (
-                <>
-                  {searchingCatalog ? (
-                    <View style={styles.centeredSpinner}>
-                      <PrimaryActivityIndicator size="small" />
-                    </View>
-                  ) : null}
+            {hasQuery && noMatch.heldOnly && filteredRecipes.length > 0 ? (
+              <Text role="caption" tone="secondary" align="center">
+                {t('errors.offlineSearchUnavailable')}
+              </Text>
+            ) : null}
 
-                  {otherResults.map(item => (
-                    <AppPressable
-                      key={item.key}
-                      onPress={() => handleSelectSearchResult(item)}
-                      disabled={loadingItemKey === item.key}
-                      style={styles.recipeItem}
-                    >
-                      {item.imageUrl ? (
-                        <CachedImage
-                          uri={item.imageUrl}
-                          style={styles.recipeImage}
-                          displaySize={44}
-                        />
-                      ) : null}
-                      <View style={styles.recipeInfo}>
-                        <Text role="bodyStrong" numberOfLines={1}>
-                          {item.title}
+            {/* Additional search results */}
+            {hasQuery && (searchingCatalog || otherResults.length > 0) ? (
+              <>
+                {searchingCatalog ? (
+                  <View style={styles.centeredSpinner}>
+                    <PrimaryActivityIndicator size="small" />
+                  </View>
+                ) : null}
+
+                {otherResults.map(item => (
+                  <AppPressable
+                    key={item.key}
+                    onPress={() => handleSelectSearchResult(item)}
+                    disabled={loadingItemKey === item.key}
+                    style={styles.recipeItem}
+                  >
+                    {item.imageUrl ? (
+                      <CachedImage
+                        uri={item.imageUrl}
+                        style={styles.recipeImage}
+                        displaySize={44}
+                      />
+                    ) : null}
+                    <View style={styles.recipeInfo}>
+                      <Text role="bodyStrong" numberOfLines={1}>
+                        {item.title}
+                      </Text>
+                      {item.subtitle ? (
+                        <Text
+                          role="caption"
+                          tone="secondary"
+                          style={styles.recipeMeta}
+                          numberOfLines={1}
+                        >
+                          {item.subtitle}
                         </Text>
-                        {item.subtitle ? (
-                          <Text
-                            role="caption"
-                            tone="secondary"
-                            style={styles.recipeMeta}
-                            numberOfLines={1}
-                          >
-                            {item.subtitle}
-                          </Text>
-                        ) : null}
-                        {item.dietTags.length > 0 ? (
-                          <View style={styles.dietTagsRow}>
-                            {item.dietTags.map(tag => (
-                              <View key={tag} style={styles.dietTag}>
-                                <Text role="label" style={styles.dietTagText}>
-                                  {t(DIET_TAG_LABEL_KEYS[tag])}
-                                </Text>
-                              </View>
-                            ))}
-                          </View>
-                        ) : null}
-                      </View>
-                      {loadingItemKey === item.key ? (
-                        <PrimaryActivityIndicator size="small" />
-                      ) : (
-                        <Icon
-                          name="add-circle-outline"
-                          size={24}
-                          tone="primary"
-                        />
-                      )}
-                    </AppPressable>
-                  ))}
-                </>
-              ) : null}
+                      ) : null}
+                      {item.dietTags.length > 0 ? (
+                        <View style={styles.dietTagsRow}>
+                          {item.dietTags.map(tag => (
+                            <View key={tag} style={styles.dietTag}>
+                              <Text role="label" style={styles.dietTagText}>
+                                {t(DIET_TAG_LABEL_KEYS[tag])}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      ) : null}
+                    </View>
+                    {loadingItemKey === item.key ? (
+                      <PrimaryActivityIndicator size="small" />
+                    ) : (
+                      <Icon
+                        name="add-circle-outline"
+                        size="md"
+                        tone="primary"
+                      />
+                    )}
+                  </AppPressable>
+                ))}
+              </>
+            ) : null}
 
-              {/* Empty state */}
-              {!hasQuery && recipes.length === 0 ? (
-                <EmptyState
-                  size="compact"
-                  title={t('addMealSheet.noSavedRecipes')}
-                />
-              ) : null}
+            {/* Empty state */}
+            {!hasQuery && recipes.length === 0 ? (
+              <EmptyState
+                size="compact"
+                title={t('addMealSheet.noSavedRecipes')}
+              />
+            ) : null}
 
-              {hasQuery &&
-              (catalogSearched || !canSearchCatalog || noMatch.heldOnly) &&
-              filteredRecipes.length === 0 &&
-              !isLoadingRemainingPages &&
-              !searchingCatalog &&
-              otherResults.length === 0 ? (
-                <EmptyState
-                  size="compact"
-                  title={
-                    noMatch.heldOnly
-                      ? noMatch.title
-                      : t('addMealSheet.noResults')
-                  }
-                  description={noMatch.description}
-                />
-              ) : null}
-            </>
-          }
-        />
-      </View>
-    </BottomSheetModal>
+            {hasQuery &&
+            (catalogSearched || !canSearchCatalog || noMatch.heldOnly) &&
+            filteredRecipes.length === 0 &&
+            !isLoadingRemainingPages &&
+            !searchingCatalog &&
+            otherResults.length === 0 ? (
+              <EmptyState
+                size="compact"
+                title={
+                  noMatch.heldOnly ? noMatch.title : t('addMealSheet.noResults')
+                }
+                description={noMatch.description}
+              />
+            ) : null}
+          </>
+        }
+      />
+    </View>
+  );
+};
+
+export const AddMealSheet: React.FC<AddMealSheetProps> = ({
+  visible,
+  ...content
+}) => {
+  const { t } = useTranslation();
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      mode="list"
+      visible={visible}
+      onDismiss={content.onClose}
+      snapPoints={['65%', '85%']}
+      // The search field sits low in a tall sheet; panning would cover it.
+      modalOptions={{ android_keyboardInputMode: 'adjustResize' }}
+      header={
+        <SheetHeader title={t('labels.addAMeal')} onClose={content.onClose} />
+      }
+    >
+      {opening ? <AddMealContent key={opening.id} {...content} /> : null}
+    </Sheet>
   );
 };
 
@@ -460,27 +438,18 @@ const styles = StyleSheet.create(theme => ({
   content: {
     flex: 1,
   },
-  header: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.sm,
-  },
-  headerTitle: {
-    color: theme.colors.textPrimary,
-  },
   mealTypeScroll: {
-    flexGrow: 0,
-    flexShrink: 0,
     marginBottom: theme.spacing.md,
   },
   mealTypeContent: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.layout.pageGutter,
     paddingVertical: theme.spacing.xs,
   },
   searchBarWrapper: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   listContent: {
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: theme.layout.pageGutter,
     paddingBottom: theme.spacing.xl,
   },
   customMealRow: {

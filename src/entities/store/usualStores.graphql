@@ -1,0 +1,32 @@
+# A usual store as every reader of the list selects it: the row a local write
+# completes before the server names it. Consumer: writeUsualStores.
+fragment usualStores_row on UsualStore {
+  id
+  ...UsualStoreReaders
+}
+
+# The stores a household shops at. Read by useUsualStores, for the
+# usual-stores screen, the store picker's "Added" and the receipt review's
+# learned store. Written only by writeUsualStores (usualStores.ts, beside it).
+query UsualStores($homeId: ID) {
+  usualStores(homeId: $homeId) {
+    id
+    addedVia
+    pinned
+    compared
+    lastUsedAt
+    store {
+      id
+      name
+      address
+      chain {
+        id
+        name
+      }
+    }
+    chain {
+      id
+      name
+    }
+  }
+}

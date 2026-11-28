@@ -1,18 +1,18 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import { GetPantryItemDocument } from './usePantryItemDetailData.generated';
 import {
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
-} from '#features/pantry/graphql/pantryFragments.generated';
+} from '#entities/pantryItem/batches.generated';
 import { PantryItemDetail_PantryItemFragmentDoc } from './PantryItemDetail.generated';
 import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import { summarizeBatchPricing } from '#features/pantry/utils/summarizeBatchPricing';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { isResourceNotFoundError } from '#features/pantry/utils/notFound';
-import { isResourceAccessLostError } from '#/utils/errors/graphqlErrors';
+import { isResourceAccessLostError } from '#utils/errors/graphqlErrors';
 
 /** The detail screen's item, its batches, and what the server says about both. */
 export function usePantryItemDetailData(itemId: string) {
@@ -118,3 +118,6 @@ export function usePantryItemDetailData(itemId: string) {
     refreshAll,
   };
 }
+
+export type PantryItemDetailData = ReturnType<typeof usePantryItemDetailData>;
+export type PantryItemDetailItem = NonNullable<PantryItemDetailData['item']>;

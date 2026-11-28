@@ -10,7 +10,7 @@ import {
 } from '#/test-utils/subscriptionCapture';
 import { act } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -19,14 +19,14 @@ import {
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import type { SubscriptionConfig } from '#/services/subscriptions/types';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
+import type { SubscriptionConfig } from '#services/subscriptions/types';
 import {
   MutationType,
   PantrySubtype,
   SyncScopeKind,
-} from '#/graphql/generated/schemaTypes';
-import { clearPositions, holdPosition } from '#/apollo/feed/feedPositions';
+} from '#graphql/generated/schemaTypes';
+import { clearPositions, holdPosition } from '#apollo/feed/feedPositions';
 import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
 import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
@@ -36,16 +36,16 @@ import {
 } from '#features/pantry/hooks/usePantrySubscriptions.generated';
 import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 
-jest.mock('#/services/auth/deviceId', () => ({
+jest.mock('#services/auth/deviceId', () => ({
   getDeviceId: jest.fn(() => 'device_this'),
 }));
 
 const mockRegister = jest.fn().mockReturnValue({});
 const mockIsPendingDelete = jest.fn().mockReturnValue(false);
 
-jest.mock('#/services/subscriptions/SubscriptionService', () => ({
+jest.mock('#services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     register: (config: SubscriptionConfig) => mockRegister(config),
     isPendingDelete: (id: string) => mockIsPendingDelete(id),
@@ -54,8 +54,8 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 
 const mockAddToConnection = jest.fn();
 const mockRemoveFromConnection = jest.fn();
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
+jest.mock('#apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#apollo/utils/cacheUpdaters'),
   createAddToParentConnectionUpdater:
     () =>
     (...args: unknown[]) =>

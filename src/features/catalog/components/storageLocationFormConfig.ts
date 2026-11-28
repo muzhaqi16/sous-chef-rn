@@ -1,7 +1,53 @@
-import type { KeyUnder } from '#/i18n';
-import type { Translate } from '#/i18n/types';
-import { StorageState, StorageType } from '#/graphql/generated/schemaTypes';
-import { colors } from '#/theme/foundations/colors';
+import { boolean, mixed, object, string, type ObjectSchema } from 'yup';
+import type { KeyUnder } from '#i18n';
+import type { Translate } from '#i18n/types';
+import { StorageState, StorageType } from '#graphql/generated/schemaTypes';
+import { colors } from '#theme/foundations/colors';
+import { lazyMessage } from '#utils/validation/common';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
+
+/** One rule for a location's name, wherever a location is named. */
+export const storageLocationNameRule = string()
+  .trim()
+  .required(lazyMessage('addStorageLocation.nameRequired'))
+  .min(2, lazyMessage('commonValidation.nameMin'));
+
+/** The location form's fields, as typed; the submit maps them to the API's. */
+export interface StorageLocationFields {
+  name: string;
+  type: StorageType;
+  parentLocationId: string | null;
+  description: string;
+  temperature: StorageState;
+  color: string | null;
+  isClimateControlled: boolean;
+  capacity: string;
+  capacityUnit: string;
+  isDefault: boolean;
+}
+
+export const storageLocationSchema: ObjectSchema<StorageLocationFields> =
+  object({
+    name: storageLocationNameRule,
+    type: mixed<StorageType>().oneOf(Object.values(StorageType)).defined(),
+    parentLocationId: string().nullable().defined(),
+    description: string().defined(),
+    temperature: mixed<StorageState>()
+      .oneOf(Object.values(StorageState))
+      .defined(),
+    color: string().nullable().defined(),
+    isClimateControlled: boolean().defined(),
+    // Blank is no capacity; anything typed must read as an amount above zero.
+    capacity: string()
+      .defined()
+      .test(
+        'amount',
+        lazyMessage('errors.invalidQuantity'),
+        value => value.trim() === '' || parseDecimalInput(value) > 0,
+      ),
+    capacityUnit: string().defined(),
+    isDefault: boolean().defined(),
+  });
 
 type FormKey = KeyUnder<'storageLocationForm'>;
 

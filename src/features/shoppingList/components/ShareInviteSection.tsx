@@ -3,26 +3,24 @@ import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
-import { OnPrimaryActivityIndicator } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
+import { IconButton } from '#components/atoms/IconButton';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import { Icon } from '#components/atoms/Icon';
+import { useTranslation } from '#i18n';
 import { EmailInput } from '#components/molecules/EmailInput';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { useInviteCollaborator } from '#features/shoppingList/hooks/useInviteCollaborator';
-import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
+import { CollaboratorRole } from '#graphql/generated/schemaTypes';
 import { ROLE_PERMISSIONS } from '#features/shoppingList/components/collaboratorRoles';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
-import type { Translate } from '#/i18n/types';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import type { Translate } from '#i18n/types';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import {
   shareInviteSchema,
   shareInviteDefaults,
   type ShareInviteFormValues,
 } from './shareInviteFormConfig';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 
 const buildRoleOptions = (t: Translate, roles: readonly CollaboratorRole[]) =>
   roles.map(role => ({
@@ -88,6 +86,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
           name="email"
           render={({ field, fieldState }) => (
             <EmailInput
+              ref={field.ref}
               containerStyle={styles.emailInputContainer}
               value={field.value}
               onChangeText={field.onChange}
@@ -95,18 +94,18 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
             />
           )}
         />
-        <AppPressable
-          style={styles.sendButton}
-          onPress={handleShare}
+        <IconButton
+          name="send"
+          size="sm"
+          tone="onPrimary"
+          onPress={() => {
+            void handleShare();
+          }}
           accessibilityLabel={t('labels.inviteMembers')}
-          disabled={sharing}
-        >
-          {sharing ? (
-            <OnPrimaryActivityIndicator size="small" />
-          ) : (
-            <Icon name="send" size={20} tone="onPrimary" />
-          )}
-        </AppPressable>
+          filled={{ size: 'xl', tone: 'primary' }}
+          loading={sharing}
+          style={styles.sendButton}
+        />
       </View>
       <Text role="bodyStrong" style={styles.roleLabel}>
         {t('labels.role')}
@@ -115,7 +114,6 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
         options={roleOptions}
         selected={selectedRole}
         onSelect={setSelectedRole}
-        size="md"
         edgeFadeColor="background"
       />
     </View>
@@ -137,12 +135,6 @@ const styles = StyleSheet.create(theme => ({
   },
   sendButton: {
     marginLeft: theme.spacing.base,
-    backgroundColor: theme.colors.primary,
-    width: 44,
-    height: 44,
-    borderRadius: theme.radii.full,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   roleLabel: {
     color: theme.colors.textSecondary,

@@ -1,5 +1,5 @@
 import { reconcileReplaySuccess } from '../queueReplayReconcilers';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { operationNameOf } from '#apollo/utils/documentOperation';
 import {
   CreatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
@@ -9,15 +9,14 @@ import {
   CreateShoppingListDocument,
   MoveShoppingItemToPantryDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => ({ cache: {} }),
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
 }));
-jest.mock('#features/shoppingList/cache/connections', () => ({
-  ...jest.requireActual('#features/shoppingList/cache/connections'),
+jest.mock('#entities/shoppingList/connections', () => ({
+  ...jest.requireActual('#entities/shoppingList/connections'),
   addNewItemToShoppingListCache: jest.fn(),
 }));
 
@@ -153,10 +152,7 @@ describe('reconcileReplaySuccess — the shopping adds', () => {
     },
   };
 
-  it.each([
-    AddItemToShoppingListDocument,
-    AddItemsToShoppingListFromRecipeDocument,
-  ])(
+  it.each([AddItemToShoppingListDocument])(
     'moves the writes behind a merged line onto the row the server kept (%#)',
     document => {
       const adopt = jest.fn();

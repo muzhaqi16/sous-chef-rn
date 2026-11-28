@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -9,9 +10,9 @@ import {
   OnPrimaryActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { Icon } from '#components/atoms/Icon';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import {
   useInvitationActions,
   type InvitationFailure,
@@ -20,10 +21,10 @@ import { useUser } from '#store/useAppStore';
 import type { InvitationData } from '#features/notifications/types';
 import { useToday } from '#hooks/app/useToday';
 import { getNotificationCopy } from '#features/notifications/utils/notificationHelpers';
-import { ErrorCode, NotificationType } from '#/graphql/generated/schemaTypes';
-import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
+import { ErrorCode, NotificationType } from '#graphql/generated/schemaTypes';
+import { executeAsyncWithCleanup } from '#utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 interface InvitationAcceptanceModalProps {
   visible: boolean;
@@ -184,20 +185,21 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
           <View style={styles.iconContainer}>
             <Icon
               name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
-              size={32}
+              size="lg"
               tone="onPrimaryLight"
             />
           </View>
           <Text role="heading" style={styles.title}>
             {copy.title}
           </Text>
-          <AppPressable
-            style={styles.closeButton}
+          <IconButton
+            name="close"
+            size="md"
+            tone="textSecondary"
             onPress={onClose}
             accessibilityLabel={t('labels.close')}
-          >
-            <Icon name="close" size={24} tone="textSecondary" />
-          </AppPressable>
+            style={styles.closeButton}
+          />
         </View>
 
         {/* Content */}
@@ -208,7 +210,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
 
           {!!invitation.inviterName && (
             <View style={styles.inviterContainer}>
-              <Icon name="person" size={16} tone="textSecondary" />
+              <Icon name="person" size="xs" tone="textSecondary" />
               <Text role="caption" tone="secondary" style={styles.inviterText}>
                 {t('labels.invitedBy', { name: invitation.inviterName })}
               </Text>
@@ -218,7 +220,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
           <View style={styles.entityContainer}>
             <Icon
               name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
-              size={16}
+              size="xs"
               tone="textSecondary"
             />
             <Text role="label" tone="secondary" style={styles.entityText}>
@@ -247,7 +249,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
                 <ErrorActivityIndicator />
               ) : (
                 <>
-                  <Icon name="close" size={20} tone="error" />
+                  <Icon name="close" size="sm" tone="error" />
                   <Text role="bodyStrong" tone="danger">
                     {t('labels.reject')}
                   </Text>
@@ -264,7 +266,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
                 <OnPrimaryActivityIndicator />
               ) : (
                 <>
-                  <Icon name="checkmark" size={20} tone="onPrimary" />
+                  <Icon name="checkmark" size="sm" tone="onPrimary" />
                   <Text role="bodyStrong" style={styles.acceptText}>
                     {t('labels.accept')}
                   </Text>

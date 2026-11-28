@@ -1,11 +1,7 @@
 import React from 'react';
-import { View } from 'react-native';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { RowCard } from '#components/atoms/RowCard';
+import { RowFrame, type SwipeRowPress } from '#components/molecules/RowFrame';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
-import { HapticService } from '#services/haptic/HapticService';
-import { RIPPLE } from '#constants/ripple';
-import { commonStyles } from '#/styles/commonStyles';
 import type { BaseItemCardProps } from './types';
 
 // Slot-based swipeable row; `ItemCard` is the one with the standard
@@ -16,6 +12,7 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
   leftElement,
   children,
   rightElement,
+  trailingActions,
   containerStyle,
   onPress,
   leftActions,
@@ -27,31 +24,27 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
   itemId,
   testID,
 }) => {
-  const slotChildren: React.ReactNode[] = [];
-  if (leftElement)
-    slotChildren.push(
-      <React.Fragment key="left">{leftElement}</React.Fragment>,
-    );
-  if (children)
-    slotChildren.push(
-      <React.Fragment key="content">{children}</React.Fragment>,
-    );
-  if (rightElement)
-    slotChildren.push(
-      <React.Fragment key="right">{rightElement}</React.Fragment>,
-    );
-
   const hasSwipeActions = !!leftActions?.length || !!rightActions?.length;
 
   // A swipeable row's button carries the id, with its label and actions; the
-  // same id on the card inside it makes every lookup by id ambiguous.
-  const cardContent = (
-    <View
-      style={[commonStyles.rowSurface, commonStyles.rowContent, containerStyle]}
+  // same id on the content inside it makes every lookup by id ambiguous.
+  const frame = (swipe?: SwipeRowPress) => (
+    <RowFrame
+      trailing={trailingActions}
+      swipe={swipe}
+      press={
+        !swipe && onPress
+          ? { onPress, accessibilityLabel, haptic: true, ripple: true }
+          : undefined
+      }
+      accessibilityLabel={accessibilityLabel}
+      surfaceStyle={containerStyle}
       testID={hasSwipeActions ? undefined : testID}
     >
-      {slotChildren}
-    </View>
+      {leftElement}
+      {children}
+      {rightElement}
+    </RowFrame>
   );
 
   if (hasSwipeActions) {
@@ -69,31 +62,11 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
           leftThreshold={leftThreshold}
           rightThreshold={rightThreshold}
         >
-          {cardContent}
+          {frame}
         </SwipeableItem>
       </RowCard>
     );
   }
 
-  if (onPress) {
-    const handlePress = () => {
-      HapticService.selection();
-      onPress();
-    };
-    return (
-      <RowCard>
-        <AppPressable
-          onPress={handlePress}
-          accessibilityRole="button"
-          accessibilityLabel={accessibilityLabel}
-          android_ripple={RIPPLE.SUBTLE}
-          style={[]}
-        >
-          {cardContent}
-        </AppPressable>
-      </RowCard>
-    );
-  }
-
-  return <RowCard>{cardContent}</RowCard>;
+  return <RowCard>{frame()}</RowCard>;
 };

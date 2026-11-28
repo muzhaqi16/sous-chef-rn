@@ -17,12 +17,15 @@
  * stops fitting the glyphs. Below it there is headroom; at or above it there is
  * none.
  */
-import { readFileSync } from 'fs';
-import { globSync } from 'glob';
-import { resolve } from 'path';
-import { typography } from '#/theme/foundations/typography';
-
-const ROOT = resolve(__dirname, '..', '..');
+import * as ts from 'typescript';
+import { typography } from '#theme/foundations/typography';
+import {
+  lineOf,
+  nodesOf,
+  parseSource,
+  productionSources,
+  propertyName,
+} from '#/test-utils/sourceAst';
 
 /** The point at which the `body` variant's 24px line box stops fitting. */
 const RISK_PX = 24;
@@ -49,53 +52,62 @@ interface Block {
   hasLineHeight: boolean;
 }
 
-/** Style blocks in `file` whose `fontSize` resolves to `RISK_PX` or more. */
-function riskyBlocks(file: string): Block[] {
-  const src = readFileSync(resolve(ROOT, file), 'utf8');
-  const out: Block[] = [];
+const isRisky = (value: string): boolean => {
+  const token = RISKY_TOKENS.find(t =>
+    new RegExp(`\\['${t}'\\]|\\.${t}\\b`).test(value),
+  );
+  return !!token || (/^\d+$/.test(value) && Number(value) >= RISK_PX);
+};
 
-  for (const match of src.matchAll(/^[ \t]*fontSize:[ \t]*(.+?),[ \t]*$/gm)) {
-    const value = match[1];
-    const token = RISKY_TOKENS.find(t =>
-      new RegExp(`\\['${t}'\\]|\\.${t}\\b`).test(value!),
-    );
-    const trimmed = value!.trim();
-    const literal = /^\d+$/.test(trimmed) ? Number(trimmed) : undefined;
-    if (!token && !(literal !== undefined && literal >= RISK_PX)) continue;
-
-    const index = match.index ?? 0;
-    const open = src.lastIndexOf('{', index);
-    let depth = 0;
-    let end = src.length;
-    for (let i = open; i < src.length; i++) {
-      if (src[i] === '{') depth++;
-      else if (src[i] === '}') {
-        depth--;
-        if (depth === 0) {
-          end = i;
-          break;
-        }
-      }
-    }
-    const style =
-      /([A-Za-z0-9_]+)\s*:\s*$/.exec(src.slice(0, open).trimEnd())?.[1] ?? '?';
-
-    out.push({
-      file,
-      style,
-      line: src.slice(0, index).split('\n').length,
-      fontSize: trimmed,
-      hasLineHeight: src.slice(open, end).includes('lineHeight'),
+/** Style objects in `file` whose own `fontSize` resolves to `RISK_PX` or more. */
+function riskyBlocks(file: string, text?: string): Block[] {
+  return nodesOf(parseSource(file, text))
+    .filter(ts.isObjectLiteralExpression)
+    .flatMap(style => {
+      const own = (name: string) =>
+        style.properties.find(
+          property =>
+            (ts.isPropertyAssignment(property) ||
+              ts.isShorthandPropertyAssignment(property)) &&
+            propertyName(property.name) === name,
+        );
+      const fontSize = own('fontSize');
+      if (!fontSize || !ts.isPropertyAssignment(fontSize)) return [];
+      const value = fontSize.initializer.getText();
+      if (!isRisky(value)) return [];
+      const holder = style.parent;
+      return [
+        {
+          file,
+          style:
+            ts.isPropertyAssignment(holder) && propertyName(holder.name)
+              ? propertyName(holder.name) ?? '?'
+              : '?',
+          line: lineOf(fontSize),
+          fontSize: value,
+          hasLineHeight: !!own('lineHeight'),
+        },
+      ];
     });
-  }
-  return out;
 }
 
-const FILES = globSync('src/**/*.{ts,tsx}', { cwd: ROOT }).filter(
-  f => !f.includes('__tests__') && !f.endsWith('.d.ts'),
-);
+const FILES = productionSources();
 
 describe('large text carries its own leading', () => {
+  it('catches a one-line style with no leading', () => {
+    const planted = `
+      const styles = StyleSheet.create(theme => ({
+        title: { fontSize: theme.typography.fontSize['2xl'], fontWeight: '700' },
+        body: { fontSize: 28, lineHeight: 34 },
+      }));`;
+
+    expect(
+      riskyBlocks('planted.ts', planted)
+        .filter(block => !block.hasLineHeight)
+        .map(block => block.style),
+    ).toEqual(['title']);
+  });
+
   it('scans the files it claims to scan', () => {
     // A sweep that reads nothing passes vacuously.
     expect(FILES.length).toBeGreaterThan(200);
@@ -104,11 +116,13 @@ describe('large text carries its own leading', () => {
 
   it('finds the large-text styles it is meant to police', () => {
     // If this drops to nothing the matcher has broken, not the codebase.
-    expect(FILES.flatMap(riskyBlocks).length).toBeGreaterThanOrEqual(5);
+    expect(
+      FILES.flatMap(file => riskyBlocks(file)).length,
+    ).toBeGreaterThanOrEqual(5);
   });
 
   it('pairs every large fontSize with a lineHeight', () => {
-    const offenders = FILES.flatMap(riskyBlocks)
+    const offenders = FILES.flatMap(file => riskyBlocks(file))
       .filter(b => !b.hasLineHeight)
       .filter(b => !(`${b.file}#${b.style}` in ALLOWED))
       .map(b => `${b.file}:${b.line} — ${b.style} { fontSize: ${b.fontSize} }`);

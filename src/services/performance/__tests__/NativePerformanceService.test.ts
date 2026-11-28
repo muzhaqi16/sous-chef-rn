@@ -2,7 +2,7 @@ import performance, {
   PerformanceObserver,
   setResourceLoggingEnabled,
 } from 'react-native-performance';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 import { NativePerformanceService } from '../NativePerformanceService';
 
 interface MockObserver {
@@ -35,7 +35,7 @@ jest.mock('react-native-performance', () => {
   };
 });
 
-jest.mock('#/native/StartupMark', () => ({
+jest.mock('#native/StartupMark', () => ({
   StartupMark: {
     reportFullyDrawn: jest.fn(),
     startProfiling: jest.fn(),
@@ -44,13 +44,13 @@ jest.mock('#/native/StartupMark', () => ({
   },
 }));
 
-jest.mock('#/config/env', () => ({
+jest.mock('#config/env', () => ({
   env: { API_URL: 'https://api.example.com/graphql' },
 }));
 
 // Environment is auto-mocked via jest.setup.js; override `getApiConfig` so
 // the perf-API URL matches the assertions below.
-import { Environment } from '#/utils/environment';
+import { Environment } from '#utils/environment';
 
 describe('NativePerformanceService', () => {
   beforeEach(() => {
@@ -378,7 +378,7 @@ describe('NativePerformanceService', () => {
   });
 
   describe('markFullyDrawn', () => {
-    const { StartupMark } = jest.requireMock('#/native/StartupMark');
+    const { StartupMark } = jest.requireMock('#native/StartupMark');
     const START = 1_000_000;
 
     beforeEach(() => {
@@ -423,10 +423,10 @@ describe('NativePerformanceService', () => {
       }));
       return {
         svc: require('../NativePerformanceService').NativePerformanceService,
-        mark: require('#/native/StartupMark').StartupMark,
+        mark: require('#native/StartupMark').StartupMark,
         // `resetModules` gives the re-required service a FRESH telemetry mock,
         // so asserting on the outer `Telemetry` would test the wrong object.
-        telemetry: require('#/services/telemetry').Telemetry,
+        telemetry: require('#services/telemetry').Telemetry,
       };
     };
 

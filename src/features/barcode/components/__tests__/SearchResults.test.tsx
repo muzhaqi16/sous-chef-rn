@@ -1,4 +1,5 @@
 import React from 'react';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   act,
   fireEvent,
@@ -11,8 +12,8 @@ import {
   ErrorDisposition,
   NetWeightKind,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { makeCache } from '#/apollo/cache';
+} from '#graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
 import {
   UseHeldStacks_PantryFragmentDoc,
   UseHeldStacks_PantryItemFragmentDoc,
@@ -26,19 +27,18 @@ import {
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   AddBrandToListDocument,
   BrandListsDocument,
 } from '#features/profile/hooks/useBrandLists.generated';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import { StoreShelfPricesDocument } from '#features/catalog/hooks/useStoreShelfPrices.generated';
 import { AddToBrandListSheet } from '#features/profile/ui/AddToBrandListSheet';
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 import {
   asAbbreviation,
@@ -558,7 +558,7 @@ describe('a list add', () => {
     shoppingListId: 'list-1',
   };
   const addedToList = () =>
-    recordMock(BarcodeAddItemToShoppingListDocument, {
+    recordMock(AddItemToShoppingListDocument, {
       data: {
         addItemsToShoppingList: {
           __typename: 'AddItemsToShoppingListPayload',
@@ -586,7 +586,7 @@ describe('a list add', () => {
     );
 
     await pressAdd(addLabel.shoppingList());
-    await log.requested(BarcodeAddItemToShoppingListDocument);
+    await log.requested(AddItemToShoppingListDocument);
 
     const { items } = sentAdd(add);
     const [line] = Array.isArray(items) ? items : [];
@@ -605,7 +605,7 @@ describe('a list add', () => {
     );
 
     await pressAdd(addLabel.shoppingList());
-    await log.landed(BarcodeAddItemToShoppingListDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await act(async () => undefined);
 
     expect(onScanAnother).toHaveBeenCalledTimes(1);

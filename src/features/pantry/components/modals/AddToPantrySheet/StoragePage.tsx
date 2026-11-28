@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
@@ -8,7 +8,7 @@ import { DropdownStack } from '#components/atoms/DropdownStack';
 import { FormInput } from '#components/atoms/FormInput';
 import { StorageLocationAutocompleteField } from '#features/catalog/ui/autocomplete/StorageLocationAutocompleteField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import type { ItemCondition } from '#/graphql/generated/schemaTypes';
+import type { ItemCondition } from '#graphql/generated/schemaTypes';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 import {
   ITEM_CONDITION_OPTIONS,
@@ -88,7 +88,6 @@ export const StoragePage: React.FC<StoragePageProps> = ({
           value={tags}
           onChangeText={setTags}
           placeholder={t('addToPantry.tagsPlaceholder')}
-          useBottomSheetInput
         />
 
         {/* Notes */}
@@ -98,7 +97,6 @@ export const StoragePage: React.FC<StoragePageProps> = ({
           onChangeText={setStorageNotes}
           placeholder={t('addToPantry.notesPlaceholder')}
           multiline
-          useBottomSheetInput
         />
       </DropdownStack>
     </BottomSheetFormScrollView>

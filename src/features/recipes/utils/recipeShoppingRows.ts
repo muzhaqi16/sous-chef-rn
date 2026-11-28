@@ -1,8 +1,8 @@
-import { generateEntityId } from '#/utils/generateEntityId';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { itemIdOf, typedItemRef } from '#/utils/refInput';
-import { AddedContext } from '#/graphql/generated/schemaTypes';
-import type { ShoppingRowLine } from '#features/shoppingList/cache/createShoppingListRow';
+import { generateEntityId } from '#utils/generateEntityId';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { itemIdOf, typedItemRef } from '#utils/refInput';
+import { AddedContext } from '#graphql/generated/schemaTypes';
+import type { ShoppingRowLine } from '#entities/shoppingList/createShoppingListRow';
 
 /** A recipe ingredient, as the recipe detail caches it. */
 export interface RecipeIngredientLine {

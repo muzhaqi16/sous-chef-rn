@@ -1,7 +1,11 @@
 import React from 'react';
 import type { ScrollViewProps, StyleProp, ViewStyle } from 'react-native';
-import { View } from 'react-native';
-import { BottomSheetScrollView, BottomSheetView } from '@gorhom/bottom-sheet';
+import { View, useWindowDimensions } from 'react-native';
+import {
+  BottomSheetScrollView,
+  BottomSheetView,
+  type BottomSheetModalProps,
+} from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Title } from '#components/atoms/Title';
 import { BarActions, type BarAction } from '#components/molecules/BarActions';
@@ -11,19 +15,56 @@ import {
   type UseStandardBottomSheetOptions,
 } from '#hooks/ui/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 import {
   SheetHeaderOutlet,
   SheetHeaderStoreProvider,
   useSheetHeaderStore,
 } from './SheetHeaderSlot';
+import { SheetCloseGuardProvider, useSheetCloseGuard } from './SheetCloseGuard';
 
 export type SheetMode = 'view' | 'form' | 'action' | 'list';
+
+/**
+ * A phone keyboard takes under 40% of the screen, so gorhom's `interactive`
+ * lift raises a sheet up to this share of it whole above the keyboard.
+ */
+const LIFTED_WHOLE = 0.6;
+
+/** The tallest a sheet's snap points make it, as a share of the window. */
+function tallestShare(
+  snapPoints: readonly (string | number)[],
+  windowHeight: number,
+): number {
+  return Math.max(
+    0,
+    ...snapPoints.map(point =>
+      typeof point === 'number'
+        ? point / windowHeight
+        : parseDecimalInput(point.replace('%', '')) / 100,
+    ),
+  );
+}
+
+/**
+ * gorhom options a sheet sets beyond the standard ones: `push` to stack over a
+ * host sheet, an Android keyboard that resizes. A key left out keeps the
+ * standard value. Input its content holds is guarded by `useSheetUnsavedInput`.
+ */
+export type SheetModalOptions = Pick<
+  BottomSheetModalProps,
+  | 'stackBehavior'
+  | 'android_keyboardInputMode'
+  | 'keyboardBlurBehavior'
+  | 'enableContentPanningGesture'
+>;
 
 export interface SheetProps extends UseStandardBottomSheetOptions {
   children: React.ReactNode;
   /**
-   * `view` a static `BottomSheetView`; `form` a keyboard-aware scroll view plus
-   * the input context; `action` a scrolling list of choices; `list` the child
+   * `view` a static `BottomSheetView`; `form` a scroll view for inputs, kept
+   * above the keyboard (see `LIFTED_WHOLE`); `action` a scrolling list of
+   * choices; `list` the child
    * unwrapped, for content that scrolls itself and so needs the modal's height.
    * A bespoke layout calls {@link useStandardBottomSheet} directly.
    */
@@ -41,9 +82,9 @@ export interface SheetProps extends UseStandardBottomSheetOptions {
    *  density-scaled `theme.spacing.md` inside the scroll view. */
   bottomOffset?: number;
   /**
-   * The sheet's bar, `SheetHeader` or `BottomSheetHeader`, held above the
-   * content: a field scrolled into view above the keyboard never carries it off.
-   * It sits outside `contentContainerStyle`, so it takes no `contentPadding`.
+   * The sheet's bar, `SheetHeader`, held above the content: a field scrolled
+   * into view above the keyboard never carries it off. It sits outside
+   * `contentContainerStyle`, so it takes no `contentPadding`.
    */
   header?: React.ReactNode;
   /**
@@ -55,6 +96,18 @@ export interface SheetProps extends UseStandardBottomSheetOptions {
   title?: string;
   /** Actions beside the title, icon or text. */
   actions?: BarAction[];
+  modalOptions?: SheetModalOptions;
+  /**
+   * Who clears the home indicator in `list`: the container (default), or the
+   * content, when each of its steps pads its own scroll content.
+   */
+  bottomInset?: 'container' | 'content';
+  /**
+   * The page gutter on the content, as `Screen`'s: `view` and `form` take it
+   * unless they say `none`, and `action` always has it. A host pads only its
+   * content's top and bottom.
+   */
+  gutter?: 'page' | 'none';
 }
 
 /**
@@ -72,13 +125,28 @@ export const Sheet: React.FC<SheetProps> = ({
   headerFromContent = false,
   title,
   actions,
+  modalOptions,
+  bottomInset = 'container',
+  gutter = 'page',
   ...sheetOptions
 }) => {
+  const closeGuard = useSheetCloseGuard();
+  // gorhom lifts a short sheet whole above the keyboard, so a keyboard-aware
+  // scroll would make that room a second time and push the field out of view.
+  // A taller form keeps its one stop and its scroll alone makes the room.
+  // Verified: #gorhoms-lift-and-a-keyboard-aware-scroll-both-make-room
+  const { height: windowHeight } = useWindowDimensions();
+  const liftedWhole =
+    tallestShare(sheetOptions.snapPoints, windowHeight) <= LIFTED_WHOLE;
   const {
     ref,
     modalProps,
     contentContainerStyle: insetStyle,
-  } = useStandardBottomSheet(sheetOptions);
+  } = useStandardBottomSheet({
+    ...sheetOptions,
+    ...(mode === 'form' && !liftedWhole && { keyboardBehavior: 'extend' }),
+    discardGuard: closeGuard,
+  });
   const headerStore = useSheetHeaderStore();
   const header = headerFromContent ? (
     <SheetHeaderOutlet store={headerStore} />
@@ -86,10 +154,16 @@ export const Sheet: React.FC<SheetProps> = ({
     headerProp
   );
 
+  const gutterStyle = gutter === 'page' ? styles.pageGutter : undefined;
+  // The title sits on the gutter wherever the content has none of its own: a
+  // list's rows inset themselves, and the bar above them would sit flush.
+  const titleGutter =
+    mode === 'list' || !gutterStyle ? styles.pageGutter : undefined;
+
   const body = (
     <>
       {title || actions?.length ? (
-        <View style={styles.titleRow}>
+        <View style={[styles.titleRow, titleGutter]}>
           {!!title && <Title style={styles.title}>{title}</Title>}
           <BarActions actions={actions} placement="gutter" />
         </View>
@@ -98,7 +172,7 @@ export const Sheet: React.FC<SheetProps> = ({
     </>
   );
 
-  const containerStyle = [contentContainerStyle, insetStyle];
+  const containerStyle = [gutterStyle, contentContainerStyle, insetStyle];
 
   // `keyboardShouldPersistTaps` is stated, not inherited: neither gorhom nor
   // the keyboard-aware view supplies one, and RN's default spends the first
@@ -127,19 +201,22 @@ export const Sheet: React.FC<SheetProps> = ({
   const content = (() => {
     switch (mode) {
       case 'list':
-        // The modal bounds the child itself. `BottomSheetView` is absolutely
-        // positioned with no height, so a scrollable inside it never scrolls.
+        // A plain flex parent: `BottomSheetView` is absolutely positioned with
+        // no height, so a scrollable inside it never scrolls. The inset keeps
+        // the last row clear of the home indicator.
         return (
-          <>
+          <View
+            style={[styles.fill, bottomInset === 'container' && insetStyle]}
+          >
             {header}
             {body}
-          </>
+          </View>
         );
       case 'view':
         return header ? (
           <BottomSheetView style={insetStyle}>
             {header}
-            <View style={contentContainerStyle}>{body}</View>
+            <View style={[gutterStyle, contentContainerStyle]}>{body}</View>
           </BottomSheetView>
         ) : (
           <BottomSheetView style={containerStyle}>{body}</BottomSheetView>
@@ -148,35 +225,46 @@ export const Sheet: React.FC<SheetProps> = ({
         return underHeader(
           <BottomSheetScrollView
             {...scrollProps}
-            contentContainerStyle={[styles.actionContent, containerStyle]}
+            contentContainerStyle={[styles.pageGutter, containerStyle]}
           >
             {body}
           </BottomSheetScrollView>,
         );
       case 'form':
         return underHeader(
-          <BottomSheetFormScrollView
-            {...scrollProps}
-            contentContainerStyle={containerStyle}
-            // Forwarded only when set: spreading `bottomOffset: undefined`
-            // would override the scroll view's theme-mapped default.
-            {...(bottomOffset !== undefined ? { bottomOffset } : {})}
-          >
-            {body}
-          </BottomSheetFormScrollView>,
+          liftedWhole ? (
+            <BottomSheetScrollView
+              {...scrollProps}
+              contentContainerStyle={containerStyle}
+            >
+              {body}
+            </BottomSheetScrollView>
+          ) : (
+            <BottomSheetFormScrollView
+              {...scrollProps}
+              contentContainerStyle={containerStyle}
+              // Forwarded only when set: spreading `bottomOffset: undefined`
+              // would override the scroll view's theme-mapped default.
+              {...(bottomOffset !== undefined ? { bottomOffset } : {})}
+            >
+              {body}
+            </BottomSheetFormScrollView>
+          ),
         );
     }
   })();
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      {headerFromContent ? (
-        <SheetHeaderStoreProvider value={headerStore}>
-          {content}
-        </SheetHeaderStoreProvider>
-      ) : (
-        content
-      )}
+    <BottomSheetModal ref={ref} {...modalProps} {...modalOptions}>
+      <SheetCloseGuardProvider value={closeGuard}>
+        {headerFromContent ? (
+          <SheetHeaderStoreProvider value={headerStore}>
+            {content}
+          </SheetHeaderStoreProvider>
+        ) : (
+          content
+        )}
+      </SheetCloseGuardProvider>
     </BottomSheetModal>
   );
 };
@@ -192,7 +280,7 @@ const styles = StyleSheet.create(theme => ({
   title: {
     flex: 1,
   },
-  actionContent: {
+  pageGutter: {
     paddingHorizontal: theme.layout.pageGutter,
   },
 }));

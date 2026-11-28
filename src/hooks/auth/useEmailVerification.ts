@@ -1,10 +1,10 @@
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   useAppStore,
   useUserId,
   useHasUnverifiedEmail,
 } from '#store/useAppStore';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { useNavigationIntents } from '#platform/screen';
 
 /**

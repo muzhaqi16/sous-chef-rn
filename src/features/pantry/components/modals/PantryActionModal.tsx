@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { errorService } from '#/services/errorService';
-import { alertService } from '#/services/alertService';
+import { errorService } from '#services/errorService';
+import { alertService } from '#services/alertService';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { pantryTestIDs } from '#features/pantry/testIDs';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { UnitPicker } from '#features/pantry/components/UnitPicker';
 import {
   useOperationUnits,
@@ -13,9 +14,10 @@ import {
   type PantryOperation,
 } from '#features/pantry/hooks/useOperationUnits';
 import { useConvertAvailableQuantity } from '#features/pantry/hooks/useConvertAvailableQuantity';
-import { commonStyles } from '#/styles/commonStyles';
+import { useOpening } from '#hooks/ui/useOpening';
+import { commonStyles } from '#styles/commonStyles';
 import { Text } from '#components/atoms/Text';
-import type { UnitLabelSource } from '#/utils/formatQuantity';
+import type { UnitLabelSource } from '#utils/formatQuantity';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { DataStateView } from '#components/organisms/DataStateView';
 import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
@@ -24,51 +26,94 @@ import {
   amountLeftOf,
   fullPackagesAfter,
   shownStock,
-} from '#domain/stockDisplay';
+} from '#entities/pantryItem/stockDisplay';
 import { formatAmountLeft } from '#features/pantry/hooks/usePantryItemTransformation';
+import { scopedToBatch } from '#features/pantry/utils/scopedToBatch';
+import { shownParts } from '#features/pantry/utils/judgeDeduction';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import type {
   PantryActionSharedState,
   ShownQuantity,
+  UsedBatch,
 } from '#features/pantry/types';
 
 interface PantryActionModalProps {
   visible: boolean;
+  /** Read as the sheet opens; the caller may clear it as the sheet closes. */
   pantryItemId: string | null;
   onClose: () => void;
-  title: string;
-  confirmLabel: string;
-  confirmColor?: React.ComponentProps<typeof BottomSheetHeader>['confirmColor'];
-  snapPoints?: (string | number)[];
+  /** The sheet's one stop. */
+  snapPoint?: string;
   unitToggleLabel?: string;
   currentQuantityLabel?: string;
   /** Selects which unit-eligibility query runs. */
   operation: PantryOperation;
-  onConfirm: (shared: PantryActionSharedState) => void | Promise<unknown>;
-  renderActionFields: (
+  /**
+   * An action on this batch alone: what it holds is what is available, to the
+   * form as to the line above it.
+   */
+  batch?: UsedBatch | null;
+  /**
+   * The action's form: its bar (`PantryActionHeader`) and its fields, mounted
+   * fresh for each opening. `pantryItem` is null until the stack is read.
+   */
+  renderForm: (
     shared: PantryActionSharedState,
-    pantryItem: PantryActionModal_PantryItemFragment,
+    pantryItem: PantryActionModal_PantryItemFragment | null,
   ) => React.ReactNode;
 }
 
 /**
- * Shared shell for the pantry action modals (Consume, RecordWaste, Restock);
- * action-specific fields arrive through `renderActionFields`. The item is read
- * live, so a cache update reaches the open modal without re-snapshotting state.
+ * The sheet the pantry actions (consume, waste, restock) open in. Each opening
+ * mounts the stack's frame and the action's form afresh.
  */
 export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   visible,
   pantryItemId,
   onClose,
-  title,
-  confirmLabel,
-  confirmColor,
-  snapPoints = ['75%', '95%'],
+  snapPoint = '75%',
+  ...frame
+}) => {
+  const presented = visible && !!pantryItemId;
+  const opening = useOpening(presented, pantryItemId);
+
+  return (
+    <Sheet
+      mode="form"
+      headerFromContent
+      visible={presented}
+      onDismiss={onClose}
+      snapPoints={[snapPoint]}
+      style={commonStyles.bottomSheetScrollView}
+      contentContainerStyle={commonStyles.bottomSheetContent}
+    >
+      {opening?.payload ? (
+        <PantryActionFrame
+          key={opening.id}
+          pantryItemId={opening.payload}
+          {...frame}
+        />
+      ) : null}
+    </Sheet>
+  );
+};
+
+type PantryActionFrameProps = Omit<
+  PantryActionModalProps,
+  'visible' | 'pantryItemId' | 'onClose' | 'snapPoint'
+> & { pantryItemId: string };
+
+/**
+ * One opening: the stack, read live so a cache update reaches the open sheet,
+ * and the unit the action is measured in, around the action's form.
+ */
+const PantryActionFrame: React.FC<PantryActionFrameProps> = ({
+  pantryItemId,
   unitToggleLabel,
   currentQuantityLabel,
   operation,
-  onConfirm,
-  renderActionFields,
+  batch = null,
+  renderForm,
 }) => {
   const { t } = useTranslation();
   const readingSystem = useReadingSystem();
@@ -85,9 +130,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
 
   const [selectedUnitInfo, setSelectedUnitInfo] =
     useState<SelectedUnitInfo | null>(null);
-  const [notes, setNotes] = useState('');
-  const submitting = useRef(false);
-  const [saving, setSaving] = useState(false);
 
   // A row created offline holds a neutral unit with an empty id. Sent as
   // `usageUnitId` it names no unit; omitted, the server uses the stack's own.
@@ -109,6 +151,12 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     consumeUnitId: pantryItem?.consumeUnit?.id,
     operation,
   });
+
+  // The ranked default once it is read, kept until another unit is picked: a
+  // later ranking never moves an amount already typed to another unit.
+  if (selectedUnitInfo === null && defaultUnit !== null) {
+    setSelectedUnitInfo(defaultUnit);
+  }
 
   // Matches the API's lazy init: quantity × netWeight.
   const effectiveNetWeight =
@@ -212,34 +260,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       netWeightUnitId: pantryItem?.netWeightUnit?.id,
     });
 
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevPantryItemId, setPrevPantryItemId] = useState(pantryItem?.id);
-  if (visible !== prevVisible || pantryItem?.id !== prevPantryItemId) {
-    setPrevVisible(visible);
-    setPrevPantryItemId(pantryItem?.id);
-    if (visible && pantryItem) {
-      setNotes('');
-      setSelectedUnitInfo(defaultUnit);
-    }
-  }
-
-  // Also picks up the default unit once it loads, if nothing is selected yet.
-  // Starts unset: a sheet opening over cached units sees no change otherwise.
-  const [prevDefaultUnitId, setPrevDefaultUnitId] = useState<
-    string | undefined
-  >(undefined);
-  if (defaultUnit?.unitId !== prevDefaultUnitId) {
-    setPrevDefaultUnitId(defaultUnit?.unitId);
-    if (
-      visible &&
-      pantryItem &&
-      selectedUnitInfo == null &&
-      defaultUnit != null
-    ) {
-      setSelectedUnitInfo(defaultUnit);
-    }
-  }
-
   const displayAsFractionOf = (unitId: string | undefined) =>
     unitId === trackingUnitId
       ? pantryItem?.unit.displayAsFraction ?? null
@@ -248,8 +268,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   const shared: PantryActionSharedState = {
     selectedUnitInfo,
     setSelectedUnitInfo,
-    notes,
-    setNotes,
     trackingQuantity,
     trackingUnit,
     trackingUnitId,
@@ -275,46 +293,11 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     isDualTracked,
     portionUnitId: pantryItem?.portionUnitId ?? null,
   };
-
-  const presented = visible && !!pantryItemId;
+  // What the action may take: the batch's, when it is on one.
+  const held = batch ? scopedToBatch(shared, batch) : shared;
 
   return (
-    <Sheet
-      mode="form"
-      visible={presented}
-      onDismiss={onClose}
-      snapPoints={snapPoints}
-      style={commonStyles.bottomSheetScrollView}
-      contentContainerStyle={commonStyles.bottomSheetContent}
-      header={
-        <BottomSheetHeader
-          title={title}
-          onCancel={onClose}
-          onConfirm={async () => {
-            if (submitting.current) return;
-            submitting.current = true;
-            setSaving(true);
-            try {
-              await onConfirm(shared);
-            } catch (error) {
-              errorService.reportError(error, {
-                operation: 'Confirm pantry action',
-              });
-              alertService.alert(
-                t('labels.error'),
-                t('errors.codes.genericRetry'),
-              );
-            }
-            submitting.current = false;
-            setSaving(false);
-          }}
-          saving={saving}
-          confirmLabel={confirmLabel}
-          confirmColor={confirmColor}
-          confirmTestID={pantryTestIDs.actionConfirm}
-        />
-      }
-    >
+    <>
       {!!pantryItem && (
         <>
           {/* Item Info */}
@@ -327,7 +310,12 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
                 {resolvedCurrentQuantityLabel}{' '}
               </Text>
               <Text role="bodyStrong">
-                {formatAmountLeft(pantryItem, readingSystem)}
+                {batch
+                  ? t(
+                      'pantryAction.availableAmount',
+                      shownParts(held.leftAfter(0)),
+                    )
+                  : formatAmountLeft(pantryItem, readingSystem)}
               </Text>
             </View>
           </View>
@@ -341,13 +329,12 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
             onSelect={setSelectedUnitInfo}
             loading={unitsLoading}
           />
-
-          {/* Action-specific fields */}
-          {renderActionFields(shared, pantryItem)}
         </>
       )}
 
-      {!pantryItem && !!pantryItemId && itemQueryLoading ? (
+      {renderForm(held, pantryItem)}
+
+      {!pantryItem && itemQueryLoading ? (
         <View style={commonStyles.bottomSheetLoading}>
           <ThemedActivityIndicator />
         </View>
@@ -356,6 +343,67 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       {itemState === 'error' || itemState === 'offline' ? (
         <DataStateView state={itemState} onRetry={retryItem} />
       ) : null}
-    </Sheet>
+    </>
+  );
+};
+
+interface PantryActionHeaderProps {
+  title: string;
+  /** Names the confirm for a screen reader: the action it takes. */
+  confirmLabel: string;
+  onClose: () => void;
+  /**
+   * Null while there is no stack to act on. Resolves once the action settles;
+   * a throw is a failure no field can hold, said in an alert.
+   */
+  onConfirm: (() => Promise<unknown>) | null;
+}
+
+/** An action form's bar: close, its title, and a confirm that saves once at a time. */
+export const PantryActionHeader: React.FC<PantryActionHeaderProps> = ({
+  title,
+  confirmLabel,
+  onClose,
+  onConfirm,
+}) => {
+  const { t } = useTranslation();
+  const submitting = useRef(false);
+  const [saving, setSaving] = useState(false);
+
+  const confirm = async (send: () => Promise<unknown>) => {
+    if (submitting.current) return;
+    submitting.current = true;
+    setSaving(true);
+    try {
+      await send();
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Confirm pantry action',
+      });
+      alertService.alert(t('labels.error'), t('errors.codes.genericRetry'));
+    }
+    submitting.current = false;
+    setSaving(false);
+  };
+
+  return (
+    <SheetHeaderSlot>
+      <SheetHeader
+        title={title}
+        onClose={onClose}
+        confirm={
+          onConfirm
+            ? {
+                onPress: () => {
+                  void confirm(onConfirm);
+                },
+                accessibilityLabel: confirmLabel,
+                loading: saving,
+                testID: pantryTestIDs.actionConfirm,
+              }
+            : undefined
+        }
+      />
+    </SheetHeaderSlot>
   );
 };

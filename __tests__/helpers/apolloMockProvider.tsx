@@ -13,10 +13,10 @@ import type {
 } from '@apollo/client';
 import { useApolloClient } from '@apollo/client/react';
 import { gql, type OperationVariables } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { onCacheWrite } from '#/apollo/utils/onCacheWrite';
-import { isRecord } from '#/utils/isRecord';
+import { makeCache } from '#apollo/cache';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
+import { onCacheWrite } from '#apollo/utils/onCacheWrite';
+import { isRecord } from '#utils/isRecord';
 import { SchemaLink } from '@apollo/client/link/schema';
 import { MockedProvider } from '@apollo/client/testing/react';
 import { MockLink } from '@apollo/client/testing';
@@ -350,7 +350,7 @@ function buildSchemaLink(
  * - With `operationMocks`: per-operation `MockedProvider` mocks.
  * - Don't combine both at once — pick the strategy your test needs.
  */
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 
 // The app's own defaults, not a near-copy. This was a hand-maintained
 // duplicate that had already drifted from `client.ts` (no `returnPartialData`),

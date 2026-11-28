@@ -1,12 +1,12 @@
 'use no memo';
 
 import React from 'react';
-import { ShareLinkTargetType } from '#/graphql/generated/schemaTypes';
+import { ShareLinkTargetType } from '#graphql/generated/schemaTypes';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo, seedQuery } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { kitTestIDs } from '#components/testIDs';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { userEvent } from '@testing-library/react-native';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { ResolveShareLinkDocument } from '#operations/home/home.generated';

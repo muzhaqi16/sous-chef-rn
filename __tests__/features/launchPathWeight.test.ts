@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { moduleSpecifiersOf } from '#/test-utils/sourceAst';
 
 /**
  * `i18n/config` is imported near the top of `index.js`, so everything it
@@ -21,23 +22,12 @@ import path from 'path';
 const ROOT = path.join(__dirname, '..', '..');
 const ENTRY = path.join(ROOT, 'src', 'i18n', 'config.ts');
 
-const ALIASES: Record<string, string> = {
-  '#features': 'src/features',
-  '#components': 'src/components',
-  '#hooks': 'src/hooks',
-  '#store': 'src/store',
-  '#utils': 'src/utils',
-  '#services': 'src/services',
-  '#constants': 'src/constants',
-  '#apollo': 'src/apollo',
-  '#platform': 'src/platform',
-  '#native': 'src/native',
-  '#operations': 'src/graphql/operations',
-  '#generated': 'src/graphql/generated',
-  '#': 'src',
+// The table Babel and Jest resolve with, so no spelling the app can import
+// stops this walk early and shrinks the graph it measures.
+const { babelAliases } = require('../../scripts/lib/aliases') as {
+  babelAliases: () => Record<string, string>;
 };
-
-const IMPORT_SOURCE = /(?:from\s*|import\s*\(\s*)['"]([^'"]+)['"]/g;
+const ALIASES = babelAliases();
 
 const resolve = (spec: string, from: string): string | null => {
   let base: string;
@@ -70,10 +60,8 @@ const reachable = (entry: string): Set<string> => {
   while (queue.length) {
     const file = queue.pop()!;
     if (file.endsWith('.json')) continue;
-    for (const [, spec] of fs
-      .readFileSync(file, 'utf8')
-      .matchAll(IMPORT_SOURCE)) {
-      const next = resolve(spec!, file);
+    for (const spec of moduleSpecifiersOf(file)) {
+      const next = resolve(spec, file);
       if (next && !seen.has(next)) {
         seen.add(next);
         queue.push(next);
@@ -87,6 +75,15 @@ describe('the i18n launch path', () => {
   const reached = reachable(ENTRY);
   const reaches = (rel: string) => reached.has(path.join(ROOT, rel));
 
+  it('follows a require() as well as an import', () => {
+    expect(
+      moduleSpecifiersOf(
+        'planted.ts',
+        `import './a';\nexport { b } from './b';\nconst c = require('./c');\nconst d = () => import('./d');`,
+      ),
+    ).toEqual(['./a', './b', './c', './d']);
+  });
+
   it('resolves the graph at all, so the checks below are not vacuous', () => {
     expect(reached.size).toBeGreaterThan(20);
     expect(reaches('src/features/registry.static.ts')).toBe(true);
@@ -98,6 +95,8 @@ describe('the i18n launch path', () => {
     ['the offline queue store', 'src/apollo/offlineQueue/queueStore.ts'],
     ['the cache field policies', 'src/apollo/cacheFieldPolicies.ts'],
     ['the replay registry', 'src/apollo/offlineQueue/preparationRegistry.ts'],
+    ['the write registry', 'src/features/registry.data.ts'],
+    ['the feed registry', 'src/features/registry.feed.ts'],
     ['device locale probing', 'src/utils/deviceLocale.ts'],
   ])('does not reach %s', (_label, rel) => {
     expect(reaches(rel)).toBe(false);

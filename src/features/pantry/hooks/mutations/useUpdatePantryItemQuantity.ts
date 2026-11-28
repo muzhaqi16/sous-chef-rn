@@ -3,23 +3,22 @@
  * update replays as itself at the version it holds.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
+import { useApolloClient } from '@apollo/client/react';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import {
   UseUpdatePantryItemQuantity_RowFragmentDoc,
   type UseUpdatePantryItemQuantity_RowFragment,
 } from './useUpdatePantryItemQuantity.generated';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { logger } from '#/utils/environment';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
-import type { writeHeldStock } from '#features/pantry/cache/stock';
+import { normalizeNumericTextForApi } from '#utils/parseDecimalInput';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { logger } from '#utils/environment';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
+import type { writeHeldStock } from '#entities/pantryItem/stock';
 import type { SetStockInputs } from '#features/pantry/offline/localWrites';
-import { todayKey } from '#/utils/dateUtils';
-import { statedAmount } from '#/utils/formatQuantity';
+import { todayKey } from '#utils/dateUtils';
+import { statedAmount } from '#utils/formatQuantity';
+import { updatePantryItemQuantityWrite } from '#features/pantry/offline/localWrites';
 
 interface UseUpdatePantryItemQuantityOptions {
   refetch?: () => void;
@@ -44,10 +43,10 @@ export function useUpdatePantryItemQuantity({
   const { t } = useTranslation();
   const client = useApolloClient();
 
-  const [updateQuantityMutation] = useMutation(
-    UpdatePantryItemQuantityDocument,
-    { context: { localFirst: true } },
-  );
+  const setQuantity = useLocalWrite(updatePantryItemQuantityWrite, {
+    fallback: t('errors.updateItemFailed'),
+    onConflictRefresh: refetch,
+  });
 
   /**
    * Sets the quantity in the stack's own unit, or in the dozen it is shown in;
@@ -106,8 +105,7 @@ export function useUpdatePantryItemQuantity({
         },
       }),
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      UpdatePantryItemQuantityDocument,
+    const settled = await setQuantity.send(
       {
         today: todayKey(),
         input: {
@@ -119,12 +117,6 @@ export function useUpdatePantryItemQuantity({
           version: currentItem.version,
         },
       },
-      write =>
-        settleMutation(() => updateQuantityMutation(write), {
-          document: UpdatePantryItemQuantityDocument,
-          fallback: t('errors.updateItemFailed'),
-          onConflictRefresh: refetch,
-        }),
       inputs,
     );
 

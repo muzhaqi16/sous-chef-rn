@@ -3,12 +3,12 @@
 // ActiveFilterChipsRow (active-filter display).
 
 import { isLifestyleDiet } from '#domain/dietary';
-import type { TranslationKey } from '#/i18n';
+import type { TranslationKey } from '#i18n';
 import {
   Diet,
   Intolerance,
   RecipeCategory,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /** The categories the meal-type filter offers (`MEAL_TYPES`). */
 export type MealTypeCategory =

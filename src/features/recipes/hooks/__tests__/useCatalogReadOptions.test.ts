@@ -1,9 +1,9 @@
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   renderHookWithApollo,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import { ExternalSource } from '#graphql/generated/schemaTypes';
 import {
   catalogFetchKey,
   recordCatalogFetch,

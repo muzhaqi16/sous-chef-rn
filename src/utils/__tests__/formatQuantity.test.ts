@@ -12,11 +12,11 @@ import {
   parseStoredQuantityText,
   unitLabel,
 } from '../formatQuantity';
-import { getI18n } from '#/i18n/config';
-import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
+import { getI18n } from '#i18n/config';
+import { getDeviceDecimalSeparator } from '#utils/deviceLocale';
 
-jest.mock('#/utils/deviceLocale', () => ({
-  ...jest.requireActual('#/utils/deviceLocale'),
+jest.mock('#utils/deviceLocale', () => ({
+  ...jest.requireActual('#utils/deviceLocale'),
   getDeviceDecimalSeparator: jest.fn(() => '.'),
 }));
 

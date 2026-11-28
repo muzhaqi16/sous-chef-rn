@@ -7,9 +7,9 @@ import {
   NotificationCategory,
   NotificationType,
   Priority,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { DisplayNotification } from '../toDisplayNotification';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 
 function makeNotification(
   overrides: Partial<DisplayNotification> = {},

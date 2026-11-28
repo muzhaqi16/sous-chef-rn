@@ -4,7 +4,7 @@
  * keeps showing the row until its write is answered or refused.
  */
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 import {
   AddRecipeToFavoritesDocument,

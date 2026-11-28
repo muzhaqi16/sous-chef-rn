@@ -1,4 +1,4 @@
-import type { UnitLabelSource } from '#/utils/formatQuantity';
+import type { UnitLabelSource } from '#utils/formatQuantity';
 
 /** A receipt as the review reads it, from the phone's labels or the server's parse. */
 export type ParsedLineKind =

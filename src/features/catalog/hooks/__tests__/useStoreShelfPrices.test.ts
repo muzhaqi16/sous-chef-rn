@@ -1,6 +1,6 @@
-import { makeCache } from '#/apollo/cache';
-import { PriceBasis } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import { makeCache } from '#apollo/cache';
+import { PriceBasis } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import {
   recordMock,
   renderHookWithApollo,
@@ -9,8 +9,8 @@ import {
 import { drainTimers } from '#/test-utils/drainTimers';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
-import { formatMonthDay } from '#/utils/formatters/date';
-import { formatCurrency } from '#/utils/formatters/number';
+import { formatMonthDay } from '#utils/formatters/date';
+import { formatCurrency } from '#utils/formatters/number';
 import {
   StoreShelfPricesDocument,
   UseStoreShelfPrices_ItemFragmentDoc,

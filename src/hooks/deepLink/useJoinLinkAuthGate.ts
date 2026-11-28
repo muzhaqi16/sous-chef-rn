@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { useNavigationIntents } from '#platform/screen';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useStore } from '#store';
 import type { DeepLinkAction } from '#store/slices/navigationSlice';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 
 type JoinLinkType = DeepLinkAction['type'];
 

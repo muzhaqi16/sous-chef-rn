@@ -1,6 +1,6 @@
 import React from 'react';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { PressableScale } from '#components/atoms/PressableScale';
@@ -41,7 +41,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
       }}
     >
       <Animated.View style={glyphStyle}>
-        <Icon name={icon} size={28} tone="onPrimary" library={iconLibrary} />
+        <Icon name={icon} size="md" tone="onPrimary" library={iconLibrary} />
       </Animated.View>
     </PressableScale>
   );

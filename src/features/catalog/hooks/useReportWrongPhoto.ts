@@ -1,5 +1,5 @@
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
 import { useReportItem } from '#features/catalog/hooks/useReportItem';
 
 /** Moderators read every report in English, whatever language sent it. */

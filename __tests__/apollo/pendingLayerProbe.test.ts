@@ -1,5 +1,5 @@
 import { gql, type Reference } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 
 /**
  * What an optimistic layer keeps over later writes to the root, and how layers

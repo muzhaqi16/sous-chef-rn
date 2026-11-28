@@ -1,19 +1,19 @@
-import { unknownMember } from '#/utils/closedEnum';
+import { unknownMember } from '#utils/closedEnum';
 import {
   CollaboratorRole,
   NotificationType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { isDateKey, safeParseDate } from '#utils/dateUtils';
 import type { NotificationCopyData } from '#features/notifications/types';
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 import {
   daysUntilExpiry as daysUntilExpiryOn,
   expiryLabel,
 } from '#domain/expiry';
-import type { TranslationKey } from '#/i18n';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
-import { formatMonthDay, formatTimeOfDay } from '#/utils/formatters/date';
-import { cappedNames } from '#/utils/cappedNames';
+import type { TranslationKey } from '#i18n';
+import { formatQuantityForDisplay } from '#utils/formatQuantity';
+import { formatMonthDay, formatTimeOfDay } from '#utils/formatters/date';
+import { cappedNames } from '#utils/cappedNames';
 
 export const getNotificationAction = (
   type: NotificationType,

@@ -6,14 +6,14 @@ import type { ApolloCache, OperationVariables } from '@apollo/client';
 import {
   rowBaseline,
   type RowFields,
-} from '#/apollo/pendingWrites/conflictRead';
-import { inputIdOf } from '#/apollo/pendingWrites/inputId';
-import type { ConflictRead, LocalWrite } from '#/apollo/pendingWrites/types';
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
-import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
+} from '#apollo/pendingWrites/conflictRead';
+import { inputIdOf } from '#apollo/pendingWrites/inputId';
+import type { ConflictRead, LocalWrite } from '#apollo/pendingWrites/types';
+import { writeEntityFields } from '#apollo/utils/localFirstFields';
+import { isHeld } from '#apollo/utils/writeLocalEntity';
+import { UsualStoreSource } from '#graphql/generated/schemaTypes';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
 import { storeChoiceKey, type StoreChoice } from '#domain/stores';
 import {
   writeLocalStore,
@@ -24,14 +24,14 @@ import {
   unlistStorageLocation,
   writeLocalStorageLocation,
   type LocalStorageLocation,
-} from '#features/catalog/cache/storageLocations';
+} from '#entities/storageLocation/storageLocations';
 import {
   isUsualStoreList,
   keepUsualStores,
   localUsualStore,
   replaceUsualStore,
   writeUsualStores,
-} from '#features/catalog/cache/usualStores';
+} from '#entities/store/usualStores';
 import {
   hideSuggestion,
   putSuggestionsBack,
@@ -42,6 +42,23 @@ import {
   StorageLocationConflict_StorageLocationFragmentDoc,
   StorageLocationForConflictDocument,
 } from './storageLocationConflict.generated';
+import { bindLocalWrite } from '#apollo/pendingWrites/bindLocalWrite';
+import {
+  CreateStorageLocationDocument,
+  DeleteStorageLocationDocument,
+  MarkStorageLocationAsDefaultDocument,
+  UpdateStorageLocationDocument,
+} from '#features/catalog/graphql/storageLocation.generated';
+import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
+import {
+  AddUsualStoreDocument,
+  RemoveUsualStoreDocument,
+  UpdateUsualStoreDocument,
+} from '#features/catalog/hooks/useUsualStoreWrites.generated';
+import {
+  MarkSuggestionActiveDocument,
+  MarkSuggestionDismissedDocument,
+} from '#operations/item/item.generated';
 
 const locationRef = (id: string) => ({ __typename: 'StorageLocation', id });
 
@@ -263,3 +280,45 @@ export const undoDismissal: LocalWrite<UndoDismissalInputs> = {
   // The answer states no list.
   commit: returnSuggestion,
 };
+
+// Each document this feature sends as a local write, bound to its write.
+export const createStorageLocationWrite = bindLocalWrite(
+  CreateStorageLocationDocument,
+  createLocation,
+);
+export const updateStorageLocationWrite = bindLocalWrite(
+  UpdateStorageLocationDocument,
+  updateLocation,
+);
+export const markStorageLocationAsDefaultWrite = bindLocalWrite(
+  MarkStorageLocationAsDefaultDocument,
+  locationFields,
+);
+export const deleteStorageLocationWrite = bindLocalWrite(
+  DeleteStorageLocationDocument,
+  removeLocation,
+);
+export const createStoreWrite = bindLocalWrite(
+  CreateStoreDocument,
+  createStore,
+);
+export const addUsualStoreWrite = bindLocalWrite(
+  AddUsualStoreDocument,
+  addUsualStore,
+);
+export const updateUsualStoreWrite = bindLocalWrite(
+  UpdateUsualStoreDocument,
+  pinUsualStore,
+);
+export const removeUsualStoreWrite = bindLocalWrite(
+  RemoveUsualStoreDocument,
+  removeUsualStore,
+);
+export const markSuggestionDismissedWrite = bindLocalWrite(
+  MarkSuggestionDismissedDocument,
+  dismissSuggestion,
+);
+export const markSuggestionActiveWrite = bindLocalWrite(
+  MarkSuggestionActiveDocument,
+  undoDismissal,
+);

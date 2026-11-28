@@ -2,11 +2,11 @@ import type { RefObject } from 'react';
 import { useToday } from '#hooks/app/useToday';
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { MEAL_PLAN_TYPE_LABEL_KEYS } from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
-import { formatDateRange } from '#/utils/formatters/date';
+import { formatDateRange } from '#utils/formatters/date';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import type {
@@ -109,7 +109,7 @@ export function useMealPlanSelectorConfig(
             {` · ${item.home?.name ?? personalLabel}`}
           </Text>
         </View>
-        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
+        {!!isSelected && <Icon name="checkmark" size="sm" tone="primary" />}
       </SelectorItemContainer>
     );
   };

@@ -11,8 +11,8 @@
 // authService.register.test.ts).
 
 import { ApolloClient, ApolloLink } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
 
 const client = new ApolloClient({
   cache: makeCache(),
@@ -25,7 +25,7 @@ const mockCache = {
   evict: jest.spyOn(client.cache, 'evict').mockReturnValue(true),
   gc: jest.spyOn(client.cache, 'gc').mockReturnValue([]),
 };
-jest.mock('#/apollo/client', () => ({
+jest.mock('#apollo/client', () => ({
   restorePersistedCache: jest.fn(),
   flushCachePersistence: jest.fn(),
 }));
@@ -48,7 +48,7 @@ jest.mock('#native/deviceInfo', () => ({
 }));
 
 const mockPermissionCheck = jest.fn().mockResolvedValue('granted');
-jest.mock('#/services/permissions/PermissionService', () => ({
+jest.mock('#services/permissions/PermissionService', () => ({
   PermissionService: { check: (...a: unknown[]) => mockPermissionCheck(...a) },
 }));
 
@@ -59,7 +59,7 @@ const mockOnRefresh = jest.fn<
   typeof mockUnsubscribe,
   [((token: string) => void)?]
 >(() => mockUnsubscribe);
-jest.mock('#/services/push/pushTokenProvider', () => ({
+jest.mock('#services/push/pushTokenProvider', () => ({
   acquirePushToken: () => mockAcquireToken(),
   getPushTokenProvider: () => ({ getToken: () => mockGetToken() }),
   onPushTokenRefresh: (listener: (token: string) => void) =>
@@ -68,18 +68,18 @@ jest.mock('#/services/push/pushTokenProvider', () => ({
 
 const mockPerformLogoutCleanup = jest.fn().mockResolvedValue(undefined);
 const mockCompleteLogout = jest.fn();
-jest.mock('#/apollo/logoutCleanup', () => ({
+jest.mock('#apollo/logoutCleanup', () => ({
   LogoutCleanup: {
     performLogoutCleanup: (...a: unknown[]) => mockPerformLogoutCleanup(...a),
     completeLogout: (...a: unknown[]) => mockCompleteLogout(...a),
   },
 }));
 
-jest.mock('#/apollo/offlineQueue/queueManager', () => ({
+jest.mock('#apollo/offlineQueue/queueManager', () => ({
   queueManager: { onLogout: jest.fn(), onUserChange: jest.fn() },
 }));
 
-jest.mock('#/services/auth/deviceId');
+jest.mock('#services/auth/deviceId');
 
 jest.mock('#native/storage/keychain', () => ({
   removeBiometricCredentials: jest.fn().mockResolvedValue(true),
@@ -87,20 +87,20 @@ jest.mock('#native/storage/keychain', () => ({
 
 import type { RootState } from '#store';
 import { createResetManager } from '#store/resetManager';
-import { registerApolloClient } from '#/apollo/clientRegistry';
-import { authService } from '#/services/authService';
-import { biometricService } from '#/services/biometric/deviceCredential';
-import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
-import { registerMobileSessionHost } from '#/app/mobileSessionHost';
-import { logger } from '#/utils/environment';
+import { registerApolloClient } from '#apollo/clientRegistry';
+import { authService } from '#services/authService';
+import { biometricService } from '#services/biometric/deviceCredential';
+import { registerDeviceInBackground } from '#services/device/deviceRegistration';
+import { registerMobileSessionHost } from '#app/mobileSessionHost';
+import { logger } from '#utils/environment';
 import {
   clearRegisteredLocale,
   ensureDeviceId,
   recordRegisteredLocale,
-} from '#/services/auth/deviceId';
-import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
+} from '#services/auth/deviceId';
+import { MOCK_DEVICE_ID } from '#services/auth/__mocks__/deviceId';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
-import * as backoff from '#/utils/backoff';
+import * as backoff from '#utils/backoff';
 
 // A sign-out revokes and drops the slot through the step the app registers.
 registerMobileSessionHost();

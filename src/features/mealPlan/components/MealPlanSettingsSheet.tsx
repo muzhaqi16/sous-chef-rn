@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { View } from 'react-native';
-import { useMoney } from '#/domain/money';
-import { useTranslation } from '#/i18n';
+import { useMoney } from '#domain/money';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO } from 'date-fns';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { NutritionSummaryCard } from './NutritionSummaryCard';
 import { Icon } from '#components/atoms/Icon';
 import { useFragment } from '@apollo/client/react';
@@ -19,12 +19,12 @@ import type { MealPlanPermissions } from '#features/mealPlan/utils/mealPlanPermi
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { Text } from '#components/atoms/Text';
-import { formatDateRangeWithYear } from '#/utils/formatters/date';
+import { formatDateRangeWithYear } from '#utils/formatters/date';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
-import { personName } from '#/utils/formatters/memberFormatters';
+import { destructiveConfirm } from '#services/destructiveConfirm';
+import { personName } from '#utils/formatters/memberFormatters';
 
 interface MealPlanSettingsSheetProps {
   visible: boolean;
@@ -63,7 +63,7 @@ function ActionItem({
     >
       <Icon
         name={icon}
-        size={22}
+        size="md"
         tone={destructive ? 'danger' : 'textPrimary'}
       />
       <View style={actionStyles.content}>
@@ -80,7 +80,7 @@ function ActionItem({
           </Text>
         )}
       </View>
-      <Icon name="chevron-forward" size={18} tone="textTertiary" />
+      <Icon name="chevron-forward" size="xsPlus" tone="textTertiary" />
     </AppPressable>
   );
 }
@@ -186,11 +186,9 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
       contentContainerStyle={styles.contentContainer}
       style={styles.scrollView}
       header={
-        <BottomSheetHeader
+        <SheetHeader
           title={t('mealPlanSettings.planSettings')}
-          onCancel={onClose}
-          onConfirm={onClose}
-          confirmLabel={t('labels.done')}
+          onClose={onClose}
         />
       }
     >
@@ -229,7 +227,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
         <SectionHeader variant="overline">
           {t('mealPlanSettings.actionsLabel')}
         </SectionHeader>
-        <View style={styles.actionsCard}>
+        <View>
           {permissions.canSaveAsTemplate ? (
             <>
               <ActionItem
@@ -241,7 +239,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
                   onSaveAsTemplate();
                 }}
               />
-              <Divider style={styles.dividerGap} />
+              <Divider />
             </>
           ) : null}
           {permissions.canDuplicate ? (
@@ -255,7 +253,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
                   onDuplicate();
                 }}
               />
-              <Divider style={styles.dividerGap} />
+              <Divider />
             </>
           ) : null}
           <ActionItem
@@ -270,7 +268,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           />
           {!!dietaryProfile && (
             <>
-              <Divider style={styles.dividerGap} />
+              <Divider />
               <ActionItem
                 icon="fitness-outline"
                 label={
@@ -302,10 +300,10 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           <SectionHeader variant="overline">
             {t('mealPlanSettings.generatedLists')}
           </SectionHeader>
-          <View style={styles.actionsCard}>
+          <View>
             {generatedLists.map(list => (
               <View key={list.id} style={styles.listRow}>
-                <Icon name="list-outline" size={18} tone="textSecondary" />
+                <Icon name="list-outline" size="xsPlus" tone="textSecondary" />
                 <Text role="caption" style={styles.listName}>
                   {list.name}
                 </Text>
@@ -321,7 +319,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           <SectionHeader variant="overline">
             {t('labels.dangerZone')}
           </SectionHeader>
-          <View style={styles.actionsCard}>
+          <View>
             <ActionItem
               icon="trash-outline"
               label={
@@ -346,14 +344,11 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   contentContainer: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.lg,
   },
   planInfo: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.xs,
   },
   planDate: {
@@ -362,27 +357,14 @@ const styles = StyleSheet.create(theme => ({
   section: {
     gap: theme.spacing.sm,
   },
-  actionsCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-  },
-  dividerGap: {
-    marginHorizontal: theme.spacing.md,
-  },
   nutritionContainer: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
   },
   listName: {
     flex: 1,
@@ -394,7 +376,6 @@ const actionStyles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.md,
   },
   content: {

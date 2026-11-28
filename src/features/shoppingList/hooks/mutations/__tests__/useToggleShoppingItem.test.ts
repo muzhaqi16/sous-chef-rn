@@ -1,9 +1,9 @@
 import { act } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { makeCache } from '#apollo/cache';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import { cacheShows } from '#/test-utils/cacheWaits';
 import {
   type MockDataFor,

@@ -1,14 +1,14 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Screen } from '#components/templates/Screen';
 import { SkeletonCircle } from '#components/atoms/Skeleton/SkeletonCircle';
 import { SkeletonLine } from '#components/atoms/Skeleton/SkeletonLine';
 
 const AVATAR_SIZE = 80; // matches ProfileHero.AVATAR_SIZE
 
-// Mirrors `PROFILE_SETTINGS_CONFIG` in `src/config/settingsConfig.ts`, minus the
+// Mirrors `PROFILE_SETTINGS_CONFIG` in `screens/settingsConfig.ts`, minus the
 // Developer section that `Environment.shouldEnableDebugFeatures()` gates out.
 const SECTION_ROWS: readonly number[] = [
   1, // Personal Information

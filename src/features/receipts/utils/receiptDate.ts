@@ -1,5 +1,5 @@
 import { isWithinInterval, subDays } from 'date-fns';
-import { dayAsInstant, fromDateKey } from '#/utils/dateUtils';
+import { dayAsInstant, fromDateKey } from '#utils/dateUtils';
 
 // US receipts print the month first, `09/30/26 14:22` or `9/30/2026`; most
 // others the day first, `30/09/2026`; a few print ISO.

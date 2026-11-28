@@ -1,37 +1,32 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import {
   AcquisitionMethod,
   ErrorCode,
   type CreateReceiptCheckInInput,
   type ReceiptCheckInLineInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { ShoppingListItemNode } from '#features/shoppingList/hooks/usePaginatedShoppingItems';
-import type { NewUsualStore } from '#features/catalog/cache/usualStores';
-import { localIntakeRow } from '#features/pantry/cache/localIntake';
-import { localMoveRow } from '#features/shoppingList/cache/localMove';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation, type Settled } from '#/apollo/utils/settleMutation';
-import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { todayKey } from '#/utils/dateUtils';
-import { errorService } from '#/services/errorService';
-import { toastService } from '#/services/toastService';
-import { Telemetry } from '#/services/telemetry';
-import { useTranslation } from '#/i18n';
+import type { NewUsualStore } from '#entities/store/usualStores';
+import { localIntakeRow } from '#entities/pantryItem/localIntake';
+import { localMoveRow } from '#entities/shoppingList/localMove';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { askForReviewAfterSuccess } from '#domain/reviewPrompt';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { todayKey } from '#utils/dateUtils';
+import { errorService } from '#services/errorService';
+import { toastService } from '#services/toastService';
+import { Telemetry } from '#services/telemetry';
+import { useTranslation } from '#i18n';
 import { useReceiptDraftActions } from '../store/receiptDraftStore';
-import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
+import type { LocalPantryItem } from '#entities/pantryItem/writeLocalPantryItem';
 import type { CheckInInputs, LocalCheckInLine } from '../offline/localWrites';
 import {
   receiptLineOutcomes,
   settleReceiptCheckIn,
   type CheckInLineResult,
 } from '../offline/receiptCheckIn';
-import {
-  CreateReceiptCheckInDocument,
-  type CreateReceiptCheckInMutation,
-} from './useReceiptCheckIn.generated';
-import { cappedNames } from '#/utils/cappedNames';
+import { cappedNames } from '#utils/cappedNames';
+import { createReceiptCheckInWrite } from '#features/receipts/offline/localWrites';
 
 /** The API's cap on one check-in: a longer receipt goes as several. */
 export const LINES_PER_CHECK_IN = 100;
@@ -162,18 +157,6 @@ const localLines = (
   });
 };
 
-const markLines = (lines: readonly CheckInLineToSend[]) => {
-  for (const { input } of lines) {
-    if (input.pantryItemId) unconfirmedCreates.mark(input.pantryItemId);
-  }
-};
-
-const releaseLines = (lines: readonly CheckInLineToSend[]) => {
-  for (const { input } of lines) {
-    if (input.pantryItemId) unconfirmedCreates.confirm(input.pantryItemId);
-  }
-};
-
 /**
  * Records a confirmed receipt in one call per 100 lines. Each line shows in the
  * pantry and list before its call fires and while it is queued, as a pending
@@ -185,8 +168,9 @@ export function useReceiptCheckIn(listId: string | undefined) {
   const client = useApolloClient();
   const { setCheckInState, remintCheckInId, markAdded, markUnsent } =
     useReceiptDraftActions();
-  const [createCheckIn] = useMutation(CreateReceiptCheckInDocument, {
-    context: { localFirst: true },
+  const createCheckIn = useLocalWrite(createReceiptCheckInWrite, {
+    fallback: t('errors.addItemFailedRetry'),
+    present: 'none',
   });
 
   // Names the refused lines and, when one code accounts for all of them, its
@@ -263,37 +247,18 @@ export function useReceiptCheckIn(listId: string | undefined) {
       lines: localLines(receipt.pantryId, lines),
       now: new Date().toISOString(),
     };
-    markLines(lines);
-    const settled = pendingWritesOf(client.cache).send<
-      CreateReceiptCheckInMutation,
-      { input: typeof input; today: string }
-    >(
-      CreateReceiptCheckInDocument,
-      { input, today },
-      async (write): Promise<Settled<CreateReceiptCheckInMutation>> => {
+    const settled = createCheckIn.send({ input, today }, inputs, {
+      ready: async (write, amend) => {
         const placed = await turn;
-        if (!placed) return { status: 'failed', data: undefined };
+        if (!placed) return null;
         const { newStore, ...store } = placed;
-        if (newStore) {
-          pendingWritesOf(client.cache).amend(write.context.pendingWriteId, {
-            newStore,
-          });
-        }
-        return settleMutation(
-          () =>
-            createCheckIn({
-              ...write,
-              variables: { ...write.variables, input: { ...input, ...store } },
-            }),
-          {
-            document: CreateReceiptCheckInDocument,
-            fallback: t('errors.addItemFailedRetry'),
-            present: 'none',
-          },
-        );
+        if (newStore) amend({ newStore });
+        return {
+          ...write,
+          variables: { ...write.variables, input: { ...input, ...store } },
+        };
       },
-      inputs,
-    );
+    });
     return { input, settled };
   };
 
@@ -359,7 +324,6 @@ export function useReceiptCheckIn(listId: string | undefined) {
         input = retried.input;
         settled = await retried.settled;
       }
-      releaseLines(chunk);
       if (settled.status === 'queued') {
         queued = true;
         continue;
@@ -381,7 +345,6 @@ export function useReceiptCheckIn(listId: string | undefined) {
         for (const later of unsent) {
           later.open(null);
           await later.sent.settled;
-          releaseLines(later.chunk);
         }
         markUnsent(
           unsent.flatMap(later => later.chunk.map(line => line.index)),

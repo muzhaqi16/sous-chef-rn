@@ -2,8 +2,9 @@
 import React from 'react';
 import { GraphQLError } from 'graphql';
 import { act, screen, userEvent } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
-import { t } from '#/i18n';
+import type { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#apollo/cache';
+import { t } from '#i18n';
 import {
   renderWithApollo,
   type MockDataFor,
@@ -16,21 +17,18 @@ import {
   NotificationStatus,
   NotificationType,
   Priority,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   UseNotificationsOnLaunch_NotificationFragmentDoc,
   type UseNotificationsOnLaunch_NotificationFragment,
 } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
-import {
-  toDisplayNotification,
-  type DisplayNotification,
-} from '#features/notifications/utils/toDisplayNotification';
+import { NotificationDetailDocument } from '#features/notifications/hooks/useNotificationDetail.generated';
 import { RecommendedRecipeDocument } from '#features/recipes/ui/useRecommendedRecipes.generated';
 import { NotificationDetailScreen } from '../NotificationDetailScreen';
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
 const mockToRecipeDetail = jest.fn();
@@ -103,8 +101,30 @@ const makeNotification = (
   type: NotificationType,
   data: ServerRow['data'],
   server: { title: string; message: string },
-): DisplayNotification =>
-  toDisplayNotification(serverRow({ type, data, ...server }));
+): ServerRow => serverRow({ type, data, ...server });
+
+/**
+ * The feed's row in the cache, and the screen opened on its id alone, as a
+ * push and the list both open it.
+ */
+const openOn = (
+  row: ServerRow,
+  options: {
+    cache?: InMemoryCache;
+    operationMocks?: ReadonlyArray<MockedResponse>;
+  } = {},
+) => {
+  const cache = options.cache ?? makeCache();
+  seedFragment(cache, {
+    fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
+    fragmentName: 'useNotificationsOnLaunch_notification',
+    data: row,
+  });
+  return renderWithApollo(
+    <NotificationDetailScreen route={makeRoute({ id: row.id })} />,
+    { cache, operationMocks: options.operationMocks },
+  );
+};
 
 const milkExpiring: ServerRow['data'] = {
   __typename: 'ExpiryReminderNotificationData',
@@ -125,8 +145,22 @@ afterEach(() => {
 });
 
 describe('NotificationDetailScreen', () => {
-  it('shows error when notification is missing', () => {
-    renderWithApollo(<NotificationDetailScreen route={makeRoute()} />);
+  it('says not found when the server holds no such notification', async () => {
+    renderWithApollo(
+      <NotificationDetailScreen route={makeRoute({ id: 'gone' })} />,
+      {
+        operationMocks: [
+          {
+            request: {
+              query: NotificationDetailDocument,
+              variables: { id: 'gone' },
+            },
+            result: { data: { notification: null } },
+          },
+        ],
+      },
+    );
+    await drainTimers();
     expect(screen.getByText('Notification not found')).toBeTruthy();
   });
 
@@ -140,9 +174,7 @@ describe('NotificationDetailScreen', () => {
       milkExpiring,
       server,
     );
-    renderWithApollo(
-      <NotificationDetailScreen route={makeRoute({ notification })} />,
-    );
+    openOn(notification);
     expect(screen.getByText('Expiry reminder')).toBeTruthy();
     expect(screen.getByText('Milk: Expires tomorrow')).toBeTruthy();
     expect(screen.queryByText(server.title)).toBeNull();
@@ -163,9 +195,7 @@ describe('NotificationDetailScreen', () => {
       },
       server,
     );
-    renderWithApollo(
-      <NotificationDetailScreen route={makeRoute({ notification })} />,
-    );
+    openOn(notification);
     expect(screen.getByText('Low stock')).toBeTruthy();
     expect(screen.getByText('Rice is running low (2 left)')).toBeTruthy();
     expect(screen.queryByText(server.title)).toBeNull();
@@ -182,26 +212,20 @@ describe('NotificationDetailScreen', () => {
       null,
       server,
     );
-    renderWithApollo(
-      <NotificationDetailScreen route={makeRoute({ notification })} />,
-    );
+    openOn(notification);
     expect(screen.getByText('Shopping list updated')).toBeTruthy();
     expect(screen.getByText('A shared shopping list has changes')).toBeTruthy();
     expect(screen.queryByText(server.message)).toBeNull();
   });
 
   it("shows the details an authored row's author attached", () => {
-    const notification = toDisplayNotification(
-      serverRow({
-        isAuthoredContent: true,
-        title: 'Scheduled maintenance',
-        message: 'The app is read-only on Sunday morning.',
-        payload: { details: 'From 6 to 8 AM.' },
-      }),
-    );
-    renderWithApollo(
-      <NotificationDetailScreen route={makeRoute({ notification })} />,
-    );
+    const notification = serverRow({
+      isAuthoredContent: true,
+      title: 'Scheduled maintenance',
+      message: 'The app is read-only on Sunday morning.',
+      payload: { details: 'From 6 to 8 AM.' },
+    });
+    openOn(notification);
     expect(
       screen.getByText('The app is read-only on Sunday morning.'),
     ).toBeTruthy();
@@ -219,27 +243,19 @@ describe('NotificationDetailScreen', () => {
         pantryItemId,
       });
 
-    const openedOn = (row: ServerRow) =>
-      makeRoute({ id: row.id, notification: toDisplayNotification(row) });
-
     it('is offered while the server names the stack', () => {
-      renderWithApollo(
-        <NotificationDetailScreen route={openedOn(reminder('s-1'))} />,
-      );
+      openOn(reminder('s-1'));
       expect(screen.getByText(takeAction)).toBeTruthy();
     });
 
     it('is not offered, and no error is shown, when the server names no stack', () => {
-      renderWithApollo(
-        <NotificationDetailScreen route={openedOn(reminder(null))} />,
-      );
+      openOn(reminder(null));
       expect(screen.getByText('Milk: Expires tomorrow')).toBeTruthy();
       expect(screen.queryByText(takeAction)).toBeNull();
       expect(screen.queryByText(t('notifications.notFound'))).toBeNull();
     });
 
-    // The route carries the row as it was when the screen opened; the cache
-    // carries what the server says now.
+    // The screen reads the row live: what the server says now reaches it.
     it('is withdrawn when the server stops naming the stack while the screen is open', async () => {
       const cache = makeCache();
       const write = (row: ServerRow) =>
@@ -248,11 +264,7 @@ describe('NotificationDetailScreen', () => {
           fragmentName: 'useNotificationsOnLaunch_notification',
           data: row,
         });
-      write(reminder('s-1'));
-      renderWithApollo(
-        <NotificationDetailScreen route={openedOn(reminder('s-1'))} />,
-        { cache },
-      );
+      openOn(reminder('s-1'), { cache });
       expect(screen.getByText(takeAction)).toBeTruthy();
 
       act(() => {
@@ -320,13 +332,7 @@ describe('NotificationDetailScreen', () => {
     };
     const renderRecommendation = (
       operationMocks: ReadonlyArray<MockedResponse>,
-    ) =>
-      renderWithApollo(
-        <NotificationDetailScreen
-          route={makeRoute({ notification: recommendation })}
-        />,
-        { operationMocks },
-      );
+    ) => openOn(recommendation, { operationMocks });
 
     it('lists each recipe as it is now, with the coverage it was recommended with, and opens it', async () => {
       renderRecommendation([

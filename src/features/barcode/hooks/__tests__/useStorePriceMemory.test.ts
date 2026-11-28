@@ -1,5 +1,5 @@
-import { makeCache } from '#/apollo/cache';
-import { t } from '#/i18n';
+import { makeCache } from '#apollo/cache';
+import { t } from '#i18n';
 import {
   recordMock,
   renderHookWithApollo,
@@ -9,9 +9,9 @@ import { drainTimers } from '#/test-utils/drainTimers';
 import {
   PriceBasis,
   PriceComparisonScope,
-} from '#/graphql/generated/schemaTypes';
-import { formatCurrency } from '#/utils/formatters/number';
-import { formatMonthDay } from '#/utils/formatters/date';
+} from '#graphql/generated/schemaTypes';
+import { formatCurrency } from '#utils/formatters/number';
+import { formatMonthDay } from '#utils/formatters/date';
 import {
   HouseholdUsualUnitPriceDocument,
   StorePriceMemoryDocument,

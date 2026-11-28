@@ -1,5 +1,51 @@
 import { readFileSync } from 'fs';
 import { sync as glob } from 'glob';
+import * as ts from 'typescript';
+import { nodesOf, parseSource } from '#/test-utils/sourceAst';
+
+/**
+ * Whether the file reads the gutter token: `….layout.pageGutter`, or
+ * `pageGutter` destructured from `….layout`. A comment naming it is not a read.
+ */
+const readsGutter = (file: string, text?: string): boolean =>
+  nodesOf(parseSource(file, text)).some(node => {
+    if (ts.isPropertyAccessExpression(node)) {
+      return (
+        node.name.text === 'pageGutter' &&
+        /(^|\.)layout$/.test(node.expression.getText())
+      );
+    }
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name)
+    ) {
+      return (
+        !!node.initializer &&
+        /(^|\.)layout$/.test(node.initializer.getText()) &&
+        node.name.elements.some(
+          element =>
+            (element.propertyName ?? element.name).getText() === 'pageGutter',
+        )
+      );
+    }
+    return false;
+  });
+
+/** Whether the file renders a `<Sheet mode="list">`, whose content it insets. */
+const rendersListSheet = (file: string, text?: string): boolean =>
+  nodesOf(parseSource(file, text)).some(
+    node =>
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+      node.tagName.getText() === 'Sheet' &&
+      node.attributes.properties.some(
+        attr =>
+          ts.isJsxAttribute(attr) &&
+          attr.name.getText() === 'mode' &&
+          !!attr.initializer &&
+          ts.isStringLiteral(attr.initializer) &&
+          attr.initializer.text === 'list',
+      ),
+  );
 
 /**
  * The gutter had six authors on the pantry alone, agreeing only because the
@@ -28,10 +74,15 @@ const AUTHORS: Record<string, string> = {
     'list owns its content inset',
   'src/features/catalog/ui/StoreList.tsx':
     'list owns its content inset, its fixed header included',
+  'src/features/notifications/screens/NotificationListScreen.tsx':
+    'list owns its content inset',
 
   // The scaffolds that apply `gutter="page"` for every screen not built on a list.
   'src/components/templates/Screen.tsx': 'the gutter prop itself',
   'src/components/templates/Sheet.tsx': 'the gutter prop itself',
+  // The tray is a sheet built on its own: its header, body and footer are the page.
+  'src/components/templates/ActionTray/ActionTray.tsx':
+    'the tray is its own sheet container',
 
   // The collapsing-hero detail screens' content card.
   'src/components/templates/CollapsingHeroDetail.tsx':
@@ -61,6 +112,40 @@ const AUTHORS: Record<string, string> = {
     'insets its bare children',
   'src/features/shoppingList/components/ShoppingListMainContent.tsx':
     'insets its bare children',
+  'src/features/pantry/screens/PantryAnalytics.tsx': 'insets its bare children',
+
+  // A list sheet's content takes no gutter, so its header and its list's
+  // content insets itself, as a page list does.
+  'src/features/mealPlan/components/AddMealSheet.tsx': 'list sheet, self-inset',
+  'src/features/mealPlan/components/TemplateBrowserSheet.tsx':
+    'list sheet, self-inset',
+  'src/features/recipes/components/modals/IngredientMatchingSheet.tsx':
+    'list sheet, self-inset',
+  'src/features/recipes/components/TagPicker.tsx': 'list sheet, self-inset',
+  'src/features/recipes/components/FolderPicker.tsx': 'list sheet, self-inset',
+  'src/features/recipes/components/recipeSearch/IngredientSelectorSheet.tsx':
+    'list sheet, self-inset',
+  'src/components/organisms/MultiSelectChipSheet/MultiSelectChipSheet.tsx':
+    'list sheet, self-inset',
+  'src/features/catalog/ui/AddItemSheet/AddItemSheet.tsx':
+    'list sheet, self-inset',
+  'src/features/catalog/components/BottomSheetAutocompleteInput.tsx':
+    'list sheet, self-inset',
+  // The Add Item sheet's steps: each scrolls itself inside that list sheet.
+  'src/features/catalog/ui/AddItemSheet/SuggestionDrilldown.tsx':
+    'a step of a list sheet, self-inset',
+  'src/features/catalog/ui/ReportItemForm/ReportItemForm.tsx':
+    'a step of a list sheet, self-inset',
+  'src/features/shoppingList/components/AddToShoppingListSheet/ShoppingListDetailsStep.tsx':
+    'a step of a list sheet, self-inset',
+  'src/features/pantry/components/modals/AddToPantrySheet/detailsPageStyles.ts':
+    'the pages of a list sheet step, self-inset',
+  // The autocomplete sheet's rows are full-width cells, shared with the inline
+  // dropdown: the cell, not the list, holds the text on the gutter.
+  'src/features/catalog/components/AutocompleteField/AutocompleteRow.tsx':
+    'full-width cell of a list sheet',
+  'src/features/catalog/components/AutocompleteField/AutocompleteField.tsx':
+    'full-width cell of a list sheet',
 
   // One host, which does not inset it.
   'src/features/shoppingList/components/ShoppingListTabs/FilterTabBar.tsx':
@@ -73,6 +158,8 @@ const AUTHORS: Record<string, string> = {
     'skeleton list, overlaid on a padded list it is not inside',
   'src/features/mealPlan/components/skeletons/MealPlanSkeleton.tsx':
     'single host, self-inset',
+  'src/features/pantry/components/analytics/DateRangeFilter.tsx':
+    'single host, self-inset',
   'src/features/recipes/components/skeletons/RecipeSkeleton.tsx':
     'its own scroll view, a sibling of the list; an outer inset clips its shadows',
   'src/features/notifications/components/NotificationFilters.tsx':
@@ -82,11 +169,28 @@ const AUTHORS: Record<string, string> = {
 /**
  * Shared components that carry NO inset of their own, and the render sites that
  * therefore have to supply one. Derived from the tree rather than listed, so a
- * new host cannot ship flush to the screen edge — which is what
- * `NotificationFilters` and `SavedRecipes` did when `FilterTabs` gave its own
- * inset up.
+ * new host cannot ship flush to the screen edge, as `NotificationFilters` and
+ * `SavedRecipes` once did.
  */
-const GUTTERLESS = ['FilterTabs'];
+const GUTTERLESS = ['ChipScrollRow'];
+
+/** A host that sits inside a container already supplying the inset, and which. */
+const HOST_INHERITS_AN_INSET: Record<string, string> = {
+  'src/features/mealPlan/components/AddToMealPlanSheet/AddToMealPlanSheet.tsx':
+    'a form Sheet, whose content takes the page gutter',
+  'src/features/mealPlan/components/SaveAsTemplateSheet.tsx':
+    'a form Sheet, whose content takes the page gutter',
+  'src/features/pantry/components/StockCheckSheet.tsx':
+    'a form Sheet, whose content takes the page gutter',
+  'src/features/receipts/components/ReceiptLineSheet.tsx':
+    'a form Sheet, whose content takes the page gutter',
+  'src/features/pantry/components/form/StorageDetailsSection.tsx':
+    'PantryItemForm\'s FormScreen, a gutter="page" screen',
+  'src/features/shoppingList/components/ShareInviteSection.tsx':
+    'ShareList, a gutter="page" SubScreen',
+  'src/features/recipes/components/IngredientMatchRow.tsx':
+    'IngredientMatchingSheet, whose body insets itself',
+};
 
 /**
  * A skeleton list that INHERITS its inset, and the padded container it sits in.
@@ -115,13 +219,54 @@ const SKELETON_INHERITS_AN_INSET: Record<string, string> = {
 const SUPPLIES_AN_INSET =
   /layout\.pageGutter|gutter="page"|[sS]tyles\d*\.gutter/;
 
-const sources = glob('src/**/*.{ts,tsx}', { ignore: ['**/*.generated.ts'] });
+// A test that asserts the gutter authors no edge.
+const sources = glob('src/**/*.{ts,tsx}', {
+  ignore: ['**/*.generated.ts', '**/__tests__/**'],
+});
 
 describe('the page gutter has one author per page', () => {
-  it('is read only by a page container, its chrome, or a deliberate negation', () => {
-    const readers = sources.filter(f =>
-      readFileSync(f, 'utf8').includes('layout.pageGutter'),
+  it('sees a destructured read, and no read in a comment', () => {
+    expect(
+      readsGutter('planted.ts', 'const { pageGutter } = theme.layout;'),
+    ).toBe(true);
+    expect(
+      readsGutter('planted.ts', '// theme.layout.pageGutter, by the screen'),
+    ).toBe(false);
+  });
+
+  it('sees a list sheet by its mode, whatever else the tag carries', () => {
+    expect(
+      rendersListSheet(
+        'planted.tsx',
+        '<Sheet visible={open} mode="list" onDismiss={() => close()} />',
+      ),
+    ).toBe(true);
+    expect(rendersListSheet('planted.tsx', '<Sheet mode="form" />')).toBe(
+      false,
     );
+
+    const offGutter = [
+      '<Sheet mode="list"><View style={styles.body} /></Sheet>;',
+      'const styles = { body: { paddingHorizontal: theme.spacing.md } };',
+    ].join('\n');
+    expect(rendersListSheet('planted.tsx', offGutter)).toBe(true);
+    expect(readsGutter('planted.tsx', offGutter)).toBe(false);
+  });
+
+  // `Sheet` insets a view, form or action sheet's content; a list's content
+  // scrolls itself, so the host insets its header and its list's content,
+  // and the whole width scrolls the list rather than dragging the sheet.
+  it('is read by every list sheet', () => {
+    const listSheets = sources.filter(
+      f => f.endsWith('.tsx') && rendersListSheet(f),
+    );
+
+    expect(listSheets.length).toBeGreaterThan(0);
+    expect(listSheets.filter(f => !readsGutter(f)).sort()).toEqual([]);
+  });
+
+  it('is read only by a page container, its chrome, or a deliberate negation', () => {
+    const readers = sources.filter(f => readsGutter(f));
     const unlisted = readers.filter(f => !(f in AUTHORS)).sort();
 
     // A new reader is a new author of an edge. Add it to AUTHORS with the
@@ -133,7 +278,7 @@ describe('the page gutter has one author per page', () => {
     const stale = Object.keys(AUTHORS)
       .filter(f => {
         try {
-          return !readFileSync(f, 'utf8').includes('layout.pageGutter');
+          return !readsGutter(f);
         } catch {
           return true;
         }
@@ -173,6 +318,7 @@ describe('the page gutter has one author per page', () => {
 
       const bare = hosts
         .filter(f => !SUPPLIES_AN_INSET.test(readFileSync(f, 'utf8')))
+        .filter(f => !(f in HOST_INHERITS_AN_INSET))
         .sort();
 
       expect(bare).toEqual([]);
@@ -192,7 +338,7 @@ describe('the page gutter has one author per page', () => {
     expect(skeletonLists.length).toBeGreaterThan(0);
 
     const flush = skeletonLists
-      .filter(f => !readFileSync(f, 'utf8').includes('layout.pageGutter'))
+      .filter(f => !readsGutter(f))
       .filter(f => !(f in SKELETON_INHERITS_AN_INSET))
       .sort();
 
@@ -203,7 +349,7 @@ describe('the page gutter has one author per page', () => {
     const doubled = Object.keys(SKELETON_INHERITS_AN_INSET)
       .filter(f => {
         try {
-          return readFileSync(f, 'utf8').includes('layout.pageGutter');
+          return readsGutter(f);
         } catch {
           return true;
         }
@@ -223,5 +369,88 @@ describe('the page gutter has one author per page', () => {
     // author of an edge the list already owns.
     expect(body).not.toMatch(/\b(margin|padding)Horizontal\b/);
     expect(body).not.toMatch(/\b(margin|padding)(Left|Right|Start|End)\b/);
+  });
+
+  // A `view`, `form` or `action` sheet takes the gutter from `Sheet`; its host
+  // pads only the content's top and bottom.
+  describe('in a sheet', () => {
+    /** The hand insets a source's sheets give their content's sides. */
+    const sheetSideInsets = (src: string): string[] =>
+      [...src.matchAll(/<Sheet\b([\s\S]*?)>/g)].flatMap(([, tag = '']) => {
+        const mode = /mode="(\w+)"/.exec(tag)?.[1] ?? 'view';
+        if (mode === 'list' || /gutter="none"/.test(tag)) return [];
+        const style = /contentContainerStyle=\{([^}]*)\}/.exec(tag)?.[1] ?? '';
+        return [...style.matchAll(/styles\.(\w+)/g)].flatMap(([, name]) => {
+          const block = new RegExp(`\n  ${name}: \\{([\\s\\S]*?)\n  \\}`).exec(
+            src,
+          )?.[1];
+          return block && /\bpadding(Horizontal|Left|Right)?:/.test(block)
+            ? [name ?? '']
+            : [];
+        });
+      });
+
+    it('catches a host padding its sides by hand', () => {
+      const planted = [
+        '<Sheet mode="form" contentContainerStyle={styles.content}>',
+        'const styles = StyleSheet.create(theme => ({',
+        '  content: {',
+        '    paddingHorizontal: theme.spacing.md,',
+        '  },',
+        '}));',
+      ].join('\n');
+
+      expect(sheetSideInsets(planted)).toEqual(['content']);
+    });
+
+    /**
+     * A sheet is `surface`: a card filled with it and drawing no edge cannot be
+     * seen, and its padding reads as content set in off the gutter.
+     */
+    const unseenCards = (src: string): string[] =>
+      [...src.matchAll(/\n {2}(\w+): \{([\s\S]*?)\n {2}\}/g)]
+        .filter(
+          ([, , body = '']) =>
+            /backgroundColor: theme\.colors\.surface,/.test(body) &&
+            !/\bborder(Width|Color)\b/.test(body),
+        )
+        .map(([, name = '']) => name);
+
+    it('catches a card the sheet hides', () => {
+      const planted = [
+        '<Sheet mode="action">',
+        'const styles = StyleSheet.create(theme => ({',
+        '  card: {',
+        '    backgroundColor: theme.colors.surface,',
+        '    padding: theme.spacing.md,',
+        '  },',
+        '  field: {',
+        '    backgroundColor: theme.colors.surface,',
+        '    borderWidth: theme.borderWidth.hairline,',
+        '  },',
+        '}));',
+      ].join('\n');
+
+      expect(unseenCards(planted)).toEqual(['card']);
+    });
+
+    it('fills nothing with the sheet’s own colour in any host', () => {
+      const unseen = sources
+        .filter(f => f.endsWith('.tsx') && !f.includes('__tests__'))
+        .filter(f => /<Sheet\b/.test(readFileSync(f, 'utf8')))
+        .filter(f => unseenCards(readFileSync(f, 'utf8')).length > 0)
+        .sort();
+
+      expect(unseen).toEqual([]);
+    });
+
+    it('leaves the sides to the sheet in every host', () => {
+      const padded = sources
+        .filter(f => f.endsWith('.tsx') && !f.includes('__tests__'))
+        .filter(f => sheetSideInsets(readFileSync(f, 'utf8')).length > 0)
+        .sort();
+
+      expect(padded).toEqual([]);
+    });
   });
 });

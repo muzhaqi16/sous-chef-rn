@@ -1,11 +1,11 @@
 import { gql, type InMemoryCache } from '@apollo/client';
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   ErrorCode,
   MealPlanType,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   holdMock,
   recordMock,
@@ -23,11 +23,11 @@ import {
   DeleteMealPlanDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
-import type { CreateMealPlanInput } from '#/graphql/generated/schemaTypes';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import type { CreateMealPlanInput } from '#graphql/generated/schemaTypes';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import { writeLocalMealPlan } from '#features/mealPlan/cache/mealPlan';
-import { alertService } from '#/services/alertService';
-import { t } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { t } from '#i18n';
 import { useMealPlan } from '#features/mealPlan/screens/useMealPlan';
 import { useMealPlanActions } from '../useMealPlanActions';
 

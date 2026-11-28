@@ -1,7 +1,9 @@
 name: 'Setup dependencies + GraphQL codegen'
 description: |
   Restores cached node_modules (keyed on package-lock.json) and the generated
-  GraphQL files (keyed on the .graphql sources + schema + codegen config).
+  GraphQL files (keyed on every input of `npm run codegen`: the operation
+  documents, the schema, the codegen configs, the generator scripts and the
+  modules they load, and the package manifests that pin the plugins).
   Runs `npm ci` and `npm run codegen` only on cache miss.
 
   Caller is responsible for `actions/checkout` and `actions/setup-node` —
@@ -31,7 +33,10 @@ runs:
           !src/config/env.generated.ts
           src/graphql/generated/schemaTypes.ts
           src/graphql/generated/fragmentMatcher.json
-        key: ${{ runner.os }}-codegen-${{ hashFiles('src/**/*.graphql', 'src/graphql/generated/schema.graphql', 'codegen.ts', 'scripts/lib/mutationDocumentsPlugin.js') }}
+        # Every input of `npm run codegen`, its generator scripts and what they
+        # load included: a generator change with its outputs restored from cache
+        # reads as stale. `codegenCacheKeyCoversInputs.test.ts` holds this list.
+        key: ${{ runner.os }}-codegen-${{ hashFiles('src/**/*.graphql', 'src/graphql/generated/schema.graphql', 'codegen*.ts', 'scripts/lib/**', 'scripts/generate-*.mjs', 'package-lock.json', 'package.json') }}
 
     - name: Generate GraphQL types
       if: steps.cache-codegen.outputs.cache-hit != 'true'

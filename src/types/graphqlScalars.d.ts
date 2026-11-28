@@ -1,7 +1,7 @@
 /**
  * Custom GraphQL scalars, referenced by NAME from `codegen.ts`'s `scalars` map.
  * Global ambient types so generated code needs no import — which sidesteps the
- * `module#Type` codegen syntax colliding with the `#/` path alias. This file is
+ * `module#Type` codegen syntax colliding with the `#` path aliases. This file is
  * intentionally NOT a module, so the declarations stay global.
  */
 

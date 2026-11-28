@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+import { useTranslation } from '#i18n';
+import type { Translate } from '#i18n/types';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#components/atoms/Icon';
 import { Reveal } from '#components/atoms/Reveal';

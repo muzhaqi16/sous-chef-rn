@@ -5,14 +5,14 @@ import {
   recordMock,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   AddItemToShoppingListDocument,
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { toastService } from '#services/toastService';
 import { AddToShoppingListSheet } from '../AddToShoppingListSheet';
 
 jest.mock('#hooks/navigation/useAppNavigation');
@@ -26,8 +26,8 @@ jest.mock('#features/shoppingList/hooks/useShoppingListSuggestions', () => ({
   })),
 }));
 
-jest.mock('#features/catalog/ui/AddItemSheet/useAddItemSheetState', () => ({
-  useAddItemSheetState: jest.fn(() => ({ shouldFetch: true })),
+jest.mock('#features/catalog/ui/AddItemSheet/useDeferredSheetFetch', () => ({
+  useDeferredSheetFetch: jest.fn(() => true),
 }));
 
 jest.mock('../ShoppingListDetailsStep', () => ({

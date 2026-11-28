@@ -1,7 +1,7 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useEffect, useRef, useState, useImperativeHandle } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +11,9 @@ import { getScrollClearancePadding } from '#constants/layout';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import { PREFERENCE_DEFAULTS } from '#store/slices/preferenceTypes';
 import { SearchBar } from '#components/molecules/SearchBar';
-import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
+import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
+import { IconButton } from '#components/atoms/IconButton';
+import { kitTestIDs } from '#components/testIDs';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { PantrySortModal, sortOptionLabelKey } from './PantrySortModal';
 import {
@@ -289,20 +291,12 @@ export const PantryContent = React.forwardRef<
     };
 
     const resolvedTabs = tabs ?? getDefaultPantryTabs(t);
-
-    const tabsWithAddButton = (() => {
-      if (!onAddLocation) return resolvedTabs;
-      return [
-        ...resolvedTabs,
-        {
-          id: '__add__' as LocationFilter,
-          label: '',
-          icon: 'add',
-          onPress: onAddLocation,
-          isAction: true,
-        },
-      ];
-    })();
+    // A failed read holds no items: its zeros are unknown, not counts.
+    const locationOptions = resolvedTabs.map(option => ({
+      ...option,
+      ...(itemsFailure ? undefined : { count: locationCounts[option.key] }),
+      testID: kitTestIDs.filterTab(pantryTestIDs.locationTabPrefix, option.key),
+    }));
 
     // `locationFilter` is deliberately absent: no item cell renders anything
     // derived from it, and including it re-renders every mounted cell on a tab
@@ -352,16 +346,29 @@ export const PantryContent = React.forwardRef<
               }}
             />
             <View style={styles.tabs}>
-              <FilterTabs<LocationFilter>
-                tabs={tabsWithAddButton}
-                activeTabId={locationFilter}
-                onTabChange={handleLocationFilterChange}
-                // A failed read holds no items: its zeros are unknown, not counts.
-                counts={itemsFailure ? undefined : locationCounts}
-                testIDPrefix={pantryTestIDs.locationTabPrefix}
+              <ChipScrollRow<LocationFilter>
+                options={locationOptions}
+                selected={locationFilter}
+                onSelect={handleLocationFilterChange}
+                edgeFadeColor="background"
+                trailing={
+                  onAddLocation ? (
+                    <IconButton
+                      name="add"
+                      tone="primary"
+                      onPress={onAddLocation}
+                      accessibilityLabel={t('labels.addLocation')}
+                      testID={kitTestIDs.filterTabAction(
+                        pantryTestIDs.locationTabPrefix,
+                      )}
+                    />
+                  ) : undefined
+                }
               />
             </View>
-            <StockCheckEntry />
+            <StockCheckEntry
+              visible={locationFilter === 'all' && !searchQuery}
+            />
           </View>
 
           <View style={styles.listHost}>

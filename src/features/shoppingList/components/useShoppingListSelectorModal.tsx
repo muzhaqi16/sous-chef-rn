@@ -1,10 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTabBarSetters } from '#/context/TabBarActionsContext';
+import { useTabBarSetters } from '#context/TabBarActionsContext';
 import { Icon } from '#components/atoms/Icon';
 import { ShoppingListAvatar } from '#features/shoppingList/components/ShoppingListAvatar';
 import { PendingListInvites } from '#features/shoppingList/components/PendingListInvites';
@@ -12,8 +12,8 @@ import { SelectorSectionHeader } from '#features/shoppingList/components/Selecto
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useStore } from '#store';
-import { toastService } from '#/services/toastService';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { toastService } from '#services/toastService';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
 import { useDeleteShoppingList } from '#features/shoppingList/hooks/mutations/useDeleteShoppingList';
 import type {
   SelectorConfig,
@@ -23,8 +23,8 @@ import { SelectorItemContainer } from '#components/organisms/AnimatedItemSelecto
 import type { ShoppingListFromQuery } from '../hooks/useShoppingListsQuery';
 import { Text } from '#components/atoms/Text';
 import type { BarAction } from '#components/molecules/BarActions';
-import { personName } from '#/utils/formatters/memberFormatters';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { personName } from '#utils/formatters/memberFormatters';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 export type ShoppingListSelectorItem = ShoppingListFromQuery & {
   _isOwner: boolean;
@@ -264,7 +264,7 @@ export function useShoppingListSelectorModal({
         >
           <Icon
             name={isSelectedForDelete ? 'checkbox' : 'square-outline'}
-            size={20}
+            size="sm"
             tone={isSelectedForDelete ? 'error' : 'textSecondary'}
           />
           <ShoppingListAvatar list={list} size={32} />
@@ -310,7 +310,7 @@ export function useShoppingListSelectorModal({
             })}
           </Text>
         )}
-        {!!isSelected && <Icon name="checkmark" size={20} tone="primary" />}
+        {!!isSelected && <Icon name="checkmark" size="sm" tone="primary" />}
       </SelectorItemContainer>
     );
   };

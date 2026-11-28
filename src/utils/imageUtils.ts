@@ -3,10 +3,10 @@ import {
   ImageKind,
   ImagePerspective,
   type ItemImage,
-} from '#/graphql/generated/schemaTypes';
-import { logger } from '#/utils/environment';
-import { isTranslationKey } from '#/i18n';
-import type { Translate } from '#/i18n/types';
+} from '#graphql/generated/schemaTypes';
+import { logger } from '#utils/environment';
+import { isTranslationKey } from '#i18n';
+import type { Translate } from '#i18n/types';
 
 // =============================================================================
 // IMAGE SIZE SELECTION

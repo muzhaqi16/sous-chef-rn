@@ -1,6 +1,6 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { renderHook, act } from '@testing-library/react-native';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { MealType } from '#graphql/generated/schemaTypes';
 import { useAddRecipeToMealPlan } from '../useAddRecipeToMealPlan';
 
 const mockCreateItem = jest.fn();

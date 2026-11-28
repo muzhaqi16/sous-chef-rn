@@ -13,7 +13,7 @@ import {
   CollaboratorRole,
   CollaboratorStatus,
   MembershipRole,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { useListBudget } from '../useListBudget';
 import {

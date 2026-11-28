@@ -1,4 +1,5 @@
 import React from 'react';
+import { kitTestIDs } from '#components/testIDs';
 import { act, screen, userEvent, within } from '@testing-library/react-native';
 import {
   inputOf,
@@ -9,13 +10,13 @@ import {
 import { operationLog } from '#/test-utils/operationLog';
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
-import { t, type TranslationKey } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t, type TranslationKey } from '#i18n';
+import { alertService } from '#services/alertService';
 import {
   ErrorCode,
   ErrorDisposition,
   StorageType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   CreateStorageLocationDocument,
   DeleteStorageLocationDocument,
@@ -138,7 +139,6 @@ const sheet = () => screen.UNSAFE_getByType(StorageLocationSheet);
 const VALUES: StorageLocationFormValues = {
   name: 'Garage shelf',
   type: StorageType.Cabinet,
-  icon: null,
   parentLocationId: null,
   description: null,
   temperature: null,
@@ -184,14 +184,14 @@ describe('the storage locations', () => {
   it('say they are loading while nothing is held', async () => {
     await openLocations({ readHeld: true });
 
-    expect(screen.getByLabelText(t('storageLocations.loading'))).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.stateLoading)).toBeTruthy();
   });
 
   it('say why they could not be read, and are read again', async () => {
     await openLocations({ readFails: true });
 
-    expect(screen.getByText(t('errors.boundary.title'))).toBeTruthy();
-    await userEvent.setup().press(screen.getByText(t('labels.retry')));
+    expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
     await log.landed(GetStorageLocationsDocument, 2);
 
     expect(cardNames()).toContain('Kitchen');
@@ -201,7 +201,7 @@ describe('the storage locations', () => {
     useStore.setState({ isOnline: false, apiReachable: false });
     await openLocations({ readFails: true });
 
-    expect(screen.getByText(t('storageLocations.offlineTitle'))).toBeTruthy();
+    expect(screen.getByTestId(kitTestIDs.stateOffline)).toBeTruthy();
     expect(
       screen.queryByText(t('storageLocations.noLocations')),
     ).not.toBeOnTheScreen();

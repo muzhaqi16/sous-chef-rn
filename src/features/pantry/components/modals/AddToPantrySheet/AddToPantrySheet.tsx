@@ -1,21 +1,21 @@
 import React, { useState, useRef } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   usePantryItemSuggestions,
   PANTRY_SUGGESTIONS_LIMIT,
   type PantryItemSuggestion,
 } from '#features/pantry/hooks/usePantryItemSuggestions';
 import { useAddToPantry } from '#features/pantry/hooks/mutations/useAddToPantry';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import {
   PantrySuggestionSource,
   SuggestionSurface,
   type ItemSuggestion,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';
-import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddItemSheetState';
+import { useDeferredSheetFetch } from '#features/catalog/ui/AddItemSheet/useDeferredSheetFetch';
 import { pantrySheetConfig } from '#features/pantry/components/modals/AddToPantrySheet/pantrySheetConfig';
 import { AddDetailsSheet } from './AddDetailsSheet';
 
@@ -52,13 +52,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  // Details step state. The shared AddItemSheet owns which step is visible
-  // (search vs details); here we only prep the inputs the details form reads.
-  const [prefilledItemName, setPrefilledItemName] = useState('');
-
   // Shared state management
-  const state = useAddItemSheetState({
-    visible,
+  const shouldFetch = useDeferredSheetFetch({
+    open: visible && !!pantryId,
     contextId: pantryId,
     deferFetch: pantrySheetConfig.deferFetch,
   });
@@ -78,7 +74,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const suggestionsResult = usePantryItemSuggestions({
     pantryId,
     limit: PANTRY_SUGGESTIONS_LIMIT,
-    skip: !visible || !state.shouldFetch,
+    skip: !visible || !shouldFetch,
   });
 
   // Dismiss a junk/unwanted suggestion from the PANTRY surface.
@@ -95,12 +91,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   // Track items currently being added to prevent duplicate rapid-fire mutations
   const pendingItemIds = useRef(new Set<string>());
 
-  // Prep the details form's inputs when "Add manually" is pressed. The shared
-  // AddItemSheet morphs to the in-place details step itself (see renderDetails);
-  // here we only seed the prefilled name and the storage locations it reads.
-  const handleAddManually = (searchValue: string) => {
+  // The details step's storage picker lists these; the sheet hands it the name.
+  const handleAddManually = () => {
     setStorageLocations(readStorageLocations());
-    setPrefilledItemName(searchValue);
   };
 
   /**
@@ -235,15 +228,13 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       onDismissSuggestion={handleDismissSuggestion}
       onAddManually={handleAddManually}
       startStep={startStep}
-      shouldFetch={state.shouldFetch}
       initialSearchQuery={initialSearchQuery}
-      renderDetails={({ goBack, holdOpen }) => (
+      renderDetails={({ goBack, itemName }) => (
         <AddDetailsSheet
           pantryId={pantryId}
-          prefilledItemName={prefilledItemName}
+          prefilledItemName={itemName}
           storageLocations={storageLocations}
           onClose={goBack}
-          onHoldOpen={holdOpen}
           onSuccess={handleAddSuccess}
         />
       )}

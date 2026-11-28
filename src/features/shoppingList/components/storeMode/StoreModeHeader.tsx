@@ -6,10 +6,13 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { ProgressBar } from '#components/atoms/ProgressBar';
 import { Reveal } from '#components/atoms/Reveal';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
-import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
-import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
+import { kitTestIDs } from '#components/testIDs';
+import {
+  ChipScrollRow,
+  type ChipOption,
+} from '#components/molecules/ChipScrollRow';
 import { Icon, type IconName } from '#components/atoms/Icon';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import type { AisleHeaderRow } from '#features/shoppingList/components/SortableShoppingList/types';
 import type { AisleRouteNote } from '#features/shoppingList/screens/useAisleView';
 import type {
@@ -57,23 +60,29 @@ export const StoreModeHeader: React.FC<StoreModeHeaderProps> = ({
     ? t('shoppingListScreens.storeMode.atStore', { store: storeName })
     : t('shoppingListScreens.storeMode.chooseStore');
 
-  const tabs: FilterTabConfig<StoreModeTab>[] = [
-    { id: 'all', label: t('shoppingListScreens.aisles.all') },
+  const testIDOf = (key: StoreModeTab) =>
+    kitTestIDs.filterTab(shoppingListTestIDs.aisleTabPrefix, key);
+  const options: ChipOption<StoreModeTab>[] = [
+    {
+      key: 'all',
+      label: t('shoppingListScreens.aisles.all'),
+      count: lineCount,
+      testID: testIDOf('all'),
+    },
     ...aisles.map(aisle => ({
-      id: aisle.department,
+      key: aisle.department,
       label: t(`shoppingListScreens.aisles.department.${aisle.department}`),
+      count: aisle.count,
+      testID: testIDOf(aisle.department),
     })),
     {
-      id: 'cart',
+      key: 'cart',
       label: t('shoppingListScreens.storeMode.cart'),
       icon: 'cart-outline',
+      count: cartCount,
+      testID: testIDOf('cart'),
     },
   ];
-  const counts: Partial<Record<StoreModeTab, number>> = {
-    all: lineCount,
-    cart: cartCount,
-  };
-  for (const aisle of aisles) counts[aisle.department] = aisle.count;
 
   // Off, the trip reads as what is left to buy, with no cost.
   const showPrices = useBudgetAndPricesEnabled();
@@ -152,12 +161,11 @@ export const StoreModeHeader: React.FC<StoreModeHeaderProps> = ({
         ) : null}
       </View>
       <View style={styles.tabs}>
-        <FilterTabs<StoreModeTab>
-          tabs={tabs}
-          activeTabId={tab}
-          onTabChange={onTabChange}
-          counts={counts}
-          testIDPrefix={shoppingListTestIDs.aisleTabPrefix}
+        <ChipScrollRow<StoreModeTab>
+          options={options}
+          selected={tab}
+          onSelect={onTabChange}
+          edgeFadeColor="background"
         />
       </View>
     </View>
@@ -172,11 +180,7 @@ const DetailLine: React.FC<{
   children: string;
 }> = ({ icon, accent = false, testID, children }) => (
   <View style={styles.detailLine} testID={testID}>
-    <Icon
-      name={icon}
-      size={DETAIL_ICON_SIZE}
-      tone={accent ? 'primary' : 'textSecondary'}
-    />
+    <Icon name={icon} size="xs" tone={accent ? 'primary' : 'textSecondary'} />
     <Text
       role="footnote"
       tone={accent ? 'accent' : 'secondary'}
@@ -186,8 +190,6 @@ const DetailLine: React.FC<{
     </Text>
   </View>
 );
-
-const DETAIL_ICON_SIZE = 16;
 
 const styles = StyleSheet.create(theme => ({
   header: {

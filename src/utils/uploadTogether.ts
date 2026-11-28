@@ -1,4 +1,4 @@
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 
 interface UploadTogetherOptions {
   /** Past this the rest are stopped and the whole set fails. */

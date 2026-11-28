@@ -1,10 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Link } from '#components/atoms/Link';
 import { Text } from '#components/atoms/Text';
-import type { DataAttributionValue } from '#/types/attribution';
+import type { DataAttributionValue } from '#types/attribution';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 
 interface DataAttributionNoticesProps {

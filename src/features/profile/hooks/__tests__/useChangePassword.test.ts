@@ -4,12 +4,12 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { ChangePasswordDocument } from '#operations/auth/auth.generated';
-import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
+import { PasswordActionStatus } from '#graphql/generated/schemaTypes';
 import {
   registerSessionHost,
   type SessionHost,
   type StoredSignInRenewal,
-} from '#/services/auth/sessionHost';
+} from '#services/auth/sessionHost';
 import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
 import { useStore } from '#store';
 import { useChangePassword } from '#features/profile/hooks/useChangePassword';

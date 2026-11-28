@@ -16,7 +16,7 @@
  */
 
 import { useStore, PERSISTED_KEYS } from '#store';
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 
 // The recovery signal is controllable, so the plaintext-token guard in
 // partialize is exercised without provoking a real device-key failure.

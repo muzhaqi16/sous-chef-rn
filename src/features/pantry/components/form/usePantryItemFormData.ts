@@ -4,7 +4,7 @@ import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { PantryItemForm_PantryItemFragmentDoc } from './PantryItemForm.generated';
 import { PantryItemForEditDocument } from './usePantryItemFormData.generated';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
-import { extractNodes } from '#/utils/connectionUtils';
+import { extractNodes } from '#utils/connectionUtils';
 import { defaultPantryOf } from '#domain/homePantries';
 import { useToday } from '#hooks/app/useToday';
 import { useDataState } from '#hooks/data/useDataState';

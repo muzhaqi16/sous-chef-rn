@@ -53,57 +53,13 @@ export const commonStyles = StyleSheet.create(theme => ({
       (theme.sizes.touchTarget.md - theme.sizes.icon.md) / 2,
   },
 
-  // Headers own their edge inset, even inside a padded sheet body.
-  textBarInset: {
-    // Account for the text button's padding, just as barInset does for icons.
-    paddingHorizontal: theme.layout.pageGutter - theme.spacing.xs,
-  },
-
   // Cancel the body's inset before the header applies its own.
   sheetHeaderBleed: (contentPadding?: 'md' | 'lg') => ({
     marginHorizontal: contentPadding ? -theme.spacing[contentPadding] : 0,
   }),
 
-  input: {
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.smPlus,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.inputBackground,
-  },
   inputGroup: {
     marginBottom: theme.spacing.lg,
-  },
-
-  button: {
-    paddingVertical: {
-      xs: theme.spacing.sm,
-      md: theme.spacing.md,
-    },
-    paddingHorizontal: {
-      xs: theme.spacing.md,
-      md: theme.spacing.lg,
-    },
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  buttonPrimary: {
-    backgroundColor: theme.colors.primary,
-  },
-  buttonSecondary: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-  },
-  buttonTextPrimary: {
-    color: theme.colors.onPrimary,
   },
 
   settingsSection: {
@@ -204,8 +160,9 @@ export const commonStyles = StyleSheet.create(theme => ({
   bottomSheetScrollView: {
     flex: 1,
   },
+  // A sheet's own gutter insets the sides.
   bottomSheetContent: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   bottomSheetLoading: {
     paddingVertical: theme.spacing.xl,
@@ -248,34 +205,11 @@ export const commonStyles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
   },
-  bottomSheetOptionContainer: {
+  // Chips that wrap onto further lines, as a sheet's choices do.
+  chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.sm,
-  },
-  bottomSheetOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    gap: theme.spacing.xs,
-  },
-  bottomSheetOptionSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surfaceVariant,
-  },
-  bottomSheetOptionText: {
-    ...theme.type.caption,
-    color: theme.colors.textSecondary,
-  },
-  bottomSheetOptionTextSelected: {
-    color: theme.colors.primaryText,
-    ...theme.type.bodyStrong,
   },
 
   caption: {

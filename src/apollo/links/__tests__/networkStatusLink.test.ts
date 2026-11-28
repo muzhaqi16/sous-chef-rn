@@ -6,8 +6,8 @@ import { createNetworkStatusLink } from '../networkStatusLink';
 import { apiReachabilityBreaker } from '../apiReachabilityBreaker';
 import { OfflineRejectedError } from '../../offlineQueue/OfflineRejectedError';
 import { useStore } from '#store';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { logger } from '#/utils/environment';
+import { isNetworkError } from '#utils/isNetworkError';
+import { logger } from '#utils/environment';
 
 jest.mock('../apiReachabilityBreaker', () => ({
   apiReachabilityBreaker: {
@@ -16,7 +16,7 @@ jest.mock('../apiReachabilityBreaker', () => ({
   },
 }));
 
-jest.mock('#/utils/isNetworkError', () => ({
+jest.mock('#utils/isNetworkError', () => ({
   isNetworkError: jest.fn((e: { network?: boolean }) => e?.network === true),
 }));
 

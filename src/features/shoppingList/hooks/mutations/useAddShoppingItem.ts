@@ -3,18 +3,16 @@
  * makes a replay converge.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
 import type { ShoppingListItemInput } from './types';
 import {
   normalizeNumericTextForApi,
   parseDecimalInput,
-} from '#/utils/parseDecimalInput';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { refByIdOrName, typedItemRef } from '#/utils/refInput';
+} from '#utils/parseDecimalInput';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { refByIdOrName, typedItemRef } from '#utils/refInput';
 import { lineUnitFields } from '#features/shoppingList/utils/lineUnit';
 
 interface UseAddShoppingItemOptions {
@@ -22,10 +20,9 @@ interface UseAddShoppingItemOptions {
 }
 
 export function useAddShoppingItem({ listId }: UseAddShoppingItemOptions) {
-  const client = useApolloClient();
   const { t } = useTranslation();
 
-  const [addItemMutation] = useMutation(AddItemToShoppingListDocument);
+  const { addRow } = useAddShoppingRows();
 
   /** `true` once the item is added or its create is queued; `false` when refused. */
   const addItem = async (input: ShoppingListItemInput): Promise<boolean> => {
@@ -73,7 +70,7 @@ export function useAddShoppingItem({ listId }: UseAddShoppingItemOptions) {
       }),
     };
 
-    const created = await createShoppingListRow(client.cache, {
+    const created = await addRow({
       listId,
       row: {
         itemName: input.itemName,
@@ -84,8 +81,6 @@ export function useAddShoppingItem({ listId }: UseAddShoppingItemOptions) {
         unitId: input.unitId,
       },
       line,
-      send: addItemMutation,
-      document: AddItemToShoppingListDocument,
       fallback: t('errors.addItemFailed'),
     });
     if (created.failure) {

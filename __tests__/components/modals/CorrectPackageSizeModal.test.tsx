@@ -12,7 +12,7 @@ import {
   type CorrectPackageSizeModal_BatchFragment,
   type CorrectPackageSizeModal_PantryItemFragment,
 } from '#features/pantry/components/modals/CorrectPackageSizeModal.generated';
-import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitSystem, UnitType } from '#graphql/generated/schemaTypes';
 import {
   asAbbreviation,
   readingAsAbbreviation,
@@ -26,17 +26,6 @@ jest.mock('../../../src/hooks/ui/useStandardBottomSheet', () => ({
     theme: { colors: {} },
   }),
   BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
-}));
-jest.mock('../../../src/components/molecules/BottomSheetHeader', () => ({
-  BottomSheetHeader: (props: { title?: string; onConfirm?: () => void }) => {
-    const { Pressable, Text } = require('react-native');
-    return (
-      <>
-        <Text>{props.title}</Text>
-        <Pressable accessibilityLabel="confirm" onPress={props.onConfirm} />
-      </>
-    );
-  },
 }));
 jest.mock(
   '../../../src/components/atoms/BottomSheetKeyboardAwareScrollView',
@@ -253,7 +242,7 @@ describe('CorrectPackageSizeModal', () => {
 
       fireEvent.changeText(screen.getByLabelText('Each holds'), '1133.98');
       fireEvent.changeText(screen.getByLabelText('Reason'), 'Misread label');
-      fireEvent.press(screen.getByLabelText('confirm'));
+      fireEvent.press(screen.getByLabelText('Correct'));
 
       await drainTimers();
       expect(onConfirm).toHaveBeenCalledWith({

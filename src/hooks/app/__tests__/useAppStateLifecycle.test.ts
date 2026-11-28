@@ -1,20 +1,20 @@
 'use no memo';
 
 import { renderHook } from '@testing-library/react-native';
-import { flushCachePersistence } from '#/apollo/client';
+import { flushCachePersistence } from '#apollo/client';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { useAppStateLifecycle } from '../useAppStateLifecycle';
 
-jest.mock('#/apollo/client', () => ({
+jest.mock('#apollo/client', () => ({
   flushCachePersistence: jest.fn(),
 }));
 jest.mock('#store/useAppStore', () => ({
   useIsHydrated: () => true,
 }));
-jest.mock('#/apollo/offlineQueue/queueManager', () => ({
+jest.mock('#apollo/offlineQueue/queueManager', () => ({
   queueManager: { processQueue: jest.fn(() => Promise.resolve()) },
 }));
-jest.mock('#/apollo/links/apiReachabilityBreaker', () => ({
+jest.mock('#apollo/links/apiReachabilityBreaker', () => ({
   apiReachabilityBreaker: { onAppForeground: jest.fn() },
 }));
 jest.mock('#store/slices/authSlice', () => ({

@@ -1,4 +1,4 @@
-import { StoreLineMatch } from '#/graphql/generated/schemaTypes';
+import { StoreLineMatch } from '#graphql/generated/schemaTypes';
 import type { ListSavingsQuery } from '#features/shoppingList/hooks/useListSavings.generated';
 import { asAbbreviation } from './unitLabels';
 

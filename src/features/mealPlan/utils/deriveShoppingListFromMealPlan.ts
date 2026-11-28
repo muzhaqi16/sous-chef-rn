@@ -1,8 +1,8 @@
-import { generateEntityId } from '#/utils/generateEntityId';
+import { generateEntityId } from '#utils/generateEntityId';
 import {
   AddedContext,
   type BatchAddShoppingListItemInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /** One planned meal, as `useGenerateShoppingList_mealPlan` caches it. */
 export interface PlannedMeal {

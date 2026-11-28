@@ -17,11 +17,20 @@ const easing = {
 
 interface CssEasing {
   standard: CSSTransitionTimingFunction;
+  emphasized: CSSTransitionTimingFunction;
+  gentle: CSSTransitionTimingFunction;
+  plain: CSSTransitionTimingFunction;
 }
 
-/** The same curves as timing functions for a Reanimated CSS transition. */
+/**
+ * The same curves as timing functions for a Reanimated CSS transition or
+ * animation. Reanimated's `Easing.ease` is CSS `ease-in`, not CSS `ease`.
+ */
 const cssEasing: CssEasing = {
   standard: 'ease',
+  emphasized: 'ease-in-out',
+  gentle: 'ease-out',
+  plain: 'ease-in',
 };
 
 // There are no reduce-motion substitutes here on purpose. Reanimated collapses

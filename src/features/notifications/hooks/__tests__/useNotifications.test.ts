@@ -24,15 +24,15 @@ import {
   NotificationSubtype,
   Priority,
   MutationType,
-} from '#/graphql/generated/schemaTypes';
-import { makeCache } from '#/apollo/cache';
+} from '#graphql/generated/schemaTypes';
+import { makeCache } from '#apollo/cache';
 import { NotificationForEventDocument } from '#features/notifications/hooks/useNotifications.generated';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotifications, useNotificationListener } from '../useNotifications';
 import { reportSubscriptionError } from '#utils/subscriptionErrorHandler';
 import { MAX_RESTART_ATTEMPTS } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 
 // Mutable so a test can simulate a logged-out session. Prefixed `mock` so the

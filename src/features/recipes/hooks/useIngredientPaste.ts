@@ -1,8 +1,8 @@
 import { useLazyQuery } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import { toastService } from '#/services/toastService';
-import { errorCopy, errorService } from '#/services/errorService';
-import { getDeviceLocale } from '#/utils/deviceLocale';
+import { useTranslation } from '#i18n';
+import { toastService } from '#services/toastService';
+import { errorCopy, errorService } from '#services/errorService';
+import { getDeviceLocale } from '#utils/deviceLocale';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { ParseIngredientLinesDocument } from './useIngredientPaste.generated';
 import {

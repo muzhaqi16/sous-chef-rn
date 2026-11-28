@@ -1,4 +1,4 @@
-import { StoreDepartment } from '#/graphql/generated/schemaTypes';
+import { StoreDepartment } from '#graphql/generated/schemaTypes';
 import {
   isKnownDepartment,
   knownDepartment,

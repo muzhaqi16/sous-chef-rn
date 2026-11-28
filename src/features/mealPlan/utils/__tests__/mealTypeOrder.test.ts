@@ -1,4 +1,4 @@
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { MealType } from '#graphql/generated/schemaTypes';
 import { MEAL_TYPE_ORDER } from '../mealPlanEnumLabels';
 
 describe('MEAL_TYPE_ORDER', () => {

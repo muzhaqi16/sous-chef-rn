@@ -1,9 +1,9 @@
 import { useQuery } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import {
   RestrictionSeverity,
   type MembershipRole,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { restrictionLabel } from '#domain/dietary';
 import { useDataState } from '#hooks/data/useDataState';
 import { HomeDietaryNeedsDocument } from './useHomeDietaryNeeds.generated';

@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import { t, type TranslationKey } from '#/i18n';
+import { t, type TranslationKey } from '#i18n';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
@@ -7,13 +7,13 @@ import {
   JoinHomeByCodeDocument,
   ResolveShareLinkDocument,
 } from '#operations/home/home.generated';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import {
   ErrorCode,
   MembershipRole,
   MembershipStatus,
   ShareLinkTargetType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useHomeInvitations } from '../useHomeInvitations';
 
 type HomeInvitationsApi = ReturnType<typeof useHomeInvitations>;
@@ -30,14 +30,14 @@ type PreviewResult = Awaited<
   ReturnType<HomeInvitationsApi['previewHomeByCode']>
 >;
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
-jest.mock('#/utils/connectionUtils', () => ({
+jest.mock('#utils/connectionUtils', () => ({
   normalizeHome: jest.fn((home: unknown) => home),
 }));
 
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
+jest.mock('#apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#apollo/utils/cacheUpdaters'),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
@@ -247,9 +247,9 @@ describe('useHomeInvitations', () => {
         result: {
           data: {
             inviteToHome: {
-              __typename: 'ConflictError',
-              code: ErrorCode.ResourceAlreadyExists,
-              message: 'User already invited',
+              __typename: 'ForbiddenError',
+              code: ErrorCode.Forbidden,
+              message: 'Not allowed to invite',
             },
           },
         },
@@ -271,6 +271,47 @@ describe('useHomeInvitations', () => {
       // Copy for the modal, which keeps itself open; never the server's prose,
       // and no native alert over the modal.
       expect(refusal).toBe('Failed to send invitation');
+      expect(alertService.alert).not.toHaveBeenCalled();
+    });
+
+    it('says an address already in the home, or declined lately, in the app\u2019s own words', async () => {
+      const rejectionMock: MockFor<typeof InviteToHomeDocument> = {
+        request: {
+          query: InviteToHomeDocument,
+          variables: {
+            input: {
+              homeId: 'home-1',
+              email: 'dupe@test.com',
+              role: MembershipRole.Member,
+            },
+          },
+        },
+        result: {
+          data: {
+            inviteToHome: {
+              __typename: 'ConflictError',
+              code: ErrorCode.Conflict,
+              message: 'User already invited',
+            },
+          },
+        },
+      };
+
+      const { result } = renderHookWithApollo(
+        () => useHomeInvitations(createOptions()),
+        { operationMocks: [rejectionMock] },
+      );
+
+      let refusal: string | null | undefined;
+      await act(async () => {
+        refusal = await result.current.inviteUserToHome(
+          'home-1',
+          'dupe@test.com',
+        );
+      });
+
+      // The server's two CONFLICT messages share one sentence of the app's.
+      expect(refusal).toBe(t('inviteUser.inviteeAlreadyIn'));
       expect(alertService.alert).not.toHaveBeenCalled();
     });
 
@@ -330,23 +371,6 @@ describe('useHomeInvitations', () => {
   });
 
   describe('joinHomeByCode', () => {
-    it('shows alert for empty join code', async () => {
-      const { result } = renderHookWithApollo(() =>
-        useHomeInvitations(createOptions()),
-      );
-
-      let success: JoinResult | undefined;
-      await act(async () => {
-        success = await result.current.joinHomeByCode('   ');
-      });
-
-      expect(success).toBe(false);
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Please enter a join code',
-      );
-    });
-
     it('calls mutation with trimmed code and returns membership', async () => {
       const { result } = renderHookWithApollo(
         () => useHomeInvitations(createOptions()),
@@ -486,6 +510,8 @@ describe('useHomeInvitations', () => {
       });
 
       expect(returnValue).toBeNull();
+      // Said, not swallowed: the read resolved with its error.
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -146,6 +146,20 @@ describe('prune-build-output', () => {
     expect(exists(older, 'Build')).toBe(true);
   });
 
+  it('keeps what pod install wrote into ios/build, which no build rewrites', () => {
+    const podOutput = ['generated', 'rncore-facades', 'rndeps-facades'];
+    for (const name of podOutput)
+      write(path.join(repo, 'ios/build', name, 'f'));
+    write(path.join(repo, 'ios/build/Build/output'));
+
+    prune('--max-age-days', '0', ...NEVER_BELOW);
+
+    for (const name of podOutput) {
+      expect(exists(repo, 'ios/build', name, 'f')).toBe(true);
+    }
+    expect(exists(repo, 'ios/build/Build')).toBe(false);
+  });
+
   it('leaves iOS output alone while xcodebuild runs', () => {
     stub(
       'pgrep',

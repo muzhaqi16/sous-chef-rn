@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useFragment, useQuery } from '@apollo/client/react';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { logger } from '#/utils/environment';
-import { formatCurrency } from '#/utils/formatters/number';
+import { logger } from '#utils/environment';
+import type { FormatCurrency } from '#domain/money';
 import {
   ListCostToGoDocument,
   UseListCostToGo_ListFragmentDoc,
@@ -74,5 +74,8 @@ export function useLiveCostToGo(
 }
 
 /** The cost to go as money, or null when nothing is priced. */
-export const formatCostToGo = (cost: ListCostToGo): string | null =>
-  cost.amount == null ? null : formatCurrency(cost.amount, cost.currency);
+export const formatCostToGo = (
+  cost: ListCostToGo,
+  format: FormatCurrency,
+): string | null =>
+  cost.amount == null ? null : format(cost.amount, cost.currency);

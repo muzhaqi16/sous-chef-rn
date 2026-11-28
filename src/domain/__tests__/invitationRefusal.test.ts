@@ -1,8 +1,8 @@
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { ErrorCode, TopLevelErrorCode } from '#graphql/generated/schemaTypes';
 import { AcceptHomeInviteDocument } from '#operations/home/home.generated';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { invitationRefusalCopy } from '../invitationRefusal';
 
 const UNAVAILABLE = {

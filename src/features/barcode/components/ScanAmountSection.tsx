@@ -7,7 +7,7 @@ import {
   type UseFormReturn,
 } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Card } from '#components/atoms/Card';
 import { FieldRow } from '#components/atoms/FieldRow';
@@ -22,8 +22,8 @@ import {
   formatQuantityWithUnit,
   type QuantityDisplayOptions,
 } from '#utils/formatQuantity';
-import { parseFractionalInput } from '#/utils/fractionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { parseFractionalInput } from '#utils/fractionUtils';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 import type { ScanAmountFormValues } from './scanAmountFormConfig';
 
 interface ScanAmountSectionProps {
@@ -76,7 +76,10 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
     control,
     name: 'sizeUnitId',
   });
-  const { field: sizeField, fieldState: sizeState } = useController({
+  const {
+    field: { ref: sizeRef, ...sizeField },
+    fieldState: sizeState,
+  } = useController({
     control,
     name: 'sizeInput',
   });
@@ -127,7 +130,7 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
           <Text role="label" tone="accent">
             {t('labels.edit')}
           </Text>
-          <Icon name="chevron-forward" size={16} tone="primary" />
+          <Icon name="chevron-forward" size="xs" tone="primary" />
         </AppPressable>
         {action}
       </Card>
@@ -145,6 +148,7 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
           name="quantityInput"
           render={({ field, fieldState }) => (
             <FractionInput
+              ref={field.ref}
               label={t('labels.quantity')}
               required
               value={field.value}
@@ -187,6 +191,7 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
       {holdsContents ? (
         <PackageContentsFields
           variant="modal"
+          sizeRef={sizeRef}
           size={sizeField.value}
           onSizeChange={text => {
             sizeField.onChange(text);

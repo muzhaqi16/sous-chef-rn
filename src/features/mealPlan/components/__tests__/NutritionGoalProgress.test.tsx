@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { NutritionGoalProgress } from '../NutritionGoalProgress';
-import { GoalStatus, type GoalProgress } from '#/graphql/generated/schemaTypes';
+import { GoalStatus, type GoalProgress } from '#graphql/generated/schemaTypes';
 
 const makeProgress = (
   current: number,

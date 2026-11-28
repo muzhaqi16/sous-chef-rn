@@ -1,4 +1,4 @@
-import { changeLanguage } from '#/i18n/config';
+import { changeLanguage } from '#i18n/config';
 import { createItemSchema, unitsRule } from '../itemValidation';
 
 /**

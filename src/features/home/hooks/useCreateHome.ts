@@ -1,17 +1,13 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { CreateHomeDocument } from '#operations/home/home.generated';
+import { useApolloClient } from '@apollo/client/react';
 import { holdsHomesList } from '#features/home/hooks/homeCacheUpdaters';
 import type { CreateHomeInputs } from '#features/home/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import {
-  settleMutation,
-  type SettledFailure,
-} from '#/apollo/utils/settleMutation';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { generateEntityId } from '#/utils/generateEntityId';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { SettledFailure } from '#apollo/utils/settleMutation';
+import { generateEntityId } from '#utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
-import type { CreateHomeInput } from '#/graphql/generated/schemaTypes';
-import { useTranslation } from '#/i18n';
+import type { CreateHomeInput } from '#graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import { createHomeWrite } from '#features/home/offline/localWrites';
 
 /** A create's verdict, plus the id it minted — the home's id, queued or not. */
 export type CreateHomeOutcome =
@@ -29,10 +25,10 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
   const { t } = useTranslation();
   const client = useApolloClient();
   const user = useUser();
-  const [createHomeMutation, { loading: creating }] = useMutation(
-    CreateHomeDocument,
-    { context: { localFirst: true } },
-  );
+  const create = useLocalWrite(createHomeWrite, {
+    fallback: t('errors.createHomeFailed'),
+    present: 'none',
+  });
 
   /** `fallback` is the copy for a failure its code does not describe. */
   const createHome = async (
@@ -41,9 +37,6 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
   ): Promise<CreateHomeOutcome> => {
     const id = generateEntityId();
     const input = { ...fields, id, createDefaultPantry: false };
-    // Selecting the home opens its event subscriptions, which the server refuses
-    // until the create lands — see `unconfirmedCreates`.
-    unconfirmedCreates.mark(id);
 
     // `useDefaultHome` fires the app's only GetHomes fetch once per session,
     // and during onboarding that happens when the account has zero homes — so a
@@ -57,20 +50,9 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
         : undefined,
       now: new Date().toISOString(),
     };
-    const settled = await pendingWritesOf(client.cache).send(
-      CreateHomeDocument,
-      { input },
-      write =>
-        settleMutation(() => createHomeMutation(write), {
-          document: CreateHomeDocument,
-          fallback,
-          present: 'none',
-        }),
-      inputs,
-    );
-    // Released on every outcome; a queued create is tracked by the offline
-    // queue's pending set from here on.
-    unconfirmedCreates.confirm(id);
+    const settled = await create.send({ input }, inputs, {
+      settle: { fallback },
+    });
 
     if (settled.failure) {
       return { status: 'rejected', id, failure: settled.failure };
@@ -78,7 +60,7 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
     return { status: 'ok', id };
   };
 
-  return { createHome, creating };
+  return { createHome, creating: create.sending };
 }
 
 /** The create this hook returns, for callers that pass it on. */

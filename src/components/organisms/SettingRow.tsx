@@ -1,49 +1,89 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { StyleSheet } from 'react-native-unistyles';
 import { ValueText } from '../atoms/ValueText';
-import { getValidationSchemaForField } from '#/utils/validation/profile';
 import { Icon } from '#components/atoms/Icon';
-import { TextEditBottomSheet } from '#components/organisms/TextEditBottomSheet/TextEditBottomSheet';
+import type { AnyObjectSchema } from 'yup';
+import {
+  TextEditBottomSheet,
+  type TextEditKeyboardType,
+} from '#components/organisms/TextEditBottomSheet/TextEditBottomSheet';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
 import { kitTestIDs } from '#components/testIDs';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 
-/** A single option for a `modal`/`radio` setting row. */
+/** A single option for a `modal` setting row. */
 export interface SettingOption {
   label: string;
   value: string;
 }
 
-/** Runtime descriptor consumed by SettingRow / SettingsSection. */
-export interface SettingItem {
+interface SettingItemBase {
   key: string;
   label: string;
-  type: string;
   testID?: string;
   subtitle?: string;
-  /** `modal` only: a compact form for the row, when the option label is long. */
-  valueLabel?: string;
-  /** `text` only: the edit sheet's placeholder. */
-  placeholder?: string;
   disabled?: boolean;
-  value?: string | boolean;
-  /** `switch` only: a write is in flight, so the control shows a spinner. */
+  icon?: React.ReactNode;
+}
+
+/** A value shown, not edited. */
+interface InfoSetting extends SettingItemBase {
+  type: 'info';
+  value?: string;
+}
+
+/** A value edited in a one-field sheet, checked by the row's own schema. */
+interface TextSetting extends SettingItemBase {
+  type: 'text';
+  value?: string;
+  placeholder?: string;
+  /** Keyed by the row's `key`; plain text when left out. */
+  validationSchema?: AnyObjectSchema;
+  multiline?: boolean;
+  keyboardType?: TextEditKeyboardType;
+  onSave?: (value: string) => void;
+}
+
+interface SwitchSetting extends SettingItemBase {
+  type: 'switch';
+  value?: boolean;
+  /** A write is in flight, so the control shows a spinner. */
   loading?: boolean;
-  selected?: string;
+  onPress?: () => void;
+}
+
+/** A choice among options, picked in a sheet. */
+interface ModalSetting extends SettingItemBase {
+  type: 'modal';
+  value?: string;
+  /** A compact form for the row, when the option label is long. */
+  valueLabel?: string;
   options?: SettingOption[];
   /** Shown under the options when the read behind them failed. */
   unavailable?: React.ReactNode;
-  icon?: React.ReactNode;
   onSave?: (value: string) => void;
+}
+
+/** `navigation` opens a screen, behind a chevron; `action` acts in place. */
+interface PressSetting extends SettingItemBase {
+  type: 'navigation' | 'action';
   onPress?: () => void;
 }
+
+/** Runtime descriptor consumed by SettingRow / SettingsSection. */
+export type SettingItem =
+  | InfoSetting
+  | TextSetting
+  | SwitchSetting
+  | ModalSetting
+  | PressSetting;
 
 export interface SettingRowProps {
   item: SettingItem;
@@ -65,36 +105,30 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       setModalVisible(true);
     } else if (item.type === 'text') {
       setTextEditVisible(true);
-    } else if (item.onPress) {
-      item.onPress();
+    } else if (item.type !== 'info') {
+      item.onPress?.();
     }
   };
 
   const handleSwitchChange = () => {
-    if (item.type !== 'switch') return;
-    if (item.onPress) {
-      item.onPress();
-    }
+    if (item.type === 'switch') item.onPress?.();
   };
 
   const handleModalOptionPress = (optionValue: string) => () => {
-    if (item.onSave) {
-      item.onSave(optionValue);
-    }
+    if (item.type === 'modal') item.onSave?.(optionValue);
     setModalVisible(false);
   };
 
   const handleTextSave = (value: string) => {
-    if (item.onSave) {
-      item.onSave(value);
-    }
+    if (item.type === 'text') item.onSave?.(value);
   };
 
   const handleTextEditClose = () => {
     setTextEditVisible(false);
   };
 
-  const textValue = typeof item.value === 'string' ? item.value : undefined;
+  const textValue =
+    item.type === 'text' || item.type === 'info' ? item.value : undefined;
 
   // The row's label replaces the text inside it, so the subtitle joins the
   // label: a screen reader user can turn hints off.
@@ -153,7 +187,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           item.type !== 'info' && item.type !== 'switch' && !item.disabled
         }
         disabled={isInert}
-        android_ripple={isInert ? null : RIPPLE.SUBTLE}
+        android_ripple={isInert ? undefined : RIPPLE.SUBTLE}
         style={[
           styles.rowWrapper,
           isFirst && styles.rowFirst,
@@ -188,7 +222,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           {item.type === 'text' && (
             <>
               <ValueText>{textValue}</ValueText>
-              <Icon name="pencil" size={16} tone="textSecondary" />
+              <Icon name="pencil" size="xs" tone="textSecondary" />
             </>
           )}
 
@@ -203,18 +237,6 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             />
           )}
 
-          {item.type === 'radio' && !!item.options && (
-            <Icon
-              name={
-                item.selected === item.value
-                  ? 'radio-button-on'
-                  : 'radio-button-off'
-              }
-              size={20}
-              tone={item.selected === item.value ? 'primary' : 'textSecondary'}
-            />
-          )}
-
           {item.type === 'modal' && (
             <View style={styles.modalValueContainer}>
               <Text tone="secondary" numberOfLines={1} ellipsizeMode="tail">
@@ -222,30 +244,30 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                   item.options?.find(opt => opt.value === item.value)?.label ??
                   t('labels.select')}
               </Text>
-              <Icon name="chevron-forward" size={20} tone="textSecondary" />
+              <Icon name="chevron-forward" size="sm" tone="textSecondary" />
             </View>
           )}
 
           {item.type === 'navigation' && (
-            <Icon name="chevron-forward" size={20} tone="textSecondary" />
+            <Icon name="chevron-forward" size="sm" tone="textSecondary" />
           )}
         </View>
       </AppPressable>
-      {/* Text Edit Bottom Sheet */}
-      <TextEditBottomSheet
-        visible={textEditVisible}
-        title={item.label}
-        label={item.label}
-        placeholder={item.placeholder}
-        initialValue={typeof item.value === 'string' ? item.value : ''}
-        fieldKey={item.key}
-        // @ts-expect-error - yup schema type compatibility
-        validationSchema={getValidationSchemaForField(item.key)}
-        onSave={handleTextSave}
-        onClose={handleTextEditClose}
-        multiline={item.key === 'bio'}
-        keyboardType={item.key === 'phone' ? 'phone-pad' : 'default'}
-      />
+      {item.type === 'text' ? (
+        <TextEditBottomSheet
+          visible={textEditVisible}
+          title={item.label}
+          label={item.label}
+          placeholder={item.placeholder}
+          initialValue={item.value ?? ''}
+          fieldKey={item.key}
+          validationSchema={item.validationSchema}
+          onSave={handleTextSave}
+          onClose={handleTextEditClose}
+          multiline={item.multiline}
+          keyboardType={item.keyboardType}
+        />
+      ) : null}
       {/* Selection Bottom Sheet */}
       {item.type === 'modal' && !!item.options && (
         <Sheet
@@ -254,7 +276,6 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           onDismiss={() => setModalVisible(false)}
           snapPoints={[]}
           enableDynamicSizing={true}
-          contentContainerStyle={styles.sheetContent}
         >
           <Text role="heading" align="center" style={styles.sheetTitle}>
             {item.label}
@@ -275,7 +296,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             >
               <Text style={styles.sheetOptionText}>{opt.label}</Text>
               {item.value === opt.value && (
-                <Icon name="checkmark" size={20} tone="primary" />
+                <Icon name="checkmark" size="sm" tone="primary" />
               )}
             </AppPressable>
           ))}
@@ -323,9 +344,6 @@ const styles = StyleSheet.create(theme => ({
     // The value truncates (it already asks for one line); without this it
     // holds its natural width and the label column pays for it instead.
     flexShrink: 1,
-  },
-  sheetContent: {
-    paddingHorizontal: theme.spacing.lg,
   },
   sheetTitle: {
     paddingVertical: theme.spacing.sm,

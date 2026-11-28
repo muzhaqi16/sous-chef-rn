@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { CardLeftSlot } from '../CardLeftSlot';
 
-jest.mock('#/styles/commonStyles', () => ({
+jest.mock('#styles/commonStyles', () => ({
   commonStyles: {
     listItemImageContainerCompact: {},
     listItemImageCompact: {},

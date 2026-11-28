@@ -1,8 +1,8 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useFragment } from '@apollo/client/react';
-import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -12,9 +12,8 @@ import {
   RecipeReviewFragmentDoc,
   type RecipeReviewFragment,
 } from '#features/recipes/graphql/recipeFragments.generated';
-import { formatRelativeToNow } from '#/utils/formatters/date';
-import { personName } from '#/utils/formatters/memberFormatters';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { formatRelativeToNow } from '#utils/formatters/date';
+import { personName } from '#utils/formatters/memberFormatters';
 import { useUser } from '#store/useAppStore';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 
@@ -69,7 +68,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
           <CachedImage uri={avatar} style={styles.avatar} displaySize={36} />
         ) : (
           <View style={styles.avatarPlaceholder}>
-            <Icon name="person" size={16} tone="textSecondary" />
+            <Icon name="person" size="xs" tone="textSecondary" />
           </View>
         )}
         <View style={styles.headerText}>
@@ -78,7 +77,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
               {displayName}
             </Text>
             {!!review.verified && (
-              <Icon name="checkmark-circle" size={14} tone="success" />
+              <Icon name="checkmark-circle" size="2xsPlus" tone="success" />
             )}
           </View>
           <Text role="caption" tone="secondary" style={styles.date}>
@@ -89,38 +88,35 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
         {!!isOwn && (
           <View style={styles.ownActions}>
             {!!onEdit && (
-              <Pressable
+              <IconButton
+                name="create-outline"
+                size="xsPlus"
+                tone="primary"
                 onPress={onEdit}
-                hitSlop={hitSlop.md}
-                style={({ pressed }) => pressed && styles.pressed}
                 accessibilityLabel={t('recipes.editReviewA11y')}
-              >
-                <Icon name="create-outline" size={18} tone="primary" />
-              </Pressable>
+              />
             )}
             {!!onDelete && (
-              <Pressable
+              <IconButton
+                name="trash-outline"
+                size="xsPlus"
+                tone="error"
                 onPress={onDelete}
-                hitSlop={hitSlop.md}
-                style={({ pressed }) => pressed && styles.pressed}
                 accessibilityLabel={t('recipes.deleteReviewA11y')}
-              >
-                <Icon name="trash-outline" size={18} tone="error" />
-              </Pressable>
+              />
             )}
           </View>
         )}
         {!!reportable && (
-          <Pressable
+          <IconButton
+            name="flag-outline"
+            size="xsPlus"
+            tone="textSecondary"
             onPress={() => onReport(authorId)}
-            hitSlop={hitSlop.md}
-            style={({ pressed }) => pressed && styles.pressed}
-            accessibilityRole="button"
             accessibilityLabel={t('reports.reportReview')}
+            accessibilityRole="button"
             testID={recipesTestIDs.reviewReportButton(review.id)}
-          >
-            <Icon name="flag-outline" size={18} tone="textSecondary" />
-          </Pressable>
+          />
         )}
       </View>
       {/* Stars */}
@@ -129,7 +125,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
           <Icon
             key={star}
             name={star <= review.rating ? 'star' : 'star-outline'}
-            size={14}
+            size="2xsPlus"
             tone="rating"
           />
         ))}
@@ -149,7 +145,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       >
         <Icon
           name={hasVotedHelpful ? 'thumbs-up' : 'thumbs-up-outline'}
-          size={14}
+          size="2xsPlus"
           tone={hasVotedHelpful ? 'onPrimaryLight' : 'textSecondary'}
         />
         <Text
@@ -236,8 +232,5 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primaryLight,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

@@ -14,6 +14,7 @@ jest.mock('#features/pantry/hooks/usePantryQuery', () => {
 });
 
 import { memoryScreen } from '#/test-utils/memoryPlatform';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   completeMockedResponse,
   recordMock,
@@ -25,20 +26,19 @@ import {
   type GetMealPlanQuery,
 } from '#features/mealPlan/screens/useMealPlan.generated';
 import type { Unmasked } from '@apollo/client/masking';
-import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GenerateShoppingListPlanDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { seedCache } from '#/test-utils/apolloMockProvider';
 import { UseGenerateShoppingList_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { useStore } from '#store';
-import { AddedContext, ErrorCode } from '#/graphql/generated/schemaTypes';
+import { AddedContext, ErrorCode } from '#graphql/generated/schemaTypes';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import {
   MAX_RECIPE_INGREDIENTS,
   RECIPE_INGREDIENTS_PAGE_SIZE,
 } from '#domain/recipeIngredientsPaging';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { act } from '@testing-library/react-native';
 import { useGenerateShoppingList } from '../useGenerateShoppingList';
 
@@ -166,7 +166,7 @@ function createMock() {
 }
 
 function addMock() {
-  return recordMock(AddDerivedItemsToShoppingListDocument, {
+  return recordMock(AddItemToShoppingListDocument, {
     data: {
       addItemsToShoppingList: {
         __typename: 'AddItemsToShoppingListPayload',
@@ -650,7 +650,7 @@ describe('generating a shopping list from a cached meal plan', () => {
 
     it('takes back the rows of a refused batch and reports no success', async () => {
       useStore.setState({ apiReachable: false });
-      const refused = recordMock(AddDerivedItemsToShoppingListDocument, {
+      const refused = recordMock(AddItemToShoppingListDocument, {
         data: {
           addItemsToShoppingList: {
             __typename: 'ForbiddenError',

@@ -1,11 +1,10 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import {
-  AddItemToShoppingListDocument,
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
-import { useTranslation } from '#/i18n';
+import { useAddShoppingRows } from '#features/shoppingList/hooks/useAddShoppingRows';
+import { useTranslation } from '#i18n';
 import {
   putSuggestionBack,
   takeSuggestion,
@@ -52,7 +51,7 @@ export function useAddToShoppingList({
   const client = useApolloClient();
   const { t } = useTranslation();
 
-  const [addItemMutation] = useMutation(AddItemToShoppingListDocument);
+  const { addRow } = useAddShoppingRows();
 
   const readSuggestions = (forList: string) => {
     const variables = { id: forList, limit: suggestionsLimit };
@@ -145,7 +144,7 @@ export function useAddToShoppingList({
     unitId,
   }: NewItem): Promise<AddItemOutcome> => {
     if (!shoppingListId) return 'reverted';
-    const { outcome } = await createShoppingListRow(client.cache, {
+    const { outcome } = await addRow({
       listId: shoppingListId,
       row: { itemName, unitId },
       line: {
@@ -153,8 +152,6 @@ export function useAddToShoppingList({
         quantity: null,
         unit: unitId ? { id: unitId } : undefined,
       },
-      send: addItemMutation,
-      document: AddItemToShoppingListDocument,
       fallback: t('errors.addItemFailed'),
     });
     return outcome;

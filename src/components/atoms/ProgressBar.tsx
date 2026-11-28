@@ -1,13 +1,13 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
-  useSharedValue,
-  withTiming,
+  type CSSTransitionProperties,
 } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
-import { motion } from '#/theme/motion';
+import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
+import { motion } from '#theme/motion';
 
 type Tone = 'accent' | 'success' | 'warning' | 'error' | 'rating';
 
@@ -21,6 +21,21 @@ const TONE_COLOR: Record<
   error: 'error',
   rating: 'rating',
 };
+
+// Attached from the fill's first commit, so the first value shows at once and
+// every later one slides. Verified: #reanimated-css-transitions-need-a-baseline-commit.
+const SLIDE: CSSTransitionProperties = {
+  transitionProperty: 'width',
+  transitionDuration: motion.timing.MODERATE,
+  transitionTimingFunction: motion.cssEasing.standard,
+};
+
+// Plain values, not a Unistyles style: the transition animates what the style
+// prop carries.
+const filled = (ratio: number): ViewStyle => ({
+  height: '100%',
+  width: `${ratio * 100}%`,
+});
 
 export interface ProgressBarProps {
   /** 0–1. Values outside the range are clamped, so a caller can pass a ratio. */
@@ -47,17 +62,14 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 }) => {
   const ratio = Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
   const variantStyles = styles.useVariants({ size });
-  const progress = useSharedValue(ratio);
-  useEffect(() => {
-    progress.set(withTiming(ratio, { duration: motion.timing.MODERATE }));
-  }, [progress, ratio]);
-  // The fill animates, so its themed colour is read in the worklet.
+  // Reanimated's CSS transitions ignore reduce motion.
+  // Verified: #reanimated-css-transitions-ignore-reduce-motion.
+  const motionEnabled = useMotionEnabled();
+  // The fill animates, so its themed values are read in a theme-only worklet.
   const animatedTheme = useAnimatedTheme();
-  const fillStyle = useAnimatedStyle(() => {
+  const fillThemeStyle = useAnimatedStyle(() => {
     const theme = animatedTheme.get();
     return {
-      height: '100%',
-      width: `${progress.get() * 100}%`,
       borderRadius: theme.radii.full,
       backgroundColor: theme.colors[TONE_COLOR[tone]],
     };
@@ -70,7 +82,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       style={[variantStyles.track, style]}
       testID={testID}
     >
-      <Animated.View style={fillStyle} />
+      <Animated.View
+        style={[fillThemeStyle, filled(ratio), motionEnabled ? SLIDE : null]}
+      />
     </View>
   );
 };

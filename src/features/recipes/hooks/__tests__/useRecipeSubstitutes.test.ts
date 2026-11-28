@@ -1,5 +1,5 @@
 import type { Unmasked } from '@apollo/client/masking';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   completeMockedResponse,
   recordMock,
@@ -17,7 +17,7 @@ import {
   DietaryAlertState,
   MembershipRole,
   RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { RecipeSubstitutesDocument } from '../useRecipeSubstitutes.generated';
 import { useRecipeSubstitutes } from '../useRecipeSubstitutes';
 

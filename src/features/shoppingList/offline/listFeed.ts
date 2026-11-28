@@ -4,18 +4,17 @@ import type {
   FeedPage,
   FeedScopeCursor,
   FeedSnapshot,
-} from '#/apollo/feed/types';
-import { readWholeScope } from '#/apollo/feed/readWholeScope';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
-import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
+} from '#apollo/feed/types';
+import { readWholeScope } from '#apollo/feed/readWholeScope';
+import { isHeld } from '#apollo/utils/writeLocalEntity';
+import { SyncScopeKind } from '#graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { removeCollaboratorFromShoppingListCache } from '../cache/collaborators';
 import {
   dropShoppingListRows,
   moveAnsweredShoppingListItem,
   sortShoppingListRows,
-} from '../cache/connections';
+} from '#entities/shoppingList/connections';
 import {
   attachCollaborator,
   evictListRows,
@@ -24,8 +23,8 @@ import {
 import {
   addShoppingListToQueryCache,
   removeShoppingListFromCache,
-} from '../cache/list';
-import { scopeStorage } from '#/apollo/offline/ApolloCachePersistence';
+} from '#entities/shoppingList/list';
+import { scopeStorage } from '#apollo/offline/ApolloCachePersistence';
 import {
   discardListShard,
   hydrateListShard,
@@ -184,8 +183,6 @@ export const listFeedAdapter: FeedAdapter = {
     evictListRows(cache, id);
     discardListShard(id);
   },
-
-  holdsUnacknowledgedCreate: id => queueStore.holdsCreateFor(id),
 
   isOnScreen: id => useStore.getState().selectedShoppingListId === id,
 

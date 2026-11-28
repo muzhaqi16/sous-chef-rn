@@ -1,11 +1,10 @@
 import React from 'react';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { Text } from '#components/atoms/Text';
-import { Button } from '#components/molecules/Button';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useOpening } from '#hooks/ui/useOpening';
@@ -55,19 +54,17 @@ interface CaptureFormFrameProps {
   /** Why the last send did not start, where no field can hold it. */
   failure: string | null;
   sending: boolean;
-  /** Whether the form holds something to send. */
-  canSend: boolean;
+  /** Sends, or says on the form what is missing. */
   onSend: () => void;
   children: React.ReactNode;
 }
 
-/** A capture form's title, connection note, failure and send button around its fields. */
+/** A capture form's bar, with its send, and its connection note and failure around its fields. */
 export const CaptureFormFrame: React.FC<CaptureFormFrameProps> = ({
   title,
   onClose,
   failure,
   sending,
-  canSend,
   onSend,
   children,
 }) => {
@@ -77,7 +74,18 @@ export const CaptureFormFrame: React.FC<CaptureFormFrameProps> = ({
   return (
     <>
       <SheetHeaderSlot>
-        <SheetHeader title={title} onClose={onClose} />
+        <SheetHeader
+          title={title}
+          onClose={onClose}
+          // Held only offline, which the note under the fields says.
+          confirm={{
+            onPress: onSend,
+            accessibilityLabel: t('recipes.captureImport'),
+            loading: sending,
+            disabled: unavailable,
+            testID: recipesTestIDs.captureSend,
+          }}
+        />
       </SheetHeaderSlot>
       {children}
       {unavailable ? (
@@ -92,21 +100,12 @@ export const CaptureFormFrame: React.FC<CaptureFormFrameProps> = ({
           iconLibrary="Ionicons"
         />
       ) : null}
-      <Button
-        onPress={onSend}
-        loading={sending}
-        disabled={unavailable || !canSend}
-        testID={recipesTestIDs.captureSend}
-      >
-        {t('recipes.captureImport')}
-      </Button>
     </>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.md,
   },
   note: {

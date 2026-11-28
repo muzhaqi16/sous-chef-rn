@@ -5,7 +5,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import { UnitSystem } from '#graphql/generated/schemaTypes';
 import { useReadingSystem } from '../useReadingSystem';
 
 const settingsMock = (

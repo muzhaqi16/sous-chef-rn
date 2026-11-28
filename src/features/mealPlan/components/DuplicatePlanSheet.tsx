@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
+import { Controller, useController, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useTranslation } from '#i18n';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
 import { StyleSheet } from 'react-native-unistyles';
 import { addDays, differenceInDays, parseISO } from 'date-fns';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { FormInput } from '#components/atoms/FormInput';
 import { Icon } from '#components/atoms/Icon';
 import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
@@ -14,9 +17,30 @@ import {
   formatMonthDay,
   formatMonthDayYear,
   formatWeekdayMonthDay,
-} from '#/utils/formatters/date';
-import { toDateKey } from '#/utils/dateUtils';
-import { hitSlop } from '#/theme/foundations/sizes';
+} from '#utils/formatters/date';
+import { toDateKey } from '#utils/dateUtils';
+import { useOpening } from '#hooks/ui/useOpening';
+import { reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import {
+  duplicatePlanSchema,
+  type DuplicatePlanFormValues,
+} from './duplicatePlanFormConfig';
+
+/** The copy's first and last day: as many days as the plan, after it ends. */
+const copyRange = (mealPlan: MealPlanDisplayFragment, offset: number) => {
+  const duration =
+    !mealPlan.startDate || !mealPlan.endDate
+      ? 7
+      : differenceInDays(
+          parseISO(mealPlan.endDate),
+          parseISO(mealPlan.startDate),
+        );
+  const start = mealPlan.endDate
+    ? addDays(parseISO(mealPlan.endDate), 1 + offset)
+    : new Date();
+  return { start, end: addDays(start, duration) };
+};
 
 interface DuplicatePlanSheetProps {
   visible: boolean;
@@ -29,86 +53,65 @@ interface DuplicatePlanSheetProps {
     newEndDate: string;
   }) => void;
   loading: boolean;
-  /** Server unreachable (offline / API down) — disables confirm (no replay path). */
-  disabled?: boolean;
 }
 
-export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
-  visible,
+type DuplicatePlanFormProps = Omit<
+  DuplicatePlanSheetProps,
+  'visible' | 'mealPlan'
+> & { mealPlan: MealPlanDisplayFragment };
+
+const DuplicatePlanForm: React.FC<DuplicatePlanFormProps> = ({
   mealPlan,
   onClose,
   onDuplicate,
   loading,
-  disabled = false,
 }) => {
   const { t } = useTranslation();
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<DuplicatePlanFormValues>({
+    resolver: yupResolver(duplicatePlanSchema),
+    defaultValues: {
+      name: t('labels.copyOfName', { name: mealPlan.name }),
+      startDateOffset: 0,
+    },
+  });
+  useSheetUnsavedInput(isDirty);
+  const { field: offset } = useController({
+    control,
+    name: 'startDateOffset',
+  });
+  const { start, end } = copyRange(mealPlan, offset.value);
 
-  const [name, setName] = useState('');
-  const [startDateOffset, setStartDateOffset] = useState(0);
-
-  // Reset state when sheet opens (render-time conditional state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevMealPlan, setPrevMealPlan] = useState(mealPlan);
-  if (visible !== prevVisible || mealPlan !== prevMealPlan) {
-    setPrevVisible(visible);
-    setPrevMealPlan(mealPlan);
-    if (visible && mealPlan) {
-      setName(t('labels.copyOfName', { name: mealPlan.name }));
-      setStartDateOffset(0);
-    }
-  }
-
-  const duration = (() => {
-    if (!mealPlan?.startDate || !mealPlan.endDate) return 7;
-    return differenceInDays(
-      parseISO(mealPlan.endDate),
-      parseISO(mealPlan.startDate),
-    );
-  })();
-
-  const newStartDate = (() => {
-    if (!mealPlan?.endDate) return new Date();
-    return addDays(parseISO(mealPlan.endDate), 1 + startDateOffset);
-  })();
-
-  const newEndDate = (() => {
-    return addDays(newStartDate, duration);
-  })();
-
-  const handleDuplicate = () => {
-    if (!mealPlan || !name.trim()) return;
+  const duplicate = handleSubmit(({ name, startDateOffset }) => {
+    const range = copyRange(mealPlan, startDateOffset);
     onDuplicate({
       mealPlanId: mealPlan.id,
-      newName: name.trim(),
-      newStartDate: toDateKey(newStartDate),
-      newEndDate: toDateKey(newEndDate),
+      newName: name,
+      newStartDate: toDateKey(range.start),
+      newEndDate: toDateKey(range.end),
     });
-  };
+  }, reportValidationErrors);
 
   return (
-    <Sheet
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={['55%']}
-      mode="form"
-      style={styles.scrollView}
-      contentContainerStyle={styles.contentContainer}
-      header={
-        <BottomSheetHeader
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
           title={t('labels.duplicatePlan')}
-          onCancel={onClose}
-          onConfirm={handleDuplicate}
-          confirmLabel={
-            loading
-              ? t('duplicatePlan.duplicating')
-              : t('duplicatePlan.duplicate')
-          }
-          confirmDisabled={loading || disabled || !name.trim()}
-          confirmColor="primary"
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void duplicate();
+            },
+            accessibilityLabel: t('duplicatePlan.duplicate'),
+            loading,
+          }}
         />
-      }
-    >
-      {!!mealPlan && !!mealPlan.startDate && !!mealPlan.endDate && (
+      </SheetHeaderSlot>
+
+      {!!mealPlan.startDate && !!mealPlan.endDate && (
         <View style={styles.currentInfo}>
           <Text role="caption" tone="secondary" style={styles.currentLabel}>
             {t('duplicatePlan.currentPlanLabel')}
@@ -120,12 +123,21 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
         </View>
       )}
 
-      <FormInput
-        label={t('duplicatePlan.newNameLabel')}
-        value={name}
-        onChangeText={setName}
-        placeholder={t('duplicatePlan.newNamePlaceholder')}
-        required
+      <Controller
+        control={control}
+        name="name"
+        render={({ field, fieldState }) => (
+          <FormInput
+            ref={field.ref}
+            label={t('duplicatePlan.newNameLabel')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('duplicatePlan.newNamePlaceholder')}
+            error={fieldState.error?.message}
+            required
+          />
+        )}
       />
 
       {/* Date adjustment */}
@@ -134,43 +146,71 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
           {t('labels.startDate')}
         </Text>
         <View style={styles.dateAdjust}>
-          <Pressable
-            onPress={() => setStartDateOffset(prev => prev - 7)}
+          <IconButton
+            name="chevron-back"
+            size="sm"
+            tone="primary"
+            onPress={() => offset.onChange(offset.value - 7)}
             accessibilityLabel={t('a11y.previousWeek')}
-            style={styles.dateButton}
-            hitSlop={hitSlop.md}
-          >
-            <Icon name="chevron-back" size={20} tone="primary" />
-          </Pressable>
+            filled={{ size: 'md', tone: 'background' }}
+          />
           <View style={styles.dateDisplay}>
-            <Text role="bodyStrong">{formatWeekdayMonthDay(newStartDate)}</Text>
+            <Text role="bodyStrong">{formatWeekdayMonthDay(start)}</Text>
             <Text role="caption" tone="secondary" style={styles.dateSubtext}>
               {t('duplicatePlan.endDateSubtext', {
-                date: formatWeekdayMonthDay(newEndDate),
+                date: formatWeekdayMonthDay(end),
               })}
             </Text>
           </View>
-          <Pressable
-            onPress={() => setStartDateOffset(prev => prev + 7)}
+          <IconButton
+            name="chevron-forward"
+            size="sm"
+            tone="primary"
+            onPress={() => offset.onChange(offset.value + 7)}
             accessibilityLabel={t('a11y.nextWeek')}
-            style={styles.dateButton}
-            hitSlop={hitSlop.md}
-          >
-            <Icon name="chevron-forward" size={20} tone="primary" />
-          </Pressable>
+            filled={{ size: 'md', tone: 'background' }}
+          />
         </View>
       </View>
 
       <View style={styles.infoCard}>
         <Icon
           name="information-circle-outline"
-          size={18}
+          size="xsPlus"
           tone="textSecondary"
         />
         <Text role="caption" style={styles.infoText}>
           {t('duplicatePlan.infoText')}
         </Text>
       </View>
+    </>
+  );
+};
+
+export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
+  visible,
+  mealPlan,
+  ...form
+}) => {
+  const opening = useOpening(visible && mealPlan !== null, mealPlan);
+
+  return (
+    <Sheet
+      visible={visible}
+      onDismiss={form.onClose}
+      snapPoints={['55%']}
+      mode="form"
+      headerFromContent
+      style={styles.scrollView}
+      contentContainerStyle={styles.contentContainer}
+    >
+      {opening?.payload ? (
+        <DuplicatePlanForm
+          key={opening.id}
+          mealPlan={opening.payload}
+          {...form}
+        />
+      ) : null}
     </Sheet>
   );
 };
@@ -180,14 +220,11 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   contentContainer: {
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     gap: theme.spacing.md,
   },
   currentInfo: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   currentLabel: {
     marginBottom: theme.spacing.xs,
@@ -199,15 +236,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    padding: theme.spacing.sm,
-  },
-  dateButton: {
-    padding: theme.spacing.sm,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.background,
+    paddingVertical: theme.spacing.sm,
   },
   dateDisplay: {
     alignItems: 'center',
@@ -220,10 +249,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
+    paddingVertical: theme.spacing.md,
   },
   infoText: {
     flex: 1,

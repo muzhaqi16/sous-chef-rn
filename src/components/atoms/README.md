@@ -13,7 +13,8 @@ each is a molecule.
 
 There is no `base/`: a folder beside the tiers would hold components by taste,
 not by what they render. `DataStateView` composes `Loading`, `ErrorState` and
-`EmptyState` and routes between them, which makes it a molecule.
+`EmptyState`, each a molecule, and routes between them, which makes it an
+organism.
 
 ## Where a component goes
 

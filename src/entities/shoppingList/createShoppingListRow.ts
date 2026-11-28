@@ -1,0 +1,200 @@
+/**
+ * The local-first lifecycle of one shopping-row create, for every surface that
+ * adds a line: mint the id, hold the row as a pending write, send it and
+ * settle. The surface keeps its own success UX.
+ */
+
+import type { ApolloCache } from '@apollo/client';
+import { emitTutorialEvent } from '#domain/tutorialEvents';
+import type {
+  AddItemsToShoppingListInput,
+  BatchAddShoppingListItemInput,
+} from '#graphql/generated/schemaTypes';
+import type { LocalWriteSend } from '#apollo/pendingWrites/pendingWrites';
+import { sendLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { LocalWriteBinding } from '#apollo/pendingWrites/types';
+import type { SettledFailure } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { generateEntityId } from '#utils/generateEntityId';
+import { isRecord } from '#utils/isRecord';
+import { itemIdOf, type SentItemRef } from '#utils/refInput';
+import { t } from '#i18n';
+import type { AddRowsInputs } from './localWrites';
+import {
+  createLocalShoppingListItem,
+  type LocalShoppingListItem,
+  type OptimisticShoppingListItemFields,
+} from './items';
+
+/**
+ * What a new row shows until the server answers; its list is the create's, and
+ * its item the one the line names unless the row states its own (a line naming
+ * a product record still names the item that record is of).
+ */
+export type ShoppingRowFields = Omit<
+  OptimisticShoppingListItemFields,
+  'shoppingListId'
+>;
+
+/** The line as sent, less the id the create mints. */
+export type ShoppingRowLine = Omit<
+  BatchAddShoppingListItemInput,
+  'id' | 'item'
+> & {
+  item: SentItemRef;
+};
+
+interface ShoppingRowCreate<TData> {
+  listId: string;
+  row: ShoppingRowFields;
+  line: ShoppingRowLine;
+  /** Fires the batch add; `useAddShoppingRows`, the one door, passes it. */
+  send: (
+    options: LocalWriteSend<{ input: AddItemsToShoppingListInput }>,
+  ) => Promise<{ data?: TData | null; error?: unknown }>;
+  /** The batch add, bound to the rows it shows: `useAddShoppingRows` passes it. */
+  write: LocalWriteBinding<
+    TData,
+    { input: AddItemsToShoppingListInput },
+    AddRowsInputs
+  >;
+  /** The surface's copy for a refusal nothing more specific describes. */
+  fallback: string;
+}
+
+interface ShoppingRowCreated<TData> {
+  /**
+   * The row the line landed on: the server's when it folded the add into a
+   * line it held, else the id the create minted.
+   */
+  id: string;
+  /** `kept` once the row is added or its create queued. */
+  outcome: 'kept' | 'reverted';
+  /** Why the row was withdrawn, for the surface to present; never presented here. */
+  failure: SettledFailure | null;
+  data: TData | null | undefined;
+}
+
+/** The batch's only line, as an applied response states it. */
+function answeredLine(data: unknown): Record<string, unknown> | null {
+  const payload: unknown = appliedPayload(data);
+  const results: unknown = isRecord(payload) ? payload.results : undefined;
+  const line: unknown = Array.isArray(results) ? results[0] : undefined;
+  return isRecord(line) ? line : null;
+}
+
+/** The batch can apply while refusing its only line; that comes with no code worth naming. */
+function refusedLine(data: unknown): boolean {
+  const line = answeredLine(data);
+  return !!line && (line.success === false || line.item === null);
+}
+
+/** The row the server put the line on, which differs from the minted id after a merge. */
+function landedRowId(data: unknown): string | null {
+  const item = answeredLine(data)?.item;
+  return isRecord(item) && typeof item.id === 'string' ? item.id : null;
+}
+
+/** The API refuses a batch add, or a create's lines, past this many. */
+export const ADD_ITEMS_BATCH_LIMIT = 50;
+
+/**
+ * Sends lines as batch adds the API accepts, each slice settled on its own and
+ * holding only its own rows, so a refusal takes back exactly those. Returns the
+ * first failure, for the caller to present, or null when every slice applied or
+ * queued.
+ */
+export async function addItemsInSlices<TItem extends { id?: string | null }>(
+  cache: ApolloCache,
+  listId: string,
+  items: readonly TItem[],
+  rowOf: (line: TItem) => LocalShoppingListItem | null,
+  send: (
+    write: LocalWriteSend<{
+      input: { shoppingListId: string; items: TItem[] };
+    }>,
+  ) => Promise<{ data?: unknown; error?: unknown }>,
+  settle: {
+    write: LocalWriteBinding<
+      unknown,
+      { input: { shoppingListId: string; items: TItem[] } },
+      AddRowsInputs
+    >;
+    fallback: string;
+  },
+): Promise<SettledFailure | null> {
+  let firstFailure: SettledFailure | null = null;
+  let landed = false;
+  // In order: a queued slice replays behind the one before it.
+  for (let start = 0; start < items.length; start += ADD_ITEMS_BATCH_LIMIT) {
+    const slice = items.slice(start, start + ADD_ITEMS_BATCH_LIMIT);
+    const inputs: AddRowsInputs = {
+      listId,
+      rows: slice.flatMap(line => rowOf(line) ?? []),
+      now: new Date().toISOString(),
+    };
+    const settled = await sendLocalWrite(
+      cache,
+      settle.write,
+      { input: { shoppingListId: listId, items: slice } },
+      send,
+      { fallback: settle.fallback, present: 'none' },
+      inputs,
+    );
+    firstFailure ??= settled.failure ?? null;
+    landed ||= settled.failure === undefined;
+  }
+  // A tour step waiting for an add continues, whichever way it came.
+  if (landed) emitTutorialEvent('list.itemAdded');
+  return firstFailure;
+}
+
+export async function createShoppingListRow<TData>(
+  cache: ApolloCache,
+  { listId, row, line, send, write, fallback }: ShoppingRowCreate<TData>,
+): Promise<ShoppingRowCreated<TData>> {
+  const id = generateEntityId();
+  const inputs: AddRowsInputs = {
+    listId,
+    rows: [
+      createLocalShoppingListItem(id, {
+        ...row,
+        itemId: row.itemId ?? itemIdOf(line.item),
+        shoppingListId: listId,
+      }),
+    ],
+    now: new Date().toISOString(),
+  };
+
+  const settled = await sendLocalWrite(
+    cache,
+    write,
+    { input: { shoppingListId: listId, items: [{ ...line, id }] } },
+    send,
+    { fallback, present: 'none' },
+    inputs,
+  );
+  if (settled.failure) {
+    return { id, outcome: 'reverted', failure: settled.failure, data: null };
+  }
+  if (refusedLine(settled.data)) {
+    return {
+      id,
+      outcome: 'reverted',
+      failure: {
+        code: null,
+        field: null,
+        title: t('labels.error'),
+        body: fallback,
+      },
+      data: settled.data,
+    };
+  }
+  emitTutorialEvent('list.itemAdded');
+  return {
+    id: landedRowId(settled.data) ?? id,
+    outcome: 'kept',
+    failure: null,
+    data: settled.data,
+  };
+}

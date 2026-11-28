@@ -9,7 +9,7 @@ A colour is a theme token, never a hex, rgb() or named literal.
 
 ## Use instead
 
-A token: `theme.colors.*` in a stylesheet, `<Icon tone="onScrim" />` for an icon, `colors.*` from `#/theme/foundations/colors` outside a component. Missing one? Add it under `src/theme/` — a per-scheme value in `themes.ts`, a scheme-independent one (artwork, a stored swatch, a ripple) in `foundations/colors.ts`.
+A token: `theme.colors.*` in a stylesheet, `<Icon tone="onScrim" />` for an icon, `colors.*` from `#theme/foundations/colors` outside a component. Missing one? Add it under `src/theme/` — a per-scheme value in `themes.ts`, a scheme-independent one (artwork, a stored swatch, a ripple) in `foundations/colors.ts`.
 
 - Over a photo, camera preview or scrim: `onScrim` for the foreground, `overlays.*` for the scrim, `onScrimSubtle` for a control's ground.
 - On a fill: that fill's `on*` token (`onPrimary`), never white — the fill follows the user's accent.

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useStockCheck } from '../hooks/useStockCheck';
@@ -9,8 +9,12 @@ import { StockCheckSheet } from './StockCheckSheet';
 /**
  * The pantry's way into a stock check: shown while the server has stacks worth
  * checking, never in the way of the list. Off with `pantryTrackingFoundation`.
+ * The check covers the whole pantry, so a narrowed list hides it; it stays
+ * mounted so its read is not re-run on every filter change.
  */
-export const StockCheckEntry: React.FC = () => {
+export const StockCheckEntry: React.FC<{ visible: boolean }> = ({
+  visible,
+}) => {
   const { t } = useTranslation();
   const enabled = useFeatureFlag('pantryTrackingFoundation');
   const { rows } = useStockCheck(enabled);
@@ -18,7 +22,7 @@ export const StockCheckEntry: React.FC = () => {
   if (!enabled) return null;
   return (
     <>
-      {rows.length > 0 ? (
+      {visible && rows.length > 0 ? (
         <AlertBanner
           variant="info"
           title={t('pantryScreen.stockCheckEntry', { count: rows.length })}

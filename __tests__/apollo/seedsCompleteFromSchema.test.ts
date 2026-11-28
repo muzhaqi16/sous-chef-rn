@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { Items_RowFragmentDoc } from '#features/shoppingList/cache/items.generated';
+import { Items_RowFragmentDoc } from '#entities/shoppingList/items.generated';
 
 describe('a cache seed', () => {
   it('states only what it asserts on: a query’s other fields come from the SDL', () => {

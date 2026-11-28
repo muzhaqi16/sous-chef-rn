@@ -8,7 +8,7 @@ import { MyRecipes } from '../MyRecipes';
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
 // Its repeating diagnostics timer never drains: 0 is the hook's own off switch.

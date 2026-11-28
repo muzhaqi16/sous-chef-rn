@@ -2,11 +2,8 @@
 
 import { act } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
-import { makeCache } from '#/apollo/cache';
-import {
-  readUsualStores,
-  writeUsualStores,
-} from '#features/catalog/cache/usualStores';
+import { makeCache } from '#apollo/cache';
+import { readUsualStores, writeUsualStores } from '#entities/store/usualStores';
 import {
   inputOf,
   recordMock,
@@ -35,9 +32,9 @@ import {
   ReceiptParser,
   UnitType,
   UsualStoreSource,
-} from '#/graphql/generated/schemaTypes';
-import { toDateKey } from '#/utils/dateUtils';
-import { t } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import { toDateKey } from '#utils/dateUtils';
+import { t } from '#i18n';
 import {
   useReceiptDraftStore,
   type ReceiptDraft,
@@ -56,7 +53,7 @@ import { useReceiptReview } from '../useReceiptReview';
 import { UseReceiptReview_StoreFragmentDoc } from '../useReceiptReview.generated';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import { CreateStoreFromPlaceDocument } from '#features/catalog/hooks/useCreateStoreFromPlace.generated';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { RemoveUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { ResolveReceiptLinesDocument } from '../useReceiptMatches.generated';
@@ -68,10 +65,10 @@ import {
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 interface CurrentPantry {
   pantry: { id: string; name: string } | null;
   currentHome: { id: string } | null;
@@ -594,6 +591,16 @@ describe('useReceiptReview', () => {
     expect(pantryItemNames(cache).sort()).toEqual(['Bananas', 'Whole milk']);
     expect(review().pendingCount).toBe(0);
     expect(draft()?.checkIn?.state).toBe('queued');
+    // Shown apart from lines the server took, until it answers.
+    expect(review().rows.map(row => row.status)).toEqual(['queued', 'queued']);
+    const checkInId = draft()?.checkIn?.ids[0] ?? '';
+    act(() => {
+      useReceiptDraftStore.getState().settleCheckIn(checkInId, [
+        { index: 1, success: true },
+        { index: 3, success: true },
+      ]);
+    });
+    expect(review().rows.map(row => row.status)).toEqual(['added', 'added']);
   });
 
   it.each<[string, Partial<ReceiptLineChoice>, string]>([
@@ -642,7 +649,23 @@ describe('useReceiptReview', () => {
   // IN-04: the milk already moved to the pantry gets its receipt: the line
   // fills that purchase in, records it, and adds no stock or second purchase.
   it('sends a line picked as the receipt for an earlier purchase as that purchase', async () => {
-    const { choose, checkIn, addChosen, cache } = await setup();
+    const { choose, checkIn, addChosen, cache } = await setup({
+      // The milk that purchase stocked, once: one arrival, nothing added since.
+      held: {
+        pantry: {
+          id: 'p1',
+          itemsConnection: connectionOf([
+            {
+              id: 'p1-milk',
+              itemName: 'Whole milk',
+              item: { id: 'cat-milk' },
+              quantity: 1,
+              activeBatchCount: 1,
+            },
+          ]),
+        },
+      },
+    });
     await choose({
       1: {
         ...MILK,
@@ -661,7 +684,14 @@ describe('useReceiptReview', () => {
     });
     expect(attached).not.toHaveProperty('pantryItemId');
     expect(attached).not.toHaveProperty('shoppingListItemId');
-    expect(pantryItems(cache)).toEqual([]);
+    // Still the one stack, holding what it held, from one arrival.
+    expect(pantryItems(cache)).toEqual([
+      expect.objectContaining({ id: 'p1-milk', quantity: 1 }),
+    ]);
+    expect(record(cache, 'PantryItem:p1-milk')).toMatchObject({
+      quantity: 1,
+      activeBatchCount: 1,
+    });
   });
 
   // REL-01: two confirms in flight carry the identities the first minted, so
@@ -685,6 +715,46 @@ describe('useReceiptReview', () => {
     expect(await addChosen()).toMatchObject({ sent: 0 });
     expect(checkIn.fired).toHaveLength(sends);
   });
+
+  // A line filling an earlier purchase is told what that purchase holds otherwise.
+  it.each([
+    [ErrorCode.VersionConflict, undefined, 'receipts.review.purchaseChanged'],
+    [
+      ErrorCode.ValidationFailed,
+      'amount',
+      'receipts.review.purchaseDiffersAmount',
+    ],
+    [
+      ErrorCode.ValidationFailed,
+      'totalPaid',
+      'receipts.review.purchaseDiffersPaid',
+    ],
+  ] as const)(
+    'says a picked purchase refused with %s on %s why, for the line to be checked again',
+    async (code, field, said) => {
+      const { review, run } = await setup();
+      await run(current => {
+        current.chooseLine(1, {
+          ...MILK,
+          notStocked: true,
+          existingPurchase: { id: 'IN-04-existing-purchase', version: 3 },
+        });
+        useReceiptDraftStore.setState(state => ({
+          draft: state.draft && {
+            ...state.draft,
+            failed: { 1: code },
+            ...(field ? { failedOn: { 1: field } } : {}),
+          },
+        }));
+      });
+
+      expect(review().rows[0]).toMatchObject({
+        status: 'failed',
+        failure: t(said),
+        ...(field ? { failedOn: field } : {}),
+      });
+    },
+  );
 
   it('says a line refused with no code this build knows was not added', async () => {
     const { review, run } = await setup();

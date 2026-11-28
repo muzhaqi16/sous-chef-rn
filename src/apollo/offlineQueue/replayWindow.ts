@@ -1,5 +1,5 @@
-import { requireApolloClient } from '#/apollo/clientRegistry';
-import { logger } from '#/utils/environment';
+import { requireApolloClient } from '#apollo/clientRegistry';
+import { logger } from '#utils/environment';
 import { OfflineLimitsDocument } from './offlineLimits.generated';
 
 const DAY_MS = 24 * 60 * 60 * 1000;

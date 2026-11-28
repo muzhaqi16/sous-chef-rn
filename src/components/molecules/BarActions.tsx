@@ -10,7 +10,8 @@ import {
   type ActionVariant,
   type HeaderAction,
 } from '#components/molecules/HeaderActionIcon';
-import { hitSlop, sizes } from '#/theme/foundations/sizes';
+import { hitSlop, sizes } from '#theme/foundations/sizes';
+import type { Theme } from '#theme/themes';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 type MeasureHandler = NonNullable<HeaderAction['onMeasure']>;
@@ -53,9 +54,9 @@ interface BarActionsProps {
   leading?: React.ReactNode;
   /**
    * `bar`: the bar pads by `commonStyles.barInset`, so each action is a whole
-   * touch target. `gutter`: the bar sits on a content gutter, so the glyph
-   * takes the edge and `hitSlop` supplies the target. Either way the outermost
-   * glyph lands on the page gutter and glyphs sit the same distance apart.
+   * touch target. `gutter`: the bar sits on a content gutter, so its whole
+   * targets are pulled out by their slack (see `gutterTargetGeometry`). Either
+   * way the outermost glyph lands on the page gutter.
    */
   placement?: Placement;
   onLayout?: (event: LayoutChangeEvent) => void;
@@ -109,7 +110,7 @@ const BarActionButton: React.FC<{
       testID={action.testID}
       accessibilityRole="button"
       accessibilityLabel={action.accessibilityLabel}
-      hitSlop={placement === 'bar' ? hitSlop.lg : GLYPH_SLACK}
+      hitSlop={placement === 'bar' ? hitSlop.lg : undefined}
     >
       {content}
     </AppPressable>
@@ -128,8 +129,10 @@ export const BarActions: React.FC<BarActionsProps> = ({
   placement = 'bar',
   onLayout,
 }) => {
+  // An empty group pulled out would hand its pull to the title beside it.
+  const pulled = placement === 'gutter' && (actions.length > 0 || !!leading);
   return (
-    <View style={styles.group(placement)} onLayout={onLayout}>
+    <View style={styles.group(pulled)} onLayout={onLayout}>
       {leading}
       {actions.map((action, index) => (
         <BarActionButton key={index} action={action} placement={placement} />
@@ -138,28 +141,47 @@ export const BarActions: React.FC<BarActionsProps> = ({
   );
 };
 
-// What a 24pt glyph centred in its 44pt target leaves on each side. Sizes do
-// not scale with density, so the foundation value is the theme's.
+// What a 24pt glyph centred in its 44pt target leaves on each side, for a
+// bar that reserves it in its own inset.
 const GLYPH_SLACK = (sizes.touchTarget.md - sizes.icon.md) / 2;
 
+/**
+ * A gutter bar's target is a whole box at the platform floor, and the group is
+ * pulled out by the glyph's slack in it, so the outermost glyph lands on the
+ * gutter. Read from the theme: the glyph grows with density, the floor does not.
+ */
+export const gutterTargetGeometry = (theme: Theme) => {
+  const box = theme.sizes.touchTarget.min;
+  return { box, pull: (box - theme.sizes.icon.md) / 2 };
+};
+
 const styles = StyleSheet.create(theme => {
-  const slack = GLYPH_SLACK;
+  const { box, pull } = gutterTargetGeometry(theme);
   return {
-    group: (placement: Placement) => ({
+    group: (pulled: boolean) => ({
       flexDirection: 'row',
       alignItems: 'center',
-      // A gutter target has no slack of its own, so the gap carries it.
-      gap: theme.spacing.sm + (placement === 'gutter' ? slack * 2 : 0),
+      gap: theme.spacing.sm,
+      ...(pulled && {
+        marginHorizontal: -pull,
+        marginVertical: -pull,
+      }),
     }),
     target: (placement: Placement, isText: boolean) =>
       placement === 'bar'
         ? {
             minWidth: theme.sizes.touchTarget.md,
             minHeight: theme.sizes.touchTarget.md,
-            ...(isText && { paddingHorizontal: slack }),
+            ...(isText && { paddingHorizontal: GLYPH_SLACK }),
             justifyContent: 'center',
             alignItems: 'center',
           }
-        : { justifyContent: 'center', alignItems: 'center' },
+        : {
+            minWidth: box,
+            minHeight: box,
+            ...(isText && { paddingHorizontal: pull }),
+            justifyContent: 'center',
+            alignItems: 'center',
+          },
   };
 });

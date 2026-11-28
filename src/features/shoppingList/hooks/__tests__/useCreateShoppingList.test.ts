@@ -1,11 +1,11 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
+import { createLocalShoppingListItem } from '#entities/shoppingList/items';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useUser } from '#store/useAppStore';
 import { useCreateShoppingList } from '../useCreateShoppingList';

@@ -1,11 +1,14 @@
 import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { SearchBar } from '#components/molecules/SearchBar';
-import { FilterTabs } from '#components/organisms/FilterTabs/FilterTabs';
-import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
+import { kitTestIDs } from '#components/testIDs';
+import {
+  ChipScrollRow,
+  type ChipOption,
+} from '#components/molecules/ChipScrollRow';
 import { FolderPicker } from '#features/recipes/components/FolderPicker';
 import { TagPicker } from '#features/recipes/components/TagPicker';
 import { DataStateView } from '#components/organisms/DataStateView';
@@ -31,7 +34,7 @@ import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTrac
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { SearchIncompleteNotice } from '#features/recipes/components/SearchIncompleteNotice';
 
@@ -194,87 +197,63 @@ export const SavedRecipes: React.FC = () => {
     toRecipeDetail({ recipeId });
   };
 
-  // Check if any filters are active
-  const hasActiveFilters = selectedFolder !== null || selectedTags.length > 0;
+  type FilterChip = 'all' | 'folder' | 'tags';
+  const testIDOf = (key: FilterChip) =>
+    kitTestIDs.filterTab(recipesTestIDs.savedRecipesFilterTabPrefix, key);
 
-  // Define filter tabs with modal triggers
-  const filterTabs = (() => {
-    const tabs: FilterTabConfig<string>[] = [
-      {
-        id: 'all',
-        label: t('labels.all'),
-      },
-    ];
+  // All clears every filter; a folder or tag chip opens its picker, and shows
+  // as selected while it filters.
+  const filterOptions: ChipOption<FilterChip>[] = [
+    {
+      key: 'all',
+      label: t('labels.all'),
+      count: recipes.length,
+      testID: testIDOf('all'),
+    },
+  ];
+  if (folders.length > 0 || foldersUnavailable) {
+    filterOptions.push({
+      key: 'folder',
+      label: selectedFolder ?? t('recipes.folders'),
+      icon: 'folder',
+      // Unread offline: no count, which would say none.
+      ...(foldersUnavailable ? undefined : { count: folders.length }),
+      testID: testIDOf('folder'),
+    });
+  }
+  if (offersTagFilter) {
+    filterOptions.push({
+      key: 'tags',
+      label:
+        selectedTags.length > 0
+          ? t('recipes.tagCount', { count: selectedTags.length })
+          : t('labels.tags'),
+      icon: 'pricetag-outline',
+      ...(hasMore ? undefined : { count: availableTags.length }),
+      testID: testIDOf('tags'),
+    });
+  }
 
-    if (folders.length > 0 || foldersUnavailable) {
-      tabs.push({
-        id: 'folder',
-        label: selectedFolder ?? t('recipes.folders'),
-        icon: 'folder',
-        onPress: () => setShowFolderPicker(true),
-        showDropdownIndicator: true,
-      });
-    }
+  const selectedFilters: FilterChip[] = [];
+  if (selectedFolder) selectedFilters.push('folder');
+  if (selectedTags.length > 0) selectedFilters.push('tags');
 
-    if (offersTagFilter) {
-      tabs.push({
-        id: 'tags',
-        label:
-          selectedTags.length > 0
-            ? t('recipes.tagCount', { count: selectedTags.length })
-            : t('labels.tags'),
-        icon: 'pricetag-outline',
-        onPress: () => setShowTagPicker(true),
-        showDropdownIndicator: true,
-      });
-    }
-
-    return tabs;
-  })();
-
-  const filterCounts = {
-    all: recipes.length,
-    folder: folders.length,
-    tags: hasMore ? undefined : availableTags.length,
+  const handleFilterPress = (key: FilterChip) => {
+    if (key === 'folder') setShowFolderPicker(true);
+    else if (key === 'tags') setShowTagPicker(true);
+    else handleClearFilters();
   };
 
-  const filteredTabs = (() => {
-    const filtered: string[] = [];
-    if (selectedFolder) filtered.push('folder');
-    if (selectedTags.length > 0) filtered.push('tags');
-    return filtered;
-  })();
-
-  const activeFilterTab = filteredTabs.length === 0 ? 'all' : '';
-
-  // Filter header - shown when folders or tags are available
-  const FilterHeader = (() => {
-    if (folders.length === 0 && !foldersUnavailable && !offersTagFilter) {
-      return null;
-    }
-
-    return (
-      <FilterTabs
-        tabs={filterTabs}
-        activeTabId={activeFilterTab}
-        filteredTabIds={filteredTabs}
-        onTabChange={tabId => {
-          if (tabId === 'all') {
-            handleClearFilters();
-          }
-        }}
-        counts={filterCounts}
-        actionButton={{
-          icon: 'close',
-          accessibilityLabel: t('recipeFilters.clearAllA11y'),
-          onPress: handleClearFilters,
-          testID: recipesTestIDs.savedRecipesClearFilters,
-          disabled: !hasActiveFilters,
-        }}
-        testIDPrefix={recipesTestIDs.savedRecipesFilterTabPrefix}
+  // Shown when folders or tags are available.
+  const FilterHeader =
+    filterOptions.length > 1 ? (
+      <ChipScrollRow<FilterChip>
+        options={filterOptions}
+        selected={selectedFilters.length > 0 ? selectedFilters : 'all'}
+        onSelect={handleFilterPress}
+        edgeFadeColor="background"
       />
-    );
-  })();
+    ) : null;
 
   const renderItem = ({ item }: { item: SavedRecipeNode }) => (
     <SavedRecipeCard

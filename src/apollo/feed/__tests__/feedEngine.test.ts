@@ -1,13 +1,13 @@
 import type { ApolloClient } from '@apollo/client';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
 import {
   SyncPageStatus,
   SyncPokeKind,
   SyncScopeKind,
-} from '#/graphql/generated/schemaTypes';
-import { getDeviceId } from '#/services/auth/deviceId';
-import { Telemetry } from '#/services/telemetry';
+} from '#graphql/generated/schemaTypes';
+import { getDeviceId } from '#services/auth/deviceId';
+import { Telemetry } from '#services/telemetry';
 import {
   clientOver,
   fault,
@@ -40,10 +40,10 @@ import {
   positionOf,
 } from '../feedPositions';
 
-jest.mock('#/services/auth/deviceId');
+jest.mock('#services/auth/deviceId');
 
 let mockClient: ApolloClient | null = null;
-jest.mock('#/apollo/clientRegistry', () => ({
+jest.mock('#apollo/clientRegistry', () => ({
   getApolloClient: () => mockClient,
   requireApolloClient: () => mockClient,
   registerApolloClient: jest.fn(),

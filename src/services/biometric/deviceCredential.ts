@@ -4,24 +4,24 @@
  * steps `src/app/mobileSessionHost.ts` registers.
  */
 
-import { requireApolloClient } from '#/apollo/clientRegistry';
+import { requireApolloClient } from '#apollo/clientRegistry';
 import {
   MyDeviceCredentialsDocument,
   RevokeDeviceCredentialDocument,
 } from '#operations/auth/auth.generated';
 import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
-import { authService } from '#/services/authService';
-import { ensureDeviceId } from '#/services/auth/deviceId';
+import { authService } from '#services/authService';
+import { ensureDeviceId } from '#services/auth/deviceId';
 import type {
   PostSignInGate,
   StoredSignInRenewal,
-} from '#/services/auth/sessionHost';
-import { toastService } from '#/services/toastService';
+} from '#services/auth/sessionHost';
+import { toastService } from '#services/toastService';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
-import { t } from '#/i18n';
-import { logger } from '#/utils/environment';
-import { withinMs } from '#/utils/withinMs';
+import { t } from '#i18n';
+import { logger } from '#utils/environment';
+import { withinMs } from '#utils/withinMs';
 import {
   getBiometricCapability,
   getLastBiometricEmail,

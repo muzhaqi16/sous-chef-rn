@@ -1,5 +1,5 @@
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import { refusalEnvelopeOf } from './graphqlErrors';
 
 // The only two budgets the API refuses with; exact codes, never a `RATE_` prefix.

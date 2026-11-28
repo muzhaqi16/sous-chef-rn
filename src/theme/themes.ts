@@ -1,7 +1,6 @@
 import {
   colors,
   darkExpiration,
-  darkFilterTab,
   chartCategorical,
   darkChartCategorical,
 } from './foundations/colors';
@@ -162,14 +161,7 @@ export const lightTheme = {
     // Components specific
     black: colors.neutral[1000],
     transparent: colors.transparent,
-    chipBackground: colors.neutral[200],
     chipText: colors.neutral[700],
-    chipSelectedBackground: brand[300],
-    chipSelectedText: onColor(
-      brand[300],
-      colors.neutral[0],
-      colors.neutral[900],
-    ),
 
     // Icon colors - semantic tokens for consistent icon styling
     iconPrimary: brand[500],
@@ -190,7 +182,6 @@ export const lightTheme = {
 
     // Pantry redesign colors
     expiration: colors.expiration,
-    filterTab: colors.filterTab,
     chartCategorical,
     alertBanner: colors.alertBanner,
 
@@ -293,14 +284,7 @@ export const darkTheme = {
     // Components specific
     black: colors.neutral[1000],
     transparent: colors.transparent,
-    chipBackground: colors.neutral[700],
     chipText: colors.neutral[200],
-    chipSelectedBackground: brand[400],
-    chipSelectedText: onColor(
-      brand[400],
-      colors.neutral[0],
-      colors.neutral[900],
-    ),
 
     // Icon colors - semantic tokens for consistent icon styling
     iconPrimary: brand[400],
@@ -334,7 +318,6 @@ export const darkTheme = {
     // Pantry redesign colors — dark-mode override values (same key shape as light).
     // Solid backgrounds prevent swipeable container background bleed-through.
     expiration: darkExpiration,
-    filterTab: darkFilterTab,
     chartCategorical: darkChartCategorical,
     // Alert banner — solid dark backgrounds instead of light-mode pastels
     alertBanner: {

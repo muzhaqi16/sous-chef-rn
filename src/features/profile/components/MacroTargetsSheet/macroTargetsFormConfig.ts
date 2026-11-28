@@ -1,5 +1,5 @@
 import { object, string, type ObjectSchema } from 'yup';
-import { t, type TranslationKey } from '#/i18n';
+import { t, type TranslationKey } from '#i18n';
 import { DIETARY_LIMITS } from '#domain/dietary';
 
 export interface MacroTargetsFormValues {

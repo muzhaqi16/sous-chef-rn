@@ -6,7 +6,7 @@ import {
 } from './usePantryItemSelection.generated';
 import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePantryItemMutations';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
-import { extractNodes } from '#/utils/connectionUtils';
+import { extractNodes } from '#utils/connectionUtils';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { useDataState } from '#hooks/data/useDataState';

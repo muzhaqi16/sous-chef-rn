@@ -5,7 +5,7 @@ import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { GetPantryItemBatchHistoryDocument } from '#features/pantry/graphql/pantry.generated';
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { BatchStatus } from '#graphql/generated/schemaTypes';
 import { PantryBatchHistoryScreen } from '../PantryBatchHistoryScreen';
 
 // Its repeating diagnostics timer never drains: 0 is the hook's own off switch.
@@ -22,7 +22,7 @@ jest.mock('#hooks/performance/useFlashListPerformance', () => {
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
 jest.mock('#hooks/navigation/useAppNavigation');

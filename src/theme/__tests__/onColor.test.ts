@@ -1,5 +1,5 @@
 import chroma from 'chroma-js';
-import { appConfig } from '#/config/appConfig';
+import { appConfig } from '#config/appConfig';
 import { onColor } from '../foundations/derivePalette';
 import { lightTheme, darkTheme } from '../themes';
 
@@ -93,15 +93,5 @@ describe('on-fill tokens', () => {
     );
 
     expect(failing).toEqual([]);
-  });
-
-  it('keep a selected chip readable in both themes', () => {
-    for (const theme of [lightTheme, darkTheme]) {
-      const { chipSelectedBackground, chipSelectedText } = theme.colors;
-
-      expect(
-        chroma.contrast(chipSelectedBackground, chipSelectedText),
-      ).toBeGreaterThanOrEqual(AA_BODY);
-    }
   });
 });

@@ -1,6 +1,6 @@
 'use no memo';
 
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 import React from 'react';
 import { gql, type InMemoryCache } from '@apollo/client';
 
@@ -13,8 +13,9 @@ import {
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { makeCache } from '#/apollo/cache';
-import { isRecord } from '#/utils/isRecord';
+import { settledInAct } from '#/test-utils/settledInAct';
+import { makeCache } from '#apollo/cache';
+import { isRecord } from '#utils/isRecord';
 import { useStore } from '#store';
 import {
   CreatePantryDocument,
@@ -24,14 +25,14 @@ import {
   UpdatePantryDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import {
   pantryData,
   type PantryFixture,
 } from '../../../../../__tests__/helpers/fixtures/pantryFixtures';
-import { alertService } from '#/services/alertService';
-import { errorService } from '#/services/errorService';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { alertService } from '#services/alertService';
+import { errorService } from '#services/errorService';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
 import { Text as AppText } from '#components/atoms/Text';
 import {
   HomePantries_HomeFragmentDoc,
@@ -45,11 +46,11 @@ type HomeEdge =
 
 // The day stays fixed: the hook's midnight timer re-arms itself.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 jest.mock('#hooks/navigation/useAppNavigation');
-jest.mock('#/services/errorService');
-jest.mock('#/services/subscriptions/SubscriptionService', () => ({
+jest.mock('#services/errorService');
+jest.mock('#services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     registerParentDeletion: jest.fn(),
     unregisterParentDeletion: jest.fn(),
@@ -250,15 +251,13 @@ describe('editing a pantry', () => {
     });
   });
 
-  it('refuses an empty name', async () => {
+  it('refuses an empty name on the field', async () => {
     await renderEditing({ ...kitchen, name: '' });
 
-    fireEvent.press(screen.getByText('Save'));
+    await settledInAct(() => fireEvent.press(screen.getByText('Save')));
 
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Pantry name cannot be empty',
-    );
+    expect(screen.getByText('Pantry name cannot be empty')).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   it('puts the Default switch back when the server refuses it', async () => {
@@ -394,7 +393,7 @@ describe('creating a pantry', () => {
     expect(mockNav.goBack).toHaveBeenCalled();
   });
 
-  it('refuses with no home selected', () => {
+  it('refuses with no home selected', async () => {
     useStore.setState({ selectedHomeId: null });
     renderCreating();
 
@@ -402,7 +401,7 @@ describe('creating a pantry', () => {
       screen.getByPlaceholderText('Enter pantry name (e.g., Kitchen Pantry)'),
       'Garage',
     );
-    fireEvent.press(screen.getByText('Create'));
+    await settledInAct(() => fireEvent.press(screen.getByText('Create')));
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',

@@ -12,11 +12,11 @@ import {
   PeriodGranularity,
   DateRange,
   type AnalyticsFilters,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
-import { useTranslation } from '#/i18n';
-import { errorCopy } from '#/services/errorService';
+import { useTranslation } from '#i18n';
+import { errorCopy } from '#services/errorService';
 
 type UsageAnalytics = NonNullable<
   GetPantryUsageAnalyticsQuery['pantry']

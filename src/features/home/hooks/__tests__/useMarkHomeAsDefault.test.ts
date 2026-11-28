@@ -1,7 +1,7 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import type { Settled } from '#/apollo/utils/settleMutation';
+import { makeCache } from '#apollo/cache';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
+import type { Settled } from '#apollo/utils/settleMutation';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useMarkHomeAsDefault } from '#features/home/hooks/useMarkHomeAsDefault';
 import type { CreateHomeInputs } from '#features/home/offline/localWrites';

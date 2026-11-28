@@ -24,4 +24,4 @@ Plain values and callbacks:
 
 Tests, `__mocks__` and generated files. A hook that is not exported cannot reach a screen and is not reported.
 
-Source: [`eslint/plugin/rules/hook-returns-no-library-type.js`](../../eslint/plugin/rules/hook-returns-no-library-type.js) · spec: [`__tests__/lint/rules/hook-returns-no-library-type.test.ts`](../../__tests__/lint/rules/hook-returns-no-library-type.test.ts)
+Source: [`eslint/plugin/rules/hook-returns-no-library-type.js`](../../eslint/plugin/rules/hook-returns-no-library-type.js) · spec: [`__tests__/lint/typedRules/hook-returns-no-library-type.ts`](../../__tests__/lint/typedRules/hook-returns-no-library-type.ts)

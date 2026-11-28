@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState, type Component } from 'react';
-import type { LayoutChangeEvent } from 'react-native';
-import type Animated from 'react-native-reanimated';
+import { useEffect, useRef } from 'react';
+import type { LayoutChangeEvent, ScrollViewInstance } from 'react-native';
 import {
   cancelAnimation,
   scrollTo,
@@ -11,31 +10,11 @@ import {
 } from 'react-native-reanimated';
 import type { ScrollMetrics } from '#hooks/ui/useScrollEdgeFades';
 import { SCROLL_SLIDE } from '#constants/animations';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 interface ItemLayout {
   x: number;
   width: number;
-}
-
-// ── Module-level caches keyed by `cacheKey` ──
-// Let a second instance of the same scroller (e.g. a sticky-header copy of a
-// filter strip) start at the correct scroll offset without a flicker, by
-// reusing the measurements the first instance recorded. Only used when a
-// `cacheKey` is supplied; single-instance scrollers keep their layouts in a
-// per-instance ref instead.
-const itemLayoutCache = new Map<string, Map<unknown, ItemLayout>>();
-const viewportWidthCache = new Map<string, number>();
-
-// Offset that centers `activeKey` in the viewport, from cached measurements
-// only (no refs) so it's safe to call from a render-time useState initializer.
-function cachedCenterOffset(activeKey: unknown, cacheKey: string): number {
-  const layouts = itemLayoutCache.get(cacheKey);
-  const vp = viewportWidthCache.get(cacheKey);
-  if (!layouts || !vp) return 0;
-  const pos = layouts.get(activeKey);
-  if (!pos) return 0;
-  return Math.max(0, pos.x - vp / 2 + pos.width / 2);
 }
 
 interface UseCenterActiveItemParams<K> {
@@ -46,65 +25,39 @@ interface UseCenterActiveItemParams<K> {
    * numbers aren't measured twice.
    */
   metrics: React.RefObject<ScrollMetrics>;
-  /**
-   * When set, item layouts + viewport width persist in a module cache under
-   * this key so a second instance (sticky-header copy) starts centered without
-   * a flicker. Omit for a single-instance scroller.
-   */
-  cacheKey?: string;
 }
 
 /**
  * Centers a horizontal scroller's active item: instantly on first paint, glided
- * afterwards. Wire `animatedRef`, `onItemLayout`, `onScrollViewLayout`,
- * `initialContentOffset`. The UI-thread glide is gated by `driving`, so a manual
+ * afterwards. Wire `animatedRef` and `onItemLayout`. The UI-thread glide is
+ * gated by `driving`, so a manual
  * scroll is never fought and the first paint is not yanked to 0 pre-measurement.
  */
-export function useCenterActiveItem<
-  K,
-  TScroll extends Component = Animated.ScrollView,
->({ activeKey, metrics, cacheKey }: UseCenterActiveItemParams<K>) {
+export function useCenterActiveItem<K>({
+  activeKey,
+  metrics,
+}: UseCenterActiveItemParams<K>) {
   // Gates the glide: the first positioning is instant so the strip doesn't
   // visibly scroll on appear; later activeKey changes glide smoothly.
   const hasAutoCenteredRef = useRef(false);
-  // Per-instance layouts when there's no shared cache.
-  const instanceLayouts = useRef<Map<unknown, ItemLayout>>(new Map());
+  const itemLayouts = useRef<Map<unknown, ItemLayout>>(new Map());
 
-  const animatedRef = useAnimatedRef<TScroll>();
+  const animatedRef = useAnimatedRef<ScrollViewInstance>();
   const target = useSharedValue(0);
   const driving = useSharedValue(false);
   useAnimatedReaction(
-    () => (driving.value ? target.value : null),
+    () => (driving.get() ? target.get() : null),
     x => {
       if (x !== null) scrollTo(animatedRef, x, 0, false);
     },
   );
 
-  const layouts = (): Map<unknown, ItemLayout> => {
-    if (!cacheKey) return instanceLayouts.current;
-    let cached = itemLayoutCache.get(cacheKey);
-    if (!cached) {
-      cached = new Map();
-      itemLayoutCache.set(cacheKey, cached);
-    }
-    return cached;
-  };
-  const viewportW = (): number =>
-    metrics.current.viewportW ||
-    (cacheKey ? viewportWidthCache.get(cacheKey) ?? 0 : 0);
   const centerOffset = (key: K): number => {
-    const pos = layouts().get(key);
-    const vp = viewportW();
+    const pos = itemLayouts.current.get(key);
+    const vp = metrics.current.viewportW;
     if (!pos || vp <= 0) return 0;
     return Math.max(0, pos.x - vp / 2 + pos.width / 2);
   };
-
-  // Start the sticky copy at the cached offset; a fresh first instance starts
-  // at 0 and the effect below centers it once measured.
-  const [initialContentOffset] = useState(() => ({
-    x: cacheKey ? cachedCenterOffset(activeKey, cacheKey) : 0,
-    y: 0,
-  }));
 
   useEffect(() => {
     let cancelled = false;
@@ -112,13 +65,8 @@ export function useCenterActiveItem<
 
     const tryCenter = (attempt: number) => {
       if (cancelled) return;
-      const map = cacheKey
-        ? itemLayoutCache.get(cacheKey)
-        : instanceLayouts.current;
-      const pos = map?.get(activeKey);
-      const vp =
-        metrics.current.viewportW ||
-        (cacheKey ? viewportWidthCache.get(cacheKey) ?? 0 : 0);
+      const pos = itemLayouts.current.get(activeKey);
+      const vp = metrics.current.viewportW;
       if (pos && vp > 0) {
         const centered = Math.max(0, pos.x - vp / 2 + pos.width / 2);
         const contentW = metrics.current.contentW;
@@ -161,11 +109,11 @@ export function useCenterActiveItem<
       if (rafId != null) cancelAnimationFrame(rafId);
       cancelAnimation(target);
     };
-  }, [activeKey, cacheKey, metrics, target, driving]);
+  }, [activeKey, metrics, target, driving]);
 
   const onItemLayout = (key: K, e: LayoutChangeEvent) => {
     const { x, width } = e.nativeEvent.layout;
-    layouts().set(key, { x, width });
+    itemLayouts.current.set(key, { x, width });
     // On initial mount, scroll to the active item as soon as its position is
     // known — ahead of the effect's rAF, so there's no visible jump.
     if (key === activeKey) {
@@ -178,16 +126,8 @@ export function useCenterActiveItem<
     }
   };
 
-  const onScrollViewLayout = (e: LayoutChangeEvent) => {
-    if (cacheKey) {
-      viewportWidthCache.set(cacheKey, e.nativeEvent.layout.width);
-    }
-  };
-
   return {
     animatedRef,
     onItemLayout,
-    onScrollViewLayout,
-    initialContentOffset,
   };
 }

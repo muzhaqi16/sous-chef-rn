@@ -9,12 +9,12 @@ import {
   onNotificationOpenedApp,
   getInitialNotification,
 } from '@react-native-firebase/messaging';
-import { showLocalNotification } from '#/services/notifications/localNotificationHelper';
+import { showLocalNotification } from '#services/notifications/localNotificationHelper';
 import { routeNotificationTap } from '../pushNotificationRouting';
 import { registerTelemetryStateLoader } from '#services/telemetry/telemetryState';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 
-jest.mock('#/services/notifications/localNotificationHelper', () => ({
+jest.mock('#services/notifications/localNotificationHelper', () => ({
   showLocalNotification: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('../pushNotificationRouting', () => ({

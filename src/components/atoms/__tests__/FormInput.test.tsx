@@ -3,10 +3,6 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { FormInput } from '../FormInput';
 
-jest.mock('#context/BottomSheetInputContext', () => ({
-  useIsBottomSheetInput: jest.fn(() => false),
-}));
-
 describe('FormInput', () => {
   const defaultProps = {
     label: 'Name',

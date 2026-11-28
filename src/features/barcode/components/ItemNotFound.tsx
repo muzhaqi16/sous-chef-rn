@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
@@ -18,7 +18,7 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({
   const { t } = useTranslation();
   return (
     <View style={styles.container}>
-      <Icon name="qr-code-outline" size={48} tone="textSecondary" />
+      <Icon name="qr-code-outline" size="xl" tone="textSecondary" />
       <Text role="subheading" align="center">
         {t('barcode.itemNotFound')}
       </Text>

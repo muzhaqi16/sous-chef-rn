@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
@@ -15,6 +15,7 @@ import {
 } from '#features/recipes/utils/recipeFilterOptions';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
+import { Chip } from '#components/molecules/Chip';
 
 export type RemovableFilterKind =
   | 'diet'
@@ -108,11 +109,11 @@ export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
         })}
         testID={recipesTestIDs.activeFiltersSummary}
       >
-        <Icon name="options-outline" size={14} tone="primary" />
+        <Icon name="options-outline" size="2xsPlus" tone="primary" />
         <Text role="label" tone="secondary">
           {t('recipes.filtersActiveSummary', { count: chips.length })}
         </Text>
-        <ExpandChevron expanded={expanded} size={14} />
+        <ExpandChevron expanded={expanded} size="2xsPlus" />
       </Pressable>
       {expanded ? (
         <ScrollView
@@ -121,21 +122,15 @@ export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
           contentContainerStyle={styles.scrollContent}
         >
           {chips.map(chip => (
-            <Pressable
+            <Chip
               key={chip.key}
-              style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
+              label={chip.label}
+              removable
               onPress={() => onRemoveFilter(chip.kind, chip.value)}
-              accessibilityRole="button"
               accessibilityLabel={t('recipes.removeFilterA11y', {
                 filter: chip.label,
               })}
-            >
-              <Text role="label" style={styles.chipText}>
-                {chip.label}
-              </Text>
-              {/* textInverse tracks chipSelectedText (neutral-0 light / neutral-900 dark) */}
-              <Icon name="close-circle" size={16} tone="textInverse" />
-            </Pressable>
+            />
           ))}
           <Pressable
             style={({ pressed }) => [
@@ -173,19 +168,6 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.xs,
     gap: theme.spacing.sm,
     alignItems: 'center',
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.smPlus,
-    borderRadius: theme.radii['2xl'],
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.chipSelectedBackground,
-  },
-  chipText: {
-    color: theme.colors.chipSelectedText,
   },
   clearAllButton: {
     paddingVertical: theme.spacing.xs,

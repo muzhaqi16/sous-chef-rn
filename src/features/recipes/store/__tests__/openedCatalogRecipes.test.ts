@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import { ExternalSource } from '#graphql/generated/schemaTypes';
 import {
   recordOpenedCatalogRecipe,
   useOpenedCatalogRecipesStore,

@@ -10,12 +10,12 @@
  * the wrong mode as well as showing a wrong number.
  */
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   addPantryItemLocally,
   removePantryItemLocally,
   type PantryItemRef,
-} from '#features/pantry/cache/items';
+} from '#entities/pantryItem/items';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const PANTRY = gql`

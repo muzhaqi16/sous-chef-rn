@@ -1,10 +1,10 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   MembershipRole,
   RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { MemberDietaryNeeds } from '#features/home/hooks/useHomeDietaryNeeds';
 import { homeTestIDs } from '#features/home/testIDs';
 import { HomeDietaryNeedsScreen } from '../HomeDietaryNeedsScreen';

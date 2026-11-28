@@ -5,15 +5,15 @@ import {
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   BatchStatus,
   ExpiryKind,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
-import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
+} from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import type { PantryItemBatchFragment } from '#entities/pantryItem/batches.generated';
 import { BatchListItem } from '../BatchListItem';
 import { BatchListItem_PantryItemFragmentDoc } from '../BatchListItem.generated';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
@@ -139,6 +139,15 @@ describe('BatchListItem', () => {
       cache: stackCache({ netWeightUnit: 'oz' }),
     });
     expect(screen.getByText('Package: 22 oz')).toBeTruthy();
+  });
+
+  it('offers a use from this batch alone', () => {
+    const onUse = jest.fn();
+    renderWithApollo(<BatchListItem batch={batch(2)} onUse={onUse} />, {
+      cache: stackCache({}),
+    });
+    fireEvent.press(screen.getByLabelText(t('a11y.useFromBatch')));
+    expect(onUse).toHaveBeenCalledWith('b1');
   });
 
   it('offers a correction on a weighed batch', () => {

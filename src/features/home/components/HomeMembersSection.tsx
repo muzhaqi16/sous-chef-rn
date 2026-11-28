@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
@@ -9,11 +9,10 @@ import { Text } from '#components/atoms/Text';
 import {
   InviteStatus,
   type MembershipRole,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { MembershipPermissionKey } from '#features/home/types';
 import {
   canManageHome,
-  canManageMember,
   type HomeViewer,
 } from '#features/home/utils/homePermissions';
 import type { HomeDetailScreen_HomeFragment } from '#features/home/screens/HomeDetailScreen.generated';
@@ -74,13 +73,6 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
   const pendingInvites = invites.filter(
     inv => inv.status !== InviteStatus.Accepted,
   );
-  const anyManageable = members.some(member =>
-    canManageMember(
-      viewer,
-      member.role,
-      resolveMemberLabel(member).isCurrentUser,
-    ),
-  );
 
   return (
     <View>
@@ -96,7 +88,6 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
               displayName={displayName}
               isCurrentUser={isCurrentUser}
               viewer={viewer}
-              reserveChevron={anyManageable}
               onChangeRole={role => onChangeRole(member.id, role)}
               onRemove={() => onRemove(member.id, displayName)}
               onTransferOwnership={() =>
@@ -111,7 +102,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
         })
       ) : (
         <View style={styles.emptyInset}>
-          <Icon name="people-outline" size={24} tone="textSecondary" />
+          <Icon name="people-outline" size="md" tone="textSecondary" />
           <Text role="caption" tone="secondary">
             {t('homeMembers.noMembers')}
           </Text>

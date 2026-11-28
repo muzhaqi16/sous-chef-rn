@@ -1,18 +1,18 @@
 import { skipToken, useQuery } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 import {
   ConsumptionUnitsForPantryItemDocument,
   RestockUnitsForPantryItemDocument,
   type ConsumptionUnitsForPantryItemQuery,
   type RestockUnitsForPantryItemQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import type { UnitRole } from '#/graphql/generated/schemaTypes';
-import { UnitType, type UnitSource } from '#/graphql/generated/schemaTypes';
-import { countFactorOver } from '#domain/stockDisplay';
+import type { UnitRole } from '#graphql/generated/schemaTypes';
+import { UnitType, type UnitSource } from '#graphql/generated/schemaTypes';
+import { countFactorOver } from '#entities/pantryItem/stockDisplay';
 import type { PickableUnit } from '#features/pantry/types';
-import type { UnitLabelSource } from '#/utils/formatQuantity';
+import type { UnitLabelSource } from '#utils/formatQuantity';
 
 export enum PantryOperation {
   Consume = 'CONSUME',

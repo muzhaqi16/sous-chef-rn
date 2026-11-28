@@ -1,14 +1,15 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
-import type { UnitSystem } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import type { UnitSystem } from '#graphql/generated/schemaTypes';
 import { RowCard } from '#components/atoms/RowCard';
 import { StatusLine, type StatusTone } from '#components/atoms/StatusLine';
 import { Text } from '#components/atoms/Text';
 import { ListItem } from '#components/molecules/ListItem';
 import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem';
 import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
-import { rowType } from '#/theme/foundations/type';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import type { SwipeRowPress } from '#components/molecules/RowFrame';
+import { rowType } from '#theme/foundations/type';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 import { describeStoreOption, type FoundOption } from '#domain/stores';
 
 interface StoreRowProps {
@@ -54,8 +55,9 @@ export const StoreRow: React.FC<StoreRowProps> = ({
     added,
   );
 
-  const row = (
+  const row = (swipePress?: SwipeRowPress) => (
     <ListItem
+      swipe={swipePress}
       title={title}
       titleNumberOfLines={1}
       subtitle={
@@ -78,8 +80,8 @@ export const StoreRow: React.FC<StoreRowProps> = ({
         ) : undefined
       }
       badge={added ? { text: added } : undefined}
-      rightElement={trailing}
-      // Swiped, the swipe's container is the row's one accessible element.
+      trailingActions={trailing}
+      // Swiped, the swipe's button is the row's one accessible element.
       accessibilityLabel={swipe ? undefined : label}
       accessibilityHint={accessibilityHint}
       onPress={swipe ? undefined : onPress}
@@ -100,7 +102,7 @@ export const StoreRow: React.FC<StoreRowProps> = ({
           {row}
         </SwipeableItem>
       ) : (
-        row
+        row()
       )}
     </RowCard>
   );

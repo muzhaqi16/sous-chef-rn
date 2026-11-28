@@ -1,66 +1,64 @@
 /**
- * Local-first: the batch shows as wasted until the server answers. The server
- * writes a waste ledger row, so `input.idempotencyKey` is what keeps a queued
- * replay from double-counting.
+ * Local-first: the batch shows as wasted, and its stack as that much less,
+ * until the server answers. The server writes a waste ledger row, so
+ * `input.idempotencyKey` is what keeps a queued replay from double-counting.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { WastePantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
-import { BatchStatus, type WasteReason } from '#/graphql/generated/schemaTypes';
-import { sendFields } from '#/apollo/pendingWrites/sendFields';
-import { useTranslation } from '#/i18n';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
+import type { SettleStatus } from '#apollo/utils/settleMutation';
+import type { WasteBatchInputs } from '#features/pantry/offline/localWrites';
+import type { WasteReason } from '#graphql/generated/schemaTypes';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
+import { wastePantryItemBatchWrite } from '#features/pantry/offline/localWrites';
 
-interface UseWastePantryItemBatchOptions {
-  onSuccess?: () => void;
+/** A batch thrown out whole. */
+export interface WastedBatch {
+  id: string;
+  pantryItemId: string;
+  /** What it holds, in its stack's tracking unit. */
+  quantity: number;
 }
 
-export function useWastePantryItemBatch({
-  onSuccess,
-}: UseWastePantryItemBatchOptions = {}) {
+/** Why it went, as the waste sheet states it. */
+interface BatchWasteDetails {
+  wasteReason: WasteReason;
+  isComposted: boolean;
+  isRecycled: boolean;
+  notes: string;
+}
+
+export function useWastePantryItemBatch() {
   const { t } = useTranslation();
-  const client = useApolloClient();
-  const [wasteMutation] = useMutation(WastePantryItemBatchDocument, {
-    context: { localFirst: true },
+  const waste = useLocalWrite(wastePantryItemBatchWrite, {
+    fallback: t('errors.wasteBatchFailed'),
   });
 
   const wasteBatch = async (
-    batchId: string,
-    wasteReason?: WasteReason,
-    isComposted?: boolean,
-    isRecycled?: boolean,
-    notes?: string,
-  ): Promise<boolean> => {
-    const settled = await sendFields(client.cache, {
-      entity: { __typename: 'PantryItemBatch', id: batchId },
-      // Wasting empties the batch, so the server returns it at zero with a
-      // `depletedAt`; `status` alone leaves the row showing its old amount.
-      fields: {
-        status: BatchStatus.Wasted,
-        quantity: 0,
-        depletedAt: new Date().toISOString(),
-      },
-      variables: {
+    batch: WastedBatch,
+    { wasteReason, isComposted, isRecycled, notes }: BatchWasteDetails,
+  ): Promise<SettleStatus> => {
+    const inputs: WasteBatchInputs = {
+      pantryItemId: batch.pantryItemId,
+      held: batch.quantity,
+      now: new Date().toISOString(),
+    };
+    const settled = await waste.send(
+      {
         today: todayKey(),
         input: {
-          batchId,
+          batchId: batch.id,
           wasteReason,
           isComposted,
           isRecycled,
-          notes,
+          notes: notes || undefined,
           idempotencyKey: generateEntityId(),
         },
       },
-      mutate: wasteMutation,
-      settle: {
-        document: WastePantryItemBatchDocument,
-        fallback: t('errors.wasteBatchFailed'),
-      },
-    });
-    if (settled.status === 'failed') return false;
-    onSuccess?.();
-    return true;
+      inputs,
+    );
+    return settled.status;
   };
 
   return { wasteBatch };

@@ -15,7 +15,7 @@ import {
   StoreDepartment,
   UnitType,
   UsagePurpose,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 /**
  * Every member of an enum that backs an i18n namespace has a key in that

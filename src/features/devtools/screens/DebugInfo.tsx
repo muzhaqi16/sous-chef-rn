@@ -1,12 +1,12 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { StyleSheet } from 'react-native-unistyles';
 import { SubScreen } from '#components/templates/SubScreen';
-import { Environment } from '#/utils/environment';
-import { env } from '#/config/env';
+import { Environment } from '#utils/environment';
+import { env } from '#config/env';
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import Clipboard from '@react-native-clipboard/clipboard';

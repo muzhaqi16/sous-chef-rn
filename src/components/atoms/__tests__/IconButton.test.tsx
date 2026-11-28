@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import { lightTheme } from '#theme/themes';
 import { IconButton } from '../IconButton';
 
 describe('IconButton', () => {
@@ -95,5 +96,52 @@ describe('IconButton', () => {
       />,
     );
     expect(screen.getByTestId('menu-btn')).toBeTruthy();
+  });
+
+  // The fill is drawn at its own size; the target stays the platform floor.
+  it('draws a fill at its size inside a floor-sized target', () => {
+    render(
+      <IconButton
+        name="add"
+        onPress={mockOnPress}
+        accessibilityLabel="Add"
+        filled={{ size: 'sm', tone: 'primaryLight' }}
+        testID="add-btn"
+      />,
+    );
+
+    expect(screen.getByTestId('add-btn')).toHaveStyle({
+      minWidth: lightTheme.sizes.touchTarget.min,
+      minHeight: lightTheme.sizes.touchTarget.min,
+    });
+    // The first host view inside the target.
+    let [fill] = screen.getByTestId('add-btn').children;
+    while (fill && typeof fill !== 'string' && typeof fill.type !== 'string') {
+      [fill] = fill.children;
+    }
+    expect(fill).toHaveStyle({
+      width: lightTheme.sizes.iconFill.sm,
+      height: lightTheme.sizes.iconFill.sm,
+    });
+  });
+
+  it('waits while loading, and says so', async () => {
+    render(
+      <IconButton
+        name="send"
+        onPress={mockOnPress}
+        accessibilityLabel="Send"
+        filled={{ size: 'xl', tone: 'primary' }}
+        loading
+      />,
+    );
+
+    const button = screen.getByRole('button', { name: 'Send' });
+    expect(button.props.accessibilityState).toEqual({
+      disabled: true,
+      busy: true,
+    });
+    await userEvent.setup().press(button);
+    expect(mockOnPress).not.toHaveBeenCalled();
   });
 });

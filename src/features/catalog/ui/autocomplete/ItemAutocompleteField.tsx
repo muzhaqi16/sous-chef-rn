@@ -1,10 +1,11 @@
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import React from 'react';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
 import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
+import type { FieldChaining } from '#features/catalog/components/InlineAutocomplete';
 
 interface ItemAutocompleteFieldProps {
   variant: 'inline' | 'modal';
@@ -17,7 +18,8 @@ interface ItemAutocompleteFieldProps {
   testID?: string;
   onSelectItem?: (item: ItemSuggestion) => void;
   showBrand?: boolean;
-  autoFocus?: boolean;
+  /** Inline only: the input's ref, and where the return key moves on to. */
+  chaining?: FieldChaining;
 }
 
 export const ItemAutocompleteField: React.FC<ItemAutocompleteFieldProps> = ({
@@ -31,6 +33,7 @@ export const ItemAutocompleteField: React.FC<ItemAutocompleteFieldProps> = ({
   testID,
   onSelectItem,
   showBrand = false,
+  chaining,
 }) => {
   const { t } = useTranslation();
   const item = useItemAutocomplete();
@@ -38,6 +41,7 @@ export const ItemAutocompleteField: React.FC<ItemAutocompleteFieldProps> = ({
   return (
     <GenericAutocompleteField<ItemSuggestion>
       variant={variant}
+      chaining={chaining}
       label={label}
       value={value}
       placeholder={placeholder}

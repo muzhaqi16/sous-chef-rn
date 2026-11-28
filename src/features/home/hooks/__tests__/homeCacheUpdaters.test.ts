@@ -1,17 +1,15 @@
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
+jest.mock('#apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#apollo/utils/cacheUpdaters'),
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
-  createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
 import type { ApolloCache } from '@apollo/client';
-import { addToHomesCache, removeFromHomesCache } from '../homeCacheUpdaters';
+import { addToHomesCache } from '../homeCacheUpdaters';
 
 // Access mock fns AFTER module-level code has executed
-const {
-  createAddToQueryConnectionUpdater,
-  createRemoveFromQueryConnectionUpdater,
-} = jest.requireMock('#/apollo/utils/cacheUpdaters');
+const { createAddToQueryConnectionUpdater } = jest.requireMock(
+  '#apollo/utils/cacheUpdaters',
+);
 
 describe('home hooks utils', () => {
   describe('addToHomesCache', () => {
@@ -41,29 +39,6 @@ describe('home hooks utils', () => {
       // addToHomesCache is the return value of createAddToQueryConnectionUpdater
       // which is a jest.fn() - so it was called
       expect(addToHomesCache).toBeDefined();
-    });
-  });
-
-  describe('removeFromHomesCache', () => {
-    it('is created via createRemoveFromQueryConnectionUpdater with homes and Home', () => {
-      expect(createRemoveFromQueryConnectionUpdater).toHaveBeenCalledWith(
-        'homes',
-        'Home',
-      );
-    });
-
-    it('is a callable function', () => {
-      expect(typeof removeFromHomesCache).toBe('function');
-    });
-
-    it('can be called with expected arguments', () => {
-      const mockCache = {
-        modify: jest.fn(),
-      } as Partial<ApolloCache> as ApolloCache;
-
-      removeFromHomesCache(mockCache, 'home-1', { evictItem: true });
-
-      expect(removeFromHomesCache).toBeDefined();
     });
   });
 });

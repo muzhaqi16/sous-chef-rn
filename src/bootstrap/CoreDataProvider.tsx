@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useDataPreloading } from '#/hooks/data/useDataPreloading';
+import { useDataPreloading } from '#hooks/data/useDataPreloading';
 import {
   useOfflineTabPreloading,
   type WarmTarget,

@@ -6,7 +6,7 @@
 import { useTranslation as useI18nextTranslation } from 'react-i18next';
 import type { UseTranslationOptions } from 'react-i18next';
 import type { ParseKeys, TOptions } from 'i18next';
-import { deviceLanguage } from '#/utils/deviceLocale';
+import { deviceLanguage } from '#utils/deviceLocale';
 import { getI18n, SUPPORTED_LANGUAGES, type SupportedLanguage } from './config';
 
 // ---------------------------------------------------------------------------

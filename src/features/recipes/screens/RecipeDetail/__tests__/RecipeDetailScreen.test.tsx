@@ -1,4 +1,5 @@
 import React from 'react';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { RefreshControl } from 'react-native';
 import {
   act,
@@ -6,7 +7,7 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   inputOf,
   recordMock,
@@ -27,8 +28,8 @@ import {
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
 import { recordOpenedCatalogRecipe } from '#features/recipes/store/openedCatalogRecipes';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import {
   Diet,
   DietaryAlertState,
@@ -36,9 +37,9 @@ import {
   ExternalSyncStatus,
   MembershipRole,
   RecipeStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { hasTipFact } from '#hooks/settings/useFeatureHint';
-import { formatMonthDayYear } from '#/utils/formatters/date';
+import { formatMonthDayYear } from '#utils/formatters/date';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetDietaryProfileDocument } from '#operations/user/user.generated';
 import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
@@ -48,6 +49,7 @@ import {
   OpenCatalogRecipeDocument,
   GetRecipeDocument,
   MarkRecipeAsCookedDocument,
+  MatchRecipeIngredientsToPantryDocument,
   GetRecipeReviewsDocument,
   SavedRecipeFoldersDocument,
   UpdateFavoriteRecipeDocument,
@@ -61,8 +63,7 @@ import { RecipeSubstitutesDocument } from '#features/recipes/hooks/useRecipeSubs
 import { MySavedRecipesDocument } from '#features/recipes/screens/useSavedRecipes.generated';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { RecipeMissingIngredientsDocument } from '#features/recipes/hooks/useRecipeMissingIngredients.generated';
-import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
-import { isRecord } from '#/utils/isRecord';
+import { isRecord } from '#utils/isRecord';
 import { kitTestIDs } from '#components/testIDs';
 import { RecipeDetail } from '../index';
 
@@ -343,9 +344,14 @@ describe('cooking it', () => {
   // The dialog is opened through the cook control before its confirm is pressed.
   it('is marked cooked from its dialog, for who the person cooks for', async () => {
     const cooked = recordMock(MarkRecipeAsCookedDocument, { held: true });
+    // The review it asks for finds nothing to draw, so the cook goes ahead.
+    const review = recordMock(MatchRecipeIngredientsToPantryDocument, {
+      data: { matchRecipeIngredientsToPantry: [] },
+    });
     await openRecipe({
       answers: [
         cooked,
+        review,
         recordMock(GetDietaryProfileDocument, {
           data: {
             me: {
@@ -367,11 +373,10 @@ describe('cooking it', () => {
     await user.press(screen.getByText(t('recipes.markCooked')));
     // The cook sheet is presented with its form.
     expect(screen.UNSAFE_getByType(MarkCookedModal).props.visible).toBe(true);
-    const confirm = screen.getAllByText(t('markCookedModal.markCooked')).at(-1);
-    if (!confirm) throw new Error('no confirm in the cook dialog');
-    await user.press(confirm);
+    await user.press(screen.getByTestId(recipesTestIDs.cookConfirm));
     await log.requested(MarkRecipeAsCookedDocument);
 
+    expect(review.fired[0]).toMatchObject({ servings: 2 });
     expect(cooked.fired[0]).toMatchObject({
       input: { recipeId: 'recipe-1', servings: 2 },
     });
@@ -579,10 +584,10 @@ describe('its ingredients', () => {
       : [];
   };
   const listedAnswer = () =>
-    recordMock(AddItemsToShoppingListFromRecipeDocument, {
+    recordMock(AddItemToShoppingListDocument, {
       dataFor: (
         variables,
-      ): MockDataFor<typeof AddItemsToShoppingListFromRecipeDocument> => ({
+      ): MockDataFor<typeof AddItemToShoppingListDocument> => ({
         addItemsToShoppingList: {
           __typename: 'AddItemsToShoppingListPayload',
           results: lineIdsOf(variables).map(id => ({
@@ -605,7 +610,7 @@ describe('its ingredients', () => {
     await userEvent
       .setup()
       .press(screen.getByTestId(recipesTestIDs.ingredientTile(0)));
-    await log.landed(AddItemsToShoppingListFromRecipeDocument);
+    await log.landed(AddItemToShoppingListDocument);
 
     expect(added.fired).toHaveLength(1);
     expect(
@@ -615,7 +620,7 @@ describe('its ingredients', () => {
   });
 
   it('opens what a flagged one means for the household instead of adding it', async () => {
-    const added = recordMock(AddItemsToShoppingListFromRecipeDocument, {
+    const added = recordMock(AddItemToShoppingListDocument, {
       held: true,
     });
     await openRecipe({

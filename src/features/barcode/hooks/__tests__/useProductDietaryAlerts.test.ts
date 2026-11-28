@@ -3,7 +3,7 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   Diet,
   DietaryAlertState,
@@ -11,7 +11,7 @@ import {
   MembershipRole,
   ReligiousDiet,
   RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { ProductDietaryAlertsDocument } from '../useProductDietaryAlerts.generated';
 import { useProductDietaryAlerts } from '../useProductDietaryAlerts';
 

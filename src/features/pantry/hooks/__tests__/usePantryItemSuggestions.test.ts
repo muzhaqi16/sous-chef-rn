@@ -6,20 +6,20 @@ import {
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { useStore } from '#store';
 import {
   GetPantryItemSuggestionsDocument,
   type GetPantryItemSuggestionsQuery,
 } from '#features/pantry/graphql/pantry.generated';
-import { PantrySuggestionSource } from '#/graphql/generated/schemaTypes';
+import { PantrySuggestionSource } from '#graphql/generated/schemaTypes';
 import { usePantryItemSuggestions } from '../usePantryItemSuggestions';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
 jest.mock('#utils/imageUtils', () => ({

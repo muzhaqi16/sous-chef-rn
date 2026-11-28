@@ -1,6 +1,6 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
@@ -9,7 +9,7 @@ import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAut
 import { FieldRow } from '#components/atoms/FieldRow';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { PackageContentsFields } from '#features/pantry/ui/PackageContentsFields';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
+import type { UnitType } from '#graphql/generated/schemaTypes';
 
 export interface DetailsPageProps {
   quantityInput: string;
@@ -92,7 +92,6 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
         {holdsContents ? (
           <PackageContentsFields
             variant="inline"
-            useBottomSheetInput
             size={sizeInput}
             onSizeChange={setSizeInput}
             sizeError={sizeError}

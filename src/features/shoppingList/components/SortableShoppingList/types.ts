@@ -5,7 +5,7 @@ import type {
   SwipeableRef,
   SwipeAction,
 } from '#components/organisms/SwipeableItem/types';
-import type { StoreDepartment } from '#/graphql/generated/schemaTypes';
+import type { StoreDepartment } from '#graphql/generated/schemaTypes';
 
 export type Positions = Record<number, number>;
 

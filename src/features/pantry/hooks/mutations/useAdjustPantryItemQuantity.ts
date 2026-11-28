@@ -4,15 +4,13 @@
  * keeps a queued replay from double-counting.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { AdjustPantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import type { SetStockInputs } from '#features/pantry/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { useTranslation } from '#/i18n';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { todayKey } from '#/utils/dateUtils';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
+import { generateEntityId } from '#utils/generateEntityId';
+import { todayKey } from '#utils/dateUtils';
 import type { RecountUnits } from '#features/pantry/types';
+import { adjustPantryItemQuantityWrite } from '#features/pantry/offline/localWrites';
 
 interface UseAdjustPantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -22,10 +20,9 @@ export function useAdjustPantryItemQuantity({
   onSuccess,
 }: UseAdjustPantryItemQuantityOptions = {}) {
   const { t } = useTranslation();
-  const client = useApolloClient();
 
-  const [adjustMutation] = useMutation(AdjustPantryItemQuantityDocument, {
-    context: { localFirst: true },
+  const adjust = useLocalWrite(adjustPantryItemQuantityWrite, {
+    fallback: t('errors.adjustQuantityFailed'),
   });
 
   const adjustQuantity = async (
@@ -50,8 +47,7 @@ export function useAdjustPantryItemQuantity({
 
     // idempotencyKey dedups the ADJUSTMENT ledger entry on replay. `version` is
     // the optimistic-concurrency check the server requires.
-    const settled = await pendingWritesOf(client.cache).send(
-      AdjustPantryItemQuantityDocument,
+    const settled = await adjust.send(
       {
         today: todayKey(),
         input: {
@@ -64,11 +60,6 @@ export function useAdjustPantryItemQuantity({
           ...units,
         },
       },
-      write =>
-        settleMutation(() => adjustMutation(write), {
-          document: AdjustPantryItemQuantityDocument,
-          fallback: t('errors.adjustQuantityFailed'),
-        }),
       inputs,
     );
     if (settled.status === 'failed') return false;

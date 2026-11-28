@@ -13,10 +13,10 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { useStore } from '#store';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
-import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
+import { AppTheme, UnitSystem } from '#graphql/generated/schemaTypes';
 import {
   GetUserSettingsDocument,
   UpdateUserPreferencesDocument,

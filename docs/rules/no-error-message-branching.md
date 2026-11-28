@@ -9,8 +9,8 @@ Searching or comparing an error's message against wording: `message.includes(…
 ## Use instead
 
 - A server error or refusal: its `code` (`ErrorCode`, `TopLevelErrorCode`, `extensions.code`) and `field`, through `settleMutation` / `localizedErrorMessage`.
-- A transport failure: `isNetworkError(error)` (`#/utils/isNetworkError`). It reads the error's class: whatwg-fetch rejects a failed or timed-out request with a `TypeError`.
-- Our own deadline: throw `TimeoutError` (`#/utils/errors/timeoutError`) and check with `instanceof`.
+- A transport failure: `isNetworkError(error)` (`#utils/isNetworkError`). It reads the error's class: whatwg-fetch rejects a failed or timed-out request with a `TypeError`.
+- Our own deadline: throw `TimeoutError` (`#utils/errors/timeoutError`) and check with `instanceof`.
 - A library whose signal exists only in the message: a predicate in `src/utils/errors/libraryErrorMessages.ts`, pinned by a test that drives the installed library.
 
 ## Why

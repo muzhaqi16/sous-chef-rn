@@ -2,7 +2,7 @@ import {
   MIRRORED_SETTINGS,
   mirroredFrom,
   type MirroredSettings,
-} from '#/domain/serverSettings';
+} from '#domain/serverSettings';
 import type { RootState } from '#store/index';
 
 /**

@@ -35,7 +35,6 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
   itemName
   quantity
   quantityInput
-  displayFormat
   # This fragment is how another user's change reaches this device, so it
   # carries the whole purchase record. Worth recording that it can: this is a
   # read-back QUERY over HTTP — the subscription itself carries only the

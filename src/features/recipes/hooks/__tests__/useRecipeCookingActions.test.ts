@@ -1,10 +1,10 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { act } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import {
   ErrorCode,
   RecipeIngredientMatchKind,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   inputOf,
   recordMock,
@@ -21,10 +21,10 @@ import { UseRecipeData_RecipeFragmentDoc } from '#features/recipes/hooks/useReci
 import type { RootState } from '#store';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { useRecipeCookingActions } from '../useRecipeCookingActions';
-import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
+import { askForReviewAfterSuccess } from '#domain/reviewPrompt';
 import { onTutorialEvent, type TutorialEvent } from '#domain/tutorialEvents';
 
-jest.mock('#/domain/reviewPrompt');
+jest.mock('#domain/reviewPrompt');
 
 // useRecipeIngredientMatching (used internally) reads the selected pantry id.
 let mockIsOnline = true;
@@ -46,7 +46,7 @@ const mockToastInfo = jest.mocked(toastService.info);
 
 // Deterministic client-minted cooking-log id so we can assert the mutation
 // sends it.
-jest.mock('#/utils/generateEntityId', () => ({
+jest.mock('#utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'client-cooklog-1'),
 }));
 
@@ -134,7 +134,7 @@ const cook = (
   args: Partial<Parameters<Cooking['handleMarkAsCooked']>[0]> = {},
 ) =>
   act(async () => {
-    result.current.handleMarkAsCooked({
+    void result.current.handleMarkAsCooked({
       servings: 4,
       deductFromPantry: true,
       useGranularDeduction: false,
@@ -179,7 +179,7 @@ describe('useRecipeCookingActions', () => {
     ]);
     await drainTimers();
     expect(mockToastSuccess).toHaveBeenCalledWith(
-      'Recipe marked as cooked! Ingredients deducted from pantry.',
+      'Recipe marked as cooked. Deducted from 1 pantry item.',
     );
     expect(askForReviewAfterSuccess).toHaveBeenCalledTimes(1);
   });
@@ -358,11 +358,18 @@ describe('useRecipeCookingActions', () => {
     );
   });
 
-  it('toasts the failure message and shows no success toast when the server rejects', async () => {
+  it('toasts the failure message and keeps the sheet open when the server rejects', async () => {
     const { result } = renderCooking([refusedCookMock().mock]);
 
-    await cook(result);
+    const outcome = await drained(() =>
+      result.current.handleMarkAsCooked({
+        servings: 4,
+        deductFromPantry: true,
+        useGranularDeduction: false,
+      }),
+    );
 
+    expect(outcome).toBe('retry');
     // The refusal names `servings`, which has copy of its own.
     await drainTimers();
     expect(mockToastError).toHaveBeenCalledWith(
@@ -428,43 +435,93 @@ describe('useRecipeCookingActions', () => {
     // left to the teardown's flush of pending work.
     await drainTimers();
     expect(mockToastSuccess).toHaveBeenCalledWith(
-      'Recipe marked as cooked! Ingredients deducted from pantry.',
+      'Recipe marked as cooked. Deducted from 1 pantry item.',
     );
   });
 
+  // A cook that asked for the review deducts nothing unreviewed.
   describe('when the ingredient review cannot load', () => {
     const noMatches = () =>
       recordMock(MatchRecipeIngredientsToPantryDocument, {
         error: new Error('Network request failed'),
       });
 
-    it('records the cook offline, and says what it skipped', async () => {
-      mockIsOnline = false;
-      const cooked = cookedMock();
-      const { result } = renderCooking([noMatches().mock, cooked.mock]);
+    it.each([true, false])(
+      'keeps the sheet open with the review off, and records nothing (online: %s)',
+      async online => {
+        mockIsOnline = online;
+        const cooked = cookedMock();
+        const { result } = renderCooking([noMatches().mock, cooked.mock]);
 
-      await cook(result, { servings: 2, useGranularDeduction: true });
-      await drainTimers();
-      mockIsOnline = true;
+        const outcome = await drained(() =>
+          result.current.handleMarkAsCooked({
+            servings: 2,
+            deductFromPantry: true,
+            useGranularDeduction: true,
+          }),
+        );
+        mockIsOnline = true;
 
-      expect(cooked.fired).toHaveLength(1);
-      expect(mockToastInfo).toHaveBeenCalledWith(
-        'Reviewing the ingredients needs a connection. The amounts will be worked out when it syncs.',
-      );
-      expect(mockToastSuccess).not.toHaveBeenCalled();
+        expect(outcome).toBe('reviewUnavailable');
+        expect(cooked.fired).toHaveLength(0);
+        expect(mockToastSuccess).not.toHaveBeenCalled();
+        expect(mockToastInfo).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  it('records a recipe with nothing to draw as cooked, its pantry unchanged', async () => {
+    const cooked = cookedMock();
+    const { result } = renderCooking([
+      recordMock(MatchRecipeIngredientsToPantryDocument, {
+        data: { matchRecipeIngredientsToPantry: [] },
+      }).mock,
+      cooked.mock,
+    ]);
+
+    const outcome = await drained(() =>
+      result.current.handleMarkAsCooked({
+        servings: 2,
+        deductFromPantry: true,
+        useGranularDeduction: true,
+      }),
+    );
+    await drainTimers();
+
+    expect(outcome).toBe('done');
+    expect(inputOf(cooked.fired[0]!)).toMatchObject({
+      deductFromPantry: false,
     });
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Recipe marked as cooked. Your pantry wasn't changed.",
+    );
+  });
 
-    it('says the cook deducted online, as ever', async () => {
-      const cooked = cookedMock();
-      const { result } = renderCooking([noMatches().mock, cooked.mock]);
-
-      await cook(result, { servings: 2, useGranularDeduction: true });
-      await drainTimers();
-
-      expect(cooked.fired).toHaveLength(1);
-      expect(mockToastInfo).not.toHaveBeenCalled();
-      expect(mockToastSuccess).toHaveBeenCalled();
+  // COOK-03: a cook states what it recorded, never what it asked for.
+  it('says a deducting cook that drew on no stack left the pantry unchanged', async () => {
+    const cooked = recordMock(MarkRecipeAsCookedDocument, {
+      data: {
+        markRecipeAsCooked: {
+          __typename: 'MarkRecipeAsCookedPayload',
+          skippedIngredients: [],
+          cookingLog: {
+            pantryItemsUsedConnection: {
+              edges: [],
+              pageInfo: { hasNextPage: false },
+            },
+          },
+          mealPlanItem: null,
+        },
+      },
     });
+    const { result } = renderCooking([cooked.mock]);
+
+    await cook(result);
+    await drainTimers();
+
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Recipe marked as cooked. Your pantry wasn't changed.",
+    );
   });
 
   // The review opens with the servings and notes the cook entered; skipping it
@@ -703,5 +760,74 @@ describe('useRecipeCookingActions — from a recipe or from its planned meal', (
       mealPlanItemId: 'mpi-1',
       mealPlanItemVersion: 2,
     });
+  });
+
+  // How a planned meal's cook ends when the server will not take it.
+  describe('a planned meal the server refuses', () => {
+    const refusedAs = (code: ErrorCode) =>
+      recordMock(MarkRecipeAsCookedDocument, {
+        data: { markRecipeAsCooked: { __typename: 'ConflictError', code } },
+        maxUsageCount: 1,
+      });
+    const quickCook = (result: { current: Cooking }) =>
+      drained(() =>
+        result.current.handleMarkAsCooked({
+          servings: 4,
+          deductFromPantry: false,
+          useGranularDeduction: false,
+        }),
+      );
+
+    it('ends the cook when another cook already completed the meal', async () => {
+      const { result } = renderHookWithApollo(
+        () =>
+          useRecipeCookingActions({
+            recipeId: 'recipe-1',
+            plannedMeal: { id: 'mpi-1', version: 2 },
+            onMealChanged: jest.fn(),
+          }),
+        { operationMocks: [refusedAs(ErrorCode.Conflict).mock] },
+      );
+
+      expect(await quickCook(result)).toBe('done');
+    });
+
+    it('sends the next confirm at the version the meal has now', async () => {
+      const stale = refusedAs(ErrorCode.VersionConflict);
+      const cooked = cookedMock();
+      let meal = { id: 'mpi-1', version: 2 };
+      const { result, rerender } = renderHookWithApollo(
+        () =>
+          useRecipeCookingActions({
+            recipeId: 'recipe-1',
+            plannedMeal: meal,
+            onMealChanged: jest.fn(),
+          }),
+        { operationMocks: [stale.mock, cooked.mock] },
+      );
+
+      expect(await quickCook(result)).toBe('retry');
+      // The plan, refetched on the conflict, now holds the meal at 3.
+      meal = { id: 'mpi-1', version: 3 };
+      rerender({});
+      expect(await quickCook(result)).toBe('done');
+
+      expect(inputOf(stale.fired[0]!)).toMatchObject({
+        mealPlanItemVersion: 2,
+      });
+      expect(inputOf(cooked.fired[0]!)).toMatchObject({
+        mealPlanItemVersion: 3,
+      });
+    });
+  });
+
+  it('keeps the review open when a skipped review is refused', async () => {
+    const { result } = renderCooking([refusedCookMock().mock]);
+    const close = jest.spyOn(result.current.ingredientMatching, 'closeSheet');
+
+    act(() => result.current.handleSkipReview());
+    await drainTimers();
+
+    expect(close).not.toHaveBeenCalled();
   });
 });

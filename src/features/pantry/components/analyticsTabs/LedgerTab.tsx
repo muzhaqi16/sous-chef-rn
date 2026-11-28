@@ -1,27 +1,26 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
-import { moneyByCurrency } from '#/domain/money';
-import { useTranslation } from '#/i18n';
+import { UNKNOWN_AMOUNT } from '#utils/formatters/number';
+import { moneyByCurrency, useFormatCurrency } from '#domain/money';
+import { useTranslation } from '#i18n';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { ChartSection } from '#features/pantry/components/analytics/ChartSection';
-import { PeriodGranularity } from '#/graphql/generated/schemaTypes';
+import { PeriodGranularity } from '#graphql/generated/schemaTypes';
 import { safeParseDate } from '#utils/dateUtils';
-import { formatMonthDay, formatMonthYear } from '#/utils/formatters/date';
+import { formatMonthDay, formatMonthYear } from '#utils/formatters/date';
 import {
   formatQuantityDisplay,
   formatQuantityForDisplay,
   unitLabel,
   type UnitLabelSource,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import {
   AnalyticsSummaryCard,
   GranularityButton,
   OfflineTabState,
   TopItemsBarChart,
-  money,
   styles,
   totalsByItem,
 } from './shared';
@@ -69,6 +68,7 @@ export const LedgerTab: React.FC<
   onRefresh,
 }) => {
   const { t } = useTranslation();
+  const money = useFormatCurrency();
   const showsCost = useBudgetAndPricesEnabled();
   const costAnalytics = showsCost ? ledgerData?.costAnalytics : null;
   // One average per currency AND unit: a kilogram and a piece do not average.
@@ -198,7 +198,9 @@ export const LedgerTab: React.FC<
           <AnalyticsSummaryCard
             title={t('labels.totalSpent')}
             // No costed restock in the period is an unknown spend, never zero.
-            value={moneyByCurrency(costAnalytics.totalSpent) ?? UNKNOWN_AMOUNT}
+            value={
+              moneyByCurrency(costAnalytics.totalSpent, money) ?? UNKNOWN_AMOUNT
+            }
             icon="cash-outline"
             uniProps={theme => ({ color: theme.colors.warning })}
           />

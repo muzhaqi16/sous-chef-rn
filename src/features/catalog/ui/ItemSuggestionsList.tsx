@@ -8,8 +8,8 @@ import { Text } from '#components/atoms/Text';
 import { ListItem } from '#components/molecules/ListItem';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
-import { useTranslation } from '#/i18n';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
 import { QuickAddButton } from '#features/catalog/components/QuickAddButton';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 
@@ -94,7 +94,7 @@ const AddManuallyOption = ({
       onPress={onPress}
       testID={catalogTestIDs.addManuallyButton(testIDPrefix)}
     >
-      <Icon name="add-circle-outline" size={20} tone="primary" />
+      <Icon name="add-circle-outline" size="sm" tone="primary" />
       <Text role="bodyStrong" tone="accent">
         {saysNoMatches
           ? t('addItemSheet.noMatchesAddManually', { term: searchQuery })
@@ -116,7 +116,7 @@ const ReportItemOption = ({ onPress }: { onPress: () => void }) => {
       accessibilityRole="button"
       accessibilityLabel={t('reportItem.footer')}
     >
-      <Icon name="alert-circle-outline" size={18} tone="secondary" />
+      <Icon name="alert-circle-outline" size="xsPlus" tone="secondary" />
       <Text role="caption" tone="secondary">
         {t('reportItem.footer')}
       </Text>

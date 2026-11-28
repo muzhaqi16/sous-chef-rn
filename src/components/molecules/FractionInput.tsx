@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
-import {
-  ThemedBottomSheetTextInput,
-  ThemedTextInput,
-} from '#components/atoms/themedComponents';
-import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
+import { assignRef, type FocusableInputRef } from '#components/atoms/inputRef';
 import { Text } from '#components/atoms/Text';
-import { localizeNumericHint } from '#/utils/formatters/number';
+import { localizeNumericHint } from '#utils/formatters/number';
 
 interface FractionInputProps {
   value: string;
@@ -19,13 +16,9 @@ interface FractionInputProps {
   label?: string;
   disabled?: boolean;
   testID?: string;
-  keyboardType?:
-    | 'default'
-    | 'numeric'
-    | 'decimal-pad'
-    | 'numbers-and-punctuation';
-  useBottomSheetInput?: boolean;
   required?: boolean;
+  /** The input, for a host that only focuses it (react-hook-form). */
+  ref?: React.Ref<FocusableInputRef>;
 }
 
 /** Accepts decimals ("1.5"), simple fractions ("1/4") and mixed numbers ("1 1/4"). */
@@ -37,16 +30,10 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   label,
   disabled = false,
   testID,
-  keyboardType = 'numbers-and-punctuation',
-  useBottomSheetInput = false,
   required = false,
+  ref,
 }) => {
   const { t } = useTranslation();
-  const contextValue = useIsBottomSheetInput();
-  const InputComponent =
-    useBottomSheetInput || contextValue
-      ? ThemedBottomSheetTextInput
-      : ThemedTextInput;
   const [isFocused, setIsFocused] = useState(false);
 
   // `,` as well as `.`: the keypad on a comma-locale device offers no `.` at
@@ -81,14 +68,16 @@ export const FractionInput: React.FC<FractionInputProps> = ({
       required={required}
       inputTestID={testID}
     >
-      <InputComponent
+      <ThemedTextInput
+        ref={node => assignRef(ref, node)}
         style={variantStyles.input}
         value={value}
         onChangeText={handleChangeText}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         placeholder={placeholder ?? formatsHint}
-        keyboardType={keyboardType}
+        // The one keypad with "/" and a space: the value may be "1 1/2".
+        keyboardType="numbers-and-punctuation"
         editable={!disabled}
         selectTextOnFocus
         testID={testID}

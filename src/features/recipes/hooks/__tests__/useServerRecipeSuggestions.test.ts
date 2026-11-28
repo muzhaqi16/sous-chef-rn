@@ -1,5 +1,5 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -10,7 +10,7 @@ import {
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { useServerRecipeSuggestions } from '../useServerRecipeSuggestions';
 import { RecipeSuggestionsDocument } from '../useServerRecipeSuggestions.generated';
-import { getI18n } from '#/i18n/config';
+import { getI18n } from '#i18n/config';
 import { toDisplayItems } from '#features/recipes/screens/recipeDisplayItems';
 import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 import { useStore } from '#store';

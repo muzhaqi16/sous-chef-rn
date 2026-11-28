@@ -98,7 +98,7 @@ export const InfoRow: React.FC<InfoRowProps> = ({
       {icon ? (
         <View style={styles.valueWithIcon}>
           <View style={styles.iconContainer}>
-            <Icon name={icon} size={16} color={iconColor} tone={iconTone} />
+            <Icon name={icon} size="xs" color={iconColor} tone={iconTone} />
           </View>
           {valueContent}
         </View>

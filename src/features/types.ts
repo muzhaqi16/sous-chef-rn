@@ -1,5 +1,5 @@
 import type { createBottomTabScreen } from '@react-navigation/bottom-tabs';
-import type { TranslationKey } from '#/i18n';
+import type { TranslationKey } from '#i18n';
 
 /** Accepts both React components and static navigator objects. */
 type NavigationScreen = Parameters<typeof createBottomTabScreen>[0]['screen'];

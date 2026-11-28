@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 // RNGH's Pressable, not the themed RN re-export: nested inside the row's RNGH
 // Swipeable, only RNGH's native button captures the tap. An RN Pressable is in a
@@ -11,20 +11,8 @@ import {
   formatQuantityForDisplay,
   formatQuantityWithUnit,
   type QuantityNotation,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
-import { hitSlop } from '#/theme/foundations/sizes';
-
-/**
- * Tall enough for the touch floor; on the right, half the 4 dp gap to the row's
- * Move to Pantry action, which takes the other half.
- */
-const CHIP_SLOP = {
-  top: hitSlop.lg,
-  bottom: hitSlop.lg,
-  left: hitSlop.md,
-  right: 2,
-};
 
 interface QuantityBadgeProps {
   testID?: string;
@@ -96,7 +84,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
       })}
       accessibilityHint={isDisabled ? undefined : t('quantityBadge.a11yHint')}
       accessibilityState={{ disabled: isDisabled }}
-      hitSlop={CHIP_SLOP}
+      style={variantStyles.target}
     >
       <View style={[variantStyles.container, containerOverride]}>
         <Text
@@ -125,6 +113,14 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  // A whole target at the floor, the chip drawn at its own size at its end:
+  // the row's trailing slot is only as tall as what it holds.
+  target: {
+    minWidth: theme.sizes.touchTarget.min,
+    minHeight: theme.sizes.touchTarget.min,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
   container: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing['2xs'],

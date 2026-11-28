@@ -12,7 +12,7 @@ import {
   type TypedDocumentNode,
 } from '@apollo/client';
 import { useApolloClient, useQuery } from '@apollo/client/react';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -20,7 +20,7 @@ import {
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import type { SubscriptionConfig } from '#/services/subscriptions/types';
+import type { SubscriptionConfig } from '#services/subscriptions/types';
 import {
   MealPlanSubtype,
   MealPlanType,
@@ -29,7 +29,7 @@ import {
   ShoppingListSubtype,
   StorageState,
   SyncScopeKind,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
 import { PantryItemsForEventsDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
@@ -45,15 +45,15 @@ import { MealTemplateItemsForEventDocument } from '#features/mealPlan/hooks/useM
 import { useShoppingListSubscriptions } from '#features/shoppingList/hooks/useShoppingListSubscriptions';
 import { ShoppingListItemsForEventsDocument } from '#features/shoppingList/hooks/useShoppingListSubscriptions.generated';
 import { captureOnData } from '#/test-utils/subscriptionCapture';
-import { clearPositions, holdPosition } from '#/apollo/feed/feedPositions';
+import { clearPositions, holdPosition } from '#apollo/feed/feedPositions';
 import { typedConnectionOf } from '#/test-utils/fixtures/connectionOf';
 
-jest.mock('#/services/auth/deviceId', () => ({
+jest.mock('#services/auth/deviceId', () => ({
   getDeviceId: jest.fn(() => 'device_this'),
 }));
 
 const mockRegister = jest.fn();
-jest.mock('#/services/subscriptions/SubscriptionService', () => ({
+jest.mock('#services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     register: (config: SubscriptionConfig) => mockRegister(config),
     isParentDeleting: () => false,

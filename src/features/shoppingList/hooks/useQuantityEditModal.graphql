@@ -59,7 +59,6 @@ fragment useQuantityEditModal_updateQuantityResult on ShoppingListItem {
   id
   quantity
   quantityInput
-  displayFormat
   unitName
   version
   unit {

@@ -137,10 +137,18 @@ The mobile side is complete; pointers for future changes:
 
 A push standing for one notification carries `notificationId` (dedup key — must
 match the WebSocket notification id), `type` (the `NotificationType`, e.g.
-`LOW_STOCK`), `category` (the `NotificationCategory` — routing → Pantry /
-Shopping tab, else the feed), `sourceId` / `sourceType` when set (source
-correlation, not used for routing), and the display parameters `pushCopy` words
-the tray entry from.
+`LOW_STOCK`), `category` (the `NotificationCategory`: a category a feature
+claims opens that feature's tab, any other opens the notification's detail),
+`sourceId` / `sourceType` when set (source correlation, not used for routing),
+and the display parameters `pushCopy` words the tray entry from.
+
+Where a tap leads is `notificationDestination`, and the navigation action is
+`notificationDestinationAction`: one action for a tapped push and for a row in
+the list, which returns to a screen already open beneath (`pop`) instead of
+stacking another. The detail reads `Query.notification` from the cache when the
+feed holds the row, and from the server when it does not, as for a push opened
+from a closed app. Opening from a push marks the notification read even when the
+device did not hold it; the answer states the row and the badge.
 
 A **summary** — two or more notifications deferred by quiet hours or a delivery
 slot, still unread when it is delivered — names only the set: `coalescedCount`

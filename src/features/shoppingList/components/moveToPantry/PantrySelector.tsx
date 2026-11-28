@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
@@ -50,7 +50,7 @@ export const PantrySelector: React.FC<PantrySelectorProps> = ({
           >
             <Icon
               name="cube-outline"
-              size={20}
+              size="sm"
               tone={
                 selectedPantryId === pantry.id ? 'onPrimary' : 'textSecondary'
               }

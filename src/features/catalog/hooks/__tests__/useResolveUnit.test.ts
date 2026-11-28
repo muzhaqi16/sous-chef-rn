@@ -4,7 +4,7 @@ import {
   type RecordedMock,
 } from '#/test-utils/apolloMockProvider';
 import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { useResolveUnit } from '../useResolveUnit';
 

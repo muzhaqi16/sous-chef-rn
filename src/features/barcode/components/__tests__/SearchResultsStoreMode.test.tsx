@@ -1,18 +1,20 @@
 import React from 'react';
+import type { ApolloClient } from '@apollo/client';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   act,
   fireEvent,
   screen,
   userEvent,
 } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   ErrorCode,
   PriceBasis,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+} from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
 import {
@@ -23,7 +25,8 @@ import {
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { cacheShows } from '#/test-utils/cacheWaits';
+import { cacheShows, screenShows } from '#/test-utils/cacheWaits';
+import { settledInAct } from '#/test-utils/settledInAct';
 import {
   listLine,
   purchaseRecordOf,
@@ -36,7 +39,6 @@ import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
-import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import {
   HouseholdUsualUnitPriceDocument,
   StorePriceMemoryDocument,
@@ -45,11 +47,15 @@ import {
   StoreShelfPricesDocument,
   type UseStoreShelfPrices_ItemFragment,
 } from '#features/catalog/hooks/useStoreShelfPrices.generated';
-import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  GetShoppingListItemsFilteredDocument,
+  UpdateShoppingListItemDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { SHOPPING_ITEMS_PAGE_SIZE } from '#features/shoppingList/hooks/shoppingItemsPage';
 import { UseListAsksPrice_ListFragmentDoc } from '#features/shoppingList/hooks/useListAsksPrice.generated';
 import { UseListCurrency_ListFragmentDoc } from '#features/shoppingList/hooks/useListCurrency.generated';
-import { localizeNumericHint } from '#/utils/formatters/number';
-import { isRecord } from '#/utils/isRecord';
+import { localizeNumericHint } from '#utils/formatters/number';
+import { isRecord } from '#utils/isRecord';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 
 let log = operationLog();
@@ -105,7 +111,7 @@ const matchedLine = (bought = false, withUnit = true): ListLine => ({
 });
 
 const added = (held = false) =>
-  recordMock(BarcodeAddItemToShoppingListDocument, {
+  recordMock(AddItemToShoppingListDocument, {
     held,
     data: {
       addItemsToShoppingList: {
@@ -116,7 +122,7 @@ const added = (held = false) =>
   });
 
 const addRefused = () =>
-  recordMock(BarcodeAddItemToShoppingListDocument, {
+  recordMock(AddItemToShoppingListDocument, {
     data: {
       addItemsToShoppingList: {
         __typename: 'ValidationError',
@@ -308,17 +314,46 @@ const confirmPrice = async (open = true) => {
   await press(t('labels.save'));
 };
 
+// Inside `act`, so what the settled cache renders is on screen when it returns.
 const purchaseSettles = (
   cache: ReturnType<typeof makeCache>,
   id: string,
   isPurchased: boolean,
 ) =>
-  cacheShows(
-    cache,
-    purchaseRecordWatch(id),
-    () => purchaseRecordOf(cache, id),
-    record => record?.isPurchased === isPurchased,
+  settledInAct(() =>
+    cacheShows(
+      cache,
+      purchaseRecordWatch(id),
+      () => purchaseRecordOf(cache, id),
+      record => record?.isPurchased === isPurchased,
+    ),
   );
+
+/**
+ * Resolves once the list's in-cart lines, which the screen reads, hold `id` or
+ * not; they settle after the line's own record when a tick is refused.
+ */
+const cartSettles = (client: ApolloClient, id: string, inCart: boolean) => {
+  const inCartLines = {
+    query: GetShoppingListItemsFilteredDocument,
+    variables: {
+      id: 'list-1',
+      first: SHOPPING_ITEMS_PAGE_SIZE,
+      isPurchased: true,
+    },
+  };
+  return settledInAct(() =>
+    screenShows(
+      client,
+      inCartLines,
+      () =>
+        client
+          .readQuery(inCartLines)
+          ?.shoppingList?.itemsConnection.edges.map(edge => edge.node.id) ?? [],
+      ids => ids.includes(id) === inCart,
+    ),
+  );
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -463,7 +498,7 @@ describe('SearchResults from store mode', () => {
     const { cache } = openStore({ answers: [add, tick] });
 
     await press(t('barcode.addToCart'));
-    await log.landed(BarcodeAddItemToShoppingListDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await log.landed(UpdateShoppingListItemDocument);
     const input = inputOf(tick.fired[0] ?? {});
     await purchaseSettles(cache, String(input.id), true);
@@ -483,7 +518,7 @@ describe('SearchResults from store mode', () => {
     openStore({ answers: [add, tick] });
 
     await press(t('barcode.addToCart'));
-    await log.landed(BarcodeAddItemToShoppingListDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await act(async () => undefined);
 
     expect(alertService.alert).toHaveBeenCalledWith(
@@ -503,11 +538,11 @@ describe('SearchResults from store mode', () => {
     expect(priceAction()).not.toBeDisabled();
 
     await press(t('barcode.addToCart'));
-    await log.requested(BarcodeAddItemToShoppingListDocument);
+    await log.requested(AddItemToShoppingListDocument);
     expect(priceAction()).toBeDisabled();
 
     add.release();
-    await log.landed(BarcodeAddItemToShoppingListDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await log.landed(UpdateShoppingListItemDocument);
     expect(tick.fired).toHaveLength(1);
   });
@@ -539,7 +574,7 @@ describe('SearchResults from store mode', () => {
         .placeholder,
     ).toBe(localizeNumericHint(t('purchaseAmountSheet.pricePlaceholder')));
     await confirmPrice(false);
-    await log.landed(BarcodeAddItemToShoppingListDocument);
+    await log.landed(AddItemToShoppingListDocument);
     await log.landed(UpdateShoppingListItemDocument);
 
     expect(inputOf(tick.fired[0] ?? {})).toMatchObject({
@@ -602,7 +637,7 @@ describe('SearchResults from store mode', () => {
       openStore({ answers: [add, tick] });
 
       await confirmPrice();
-      await log.landed(BarcodeAddItemToShoppingListDocument);
+      await log.landed(AddItemToShoppingListDocument);
       await act(async () => undefined);
 
       expect(alertService.alert).toHaveBeenCalledWith(
@@ -632,11 +667,15 @@ describe('SearchResults from store mode', () => {
 
   it('stays put when the tick is refused', async () => {
     const tick = tickRefused();
-    const { cache } = openStore({ lines: [matchedLine()], answers: [tick] });
+    const { cache, client } = openStore({
+      lines: [matchedLine()],
+      answers: [tick],
+    });
 
     await press(t('barcode.addToCart'));
     await log.landed(UpdateShoppingListItemDocument);
     await purchaseSettles(cache, 'line-pb', false);
+    await cartSettles(client, 'line-pb', false);
 
     expect(tick.fired).toHaveLength(1);
     expect(onScanAnother).not.toHaveBeenCalled();

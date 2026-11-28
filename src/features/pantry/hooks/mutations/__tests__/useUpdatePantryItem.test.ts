@@ -1,6 +1,6 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
-import { alertService } from '#/services/alertService';
+import { makeCache } from '#apollo/cache';
+import { alertService } from '#services/alertService';
 import {
   recordMock,
   renderHookWithApollo,
@@ -8,14 +8,14 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { cacheShows } from '#/test-utils/cacheWaits';
-import { t } from '#/i18n';
-import { todayKey } from '#/utils/dateUtils';
+import { t } from '#i18n';
+import { todayKey } from '#utils/dateUtils';
 import {
   ErrorCode,
   ItemCondition,
   StorageState,
   StorageType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {

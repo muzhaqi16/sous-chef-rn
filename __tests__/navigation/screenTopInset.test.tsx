@@ -1,16 +1,21 @@
 import React from 'react';
-import { readFileSync } from 'fs';
-import { globSync } from 'glob';
+import * as ts from 'typescript';
 import { View } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   topInsetScreenLayout,
   topInsetWith,
-  noInsetScreenLayout,
+  edgeToEdgeScreenLayout,
+  navigatorScreenLayout,
 } from '#navigation/layouts/TopInsetLayout';
 import { Screen, type ScreenProps } from '#components/templates/Screen';
 import { Text } from '#components/atoms/Text';
+import {
+  nodesOf,
+  parseSource,
+  productionSources,
+} from '#/test-utils/sourceAst';
 
 /**
  * The top inset is applied by the NAVIGATOR, once per screen, and `Screen`
@@ -122,10 +127,13 @@ describe('the top inset is applied exactly once', () => {
     expect(insetPaddings(tree)).toHaveLength(1);
   });
 
-  it('applies none for a screen that opts out', () => {
+  it.each([
+    ['an edge-to-edge screen', edgeToEdgeScreenLayout],
+    ['a nested navigator', navigatorScreenLayout],
+  ])('applies none for %s', (_label, layout) => {
     const tree = render(
       <>
-        {noInsetScreenLayout({
+        {layout({
           children: (
             <Screen header={{ variant: 'none' }}>
               <Text role="body">content</Text>
@@ -205,34 +213,54 @@ describe('the side insets are applied exactly once', () => {
  * like one that meant to, and only the roster shows the difference.
  */
 describe('every screen that opts out of the inset is a deliberate one', () => {
-  const IMMERSIVE = [
-    // Hero screens: the detail header draws edge-to-edge under the status bar.
-    'src/features/pantry/screens/registration.ts',
-    'src/features/recipes/screens/registration.ts',
-    'src/features/shoppingList/screens/registration.ts',
-    // A nested navigator insets in its own stack, so the parent must not.
-    'src/navigation/RootNavigator.tsx',
-    // The module that DEFINES the opt-out.
-    'src/navigation/layouts/TopInsetLayout.tsx',
+  // The module that DEFINES both opt-outs.
+  const LAYOUTS = 'src/navigation/layouts/TopInsetLayout.tsx';
+  const OPT_OUTS: Array<[string, string[]]> = [
+    [
+      // Hero screens: the detail header draws edge-to-edge under the status bar.
+      'edgeToEdgeScreenLayout',
+      [
+        'src/features/pantry/screens/registration.ts',
+        'src/features/recipes/screens/registration.ts',
+        'src/features/shoppingList/screens/registration.ts',
+        LAYOUTS,
+      ],
+    ],
+    [
+      // A nested navigator insets in its own stack, so the parent must not, and
+      // its screens bring their own shared-transition boundary.
+      'navigatorScreenLayout',
+      ['src/navigation/RootNavigator.tsx', LAYOUTS],
+    ],
   ];
 
-  const registrations = [
-    ...new Set([
-      ...globSync('src/features/*/screens/registration.ts'),
-      ...globSync('src/navigation/**/*.tsx'),
-    ]),
-  ] as string[];
+  /** Whether the file refers to `name` in code: a comment is not a use. */
+  const refersTo = (file: string, name: string, text?: string): boolean =>
+    nodesOf(parseSource(file, text)).some(
+      node => ts.isIdentifier(node) && node.text === name,
+    );
 
-  it('finds the registration modules, so the check is not vacuous', () => {
-    expect(registrations.length).toBeGreaterThan(10);
+  const sources = productionSources();
+
+  it('reads uses, not mentions, under any alias', () => {
+    expect(
+      refersTo(
+        'planted.ts',
+        'edgeToEdgeScreenLayout',
+        '// edgeToEdgeScreenLayout',
+      ),
+    ).toBe(false);
+    expect(
+      refersTo(
+        'planted.ts',
+        'edgeToEdgeScreenLayout',
+        "import { edgeToEdgeScreenLayout as hero } from '#navigation/layouts/TopInsetLayout';",
+      ),
+    ).toBe(true);
   });
 
-  it('names noInsetScreenLayout only in the recorded modules', () => {
-    const users = registrations.filter(file =>
-      /\bnoInsetScreenLayout\b/.test(readFileSync(file, 'utf8')),
-    );
-    expect(users.sort()).toEqual(
-      IMMERSIVE.filter(f => registrations.includes(f)).sort(),
-    );
+  it.each(OPT_OUTS)('uses %s only in the recorded modules', (name, files) => {
+    const users = sources.filter(file => refersTo(file, name));
+    expect(users.sort()).toEqual([...files].sort());
   });
 });

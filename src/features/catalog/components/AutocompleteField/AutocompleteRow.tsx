@@ -83,9 +83,10 @@ export const AutocompleteRow: React.FC<AutocompleteRowProps> = ({
 );
 
 const styles = StyleSheet.create(theme => ({
+  // A full-width cell: in the field's sheet its text sits on the page gutter.
   row: {
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
     backgroundColor: theme.colors.surface,
     flexDirection: 'row',
     alignItems: 'center',

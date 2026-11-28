@@ -7,8 +7,8 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetHomesDocument } from '#operations/home/home.generated';
-import { Telemetry } from '#/services/telemetry';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { Telemetry } from '#services/telemetry';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 import { useHomeQuery } from '../useHomeQuery';
 
 beforeEach(() => {

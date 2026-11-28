@@ -13,7 +13,6 @@ import { NavigationContext } from '@react-navigation/native';
 import { useSharedBottomSheetConfigs } from '#hooks/ui/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/ui/useBottomSheetBackHandler';
 import { useBottomSheetBackdropClaim } from '#hooks/ui/useBottomSheetBackdropClaim';
-import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
 
 // gorhom's default background and handle are each an "adjustable" TalkBack
 // stop ("Bottom Sheet", "Bottom sheet handle") ahead of the content; these paint
@@ -45,8 +44,7 @@ type ThemedBottomSheetModalProps = Omit<
 
 /**
  * Theme-reactive `BottomSheetModal`, re-exported under the gorhom name so only
- * the import source changes at a call site. Content mounts on every present,
- * so it sits in `CurrentThemeScope`.
+ * the import source changes at a call site.
  */
 const ThemedBottomSheetModal = ({
   children,
@@ -71,7 +69,7 @@ const ThemedBottomSheetModal = ({
       onAnimate?.(fromIndex, toIndex, fromPosition, toPosition);
     }}
   >
-    <CurrentThemeScope>{children}</CurrentThemeScope>
+    {children}
   </ThemedModalShell>
 );
 
@@ -83,6 +81,13 @@ export { ThemedBottomSheetModal as BottomSheetModal };
  * the `present(data)` payload generic to `never`.
  */
 export type BottomSheetModalRef = GorhomBottomSheetModal<unknown>;
+
+/** Input the sheet's content holds, which a close would drop. */
+export interface SheetDiscardGuard {
+  holds: () => boolean;
+  /** Runs `close` at once, or once the person agrees to discard the input. */
+  requestClose: (close: () => void) => void;
+}
 
 export interface UseStandardBottomSheetOptions {
   /** When provided, auto-manages present/dismiss. Omit to manage presentation manually via ref. */
@@ -100,6 +105,8 @@ export interface UseStandardBottomSheetOptions {
     fromPosition: number,
     toPosition: number,
   ) => void;
+  /** Asked before a close the owner did not make: a drag, the backdrop, Back. */
+  discardGuard?: SheetDiscardGuard;
 }
 
 // Gorhom expects the snap-point type literal even though we don't branch on it.
@@ -121,17 +128,49 @@ export function useStandardBottomSheet({
   enableDynamicSizing = false,
   onChange: userOnChange,
   onAnimate: userOnAnimate,
+  discardGuard,
 }: UseStandardBottomSheetOptions) {
   const insets = useSafeAreaInsets();
   const ref = useRef<GorhomBottomSheetModal<unknown>>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
+  // A close this sheet's owner made, or one the person agreed to: never asked.
+  const closingRef = useRef(false);
+  // An owner that unmounts the sheet closes it: gorhom then animates the close
+  // with the content still mounted, which would read as a drag.
+  // Verified: #gorhom-closes-a-modal-its-owner-unmounts-with-its-content-mounted
+  useEffect(
+    () => () => {
+      closingRef.current = true;
+    },
+    [],
+  );
+  const discardGuardRef = useRef(discardGuard);
+  useEffect(() => {
+    discardGuardRef.current = discardGuard;
+  });
+  const dismissNow = () => {
+    closingRef.current = true;
+    ref.current?.dismiss();
+  };
+  const requestDismissRef = useRef(dismissNow);
+  useEffect(() => {
+    requestDismissRef.current = () => {
+      const guard = discardGuardRef.current;
+      if (guard) guard.requestClose(dismissNow);
+      else dismissNow();
+    };
+  });
+  // What the backdrop and Back dismiss: through the guard, unlike the owner.
+  const [guardedRef] = useState(() => ({
+    current: { dismiss: () => requestDismissRef.current() },
+  }));
 
   const {
     animatedIndex,
     onChange: handleBackdrop,
     onAnimate: handleBackdropAnimate,
     release: releaseBackdrop,
-  } = useBottomSheetBackdropClaim(ref);
+  } = useBottomSheetBackdropClaim(guardedRef);
 
   // 'interactive' lifts the sheet by the keyboard height measured from its
   // TALLEST snap point (`max(0, highestDetentPosition - keyboardHeight)`), so a
@@ -165,7 +204,7 @@ export function useStandardBottomSheet({
   // Only while actually on screen: `visible` stays true across a navigation
   // away, so a handler gated on it alone stays subscribed on the pushed screen
   // and swallows back there.
-  useBottomSheetBackHandler(ref, (visible ?? false) && isFocused);
+  useBottomSheetBackHandler(guardedRef, (visible ?? false) && isFocused);
 
   const isPresentedRef = useRef(false);
   // Marks a dismiss caused purely by blur, so `safeOnDismiss` does not notify
@@ -176,12 +215,14 @@ export function useStandardBottomSheet({
     const active = visible && isFocused;
     if (active && !isPresentedRef.current) {
       isPresentedRef.current = true;
+      closingRef.current = false;
       // A rapid blur → refocus interrupts the close, so gorhom never fires
       // onDismiss and a stale flag would swallow the next genuine one.
       blurDismissRef.current = false;
       ref.current?.present();
     } else if (!active && isPresentedRef.current) {
       isPresentedRef.current = false;
+      closingRef.current = true;
       // `!active` with `visible` still true means the screen blurred (not a
       // consumer close) — flag it so `safeOnDismiss` preserves `visible`.
       if (visible) {
@@ -204,14 +245,29 @@ export function useStandardBottomSheet({
     userOnChangeRef.current = userOnChange;
   });
 
+  /** The stop gorhom last settled on; a lift above it is temporary. */
+  const stopRef = useRef(-1);
   const handleChange = (
     index: number,
     position: number,
     type: SnapPointType,
   ): void => {
+    stopRef.current = index;
     handleBackdrop(index);
     userOnChangeRef.current?.(index, position, type);
   };
+
+  // A touch as the keyboard leaves makes gorhom skip its `restore` and keep the
+  // lifted position, its content clipped above an empty band. Back to the stop
+  // the sheet is on.
+  // Verified: #gorhom-keeps-a-keyboard-lift-when-a-touch-lands-as-the-keyboard-leaves
+  useEffect(() => {
+    if (!visible) return;
+    const hidden = Keyboard.addListener('keyboardDidHide', () => {
+      if (stopRef.current >= 0) ref.current?.snapToIndex(stopRef.current);
+    });
+    return () => hidden.remove();
+  }, [visible]);
 
   // Same for onAnimate, which is what fires the backdrop claim at the
   // open-animation start.
@@ -226,9 +282,35 @@ export function useStandardBottomSheet({
     fromPosition: number,
     toPosition: number,
   ): void => {
+    // A drag closing a sheet that holds input: back up, then ask. gorhom sends
+    // this as the close starts, and a gesture's close is not a forced one, so
+    // the snap replaces it.
+    const guard = discardGuardRef.current;
+    if (
+      toIndex === -1 &&
+      fromIndex >= 0 &&
+      !closingRef.current &&
+      guard?.holds()
+    ) {
+      ref.current?.snapToIndex(fromIndex);
+      guard.requestClose(dismissNow);
+      return;
+    }
+    // gorhom refuses a snap only during a forced close, so a keyboard leaving
+    // mid-drag-close would snap the sheet back open.
+    if (toIndex === -1) stopRef.current = -1;
     handleBackdropAnimate(fromIndex, toIndex);
     userOnAnimateRef.current?.(fromIndex, toIndex, fromPosition, toPosition);
   };
+
+  // gorhom renders the sheet through a portal a render behind, and a close
+  // binds its callback as it starts: a handler changed in the render that
+  // closes the sheet would run as the one before it.
+  // Verified: #gorhom-calls-the-ondismiss-of-the-render-before-the-close
+  const onDismissRef = useRef(onDismiss);
+  useEffect(() => {
+    onDismissRef.current = onDismiss;
+  });
 
   // Gorhom fires `onClose` and `onChange(-1)` from separate animated reactions;
   // if `onClose` wins it unmounts the portal first and the claim leaks, so the
@@ -239,12 +321,13 @@ export function useStandardBottomSheet({
     isPresentedRef.current = false;
     handleBackdrop(-1);
     // A blur dismiss must NOT notify the consumer: `visible` staying true is
-    // what lets the focus effect re-present the sheet with its typed state.
+    // what lets the focus effect re-present the sheet. gorhom unmounts its
+    // content meanwhile, so what must outlive a blur lives in the parent.
     if (blurDismissRef.current) {
       blurDismissRef.current = false;
       return;
     }
-    onDismiss();
+    onDismissRef.current();
   };
 
   // Theme-derived `backgroundStyle` / `handleIndicatorStyle` come from the
@@ -266,15 +349,9 @@ export function useStandardBottomSheet({
 
   const contentContainerStyle = { paddingBottom: insets.bottom + 16 };
 
-  // For an event handler that must close the sheet directly; state-driven
-  // control goes through the `visible` option instead.
-  const dismiss = () => ref.current?.dismiss();
-
   return {
     ref,
     modalProps,
     contentContainerStyle,
-    insets,
-    dismiss,
   };
 }

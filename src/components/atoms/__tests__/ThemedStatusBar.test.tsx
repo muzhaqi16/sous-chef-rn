@@ -1,12 +1,12 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { WindowBackground } from '#/native/WindowBackground';
-import { ThemePreference } from '#/store/slices/preferenceTypes';
+import { WindowBackground } from '#native/WindowBackground';
+import { ThemePreference } from '#store/slices/preferenceTypes';
 import { ThemedStatusBar } from '../ThemedStatusBar';
 
 let mockThemePreference = ThemePreference.SYSTEM;
 
-jest.mock('#/native/WindowBackground', () => ({
+jest.mock('#native/WindowBackground', () => ({
   WindowBackground: { setTheme: jest.fn() },
 }));
 jest.mock('#store/useAppStore', () => ({

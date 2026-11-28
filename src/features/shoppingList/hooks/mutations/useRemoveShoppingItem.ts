@@ -3,12 +3,10 @@
  * answers. The replay is idempotent by item id.
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { RemoveItemFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import type { RemoveRowsInputs } from '#features/shoppingList/offline/localWrites';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { useTranslation } from '#/i18n';
+import type { RemoveRowsInputs } from '#entities/shoppingList/localWrites';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import { useTranslation } from '#i18n';
+import { removeItemFromShoppingListWrite } from '#features/shoppingList/offline/localWrites';
 
 interface UseRemoveShoppingItemOptions {
   listId: string | null | undefined;
@@ -22,28 +20,18 @@ interface UseRemoveShoppingItemReturn {
 export function useRemoveShoppingItem({
   listId,
 }: UseRemoveShoppingItemOptions): UseRemoveShoppingItemReturn {
-  const client = useApolloClient();
   const { t } = useTranslation();
 
-  const [removeItemMutation] = useMutation(RemoveItemFromShoppingListDocument, {
-    context: { localFirst: true },
+  const remove = useLocalWrite(removeItemFromShoppingListWrite, {
+    fallback: t('errors.deleteItemFailed'),
+    removal: true,
   });
 
   const removeItem = async (itemId: string): Promise<boolean> => {
     if (!listId) return false;
 
     const inputs: RemoveRowsInputs = { listId };
-    const settled = await pendingWritesOf(client.cache).send(
-      RemoveItemFromShoppingListDocument,
-      { input: { id: itemId } },
-      write =>
-        settleMutation(() => removeItemMutation(write), {
-          document: RemoveItemFromShoppingListDocument,
-          fallback: t('errors.deleteItemFailed'),
-          removal: true,
-        }),
-      inputs,
-    );
+    const settled = await remove.send({ input: { id: itemId } }, inputs);
     return settled.status !== 'failed';
   };
 

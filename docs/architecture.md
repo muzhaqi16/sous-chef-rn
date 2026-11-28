@@ -60,33 +60,34 @@ Every production file in `src/` belongs to one of two layers:
 What the core is for, and why a web host would run this app on
 react-native-web, is [`web-host-decision.md`](web-host-decision.md).
 
-| Entry                 | Layer  | Paths under `src/`                                                                                                  |
-| --------------------- | ------ | ------------------------------------------------------------------------------------------------------------------- |
-| platform              | core   | `platform/**`                                                                                                       |
-| apollo                | core   | `apollo/**`                                                                                                         |
-| bootstrap             | core   | `bootstrap/**`                                                                                                      |
-| domain                | core   | `domain/**`                                                                                                         |
-| graphql               | core   | `graphql/**`                                                                                                        |
-| i18n                  | core   | `i18n/**`                                                                                                           |
-| config                | core   | `config/**`                                                                                                         |
-| store                 | core   | `store/**`                                                                                                          |
-| types                 | core   | `types/**`                                                                                                          |
-| utils                 | core   | `utils/**`                                                                                                          |
-| services/auth         | core   | `services/auth/**`, `services/authService.ts`                                                                       |
-| services              | core   | `services/{subscriptions,telemetry}/**`, `services/{alertService,destructiveConfirm,errorService,toastService}.ts`  |
-| hooks                 | core   | `hooks/{apollo,auth,data,deepLink,search,settings,utils}/**`                                                        |
-| hooks/session         | core   | `hooks/{app,offline,subscriptions}/**`                                                                              |
-| theme/foundations     | core   | `theme/foundations/**`                                                                                              |
-| features/utils        | core   | `features/*/utils/**`                                                                                               |
-| features/graphql      | core   | `features/*/graphql/**`                                                                                             |
-| features/cache        | core   | `features/*/cache/**`                                                                                               |
-| features/data         | core   | `features/*/{hooks,offline,store,locales,constants}/**`                                                             |
-| features/declarations | core   | `features/*/{manifest.static,types,pushCopy}.ts`, `features/{registry.static,registry.cache,staticTypes}.ts`        |
-| app shell             | mobile | `{app,assets,components,constants,context,native,navigation,screens,styles}/**`                                     |
-| services (device)     | mobile | `services/{push,permissions,haptic,notifications,performance,biometric,device}/**`, `services/NavigationService.ts` |
-| hooks (UI and device) | mobile | `hooks/{ui,animations,navigation,permissions,performance,device}/**`                                                |
-| theme runtime         | mobile | `theme/*.ts`                                                                                                        |
-| features (UI)         | mobile | `features/*/{screens,components,ui,context}/**`, `features/*/{manifest,testIDs}.ts`, `features/{registry,types}.ts` |
+| Entry                 | Layer  | Paths under `src/`                                                                                                                       |
+| --------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| platform              | core   | `platform/**`                                                                                                                            |
+| apollo                | core   | `apollo/**`                                                                                                                              |
+| bootstrap             | core   | `bootstrap/**`                                                                                                                           |
+| domain                | core   | `domain/**`                                                                                                                              |
+| entities              | core   | `entities/**`                                                                                                                            |
+| graphql               | core   | `graphql/**`                                                                                                                             |
+| i18n                  | core   | `i18n/**`                                                                                                                                |
+| config                | core   | `config/**`                                                                                                                              |
+| store                 | core   | `store/**`                                                                                                                               |
+| types                 | core   | `types/**`                                                                                                                               |
+| utils                 | core   | `utils/**`                                                                                                                               |
+| services/auth         | core   | `services/auth/**`, `services/authService.ts`                                                                                            |
+| services              | core   | `services/{subscriptions,telemetry}/**`, `services/{alertService,destructiveConfirm,errorService,toastService}.ts`                       |
+| hooks                 | core   | `hooks/{apollo,auth,data,deepLink,search,settings,utils}/**`                                                                             |
+| hooks/session         | core   | `hooks/{app,offline,subscriptions}/**`                                                                                                   |
+| theme/foundations     | core   | `theme/foundations/**`                                                                                                                   |
+| features/utils        | core   | `features/*/utils/**`                                                                                                                    |
+| features/graphql      | core   | `features/*/graphql/**`                                                                                                                  |
+| features/cache        | core   | `features/*/cache/**`                                                                                                                    |
+| features/data         | core   | `features/*/{hooks,offline,store,locales,constants}/**`                                                                                  |
+| features/declarations | core   | `features/*/{manifest.static,types,pushCopy}.ts`, `features/{registry.static,registry.cache,registry.data,registry.feed,staticTypes}.ts` |
+| app shell             | mobile | `{app,assets,components,constants,context,native,navigation,screens,styles}/**`                                                          |
+| services (device)     | mobile | `services/{push,permissions,haptic,notifications,performance,biometric,device}/**`, `services/NavigationService.ts`                      |
+| hooks (UI and device) | mobile | `hooks/{ui,animations,navigation,performance,device}/**`                                                                                 |
+| theme runtime         | mobile | `theme/*.ts`                                                                                                                             |
+| features (UI)         | mobile | `features/*/{screens,components,ui,context}/**`, `features/*/{manifest,testIDs}.ts`, `features/{registry,types}.ts`                      |
 
 **Classify by folder; move only what mixes.** A file takes its layer from where
 it sits, so a new file needs no registration, and a file that would need an
@@ -222,9 +223,9 @@ There are fourteen: `today`, `pantry`, `shoppingList`, `recipes`, `mealPlan`,
 reached from headers, buttons, push taps or the root navigator's groups. Removing a feature
 from a fork is deleting its folder and its registry entries.
 
-### Three registries
+### Five registries
 
-The feature list exists three times, split by who reads it and when:
+The feature list exists five times, split by who reads it and when:
 
 - `registry.ts` (`FEATURE_REGISTRY`) — the screen-bearing manifests navigation
   iterates.
@@ -239,38 +240,52 @@ The feature list exists three times, split by who reads it and when:
   manifest field, because policies on a static manifest drag the queue store,
   the Zustand store and `apollo/client` into i18n init;
   `launchPathWeight.test.ts` holds that line.
+- `registry.data.ts` — each feature's part in the write kernel: its local-first
+  writes and how the queue restates and settles its replays, keyed by operation
+  in `localWriteRegistry`, `preparationRegistry` and `replayRegistry`.
+- `registry.feed.ts` — each feature's feed adapter, read by `feedRegistry`.
+  Apart from `registry.data.ts` because a feed reads the write kernel: one
+  module holding both loads in a cycle (`npm run check:import-cycles`).
+
+The kernel (`src/apollo`) reads features only through these registries.
+
+What holds the split is its gates, not a measured launch time:
+`staticFeatureRegistry.test.ts` (no static manifest reaches a screen or a
+component), `launchPathWeight.test.ts` (the module graph i18n init reaches),
+the layer policies (`coreLoadsWithNothingInstalled.test.ts` and
+`boundaries/dependencies`), and `npm run check:import-cycles` (the data and
+feed registries kept apart).
 
 A feature that needs shell wiring adds to its `manifest.static.ts`; it never
 adds an import of the screen-bearing registry to a launch-path module.
 
 ### The public API boundary
 
-A feature is a module with a small public surface. Reaching past it is blocked
-by ESLint (`no-restricted-imports` + `boundaries/dependencies`) for **new**
-imports:
+A feature is a module with a public surface. Reaching past it is blocked by
+ESLint (`boundaries/dependencies`). The one statement of what is internal is
+`BOUNDARY_ELEMENTS` in `eslint/boundaries.js`, which classifies every `src`
+file (`boundaryElementsCoverSrc.test.ts`):
 
-| Subfolder                         | Public? | Notes                                                                                                                                                                                                                                                                                                               |
-| --------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `screens/`                        | ✅      | Imported by navigation stacks                                                                                                                                                                                                                                                                                       |
-| `manifest.ts`                     | ✅      | Wired into `FEATURE_REGISTRY`                                                                                                                                                                                                                                                                                       |
-| `testIDs.ts`                      | ✅      | The feature's testIDs; imported by the app and by e2e page objects                                                                                                                                                                                                                                                  |
-| `hooks/` (top-level files only)   | ✅      | Cross-feature consumers may import these                                                                                                                                                                                                                                                                            |
-| `<feature>Fragments.generated.ts` | ✅      | Type imports only, when composing your own fragments                                                                                                                                                                                                                                                                |
-| `components/`                     | 🔒      | A component two features want is a KIT component — promote it to `src/components/`                                                                                                                                                                                                                                  |
-| `ui/` (catalog only)              | ✅      | The catalog's public UI. Its pickers are domain UI two features consume, so they can go in neither a domain-free kit nor one consumer                                                                                                                                                                               |
-| `context/`                        | 🔒      | Internal                                                                                                                                                                                                                                                                                                            |
-| `graphql/`                        | 🔒      | Compose your own operations instead                                                                                                                                                                                                                                                                                 |
-| `hooks/mutations/`, deeper hooks  | 🔒      | Internal lifecycle primitives                                                                                                                                                                                                                                                                                       |
-| `utils/`                          | 🔒      | Internal                                                                                                                                                                                                                                                                                                            |
-| `store/` (recipes only)           | ✅      | The recipe result caches. Two other features read them (pantry's per-item suggestions, mealPlan's recipe picker), so like catalog's `ui/` they belong in neither a domain-free kernel nor one consumer. A feature store MUST call `registerSessionScopedStore` — `SESSION_SCOPED_STATE` only reaches the root store |
-| `offline/` (pantry, shoppingList) | 🔒\*    | Public to the OFFLINE QUEUE only. A feature's replay preparers and reconcilers say what its queued mutation means, which nothing but the replayer needs — the kernel imports it, other features may not                                                                                                             |
+- **Internal:** `context/`, `utils/`, `components/`, `cache/`,
+  `hooks/mutations/` and `graphql/`. A component two features want is a kit component; an operation
+  another feature needs is sent through the owner's hook, never copied.
+- **The offline queue's only:** `offline/`. A feature's replay preparers and
+  reconcilers say what its queued mutation means; the kernel imports them, other
+  features may not.
+- **Public:** everything else — `screens/`, top-level `hooks/`, `ui/`,
+  `store/`, `testIDs.ts`, `manifest.ts`, `types.ts`, and the types of
+  `*Fragments.generated.ts`. A feature store MUST call
+  `registerSessionScopedStore`: `SESSION_SCOPED_STATE` only reaches the root
+  store.
+
+This section gives the reasoning; it does not keep a second copy of the list.
 
 Shared UI atoms, molecules, organisms, and templates live in `src/components/`,
 beside `providers/` and `performance/`. That is the whole taxonomy — there is no
 `base/`, `charts/`, `modals/`, `navigation/` or `settings/`. A component's tier
 follows from what it RENDERS, not from taste (`src/components/atoms/README.md`):
-`DataStateView` is a molecule, because routing between Loading, Error and Empty
-is composition, not a primitive. UI one feature renders stays in that feature's
+`DataStateView` is an organism, because it routes between Loading, Error and
+Empty, which are molecules themselves. UI one feature renders stays in that feature's
 `components/` (the pantry form is `src/features/pantry/components/form/`).
 Shared hooks live in `src/hooks/`. If two features need the same thing, it moves
 up — it doesn't get imported sideways, and it doesn't get imported _downwards_
@@ -336,7 +351,7 @@ NAMED after a feature either. Its feature IMPORTS are load-bearing — the offli
 queue replays every feature's writes, i18n bundles every feature's copy, the
 subscription layer mounts every feature's events — and are governed by the same
 `eslint/boundaries.js` policies: `graphql/` and `offline/` stay open to it,
-`context/`, `utils/`, `components/` and `hooks/mutations/` do not. The per-feature navigation stacks in
+`context/`, `utils/`, `components/`, `cache/` and `hooks/mutations/` do not. The per-feature navigation stacks in
 `src/navigation/stacks/` are exempt by design.
 
 **A module in the shared layers is there because more than one feature uses it.**
@@ -346,6 +361,12 @@ belongs to pantry too. A module with a single consumer is one to move.
 `src/domain/` is the exception the rule needed: logic several features share, in
 neither a domain-free kit nor one feature's internals. Admission is by the same
 consumer count — two or more features, or it belongs in the one that uses it.
+
+`src/entities/<entity>/` holds an entity several features write: its cache
+writers, its local-first write descriptors and the documents they write to
+(`shoppingList`, `pantryItem`, `store`, `catalog`). Every feature may import it;
+it imports no feature (`eslint/boundaries.js`). Admission is the same consumer
+count.
 
 Every feature has the same shape:
 `manifest.ts` (whose `id` equals its directory name), `screens/`, `hooks/` and
@@ -771,10 +792,10 @@ Chrome is composed once, not per screen.
   never the scaffold, or RNGH cannot route the scroll gesture into it.
 - **`Sheet`** (`src/components/templates/Sheet.tsx`) is a bottom sheet's shell:
   `view | form | action | list`; `list` hands a scrollable that fills the sheet
-  to the modal, since `BottomSheetView` cannot bound one. `form` brings both the keyboard offset and the input
-  context, so every `TextInput` under it resolves to gorhom's
-  `BottomSheetTextInput` rather than RN's, which would leave the sheet blind to
-  the keyboard. `__tests__/sheets/bottomSheetShell.test.ts` holds it.
+  to the modal, since `BottomSheetView` cannot bound one. `form` brings the keyboard offset. In every
+  mode `ThemedTextInput` resolves to gorhom's `BottomSheetTextInput` rather than
+  RN's, which would leave the sheet blind to the keyboard, by asking gorhom
+  whether it renders in a sheet. `ONE_DOOR_POLICIES` in `eslint/boundaries.js` hold the shell and the one input.
 - **`FormScreen`** is a full-screen form — a screen with a form's chrome. It is
   not a sheet and does not share a mechanism with one.
 
@@ -940,6 +961,8 @@ src/
 ├── context/         App-level React context
 ├── domain/          Domain logic SEVERAL features share — neither kit nor one
 │                    feature's internals; admission is by consumer count
+├── entities/        The cache writers, write descriptors and documents of an
+│                    entity several features write; imports no feature
 ├── features/        The fourteen feature modules (see above), registry.ts for
 │                    navigation and registry.static.ts for the app shell
 ├── graphql/         Shared operations, generated schema + types

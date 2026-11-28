@@ -1,6 +1,6 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { Text } from '#components/atoms/Text';
@@ -15,7 +15,7 @@ import {
   ItemCondition,
   type StorageType,
   type UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { useUpdatePantryItem } from '#features/pantry/hooks/mutations/useUpdatePantryItem';
 import { useUpdatePantryItemQuantity } from '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity';
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
@@ -39,19 +39,23 @@ import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
 import { editedAmount } from './editedAmount';
 import { usePantryUnitChange } from '#features/pantry/hooks/usePantryUnitChange';
 import { reportValidationErrors } from '#utils/validation/common';
-import { TAB_FIELDS, editItemSchema } from './pantryItemFormConfig';
+import {
+  TAB_FIELDS,
+  editItemSchema,
+  type EditItemContext,
+} from './pantryItemFormConfig';
 import {
   PAGES,
   PAGE_LABEL_KEYS,
   type PageName,
 } from '#features/catalog/ui/AddItemForm/fields';
-import { formatNumberForInput } from '#/utils/formatters/number';
-import { formatQuantityForInput, unitLabel } from '#/utils/formatQuantity';
+import { formatNumberForInput } from '#utils/formatters/number';
+import { formatQuantityForInput, unitLabel } from '#utils/formatQuantity';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
-import { fromDateKey } from '#/utils/dateUtils';
+import { fromDateKey } from '#utils/dateUtils';
 
 export interface PantryItemFormData {
   itemName?: string;
@@ -196,6 +200,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   const { resolveUnitId } = useResolveUnit();
 
+  const seeded = existingPantryItem
+    ? formValuesFromItem(existingPantryItem)
+    : undefined;
   const {
     control,
     handleSubmit,
@@ -203,20 +210,21 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     setValue,
     setError,
     trigger,
-  } = useForm<PantryItemFormData>({
-    resolver: yupResolver(editItemSchema) as Resolver<PantryItemFormData>,
+  } = useForm<PantryItemFormData, EditItemContext>({
+    resolver: yupResolver(editItemSchema) as Resolver<
+      PantryItemFormData,
+      EditItemContext
+    >,
     // `values` lands in an effect that runs before this component's own
     // `useWatch` subscribes, so an item cached at mount seeds the defaults too.
-    defaultValues: existingPantryItem
-      ? formValuesFromItem(existingPantryItem)
-      : EMPTY_FORM_VALUES,
+    defaultValues: seeded ?? EMPTY_FORM_VALUES,
     // Re-seeded in RHF's effect whenever the cached item changes; a `reset`
     // during render updates every mounted `Controller` mid-render, which React
     // refuses. A field the user has touched keeps what they typed.
-    values: existingPantryItem
-      ? formValuesFromItem(existingPantryItem)
-      : undefined,
+    values: seeded,
     resetOptions: { keepDirtyValues: true },
+    // Read at each validation: the schema judges only an amount that changed.
+    context: { quantitySeed: seeded?.quantityInput },
     mode: 'onChange',
   });
 

@@ -1,7 +1,7 @@
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { PendingWrites } from '#/apollo/pendingWrites/pendingWrites';
-import type { PendingWrite } from '#/apollo/pendingWrites/types';
+import { makeCache } from '#apollo/cache';
+import { PendingWrites } from '#apollo/pendingWrites/pendingWrites';
+import type { PendingWrite } from '#apollo/pendingWrites/types';
 import {
   completeSeed,
   seedFragment,
@@ -18,10 +18,10 @@ import {
   ReligiousDiet,
   RestrictionSeverity,
   type RestrictionKindInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { RecipeSuggestionsDocument } from '#features/recipes/hooks/useServerRecipeSuggestions.generated';
 import { CatalogRecipesByIngredientsDocument } from '#features/recipes/hooks/useCatalogDiscovery.generated';
-import type { EntityFieldsInputs } from '#/apollo/pendingWrites/entityFields';
+import type { EntityFieldsInputs } from '#apollo/pendingWrites/entityFields';
 import type { LocalBrandEntry } from '#features/profile/cache/brandLists';
 import {
   AddBrandToListDocument,

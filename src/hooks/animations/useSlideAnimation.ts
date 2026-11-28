@@ -12,7 +12,7 @@ import type {
   UseSlideAnimationOptions,
   UseSlideAnimationReturn,
 } from './types';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 const defaultEasing = motion.easing.standard;
 
@@ -97,7 +97,6 @@ export function useSlideAnimation({
 
     translateX.set(
       withTiming(direction * slideDistance, timingConfig, finished => {
-        'worklet';
         isAnimatingShared.set(false);
         if (finished && onComplete) {
           scheduleOnRN(executeOnComplete);

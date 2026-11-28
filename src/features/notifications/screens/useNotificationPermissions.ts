@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { PermissionService } from '#/services/permissions/PermissionService';
-import { logger } from '#/utils/environment';
+import { PermissionService } from '#services/permissions/PermissionService';
+import { logger } from '#utils/environment';
 
 export const useNotificationPermissions = () => {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);

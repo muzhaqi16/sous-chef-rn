@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { useSelectedPantryId } from '#store/useAppStore';
-import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
+import { usePreservedNodes } from '#hooks/apollo/usePreservedConnection';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useDataState } from '#hooks/data/useDataState';
 

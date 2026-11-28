@@ -5,10 +5,9 @@
 import {
   CollaboratorRole,
   CollaboratorStatus,
-  DisplayFormat,
   MembershipRole,
   type StoreDepartment,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   GetShoppingListDetailsDocument,
   GetShoppingListItemsFilteredDocument,
@@ -16,7 +15,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { gql, type ApolloCache, type TypedDocumentNode } from '@apollo/client';
 import { Kind } from 'graphql';
-import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
+import { SHOPPING_ITEMS_PAGE_SIZE } from '#features/shoppingList/hooks/shoppingItemsPage';
 import {
   ShoppingListItemPurchaseInfoFragmentDoc,
   type ShoppingListItemDisplayFragment,
@@ -294,7 +293,7 @@ export function seedListLines(
     );
     seedQuery(cache, {
       query: GetShoppingListItemsFilteredDocument,
-      variables: { id: listId, first: PAGINATION.ITEMS_PAGE_SIZE, isPurchased },
+      variables: { id: listId, first: SHOPPING_ITEMS_PAGE_SIZE, isPurchased },
       data: linesPage(listId, page, {
         totalCount: isPurchased ? totals.bought : totals.toBuy,
       }),
@@ -374,7 +373,6 @@ export const displayedLine = (
   itemName: 'Milk',
   quantity: 2,
   quantityInput: '2',
-  displayFormat: DisplayFormat.Auto,
   version: 3,
   updatedAt: '2025-01-01T00:00:00.000Z',
   category: 'Dairy',
@@ -401,7 +399,7 @@ export const listLineIds = (
   cache
     .readQuery({
       query: GetShoppingListItemsFilteredDocument,
-      variables: { id: listId, first: PAGINATION.ITEMS_PAGE_SIZE, isPurchased },
+      variables: { id: listId, first: SHOPPING_ITEMS_PAGE_SIZE, isPurchased },
       optimistic,
     })
     ?.shoppingList?.itemsConnection.edges.map(edge => edge.node.id) ?? [];

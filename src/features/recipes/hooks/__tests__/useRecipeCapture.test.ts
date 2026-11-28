@@ -1,4 +1,4 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { act } from '@testing-library/react-native';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import {
@@ -9,22 +9,22 @@ import {
   ErrorCode,
   RecipeCaptureStatus,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { CreateRecipeCaptureDocument } from '../useRecipeCapture.generated';
 import { useRecipeCapture, type CaptureStart } from '../useRecipeCapture';
 import { useRecipeCaptureStore } from '#features/recipes/store/recipeCaptureStore';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#/utils/generateEntityId', () => ({
+jest.mock('#utils/generateEntityId', () => ({
   generateEntityId: () => 'capture-1',
 }));
-jest.mock('#/utils/deviceLocale', () => ({
+jest.mock('#utils/deviceLocale', () => ({
   getDeviceLocale: () => 'en-AU',
 }));
 // A resend waits a backoff first; the wait itself is not under test.
-jest.mock('#/utils/backoff', () => ({
-  ...jest.requireActual('#/utils/backoff'),
+jest.mock('#utils/backoff', () => ({
+  ...jest.requireActual('#utils/backoff'),
   sleep: () => Promise.resolve(),
 }));
 

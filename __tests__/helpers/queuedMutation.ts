@@ -1,8 +1,8 @@
 import { Kind, type DocumentNode } from 'graphql';
 import type { ApolloCache, StoreObject } from '@apollo/client';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { QueueStatus } from '#/apollo/offlineQueue/types';
-import type { QueuedMutation } from '#/apollo/offlineQueue/types';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { QueueStatus } from '#apollo/offlineQueue/types';
+import type { QueuedMutation } from '#apollo/offlineQueue/types';
 
 /**
  * Fixtures for the offline queue's replay path, shared by the kernel's

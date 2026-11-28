@@ -1,0 +1,6 @@
+# What a local edit needs of a brand it names, so a row stays complete.
+fragment localBrand_brand on Brand {
+  version
+  id
+  name
+}

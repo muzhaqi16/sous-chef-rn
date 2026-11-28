@@ -15,10 +15,10 @@ Declare the key in the owning feature's `en.json` (and `es` / `it` / `sq`) and c
 
 ## Why
 
-A fallback renders only when the key is missing, so it is English in every locale exactly when something is wrong, and it hides that the key is missing from `check-i18n` and review. With typed keys (`TranslationKey`) a missing key is a compile error, so the fallback is dead or wrong. `TranslateFn` and the module-level `t` in `#/i18n` take no fallback.
+A fallback renders only when the key is missing, so it is English in every locale exactly when something is wrong, and it hides that the key is missing from `check-i18n` and review. With typed keys (`TranslationKey`) a missing key is a compile error, so the fallback is dead or wrong. `TranslateFn` and the module-level `t` in `#i18n` take no fallback.
 
 ## Exempt
 
 Test files and `.graphql` documents.
 
-Source: [`eslint/plugin/rules/no-t-default-value.js`](../../eslint/plugin/rules/no-t-default-value.js) · spec: [`__tests__/lint/rules/no-t-default-value.test.ts`](../../__tests__/lint/rules/no-t-default-value.test.ts)
+Source: [`eslint/plugin/rules/no-t-default-value.js`](../../eslint/plugin/rules/no-t-default-value.js) · spec: [`__tests__/lint/typedRules/no-t-default-value.ts`](../../__tests__/lint/typedRules/no-t-default-value.ts)

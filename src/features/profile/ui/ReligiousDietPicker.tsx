@@ -1,10 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
-import { AnimatedChip } from '#components/molecules/AnimatedChip';
-import type { ReligiousDiet } from '#/graphql/generated/schemaTypes';
+import { Chip } from '#components/molecules/Chip';
+import type { ReligiousDiet } from '#graphql/generated/schemaTypes';
 import { RELIGIOUS_DIET_OPTIONS } from '#domain/dietary';
 
 interface ReligiousDietPickerProps {
@@ -26,7 +26,7 @@ export const ReligiousDietPicker = ({
       <Text role="bodyStrong">{t('dietaryProfile.religiousDietTitle')}</Text>
       <View style={styles.chips}>
         {RELIGIOUS_DIET_OPTIONS.map(option => (
-          <AnimatedChip
+          <Chip
             key={option.value}
             label={t(option.labelKey)}
             selected={value === option.value}

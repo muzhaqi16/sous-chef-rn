@@ -1,6 +1,6 @@
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 import { requirePlatform } from '#platform/install';
-import { generateId } from '#/utils/generateId';
+import { generateId } from '#utils/generateId';
 
 const secureStore = () => requirePlatform('secureStore');
 

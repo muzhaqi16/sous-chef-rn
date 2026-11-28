@@ -1,10 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { TEMPLATE_CATEGORY_LABEL_KEYS } from '#features/mealPlan/utils/mealPlanEnumLabels';
-import { AppPressable } from '#components/atoms/AppPressable';
+import { RowCard } from '#components/atoms/RowCard';
+import { ListItem } from '#components/molecules/ListItem';
 import { StyleSheet } from 'react-native-unistyles';
-import { useMappingHelper } from '@shopify/flash-list';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
 import { Icon } from '#components/atoms/Icon';
@@ -13,6 +13,7 @@ import {
   type MealTemplateDisplayFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
+import { rowType } from '#theme/foundations/type';
 
 interface TemplateCardProps {
   template: FragmentType<typeof MealTemplateDisplayFragmentDoc>;
@@ -24,7 +25,6 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
   onPress,
 }) => {
   const { t } = useTranslation();
-  const { getMappingKey } = useMappingHelper();
   const fragmentResult = useFragment({
     fragment: MealTemplateDisplayFragmentDoc,
     fragmentName: 'MealTemplateDisplay',
@@ -33,145 +33,100 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
   if (!fragmentResult.complete) return null;
   const template = fragmentResult.data;
 
+  const category = t(TEMPLATE_CATEGORY_LABEL_KEYS[template.category]);
+  const days = t('labels.durationDays', { count: template.durationDays });
+  const servings = t('labels.servingsCount', {
+    count: template.defaultServings,
+  });
+
   return (
-    <AppPressable onPress={() => onPress(template)} style={styles.card}>
-      <View style={styles.header}>
-        <Text role="bodyStrong" style={styles.name} numberOfLines={1}>
-          {template.name}
-        </Text>
-        {template.usageCount > 0 && (
-          <Text role="caption" tone="tertiary" style={styles.usageCount}>
-            {t('templateCard.usedTimes', { count: template.usageCount })}
-          </Text>
-        )}
-      </View>
-      {!!template.description && (
-        <Text
-          role="caption"
-          tone="secondary"
-          style={styles.description}
-          numberOfLines={2}
-        >
-          {template.description}
-        </Text>
-      )}
-      <View style={styles.metaRow}>
-        <View style={styles.metaItem}>
-          <Icon name="calendar-outline" size={14} tone="textTertiary" />
-          <Text role="caption" tone="secondary">
-            {t('labels.durationDays', { count: template.durationDays })}
-          </Text>
-        </View>
-        <View style={styles.metaItem}>
-          <Icon name="people-outline" size={14} tone="textTertiary" />
-          <Text role="caption" tone="secondary">
-            {t('labels.servingsCount', { count: template.defaultServings })}
-          </Text>
-        </View>
-        {!!template.home?.name && (
-          <View style={styles.homeBadge}>
-            <Icon name="home-outline" size={12} tone="textSecondary" />
-            <Text role="caption" tone="secondary">
-              {template.home.name}
-            </Text>
-          </View>
-        )}
-        <View style={styles.categoryBadge}>
-          <Text role="label" tone="accent">
-            {t(TEMPLATE_CATEGORY_LABEL_KEYS[template.category])}
-          </Text>
-        </View>
-      </View>
-      {template.tags.length > 0 && (
-        <View style={styles.tagRow}>
-          {template.tags.slice(0, 3).map((tag, index) => (
-            <View key={getMappingKey(tag, index)} style={styles.tag}>
-              <Text role="caption" tone="secondary">
-                {tag}
+    <RowCard>
+      <ListItem
+        title={template.name}
+        titleNumberOfLines={1}
+        badge={{ text: category, variant: 'primary' }}
+        onPress={() => onPress(template)}
+        accessibilityLabel={[template.name, category, days, servings]
+          .filter(Boolean)
+          .join(', ')}
+        accessibilityHint=""
+        subtitle={
+          <View style={styles.details}>
+            {!!template.description && (
+              <Text role={rowType.subtitle} tone="secondary" numberOfLines={2}>
+                {template.description}
               </Text>
+            )}
+            <View style={styles.metaRow}>
+              <View style={styles.metaItem}>
+                <Icon
+                  name="calendar-outline"
+                  size="2xsPlus"
+                  tone="textTertiary"
+                />
+                <Text role={rowType.subtitle} tone="secondary">
+                  {days}
+                </Text>
+              </View>
+              <View style={styles.metaItem}>
+                <Icon
+                  name="people-outline"
+                  size="2xsPlus"
+                  tone="textTertiary"
+                />
+                <Text role={rowType.subtitle} tone="secondary">
+                  {servings}
+                </Text>
+              </View>
+              {!!template.home?.name && (
+                <View style={styles.metaItem}>
+                  <Icon
+                    name="home-outline"
+                    size="2xsPlus"
+                    tone="textTertiary"
+                  />
+                  <Text role={rowType.subtitle} tone="secondary">
+                    {template.home.name}
+                  </Text>
+                </View>
+              )}
+              {template.usageCount > 0 && (
+                <Text role={rowType.subtitle} tone="tertiary">
+                  {t('templateCard.usedTimes', { count: template.usageCount })}
+                </Text>
+              )}
             </View>
-          ))}
-          {template.tags.length > 3 && (
-            <Text role="caption" tone="tertiary" style={styles.moreText}>
-              +{template.tags.length - 3}
-            </Text>
-          )}
-        </View>
-      )}
-    </AppPressable>
+            {template.tags.length > 0 && (
+              <Text role={rowType.subtitle} tone="tertiary" numberOfLines={1}>
+                {template.tags.slice(0, 3).join(' · ')}
+                {template.tags.length > 3
+                  ? ` +${template.tags.length - 3}`
+                  : ''}
+              </Text>
+            )}
+          </View>
+        }
+      />
+    </RowCard>
   );
 };
 
 export const TemplateCard = TemplateCardComponent;
 
 const styles = StyleSheet.create(theme => ({
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    padding: theme.spacing.md,
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.xs,
-  },
-  name: {
-    flex: 1,
-  },
-  usageCount: {
-    marginLeft: theme.spacing.sm,
-  },
-  description: {
-    marginBottom: theme.spacing.sm,
+  details: {
+    gap: theme.spacing.xs,
   },
   metaRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: theme.spacing.md,
+    columnGap: theme.spacing.md,
+    rowGap: theme.spacing['2xs'],
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
-  },
-  homeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing['2xs'],
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing['2xs'],
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.surfaceVariant,
-  },
-  categoryBadge: {
-    marginLeft: 'auto',
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing['2xs'],
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.primaryLight,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.xs,
-    marginTop: theme.spacing.sm,
-  },
-  tag: {
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing['2xs'],
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.surfaceVariant,
-  },
-  moreText: {
-    alignSelf: 'center',
   },
 }));

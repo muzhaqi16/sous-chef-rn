@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
-import {
-  OnPrimaryActivityIndicator,
-  Pressable,
-  ThemedBottomSheetTextInput,
-} from '#components/atoms/themedComponents';
+import { Controller, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useTranslation } from '#i18n';
+import { Pressable, ThemedTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
+import { IconButton } from '#components/atoms/IconButton';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import { DataStateView } from '#components/organisms/DataStateView';
 import type { DataState } from '#hooks/data/useDataState';
 import type { SelectorConfig } from '#components/organisms/AnimatedItemSelector/types';
 import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
+import { reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import { newListSchema, type NewListFormValues } from './newListFormConfig';
 
 interface ShoppingList {
   id: string;
@@ -21,6 +23,74 @@ interface ShoppingList {
   totalItems?: number | null;
   isDefault?: boolean | null;
 }
+
+interface NewListFormProps {
+  defaultName: string;
+  creating: boolean;
+  onCreate: (name: string) => void;
+}
+
+/** A new list's name, mounted fresh each time naming opens. */
+const NewListForm: React.FC<NewListFormProps> = ({
+  defaultName,
+  creating,
+  onCreate,
+}) => {
+  const { t } = useTranslation();
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<NewListFormValues>({
+    resolver: yupResolver(newListSchema),
+    defaultValues: { name: defaultName },
+  });
+  useSheetUnsavedInput(isDirty);
+  const create = handleSubmit(({ name }) => {
+    onCreate(name);
+  }, reportValidationErrors);
+
+  return (
+    <Controller
+      control={control}
+      name="name"
+      render={({ field, fieldState }) => (
+        <View style={styles.createList}>
+          <View style={styles.createListRow}>
+            <ThemedTextInput
+              ref={field.ref}
+              style={styles.createListInput}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              placeholder={t('shoppingListPicker.newListNamePlaceholder')}
+              autoCapitalize="words"
+              maxLength={LIST_NAME_MAX_LENGTH}
+            />
+            <IconButton
+              name="checkmark"
+              size="sm"
+              tone="onPrimary"
+              onPress={() => {
+                void create();
+              }}
+              accessibilityLabel={t(
+                'shoppingListPicker.createAndAddIngredients',
+              )}
+              filled={{ size: 'xl', tone: 'primary', shape: 'rounded' }}
+              loading={creating}
+            />
+          </View>
+          {fieldState.error ? (
+            <Text role="error" tone="error" style={styles.createListError}>
+              {fieldState.error.message}
+            </Text>
+          ) : null}
+        </View>
+      )}
+    />
+  );
+};
 
 interface ShoppingListPickerSheetProps {
   visible: boolean;
@@ -52,7 +122,6 @@ export const ShoppingListPickerSheet: React.FC<
   onDismiss,
 }) => {
   const { t } = useTranslation();
-  const [newListName, setNewListName] = useState(defaultNewListName);
   const [naming, setNaming] = useState(false);
 
   const renderCustomItem = (
@@ -82,7 +151,7 @@ export const ShoppingListPickerSheet: React.FC<
           </Text>
         </View>
       )}
-      <Icon name="chevron-forward" size={20} tone="textSecondary" />
+      <Icon name="chevron-forward" size="sm" tone="textSecondary" />
     </Pressable>
   );
 
@@ -106,33 +175,11 @@ export const ShoppingListPickerSheet: React.FC<
       },
     ],
     listHeader: naming ? (
-      <View style={styles.createListRow}>
-        <ThemedBottomSheetTextInput
-          style={styles.createListInput}
-          value={newListName}
-          onChangeText={setNewListName}
-          placeholder={t('shoppingListPicker.newListNamePlaceholder')}
-          autoCapitalize="words"
-          maxLength={LIST_NAME_MAX_LENGTH}
-        />
-        <Pressable
-          style={({ pressed }) => [
-            styles.createListButton,
-            pressed && styles.pressed,
-            !newListName.trim() && styles.createListButtonDisabled,
-          ]}
-          onPress={() => onCreateListAndAdd(newListName)}
-          disabled={!newListName.trim() || creatingList}
-          accessibilityRole="button"
-          accessibilityLabel={t('shoppingListPicker.createAndAddIngredients')}
-        >
-          {creatingList ? (
-            <OnPrimaryActivityIndicator />
-          ) : (
-            <Icon name="checkmark" size={20} tone="onPrimary" />
-          )}
-        </Pressable>
-      </View>
+      <NewListForm
+        defaultName={defaultNewListName}
+        creating={creatingList}
+        onCreate={onCreateListAndAdd}
+      />
     ) : undefined,
   };
 
@@ -142,7 +189,6 @@ export const ShoppingListPickerSheet: React.FC<
       config={config}
       onClose={() => {
         setNaming(false);
-        setNewListName(defaultNewListName);
         onDismiss();
       }}
     />
@@ -178,27 +224,20 @@ const styles = StyleSheet.create(theme => ({
   defaultBadgeText: {
     color: theme.colors.onPrimaryLight,
   },
+  createList: {
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+  },
   createListRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.md,
   },
   createListInput: {
     flex: 1,
   },
-  createListButton: {
-    width: theme.sizes.touchTarget.md,
-    height: theme.sizes.touchTarget.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.primary,
-  },
-  createListButtonDisabled: {
-    opacity: theme.opacity.disabled,
+  createListError: {
+    marginTop: theme.spacing.xs,
   },
   pressed: {
     opacity: theme.opacity.pressed,

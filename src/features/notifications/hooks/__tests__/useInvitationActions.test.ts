@@ -1,13 +1,13 @@
 import { act } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import { useApolloClient } from '@apollo/client/react';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
   type RecordedMock,
 } from '#/test-utils/apolloMockProvider';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,

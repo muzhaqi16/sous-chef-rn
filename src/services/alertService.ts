@@ -4,9 +4,9 @@
  * AlertProvider's dialog once it mounts.
  */
 
-import { logger } from '#/utils/environment';
-import { t } from '#/i18n';
-import { noteTrouble } from '#/services/toastService';
+import { logger } from '#utils/environment';
+import { t } from '#i18n';
+import { noteTrouble } from '#services/toastService';
 import type {
   AlertButton,
   AlertEntry,

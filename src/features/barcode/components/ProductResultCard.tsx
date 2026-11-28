@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useMoney } from '#/domain/money';
-import { useTranslation } from '#/i18n';
+import { useMoney } from '#domain/money';
+import { useTranslation } from '#i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -20,9 +20,9 @@ import {
 } from '#domain/measure';
 import { Card } from '#components/atoms/Card';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
-import { NetWeightKind } from '#/graphql/generated/schemaTypes';
+import { NetWeightKind } from '#graphql/generated/schemaTypes';
 import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
-import type { PhotoCreditValue } from '#/types/attribution';
+import type { PhotoCreditValue } from '#types/attribution';
 import type { BrandListing } from '#features/barcode/hooks/useProductBrandListings';
 
 interface Item {
@@ -194,7 +194,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
               onPress={onEditItem}
               testID={barcodeTestIDs.productEditAction}
             >
-              <Icon name="create-outline" size={16} tone="primary" />
+              <Icon name="create-outline" size="xs" tone="primary" />
               <Text
                 role="label"
                 tone="accent"
@@ -211,7 +211,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
           )}
           {!!onCreateVariant && (
             <Pressable style={styles.actionLink} onPress={onCreateVariant}>
-              <Icon name="add-circle-outline" size={16} tone="primary" />
+              <Icon name="add-circle-outline" size="xs" tone="primary" />
               <Text role="label" tone="accent">
                 {t('barcode.newVersion')}
               </Text>

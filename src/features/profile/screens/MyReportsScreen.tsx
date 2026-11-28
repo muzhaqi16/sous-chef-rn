@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistoryScreen';
 import { useMyReports, type MyReportNode } from './useMyReports';
 import { MyReportRow } from '#features/profile/components/MyReportRow';

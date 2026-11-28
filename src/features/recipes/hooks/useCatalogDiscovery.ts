@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import type { PantryListItemNode } from '#features/pantry/hooks/usePantryQuery';
 import { catalogIngredientNames } from '#domain/catalogRecipes';
 import { defaultPantryOf } from '#domain/homePantries';
-import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
+import type { Diet, Intolerance } from '#graphql/generated/schemaTypes';
 import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 import { useCatalogReadOptions } from './useCatalogReadOptions';
 import {

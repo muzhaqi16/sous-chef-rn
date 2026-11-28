@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
@@ -38,7 +38,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     if (error) {
       return (
         <View style={styles.stateContainer}>
-          <Icon name="alert-circle-outline" size={40} tone="error" />
+          <Icon name="alert-circle-outline" size="xl" tone="error" />
           <Text role="error" align="center" tone="error">
             {error}
           </Text>
@@ -49,7 +49,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     if (isEmpty) {
       return (
         <View style={styles.stateContainer}>
-          <Icon name="bar-chart-outline" size={40} tone="textSecondary" />
+          <Icon name="bar-chart-outline" size="xl" tone="textSecondary" />
           <Text role="caption" align="center" tone="secondary">
             {emptyMessage ?? t('labels.noDataAvailable')}
           </Text>

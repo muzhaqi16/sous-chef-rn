@@ -5,20 +5,20 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { PantryUnitChangeResolution } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { isVersionConflictCode } from '#/utils/errors/versionConflict';
-import { errorService } from '#/services/errorService';
-import { useTranslation } from '#/i18n';
+import type { PantryUnitChangeResolution } from '#graphql/generated/schemaTypes';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { isVersionConflictCode } from '#utils/errors/versionConflict';
+import { errorService } from '#services/errorService';
+import { useTranslation } from '#i18n';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { writeRestatedBatches } from '#features/pantry/cache/restatedStack';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { writeRestatedBatches } from '#entities/pantryItem/restatedStack';
+import { appliedPayload } from '#utils/errors/mutationPayload';
 import {
   ChangePantryItemUnitDocument,
   PreviewPantryItemUnitChangeDocument,
   type PreviewPantryItemUnitChangeQuery,
 } from './usePantryUnitChange.generated';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 
 export type UnitChangePreview =
   PreviewPantryItemUnitChangeQuery['previewPantryItemUnitChange'];
@@ -63,17 +63,21 @@ export function usePantryUnitChange() {
     request: UnitChangeRequest,
   ): Promise<PreviewOutcome> => {
     if (isApiUnavailable) return { status: 'offline' };
+    // Under `errorPolicy: 'all'` a failed read resolves with its error.
     const result = await client
       .query({
         query: PreviewPantryItemUnitChangeDocument,
         variables: { input: request },
         fetchPolicy: 'no-cache',
       })
-      .catch((error: unknown) => {
-        errorService.reportError(error, { operation: 'Preview unit change' });
-        return null;
+      .catch((error: unknown) => ({ data: undefined, error }));
+    if (result.error) {
+      errorService.reportError(result.error, {
+        operation: 'Preview unit change',
       });
-    const next = result?.data?.previewPantryItemUnitChange;
+      return { status: 'failed' };
+    }
+    const next = result.data?.previewPantryItemUnitChange;
     return next ? { status: 'ready', preview: next } : { status: 'failed' };
   };
 

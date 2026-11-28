@@ -1,5 +1,5 @@
 import { useApolloClient } from '@apollo/client/react';
-import { announceHouseholdLeft } from '#/apollo/refetchEvents';
+import { announceHouseholdLeft } from '#apollo/refetchEvents';
 import {
   GetHomesDocument,
   type GetHomesQuery,
@@ -9,11 +9,11 @@ import {
   renderHookWithApollo,
   type MockPart,
 } from '#/test-utils/apolloMockProvider';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
+import { isHeld } from '#apollo/utils/writeLocalEntity';
 import { useStore } from '#store/index';
 import { forgetHome } from '../forgetHome';
 
-jest.mock('#/apollo/refetchEvents', () => ({
+jest.mock('#apollo/refetchEvents', () => ({
   announceHouseholdLeft: jest.fn(),
 }));
 

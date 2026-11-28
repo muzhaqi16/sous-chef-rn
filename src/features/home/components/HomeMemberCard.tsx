@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useFragment } from '@apollo/client/react';
 import type { FragmentType } from '@apollo/client/masking';
-import { Icon } from '#components/atoms/Icon';
 import { RowCard } from '#components/atoms/RowCard';
 import type { BadgeContent } from '#components/atoms/Badge';
 import { ListItem } from '#components/molecules/ListItem';
-import { formatRole } from '#/utils/formatters/roleFormatters';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { formatRole } from '#utils/formatters/roleFormatters';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 import type { MembershipPermissionKey } from '#features/home/types';
 import {
   canGrantFlag,
@@ -19,9 +16,7 @@ import {
 } from '#features/home/utils/homePermissions';
 import { HomeMemberCard_MemberFragmentDoc } from './HomeMemberCard.generated';
 import { MemberSettingsSheet } from './MemberSettingsSheet';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
-
-const CHEVRON_SIZE = 20;
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 
 interface HomeMemberCardProps {
   memberRef: FragmentType<typeof HomeMemberCard_MemberFragmentDoc>;
@@ -29,8 +24,6 @@ interface HomeMemberCardProps {
   isCurrentUser: boolean;
   /** The current user's own membership: decides which actions render. */
   viewer: HomeViewer | null;
-  /** Another row shows a chevron: hold its slot so the badges line up. */
-  reserveChevron?: boolean;
   onChangeRole: (role: MembershipRole) => void;
   onRemove: () => void;
   onTransferOwnership?: () => void;
@@ -51,7 +44,6 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
   displayName,
   isCurrentUser,
   viewer,
-  reserveChevron = false,
   onChangeRole,
   onRemove,
   onTransferOwnership,
@@ -79,9 +71,6 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
           titleNumberOfLines={1}
           badge={badge}
           accessibilityLabel={accessibilityLabelOf(displayName, roleLabel)}
-          rightElement={
-            reserveChevron ? <View style={styles.chevronSlot} /> : undefined
-          }
         />
       </RowCard>
     );
@@ -95,13 +84,6 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
           titleNumberOfLines={1}
           badge={badge}
           onPress={() => setSettingsOpen(true)}
-          rightElement={
-            <Icon
-              name="chevron-forward"
-              size={CHEVRON_SIZE}
-              tone="textSecondary"
-            />
-          }
         />
       </RowCard>
       <MemberSettingsSheet
@@ -124,9 +106,3 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  chevronSlot: {
-    width: CHEVRON_SIZE,
-  },
-});

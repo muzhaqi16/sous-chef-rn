@@ -1,6 +1,6 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { gql } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import type { MockFor, MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
@@ -17,7 +17,7 @@ import {
   UpdateRecipeReviewDocument,
 } from '#features/recipes/graphql/recipeReview.generated';
 import { useRecipeReviews } from '../useRecipeReviews';
-import { ErrorCode, RecipeStatus } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, RecipeStatus } from '#graphql/generated/schemaTypes';
 import type { MaterializedRecipe } from '../useRecipeData';
 
 jest.mock('#store/useAppStore', () => ({

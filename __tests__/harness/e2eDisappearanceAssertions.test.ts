@@ -1,5 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative } from 'path';
+import * as ts from 'typescript';
+import { lineOf, nodesOf, parseSource } from '#/test-utils/sourceAst';
 
 /**
  * A "the thing went away" assertion must first show the thing was there.
@@ -62,79 +64,72 @@ const walk = (dir: string, out: string[] = []): string[] => {
   return out;
 };
 
-/** Split a source file into `it(...)`/`test(...)` blocks by brace depth. */
-const itBlocks = (source: string): { start: number; body: string }[] => {
-  const blocks: { start: number; body: string }[] = [];
-  const opener = /\b(?:it|test)(?:\.\w+)?\s*\(/g;
-  let match: RegExpExecArray | null;
-
-  while ((match = opener.exec(source))) {
-    let depth = 0;
-    let index = match.index + match[0].length - 1;
-    for (; index < source.length; index++) {
-      const char = source[index];
-      if (char === '(') depth++;
-      else if (char === ')') {
-        depth--;
-        if (depth === 0) break;
-      }
-    }
-    blocks.push({
-      start: source.slice(0, match.index).split('\n').length,
-      body: source.slice(match.index, index + 1),
-    });
+/** `element(by.id|text|label(arg))` as `arg`'s text; otherwise undefined. */
+const matcherArgument = (node: ts.Expression): string | undefined => {
+  if (
+    !ts.isCallExpression(node) ||
+    !ts.isIdentifier(node.expression) ||
+    node.expression.text !== 'element'
+  ) {
+    return undefined;
   }
-  return blocks;
+  const [by] = node.arguments;
+  if (
+    !by ||
+    !ts.isCallExpression(by) ||
+    !/^by\.(id|text|label)$/.test(by.expression.getText())
+  ) {
+    return undefined;
+  }
+  return by.arguments[0]?.getText().replace(/\s+/g, '');
+};
+
+/** What a negated `expect(x)` or `waitFor(x)` names, through a variable too. */
+const targetOf = (subject: ts.Expression): string | undefined => {
+  const direct = matcherArgument(subject);
+  if (direct || !ts.isIdentifier(subject)) return direct;
+  const declaration = nodesOf(subject.getSourceFile()).find(
+    (node): node is ts.VariableDeclaration =>
+      ts.isVariableDeclaration(node) && node.name.getText() === subject.text,
+  );
+  return declaration?.initializer && matcherArgument(declaration.initializer);
 };
 
 /**
- * Every `.not.toBeVisible()` / `.not.toExist()` in a block, paired with the
- * matcher it applies to and whether that matcher was used earlier.
+ * Each negated target the file never names anywhere else, as `file:line target`.
  *
- * Done per-negation, with positions. An earlier version searched for the FIRST
- * negation in the block and checked against that one index, so a block with two
- * negations validated the second against the first's position and waved through
- * exactly the shape this file exists to catch.
+ * Compares the matcher's ARGUMENT (`'Cheese'`, `itemName`, `NAME_INPUT`), and
+ * across the whole file: presence is very often established through a
+ * screen-object method (`expectItemInPantry(name)`) or a `beforeAll` seed that
+ * no parser can follow, so a target counts as established when it is used
+ * anywhere else. What survives is the unambiguous case: a target the spec ONLY
+ * ever asserts the absence of.
  */
-const unprovenTargets = (block: string, file: string): string[] => {
-  const negation = /\.not\s*\.\s*(?:toBeVisible|toExist)\s*\(/g;
-  const elementCall =
-    /element\(\s*by\.(?:id|text|label)\(\s*([^)]*?)\s*\)\s*\)/g;
-  const unproven: string[] = [];
-
-  let match: RegExpExecArray | null;
-  while ((match = negation.exec(block))) {
-    const before = block.slice(0, match.index);
-
-    // The element(...) this negation applies to is the closest one before it.
-    const calls = [...before.matchAll(elementCall)];
-    const own = calls[calls.length - 1];
-    if (!own) continue;
-
-    const target = own[1]!.replace(/\s+/g, '');
-
-    // Compares the matcher's ARGUMENT (`'Cheese'`, `itemName`, `NAME_INPUT`),
-    // not the whole `by.text(...)` expression. Presence is usually established
-    // in a form that never mentions the matcher — `addItem('Cheese', '8', 'oz')`
-    // in a `beforeAll` is what puts that row on screen. Matching on the whole
-    // expression reported those as unproven, which they are not.
-    //
-    // Established if the argument is used ANYWHERE ELSE in the file — seeded,
-    // waited for, tapped, typed into, or asserted present.
-    //
-    // File scope, not block scope, and deliberately so. Presence is very often
-    // established through a screen-object method (`expectItemInPantry(name)`,
-    // `openAddDetailsForm()`) that no textual parser can follow, so a
-    // block-scoped rule reports those as unproven. They are not, and an
-    // exemption list of false positives is how a guard stops meaning anything.
-    //
-    // What survives this rule is the unambiguous case: a target the spec ONLY
-    // ever asserts the absence of, so nothing anywhere shows it can be present.
-    const occurrences = file.replace(/\s+/g, '').split(target).length - 1;
-    if (occurrences <= 1) unproven.push(target);
-  }
-  return unproven;
-};
+function unprovenTargets(file: string, text?: string): string[] {
+  const source = parseSource(file, text);
+  const flat = source.getFullText().replace(/\s+/g, '');
+  return nodesOf(source)
+    .filter(ts.isPropertyAccessExpression)
+    .filter(
+      access =>
+        (access.name.text === 'toBeVisible' ||
+          access.name.text === 'toExist') &&
+        ts.isPropertyAccessExpression(access.expression) &&
+        access.expression.name.text === 'not' &&
+        ts.isCallExpression(access.expression.expression),
+    )
+    .flatMap(access => {
+      const holder = access.expression;
+      const call = ts.isPropertyAccessExpression(holder)
+        ? holder.expression
+        : undefined;
+      const [subject] = call && ts.isCallExpression(call) ? call.arguments : [];
+      const target = subject && targetOf(subject);
+      if (!target) return [];
+      const occurrences = flat.split(target).length - 1;
+      return occurrences <= 1 ? [`${file}:${lineOf(access)}  ${target}`] : [];
+    });
+}
 
 describe('e2e disappearance assertions are falsifiable', () => {
   const files = walk(E2E_TESTS);
@@ -147,19 +142,24 @@ describe('e2e disappearance assertions are falsifiable', () => {
     expect(anyNegation).toBe(true);
   });
 
-  it('every negated target is established earlier in the same test', () => {
-    const unproven: string[] = [];
+  it('catches a target held in a variable, past the calls between', () => {
+    const planted = `
+      it('closes the banner', async () => {
+        const banner = element(by.id('only-ever-absent'));
+        await element(by.id('save')).tap();
+        await element(by.id('save')).tap();
+        await expect(banner).not.toBeVisible();
+      });`;
 
-    for (const file of files) {
-      const rel = relative(join(__dirname, '..', '..'), file);
-      const source = readFileSync(file, 'utf8');
-      for (const { start, body } of itBlocks(source)) {
-        for (const target of unprovenTargets(body, source)) {
-          unproven.push(`${rel}:~${start}  ${target}`);
-        }
-      }
-    }
+    expect(unprovenTargets('planted.e2e.ts', planted)).toEqual([
+      "planted.e2e.ts:6  'only-ever-absent'",
+    ]);
+  });
 
-    expect([...new Set(unproven)]).toEqual([]);
+  it('every negated target is established somewhere in its spec', () => {
+    const root = join(__dirname, '..', '..');
+    expect(
+      files.flatMap(file => unprovenTargets(relative(root, file))),
+    ).toEqual([]);
   });
 });

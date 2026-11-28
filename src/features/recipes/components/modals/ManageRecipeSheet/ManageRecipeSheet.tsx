@@ -1,19 +1,18 @@
 import React, { useState } from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   ThemedActivityIndicator,
-  ThemedBottomSheetTextInput,
+  ThemedTextInput,
 } from '#components/atoms/themedComponents';
-import { Icon } from '#components/atoms/Icon';
 import { TagInput } from '#features/recipes/components/TagInput';
 import { Text } from '#components/atoms/Text';
 import { InlineFolderChooser } from '#features/recipes/components/InlineFolderChooser';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Sheet } from '#components/templates/Sheet';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { useOpening } from '#hooks/ui/useOpening';
 
 export interface ManageRecipeSheetProps {
   visible: boolean;
@@ -33,8 +32,14 @@ export interface ManageRecipeSheetProps {
   recipeName?: string;
 }
 
-export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
-  visible,
+type ManageRecipeContentProps = Omit<ManageRecipeSheetProps, 'visible'>;
+
+/**
+ * One opening. Each change saves as it is made through a local-first write,
+ * so the folder, tags and rating read from the props, which hold it at once
+ * and roll back on a refusal; only the notes being typed are held here.
+ */
+const ManageRecipeContent: React.FC<ManageRecipeContentProps> = ({
   onClose,
   folders,
   availableTags,
@@ -52,58 +57,15 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  // Local state for editing
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(
-    currentFolder ?? null,
-  );
-  const [tags, setTags] = useState<string[]>(currentTags);
   const [notes, setNotes] = useState(currentNotes ?? '');
-  const [rating, setRating] = useState<number | null>(currentRating ?? null);
+  // Folders made here, listed before the write that creates them lands.
   const [localFolders, setLocalFolders] = useState<string[]>([]);
-
-  // Sync local state when props change (render-time conditional state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevCurrentFolder, setPrevCurrentFolder] = useState(currentFolder);
-  const [prevCurrentTags, setPrevCurrentTags] = useState(currentTags);
-  const [prevCurrentNotes, setPrevCurrentNotes] = useState(currentNotes);
-  const [prevCurrentRating, setPrevCurrentRating] = useState(currentRating);
-  if (
-    visible !== prevVisible ||
-    currentFolder !== prevCurrentFolder ||
-    currentTags !== prevCurrentTags ||
-    currentNotes !== prevCurrentNotes ||
-    currentRating !== prevCurrentRating
-  ) {
-    setPrevVisible(visible);
-    setPrevCurrentFolder(currentFolder);
-    setPrevCurrentTags(currentTags);
-    setPrevCurrentNotes(currentNotes);
-    setPrevCurrentRating(currentRating);
-    if (visible) {
-      setSelectedFolder(currentFolder ?? null);
-      setTags(currentTags);
-      setNotes(currentNotes ?? '');
-      setRating(currentRating ?? null);
-      setLocalFolders([]);
-    }
-  }
-
-  const handleSelectFolder = async (folder: string | null) => {
-    setSelectedFolder(folder);
-    await onUpdateFolder(folder);
-  };
+  const selectedFolder = currentFolder ?? null;
+  const rating = currentRating ?? null;
 
   const handleCreateFolder = async (name: string) => {
-    // Held locally so the new folder shows up in the list right away; the
-    // mutation below is what makes it real.
     setLocalFolders(prev => (prev.includes(name) ? prev : [...prev, name]));
-    setSelectedFolder(name);
     await onUpdateFolder(name);
-  };
-
-  const handleTagsChange = async (newTags: string[]) => {
-    setTags(newTags);
-    await onUpdateTags(newTags);
   };
 
   const handleNotesBlur = async () => {
@@ -113,10 +75,8 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   };
 
   const handleRatingPress = async (star: number) => {
-    // Toggle off if pressing same rating, otherwise set new rating
-    const newRating = rating === star ? null : star;
-    setRating(newRating);
-    await onUpdateRating(newRating);
+    // Pressing the rating already set clears it.
+    await onUpdateRating(rating === star ? null : star);
   };
 
   const handleRemove = async () => {
@@ -132,14 +92,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   ];
 
   return (
-    <Sheet
-      mode="form"
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={['85%', '95%']}
-      contentContainerStyle={styles.contentContainer}
-      style={styles.scrollView}
-    >
+    <>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -156,23 +109,21 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           )}
         </View>
         <View style={styles.headerButtons}>
-          <Pressable
+          <IconButton
+            name="trash-outline"
+            size="md"
+            tone="error"
             onPress={handleRemove}
             accessibilityLabel={t('labels.remove')}
-            hitSlop={hitSlop.lg}
             disabled={updating}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Icon name="trash-outline" size={22} tone="error" />
-          </Pressable>
-          <Pressable
+          />
+          <IconButton
+            name="close"
+            size="md"
+            tone="textPrimary"
             onPress={onClose}
             accessibilityLabel={t('labels.close')}
-            hitSlop={hitSlop.lg}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Icon name="close" size={24} tone="textPrimary" />
-          </Pressable>
+          />
         </View>
       </View>
 
@@ -192,27 +143,17 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       </SectionHeader>
       <View style={styles.ratingContainer}>
         {[1, 2, 3, 4, 5].map(star => (
-          <Pressable
+          <IconButton
             key={star}
+            name={rating !== null && star <= rating ? 'star' : 'star-outline'}
+            size="lg"
+            tone={
+              rating !== null && star <= rating ? 'rating' : 'textSecondary'
+            }
             onPress={() => handleRatingPress(star)}
             accessibilityLabel={t('a11y.rateStars', { count: star })}
-            hitSlop={{
-              top: hitSlop.lg,
-              bottom: hitSlop.lg,
-              left: hitSlop.sm,
-              right: hitSlop.sm,
-            }}
             disabled={updating}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Icon
-              name={rating !== null && star <= rating ? 'star' : 'star-outline'}
-              size={32}
-              tone={
-                rating !== null && star <= rating ? 'rating' : 'textSecondary'
-              }
-            />
-          </Pressable>
+          />
         ))}
         {rating !== null && (
           <Text role="caption" tone="secondary" style={styles.ratingText}>
@@ -224,8 +165,12 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       <InlineFolderChooser
         folders={displayFolders}
         selectedFolder={selectedFolder}
-        onSelect={handleSelectFolder}
-        onCreateFolder={handleCreateFolder}
+        onSelect={folder => {
+          void onUpdateFolder(folder);
+        }}
+        onCreateFolder={folder => {
+          void handleCreateFolder(folder);
+        }}
       />
 
       {/* Tags */}
@@ -233,11 +178,12 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         {t('labels.tags')}
       </SectionHeader>
       <TagInput
-        tags={tags}
-        onTagsChange={handleTagsChange}
+        tags={currentTags}
+        onTagsChange={newTags => {
+          void onUpdateTags(newTags);
+        }}
         suggestions={availableTags}
         placeholder={t('manageRecipe.tagsPlaceholder')}
-        maxTags={5}
         editable={!updating}
       />
 
@@ -245,7 +191,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       <SectionHeader variant="overline" style={styles.sectionLabel}>
         {t('manageRecipe.notes')}
       </SectionHeader>
-      <ThemedBottomSheetTextInput
+      <ThemedTextInput
         style={styles.notesInput}
         placeholder={t('labels.addAnyNotesAboutThisRecipe')}
         value={notes}
@@ -256,6 +202,26 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         textAlignVertical="top"
         editable={!updating}
       />
+    </>
+  );
+};
+
+export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
+  visible,
+  ...content
+}) => {
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      mode="form"
+      visible={visible}
+      onDismiss={content.onClose}
+      snapPoints={['85%']}
+      contentContainerStyle={styles.contentContainer}
+      style={styles.scrollView}
+    >
+      {opening ? <ManageRecipeContent key={opening.id} {...content} /> : null}
     </Sheet>
   );
 };
@@ -265,7 +231,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   contentContainer: {
-    padding: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
   },
   header: {
     flexDirection: 'row',
@@ -320,8 +286,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
     minHeight: 80,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

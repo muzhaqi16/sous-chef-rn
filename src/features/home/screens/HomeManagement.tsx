@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
-import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
+import { useTranslation } from '#i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   LinearTransition,
@@ -15,25 +14,23 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useHomeManagement } from '#features/home/hooks/useHomeManagement';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useInviteUserModal } from '#features/home/screens/useInviteUserModal';
-import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
-import { Button } from '#components/molecules/Button';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { HomeStats } from '#features/home/components/HomeStats';
 import { CreateHomeForm } from '#features/home/components/CreateHomeForm';
+import { JoinHomeForm } from '#features/home/components/JoinHomeForm';
 import { HomeCard } from '#features/home/components/HomeCard';
 import {
   getInvitableRoles,
   canInviteToHome,
 } from '#features/home/utils/homePermissions';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useDataState } from '#hooks/data/useDataState';
-import { errorService } from '#/services/errorService';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { motion } from '#/theme/motion';
+import { errorService } from '#services/errorService';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
+import { motion } from '#theme/motion';
 import { SubScreen } from '#components/templates/SubScreen';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { homeTestIDs } from '#features/home/testIDs';
 import type { CreateHomeFormValues } from '#features/home/components/createHomeFormConfig';
 import { useSelectedHomeId } from '#store/useAppStore';
@@ -46,7 +43,6 @@ export const HomeManagement: React.FC = () => {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [mode, setMode] = useState<'create' | 'join'>('create');
-  const [joinCode, setJoinCode] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [highlightedHomeId, setHighlightedHomeId] = useState<string | null>(
     null,
@@ -75,7 +71,6 @@ export const HomeManagement: React.FC = () => {
     loadingPreview,
     previewHome,
     createHome,
-    deleteHome,
     setDefaultHome,
     inviteUserToHome,
     joinHomeByCode,
@@ -94,7 +89,7 @@ export const HomeManagement: React.FC = () => {
     // Find the home and user's membership
     const home = homes.find(h => h.id === homeId);
     if (!home) {
-      toastService.error(t('errors.codes.homeNotFound'));
+      toastService.error(t('errors.homeNotFound'));
       return;
     }
 
@@ -135,25 +130,14 @@ export const HomeManagement: React.FC = () => {
 
   const handleCancelCreate = () => {
     setShowCreateForm(false);
-    setJoinCode('');
     setMode('create');
   };
 
-  const handleJoinHome = async () => {
-    if (!joinCode.trim()) return;
+  const handleJoinHome = async (code: string) => {
     if (!requireVerifiedEmail()) return;
 
-    const result = await joinHomeByCode(joinCode);
-    if (result) {
-      setJoinCode('');
-      setShowCreateForm(false);
-    }
-  };
-
-  const handlePreviewHome = async () => {
-    if (joinCode.trim().length > 3) {
-      await previewHomeByCode(joinCode);
-    }
+    const result = await joinHomeByCode(code);
+    if (result) setShowCreateForm(false);
   };
 
   const handleSetDefault = async (homeId: string) => {
@@ -292,54 +276,16 @@ export const HomeManagement: React.FC = () => {
                 isCreating={creating}
               />
             ) : (
-              /* Join Home Form - uses same components as CreateHomeForm */
-              <View style={styles.joinForm}>
-                <BaseInput
-                  value={joinCode}
-                  onChangeText={setJoinCode}
-                  onBlur={handlePreviewHome}
-                  placeholder={t('labels.enterJoinCode')}
-                  autoCapitalize="characters"
-                />
-                {/* Preview - only shows when code is validated */}
-                {!!loadingPreview && (
-                  <PrimaryActivityIndicator
-                    size="small"
-                    style={styles.previewLoader}
-                  />
-                )}
-                {!!previewHome && (
-                  <View style={styles.previewCard}>
-                    <Text role="heading" style={styles.previewTitle}>
-                      {previewHome.name}
-                    </Text>
-                    <Text role="caption" style={styles.previewSubtitle}>
-                      {t('labels.memberCount', {
-                        count: previewHome.memberCount ?? 0,
-                      })}
-                    </Text>
-                  </View>
-                )}
-                {/* Actions - same as CreateHomeForm */}
-                <View style={styles.formActions}>
-                  <Button
-                    variant="secondary"
-                    onPress={handleCancelCreate}
-                    fullWidth
-                  >
-                    {t('labels.cancel')}
-                  </Button>
-                  <Button
-                    loading={joiningByCode}
-                    disabled={!joinCode.trim()}
-                    onPress={handleJoinHome}
-                    variant="primary"
-                    style={styles.actionButton}
-                  >
-                    {t('homeManagement.join')}
-                  </Button>
-                </View>
-              </View>
+              <JoinHomeForm
+                onSubmit={handleJoinHome}
+                onPreview={code => {
+                  void previewHomeByCode(code);
+                }}
+                onCancel={handleCancelCreate}
+                isJoining={joiningByCode}
+                loadingPreview={loadingPreview}
+                preview={previewHome}
+              />
             )}
           </Animated.View>
         )}
@@ -360,11 +306,6 @@ export const HomeManagement: React.FC = () => {
                   home.myMembership.canInviteOthers,
                 )
               : false;
-            // The server lets only the OWNER delete a home — the role, not the
-            // canManageHome flag (which ADMINs hold by default). Gating on the
-            // flag shows ADMINs a Delete that can only ever be refused.
-            const userCanDelete =
-              home.myMembership?.role === MembershipRole.Owner;
 
             return (
               <Animated.View
@@ -382,11 +323,9 @@ export const HomeManagement: React.FC = () => {
                   isCurrent={home.id === selectedHomeId}
                   isHighlighted={home.id === highlightedHomeId}
                   canInvite={userCanInvite}
-                  canDelete={userCanDelete}
                   onPress={handleViewHomeDetail}
                   onSetDefault={handleSetDefault}
                   onInvite={inviteUserPrompt}
-                  onDelete={deleteHome}
                 />
               </Animated.View>
             );
@@ -426,32 +365,5 @@ const styles = StyleSheet.create(theme => ({
   },
   modeButtonTextActive: {
     color: theme.colors.onPrimary,
-  },
-  joinForm: {
-    backgroundColor: theme.colors.surface,
-  },
-  formActions: {
-    flexDirection: 'row',
-    marginTop: theme.spacing.md,
-    gap: theme.spacing.md,
-  },
-  actionButton: {
-    flex: 1,
-  },
-  previewLoader: {
-    marginVertical: theme.spacing.sm,
-  },
-  previewCard: {
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    gap: theme.spacing.xs,
-  },
-  previewTitle: {
-    color: theme.colors.textPrimary,
-  },
-  previewSubtitle: {
-    color: theme.colors.textSecondary,
   },
 }));

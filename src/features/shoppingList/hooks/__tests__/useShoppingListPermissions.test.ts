@@ -13,7 +13,7 @@ import { drained } from '#/test-utils/drainTimers';
 import {
   CollaboratorRole,
   CollaboratorStatus,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   ShoppingListCollaboratorFragmentDoc,
   type ShoppingListCollaboratorFragment,

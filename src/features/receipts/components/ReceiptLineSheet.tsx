@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useReceiptMoney } from '../hooks/useReceiptCurrency';
 import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
@@ -20,8 +20,8 @@ import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAut
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
 import { PackageContentsFields } from '#features/pantry/ui/PackageContentsFields';
 import { statesContents, takesContents } from '#domain/stockAmount';
-import { localizeNumericHint } from '#/utils/formatters/number';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { localizeNumericHint } from '#utils/formatters/number';
+import { reportValidationErrors } from '#utils/validation/common';
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
 import type { ReceiptReviewLine } from '../utils/receiptReviewLines';
 import type { ListMatchKey } from '../utils/linkReceiptLines';
@@ -36,9 +36,28 @@ import {
 } from './receiptLineFormConfig';
 import { receiptsTestIDs } from '../testIDs';
 import { useEarlierPurchases } from './useEarlierPurchases';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 // The picker's choice for a line that is a purchase of its own.
 const NEW_PURCHASE = 'new';
+
+/** The form field showing a refusal on the fact the API named; null shows it by the purchase. */
+const refusedField = (
+  on: string | undefined,
+): 'quantityInput' | 'priceInput' | 'itemName' | null => {
+  switch (on) {
+    case 'amount':
+      return 'quantityInput';
+    case 'totalPaid':
+    case 'discount':
+      return 'priceInput';
+    case 'item':
+      return 'itemName';
+    case undefined:
+    default:
+      return null;
+  }
+};
 
 interface ReceiptLineFormProps {
   line: ReceiptReviewLine;
@@ -49,6 +68,8 @@ interface ReceiptLineFormProps {
   canLeaveOut: boolean;
   /** Items the API proposes for the line, best first. */
   candidates: readonly ReceiptCandidate[];
+  /** Why the API refused the line last, and the fact it named. */
+  refusal?: { message: string; on?: string };
   /** The shopping list line the product and unit being picked would tick off. */
   listItemNameFor: (key: ListMatchKey) => string | undefined;
   /** A product picked before it is saved, so its list line is asked for. */
@@ -65,6 +86,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   asked,
   canLeaveOut,
   candidates,
+  refusal,
   listItemNameFor,
   onPickItem,
   onClose,
@@ -83,11 +105,22 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
     setValue,
     setError,
     trigger,
+    formState: { isDirty },
   } = useForm<ReceiptLineFormValues, ReceiptLineFormContext>({
     resolver: yupResolver(receiptLineSchema),
     context: { free: line.price === 0 && (line.discount ?? 0) > 0 },
     defaultValues: receiptLineDefaults(line, choice, unitTypeOf, asked),
   });
+  useSheetUnsavedInput(isDirty);
+
+  // Shown on the field it names as the sheet opens, until that field changes.
+  const refusedOn = refusedField(refusal?.on);
+  const refusedMessage = refusal?.message;
+  useEffect(() => {
+    if (refusedOn && refusedMessage) {
+      setError(refusedOn, { type: 'server', message: refusedMessage });
+    }
+  }, [refusedOn, refusedMessage, setError]);
 
   // `useWatch`, not `watch`: the compiler cannot memoize the latter's function.
   const itemId = useWatch({ control, name: 'itemId' });
@@ -112,7 +145,17 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   };
   const listItemName = listItemNameFor({ itemId, unitId, unitText });
   // Offered, never picked for the user: a similar purchase may be another one.
-  const earlier = useEarlierPurchases(itemId);
+  const { purchases: earlier, state: earlierState } =
+    useEarlierPurchases(itemId);
+  // Said, never left blank: no earlier purchase offered reads as none made.
+  const earlierNote =
+    earlierState === 'loading'
+      ? 'receipts.review.earlierLoading'
+      : earlierState === 'offline'
+      ? 'receipts.review.earlierOffline'
+      : earlierState === 'error'
+      ? 'receipts.review.earlierFailed'
+      : null;
   const pickedElsewhere =
     existingPurchaseId !== null &&
     !earlier.some(purchase => purchase.id === existingPurchaseId);
@@ -168,7 +211,20 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
       });
       return;
     }
-    onSave(toLineChoice({ ...values, unitId: resolvedUnitId, sizeUnitId }));
+    // A purchase that changed since it was picked is sent as it reads now,
+    // which is what the picker shows.
+    const current = earlier.find(
+      purchase => purchase.id === values.existingPurchaseId,
+    );
+    onSave(
+      toLineChoice({
+        ...values,
+        unitId: resolvedUnitId,
+        sizeUnitId,
+        existingPurchaseVersion:
+          current?.version ?? values.existingPurchaseVersion,
+      }),
+    );
     onClose();
   }, reportValidationErrors);
 
@@ -208,6 +264,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
             name="itemName"
             render={({ field, fieldState }) => (
               <ItemAutocompleteField
+                chaining={{ inputRef: field.ref }}
                 variant="inline"
                 label={t('labels.itemName')}
                 value={field.value}
@@ -249,6 +306,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                   if (picked.itemId !== itemId) dropEarlierPick();
                   setValue('itemName', picked.itemName, {
                     shouldValidate: true,
+                    shouldDirty: true,
                   });
                   setValue('itemId', picked.itemId);
                   onPickItem(picked.itemId);
@@ -259,29 +317,47 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
           )}
         </View>
 
-        {earlierOptions.length > 1 && (
+        {earlierOptions.length > 1 || earlierNote ? (
           <View style={styles.suggestions}>
             <Text role="caption" tone="secondary">
               {t('receipts.review.earlierTitle')}
             </Text>
-            <ChipScrollRow
-              options={earlierOptions}
-              selected={existingPurchaseId ?? NEW_PURCHASE}
-              onSelect={key => {
-                const picked = earlier.find(purchase => purchase.id === key);
-                if (key !== NEW_PURCHASE && !picked) return;
-                setValue('existingPurchaseId', picked?.id ?? null);
-                setValue('existingPurchaseVersion', picked?.version ?? null);
-              }}
-              edgeFadeColor="surface"
-            />
+            {earlierNote ? (
+              <Text role="caption" tone="tertiary">
+                {t(earlierNote)}
+              </Text>
+            ) : null}
+            {earlierOptions.length > 1 ? (
+              <ChipScrollRow
+                options={earlierOptions}
+                selected={existingPurchaseId ?? NEW_PURCHASE}
+                onSelect={key => {
+                  const picked = earlier.find(purchase => purchase.id === key);
+                  if (key !== NEW_PURCHASE && !picked) return;
+                  setValue('existingPurchaseId', picked?.id ?? null, {
+                    shouldDirty: true,
+                  });
+                  setValue('existingPurchaseVersion', picked?.version ?? null);
+                }}
+                edgeFadeColor="surface"
+              />
+            ) : null}
             {attached ? (
               <Text role="caption" tone="tertiary">
                 {t('receipts.review.earlierBody')}
               </Text>
             ) : null}
+            {attached && refusal && !refusedOn ? (
+              <Text
+                role="error"
+                tone="error"
+                testID={receiptsTestIDs.lineRefusal}
+              >
+                {refusal.message}
+              </Text>
+            ) : null}
           </View>
-        )}
+        ) : null}
 
         {!!listItemName && !attached && (
           <Controller
@@ -334,6 +410,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
               name="quantityInput"
               render={({ field, fieldState }) => (
                 <FractionInput
+                  ref={field.ref}
                   label={t('labels.quantity')}
                   value={field.value}
                   onChangeText={field.onChange}
@@ -349,6 +426,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
               name="unitValue"
               render={({ field, fieldState }) => (
                 <UnitAutocompleteField
+                  chaining={{ inputRef: field.ref }}
                   variant="inline"
                   label={t('labels.unit')}
                   value={field.value}
@@ -386,6 +464,8 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
                   render={({ field: unit, fieldState: unitState }) => (
                     <PackageContentsFields
                       variant="inline"
+                      sizeRef={size.ref}
+                      unitRef={unit.ref}
                       size={size.value}
                       onSizeChange={text => {
                         size.onChange(text);
@@ -419,6 +499,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
             name="priceInput"
             render={({ field, fieldState }) => (
               <FormInput
+                ref={field.ref}
                 label={t('labels.totalPaid')}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -469,7 +550,6 @@ export const ReceiptLineSheet: React.FC<ReceiptLineSheetProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.md,
     paddingBottom: theme.spacing.md,
   },
   printed: {

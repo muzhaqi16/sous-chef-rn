@@ -1,7 +1,7 @@
 import { Kind, type DocumentNode, type SelectionSetNode } from 'graphql';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { LoginUserFragmentDoc } from '#operations/auth/userFragments.generated';
-import { MIRRORED_SETTING_KEYS, SETTING_KEYS } from '#/domain/serverSettings';
+import { MIRRORED_SETTING_KEYS, SETTING_KEYS } from '#domain/serverSettings';
 
 /** The field names selected under `settings`, wherever it sits in a document. */
 function settingsFields(document: DocumentNode): Set<string> {

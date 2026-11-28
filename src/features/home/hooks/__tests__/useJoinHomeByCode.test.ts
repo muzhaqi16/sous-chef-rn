@@ -11,8 +11,8 @@ import {
   JoinHomeByCodeDocument,
 } from '#operations/home/home.generated';
 import { useJoinHomeByCode } from '../useJoinHomeByCode';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 
 type HomesData = MockDataFor<typeof GetHomesDocument>;
 type HomeEdgeData = NonNullable<

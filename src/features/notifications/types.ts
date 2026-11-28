@@ -1,4 +1,4 @@
-import { NotificationCategory } from '#/graphql/generated/schemaTypes';
+import { NotificationCategory } from '#graphql/generated/schemaTypes';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 
 /** Data passed from the expirationNotificationChanged subscription to enrich a generic notification. */

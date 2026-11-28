@@ -3,9 +3,9 @@ import {
   UpdateCollaboratorRoleDocument,
   UpdateCollaboratorPermissionsDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import type { CollaboratorRole } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { useTranslation } from '#/i18n';
+import type { CollaboratorRole } from '#graphql/generated/schemaTypes';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { useTranslation } from '#i18n';
 
 /** The item-level permissions a role's defaults can be overridden with. */
 export interface CollabPermissions {

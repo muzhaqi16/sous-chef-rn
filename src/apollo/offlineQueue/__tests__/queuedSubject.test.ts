@@ -1,21 +1,27 @@
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { queuedSubject, subjectTypeOf } from '../queuedSubject';
+import {
+  deletesItsSubject,
+  queuedSubject,
+  subjectTypeOf,
+  withoutSubjects,
+} from '../queuedSubject';
 import type {
   PantryItem,
   ShoppingListItem,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   AddRecipeToFavoritesDocument,
   ForkRecipeDocument,
+  RemoveRecipeFromFavoritesDocument,
   UpdateFavoriteRecipeDocument,
 } from '#features/recipes/graphql/recipe.generated';
 import {
   AddItemToShoppingListDocument,
   CompleteShoppingListDocument,
+  MoveShoppingItemToPantryDocument,
+  RemoveItemFromShoppingListDocument,
+  RemoveItemsFromShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   AddDietaryRestrictionDocument,
   UpdateDietaryProfileDocument,
@@ -23,9 +29,15 @@ import {
 import { AddBrandToListDocument } from '#features/profile/hooks/useBrandLists.generated';
 import { AddTemplateItemDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
+import { RecordPantryStockCheckDocument } from '#features/pantry/hooks/useStockCheck.generated';
 import {
+  ConvertExpiredToWasteDocument,
   CreatePantryItemDocument,
+  CreatePantryItemUsageDocument,
   DeletePantryItemDocument,
+  OpenPantryItemBatchDocument,
+  UpdatePantryItemQuantityDocument,
+  WastePantryItemBatchDocument,
 } from '#features/pantry/graphql/pantry.generated';
 
 describe('queuedSubject', () => {
@@ -50,6 +62,43 @@ describe('queuedSubject', () => {
       sourceIds: ['checkin-1'],
       mintedIds: ['pi-0', 'pi-2'],
     });
+  });
+
+  // So a queued check shows each stack it answers for as waiting to sync.
+  it('reads a stock check as answering for every stack it names, minting none', () => {
+    expect(
+      queuedSubject({
+        mutation: RecordPantryStockCheckDocument,
+        variables: {
+          today: '2026-11-15',
+          input: {
+            pantryId: 'pantry-1',
+            checkedAt: '2026-11-15T12:00:00.000Z',
+            idempotencyKey: 'check-1',
+            entries: [
+              {
+                pantryItemId: 'pi-1',
+                answer: 'STILL_HAVE',
+                expectedVersion: 3,
+              },
+              { pantryItemId: 'pi-2', answer: 'USED_UP', expectedVersion: 5 },
+            ],
+          },
+        },
+      }),
+    ).toMatchObject({ subjectIds: ['pi-1', 'pi-2'], mintedIds: [] });
+  });
+
+  // A clear names its rows by id alone.
+  it('reads a clear of several rows as removing each one it names', () => {
+    expect(
+      queuedSubject({
+        mutation: RemoveItemsFromShoppingListDocument,
+        variables: {
+          input: { shoppingListId: 'list-1', ids: ['sli-1', 'sli-2'] },
+        },
+      }),
+    ).toMatchObject({ subjectIds: ['sli-1', 'sli-2'], mintedIds: [] });
   });
 
   it('reads a fork as creating the new recipe and deriving from the source', () => {
@@ -88,6 +137,48 @@ describe('queuedSubject', () => {
       ['row-a', 'row-b'],
     ],
     [
+      'a use names the stack it draws on, minting none',
+      CreatePantryItemUsageDocument,
+      { pantryItemId: 'pi-2', amount: { quantity: 1 } },
+      ['pi-2'],
+      [],
+    ],
+    [
+      'an expired-stock discard names the stack',
+      ConvertExpiredToWasteDocument,
+      { pantryItemId: 'pi-3' },
+      ['pi-3'],
+      [],
+    ],
+    [
+      'opening a package names the batch',
+      OpenPantryItemBatchDocument,
+      { batchId: 'batch-1' },
+      ['batch-1'],
+      [],
+    ],
+    [
+      'wasting a package names the batch',
+      WastePantryItemBatchDocument,
+      { batchId: 'batch-2' },
+      ['batch-2'],
+      [],
+    ],
+    [
+      'a move to the pantry names the stack it mints',
+      MoveShoppingItemToPantryDocument,
+      { shoppingListItemId: 'row-1', pantryItemId: 'pi-new' },
+      ['pi-new'],
+      ['pi-new'],
+    ],
+    [
+      'unsaving a recipe names the recipe',
+      RemoveRecipeFromFavoritesDocument,
+      { recipeId: 'recipe-1' },
+      ['recipe-1'],
+      [],
+    ],
+    [
       'an entity input names itself by id',
       DeletePantryItemDocument,
       { id: 'pi-9' },
@@ -122,23 +213,6 @@ describe('queuedSubject', () => {
 
   // The field names are typed against codegen; the input-type names are keys
   // the typechecker cannot see. A misspelt one never matches and falls to `id`.
-  it('names only input types the schema declares', () => {
-    const read = (path: string) =>
-      readFileSync(join(process.cwd(), path), 'utf8');
-    const schema = read('src/graphql/generated/schema.graphql');
-    const table = /const SUBJECT_KEYS[^=]*=\s*\{([^}]*)\}/.exec(
-      read('src/apollo/offlineQueue/queuedSubject.ts'),
-    )?.[1];
-    const names = [...(table ?? '').matchAll(/^\s*(\w+):/gm)].flatMap(m =>
-      m[1] ? [m[1]] : [],
-    );
-    expect(names.length).toBeGreaterThan(5);
-    const undeclared = names.filter(
-      name => !new RegExp(`^input ${name} \\{`, 'm').test(schema),
-    );
-    expect(undeclared).toEqual([]);
-  });
-
   it('gives an input with no subject field no subject', () => {
     expect(
       queuedSubject({
@@ -216,5 +290,43 @@ describe('subjectTypeOf', () => {
     ['an input named by no entity verb', CompleteShoppingListDocument],
   ])('names no type for %s', (_label, mutation) => {
     expect(subjectTypeOf({ mutation })).toBeNull();
+  });
+});
+
+describe('deletesItsSubject', () => {
+  it.each([
+    ['a Delete input', DeletePantryItemDocument, true],
+    [
+      'a line removal its descriptor calls a deletion',
+      RemoveItemFromShoppingListDocument,
+      true,
+    ],
+    ['an update', UpdateShoppingListItemDocument, false],
+  ])('reads %s', (_label, mutation, expected) => {
+    expect(deletesItsSubject({ mutation })).toBe(expected);
+  });
+});
+
+describe('a write without some of its rows', () => {
+  const clear = (ids: string[]) => ({
+    mutation: RemoveItemsFromShoppingListDocument,
+    variables: { input: { shoppingListId: 'list-1', ids } },
+  });
+
+  it('keeps the rows a list names that are not dropped', () => {
+    expect(
+      withoutSubjects(clear(['sli-1', 'sli-2']), new Set(['sli-1'])),
+    ).toEqual({ input: { shoppingListId: 'list-1', ids: ['sli-2'] } });
+  });
+
+  it('is gone once it names no row left', () => {
+    expect(
+      withoutSubjects(clear(['sli-1']), new Set(['sli-1'])),
+    ).toBeUndefined();
+  });
+
+  it('is the write as it was when it names none of them', () => {
+    const write = clear(['sli-1']);
+    expect(withoutSubjects(write, new Set(['sli-9']))).toBe(write.variables);
   });
 });

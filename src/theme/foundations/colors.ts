@@ -126,20 +126,6 @@ export const colors = {
     warningBorder: '#FDE68A',
   },
 
-  // Light-mode canonical shape; `darkFilterTab` below mirrors the keys exactly.
-  filterTab: {
-    // The `primary` fill and its white foreground, below AA by decision.
-    activeBg: jaffa['500'],
-    activeText: '#FFFFFF',
-    inactiveBg: '#F3F4F6',
-    inactiveText: '#000000',
-    filteredBg: jaffa['50'],
-    filteredText: jaffa['600'],
-    countBg: '#D1D5DB',
-    countText: '#000000',
-    activeCountBg: 'rgba(255,255,255,0.25)',
-  },
-
   alertBanner: {
     error: {
       bg: '#FEF2F2',
@@ -188,8 +174,6 @@ export const colors = {
   /** Native press ripple (`android_ripple`); translucent, so one value reads on either scheme. */
   ripple: {
     subtle: 'rgba(0,0,0,0.06)',
-    default: 'rgba(0,0,0,0.1)',
-    onFill: 'rgba(255,255,255,0.2)',
   },
   /** A white wash for a control's ground over a photo or scrim. */
   onScrimSubtle: 'rgba(255, 255, 255, 0.2)',
@@ -241,21 +225,6 @@ export const darkExpiration: typeof colors.expiration = {
   expiredText: '#FCA5A5',
   warningText: '#FDBA74',
   warningBorder: '#5C4A35',
-};
-
-// Dark overrides for `colors.filterTab`; unchanged keys reuse the light values.
-export const darkFilterTab: typeof colors.filterTab = {
-  activeBg: colors.filterTab.activeBg,
-  activeText: colors.filterTab.activeText,
-  // Warm neutral chips, matching the dark theme's other surfaces — slate-blue
-  // reads cool against the warm near-black background.
-  inactiveBg: colors.neutral[700],
-  inactiveText: colors.neutral[200],
-  filteredBg: 'rgba(251, 146, 59, 0.15)',
-  filteredText: jaffa['300'],
-  countBg: colors.neutral[600],
-  countText: colors.neutral[100],
-  activeCountBg: colors.filterTab.activeCountBg,
 };
 
 // The categorical ramp a chart assigns by CATEGORY, not by magnitude. Each step

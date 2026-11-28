@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { OfflineStatusPill } from '../OfflineStatusPill';
 import { useOfflineStatus } from '#hooks/ui/useOfflineStatus';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 
 jest.mock('#hooks/ui/useOfflineStatus');
 

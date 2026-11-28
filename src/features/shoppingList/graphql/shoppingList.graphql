@@ -209,7 +209,6 @@ query GetShoppingListItemsFiltered(
           itemName
           quantity
           quantityInput
-          displayFormat
           purchaseInfo {
             isPurchased
             # Read by the row to show a line already stocked in the pantry.
@@ -697,6 +696,8 @@ mutation RemoveCollaborator($input: RemoveShoppingListCollaboratorInput!) {
   }
 }
 
+# The one add-to-list document: every surface that adds lines sends it through
+# `useAddShoppingRows`. `outcome` tells a line merged into one the list held.
 mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
   addItemsToShoppingList(input: $input) {
     __typename
@@ -709,6 +710,7 @@ mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
         index
         clientId
         success
+        outcome
         failure {
           code
           disposition

@@ -28,6 +28,26 @@ Re-check:
 cat node_modules/@gorhom/bottom-sheet/src/components/bottomSheetView/styles.ts
 ```
 
+### gorhom unmounts a modal's content once it is dismissed
+
+**Claim:** a `BottomSheetModal` renders nothing until it is presented and
+unmounts its content when a dismissal completes, so state held inside a
+`Sheet`'s content starts fresh on each opening. State the component rendering
+the `Sheet` holds lives on.
+
+**Verified against `@gorhom/bottom-sheet@5.2.14`.** `BottomSheetModal` returns
+`mount ? (...) : null`; its `unmount()` resets that state, and a close runs it
+because `enableDismissOnClose` defaults to `true` (`useStandardBottomSheet` sets
+no other). The Jest mock models it (`__tests__/setup/mocks/gorhom-bottom-sheet.js`);
+`src/components/templates/__tests__/Sheet.test.tsx` holds the rule.
+
+Re-check:
+
+```
+grep -n "return mount\|function unmount\|setState(INITIAL_STATE)" node_modules/@gorhom/bottom-sheet/src/components/bottomSheetModal/BottomSheetModal.tsx
+grep -n "DEFAULT_ENABLE_DISMISS_ON_CLOSE =" node_modules/@gorhom/bottom-sheet/src/components/bottomSheetModal/constants.ts
+```
+
 ### gorhom sheet content hides its children from VoiceOver
 
 **Claim:** with gorhom's defaults, a sheet's content is one accessibility
@@ -61,14 +81,91 @@ keyboard covers the field.
 `BottomSheetTextInput.handleOnFocus` sets `animatedKeyboardState.target`, and
 `useAnimatedKeyboard.ts` caches a keyboard-shown event until a
 `BottomSheetTextInput` focus sets that target. The input reads the sheet's
-internal context and **throws outside a sheet**, which is why shared inputs
-pick their implementation from `useIsBottomSheetInput()`.
+internal context and **throws outside a sheet**, which is why `ThemedTextInput`
+picks its implementation from `useInBottomSheet()` (next entry).
 
 Re-check:
 
 ```
 grep -n "target" node_modules/@gorhom/bottom-sheet/src/components/bottomSheetTextInput/BottomSheetTextInput.tsx
 grep -n -A3 "temporaryCachedState" node_modules/@gorhom/bottom-sheet/src/hooks/useAnimatedKeyboard.ts
+```
+
+### gorhom's internal context answers whether a render is in a sheet
+
+**Claim:** `useBottomSheetInternal(true)` returns the sheet's internal context
+inside any gorhom sheet, a `BottomSheetModal` among them, and `null` anywhere
+else, without throwing. `useInBottomSheet` reads it, so an input knows it is in
+a sheet in every `Sheet` mode with nothing provided by the host.
+
+**Verified against `@gorhom/bottom-sheet@5.2.14`** (2026-11-25): the hook is
+exported from the package root; its `unsafe: true` overload returns
+`useContext(BottomSheetInternalContext)` and throws only when `unsafe` is not
+`true` and the context is `null`. On the iOS simulator, a `FractionInput` in the
+use sheet (`Sheet mode="form"`) lifted the sheet above the keyboard with no
+provider.
+
+Re-check:
+
+```
+grep -n "useBottomSheetInternal" node_modules/@gorhom/bottom-sheet/src/index.ts*
+sed -n 1,30p node_modules/@gorhom/bottom-sheet/src/hooks/useBottomSheetInternal.ts
+```
+
+### gorhom types its text input's ref as RNGH's TextInput
+
+**Claim:** `BottomSheetTextInput` is `forwardRef<TextInput | undefined, …>`
+over react-native-gesture-handler's `TextInput`, which the strict React Native
+types read as a component rather than an instance. What reaches the ref at
+runtime is React Native's `TextInput` instance, so `themedComponents.tsx`
+types gorhom's input with RN's `TextInputInstance`, the one place it does.
+
+**Verified against `@gorhom/bottom-sheet@5.2.14`** with
+`react-native-gesture-handler@3.5.0`: the component imports `TextInput` from
+RNGH for its ref type and renders RN's.
+
+Re-check:
+
+```
+sed -n 1,30p node_modules/@gorhom/bottom-sheet/src/components/bottomSheetTextInput/BottomSheetTextInput.tsx
+```
+
+### React Native never extends a touch past the parent's bounds
+
+**Claim:** `hitSlop` grows a view's touch area only inside its parent: a touch
+outside the parent never reaches the child. So a control's touch target is a
+layout box at the platform floor (44 pt iOS, 48 dp Android), and `hitSlop`
+past the parent does nothing. A StyleSheet cannot scale `hitSlop` either.
+
+**Verified against `react-native@0.87.1`:** the prop's doc says so
+(`ViewPropTypes.js`, "The touch area never extends past the parent view
+bounds"). On iOS Fabric, `RCTViewComponentView`'s `hitTest` returns nil
+outside a clipping container's bounds. On Android, `TouchTargetHelper` tests
+children only inside the parent.
+
+Re-check:
+
+```
+grep -n "never extends past the parent" node_modules/react-native/Libraries/Components/View/ViewPropTypes.js
+grep -n "clipsToBounds && !isPointInside" node_modules/react-native/React/Fabric/Mounting/ComponentViews/View/RCTViewComponentView.mm
+```
+
+### An RNGH v3 button takes a touch its children do not claim
+
+**Claim:** RNGH's button (`RectButton`, RNGH `Pressable`) overrides `hitTest`
+and walks up from the touched view to the first one that is a `UIControl` or
+carries RNGH gesture recognizers. A React Native `Pressable` inside it is
+neither, so the button takes the tap and the inner control never fires. That
+is why a row's trailing controls sit beside its press surface, never inside
+it, and why `IconButton` switches to RNGH's `Pressable` inside a gesture row.
+
+**Verified against `react-native-gesture-handler@3.5.0`** (iOS,
+`apple/RNGestureHandlerButton.mm`).
+
+Re-check:
+
+```
+grep -n "hitTest:(CGPoint)point withEvent" -A32 node_modules/react-native-gesture-handler/apple/RNGestureHandlerButton.mm
 ```
 
 ### keyboard-controller bottomOffset measures input bottom
@@ -89,6 +186,141 @@ Re-check:
 
 ```
 grep -n "absoluteY + inputHeight\|bottomOffset = " node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
+```
+
+### gorhom's lift and a keyboard-aware scroll both make room
+
+**Claim:** with `keyboardBehavior: 'interactive'`, gorhom moves a sheet's top to
+`max(0, highestDetentPosition - keyboardHeight)`: a sheet short enough rises by
+the whole keyboard and sits on it. A `KeyboardAwareScrollView` inside measures
+the focused field before that rise and scrolls it up by the overlap as well, so
+in a short sheet the field ends above the sheet's top, out of view. A tall sheet
+rises less, and its field still lands that much too high. The scroll reads the
+field once, at focus, so any move of the sheet after it, `extend` from a lower
+stop included, adds onto the scroll. And gorhom locks a sheet's content below
+its top stop, so no scroll can raise a field there. `Sheet mode="form"`
+therefore uses gorhom's own scroll view up to a 60% snap point (a phone keyboard
+takes under 40% of the screen). Past it the sheet has one stop and `extend`,
+which leaves a sheet at its top stop where it is, so the scroll alone makes the
+room (`formSheetHasOneStop.test.ts`).
+
+**Verified 2026-11-25 against `@gorhom/bottom-sheet@5.2.14` +
+`react-native-keyboard-controller@1.22.5`** on the iPhone 17 simulator: the Bio
+sheet (30%) showed its bar over an empty band with the keyboard up; its field
+sat behind the bar (component tree y 0.10 to 0.18, sheet top 0.39). With gorhom's
+scroll view the field sits above the keyboard. Re-measured 2026-11-26: Adjust
+Quantity at its 65% stop rose to 0.07 with `interactive`, and its Reason field
+landed at 0.28 to 0.33 with the keyboard's top at 0.655. With one 65% stop and
+`extend` the sheet stays at 0.40 and the field ends at 0.60 to 0.65. The Add
+Item sheet extending from 70% to 95% put Category at 0.37 to 0.42; at one 95%
+stop it stays where it was, clear of the keyboard.
+
+Re-check:
+
+```
+grep -n "highestDetentPosition - keyboardHeightInContainer" node_modules/@gorhom/bottom-sheet/src/components/bottomSheet/BottomSheet.tsx
+grep -n "absoluteY + inputHeight" node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
+grep -n "SHEET_STATE.EXTENDED" -A3 node_modules/@gorhom/bottom-sheet/src/hooks/useScrollable.ts
+```
+
+### gorhom calls the onDismiss of the render before the close
+
+**Claim:** `BottomSheetModal` renders its sheet through `@gorhom/portal`, which
+pushes new children from an effect, so the sheet in the host is a render behind.
+A `dismiss()` from an effect of the render that hid the sheet starts the close
+on that older sheet, and the close's `onClose` → `unmount` → `onDismiss` chain
+is bound then. A consumer whose `onDismiss` changed in that same render gets the
+previous one. `useStandardBottomSheet` reads `onDismiss` through a ref.
+
+The content lags the same way: state inside the sheet re-renders it at once,
+with the props of the render before. A value its owner sets in the same event
+arrives one update later, after a form mounted by that state change has read
+its defaults, so `AddItemSheet` hands its details step the name itself.
+
+**Verified 2026-11-26 against `@gorhom/bottom-sheet@5.2.14` +
+`@gorhom/portal@1.0.14`** on the iPhone 17 simulator: a long-pressed folder set
+`managingFolder` and hid `FolderPicker` in one render; the `onDismiss` that ran
+logged `managingFolder` null and `visible` true, so the manage sheet never
+opened and the picker could not reopen. With the ref it opens, and closing it
+brings the picker back. "Add 'Zqxv Gutter' manually" opened the pantry details
+form with an empty name while its `prefilledItemName` prop read the name: the
+form had mounted with the owner's previous ''.
+
+Re-check:
+
+```
+grep -n "handleOnUpdateRef.current?.()" node_modules/@gorhom/portal/src/components/portal/Portal.tsx
+grep -n "_providedOnDismiss()" node_modules/@gorhom/bottom-sheet/src/components/bottomSheetModal/BottomSheetModal.tsx
+```
+
+### gorhom closes a modal its owner unmounts, with its content mounted
+
+**Claim:** when the component rendering a presented `BottomSheetModal` unmounts
+it, the portal's `handlePortalOnUnmount` runs an animated `close()` instead of
+removing the sheet, so the content stays mounted through the close and gorhom
+reports it in `onAnimate(from, -1)` as it would a drag. `useStandardBottomSheet`
+marks an unmount as the owner's close, so the close guard does not ask.
+
+**Verified 2026-11-27 against `@gorhom/bottom-sheet@5.2.14`** on the iPhone 17
+simulator: the pantry's consume sheet, rendered only while its modal is open,
+asked "Discard changes?" after every confirmed use with a typed amount. A
+stack logged in `SheetCloseGuard.requestClose` read `handleOnAnimate` →
+`handleAnimate` with the content still holding its input. With the unmount
+marked, a confirmed use closes without asking.
+
+Re-check:
+
+```
+grep -n -A32 "function handlePortalOnUnmount" node_modules/@gorhom/bottom-sheet/src/components/bottomSheetModal/BottomSheetModal.tsx | grep -n "close()"
+```
+
+### gorhom keeps a keyboard lift when a touch lands as the keyboard leaves
+
+**Claim:** gorhom's `interactive` keyboard behaviour lifts a sheet as a
+temporary position, and `keyboardBlurBehavior: 'restore'` puts it back when
+the keyboard hides, but only while neither the content nor the handle gesture
+is active. A touch on the sheet as the keyboard leaves skips the restore, and
+the sheet keeps the lifted position: its content clipped above an empty band,
+until something snaps it. The touch itself is lost too, landing on a view that
+moves. `useStandardBottomSheet` snaps to the stop gorhom last reported once the
+keyboard has hidden.
+
+**Verified 2026-11-26 against `@gorhom/bottom-sheet@5.2.14`** on the iPhone 17
+simulator: in Mark Cooked (55%), typing the servings, pressing return and
+tapping confirm 100 ms later left the sheet lifted with Smart Deduction cut in
+half, and the confirm's `onPress` never ran (a console probe). With the snap
+the sheet returns to 55%. The offline cook e2e failed on it three times in a
+row, after `c841b0183` gave every sheet input gorhom's input, which gorhom
+lifts.
+
+Re-check:
+
+```
+grep -n "animatedContentGestureState.value !== State.ACTIVE" node_modules/@gorhom/bottom-sheet/src/components/bottomSheet/BottomSheet.tsx
+```
+
+### A field focused while its sheet opens is scrolled out of view
+
+**Claim:** an `autoFocus` field shows the keyboard while its sheet is still
+sliding in from below. `KeyboardAwareScrollView` measures the field there, under
+the keyboard, and scrolls it up by that overlap, so once the sheet has risen the
+field sits above the top of its scroll view. A field focused after gorhom's
+animation stops (`animatedAnimationState.status` `STOPPED`, `animatedIndex >= 0`)
+is measured where it stays. `ThemedTextInput` defers `autoFocus` in a sheet to
+that point, once.
+
+**Verified 2026-11-26 against `@gorhom/bottom-sheet@5.2.14` +
+`react-native-keyboard-controller@1.22.5`** on the iPhone 17 simulator: the add
+storage location sheet (80%) opened with its Name field focused and its scroll
+view at offset 539 of a 410 pt viewport, the field out of view. Blurred and
+tapped on the settled sheet, the same field stayed in view; with the deferred
+focus it opens in view.
+
+Re-check:
+
+```
+grep -n "status: ANIMATION_STATUS.STOPPED" node_modules/@gorhom/bottom-sheet/src/components/bottomSheet/BottomSheet.tsx
+grep -n "absoluteY + inputHeight" node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
 ```
 
 ### A keyboard-aware scrollable cannot size a sheet
@@ -217,16 +449,22 @@ grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/Scr
 
 ### unistyles withUnistyles drops function styles
 
-**Claim:** wrapping `Pressable`/`TouchableX` with `withUnistyles(...)`
+**Claim:** wrapping a `Pressable`, RN's or RNGH's, with `withUnistyles(...)`
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
-**Verified against `react-native-unistyles@3.8.2` (2026-11-17, in source).**
+**Verified against `react-native-unistyles@3.9.0` (2026-11-25, in source).**
 `withUnistyles.native.tsx` builds the forwarded style with
 `Object.assign(acc, secret.uni__getStyles())`. For a function-valued `style`
 that is the function itself, and an arrow function has no own enumerable
 properties. RN's `Pressable` needs no wrapper: Unistyles' Metro resolver swaps
-in a bound one.
+in a bound one. Upstream holds this by design: "Don't wrap Pressable in
+withUnistyles" ([#1180](https://github.com/jpudysz/react-native-unistyles/issues/1180);
+also [#1149](https://github.com/jpudysz/react-native-unistyles/issues/1149),
+[discussion #786](https://github.com/jpudysz/react-native-unistyles/discussions/786)).
+Its guide still suggests `withUnistyles(GHPressable)` for RNGH's
+([#1109](https://github.com/jpudysz/react-native-unistyles/issues/1109)), which
+drops the same style.
 
 Re-check:
 
@@ -241,10 +479,21 @@ React, and the next React commit can put the old values back on a view that a
 Reanimated animated style has registered, and on everything under it.
 Reanimated re-applies only the props it owns.
 
-**Verified against `react-native-unistyles@3.8.2` +
-`react-native-reanimated@4.7.2` + `react-native@0.86.3` (2026-11-17, iOS
+**Verified against `react-native-unistyles@3.9.0` +
+`react-native-reanimated@4.8.0` + `react-native@0.87.1` (2026-11-25, iOS
 simulator; first measured on 3.5.0, and on Android on 3.5.3),** by running
-`UnistylesShadowRegistry.verify()` after every commit. On 3.8.2 + 4.7.2, a
+`UnistylesShadowRegistry.verify()` after every commit. On 3.9.0, a freshly
+mounted four-photo `PantryItemDetail` with every `ThemeEpochSentinel` rendering
+nothing left 3 `dot` views on the old theme 7 to 8 s after the change, light to
+dark and dark to light; `heroInner` no longer reverts (3.9.0's #1393 keeps
+React's node props on a refresh). With the sentinels, 0 of 156, and 0 on the
+pantry list (308 views) and the list under its tour popover (354). Later the
+same day, after the app's iOS window module went, neither known case came back
+on iOS with every sentinel rendering nothing: that hero 0 of 170 across six
+flips (plain, a toast after, a commit at the theme commit, a gallery swipe
+after), and `AppearanceScreen`'s swatch probe 0 of 132. Android, where this was
+also measured and which never had that module, is not re-measured, so the
+sentinels stay. On 3.8.2 + 4.7.2, a
 freshly mounted gallery `PantryItemDetail` with every `ThemeEpochSentinel`
 rendering nothing left one `dot` on the old theme from 261 ms through 3 s; with
 the sentinels, 0 in both directions, and 0 on pantry rows, list rows under a
@@ -287,26 +536,30 @@ then reports `dot` / `heroInner` mismatches. In source:
 grep -n -B 3 "getHasBeenPromoted" node_modules/react-native-unistyles/cxx/hybridObjects/HybridShadowRegistry.cpp
 ```
 
-### A Unistyles reader inside a ScopedTheme ignores theme events
+### Unistyles draws a kept element that mounts late in the current theme
 
-**Claim:** a `withUnistyles` or `useUnistyles` reader mounted inside a
-`ScopedTheme` never follows a theme event: not a switch to another theme, and
-not `UnistylesRuntime.updateTheme` giving the scoped theme itself new values.
-A view styled by `StyleSheet.create` is updated natively and does follow.
+**Claim:** an element the React Compiler kept from before a theme change, which
+first mounts after it (a sheet's or `Modal`'s content, an expanded section),
+shows the current theme. Its `styles.x` snapshot is stale, and Unistyles
+corrects it at mount.
 
-**Verified against `react-native-unistyles@3.8.2` (2026-11-17, in source; on
-an Android emulator on 3.5.2).** `useProxifiedUnistyles` builds its listener
-with `updateTheme: () => { if (scopedTheme) return; … }`, and inside a scope
-`scopedTheme` is the scope's name.
+**Verified against `react-native-unistyles@3.9.0` (2026-11-25, iOS
+simulator)** with `CurrentThemeScope`, the scope this replaced, rendering its
+children bare: Mark Cooked opened on a recipe after light to dark (the case the
+scope was added for), 0 of 269 views stale; the same sheet left open through
+dark to light, 0 of 269, its content not remounted; an alert's `Modal` raised
+after a change, 0 of 256; a pantry item's batches expanded after one, 0 of 337.
+Fixed upstream in 3.9.0 (#1394, closing #1386): `HybridShadowRegistry` compares
+each style's revision when a view links. Before it, the stale colours stuck
+until the next theme change, and a `ScopedTheme` keyed on every theme commit
+was the workaround. Its readers ignore theme events, which is why it had to
+remount.
 
-The fix: `CurrentThemeScope` keys its `ScopedTheme` on the theme name and the
-theme epoch, so every theme commit remounts the children. Guarded by
-`src/components/atoms/__tests__/CurrentThemeScope.test.tsx`.
-
-Re-check:
+Re-check: on a recipe's detail, `setTheme('DARK')` with the cook sheet closed,
+open it, and read `UnistylesShadowRegistry.verify()`. In source:
 
 ```
-grep -n -A 6 "updateTheme: () =>" node_modules/react-native-unistyles/src/core/useProxifiedUnistyles/useProxifiedUnistyles.ts
+grep -n "hasOutdatedStyles" node_modules/react-native-unistyles/cxx/hybridObjects/HybridShadowRegistry.cpp
 ```
 
 ### Unistyles' useAnimatedTheme misses a theme change made while its screen is paused
@@ -318,7 +571,7 @@ values. `useUnistyles` and `withUnistyles` catch up on their own.
 
 **Verified against `react-native-unistyles@3.5.3` +
 `react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-13, Android
-emulator); the hook's source is unchanged in 3.8.0 (2026-11-02).** With Profile two levels down the stack, the theme went from dark to
+emulator); the hook's source is unchanged in 3.9.0 (2026-11-25).** With Profile two levels down the stack, the theme went from dark to
 light. Back on Profile the page, text and icons were light, and `ProfileHero`'s
 avatar fill, which a `useAnimatedStyle` reads from the animated theme, was still
 the dark surface `rgb(54, 51, 44)`. `UnistylesShadowRegistry.verify()` reports
@@ -364,10 +617,21 @@ appearance. With `.unspecified`, the app followed the OS in both directions: 0
 of 609 views stale across the tabs. `getColorScheme` in
 `NativePlatform+ios.swift` reads `RCTKeyWindow()?.traitCollection`.
 
-The fix: `WindowBackground` calls the iOS module's `followSystem` on the System
-preference. Android has no such method and keeps `setTheme`, because its
-navigation bar needs the resolved theme. Guarded by
-`src/components/atoms/__tests__/ThemedStatusBar.test.tsx`.
+The fix: on iOS, `WindowBackground` calls React Native's
+`Appearance.setColorScheme`, with `'auto'` on the System preference, which
+clears the style from every window (`RCTAppearance.mm`). Android keeps its
+module's `setTheme`, because its navigation bar needs the resolved theme.
+Guarded by `src/native/__tests__/WindowBackground.test.ts`.
+
+Never style the root view controller as well. Unistyles changes an adaptive
+theme only on `RCTUserInterfaceStyleDidChangeNotification`
+(`NativePlatformListener+ios.swift`), which React Native posts from the root
+view's trait change, so a style there swallows every later window change. With
+one left in place, Dark then System kept the app dark on a light OS. Without
+one (`react-native@0.87.1` + `react-native-unistyles@3.9.0`, 2026-11-25), on a
+fresh launch Dark then System returned to light, the OS going dark and light
+was followed with 0 stale views, and Light held through the OS going dark,
+window included.
 
 That flip lands natively, a moment after the tap's React render, so a render
 that straddles it can put old values back. `AppearanceScreen`'s selected swatch
@@ -427,17 +691,45 @@ needs from `_other` before `init`.
 
 Re-check: `npx jest __tests__/i18n/pluralCategories.test.ts`.
 
-### InteractionManager is a no-op stub
+### InteractionManager is gone
 
-**Claim:** `InteractionManager` must never be used — in the installed RN it is
-a no-op stub. `runAfterInteractions` is just `setImmediate`;
-`createInteractionHandle()` returns `-1`; the other methods do nothing. Use
-`requestIdleCallback` for deferring non-urgent work.
+**Claim:** React Native removed `InteractionManager`. In a development build,
+reading it from `react-native` throws "InteractionManager has been removed from
+react-native core"; in a release build it is `undefined`, and its types are
+gone. Use `requestIdleCallback` for deferring non-urgent work.
 
-**Verified against `react-native@0.86.3`.** Re-check:
+**Verified against `react-native@0.87.1`** by reading the source. Re-check:
 
 ```
-grep -n "InteractionManagerStub\|setImmediate(\|return -1" node_modules/react-native/Libraries/Interaction/InteractionManager.js
+grep -n "InteractionManager has been removed" node_modules/react-native/index.js
+```
+
+### Tab-view's types take every pager-view prop, so pager-view stays at 10.0.2
+
+**Claim:** `react-native-tab-view` 4.3 types `TabView`'s props as pager-view's
+props minus a fixed list, plus its own `lazy`, `lazyPreloadDistance` and
+`renderLazyPlaceholder`. Pager-view 10.0.3 added props of those three names
+with other types (`renderLazyPlaceholder(index)`), so the two intersect and a
+`TabView` that passes `renderLazyPlaceholder` no longer typechecks. At runtime
+`TabView` hands the pager none of them. Pager-view 10.0.2 is the newest release
+without them, and its types, like every 10.x's, work under React Native's strict
+TypeScript API (7.x imports `react-native/Libraries/Types/CodegenTypes`, which
+that API hides). Hence the exact `10.0.2` in `package.json`.
+
+**Verified against `react-native-tab-view@4.3.2` (and 4.3.5, the newest 4.x) +
+`react-native-pager-view@10.0.2`/`10.0.3` (2026-11-23),** by `npm run typecheck`:
+10.0.3 failed in the pantry `TabView`, which passed `renderLazyPlaceholder`;
+10.0.2 passes. That `TabView` was removed on 2026-11-24 (PantryAnalytics moved to
+`ModeTabs`). The one left, `ShoppingListTabs`, passes `lazy` but not
+`renderLazyPlaceholder`, so the pin may no longer be needed: re-run the
+typecheck on 10.0.3 before dropping it.
+
+Re-check on a tab-view or pager-view bump: the pin can go once tab-view's omit
+list names `lazy` and `renderLazyPlaceholder`, or tab-view stops extending
+pager-view's props.
+
+```
+sed -n '/export type PagerProps = Omit</,/>/p' node_modules/react-native-tab-view/src/types.tsx
 ```
 
 ### Navigator packages call the router's action creators by name
@@ -601,7 +893,7 @@ call-site branch. A branch is needed only for motion a zero duration cannot
 stop — a loop's resting state, an ambient illustration, a shimmer.
 
 **Verified 2026-09-03 against `react-native-reanimated@4.6.0`; probe re-run
-2026-10-02 against 4.7.1.** An animation that passes no `reduceMotion` resolves
+2026-11-23 against 4.8.0.** An animation that passes no `reduceMotion` resolves
 to the device setting (`getReduceMotionFromConfig` in `animation/utilCommon.js`).
 This is why `src/theme/motion.ts` holds one set of tokens rather
 than a reduced twin of each, and `src/hooks/animations/useMotionEnabled.ts` is
@@ -622,8 +914,8 @@ falls as `e^(-t * damping / mass)` and the spring ends at 6e-9 of its start, so
 that spring runs about four times longer and overshoots far more than the same
 numbers at mass 1. Every frame of it commits, however little the value moves.
 
-**Verified against `react-native-reanimated@4.7.1` (2026-11-02, iOS simulator),**
-by timing `withSpring` from 120 to 0 in the running app. `{ damping: 20,
+**Verified against `react-native-reanimated@4.7.1` (2026-11-02, iOS simulator;
+the source re-check re-run 2026-11-23 against 4.8.0),** by timing `withSpring` from 120 to 0 in the running app. `{ damping: 20,
 stiffness: 180 }` ran 3,851 ms and overshot 28%; with `mass: 1`, 968 ms and 3%.
 `{ damping: 15, stiffness: 300 }` ran 5,034 ms and overshot 50%; with `mass: 1`,
 1,283 ms and 22%.
@@ -646,8 +938,8 @@ nothing itself: it disables recycling and offset correction for the next
 commit only.
 
 **Verified 2026-09-28 against `react-native-reanimated@4.6.0` and
-`@shopify/flash-list@2.3.2`; source re-checks re-run 2026-10-02 against 4.7.1 and
-2.3.3.** On the iOS simulator, attaching one commit earlier spread a delete's
+`@shopify/flash-list@2.3.2`; the Reanimated source re-checks re-run 2026-11-23
+against 4.8.0, FlashList's 2026-10-02 against 2.3.3.** On the iOS simulator, attaching one commit earlier spread a delete's
 reflow over 8 frames (250 ms); with a transition held on, a flick sent recycled
 rows sliding across the viewport, and detaching on `onScrollBeginDrag` removed
 them. Consumed by `useRowReflow`.
@@ -668,7 +960,8 @@ transition runs at its full duration under the OS setting. Motion driven by one
 reads `useMotionEnabled()` and skips attaching it.
 
 **Verified 2026-09-28 against `react-native-reanimated@4.6.0`, re-checked
-2026-10-02 against 4.7.1,** by source only. Not probed on a device.
+2026-11-23 against 4.8.0,** by source only. Not probed on a device. The 4.8 docs
+for CSS animations and transitions say nothing about reduce motion either.
 
 Re-check (expect no output):
 
@@ -849,8 +1142,9 @@ Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
 **Claim:** a type-level `merge` on a type with an `id` receives references,
 never the row's fields. That holds for a plain `InMemoryCache` and for
 `makeCache()`, for a row under a root field and in a list.
+
 - It runs for the parent field that holds the row (`getMergeFunction(parent,
-  field, childTypename)`).
+field, childTypename)`).
 - The row's own fields are collected in `incomingById` and stored with
   `store.merge(dataId, …)`, which no policy sees.
 - A field-level `merge` can't read the incoming row's other fields.
@@ -1040,9 +1334,13 @@ Verified 2026-09-30 against `com.google.mlkit:genai-prompt:1.0.0-beta4` (with `g
 1. `processDebugMainManifest`: the library's minSdk is 26, against the app's 24. `tools:overrideLibrary` clears it.
 2. `compileDebugKotlin`: the library's Kotlin metadata is 2.3.0, which Kotlin 2.1.20 cannot read. The failure hits `MainApplication.kt`, so the whole app stops compiling.
 
-Resolved with `kotlinVersion = "2.2.0"` AND the Kotlin Gradle plugin's classpath entry versioned by it: unversioned, RN 0.86's Gradle plugin supplies 2.1.20 and the ext property changes nothing. Gemini Nano runs only on AICore devices; the emulator has none, so its labelling is still unverified on a device.
+Resolved by Kotlin 2.2, which RN 0.87's Gradle plugin supplies to the unversioned classpath entry. The `kotlinVersion` ext property alone changes nothing: with an unversioned entry the plugin's own Kotlin wins, so a newer one needs the entry versioned. Gemini Nano runs only on AICore devices; the emulator has none, so its labelling is still unverified on a device.
 
-Re-check: `genai-prompt` is already a dependency in `android/app/build.gradle`; to see the failure again, set `kotlinVersion` back to `"2.1.20"` in `android/build.gradle` and run `./gradlew :app:compileDebugKotlin`.
+Re-check: `genai-prompt` is already a dependency in `android/app/build.gradle`. The Kotlin that RN's Gradle plugin supplies must be 2.2 or newer:
+
+```
+grep -n '^kotlin = ' node_modules/@react-native/gradle-plugin/gradle/libs.versions.toml
+```
 
 ### ML Kit text recognition kills the app on the arm64 Android emulator
 

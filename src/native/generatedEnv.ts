@@ -1,5 +1,5 @@
 import type { Env } from '#platform/ports';
-import { RAW_ENV } from '#/config/env.generated';
+import { RAW_ENV } from '#config/env.generated';
 
 /**
  * The build's configuration as `scripts/generate-env.js` wrote it. A `KEY=`

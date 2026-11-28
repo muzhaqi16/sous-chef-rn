@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import {
   renderWithApollo,
@@ -12,7 +12,7 @@ import { PantryItemCard } from '../PantryItemCard';
 import { StatusLine } from '#components/atoms/StatusLine';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Text } from '#components/atoms/Text';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
 import {
   makeQueuedMutation,
   queuedMutationFor,
@@ -24,7 +24,7 @@ import {
 import { useStore } from '#store';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { gql, type ApolloClient } from '@apollo/client';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   PantryItemCard_PantryItemFragmentDoc,
   type PantryItemCard_PantryItemFragment,
@@ -38,9 +38,9 @@ import {
   StorageState,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { toDateKey } from '#/utils/dateUtils';
-import { changeLanguage } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import { toDateKey } from '#utils/dateUtils';
+import { changeLanguage } from '#i18n';
 import {
   asAbbreviation,
   readingAsAbbreviation,
@@ -48,7 +48,7 @@ import {
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
-  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+  useToday: () => jest.requireActual('#utils/dateUtils').todayKey(),
 }));
 
 const defaultActions = {
@@ -113,14 +113,6 @@ interface BuildItemOverrides {
     perUnitNetWeight?: number | null;
     perUnitNetWeightUnit?: { id: string; name: string; symbol: string } | null;
     totalNetWeight?: number | null;
-  } | null;
-  quantityBreakdown?: {
-    fullPackages: number;
-    looseContentUnits: number;
-    contentUnit: { id: string; name: string; symbol: string } | null;
-    totalContentUnits: number;
-    remainingWeight: number | null;
-    remainingWeightUnit: { id: string; name: string; symbol: string } | null;
   } | null;
   activeBatchCount?: number;
   remainingPortions?: number | null;
@@ -242,27 +234,6 @@ function buildItem(
             : null,
         }
       : null,
-    quantityBreakdown: overrides.quantityBreakdown
-      ? {
-          __typename: 'QuantityBreakdown',
-          fullPackages: overrides.quantityBreakdown.fullPackages,
-          looseContentUnits: overrides.quantityBreakdown.looseContentUnits,
-          totalContentUnits: overrides.quantityBreakdown.totalContentUnits,
-          remainingWeight: overrides.quantityBreakdown.remainingWeight,
-          contentUnit: overrides.quantityBreakdown.contentUnit
-            ? asAbbreviation({
-                __typename: 'Unit',
-                ...overrides.quantityBreakdown.contentUnit,
-              })
-            : null,
-          remainingWeightUnit: overrides.quantityBreakdown.remainingWeightUnit
-            ? asAbbreviation({
-                __typename: 'Unit',
-                ...overrides.quantityBreakdown.remainingWeightUnit,
-              })
-            : null,
-        }
-      : null,
   };
 }
 
@@ -343,21 +314,10 @@ describe('PantryItemCard', () => {
     renderCard({
       expiresOn: toDateKey(expires),
       storageLocationName: 'Freezer',
-      quantityBreakdown: {
-        fullPackages: 2,
-        looseContentUnits: 0,
-        contentUnit: { id: 'gal', name: 'gallon', symbol: 'gal' },
-        totalContentUnits: 2,
-        remainingWeight: null,
-        remainingWeightUnit: null,
-      },
     });
-    // The status slot takes the expiry and the location keeps its own; the
-    // breakdown has no slot on the row and belongs to the detail screen. No
-    // value displaces another.
+    // The status slot takes the expiry and the location keeps its own.
     expect(screen.getAllByText(/day/i).length).toBeGreaterThan(0);
     expect(screen.getByText('Freezer')).toBeTruthy();
-    expect(screen.queryByText(/gallon/i)).toBeNull();
   });
 
   it('does not render default storage tab labels as location', () => {

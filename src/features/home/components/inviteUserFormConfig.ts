@@ -1,6 +1,6 @@
 import { object, mixed } from 'yup';
 import { emailRule } from '#utils/validation/common';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { MembershipRole } from '#graphql/generated/schemaTypes';
 
 export interface InviteUserFormValues {
   email: string;

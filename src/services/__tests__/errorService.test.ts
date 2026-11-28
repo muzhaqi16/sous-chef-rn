@@ -1,13 +1,13 @@
-jest.mock('#/utils/errorSerialization', () => ({
+jest.mock('#utils/errorSerialization', () => ({
   serializeError: jest.fn((e: unknown) => ({ message: String(e) })),
 }));
 
-jest.mock('#/utils/errors/queryComplexity', () => ({
+jest.mock('#utils/errors/queryComplexity', () => ({
   isQueryComplexityError: jest.fn(),
   describeQueryComplexity: jest.fn(),
 }));
 
-jest.mock('#/utils/errors/versionConflict', () => ({
+jest.mock('#utils/errors/versionConflict', () => ({
   isVersionConflictError: jest.fn(),
   getVersionConflictMessage: jest.fn(),
 }));
@@ -20,28 +20,26 @@ jest.mock('@apollo/client/errors', () => ({
 }));
 
 import { errorService, localizedErrorMessage } from '../errorService';
-import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
-import { Telemetry } from '#/services/telemetry';
-import { logger } from '#/utils/environment';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { GraphQLNetworkError } from '#utils/errors/graphqlErrors';
+import { Telemetry } from '#services/telemetry';
+import { logger } from '#utils/environment';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
 import {
   isQueryComplexityError,
   describeQueryComplexity,
-} from '#/utils/errors/queryComplexity';
+} from '#utils/errors/queryComplexity';
 import {
   isVersionConflictError,
   getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
+} from '#utils/errors/versionConflict';
 import {
   CombinedGraphQLErrors,
   ServerError,
   ServerParseError,
   CombinedProtocolErrors,
 } from '@apollo/client/errors';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { RegisterDocument } from '#operations/auth/auth.generated';
-import { CreateItemDocument } from '#operations/item/item.generated';
-import { UpdateItemDocument } from '#features/catalog/hooks/useSuggestItemEdit.generated';
+import { operationNameOf } from '#apollo/utils/documentOperation';
+import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 
 const mockCombinedGraphQLErrorsIs =
   CombinedGraphQLErrors.is as unknown as jest.Mock;
@@ -101,70 +99,6 @@ describe('errorService', () => {
       expect(errorService.getUserFriendlyMessage('AUTH_ACCOUNT_LOCKED')).toBe(
         'Your account has been temporarily locked for security',
       );
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // getErrorCategory
-  // -----------------------------------------------------------------------
-  describe('getErrorCategory', () => {
-    it('returns Authentication for AUTH_ prefix', () => {
-      expect(errorService.getErrorCategory('AUTH_TOKEN_EXPIRED')).toBe(
-        'Authentication',
-      );
-    });
-
-    it('returns Authorization for FORBIDDEN', () => {
-      expect(errorService.getErrorCategory('FORBIDDEN')).toBe('Authorization');
-    });
-
-    it('returns Authentication for UNAUTHENTICATED', () => {
-      expect(errorService.getErrorCategory('UNAUTHENTICATED')).toBe(
-        'Authentication',
-      );
-    });
-
-    it('returns Validation for VALIDATION_ prefix', () => {
-      expect(errorService.getErrorCategory('VALIDATION_FAILED')).toBe(
-        'Validation',
-      );
-    });
-
-    it('returns Resource for RESOURCE_ prefix', () => {
-      expect(errorService.getErrorCategory('RESOURCE_NOT_FOUND')).toBe(
-        'Resource',
-      );
-    });
-
-    it('returns Service for SERVICE_ prefix', () => {
-      expect(errorService.getErrorCategory('SERVICE_UNAVAILABLE')).toBe(
-        'Service',
-      );
-    });
-
-    it('returns Unknown for unrecognized prefix', () => {
-      expect(errorService.getErrorCategory('FOOBAR_SOMETHING')).toBe('Unknown');
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // shouldRetry
-  // -----------------------------------------------------------------------
-  describe('shouldRetry', () => {
-    it.each([
-      'SERVICE_UNAVAILABLE',
-      'SERVICE_TIMEOUT',
-      'SERVICE_OVERLOADED',
-      'RATE_LIMIT_EXCEEDED',
-      'AUTH_TOKEN_EXPIRED',
-    ])('returns true for %s', code => {
-      expect(errorService.shouldRetry(code)).toBe(true);
-    });
-
-    it('returns false for non-retryable error codes', () => {
-      expect(errorService.shouldRetry('AUTH_TOKEN_INVALID')).toBe(false);
-      expect(errorService.shouldRetry('VALIDATION_FAILED')).toBe(false);
-      expect(errorService.shouldRetry('UNKNOWN_ERROR')).toBe(false);
     });
   });
 
@@ -235,6 +169,47 @@ describe('errorService', () => {
       );
     });
 
+    it('records an outcome the person can fix as a warning, not an error', () => {
+      const error = {
+        errors: [
+          {
+            message: 'This pantry already holds that item',
+            extensions: { code: 'PANTRY_ITEM_ALREADY_EXISTS' },
+          },
+        ],
+      };
+      mockCombinedGraphQLErrorsIs.mockReturnValue(true);
+      const create = operationNameOf(CreatePantryItemDocument);
+
+      errorService.reportError(error, { operation: create });
+
+      expect(Telemetry.warn).toHaveBeenCalledWith(
+        `Refused: PANTRY_ITEM_ALREADY_EXISTS in ${create}`,
+        expect.objectContaining({ code: 'PANTRY_ITEM_ALREADY_EXISTS' }),
+      );
+      expect(Telemetry.trackError).not.toHaveBeenCalled();
+      mockCombinedGraphQLErrorsIs.mockReturnValue(false);
+    });
+
+    it('labels a fault with its code', () => {
+      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
+      (isVersionConflictError as jest.Mock).mockReturnValue(false);
+      mockCombinedGraphQLErrorsIs.mockReturnValue(false);
+      mockServerErrorIs.mockReturnValue(false);
+      mockServerParseErrorIs.mockReturnValue(false);
+      mockCombinedProtocolErrorsIs.mockReturnValue(false);
+
+      errorService.reportError(new Error('broke'), { operation: 'FaultOp' });
+
+      expect(Telemetry.trackError).toHaveBeenCalledWith(
+        'broke',
+        expect.objectContaining({
+          code: 'UNKNOWN_ERROR',
+          operation: 'FaultOp',
+        }),
+      );
+    });
+
     it('uses "Unknown" as default operation when no context provided', () => {
       errorService.reportError(new Error('no context'));
 
@@ -246,16 +221,15 @@ describe('errorService', () => {
   });
 
   // -----------------------------------------------------------------------
-  // parseApolloError
+  // classifyError
   // -----------------------------------------------------------------------
-  describe('parseApolloError', () => {
+  describe('classifyError', () => {
     // Signing in without a connection: the fetch rejects with our own
     // `NetworkRequestError`. Read by the plain `instanceof Error` arm it was
     // UNKNOWN_ERROR, and the person was told "an unexpected error occurred".
     it('reads a fetch that never got an answer as a network error', () => {
-      const result = errorService.parseApolloError(
+      const result = errorService.classifyError(
         new NetworkRequestError('Network request failed'),
-        { logError: false },
       );
 
       expect(result.error?.code).toBe('NETWORK_ERROR');
@@ -271,9 +245,7 @@ describe('errorService', () => {
         'Page limit message',
       );
 
-      const result = errorService.parseApolloError(error, {
-        operation: 'FetchItems',
-      });
+      const result = errorService.classifyError(error);
 
       expect(result.success).toBe(false);
       expect(result.error?.code).toBe('PAGINATION_LIMIT_EXCEEDED');
@@ -287,7 +259,7 @@ describe('errorService', () => {
         'Version conflict occurred',
       );
 
-      const result = errorService.parseApolloError(error);
+      const result = errorService.classifyError(error);
 
       expect(result.error?.code).toBe('VERSION_CONFLICT');
     });
@@ -305,7 +277,7 @@ describe('errorService', () => {
       (isVersionConflictError as jest.Mock).mockReturnValue(false);
       mockCombinedGraphQLErrorsIs.mockReturnValue(true);
 
-      const result = errorService.parseApolloError(error);
+      const result = errorService.classifyError(error);
 
       expect(result.error?.code).toBe('FORBIDDEN');
       // Authorization, not authentication — this must not be reported as an
@@ -329,7 +301,7 @@ describe('errorService', () => {
       (isVersionConflictError as jest.Mock).mockReturnValue(false);
       mockCombinedGraphQLErrorsIs.mockReturnValue(true);
 
-      const result = errorService.parseApolloError(error);
+      const result = errorService.classifyError(error);
 
       expect(result.error?.code).toBe('VALIDATION_FAILED');
       expect(result.error?.validationErrors).toEqual({
@@ -345,7 +317,7 @@ describe('errorService', () => {
       (isVersionConflictError as jest.Mock).mockReturnValue(false);
       mockCombinedGraphQLErrorsIs.mockReturnValue(true);
 
-      const result = errorService.parseApolloError(error);
+      const result = errorService.classifyError(error);
 
       expect(result.error?.code).toBe('GRAPHQL_ERROR');
     });
@@ -367,7 +339,7 @@ describe('errorService', () => {
         mockCombinedGraphQLErrorsIs.mockReturnValue(false);
         mockServerErrorIs.mockReturnValue(true);
 
-        const result = errorService.parseApolloError(error);
+        const result = errorService.classifyError(error);
 
         expect(result.error?.code).toBe(expectedCode);
       },
@@ -380,7 +352,7 @@ describe('errorService', () => {
       mockCombinedGraphQLErrorsIs.mockReturnValue(false);
       mockServerErrorIs.mockReturnValue(true);
 
-      const result = errorService.parseApolloError(error);
+      const result = errorService.classifyError(error);
 
       expect(result.error?.code).toBe('SERVICE_UNAVAILABLE');
     });
@@ -393,7 +365,7 @@ describe('errorService', () => {
       mockServerErrorIs.mockReturnValue(false);
       mockServerParseErrorIs.mockReturnValue(true);
 
-      const result = errorService.parseApolloError(error);
+      const result = errorService.classifyError(error);
 
       expect(result.error?.code).toBe('SERVICE_UNAVAILABLE');
       expect(result.error?.message).toBe(
@@ -410,7 +382,7 @@ describe('errorService', () => {
       mockServerParseErrorIs.mockReturnValue(false);
       mockCombinedProtocolErrorsIs.mockReturnValue(true);
 
-      const result = errorService.parseApolloError(error);
+      const result = errorService.classifyError(error);
 
       expect(result.error?.code).toBe('NETWORK_ERROR');
     });
@@ -424,7 +396,7 @@ describe('errorService', () => {
       mockServerParseErrorIs.mockReturnValue(false);
       mockCombinedProtocolErrorsIs.mockReturnValue(false);
 
-      const result = errorService.parseApolloError(error);
+      const result = errorService.classifyError(error);
 
       expect(result.error?.code).toBe('UNKNOWN_ERROR');
       // The thrown text is a diagnostic; the user reads localized copy.
@@ -439,7 +411,7 @@ describe('errorService', () => {
       mockServerParseErrorIs.mockReturnValue(false);
       mockCombinedProtocolErrorsIs.mockReturnValue(false);
 
-      const result = errorService.parseApolloError('a string error');
+      const result = errorService.classifyError('a string error');
 
       expect(result.error?.code).toBe('UNKNOWN_ERROR');
       expect(result.error?.message).toBe('An unexpected error occurred');
@@ -454,15 +426,16 @@ describe('errorService', () => {
       mockServerParseErrorIs.mockReturnValue(false);
       mockCombinedProtocolErrorsIs.mockReturnValue(false);
 
-      const result = errorService.parseApolloError(error, {
+      const result = errorService.classifyError(error, {
         customMessage: 'Custom user message',
       });
 
       expect(result.error?.message).toBe('Custom user message');
     });
 
-    it('suppresses logger.error when logError is false', () => {
-      const error = new Error('silent');
+    // Classifying is how a caller decides; recording is reportError's, once.
+    it('records nothing while classifying', () => {
+      const error = new Error('quiet');
       (isQueryComplexityError as jest.Mock).mockReturnValue(false);
       (isVersionConflictError as jest.Mock).mockReturnValue(false);
       mockCombinedGraphQLErrorsIs.mockReturnValue(false);
@@ -470,79 +443,12 @@ describe('errorService', () => {
       mockServerParseErrorIs.mockReturnValue(false);
       mockCombinedProtocolErrorsIs.mockReturnValue(false);
 
-      errorService.parseApolloError(error, { logError: false });
+      errorService.classifyError(error);
 
       expect(logger.error).not.toHaveBeenCalled();
-    });
-
-    it('calls logger.error by default', () => {
-      const error = new Error('loud');
-      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
-      (isVersionConflictError as jest.Mock).mockReturnValue(false);
-      mockCombinedGraphQLErrorsIs.mockReturnValue(false);
-      mockServerErrorIs.mockReturnValue(false);
-      mockServerParseErrorIs.mockReturnValue(false);
-      mockCombinedProtocolErrorsIs.mockReturnValue(false);
-
-      errorService.parseApolloError(error);
-
-      expect(logger.error).toHaveBeenCalledWith(
-        'Error in Unknown:',
-        expect.objectContaining({ code: 'UNKNOWN_ERROR' }),
-      );
-    });
-
-    it('reports to Telemetry.trackError and Telemetry.increment', () => {
-      const error = new Error('telemetry test');
-      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
-      (isVersionConflictError as jest.Mock).mockReturnValue(false);
-      mockCombinedGraphQLErrorsIs.mockReturnValue(false);
-      mockServerErrorIs.mockReturnValue(false);
-      mockServerParseErrorIs.mockReturnValue(false);
-      mockCombinedProtocolErrorsIs.mockReturnValue(false);
-
-      errorService.parseApolloError(error, { operation: 'TelemetryOp' });
-
-      expect(Telemetry.trackError).toHaveBeenCalledWith(
-        'telemetry test',
-        expect.objectContaining({
-          component: 'Unknown',
-          code: 'UNKNOWN_ERROR',
-          operation: 'TelemetryOp',
-        }),
-      );
-    });
-
-    it('reports expected user errors to Telemetry.warn, not trackError', () => {
-      const error = {
-        errors: [
-          {
-            message: 'User already exists with this email',
-            extensions: { code: 'EMAIL_ALREADY_EXISTS' },
-          },
-        ],
-      };
-      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
-      (isVersionConflictError as jest.Mock).mockReturnValue(false);
-      mockCombinedGraphQLErrorsIs.mockReturnValue(true);
-
-      const register = operationNameOf(RegisterDocument);
-      errorService.parseApolloError(error, { operation: register });
-
-      expect(Telemetry.warn).toHaveBeenCalledWith(
-        `Validation: EMAIL_ALREADY_EXISTS in ${register}`,
-        expect.objectContaining({
-          component: 'Email',
-          code: 'EMAIL_ALREADY_EXISTS',
-          operation: register,
-        }),
-      );
+      expect(logger.warn).not.toHaveBeenCalled();
       expect(Telemetry.trackError).not.toHaveBeenCalled();
-      expect(logger.warn).toHaveBeenCalledWith(
-        `Validation error in ${register}:`,
-        expect.objectContaining({ code: 'EMAIL_ALREADY_EXISTS' }),
-      );
-      expect(logger.error).not.toHaveBeenCalled();
+      expect(Telemetry.warn).not.toHaveBeenCalled();
     });
 
     it('returns ERROR_HANDLER_FAILED when internal parsing throws', () => {
@@ -551,13 +457,12 @@ describe('errorService', () => {
         throw new Error('Internal failure');
       });
 
-      const result = errorService.parseApolloError(new Error('anything'));
+      const result = errorService.classifyError(new Error('anything'));
 
       expect(result.error?.code).toBe('ERROR_HANDLER_FAILED');
       expect(result.error?.message).toBe(
         'Something went wrong. Please try again.',
       );
-      expect(result.error?.shouldRetry).toBe(false);
       expect(result.error?.isAuthError).toBe(false);
     });
   });
@@ -574,107 +479,16 @@ describe('errorService', () => {
       mockServerParseErrorIs.mockReturnValue(false);
       mockCombinedProtocolErrorsIs.mockReturnValue(false);
 
-      const result = errorService.handleApolloError(new Error('flat error'), {
-        operation: 'FlatOp',
-      });
+      const result = errorService.handleApolloError(new Error('flat error'));
 
       expect(result.code).toBe('UNKNOWN_ERROR');
       expect(result.message).toBe('An unexpected error occurred');
-      expect(result.category).toBe('Unknown');
-      expect(result.shouldRetry).toBe(false);
       expect(result.isAuthError).toBe(false);
     });
   });
 
   // -----------------------------------------------------------------------
   // handleMutation
-  // -----------------------------------------------------------------------
-  describe('handleMutation', () => {
-    it('returns success result when mutation succeeds', async () => {
-      const result = await errorService.handleMutation(
-        async () => ({ id: '1', name: 'Test' }),
-        { operation: operationNameOf(CreateItemDocument) },
-      );
-
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual({ id: '1', name: 'Test' });
-      expect(result.error).toBeUndefined();
-    });
-
-    it('returns error result when mutation throws', async () => {
-      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
-      (isVersionConflictError as jest.Mock).mockReturnValue(false);
-      mockCombinedGraphQLErrorsIs.mockReturnValue(false);
-      mockServerErrorIs.mockReturnValue(false);
-      mockServerParseErrorIs.mockReturnValue(false);
-      mockCombinedProtocolErrorsIs.mockReturnValue(false);
-
-      const result = await errorService.handleMutation(
-        async () => {
-          throw new Error('Mutation failed');
-        },
-        { operation: operationNameOf(UpdateItemDocument) },
-      );
-
-      expect(result.success).toBe(false);
-      expect(result.error?.code).toBe('UNKNOWN_ERROR');
-      expect(result.error?.message).toBe('An unexpected error occurred');
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // handleMutationWithVersionConflict
-  // -----------------------------------------------------------------------
-  describe('handleMutationWithVersionConflict', () => {
-    it('returns success result when mutation succeeds', async () => {
-      const result = await errorService.handleMutationWithVersionConflict(
-        async () => ({ id: '1' }),
-      );
-
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual({ id: '1' });
-      expect(result.isVersionConflict).toBeUndefined();
-    });
-
-    it('sets isVersionConflict to true for version conflict errors', async () => {
-      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
-      (isVersionConflictError as jest.Mock).mockReturnValue(true);
-      (getVersionConflictMessage as jest.Mock).mockReturnValue(
-        'Version conflict',
-      );
-
-      const result = await errorService.handleMutationWithVersionConflict(
-        async () => {
-          throw new Error('conflict');
-        },
-      );
-
-      expect(result.success).toBe(false);
-      expect(result.isVersionConflict).toBe(true);
-      expect(result.error?.code).toBe('VERSION_CONFLICT');
-    });
-
-    it('sets isVersionConflict to false for non-conflict errors', async () => {
-      (isQueryComplexityError as jest.Mock).mockReturnValue(false);
-      (isVersionConflictError as jest.Mock).mockReturnValue(false);
-      mockCombinedGraphQLErrorsIs.mockReturnValue(false);
-      mockServerErrorIs.mockReturnValue(false);
-      mockServerParseErrorIs.mockReturnValue(false);
-      mockCombinedProtocolErrorsIs.mockReturnValue(false);
-
-      const result = await errorService.handleMutationWithVersionConflict(
-        async () => {
-          throw new Error('other error');
-        },
-      );
-
-      expect(result.success).toBe(false);
-      expect(result.isVersionConflict).toBe(false);
-    });
-  });
-
-  // -----------------------------------------------------------------------
-  // useErrorService
   // -----------------------------------------------------------------------
 });
 

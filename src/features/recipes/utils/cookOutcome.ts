@@ -1,5 +1,5 @@
-import type { IngredientUsageInput } from '#/graphql/generated/schemaTypes';
-import type { UnitLabelSource } from '#/utils/formatQuantity';
+import type { IngredientUsageInput } from '#graphql/generated/schemaTypes';
+import type { UnitLabelSource } from '#utils/formatQuantity';
 
 /** One entry a reviewed cook sends, under the stack it draws on. */
 export interface CookDraw {

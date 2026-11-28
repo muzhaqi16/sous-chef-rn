@@ -19,8 +19,8 @@ import {
   MembershipRole,
   MembershipStatus,
   type CreateHomeInput,
-} from '#/graphql/generated/schemaTypes';
-import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+} from '#graphql/generated/schemaTypes';
+import { writeLocalEntity } from '#apollo/utils/writeLocalEntity';
 
 /** The signed-in user, as the membership and its `user` record name them. */
 export type HomeCreator = {

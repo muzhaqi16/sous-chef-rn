@@ -18,8 +18,8 @@ jest.mock(
 );
 
 import React from 'react';
-import { toastService } from '#/services/toastService';
-import { t } from '#/i18n';
+import { toastService } from '#services/toastService';
+import { t } from '#i18n';
 
 // RN's `useWindowDimensions` export is a getter over this module.
 const mockWindow = { width: 411, height: 915, scale: 2, fontScale: 1 };
@@ -47,7 +47,7 @@ import type { TabAppearance } from '#features/types';
 import { useStore } from '#store';
 import { TAB_BAR_HEIGHT, getTabBarBottomOffset } from '#constants/layout';
 import { withTiming } from 'react-native-reanimated';
-import { SHEET } from '#/constants/animations';
+import { SHEET } from '#constants/animations';
 import { HapticService } from '#services/haptic/HapticService';
 import { kitTestIDs } from '#components/testIDs';
 import {

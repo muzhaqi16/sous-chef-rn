@@ -1,4 +1,8 @@
-import { LOCAL_WRITES } from '#/apollo/pendingWrites/localWriteRegistry';
+import type { OperationVariables } from '@apollo/client';
+import { LOCAL_WRITES } from '#apollo/pendingWrites/localWriteRegistry';
+import type { LocalWriteBinding } from '#apollo/pendingWrites/types';
+import type { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { addItemToShoppingListWrite } from '#features/shoppingList/offline/localWrites';
 import {
   authoredMutations,
   localFirstOperationNames,
@@ -34,5 +38,46 @@ describe('local-first operations', () => {
     );
 
     expect(stale).toEqual([]);
+  });
+});
+
+/** The inputs a binding's `send` takes, read from the send itself. */
+type SendInputsOf<B> = B extends LocalWriteBinding<
+  infer TData,
+  infer TVariables extends OperationVariables,
+  infer TInputs
+>
+  ? Parameters<
+      ReturnType<typeof useLocalWrite<TData, TVariables, TInputs>>['send']
+    >[1]
+  : never;
+
+type AddRowsSendInputs = SendInputsOf<typeof addItemToShoppingListWrite>;
+
+// Each fails typecheck, not this test, the day the send stops checking inputs.
+const refusesAMistypedInput: {
+  listId: number;
+  rows: [];
+  now: string;
+} extends AddRowsSendInputs
+  ? false
+  : true = true;
+const refusesAMissingInput: undefined extends AddRowsSendInputs ? false : true =
+  true;
+const takesTheWritesInputs: {
+  listId: string;
+  rows: [];
+  now: string;
+} extends AddRowsSendInputs
+  ? true
+  : false = true;
+
+describe('a local write is sent through its binding', () => {
+  it('checks the inputs against the bound write', () => {
+    expect([
+      refusesAMistypedInput,
+      refusesAMissingInput,
+      takesTheWritesInputs,
+    ]).toEqual([true, true, true]);
   });
 });

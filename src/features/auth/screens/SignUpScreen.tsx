@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 
 import { AuthFormTemplate } from '#features/auth/components/AuthFormTemplate';
 import { AuthWrapper } from '#features/auth/components/AuthWrapper';
@@ -10,10 +10,10 @@ import { CodeVerificationScreen } from '#features/auth/screens/CodeVerificationS
 import { EmailInput } from '#components/molecules/EmailInput';
 import { PasswordInput } from '#components/molecules/PasswordInput';
 import { NameInput } from '#components/molecules/NameInput';
-import { signUpSchema } from '#/utils/validation/auth';
-import { reportValidationErrors } from '#/utils/validation/common';
-import type { RegisterInput } from '#/graphql/generated/schemaTypes';
-import { authService } from '#/services/authService';
+import { signUpSchema } from '#utils/validation/auth';
+import { reportValidationErrors } from '#utils/validation/common';
+import type { RegisterInput } from '#graphql/generated/schemaTypes';
+import { authService } from '#services/authService';
 import { useAppStore } from '#store/useAppStore';
 import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
 import { authTestIDs } from '#features/auth/testIDs';

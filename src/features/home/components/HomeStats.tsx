@@ -1,12 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { Icon, type IconName } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { Card } from '#components/atoms/Card';
 
 interface HomeStatsProps {
@@ -60,7 +60,7 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
         >
           <Card padding="none" style={styles.statCard}>
             <View style={styles.iconBadge}>
-              <Icon name={stat.icon} size={18} tone="primary" />
+              <Icon name={stat.icon} size="xsPlus" tone="primary" />
             </View>
             <Text role="title" tone="accent">
               {stat.value}

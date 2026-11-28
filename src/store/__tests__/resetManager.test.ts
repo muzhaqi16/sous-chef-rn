@@ -8,13 +8,13 @@ jest.mock('#native/storage/keychain', () => ({
 }));
 
 // Mock apollo client module
-jest.mock('#/apollo/client', () => ({
+jest.mock('#apollo/client', () => ({
   client: {
     clearStore: jest.fn(() => Promise.resolve()),
   },
 }));
 
-jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
+jest.mock('#apollo/offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: {
     clear: jest.fn(),
   },
@@ -36,7 +36,7 @@ import {
   registerApolloResetBridge,
 } from '../apolloResetBridge';
 import type { RootState } from '#store/index';
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 import { clearCredentials } from '#native/storage/keychain';
 import { requirePlatform } from '#platform/install';
 
@@ -44,14 +44,14 @@ const clearSessionTokens = jest.spyOn(
   requirePlatform('secureStore'),
   'clearSessionTokens',
 );
-import { cancelTokenRefresh } from '#/apollo/links/tokenScheduler';
+import { cancelTokenRefresh } from '#apollo/links/tokenScheduler';
 import {
   registerSessionTeardown,
   clearSessionTeardown,
 } from '../sessionTeardown';
 import { isSessionEnding } from '../sessionEnding';
-import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
-import { logger } from '#/utils/environment';
+import { apolloCachePersistence } from '#apollo/offline/ApolloCachePersistence';
+import { logger } from '#utils/environment';
 
 type SetCall = [Partial<RootState>];
 

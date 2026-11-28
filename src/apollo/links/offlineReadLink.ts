@@ -6,9 +6,9 @@ import {
   isApiUnavailable,
   shouldTreatAsOffline,
 } from '#store/slices/networkSlice';
-import { logger } from '#/utils/environment';
-import { Telemetry } from '#/services/telemetry';
-import { t } from '#/i18n';
+import { logger } from '#utils/environment';
+import { Telemetry } from '#services/telemetry';
+import { t } from '#i18n';
 import { HELD_BY_LAYER } from '../utils/heldByLayer';
 
 /**

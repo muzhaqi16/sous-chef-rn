@@ -1,21 +1,21 @@
-import { alertService } from '#/services/alertService';
-import { errorService } from '#/services/errorService';
-import { t } from '#/i18n';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { alertService } from '#services/alertService';
+import { errorService } from '#services/errorService';
+import { t } from '#i18n';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import {
   formatAmountWithUnit,
   isUnchangedQuantity,
   unitLabel,
-} from '#/utils/formatQuantity';
-import { formatNumberForInput } from '#/utils/formatters/number';
-import type { StorageType } from '#/graphql/generated/schemaTypes';
+} from '#utils/formatQuantity';
+import { formatNumberForInput } from '#utils/formatters/number';
+import type { StorageType } from '#graphql/generated/schemaTypes';
 import type { FieldNamesMarkedBoolean } from 'react-hook-form';
 import type {
   DirtyFieldFlags,
   UnitSelection,
 } from '#features/pantry/hooks/mutations/types';
-import { isOwnKey } from '#/utils/isOwnKey';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { isOwnKey } from '#utils/isOwnKey';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 import type { PantryItemFormData } from './PantryItemForm';
 import { editedAmount } from './editedAmount';
@@ -168,12 +168,6 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
       const hasFieldChanges = Object.entries(dirtyFieldsRecord).some(
         ([field, dirty]) => field !== 'quantityInput' && dirty,
       );
-
-      // Only a quantity being sent is judged: an empty stack stays editable.
-      if (quantityChanged && (!typedQuantity || typedQuantity <= 0)) {
-        alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
-        return;
-      }
 
       if (unitChanged) {
         // The net weight is one package when a measure becomes a count.

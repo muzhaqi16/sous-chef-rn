@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { useStore } from '#store';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { kitTestIDs } from '#components/testIDs';
 import { Screen } from '#components/templates/Screen';
@@ -10,14 +10,14 @@ import {
   TabBarActionsProvider,
   useTabBarSetters,
   type TabBarAddAction,
-} from '#/context/TabBarActionsContext';
-import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
+} from '#context/TabBarActionsContext';
+import { NativePerformanceService } from '#services/performance/NativePerformanceService';
 import * as tabBarAddMenu from '#hooks/navigation/useTabBarAddMenu';
 import * as tutorialSequence from '#hooks/ui/useTutorialSequence';
 import { tutorialSession } from '#hooks/ui/tutorialSession';
 import { GUIDE_TOURS } from '#domain/guides';
 import type { PendingTabAdd } from '#store/slices/uiSlice';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { MealType } from '#graphql/generated/schemaTypes';
 import {
   recordMock,
   renderWithApollo,
@@ -29,7 +29,7 @@ import {
   homesData,
   type HomeFixture,
 } from '#/test-utils/fixtures/homeFixtures';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import {

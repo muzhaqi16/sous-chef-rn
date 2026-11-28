@@ -1,15 +1,14 @@
 import React from 'react';
-import { useTranslation, type TranslationKey } from '#/i18n';
-import { AppPressable } from '#components/atoms/AppPressable';
+import { IconButton } from '#components/atoms/IconButton';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CreateItemFormData } from '#features/catalog/utils/itemValidation';
 import {
   StorageState,
   ItemType,
   BaseDimension,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { FormInput } from '#components/atoms/FormInput';
-import { Icon } from '#components/atoms/Icon';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { FormNumberInput } from '#features/catalog/components/FormNumberInput';
 import { FormSelect } from '#components/molecules/FormSelect';
@@ -19,8 +18,7 @@ import { catalogTestIDs } from '#features/catalog/testIDs';
 // Type-only, so this does not create a runtime cycle with AddItemForm (which
 // imports the field builders below).
 import type { AddItemFormMode } from './AddItemForm';
-import type { Translate } from '#/i18n/types';
-import { hitSlop } from '#/theme/foundations/sizes';
+import type { Translate } from '#i18n/types';
 
 /** `edit` proposes changes for review; `directEdit` writes them through. Both
  *  render the same form, so most field logic branches on this rather than mode. */
@@ -72,15 +70,15 @@ export const ScanUpcButton: React.FC<{ onPress: () => void }> = ({
   const { t } = useTranslation();
 
   return (
-    <AppPressable
+    <IconButton
+      name="barcode-outline"
+      size="md"
+      tone="primary"
       onPress={onPress}
-      hitSlop={hitSlop.md}
-      accessibilityRole="button"
       accessibilityLabel={t('addItemForm.scanUpcA11y')}
+      accessibilityRole="button"
       style={scanButtonStyles.button}
-    >
-      <Icon name="barcode-outline" size={22} tone="primary" />
-    </AppPressable>
+    />
   );
 };
 

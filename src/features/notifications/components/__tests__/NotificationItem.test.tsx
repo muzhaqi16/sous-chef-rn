@@ -6,7 +6,7 @@ import {
   NotificationStatus,
   NotificationType,
   Priority,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   toDisplayNotification,
   type DisplayNotification as NotificationItemData,

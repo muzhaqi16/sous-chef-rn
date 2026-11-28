@@ -78,7 +78,6 @@ describe('High Contrast with the default brand', () => {
       if (!c) return [`${name}: not built`];
       const pairs: [string, string, string][] = [
         ['onPrimary on primary', c.onPrimary, c.primary],
-        ['active filter tab', c.filterTab.activeText, c.filterTab.activeBg],
         ...pageGrounds(c).map((ground): [string, string, string] => [
           'primaryText on page',
           c.primaryText,
@@ -87,14 +86,11 @@ describe('High Contrast with the default brand', () => {
       ];
       // The dark tints are translucent; `toneContrast.test.ts` holds them painted.
       if (name === 'light') {
-        pairs.push(
-          ['onPrimaryLight on its tint', c.onPrimaryLight, c.primaryLight],
-          [
-            'filtered filter tab',
-            c.filterTab.filteredText,
-            c.filterTab.filteredBg,
-          ],
-        );
+        pairs.push([
+          'onPrimaryLight on its tint',
+          c.onPrimaryLight,
+          c.primaryLight,
+        ]);
       }
       return pairs
         .filter(([, fg, bg]) => chroma.contrast(fg, bg) < AA_BODY)

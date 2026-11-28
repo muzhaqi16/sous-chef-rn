@@ -3,10 +3,10 @@ import {
   ResetPasswordDocument,
   ValidatePasswordResetTokenDocument,
 } from '#operations/auth/auth.generated';
-import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { useTranslation } from '#/i18n';
+import { PasswordActionStatus } from '#graphql/generated/schemaTypes';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { useTranslation } from '#i18n';
 
 /**
  * What the reset did. `linkRejected`: the token is spent or bad, which the

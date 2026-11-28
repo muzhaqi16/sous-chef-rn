@@ -4,26 +4,25 @@
  * (write-time invariant).
  */
 
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import {
-  UpdateShoppingListItemDocument,
   GetShoppingListItemsFilteredDocument,
   type GetShoppingListItemsFilteredQuery,
   type GetShoppingListItemsFilteredQueryVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
-import { errorService } from '#/services/errorService';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
+import type { UpdateRowInputs } from '#entities/shoppingList/localWrites';
+import { errorService } from '#services/errorService';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
 import {
   UseToggleShoppingItem_ItemFragmentDoc,
   type UseToggleShoppingItem_ItemFragment,
 } from './useToggleShoppingItem.generated';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
-import type { PurchasedItemInput } from '#/graphql/generated/schemaTypes';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { SHOPPING_ITEMS_PAGE_SIZE } from '#features/shoppingList/hooks/shoppingItemsPage';
+import type { PurchasedItemInput } from '#graphql/generated/schemaTypes';
+import { updateShoppingListItemWrite } from '#features/shoppingList/offline/localWrites';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;
@@ -40,8 +39,8 @@ export function useToggleShoppingItem({
   // An API unreachable while "online" queues for replay rather than raising a
   // blocking error. The server does not hold an update carrying only
   // `purchaseTracking` to its `version`, so a tick replays over a reorder.
-  const [updatePurchaseMutation] = useMutation(UpdateShoppingListItemDocument, {
-    context: { localFirst: true },
+  const updatePurchase = useLocalWrite(updateShoppingListItemWrite, {
+    fallback: t('errors.updateItemFailed'),
   });
 
   // A tick that cannot be sent says so as a refused one does, so a false
@@ -93,7 +92,7 @@ export function useToggleShoppingItem({
         query: GetShoppingListItemsFilteredDocument,
         variables: {
           id: listId,
-          first: PAGINATION.ITEMS_PAGE_SIZE,
+          first: SHOPPING_ITEMS_PAGE_SIZE,
           isPurchased: previousIsPurchased,
         },
         optimistic: true,
@@ -115,8 +114,7 @@ export function useToggleShoppingItem({
       },
     };
     // A queued toggle keeps the flip; a refused one drops it.
-    const settled = await pendingWritesOf(client.cache).send(
-      UpdateShoppingListItemDocument,
+    const settled = await updatePurchase.send(
       {
         input: {
           id: itemId,
@@ -128,19 +126,13 @@ export function useToggleShoppingItem({
           },
         },
       },
-      write =>
-        settleMutation(
-          () =>
-            updatePurchaseMutation({
-              ...write,
-              onCompleted: recoverDepletedTab,
-            }),
-          {
-            document: UpdateShoppingListItemDocument,
-            fallback: t('errors.updateItemFailed'),
-          },
-        ),
       inputs,
+      {
+        run: (mutate, write) => {
+          const options = { ...write, onCompleted: recoverDepletedTab };
+          return mutate(options);
+        },
+      },
     );
     if (settled.status === 'failed') return false;
     // Queued is not a failure: the flip stands and replays.
@@ -188,8 +180,7 @@ export function useToggleShoppingItem({
     };
     // The entered amounts ride on the mutation's purchaseTracking; the detail
     // screen's cache-and-network query reflects the server's recorded values.
-    const settled = await pendingWritesOf(client.cache).send(
-      UpdateShoppingListItemDocument,
+    const settled = await updatePurchase.send(
       {
         input: {
           id: itemId,
@@ -204,11 +195,6 @@ export function useToggleShoppingItem({
           },
         },
       },
-      write =>
-        settleMutation(() => updatePurchaseMutation(write), {
-          document: UpdateShoppingListItemDocument,
-          fallback: t('errors.updateItemFailed'),
-        }),
       inputs,
     );
     return settled.status !== 'failed';

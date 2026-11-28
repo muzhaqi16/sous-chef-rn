@@ -14,14 +14,14 @@ import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { LogoutCleanup } from './logoutCleanup';
 import { isLiveChannelOpen, onWebSocketReconnected } from './links/wsLink';
 import { Telemetry } from '#services/telemetry';
-import { getResolvedLanguage, onLanguageChanged } from '#/i18n';
+import { getResolvedLanguage, onLanguageChanged } from '#i18n';
 import {
   startAnswersForSwitch,
   wasAnsweredSinceSwitch,
   wasAnsweredWholeSinceSwitch,
 } from './answeredSinceSwitch';
 import { fragmentsCarried, fragmentsNeeded } from './fragmentsOnEntities';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { RESYNC_SCOPE } from './scopedClient';
 
 type RefetchSource = keyof RefetchEvents;
@@ -133,7 +133,7 @@ const languageChanged = (client: ApolloClient) => () =>
 // changes what every screen of it shows, as a resync does.
 let householdLeft = (): void => {};
 
-/** The caller left a home or was removed from one: resync what the app shows. */
+/** The caller left, deleted or was removed from a home: resync what the app shows. */
 export const announceHouseholdLeft = (): void => householdLeft();
 
 const householdLeftSource = () =>

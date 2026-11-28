@@ -1,5 +1,5 @@
 import type { ApolloCache } from '@apollo/client';
-import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
+import { safeEvict, type ConnectionData } from '#apollo/utils/cacheUpdaters';
 import {
   Reviews_RatingCountsFragmentDoc,
   Reviews_ReviewRatingFragmentDoc,

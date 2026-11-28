@@ -1,4 +1,4 @@
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { toDisplayItems } from '../recipeDisplayItems';
 import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 

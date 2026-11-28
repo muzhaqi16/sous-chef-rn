@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { Sheet } from '#components/templates/Sheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 
 import { LoadingBranded } from '#components/molecules/Loading';
 import { ErrorState } from '#components/molecules/ErrorState';
@@ -13,13 +11,13 @@ import { SearchResults } from '../components/SearchResults';
 import AddItemForm, {
   type AddItemFormMode,
 } from '#features/catalog/ui/AddItemForm/AddItemForm';
-import type { AddItemFormInitialData } from '#/utils/items/createItemMapping';
+import type { AddItemFormInitialData } from '#domain/items/createItemMapping';
 import { SuggestEditForm } from '../components/SuggestEditForm';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useBottomSheetState } from '#features/barcode/store/barcodeScannerStore';
 import { useSearchResults } from '../hooks/useSearchResults';
 import type { BarcodeSource, ScannedItem } from '#features/barcode/types';
-import type { ScannedPack } from '#utils/items/suggestItemChanges';
+import type { ScannedPack } from '#domain/items/suggestItemChanges';
 import { Screen } from '#components/templates/Screen';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
@@ -79,12 +77,6 @@ export const SearchResultsScreen: React.FC<
 
   const { scannerSheetVisible, hideBottomSheet, showBottomSheet } =
     useBottomSheetState();
-
-  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
-    visible: scannerSheetVisible,
-    onDismiss: hideBottomSheet,
-    snapPoints: ['50%', '65%', '85%'],
-  });
 
   const showPrices = useBudgetAndPricesEnabled();
   const { item, loading, error, addingItem, handleAddItem, handleRetry } =
@@ -212,53 +204,45 @@ export const SearchResultsScreen: React.FC<
     >
       {renderContent()}
 
-      <BottomSheetModal
-        ref={bottomSheetRef}
-        {...modalProps}
-        stackBehavior="push"
-        backgroundStyle={styles.bottomSheetBackground}
-        handleIndicatorStyle={styles.bottomSheetHandle}
+      <Sheet
+        mode="form"
+        // The form shown owns the bar, with its own confirm.
+        headerFromContent
+        visible={scannerSheetVisible}
+        onDismiss={hideBottomSheet}
+        snapPoints={['50%']}
+        // Over the scanner's own screen, which a `switch` would minimize.
+        modalOptions={{ stackBehavior: 'push' }}
+        style={styles.bottomSheetContent}
       >
-        <BottomSheetFormScrollView
-          style={styles.bottomSheetContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          {sheetMode === 'edit' && item ? (
-            <SuggestEditForm
-              key={`edit-${item.id}`}
-              itemId={item.id}
-              barcode={barcode}
-              format={format}
-              scan={scannedPackOf(item)}
-              onClose={hideBottomSheet}
-            />
-          ) : (
-            <AddItemForm
-              key={sheetMode}
-              barcode={barcode}
-              format={format}
-              mode={sheetMode}
-              initialData={formInitialData}
-              onSubmit={handleAddItem}
-              onClose={hideBottomSheet}
-              loading={addingItem}
-            />
-          )}
-        </BottomSheetFormScrollView>
-      </BottomSheetModal>
+        {sheetMode === 'edit' && item ? (
+          <SuggestEditForm
+            key={`edit-${item.id}`}
+            itemId={item.id}
+            barcode={barcode}
+            format={format}
+            scan={scannedPackOf(item)}
+            onClose={hideBottomSheet}
+          />
+        ) : (
+          <AddItemForm
+            key={sheetMode}
+            barcode={barcode}
+            format={format}
+            mode={sheetMode}
+            initialData={formInitialData}
+            onSubmit={handleAddItem}
+            onClose={hideBottomSheet}
+            loading={addingItem}
+          />
+        )}
+      </Sheet>
     </Screen>
   );
 };
 
-const styles = StyleSheet.create(theme => ({
-  bottomSheetBackground: {
-    backgroundColor: theme.colors.surface,
-  },
-  bottomSheetHandle: {
-    backgroundColor: theme.colors.border,
-  },
+const styles = StyleSheet.create({
   bottomSheetContent: {
     flex: 1,
-    paddingHorizontal: theme.spacing.lg,
   },
-}));
+});

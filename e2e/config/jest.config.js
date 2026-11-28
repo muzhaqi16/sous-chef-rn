@@ -1,3 +1,5 @@
+const { jestModuleNameMapper } = require('../../scripts/lib/aliases');
+
 /** @type {import('@jest/types').Config.InitialOptions} */
 module.exports = {
   rootDir: '../..',
@@ -58,12 +60,9 @@ module.exports = {
     ],
   },
 
-  // Module name mapper for path aliases
+  // The app's aliases, from tsconfig's single list.
   moduleNameMapper: {
-    '^#/(.*)$': '<rootDir>/src/$1',
-    '^#generated$': '<rootDir>/src/graphql/generated',
-    '^#hooks/(.*)$': '<rootDir>/src/hooks/$1',
-    '^#components/(.*)$': '<rootDir>/src/components/$1',
+    ...jestModuleNameMapper(),
     '^e2e/(.*)$': '<rootDir>/e2e/$1',
   },
 };

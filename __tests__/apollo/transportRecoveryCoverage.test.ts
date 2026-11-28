@@ -1,5 +1,11 @@
-import { readFileSync, readdirSync, statSync } from 'fs';
-import { join } from 'path';
+import * as ts from 'typescript';
+import {
+  calleeName,
+  lineOf,
+  nodesOf,
+  parseSource,
+  productionSources,
+} from '#/test-utils/sourceAst';
 
 /**
  * Every `useSubscription` call must be paired with
@@ -16,61 +22,73 @@ import { join } from 'path';
  * the failure it guards is the ABSENCE of a call, which no render can observe.
  */
 
-const SRC = join(__dirname, '..', '..', 'src');
+const RECOVERY = 'useSubscriptionTransportRecovery';
 
-/**
- * Strip comments, so a doc comment that merely MENTIONS `useSubscription(` —
- * `services/subscriptions/types.ts` describes the call it feeds — is not
- * mistaken for a call site.
- */
-const stripComments = (source: string): string =>
-  source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-
-const collectSourceFiles = (dir: string, out: string[] = []): string[] => {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      if (entry === '__tests__' || entry === '__mocks__') continue;
-      collectSourceFiles(full, out);
-    } else if (
-      (entry.endsWith('.ts') || entry.endsWith('.tsx')) &&
-      !entry.endsWith('.generated.ts')
-    ) {
-      out.push(full);
-    }
+const enclosingFunction = (node: ts.Node): ts.Node => {
+  let current: ts.Node = node;
+  while (!ts.isFunctionLike(current) && !ts.isSourceFile(current)) {
+    current = current.parent;
   }
-  return out;
+  return current;
 };
 
-describe('subscription transport recovery coverage', () => {
-  const files = collectSourceFiles(SRC).map(path => ({
-    path,
-    source: stripComments(readFileSync(path, 'utf-8')),
-  }));
+const subscriptionsIn = (source: ts.SourceFile) =>
+  nodesOf(source)
+    .filter(ts.isCallExpression)
+    .filter(call => calleeName(call) === 'useSubscription');
 
-  const callSites = files.filter(
-    ({ path, source }) =>
-      // The hook itself documents the pairing; it does not subscribe.
-      !path.endsWith('useSubscriptionTransportRecovery.ts') &&
-      /\buseSubscription\(/.test(source),
+/**
+ * Each subscription with no recovery of its own, as `file:line`: the recovery
+ * names the same document and the subscription's own result.
+ */
+function unrecovered(file: string, text?: string): string[] {
+  return subscriptionsIn(parseSource(file, text))
+    .filter(call => {
+      const holder = call.parent;
+      const [document] = call.arguments;
+      if (!document || !ts.isVariableDeclaration(holder)) return true;
+      const result = holder.name.getText();
+      return !nodesOf(enclosingFunction(holder))
+        .filter(ts.isCallExpression)
+        .some(recovery => {
+          const [doc, value] = recovery.arguments;
+          return (
+            calleeName(recovery) === RECOVERY &&
+            doc?.getText() === document.getText() &&
+            value?.getText() === result
+          );
+        });
+    })
+    .map(call => `${file}:${lineOf(call)}`);
+}
+
+describe('subscription transport recovery coverage', () => {
+  it('catches a subscription whose recovery was written for another', () => {
+    const planted = `
+      function useEvents() {
+        const homeEvents = useSubscription(HomeEventsDocument, options);
+        const listEvents = useSubscription(ListEventsDocument, options);
+        useSubscriptionTransportRecovery(HomeEventsDocument, homeEvents, skip);
+        useSubscriptionTransportRecovery(HomeEventsDocument, homeEvents, skip);
+      }`;
+
+    expect(unrecovered('planted.ts', planted)).toEqual(['planted.ts:4']);
+  });
+
+  const files = productionSources().filter(
+    // The hook itself documents the pairing; it does not subscribe.
+    file => !file.endsWith(`${RECOVERY}.ts`),
   );
 
   it('finds the subscription call sites it is meant to be guarding', () => {
     // A rename or a move that made the scan match nothing would otherwise let
     // this test pass by checking an empty list.
-    expect(callSites.length).toBeGreaterThanOrEqual(6);
+    expect(
+      files.flatMap(file => subscriptionsIn(parseSource(file))).length,
+    ).toBeGreaterThanOrEqual(6);
   });
 
-  it.each(callSites.map(({ path }) => path))(
-    '%s pairs every useSubscription with transport recovery',
-    path => {
-      const source = files.find(f => f.path === path)!.source;
-
-      const subscriptions = source.match(/\buseSubscription\(/g)?.length ?? 0;
-      const recoveries =
-        source.match(/\buseSubscriptionTransportRecovery\(/g)?.length ?? 0;
-
-      expect(recoveries).toBe(subscriptions);
-    },
-  );
+  it('pairs every useSubscription with its own transport recovery', () => {
+    expect(files.flatMap(file => unrecovered(file))).toEqual([]);
+  });
 });

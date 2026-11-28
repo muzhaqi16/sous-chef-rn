@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { retryCooldownMs } from '#/utils/backoff';
+import { retryCooldownMs } from '#utils/backoff';
 
 export interface ResendBackoff {
   /** Seconds left before another attempt is allowed; 0 when one is. */

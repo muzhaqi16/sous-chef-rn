@@ -1,17 +1,18 @@
 import type { ApolloCache, ApolloClient } from '@apollo/client';
-import { requireApolloClient } from '#/apollo/clientRegistry';
-import { queueManager } from '#/apollo/offlineQueue/queueManager';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { requireApolloClient } from '#apollo/clientRegistry';
+import { queueManager } from '#apollo/offlineQueue/queueManager';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
 import {
   SyncPageStatus,
   SyncPokeKind,
   type SyncScopeKind,
-} from '#/graphql/generated/schemaTypes';
-import { getDeviceId } from '#/services/auth/deviceId';
-import { Telemetry } from '#/services/telemetry';
-import { registerSessionTeardown } from '#/store/sessionTeardown';
-import { getRateLimitDetails } from '#/utils/errors/rateLimit';
-import { logger } from '#/utils/environment';
+} from '#graphql/generated/schemaTypes';
+import { getDeviceId } from '#services/auth/deviceId';
+import { Telemetry } from '#services/telemetry';
+import { registerSessionTeardown } from '#store/sessionTeardown';
+import { getRateLimitDetails } from '#utils/errors/rateLimit';
+import { logger } from '#utils/environment';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import type { FeedPokesSubscription } from './feed.generated';
@@ -149,7 +150,7 @@ export class FeedEngine {
       const owner = this.adapterFor(kind);
       return owner &&
         (!adapter || owner === adapter) &&
-        !owner.holdsUnacknowledgedCreate(id)
+        !queueStore.holdsCreateFor(id)
         ? [id]
         : [];
     });
@@ -264,7 +265,7 @@ export class FeedEngine {
       return (
         !reached.has(id) &&
         adapter !== undefined &&
-        !adapter.holdsUnacknowledgedCreate(id)
+        !queueStore.holdsCreateFor(id)
       );
     });
     if (gone.length === 0) return;
@@ -298,7 +299,7 @@ export class FeedEngine {
         .filter(([, kind]) => this.adapterFor(kind) === adapter)
         .map(([id]) => id)
         .filter(id => {
-          const waits = adapter.holdsUnacknowledgedCreate(id);
+          const waits = queueStore.holdsCreateFor(id);
           // Queue-drained catches it up once the create is answered.
           if (waits) this.owed.delete(id);
           return !waits;

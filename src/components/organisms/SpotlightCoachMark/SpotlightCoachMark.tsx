@@ -1,8 +1,10 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
+  Modal,
   View,
   useWindowDimensions,
   type LayoutChangeEvent,
+  type ViewInstance,
 } from 'react-native';
 import {
   useSharedValue,
@@ -20,7 +22,7 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
-import { Pressable, Modal } from '#components/atoms/themedComponents';
+import { Pressable } from '#components/atoms/themedComponents';
 import {
   Canvas,
   Group,
@@ -43,7 +45,7 @@ import {
 import { SpotlightTooltip } from './SpotlightTooltip';
 import { GestureDemo } from './GestureDemo';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 
 export interface TargetRect {
@@ -131,7 +133,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   // In passthrough mode the overlay is a View inside the screen container,
   // not a full-screen Modal: page coordinates from measure() are converted to
   // the overlay's by its own page frame.
-  const overlayRef = useRef<View>(null);
+  const overlayRef = useRef<ViewInstance>(null);
   const windowFrame = {
     x: 0,
     y: 0,
@@ -333,7 +335,6 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   const swipeGesture = usePanGesture({
     activeOffsetX: [-20, 20],
     onDeactivate: event => {
-      'worklet';
       if (event.translationX < -SWIPE_THRESHOLD) {
         scheduleOnRN(handleSwipeAdvance);
       }
@@ -485,14 +486,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   }
 
   return (
-    <Modal
-      visible
-      transparent
-      animationType="none"
-      statusBarTranslucent
-      navigationBarTranslucent
-      onRequestClose={onClose}
-    >
+    <Modal visible transparent animationType="none" onRequestClose={onClose}>
       <GestureHandlerRootView style={styles.fullScreen}>
         {overlay}
       </GestureHandlerRootView>

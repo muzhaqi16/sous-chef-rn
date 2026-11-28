@@ -1,6 +1,6 @@
 import { act } from '@testing-library/react-native';
-import { makeCache } from '#/apollo/cache';
-import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { makeCache } from '#apollo/cache';
+import { unconfirmedCreates } from '#apollo/offline/unconfirmedCreates';
 import {
   type MockDataFor,
   recordMock,
@@ -14,14 +14,14 @@ import {
   type PantryItemFixture,
 } from '#/test-utils/fixtures/pantryFixtures';
 import { cacheShows } from '#/test-utils/cacheWaits';
-import { t } from '#/i18n';
-import { todayKey } from '#/utils/dateUtils';
+import { t } from '#i18n';
+import { todayKey } from '#utils/dateUtils';
 import {
   AcquisitionMethod,
   ErrorCode,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+} from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import {
   CreatePantryItemDocument,
   GetPantryDocument,

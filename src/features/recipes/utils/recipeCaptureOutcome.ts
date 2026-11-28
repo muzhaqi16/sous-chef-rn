@@ -4,10 +4,10 @@ import {
   RecipeCaptureStatus,
   RecipeCaptureWarningCode,
   type CreateRecipeCaptureInput,
-} from '#/graphql/generated/schemaTypes';
-import type { TranslationKey } from '#/i18n';
+} from '#graphql/generated/schemaTypes';
+import type { TranslationKey } from '#i18n';
 import { dailyAllowanceWait, isVerdict } from '#domain/serverJobRefusals';
-import type { RecipeCaptureReadersFragment } from '#/graphql/readers/recipeCaptureReaders.generated';
+import type { RecipeCaptureReadersFragment } from '#graphql/readers/recipeCaptureReaders.generated';
 
 type Capture = Pick<
   RecipeCaptureReadersFragment,

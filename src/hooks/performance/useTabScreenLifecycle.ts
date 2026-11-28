@@ -1,5 +1,5 @@
-import { useScreenTransition } from '#/hooks/performance/useScreenTransition';
-import { useScreenTelemetry } from '#/hooks/performance/useScreenTelemetry';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useScreenTelemetry } from '#hooks/performance/useScreenTelemetry';
 
 interface UseTabScreenLifecycleOptions {
   screenName: string;

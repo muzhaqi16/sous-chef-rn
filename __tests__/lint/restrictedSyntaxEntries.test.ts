@@ -296,7 +296,7 @@ const TEST_FIXTURES: Fixture[] = [
   {
     id: 'apolloReactMock',
     invalid: ['jest.mock("@apollo/client/react");'],
-    valid: ['jest.mock("#/services/haptic");'],
+    valid: ['jest.mock("#services/haptic");'],
   },
   {
     id: 'typenameAsConst',

@@ -3,7 +3,7 @@ import { globSync } from 'fs';
 import { relative } from 'path';
 import chroma from 'chroma-js';
 
-import { colors } from '#/theme/foundations/colors';
+import { colors } from '#theme/foundations/colors';
 
 /**
  * Text on a `primary`/`danger` fill must read the matching `on*` token. The
@@ -154,19 +154,10 @@ const paintedFills = new Set(
 );
 
 /**
- * Painted pairs below AA, each a standing decision rather than a queue: the
- * brand's own orange sets both, and darkening either to clear 4.5 would change
- * the tab's colour. An entry states why the pairing stands; a NEW pair below AA
- * still fails.
+ * Painted pairs below AA that stand by decision, each with why; a new pair
+ * below AA fails until it is fixed or listed here.
  */
-const PALETTE_CONTRAST_EXEMPT: Record<string, string> = {
-  'colors.filterTab.activeBg + .activeText':
-    '2.58 — white on the brand orange, the same pairing `applyAppearance` ' +
-    'derives for a custom brand; see `project_brand_color_white_on_primary`',
-  'colors.filterTab.filteredBg + .filteredText':
-    '3.33 — the brand orange tinted for the filtered state, which reads as ' +
-    'one ramp with the active fill above and moves only with it',
-};
+const PALETTE_CONTRAST_EXEMPT: Record<string, string> = {};
 
 const palettePairs = Object.entries(colors).flatMap(([group, value]) => {
   if (typeof value !== 'object' || value === null) return [];

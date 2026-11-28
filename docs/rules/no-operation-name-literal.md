@@ -16,7 +16,7 @@ useSubscriptionTransportRecovery(PantryEventsDocument, pantryEvents, skip);
 subscriptionService.register({ document: PantryEventsDocument, … });
 ```
 
-Where only the name will do (a link comparing `operation.operationName`), derive it: `operationNameOf(RefreshTokenDocument)` from `#/apollo/utils/documentOperation`.
+Where only the name will do (a link comparing `operation.operationName`), derive it: `operationNameOf(RefreshTokenDocument)` from `#apollo/utils/documentOperation`.
 
 ## Why
 
@@ -28,4 +28,4 @@ A renamed or deleted operation leaves a string that still compiles and silently 
 - A slot not named like an operation: a screen or component label may share an operation's spelling (`useScreenTransition('MyRecipes')`).
 - Files without type information (`.js`, `.graphql`).
 
-Source: [`eslint/plugin/rules/no-operation-name-literal.js`](../../eslint/plugin/rules/no-operation-name-literal.js) · spec: [`__tests__/lint/rules/no-operation-name-literal.test.ts`](../../__tests__/lint/rules/no-operation-name-literal.test.ts)
+Source: [`eslint/plugin/rules/no-operation-name-literal.js`](../../eslint/plugin/rules/no-operation-name-literal.js) · spec: [`__tests__/lint/typedRules/no-operation-name-literal.ts`](../../__tests__/lint/typedRules/no-operation-name-literal.ts)

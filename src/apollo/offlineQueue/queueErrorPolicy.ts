@@ -7,19 +7,19 @@ import {
   ErrorCode,
   ErrorDisposition,
   TopLevelErrorCode,
-} from '#/graphql/generated/schemaTypes';
-import { isAuthRefusalCode } from '#/utils/authErrorCodes';
-import { isNetworkError } from '#/utils/isNetworkError';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { isVersionConflictCode } from '#/utils/errors/versionConflict';
-import { getRateLimitDetails } from '#/utils/errors/rateLimit';
-import { asDisposition, refusalEnvelopeOf } from '#/utils/errors/graphqlErrors';
+} from '#graphql/generated/schemaTypes';
+import { isAuthRefusalCode } from '#utils/authErrorCodes';
+import { isNetworkError } from '#utils/isNetworkError';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { isVersionConflictCode } from '#utils/errors/versionConflict';
+import { getRateLimitDetails } from '#utils/errors/rateLimit';
+import { asDisposition, refusalEnvelopeOf } from '#utils/errors/graphqlErrors';
 import {
   isErrorTypename,
   type MutationErrorTypename,
-} from '#/utils/errors/mutationPayload';
-import { isRecord } from '#/utils/isRecord';
-import { backoffDelay } from '#/utils/backoff';
+} from '#utils/errors/mutationPayload';
+import { isRecord } from '#utils/isRecord';
+import { backoffDelay } from '#utils/backoff';
 import type { QueueError } from './types';
 
 /**
@@ -69,14 +69,12 @@ const REPLAY_NOT_PREPARED_CODE = 'REPLAY_NOT_PREPARED';
  */
 export class ReplayNotPreparedError extends Error {
   readonly operationName: string;
-  readonly cause: unknown;
 
   constructor(operationName: string, cause: unknown) {
     const detail = cause instanceof Error ? cause.message : String(cause);
-    super(`Cannot prepare replay of ${operationName}: ${detail}`);
+    super(`Cannot prepare replay of ${operationName}: ${detail}`, { cause });
     this.name = 'ReplayNotPreparedError';
     this.operationName = operationName;
-    this.cause = cause;
   }
 }
 
@@ -96,7 +94,8 @@ export class BatchRowDeferredError extends Error {
 
 /**
  * A batch applied but the server refused a row. Thrown once the rows that
- * landed are settled; the entry is kept whole, as a retry converges on them.
+ * landed are settled; the entry is kept whole, as a retry converges on them,
+ * unless its operation narrows it to the refused rows.
  */
 export class BatchRowRefusedError extends Error {
   readonly rowCode: string;
@@ -276,7 +275,7 @@ export function classifyError(error: unknown): QueueError {
 
   if (error instanceof BatchRowRefusedError) {
     return {
-      type: 'unknown',
+      type: isVersionConflictCode(error.rowCode) ? 'conflict' : 'unknown',
       message: error.message,
       code: error.rowCode,
       timestamp: Date.now(),

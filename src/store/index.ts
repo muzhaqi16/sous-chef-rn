@@ -16,7 +16,7 @@ import {
 enableMapSet();
 import type { AuthState } from './slices/authSlice';
 import { createAuthSlice } from './slices/authSlice';
-import { MIRRORED_SETTING_KEYS } from '#/domain/serverSettings';
+import { MIRRORED_SETTING_KEYS } from '#domain/serverSettings';
 import type { PreferencesState } from './slices/preferencesSlice';
 import { createPreferencesSlice } from './slices/preferencesSlice';
 import type { AppState } from './slices/appSlice';
@@ -38,14 +38,14 @@ import type { TelemetryState } from './slices/telemetrySlice';
 import { createTelemetrySlice } from './slices/telemetrySlice';
 import type { NetworkState } from './slices/networkSlice';
 import { createNetworkSlice } from './slices/networkSlice';
-import { storage, zustandStorage } from '#/store/deviceStorage';
-import { STORAGE_KEY } from '#/store/persistedKeys';
-import { pickFresherSessionTokens } from '#/services/auth/sessionTokens';
+import { storage, zustandStorage } from '#store/deviceStorage';
+import { STORAGE_KEY } from '#store/persistedKeys';
+import { pickFresherSessionTokens } from '#services/auth/sessionTokens';
 import { requirePlatform } from '#platform/install';
-import { logger } from '#/utils/environment';
-import { errorService } from '#/services/errorService';
+import { logger } from '#utils/environment';
+import { errorService } from '#services/errorService';
 import { setTelemetryStateSource } from '#services/telemetry/telemetryState';
-import { hydrateWhenStarted } from '#/store/persistedStores';
+import { hydrateWhenStarted } from '#store/persistedStores';
 
 const secureStore = () => requirePlatform('secureStore');
 
@@ -139,7 +139,7 @@ export const handleStoreRehydration = (
   // the cache may hold answers from a launch in another. Lazy — `i18n/config`
   // has load-time side effects.
   const picked = state?.language;
-  void import('#/i18n')
+  void import('#i18n')
     .then(({ changeLanguage, deviceAppLanguage }) =>
       changeLanguage(picked ?? deviceAppLanguage()),
     )
@@ -228,6 +228,8 @@ const PERSISTED_KEYS = classifyKeys(
   // WITH `user`: restoring the session without it renders a EUR account's costs
   // under the USD default until something re-reads the account.
   'preferredCurrency',
+  // The currencies' precision, the same table for every account.
+  'currencyDecimals',
 
   // Entity selections + navigation memory
   'selectedHomeId',

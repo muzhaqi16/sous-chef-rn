@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
@@ -22,7 +22,7 @@ export const UrgentNotificationsBanner: React.FC<
 
   return (
     <View style={styles.urgentBanner}>
-      <Icon name="warning-outline" size={20} tone="onError" />
+      <Icon name="warning-outline" size="sm" tone="onError" />
       <Text role="label" style={styles.urgentText}>
         {t('notifications.urgentUnread', { count: unreadUrgentCount })}
       </Text>

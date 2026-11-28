@@ -1,35 +1,23 @@
 import { useRef, useState } from 'react';
-import { useTranslation } from '#/i18n';
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { errorService } from '#/services/errorService';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { alertService } from '#/services/alertService';
-import {
-  settleMutation,
-  type SettleStatus,
-} from '#/apollo/utils/settleMutation';
-import {
-  ConsumptionUnitsForPantryItemDocument,
-  CreatePantryItemUsageDocument,
-  RestockUnitsForPantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
-import { rootFieldOf } from '#/apollo/utils/documentOperation';
-import type {
-  CreatePantryItemUsageInput,
-  WasteReason,
-} from '#/graphql/generated/schemaTypes';
+import { useTranslation } from '#i18n';
+import { useApolloClient } from '@apollo/client/react';
+import { errorService } from '#services/errorService';
+import type { SettleStatus } from '#apollo/utils/settleMutation';
+import { dropRankedUnits } from '#features/pantry/cache/rankedUnits';
 import {
   TopLevelErrorCode,
   UsagePurpose,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { Telemetry } from '#services/telemetry';
-import { generateEntityId } from '#/utils/generateEntityId';
+import type { StatedUse, StatedWaste } from '#features/pantry/types';
 import { UsePantryItemActions_IdFragmentDoc } from './usePantryItemActions.generated';
-import { toDateKey, todayKey } from '#/utils/dateUtils';
-import { inTrackingUnit } from '#features/pantry/cache/stock';
-import type { DrawStockInputs } from '#features/pantry/offline/localWrites';
+import { toDateKey } from '#utils/dateUtils';
 import { stockAmountOf, type RestockContents } from '#domain/stockAmount';
 import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
+import {
+  useRecordPantryUsage,
+  type PantryUsage,
+} from '#features/pantry/hooks/mutations/useRecordPantryUsage';
 
 interface UsePantryItemActionsOptions {
   pantryId: string | undefined;
@@ -48,24 +36,6 @@ type ActiveModal =
 
 const CLOSED_MODAL: ActiveModal = { type: null };
 
-/** The uses whose unit the server remembers: not waste, a transfer or a gift. */
-const REMEMBERS_ITS_UNIT: ReadonlySet<UsagePurpose> = new Set([
-  UsagePurpose.Cooking,
-  UsagePurpose.Snack,
-  UsagePurpose.MealPrep,
-  UsagePurpose.General,
-]);
-
-/**
- * A unit refusal makes the cached ranked lists wrong, so they are dropped and
- * the picker refetches. `schema.graphql` directs clients here: the refusal
- * carries no list of units that WOULD work, and this query answers exactly that.
- */
-const RANKED_UNIT_FIELDS = [
-  ConsumptionUnitsForPantryItemDocument,
-  RestockUnitsForPantryItemDocument,
-].map(rootFieldOf);
-
 export function usePantryItemActions({
   pantryId,
   removeItem,
@@ -78,81 +48,26 @@ export function usePantryItemActions({
   const [activeModal, setActiveModal] = useState<ActiveModal>(CLOSED_MODAL);
 
   // Uses in flight, by sheet and stack: a second confirm of one is the same
-  // use, while another stack's goes ahead (a waste's sheet closes at once).
+  // use, while another stack's goes ahead.
   const usagesPending = useRef(new Set<string>());
 
   const closeModal = () => setActiveModal(CLOSED_MODAL);
 
-  const refetchRankedUnits = () => {
-    for (const fieldName of RANKED_UNIT_FIELDS) {
-      client.cache.evict({ id: 'ROOT_QUERY', fieldName });
-    }
-    client.cache.gc();
-  };
+  const refetchRankedUnits = () => dropRankedUnits(client.cache);
 
-  // Consume/Waste item mutation (both use createPantryItemUsage)
-  const [createPantryItemUsage] = useMutation(CreatePantryItemUsageDocument, {
-    // Replays as the canonical mutation, deduped by its idempotencyKey.
-    context: { localFirst: true },
-  });
+  const { recordUsage: sendUsage } = useRecordPantryUsage();
 
   /** Consume and waste are one usage write; `purpose` tells them apart. */
   const recordUsage = async (
     modal: Exclude<ModalType, 'restock'>,
-    quantity: number,
-    usageUnitId: string | undefined,
-    usage: Pick<
-      CreatePantryItemUsageInput,
-      'purpose' | 'notes' | 'wasteReason' | 'isComposted' | 'isRecycled'
-    >,
-    fallback: string,
+    usage: Omit<PantryUsage, 'pantryItemId'>,
   ): Promise<SettleStatus | undefined> => {
     if (activeModal.type !== modal) return;
     const itemId = activeModal.itemId;
     const pendingKey = `${modal}:${itemId}`;
     if (usagesPending.current.has(pendingKey)) return;
     usagesPending.current.add(pendingKey);
-
-    // A converted unit moves the stock when the server answers.
-    const used = inTrackingUnit(client.cache, itemId, quantity, usageUnitId);
-    const inputs: DrawStockInputs = {
-      delta: used === null ? null : -used,
-      stated: usageUnitId ? { amount: quantity, unitId: usageUnitId } : null,
-      usedUnitId: REMEMBERS_ITS_UNIT.has(usage.purpose) ? usageUnitId : null,
-      now: new Date().toISOString(),
-    };
-
-    let status: SettleStatus;
-    try {
-      const settled = await pendingWritesOf(client.cache).send(
-        CreatePantryItemUsageDocument,
-        {
-          today: todayKey(),
-          input: {
-            pantryItemId: itemId,
-            amount: { quantity },
-            usageUnitId,
-            ...usage,
-            today: todayKey(),
-            // idempotencyKey dedups the usage ledger row on replay.
-            idempotencyKey: generateEntityId(),
-          },
-        },
-        write =>
-          settleMutation(() => createPantryItemUsage(write), {
-            document: CreatePantryItemUsageDocument,
-            fallback,
-            on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
-          }),
-        inputs,
-      );
-      status = settled.status;
-    } catch (error) {
-      errorService.reportError(error, { operation: 'Record pantry usage' });
-      usagesPending.current.delete(pendingKey);
-      alertService.alert(t('labels.error'), fallback);
-      return 'failed';
-    }
+    const status = await sendUsage({ ...usage, pantryItemId: itemId });
     usagesPending.current.delete(pendingKey);
     if (status !== 'failed') {
       setActiveModal(current =>
@@ -162,42 +77,39 @@ export function usePantryItemActions({
     return status;
   };
 
-  const handleConfirmConsume = (
-    quantityUsed: number,
-    _quantityInput: string,
-    purpose: UsagePurpose,
-    notes: string,
-    usageUnitId?: string,
-  ) =>
-    recordUsage(
-      'consume',
-      quantityUsed,
+  const handleConfirmConsume = ({
+    quantity,
+    purpose,
+    notes,
+    usageUnitId,
+  }: StatedUse) =>
+    recordUsage('consume', {
+      quantity,
       usageUnitId,
-      { purpose, notes: notes || undefined },
-      t('errors.recordUsageFailedRetry'),
-    );
+      usage: { purpose, notes: notes || undefined },
+      fallback: t('errors.recordUsageFailedRetry'),
+    });
 
-  const handleConfirmWaste = (
-    wasteAmount: number,
-    wasteReason: WasteReason,
-    isComposted: boolean,
-    isRecycled: boolean,
-    notes: string,
-    wasteUnitId?: string,
-  ) =>
-    recordUsage(
-      'waste',
-      wasteAmount,
-      wasteUnitId,
-      {
+  const handleConfirmWaste = ({
+    quantity,
+    wasteReason,
+    isComposted,
+    isRecycled,
+    notes,
+    usageUnitId,
+  }: StatedWaste) =>
+    recordUsage('waste', {
+      quantity,
+      usageUnitId,
+      usage: {
         purpose: UsagePurpose.Waste,
         notes: notes || undefined,
         wasteReason,
         isComposted,
         isRecycled,
       },
-      t('errors.recordWasteFailedRetry'),
-    );
+      fallback: t('errors.recordWasteFailedRetry'),
+    });
 
   // Handler to confirm restock
   const handleConfirmRestock = async (

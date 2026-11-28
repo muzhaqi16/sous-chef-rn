@@ -1,17 +1,17 @@
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import type { AlertButton } from '#platform/presenters';
-import { toastService } from '#/services/toastService';
-import { errorService } from '#/services/errorService';
+import { toastService } from '#services/toastService';
+import { errorService } from '#services/errorService';
 import { storeApi } from '#store';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   ErrorCode,
   ErrorDisposition,
   TopLevelErrorCode,
   UnitDenial,
-} from '#/graphql/generated/schemaTypes';
-import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
+} from '#graphql/generated/schemaTypes';
+import { getVersionConflictMessage } from '#utils/errors/versionConflict';
 import {
   CreatePantryItemDocument,
   CreatePantryItemUsageDocument,
@@ -21,11 +21,11 @@ import {
   type DeletePantryItemMutation,
 } from '#features/pantry/graphql/pantry.generated';
 import { operationNameOf } from '../documentOperation';
-import { presentFailure } from '#/utils/errors/presentFailure';
+import { presentFailure } from '#utils/errors/presentFailure';
 import { settleMutation, settledStatus } from '../settleMutation';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
-import { OfflineRejectedError } from '#/apollo/offlineQueue/OfflineRejectedError';
-import { Telemetry } from '#/services/telemetry';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
+import { OfflineRejectedError } from '#apollo/offlineQueue/OfflineRejectedError';
+import { Telemetry } from '#services/telemetry';
 
 // A payload member, its typename checked against the operation's result union.
 type Member<T extends { __typename: string }> = {
@@ -567,6 +567,51 @@ describe('settleMutation', () => {
       await settleMutation(throwing(error), { ...options, present: 'none' });
 
       expect(reportError).toHaveBeenCalledTimes(reports);
+    });
+  });
+
+  // A failure is recorded once, from where it settles: classifying it to pick
+  // its copy records nothing.
+  describe('what one failure records', () => {
+    const setApiUnavailable = (unavailable: boolean) => {
+      storeApi.setState({
+        isOnline: !unavailable,
+        apiReachable: unavailable ? null : true,
+      } as Partial<ReturnType<typeof storeApi.getState>>);
+    };
+    beforeEach(() => reportError.mockRestore());
+    afterEach(() => setApiUnavailable(false));
+
+    it.each([
+      [
+        'an outcome the person can fix, as a warning',
+        graphQLError('PANTRY_ITEM_ALREADY_EXISTS'),
+        { warnings: 1, errors: 0 },
+      ],
+      [
+        'a fault, as one error',
+        graphQLError('INTERNAL_SERVER_ERROR'),
+        { warnings: 0, errors: 1 },
+      ],
+    ])('%s', async (_, error, { warnings, errors }) => {
+      setApiUnavailable(false);
+
+      await settleMutation(throwing(error), { ...options, present: 'none' });
+
+      expect(Telemetry.warn).toHaveBeenCalledTimes(warnings);
+      expect(Telemetry.trackError).toHaveBeenCalledTimes(errors);
+    });
+
+    it('nothing for a send refused offline while the API is unavailable', async () => {
+      setApiUnavailable(true);
+
+      await settleMutation(throwing(new OfflineRejectedError('Update')), {
+        ...options,
+        present: 'none',
+      });
+
+      expect(Telemetry.warn).not.toHaveBeenCalled();
+      expect(Telemetry.trackError).not.toHaveBeenCalled();
     });
   });
 

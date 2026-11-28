@@ -1,4 +1,4 @@
-import { zustandStorage } from '#/store/deviceStorage';
+import { zustandStorage } from '#store/deviceStorage';
 import {
   storedResumableStep,
   useOnboardingProgressStore,

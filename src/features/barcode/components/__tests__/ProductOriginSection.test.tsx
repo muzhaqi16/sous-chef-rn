@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 import { ProductOriginSection } from '../ProductOriginSection';
 

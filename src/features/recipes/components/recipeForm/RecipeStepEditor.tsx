@@ -1,93 +1,120 @@
-import React, { forwardRef, useImperativeHandle, useState } from 'react';
-import { useTranslation } from '#/i18n';
+import React from 'react';
 import { StyleSheet } from 'react-native-unistyles';
-import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { Controller, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useTranslation } from '#i18n';
 import { FormTextArea } from '#components/atoms/FormTextArea';
+import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
-import { generateId } from '#/utils/generateId';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
+import { generateId } from '#utils/generateId';
+import { reportValidationErrors } from '#utils/validation/common';
 import type { StepFormState } from '#features/recipes/types';
-
-export interface RecipeStepEditorRef {
-  open: (step?: StepFormState) => void;
-  close: () => void;
-}
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import { stepSchema, type StepFormValues } from './stepFormConfig';
 
 interface RecipeStepEditorProps {
+  visible: boolean;
+  /** The step being edited; absent, a new one. */
+  step?: StepFormState;
+  onDismiss: () => void;
   onSave: (step: StepFormState) => void;
 }
 
-export const RecipeStepEditor = forwardRef<
-  RecipeStepEditorRef,
-  RecipeStepEditorProps
->(({ onSave }, ref) => {
+interface StepFormProps {
+  /** The step being edited; absent for a new one. */
+  step: StepFormState | undefined;
+  onSave: (step: StepFormState) => void;
+  onClose: () => void;
+}
+
+/** One opening, on the step's instruction or empty for a new step. */
+const StepForm: React.FC<StepFormProps> = ({ step, onSave, onClose }) => {
   const { t } = useTranslation();
-  // Per CLAUDE.md: never call present()/dismiss() outside an effect.
-  // Drive sheet visibility from internal state, dispatched via effect.
-  const [visible, setVisible] = useState(false);
-  const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
-    visible,
-    onDismiss: () => setVisible(false),
-    snapPoints: ['50%'],
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<StepFormValues>({
+    resolver: yupResolver(stepSchema),
+    defaultValues: { instruction: step?.instruction ?? '' },
   });
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [instruction, setInstruction] = useState('');
+  useSheetUnsavedInput(isDirty);
 
-  useImperativeHandle(ref, () => ({
-    open: (step?: StepFormState) => {
-      if (step) {
-        setEditingId(step.id);
-        setInstruction(step.instruction);
-      } else {
-        setEditingId(null);
-        setInstruction('');
-      }
-      setVisible(true);
-    },
-    close: () => setVisible(false),
-  }));
-
-  const handleSave = () => {
-    if (!instruction.trim()) return;
+  const save = handleSubmit(({ instruction }) => {
     onSave({
-      id: editingId ?? `temp-step-${generateId()}`,
-      instruction: instruction.trim(),
+      id: step?.id ?? `temp-step-${generateId()}`,
+      instruction,
       sortOrder: 0,
     });
-    setVisible(false);
-  };
+    onClose();
+  }, reportValidationErrors);
 
   return (
-    <BottomSheetModal ref={bottomSheetRef} {...modalProps} index={0}>
-      <SheetHeader
-        title={editingId ? t('recipes.editStep') : t('recipes.addStep')}
-        onClose={() => setVisible(false)}
-        confirm={{ onPress: handleSave }}
-      />
-
-      <BottomSheetFormScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <FormTextArea
-          label={t('recipes.instruction')}
-          value={instruction}
-          onChangeText={setInstruction}
-          placeholder={t('recipes.stepInstructionPlaceholder')}
-          required
-          useBottomSheetInput
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={step ? t('recipes.editStep') : t('recipes.addStep')}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void save();
+            },
+          }}
         />
-      </BottomSheetFormScrollView>
-    </BottomSheetModal>
+      </SheetHeaderSlot>
+      <Controller
+        control={control}
+        name="instruction"
+        render={({ field, fieldState }) => (
+          <FormTextArea
+            ref={field.ref}
+            label={t('recipes.instruction')}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('recipes.stepInstructionPlaceholder')}
+            error={fieldState.error?.message}
+            required
+          />
+        )}
+      />
+    </>
   );
-});
+};
 
-RecipeStepEditor.displayName = 'RecipeStepEditor';
+export const RecipeStepEditor: React.FC<RecipeStepEditorProps> = ({
+  visible,
+  step,
+  onDismiss,
+  onSave,
+}) => {
+  const opening = useOpening(visible, step);
+
+  return (
+    <Sheet
+      mode="form"
+      headerFromContent
+      visible={visible}
+      onDismiss={onDismiss}
+      snapPoints={['50%']}
+      contentContainerStyle={styles.content}
+    >
+      {opening ? (
+        <StepForm
+          key={opening.id}
+          step={opening.payload}
+          onSave={onSave}
+          onClose={onDismiss}
+        />
+      ) : null}
+    </Sheet>
+  );
+};
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
   },
 }));

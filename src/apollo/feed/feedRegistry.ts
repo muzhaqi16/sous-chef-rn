@@ -1,16 +1,10 @@
 import type { ApolloCache } from '@apollo/client';
-import { homeFeedAdapter } from '#features/home/offline/homeFeed';
-import { pantryFeedAdapter } from '#features/pantry/offline/pantryFeed';
-import { listFeedAdapter } from '#features/shoppingList/offline/listFeed';
-import { isRecord } from '#/utils/isRecord';
+import { FEATURE_FEED_ADAPTERS } from '#features/registry.feed';
+import { isRecord } from '#utils/isRecord';
 import type { FeedAdapter } from './types';
 
 /** One entry per scope kind this build handles. */
-export const FEED_ADAPTERS: readonly FeedAdapter[] = [
-  listFeedAdapter,
-  pantryFeedAdapter,
-  homeFeedAdapter,
-];
+export const FEED_ADAPTERS: readonly FeedAdapter[] = FEATURE_FEED_ADAPTERS;
 
 const BY_KIND: ReadonlyMap<string, FeedAdapter> = new Map(
   FEED_ADAPTERS.map(adapter => [adapter.kind, adapter]),

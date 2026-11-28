@@ -1,11 +1,12 @@
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { useLazyQuery } from '@apollo/client/react';
 import { AutocompleteCategoriesDocument } from '#operations/item/item.generated';
-import type { CategorySuggestion } from '#/graphql/generated/schemaTypes';
-import { CategoryType } from '#/graphql/generated/schemaTypes';
+import type { CategorySuggestion } from '#graphql/generated/schemaTypes';
+import { CategoryType } from '#graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { useAppStore } from '#store/useAppStore';
 import { filterByName } from '#features/catalog/utils/arrayUtils';
+import { onFailedRead } from '#utils/onFailedRead';
 
 interface UseCategoryAutocompleteOptions {
   categoryType?: CategoryType;
@@ -26,15 +27,12 @@ export function useCategoryAutocomplete(
   const fallbackItems = cachedCategories.filter(c => c.type === categoryType);
 
   const search = (term: string) => {
-    void searchCategories({
-      variables: {
-        input: {
-          query: term,
-          limit: 5,
-          type: categoryType,
-        },
-      },
-    }).catch(error => logger.warn('Category autocomplete failed', error));
+    onFailedRead(
+      searchCategories({
+        variables: { input: { query: term, limit: 5, type: categoryType } },
+      }),
+      error => logger.warn('Category autocomplete failed', error),
+    );
   };
 
   const getResults = (): CategorySuggestion[] => {

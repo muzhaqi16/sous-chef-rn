@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useStore } from '#store';
 import { useIsHydrated } from '#store/useAppStore';
-import { applyAppearanceToRuntime } from '#/theme/applyAppearance';
+import { applyAppearanceToRuntime } from '#theme/applyAppearance';
 
 /**
  * Cold-start sync only: applies the rehydrated appearance preferences to the

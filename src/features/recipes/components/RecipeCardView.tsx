@@ -1,16 +1,15 @@
 import React from 'react';
+import { IconButton } from '#components/atoms/IconButton';
 import { RowCard } from '#components/atoms/RowCard';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
-import { Icon } from '#components/atoms/Icon';
+import type { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { commonStyles } from '#/styles/commonStyles';
+import { commonStyles } from '#styles/commonStyles';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { rowType } from '#/theme/foundations/type';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { rowType } from '#theme/foundations/type';
 
 /** A trailing icon button on a recipe row. */
 export interface RecipeCardAction {
@@ -82,15 +81,14 @@ export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
         {!!actions?.length && (
           <View style={styles.actions}>
             {actions.map(action => (
-              <Pressable
+              <IconButton
                 key={action.key}
+                name={action.icon}
+                size="sm"
+                tone={action.tone}
                 onPress={action.onPress}
-                hitSlop={hitSlop.md}
-                style={({ pressed }) => pressed && styles.pressed}
                 accessibilityLabel={t(action.labelKey)}
-              >
-                <Icon name={action.icon} size={20} tone={action.tone} />
-              </Pressable>
+              />
             ))}
           </View>
         )}
@@ -107,8 +105,5 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.md,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
 }));

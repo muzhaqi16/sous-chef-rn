@@ -1,5 +1,5 @@
 import { createNativeStackScreen } from '@react-navigation/native-stack';
-import { noInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
+import { edgeToEdgeScreenLayout } from '#navigation/layouts/TopInsetLayout';
 import { detailScreenOptions } from '#navigation/detailScreenOptions';
 import { ListSettings } from './ListSettings';
 import { ListBudget } from './ListBudget';
@@ -37,8 +37,8 @@ export const shoppingListDetailScreens = {
   }),
   ItemDetail: createNativeStackScreen({
     screen: ShoppingListItemDetail,
-    // Hero screen — draws edge-to-edge, so it opts out of the top inset.
-    layout: noInsetScreenLayout,
+    // Hero screen: it draws under the status bar itself.
+    layout: edgeToEdgeScreenLayout,
     options: detailScreenOptions,
     linking: null,
   }),

@@ -8,10 +8,10 @@ import {
 } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
-import { makeCache } from '#/apollo/cache';
-import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { createQueueLink } from '#/apollo/offlineQueue/queueLink';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { makeCache } from '#apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#apollo/defaultOptions';
+import { createQueueLink } from '#apollo/offlineQueue/queueLink';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
 import { useStore } from '#store';
 import {
   recordMock,
@@ -24,15 +24,15 @@ import {
   MarkSuggestionDismissedDocument,
   MarkSuggestionActiveDocument,
 } from '#operations/item/item.generated';
-import { ErrorCode, SuggestionSurface } from '#/graphql/generated/schemaTypes';
-import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { ErrorCode, SuggestionSurface } from '#graphql/generated/schemaTypes';
+import { NetworkRequestError } from '#utils/errors/networkRequestError';
 import type { SuggestionParent } from '#features/catalog/cache/suggestions';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { GetPantryItemSuggestionsDocument } from '#features/pantry/graphql/pantry.generated';
 
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 
-jest.mock('#/apollo/offlineQueue/queueManager', () => ({
+jest.mock('#apollo/offlineQueue/queueManager', () => ({
   queueManager: {
     requestDrain: jest.fn(),
     drainAfterPass: jest.fn(),

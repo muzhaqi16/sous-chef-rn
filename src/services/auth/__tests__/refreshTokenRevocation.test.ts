@@ -53,7 +53,7 @@ beforeEach(() => {
   addPending.mockClear();
   mockFetch.mockReset();
   global.fetch = mockFetch;
-  const { Environment } = require('#/utils/environment');
+  const { Environment } = require('#utils/environment');
   (Environment.getApiConfig as jest.Mock).mockReturnValue({
     baseUrl: 'http://localhost:4000/graphql',
   });

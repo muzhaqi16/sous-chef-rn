@@ -7,18 +7,18 @@ import {
   clearPositions,
   forgetPosition,
   heldScopes,
-} from '#/apollo/feed/feedPositions';
-import { getApolloClient } from '#/apollo/clientRegistry';
+} from '#apollo/feed/feedPositions';
+import { getApolloClient } from '#apollo/clientRegistry';
 import {
   scopeStorage,
   type CacheShards,
-} from '#/apollo/offline/ApolloCachePersistence';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
-import { Telemetry } from '#/services/telemetry';
-import { logger } from '#/utils/environment';
-import { isRecord } from '#/utils/isRecord';
+} from '#apollo/offline/ApolloCachePersistence';
+import { queueStore } from '#apollo/offlineQueue/queueStore';
+import { pendingWritesOf } from '#apollo/pendingWrites/pendingWrites';
+import { SyncScopeKind } from '#graphql/generated/schemaTypes';
+import { Telemetry } from '#services/telemetry';
+import { logger } from '#utils/environment';
+import { isRecord } from '#utils/isRecord';
 import { useStore } from '#store';
 import {
   ListFeed_ShardFragmentDoc,

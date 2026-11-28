@@ -1,5 +1,5 @@
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { errorService } from '#/services/errorService';
+import { TopLevelErrorCode } from '#graphql/generated/schemaTypes';
+import { errorService } from '#services/errorService';
 import { serializeError } from './errorSerialization';
 import { getTopLevelGraphQLError } from './errors/graphqlErrors';
 import {
@@ -8,7 +8,7 @@ import {
   socketCloseOf,
 } from './errors/libraryErrorMessages';
 import { isNetworkError } from './isNetworkError';
-import { isRetryableWebSocketClose } from '#/apollo/links/wsCloseCodes';
+import { isRetryableWebSocketClose } from '#apollo/links/wsCloseCodes';
 
 interface SubscriptionError {
   message?: string;

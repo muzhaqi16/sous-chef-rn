@@ -1,17 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
-import { useFragment } from '@apollo/client/react';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  OnPrimaryActivityIndicator,
-  ThemedBottomSheetTextInput,
-} from '#components/atoms/themedComponents';
+import { useFragment } from '@apollo/client/react';
+import { Controller, useController, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { useTranslation } from '#i18n';
+import { ThemedTextInput } from '#components/atoms/themedComponents';
 import { StarRatingInput } from './StarRatingInput';
 import { Text } from '#components/atoms/Text';
 import { WriteReviewSheet_ReviewFragmentDoc } from './WriteReviewSheet.generated';
 import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { useOpening } from '#hooks/ui/useOpening';
+import { reportValidationErrors } from '#utils/validation/common';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
+import { reviewSchema, type ReviewFormValues } from './reviewFormConfig';
 
 interface WriteReviewSheetProps {
   visible: boolean;
@@ -21,13 +25,13 @@ interface WriteReviewSheetProps {
   submitting: boolean;
 }
 
+type ReviewFormProps = Omit<WriteReviewSheetProps, 'visible'>;
+
 /**
- * Writes or edits a recipe review, reading the existing one from the cache by
- * `existingReviewId`. Form state is seeded only when the sheet opens or the id
- * changes, so a cache update cannot overwrite the user's edits.
+ * One opening, seeded from the review the cache holds then: a later cache
+ * update to it does not overwrite what is being typed.
  */
-export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
-  visible,
+const ReviewForm: React.FC<ReviewFormProps> = ({
   existingReviewId,
   onSubmit,
   onClose,
@@ -44,44 +48,47 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
   });
   const existingReview = existingReviewId && complete ? data : null;
 
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState('');
+  const {
+    control,
+    handleSubmit,
+    formState: { isDirty },
+  } = useForm<ReviewFormValues>({
+    resolver: yupResolver(reviewSchema),
+    defaultValues: {
+      rating: existingReview?.rating ?? 0,
+      comment: existingReview?.comment ?? '',
+    },
+  });
+  useSheetUnsavedInput(isDirty);
+  const { field: rating, fieldState: ratingState } = useController({
+    control,
+    name: 'rating',
+  });
 
-  // Reset / populate form when sheet opens or the target review changes
-  // (render-time state update). Keying on `existingReviewId` (not the
-  // materialized object) means a cache update to the same review doesn't
-  // clobber the user's in-progress edits.
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevExistingReviewId, setPrevExistingReviewId] =
-    useState(existingReviewId);
-  if (visible !== prevVisible || existingReviewId !== prevExistingReviewId) {
-    setPrevVisible(visible);
-    setPrevExistingReviewId(existingReviewId);
-    if (visible) {
-      setRating(existingReview?.rating ?? 0);
-      setComment(existingReview?.comment ?? '');
-    }
-  }
-
-  const handleSubmit = async () => {
-    if (submitting || rating === 0) return;
-    await onSubmit(rating, comment.trim() || undefined);
+  const submit = handleSubmit(async ({ rating: stars, comment }) => {
+    await onSubmit(stars, comment || undefined);
     onClose();
-  };
+  }, reportValidationErrors);
 
   const isEditing = !!existingReviewId;
 
   return (
-    <Sheet
-      mode="view"
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={['55%']}
-      contentContainerStyle={styles.content}
-    >
-      <Text role="heading" style={styles.title}>
-        {isEditing ? t('recipes.editReview') : t('recipes.writeReview')}
-      </Text>
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
+          title={isEditing ? t('recipes.editReview') : t('recipes.writeReview')}
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void submit();
+            },
+            accessibilityLabel: isEditing
+              ? t('recipes.updateReview')
+              : t('recipes.submitReview'),
+            loading: submitting,
+          }}
+        />
+      </SheetHeaderSlot>
 
       {/* Rating */}
       <View style={styles.ratingSection}>
@@ -89,11 +96,16 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
           {t('recipes.rating')}
         </Text>
         <StarRatingInput
-          value={rating}
-          onChange={setRating}
-          size={36}
+          value={rating.value}
+          onChange={rating.onChange}
+          size="lg"
           disabled={submitting}
         />
+        {ratingState.error ? (
+          <Text role="error" tone="error">
+            {ratingState.error.message}
+          </Text>
+        ) : null}
       </View>
 
       {/* Comment */}
@@ -101,44 +113,58 @@ export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
         <Text role="label" tone="secondary">
           {t('recipes.commentOptional')}
         </Text>
-        <ThemedBottomSheetTextInput
-          defaultValue={comment}
-          onChangeText={setComment}
-          placeholder={t('recipes.reviewPlaceholder')}
-          multiline
-          numberOfLines={4}
-          style={styles.textInput}
-          editable={!submitting}
+        <Controller
+          control={control}
+          name="comment"
+          render={({ field }) => (
+            <ThemedTextInput
+              ref={field.ref}
+              defaultValue={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              placeholder={t('recipes.reviewPlaceholder')}
+              multiline
+              numberOfLines={4}
+              style={styles.textInput}
+              editable={!submitting}
+            />
+          )}
         />
       </View>
+    </>
+  );
+};
 
-      {/* Submit */}
-      <AppPressable
-        onPress={handleSubmit}
-        disabled={rating === 0 || submitting}
-        style={[
-          styles.submitButton,
-          rating === 0 && styles.submitButtonDisabled,
-        ]}
-      >
-        {submitting ? (
-          <OnPrimaryActivityIndicator />
-        ) : (
-          <Text role="bodyStrong" style={styles.submitText}>
-            {isEditing ? t('recipes.updateReview') : t('recipes.submitReview')}
-          </Text>
-        )}
-      </AppPressable>
+/** Writes or edits a recipe review, reading the existing one from the cache. */
+export const WriteReviewSheet: React.FC<WriteReviewSheetProps> = ({
+  visible,
+  ...form
+}) => {
+  const opening = useOpening(visible, form.existingReviewId);
+
+  return (
+    <Sheet
+      mode="view"
+      headerFromContent
+      visible={visible}
+      onDismiss={form.onClose}
+      snapPoints={['55%']}
+      contentContainerStyle={styles.content}
+    >
+      {opening ? (
+        <ReviewForm
+          key={opening.id}
+          {...form}
+          existingReviewId={opening.payload}
+        />
+      ) : null}
     </Sheet>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   content: {
-    padding: theme.spacing.lg,
-  },
-  title: {
-    marginBottom: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
   },
   ratingSection: {
     marginBottom: theme.spacing.lg,
@@ -159,20 +185,5 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     minHeight: 100,
     textAlignVertical: 'top',
-  },
-  submitButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    minHeight: 48,
-    justifyContent: 'center',
-  },
-  submitButtonDisabled: {
-    opacity: 0.5,
-  },
-  submitText: {
-    color: theme.colors.onPrimary,
   },
 }));

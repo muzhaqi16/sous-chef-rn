@@ -4,11 +4,11 @@ import {
   resolveCurrency,
   useMoney,
   usePreferredCurrency,
-} from '#/domain/money';
-import { PriceBasis } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
+} from '#domain/money';
+import { PriceBasis } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
 import { useStore } from '#store';
-import { DEFAULT_CURRENCY, UNKNOWN_AMOUNT } from '#/utils/formatters/number';
+import { DEFAULT_CURRENCY, UNKNOWN_AMOUNT } from '#utils/formatters/number';
 
 const EUR = { code: 'EUR' };
 

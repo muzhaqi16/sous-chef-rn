@@ -1,6 +1,6 @@
 import React from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { CostSummary } from '#features/shoppingList/components/listBudget/CostSummary';
@@ -46,7 +46,7 @@ export const ListBudget: React.FC<StaticScreenProps<{ listId: string }>> = ({
             store={list.targetStore}
             priceTracking={list.priceTracking}
             canEdit={budget.canEdit}
-            onBudgetDone={input => budget.saveBudget(input) !== 'invalid'}
+            onBudgetDone={budget.saveBudget}
             onPickStore={budget.pickStore}
             onPriceTrackingChange={budget.setPriceTracking}
           />

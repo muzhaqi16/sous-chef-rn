@@ -7,7 +7,7 @@
 import { element, by, waitFor } from 'detox';
 import { ShoppingListScreen } from '../screens/ShoppingListScreen';
 import { bootstrapAuthenticatedSession } from '../helpers/auth';
-import { TIMEOUTS } from '../helpers/waitFor';
+import { returnFromField, TIMEOUTS } from '../helpers/waitFor';
 import { shoppingListTestIDs } from '../../src/features/shoppingList/testIDs';
 
 const editForm = shoppingListTestIDs.editItemForm;
@@ -76,8 +76,10 @@ describe('comma-typed decimal price', () => {
     // Dismiss the keyboard via the return key, NOT by tapping the modal at
     // (10, 10) — that corner is the header's back button, which closes the
     // editor and makes the submit below miss entirely.
-    await element(by.id(editForm.priceInput)).tapReturnKey();
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await returnFromField(
+      element(by.id(editForm.priceInput)),
+      element(by.id(editForm.submitButton)),
+    );
 
     await waitFor(element(by.id(editForm.submitButton)))
       .toBeVisible()

@@ -4,14 +4,14 @@
  * sign-out. `logout()` is the only sign-out, so nothing a host does may keep a
  * person signed in.
  */
-import { createApolloClient } from '#/apollo/client';
+import { createApolloClient } from '#apollo/client';
 import {
   registerSessionHost,
   sessionHost,
   type SessionHost,
-} from '#/services/auth/sessionHost';
-import { authService, handleLogin } from '#/services/authService';
-import { errorService } from '#/services/errorService';
+} from '#services/auth/sessionHost';
+import { authService, handleLogin } from '#services/authService';
+import { errorService } from '#services/errorService';
 import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
 import { useStore } from '#store';
 

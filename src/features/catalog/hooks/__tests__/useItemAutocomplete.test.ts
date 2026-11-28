@@ -11,7 +11,7 @@ import {
   ItemLevel,
   ItemType,
   type ItemSuggestion,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 
 const makeSuggestion = (id: string, name: string): ItemSuggestion => ({
   __typename: 'ItemSuggestion',

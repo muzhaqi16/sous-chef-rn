@@ -58,13 +58,13 @@ jest.mock('react-native-device-info', () => ({
 
 // Mock environment logger
 import DeviceInfo from 'react-native-device-info';
-import { DeviceType, MobilePlatform } from '#/graphql/generated/schemaTypes';
+import { DeviceType, MobilePlatform } from '#graphql/generated/schemaTypes';
 import {
   collectDeviceInformation,
   validateDeviceInformation,
   type DeviceInformation,
 } from '../deviceInfo';
-import { storage } from '#/store/deviceStorage';
+import { storage } from '#store/deviceStorage';
 
 describe('deviceInfo', () => {
   const originalPlatformOS = Platform.OS;

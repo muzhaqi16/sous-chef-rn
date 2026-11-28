@@ -41,7 +41,7 @@ import {
 } from 'graphql';
 // The production rule itself, so this guards the code rather than a restatement
 // of it that could be relaxed independently.
-import { isErrorTypename } from '#/utils/errors/mutationPayload';
+import { isErrorTypename } from '#utils/errors/mutationPayload';
 import { OPERATION_ROOT_DIRS } from '#/test-utils/sourceRoots';
 
 const SRC = resolve(__dirname, '..', '..', 'src');

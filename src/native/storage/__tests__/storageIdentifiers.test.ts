@@ -1,6 +1,6 @@
 import { createMMKV } from 'react-native-mmkv';
 import { RECOVERY_STORAGE_KEY } from '../mmkv';
-import { STORAGE_KEY } from '#/store/persistedKeys';
+import { STORAGE_KEY } from '#store/persistedKeys';
 
 jest.mock('#native/storage/deviceKey', () => ({
   DeviceKeyManager: {

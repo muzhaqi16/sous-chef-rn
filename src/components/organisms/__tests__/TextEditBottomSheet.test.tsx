@@ -44,10 +44,15 @@ describe('TextEditBottomSheet', () => {
     expect(screen.getByText('Edit Name')).toBeTruthy();
   });
 
-  it('renders Cancel and Save buttons', () => {
+  // The sheet's one header: close leading, save as its confirm.
+  it('saves what was typed from its header', async () => {
+    const user = userEvent.setup();
     render(<TextEditBottomSheet {...defaultProps} />);
-    expect(screen.getByText('Cancel')).toBeTruthy();
-    expect(screen.getByText('Save')).toBeTruthy();
+    const field = screen.getByDisplayValue('Test Value');
+    await user.clear(field);
+    await user.type(field, 'New');
+    await user.press(screen.getByRole('button', { name: 'Save' }));
+    expect(defaultProps.onSave).toHaveBeenCalledWith('New');
   });
 
   it('renders with initial value in the input', () => {
@@ -55,10 +60,10 @@ describe('TextEditBottomSheet', () => {
     expect(screen.getByDisplayValue('Test Value')).toBeTruthy();
   });
 
-  it('calls onClose when Cancel is pressed', async () => {
+  it('closes from its header', async () => {
     const user = userEvent.setup();
     render(<TextEditBottomSheet {...defaultProps} />);
-    await user.press(screen.getByText('Cancel'));
+    await user.press(screen.getByRole('button', { name: 'Close' }));
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
@@ -79,10 +84,10 @@ describe('TextEditBottomSheet', () => {
     expect(screen.getByPlaceholderText('Enter a name...')).toBeTruthy();
   });
 
-  it('has accessibility labels on Cancel and Save', () => {
+  it('names its header controls', () => {
     render(<TextEditBottomSheet {...defaultProps} />);
-    expect(screen.getByLabelText('Cancel')).toBeTruthy();
-    expect(screen.getByLabelText('Save')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
   });
 
   it('renders correctly when not visible', () => {

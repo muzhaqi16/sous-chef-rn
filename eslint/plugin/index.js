@@ -27,6 +27,7 @@ module.exports = {
     'queueable-write-is-local-first': require('./rules/queueable-write-is-local-first'),
     'cache-read-states-optimism': require('./rules/cache-read-states-optimism'),
     'local-write-is-deterministic': require('./rules/local-write-is-deterministic'),
+    'resolved-failure-is-read': require('./rules/resolved-failure-is-read'),
     'recycling-list-host-is-bounded': require('./rules/recycling-list-host-is-bounded'),
     'hook-returns-no-library-type': require('./rules/hook-returns-no-library-type'),
     'flashlist-declares-scroll-component': require('./rules/flashlist-declares-scroll-component'),
@@ -37,5 +38,6 @@ module.exports = {
     'network-read-selects-version': require('./rules/network-read-selects-version'),
     'animated-node-takes-no-themed-style': require('./rules/animated-node-takes-no-themed-style'),
     'use-variants-return-is-read': require('./rules/use-variants-return-is-read'),
+    'shared-value-is-read-with-get': require('./rules/shared-value-is-read-with-get'),
   },
 };

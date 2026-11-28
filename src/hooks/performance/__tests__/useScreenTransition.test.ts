@@ -1,6 +1,6 @@
 'use no memo';
 
-jest.mock('#/services/performance/types', () => ({
+jest.mock('#services/performance/types', () => ({
   DEFAULT_PERFORMANCE_CONFIG: {
     enabled: true,
     trackRenders: true,
@@ -14,7 +14,7 @@ jest.mock('#/services/performance/types', () => ({
 }));
 
 const mockRecordScreenTransition = jest.fn();
-jest.mock('#/services/performance/performanceStore', () => ({
+jest.mock('#services/performance/performanceStore', () => ({
   usePerformanceStore: {
     getState: jest.fn(() => ({
       recordScreenTransition: mockRecordScreenTransition,
@@ -25,7 +25,7 @@ jest.mock('#/services/performance/performanceStore', () => ({
 import { renderHook } from '@testing-library/react-native';
 import { useScreenTransition } from '../useScreenTransition';
 import performance from 'react-native-performance';
-import { Telemetry } from '#/services/telemetry';
+import { Telemetry } from '#services/telemetry';
 import { useFocusEffect } from '@react-navigation/native';
 
 describe('useScreenTransition', () => {

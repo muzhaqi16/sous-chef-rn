@@ -1,16 +1,12 @@
 import React from 'react';
+import { SearchBar } from '#components/molecules/SearchBar';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
-import {
-  Pressable,
-  PrimaryActivityIndicator,
-  ThemedBottomSheetTextInput,
-} from '#components/atoms/themedComponents';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { FlashList } from '@shopify/flash-list';
 import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
+import { SheetHeader } from '#components/templates/SheetHeader';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { TemplateCard } from './TemplateCard';
@@ -26,13 +22,11 @@ import {
   useMealTemplates,
   type MealTemplateRef,
 } from '#features/mealPlan/hooks/useMealTemplates';
-import { TemplateCategory } from '#/graphql/generated/schemaTypes';
+import { TemplateCategory } from '#graphql/generated/schemaTypes';
 import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
-import { Text } from '#components/atoms/Text';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 
 const CATEGORY_KEYS: {
   key: TemplateCategory | undefined;
@@ -92,11 +86,6 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   const { t } = useTranslation();
   const categories: ChipOption<TemplateCategory | undefined>[] =
     CATEGORY_KEYS.map(o => ({ key: o.key, label: t(o.labelKey) }));
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible,
-    onDismiss: onClose,
-    snapPoints: ['85%'],
-  });
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   const {
@@ -121,36 +110,24 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   });
 
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      {/*
-        A plain View, NOT `BottomSheetView`: gorhom's own container style is
-        absolutely positioned with no bottom and no height, and it composes
-        AFTER the caller's — so a `flex: 1` here loses and the FlashList below
-        is never height-bounded.
-      */}
-      <View style={[styles.container, contentContainerStyle]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text role="heading">{t('templateBrowser.title')}</Text>
-          <Pressable
-            onPress={onClose}
-            hitSlop={hitSlop.md}
-            accessibilityLabel={t('labels.close')}
-          >
-            <Icon name="close" size={24} tone="textSecondary" />
-          </Pressable>
-        </View>
-
+    <Sheet
+      mode="list"
+      visible={visible}
+      onDismiss={onClose}
+      snapPoints={['85%']}
+      header={
+        <SheetHeader title={t('templateBrowser.title')} onClose={onClose} />
+      }
+    >
+      <View style={styles.container}>
         {/* Search bar */}
-        <View style={styles.searchContainer}>
-          <Icon name="search" size={18} tone="textTertiary" />
-          <ThemedBottomSheetTextInput
-            style={styles.searchInput}
-            placeholder={t('templateBrowser.searchPlaceholder')}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+        <SearchBar
+          placeholder={t('templateBrowser.searchPlaceholder')}
+          testID={mealPlanTestIDs.templateBrowserSearchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          containerStyle={styles.search}
+        />
 
         {/* Category chips */}
         <ChipScrollRow
@@ -163,21 +140,15 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
         />
 
         {/* Template list */}
-        {dataState === 'loading' ? (
-          <View style={styles.centeredSpinner}>
-            <PrimaryActivityIndicator size="large" />
-          </View>
-        ) : dataState === 'error' || dataState === 'offline' ? (
-          // `error` and `offline` both need a retry affordance — reading only
-          // `offline` renders a genuine failure as "No templates found".
-          <DataStateView state={dataState} onRetry={refetch} />
-        ) : dataState === 'empty' ? (
-          <View style={styles.emptyInset}>
-            <Icon name="document-text-outline" size={48} tone="textTertiary" />
-            <Text role="body" tone="secondary" align="center">
-              {t('templateBrowser.noTemplates')}
-            </Text>
-          </View>
+        {dataState !== 'ready' ? (
+          <DataStateView
+            state={dataState}
+            onRetry={refetch}
+            empty={{
+              icon: 'document-text-outline',
+              title: t('templateBrowser.noTemplates'),
+            }}
+          />
         ) : (
           <TemplateBrowserProvider onSelectTemplate={onSelectTemplate}>
             <FlashList
@@ -188,6 +159,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
               getItemType={getTemplateItemType}
               {...FLASHLIST_DEFAULTS.bottomSheet}
               style={styles.list}
+              contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               onEndReached={hasMore ? loadMore : undefined}
               ListFooterComponent={
@@ -201,7 +173,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
           </TemplateBrowserProvider>
         )}
       </View>
-    </BottomSheetModal>
+    </Sheet>
   );
 };
 
@@ -209,52 +181,22 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.surface,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-  },
-  searchInput: {
-    flex: 1,
-    ...theme.type.body,
-    color: theme.colors.textPrimary,
-    padding: 0,
-  },
   chipScroll: {
     maxHeight: 44,
     marginBottom: theme.spacing.sm,
   },
   chipRowContent: {
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.layout.pageGutter,
   },
   list: {
     flex: 1,
   },
-  centeredSpinner: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  // Each template is its own card in the sheet.
+  listContent: {
+    paddingHorizontal: theme.layout.pageGutter,
   },
-  emptyInset: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
+  search: {
+    marginHorizontal: theme.layout.pageGutter,
+    marginBottom: theme.spacing.sm,
   },
 }));

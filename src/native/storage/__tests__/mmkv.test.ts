@@ -1,5 +1,5 @@
 import { storage, initializeSecureStorage } from '../mmkv';
-import { STORAGE_KEY } from '#/store/persistedKeys';
+import { STORAGE_KEY } from '#store/persistedKeys';
 
 // Mock DeviceKeyManager
 jest.mock('#native/storage/deviceKey', () => ({

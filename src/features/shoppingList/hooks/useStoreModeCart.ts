@@ -1,20 +1,20 @@
 import { skipToken, useQuery } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { useTranslation } from '#i18n';
+import { firstNonBlank } from '#utils/firstNonBlank';
 import { heldFetchPolicy } from '#hooks/apollo/standDownOptions';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
+import { SHOPPING_ITEMS_PAGE_SIZE } from '#features/shoppingList/hooks/shoppingItemsPage';
 import {
   matchScannedLine,
   type ScannedProductRef,
 } from '#features/shoppingList/utils/matchScannedLine';
 import { useToggleShoppingItem } from './mutations/useToggleShoppingItem';
-import { unitPriceFromTotal } from '#features/shoppingList/utils/purchasePrice';
+import { unitPriceFromTotal } from '#entities/shoppingList/purchasePrice';
 import type { PurchaseAmountItem } from './usePurchaseAmountModal';
-import type { PurchasedItemInput } from '#/graphql/generated/schemaTypes';
+import type { PurchasedItemInput } from '#graphql/generated/schemaTypes';
 import { useListCurrency } from './useListCurrency';
-import { unitLabel } from '#/utils/formatQuantity';
+import { unitLabel } from '#utils/formatQuantity';
 
 /**
  * Store mode's cart for a scanned product: the list line it fulfils and how to
@@ -34,7 +34,7 @@ export function useStoreModeCart(
       ? {
           variables: {
             id: listId,
-            first: PAGINATION.ITEMS_PAGE_SIZE,
+            first: SHOPPING_ITEMS_PAGE_SIZE,
             isPurchased: false,
           },
           ...heldFetchPolicy('cache-only'),
@@ -47,7 +47,7 @@ export function useStoreModeCart(
       ? {
           variables: {
             id: listId,
-            first: PAGINATION.ITEMS_PAGE_SIZE,
+            first: SHOPPING_ITEMS_PAGE_SIZE,
             isPurchased: true,
           },
           ...heldFetchPolicy('cache-only'),

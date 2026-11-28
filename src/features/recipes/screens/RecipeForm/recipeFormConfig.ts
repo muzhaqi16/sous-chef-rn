@@ -1,6 +1,6 @@
 import { array, mixed, number, object, string, type ObjectSchema } from 'yup';
-import type { TranslationKey } from '#/i18n';
-import { lazyMessage } from '#/utils/validation/common';
+import type { TranslationKey } from '#i18n';
+import { commaTagsRule, lazyMessage } from '#utils/validation/common';
 import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 import {
   RecipeStatus,
@@ -10,13 +10,14 @@ import {
   type Diet,
   type HealthGoal,
   type Intolerance,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type {
   CapturedFrom,
   IngredientFormState,
   RecipeFormState,
   StepFormState,
 } from '../../types';
+import { MAX_TAGS } from '#utils/validation/entryLimits';
 
 // The API's URL scalar takes an absolute http(s) URL of at most 2048 characters
 // and refuses anything else before any resolver runs, with no field to report
@@ -37,17 +38,7 @@ const JSON_MAX_ITEMS = 1000;
 const JSON_MAX_BYTES = 64 * 1024;
 
 /** The API's recipe bounds, on create and update alike. */
-const TAGS_MAX = 10;
-const TAG_MAX_LENGTH = 50;
 const TIPS_MAX_LENGTH = 2000;
-
-/** Split the comma-separated tag field into its trimmed, non-blank tags. */
-export function parseCommaTags(raw: string): string[] {
-  return raw
-    .split(',')
-    .map(tag => tag.trim())
-    .filter(Boolean);
-}
 
 /**
  * UTF-8 BYTES, not `String.length`, which under-counts non-ASCII and would pass
@@ -138,18 +129,7 @@ export const recipeFormSchema: ObjectSchema<RecipeFormState> = object({
     ),
   originalAuthor: string().defined(),
   capturedFrom: mixed<CapturedFrom>().nullable().defined(),
-  tags: string()
-    .defined()
-    .test(
-      'tags-count',
-      lazyMessage('recipes.tagsTooMany', { count: TAGS_MAX }),
-      value => parseCommaTags(value).length <= TAGS_MAX,
-    )
-    .test(
-      'tag-length',
-      lazyMessage('recipes.tagTooLong', { count: TAG_MAX_LENGTH }),
-      value => parseCommaTags(value).every(tag => tag.length <= TAG_MAX_LENGTH),
-    ),
+  tags: commaTagsRule(MAX_TAGS),
   version: number().nullable().defined(),
   ingredientsUnread: mixed<boolean>().defined(),
 });

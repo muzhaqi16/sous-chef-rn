@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import { Text } from '#components/atoms/Text';
@@ -88,6 +88,5 @@ const styles = StyleSheet.create(theme => ({
   },
   link: {
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
   },
 }));

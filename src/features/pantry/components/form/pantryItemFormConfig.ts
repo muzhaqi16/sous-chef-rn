@@ -1,14 +1,23 @@
 import { object, string } from 'yup';
-import { lazyMessage } from '#/utils/validation/common';
+import {
+  lazyMessage,
+  quantityCapMessage,
+  withinQuantityCap,
+} from '#utils/validation/common';
 // Pages, order and label keys are the ADD form's, declared once in the catalog's
 // public `ui/`. `PageName` is an IDENTIFIER, never a tab label — resolve it
 // through `PAGE_LABEL_KEYS`. Only `TAB_FIELDS` below is this form's own.
 import type { PageName } from '#features/catalog/ui/AddItemForm/fields';
-import { StorageState, ItemCondition } from '#/graphql/generated/schemaTypes';
-import { parseFractionalInput } from '#/utils/fractionUtils';
+import { StorageState, ItemCondition } from '#graphql/generated/schemaTypes';
+import { parseFractionalInput } from '#utils/fractionUtils';
 import type { PantryItemFormData } from './PantryItemForm';
 
 type FieldName = keyof PantryItemFormData;
+
+/** The resolver's context: the amount the form was seeded with. */
+export interface EditItemContext {
+  quantitySeed?: string;
+}
 
 // yup types a test's sibling values as `any`; these are the ones the rules read.
 type NetWeightSiblings = Partial<
@@ -33,7 +42,19 @@ export const editItemSchema = object({
       'parseable',
       lazyMessage('errors.invalidQuantity'),
       value => !value || parseFractionalInput(value) !== null,
-    ),
+    )
+    // Only an amount being sent is judged: an empty stack seeded "0" stays
+    // editable, but an amount changed to nothing left is refused.
+    .test('positive', lazyMessage('errors.invalidQuantity'), (value, test) => {
+      const seed: unknown = test.options.context?.quantitySeed;
+      if (!value || value === seed) return true;
+      const parsed = parseFractionalInput(value);
+      return parsed === null || parsed > 0;
+    })
+    .test('quantity-cap', quantityCapMessage, (value, test) => {
+      const seed: unknown = test.options.context?.quantitySeed;
+      return value === seed || withinQuantityCap(value);
+    }),
   unit: string(), // Tracking unit
   minQuantity: string(),
   restockQuantity: string(),

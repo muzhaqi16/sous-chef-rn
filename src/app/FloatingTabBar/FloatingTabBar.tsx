@@ -18,7 +18,7 @@ import {
   useOverlayBackdropOpacity,
   useOverlayBackdropPresence,
 } from '#components/providers/OverlayBackdropProvider';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 import { AddMenu } from './AddMenu';
@@ -27,18 +27,18 @@ import {
   useShowNavigationLabels,
   useThemePreferences,
 } from '#store/useAppStore';
-import { FONT_SCALE_META } from '#/theme/foundations/appearanceConfig';
+import { FONT_SCALE_META } from '#theme/foundations/appearanceConfig';
 import { HapticService } from '#services/haptic/HapticService';
-import { SHEET, TAB_BAR } from '#/constants/animations';
+import { SHEET, TAB_BAR } from '#constants/animations';
 import { GlassSurface, supportsGlass } from '#components/atoms/GlassSurface';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import {
   TAB_BAR_HEIGHT,
   FLOATING_BUTTON_GAP,
   getTabBarBottomOffset,
 } from '#constants/layout';
 import { kitTestIDs } from '#components/testIDs';
-import { sizes } from '#/theme/foundations/sizes';
+import { sizes } from '#theme/foundations/sizes';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({

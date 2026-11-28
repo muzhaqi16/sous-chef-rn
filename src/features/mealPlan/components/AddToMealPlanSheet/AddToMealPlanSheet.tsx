@@ -1,28 +1,28 @@
 import React, { useState } from 'react';
-import { View, ScrollView } from 'react-native';
-import { useTranslation } from '#/i18n';
-import {
-  Pressable,
-  ThemedActivityIndicator,
-} from '#components/atoms/themedComponents';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseISO, startOfDay } from 'date-fns';
 import { Sheet } from '#components/templates/Sheet';
-import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
-import { MealType } from '#/graphql/generated/schemaTypes';
+import { SheetHeader } from '#components/templates/SheetHeader';
+import { SheetHeaderSlot } from '#components/templates/SheetHeaderSlot';
+import { MealType } from '#graphql/generated/schemaTypes';
 import {
   MEAL_TYPE_LABEL_KEYS,
   MEAL_TYPE_ORDER,
 } from '#features/mealPlan/utils/mealPlanEnumLabels';
 import { useAddRecipeToMealPlan } from '#features/mealPlan/hooks/useAddRecipeToMealPlan';
 import { useMealPlanCalendar } from '#features/mealPlan/hooks/useMealPlanCalendar';
+import { useMealPlans } from '#features/mealPlan/hooks/useMealPlans';
 import { WeekStrip } from '#features/mealPlan/components/WeekStrip';
 import { Text } from '#components/atoms/Text';
 import {
+  formatDateRange,
   formatFullWeekdayMonthDay,
-  formatMonthDay,
-} from '#/utils/formatters/date';
+} from '#utils/formatters/date';
+import { Chip } from '#components/molecules/Chip';
+import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { useOpening } from '#hooks/ui/useOpening';
 
 interface AddToMealPlanSheetProps {
   visible: boolean;
@@ -31,10 +31,10 @@ interface AddToMealPlanSheetProps {
   initialMealType?: MealType;
 }
 
-const SNAP_POINTS = ['65%'];
+type AddToMealPlanFormProps = Omit<AddToMealPlanSheetProps, 'visible'>;
 
-export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
-  visible,
+/** One opening: the plan, day and meal the recipe goes on. */
+const AddToMealPlanForm: React.FC<AddToMealPlanFormProps> = ({
   onClose,
   recipeId,
   initialMealType,
@@ -44,19 +44,6 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
   const [selectedMealType, setSelectedMealType] = useState<MealType>(
     initialMealType ?? MealType.Dinner,
   );
-
-  // Reset state when sheet opens (render-time conditional state update)
-  const [prevVisible, setPrevVisible] = useState(visible);
-  const [prevInitialMealType, setPrevInitialMealType] =
-    useState(initialMealType);
-  if (visible !== prevVisible || initialMealType !== prevInitialMealType) {
-    setPrevVisible(visible);
-    setPrevInitialMealType(initialMealType);
-    if (visible) {
-      setSelectedPlanId(null);
-      setSelectedMealType(initialMealType ?? MealType.Dinner);
-    }
-  }
 
   const {
     addRecipeToMealPlan,
@@ -91,23 +78,23 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
   };
 
   return (
-    <Sheet
-      mode="form"
-      visible={visible}
-      onDismiss={onClose}
-      snapPoints={SNAP_POINTS}
-      contentContainerStyle={styles.content}
-      header={
-        <BottomSheetHeader
+    <>
+      <SheetHeaderSlot>
+        <SheetHeader
           title={t('addToMealPlan.title')}
-          onCancel={onClose}
-          onConfirm={handleConfirm}
-          confirmLabel={t('labels.add')}
-          confirmDisabled={adding || !hasPlan}
-          confirmColor="primary"
+          onClose={onClose}
+          confirm={{
+            onPress: () => {
+              void handleConfirm();
+            },
+            accessibilityLabel: t('labels.add'),
+            loading: adding,
+            // The warning below says why.
+            disabled: !hasPlan,
+          }}
         />
-      }
-    >
+      </SheetHeaderSlot>
+
       {!hasPlan && (
         <Text
           role="caption"
@@ -124,63 +111,29 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
           <SectionHeader variant="overline" style={styles.sectionLabel}>
             {t('labels.mealPlan')}
           </SectionHeader>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.planChipRow}
+          <ChipScrollRow
+            options={mealPlans.map(plan => ({
+              key: plan.id,
+              label: plan.name,
+              detail: formatDateRange(
+                parseISO(plan.startDate),
+                parseISO(plan.endDate),
+              ),
+            }))}
+            selected={activePlanId}
+            onSelect={setSelectedPlanId}
+            edgeFadeColor="surface"
             style={styles.planChipScroll}
-          >
-            {mealPlans.map(plan => {
-              const isSelected = plan.id === activePlanId;
-              return (
-                <Pressable
-                  key={plan.id}
-                  onPress={() => setSelectedPlanId(plan.id)}
-                  style={[
-                    styles.planChip,
-                    isSelected && styles.planChipSelected,
-                  ]}
-                >
-                  <Text
-                    role="label"
-                    style={[
-                      styles.planChipText,
-                      isSelected && styles.planChipTextSelected,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {plan.name}
-                  </Text>
-                  <Text
-                    role="caption"
-                    style={[
-                      styles.planChipDate,
-                      isSelected && styles.planChipDateSelected,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {formatMonthDay(parseISO(plan.startDate))} –{' '}
-                    {formatMonthDay(parseISO(plan.endDate))}
-                  </Text>
-                </Pressable>
-              );
-            })}
-            {hasMorePlans ? (
-              <Pressable
-                onPress={loadMorePlans}
-                disabled={loadingMorePlans}
-                style={styles.morePlansChip}
-              >
-                {loadingMorePlans ? (
-                  <ThemedActivityIndicator size="small" />
-                ) : (
-                  <Text role="label" tone="accent">
-                    {t('addToMealPlan.morePlans')}
-                  </Text>
-                )}
-              </Pressable>
-            ) : null}
-          </ScrollView>
+            trailing={
+              hasMorePlans ? (
+                <Chip
+                  label={t('addToMealPlan.morePlans')}
+                  onPress={loadMorePlans}
+                  disabled={loadingMorePlans}
+                />
+              ) : null
+            }
+          />
         </>
       ) : null}
 
@@ -214,36 +167,43 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
         {t('labels.mealType')}
       </SectionHeader>
 
-      <View style={styles.mealTypeRow}>
-        {MEAL_TYPE_ORDER.map(type => (
-          <Pressable
-            key={type}
-            onPress={() => setSelectedMealType(type)}
-            style={[
-              styles.mealTypeChip,
-              selectedMealType === type && styles.mealTypeChipSelected,
-            ]}
-          >
-            <Text
-              role="caption"
-              style={[
-                styles.mealTypeText,
-                selectedMealType === type && styles.mealTypeTextSelected,
-              ]}
-            >
-              {t(MEAL_TYPE_LABEL_KEYS[type])}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      <ChipScrollRow
+        options={MEAL_TYPE_ORDER.map(type => ({
+          key: type,
+          label: t(MEAL_TYPE_LABEL_KEYS[type]),
+        }))}
+        selected={selectedMealType}
+        onSelect={setSelectedMealType}
+        edgeFadeColor="surface"
+        style={styles.mealTypeRow}
+      />
+    </>
+  );
+};
+
+export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
+  visible,
+  ...form
+}) => {
+  // The plans are read while the sheet is closed too, so an opening finds them
+  // held instead of saying there is no plan until they arrive.
+  useMealPlans({ fetchPolicy: 'cache-first' });
+  const opening = useOpening(visible);
+
+  return (
+    <Sheet
+      mode="form"
+      headerFromContent
+      visible={visible}
+      onDismiss={form.onClose}
+      snapPoints={['65%']}
+    >
+      {opening ? <AddToMealPlanForm key={opening.id} {...form} /> : null}
     </Sheet>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  content: {
-    paddingHorizontal: theme.spacing.lg,
-  },
   warningText: {
     marginBottom: theme.spacing.md,
   },
@@ -256,70 +216,7 @@ const styles = StyleSheet.create(theme => ({
   planChipScroll: {
     marginBottom: theme.spacing.md,
   },
-  planChipRow: {
-    gap: theme.spacing.sm,
-    paddingRight: theme.spacing.md,
-  },
-  planChip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-  },
-  morePlansChip: {
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-  },
-  planChipSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  planChipText: {
-    color: theme.colors.textPrimary,
-  },
-  planChipTextSelected: {
-    color: theme.colors.onPrimary,
-  },
-  planChipDate: {
-    color: theme.colors.textSecondary,
-    marginTop: theme.spacing['2xs'],
-  },
-  planChipDateSelected: {
-    color: theme.colors.onPrimary,
-    opacity: 0.8,
-  },
   mealTypeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.xs,
     marginBottom: theme.spacing.md,
-  },
-  mealTypeChip: {
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radii.lg,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.surface,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-  },
-  // Selected = primary outline + primary label, matching the shared
-  // ChipScrollRow active style the other meal-type pickers use — not a filled
-  // pill — so the two selectors read the same.
-  mealTypeChipSelected: {
-    borderColor: theme.colors.primary,
-  },
-  mealTypeText: {
-    color: theme.colors.textSecondary,
-  },
-  mealTypeTextSelected: {
-    color: theme.colors.primaryText,
   },
 }));

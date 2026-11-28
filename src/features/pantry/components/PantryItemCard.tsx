@@ -1,7 +1,7 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import { pantrySwipeActions } from './pantrySwipeActions';
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -12,14 +12,14 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { useRecyclingState } from '@shopify/flash-list';
 import { useFragment } from '@apollo/client/react';
-import { useIncompleteCellReport } from '#/hooks/apollo/useIncompleteCellReport';
+import { useIncompleteCellReport } from '#hooks/apollo/useIncompleteCellReport';
 import { BaseItemCard } from '#features/pantry/components/BaseItemCard/BaseItemCard';
 import { CardLeftSlot } from '#features/pantry/components/BaseItemCard/CardLeftSlot';
 import { CardContent } from '#features/pantry/components/BaseItemCard/CardContent';
 import { CardRightSlot } from '#features/pantry/components/BaseItemCard/CardRightSlot';
 import { StatusLine, type StatusTone } from '#components/atoms/StatusLine';
 import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
-import { SLIDE_PRESETS } from '#/constants/animations';
+import { SLIDE_PRESETS } from '#constants/animations';
 import {
   usePantryActions,
   usePantryReadingSystem,
@@ -33,9 +33,9 @@ import {
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import { daysUntilExpiry } from '#domain/expiry';
 import { useToday } from '#hooks/app/useToday';
-import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
+import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 
 // Slide animation distance only; no reactive updates needed.
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -115,7 +115,6 @@ const SlideAnimatedWrapper: React.FC<{
         },
         config,
         finished => {
-          'worklet';
           isAnimating.set(false);
           if (finished) {
             scheduleOnRN(doDelete);
@@ -260,17 +259,15 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
         testID={pantryTestIDs.item(id)}
         leftElement={leftElement}
         rightElement={
-          <>
-            <CardRightSlot
-              // Keyed by item id, matching the row's own `pantry-item-${id}` and
-              // shopping list's `shopping-list-item-${itemId}-quantity`.
-              testID={pantryTestIDs.itemQuantity(id)}
-              primary={quantity}
-              secondary={rightSecondary}
-            />
-            {accessory}
-          </>
+          <CardRightSlot
+            // Keyed by item id, matching the row's own `pantry-item-${id}` and
+            // shopping list's `shopping-list-item-${itemId}-quantity`.
+            testID={pantryTestIDs.itemQuantity(id)}
+            primary={quantity}
+            secondary={rightSecondary}
+          />
         }
+        trailingActions={accessory}
       >
         <CardContent
           title={name}

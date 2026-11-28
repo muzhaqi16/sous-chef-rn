@@ -1,18 +1,17 @@
 import { useState } from 'react';
-import { useTranslation } from '#/i18n';
-import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useTranslation } from '#i18n';
+import { useApolloClient } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { UpdateFavoriteRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { SavedFieldsInputs } from '#features/recipes/offline/localWrites';
 import { useUnfavoriteRecipe } from '#features/recipes/hooks/useUnfavoriteRecipe';
-import { toastService } from '#/services/toastService';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { toastService } from '#services/toastService';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import {
   UseRecipeSavedMetadata_RecipeFragmentDoc,
   type UseRecipeSavedMetadata_RecipeFragment,
 } from './useRecipeSavedMetadata.generated';
+import { updateFavoriteRecipeWrite } from '#features/recipes/offline/localWrites';
 
 interface UseRecipeSavedMetadataOptions {
   recipeId: string | undefined;
@@ -45,13 +44,12 @@ export function useRecipeSavedMetadata({
   const { t } = useTranslation();
   const client = useApolloClient();
   const { unfavoriteRecipe } = useUnfavoriteRecipe();
-  const [showFolderPicker, setShowFolderPicker] = useState(false);
   const [updatingFolderTags, setUpdatingFolderTags] = useState(false);
 
-  const [updateFavoriteRecipeMutation] = useMutation(
-    UpdateFavoriteRecipeDocument,
-    { context: { localFirst: true } },
-  );
+  const updateFavoriteRecipe = useLocalWrite(updateFavoriteRecipeWrite, {
+    fallback: t('recipes.updateRecipeFailed'),
+    present: 'toast',
+  });
 
   /**
    * One local-first write for all four metadata edits: they differ only in
@@ -69,15 +67,8 @@ export function useRecipeSavedMetadata({
       fields: updates,
     };
 
-    const settled = await pendingWritesOf(client.cache).send(
-      UpdateFavoriteRecipeDocument,
+    const settled = await updateFavoriteRecipe.send(
       { input: { recipeId, ...input } },
-      write =>
-        settleMutation(() => updateFavoriteRecipeMutation(write), {
-          document: UpdateFavoriteRecipeDocument,
-          fallback: t('recipes.updateRecipeFailed'),
-          present: 'toast',
-        }),
       inputs,
     );
     return settled.status !== 'failed';
@@ -86,7 +77,6 @@ export function useRecipeSavedMetadata({
   const handleUpdateFolder = (folder: string | null): Promise<void> => {
     if (!recipeId) return Promise.resolve();
 
-    setShowFolderPicker(false);
     return executeWithLoadingState(async () => {
       // `folder` as given, NOT `folder ?? undefined`: serializing drops an
       // undefined value, and an absent key means "leave unchanged", so a
@@ -164,8 +154,6 @@ export function useRecipeSavedMetadata({
   };
 
   return {
-    showFolderPicker,
-    setShowFolderPicker,
     updatingFolderTags,
     handleUpdateFolder,
     handleUpdateTags,

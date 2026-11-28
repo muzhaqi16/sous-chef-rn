@@ -243,7 +243,8 @@
   },
   "pantryAction": {
     "useByDefault": "Da consumare entro",
-    "availableDefault": "Disponibile:"
+    "availableDefault": "Disponibile:",
+    "availableAmount": "{{amount}} {{unit}}"
   },
   "correctWeight": {
     "invalidWeight": "Inserisci una dimensione valida",
@@ -291,6 +292,7 @@
     "sortedBy": "Ordina, ora per {{field}}",
     "tabAll": "Tutti",
     "tabUnassigned": "Non assegnati",
+    "locationInParent": "{{parent}} › {{name}}",
     "expiringCount": "{{count}} in scadenza",
     "expiredCount": "{{count}} scaduti",
     "lowStockCount": "{{count}} scorta bassa",
@@ -306,7 +308,7 @@
     "pantriesHiddenDescription": "Chi gestisce questa casa può permetterti di vedere le sue dispense.",
     "searchNoResultsDescription": "Vuoi aggiungerlo alla dispensa?",
     "tabEmptyTitle": "Nessun articolo in {{tabName}}",
-    "tabEmptyDescription": "Gli articoli conservati qui appariranno in questa scheda",
+    "tabEmptyDescription": "Gli articoli conservati qui appariranno in questo elenco",
     "tabEmptyFallbackName": "questa posizione",
     "tutorialPantrySettingsSubtitle": "Passa tra gli elenchi delle dispense e crea nuove dispense",
     "tutorialAddItemsTitle": "Aggiungi articoli rapidamente",
@@ -335,7 +337,8 @@
     "stockLevelHigh": "Probabilmente c'è ancora",
     "stockLevelMedium": "Meglio controllare",
     "stockLevelLow": "Probabilmente non c'è più",
-    "stockLevelUnknown": "Non si sa"
+    "stockLevelUnknown": "Non si sa",
+    "stockLastConfirmed": "Ultima conferma: {{when}}"
   },
   "storageState": {
     "AMBIENT": "Temperatura ambiente",
@@ -362,7 +365,9 @@
     "exceedsAvailableWaste": "Non puoi sprecare più della quantità disponibile ({{amount}} {{unit}})",
     "remainingAfter": "Rimanente: {{amount}} {{unit}}",
     "exceedsAvailable": "Supera la disponibilità ({{amount}} {{unit}})",
-    "conversionUnavailable": "Impossibile convertire questa unità. Scegli un’altra unità."
+    "conversionUnavailable": "Impossibile convertire questa unità. Scegli un’altra unità.",
+    "stockMovedTitle": "Non ne resta così tanto",
+    "stockMoved": "Una parte è stata usata da quando hai aperto questa schermata. Controlla quanto resta e riprova."
   },
   "duplicateItem": {
     "title": "Articolo già in dispensa"

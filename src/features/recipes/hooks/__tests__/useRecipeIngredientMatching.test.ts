@@ -1,9 +1,9 @@
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { act } from '@testing-library/react-native';
 import {
   ErrorCode,
   RecipeIngredientMatchKind,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   inputOf,
@@ -17,7 +17,7 @@ import {
   MatchRecipeIngredientsToPantryDocument,
   RecipeCookUsesDocument,
 } from '#features/recipes/graphql/recipe.generated';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import type { RootState } from '#store';
 import {
   useRecipeIngredientMatching,
@@ -75,7 +75,7 @@ const mockToastInfo = jest.mocked(toastService.info);
 const mockToastWarning = jest.mocked(toastService.warning);
 
 // Deterministic client-minted cooking-log id so we can assert the cook sends it.
-jest.mock('#/utils/generateEntityId', () => ({
+jest.mock('#utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'client-cooklog-1'),
 }));
 
@@ -217,10 +217,9 @@ describe('useRecipeIngredientMatching', () => {
       useRecipeIngredientMatching(undefined),
     );
 
-    let success: boolean | undefined;
-    success = await drained(() => result.current.loadMatches(4));
+    const review = await drained(() => result.current.loadMatches(4));
 
-    expect(success).toBe(false);
+    expect(review).toBe('unavailable');
     expect(mockToastError).toHaveBeenCalledWith(
       'Recipe or pantry not available',
     );
@@ -234,31 +233,29 @@ describe('useRecipeIngredientMatching', () => {
       { operationMocks: [m.mock], cache: seedIngredientCache(['ing-1']) },
     );
 
-    let success: boolean | undefined;
-    success = await drained(() => result.current.loadMatches(4));
+    const review = await drained(() => result.current.loadMatches(4));
 
-    expect(success).toBe(true);
+    expect(review).toBe('loaded');
     await drainTimers();
     expect(result.current.editableMatches).toHaveLength(1);
     expect(result.current.editableMatches[0]!.adjustedQuantity).toBe(2);
     expect(result.current.isSheetVisible).toBe(true);
   });
 
-  it('says a recipe has nothing to match only when the server answers so', async () => {
+  it('says a recipe has nothing to draw only when the server answers so', async () => {
     const m = matchesMock([]);
     const { result } = renderHookWithApollo(
       () => useRecipeIngredientMatching('recipe-1'),
       { operationMocks: [m.mock] },
     );
 
-    let success: boolean | undefined;
-    success = await drained(() => result.current.loadMatches(4));
+    const review = await drained(() => result.current.loadMatches(4));
 
-    expect(success).toBe(false);
-    expect(mockToastInfo).toHaveBeenCalledWith('No ingredients to match');
+    expect(review).toBe('empty');
+    expect(result.current.isSheetVisible).toBe(false);
   });
 
-  // Offline the read fails; the cook goes ahead without the review.
+  // Offline the read fails: the cook says so, not the review.
   it('reports nothing of its own when the match read fails', async () => {
     const m = recordMock(MatchRecipeIngredientsToPantryDocument, {
       error: new Error('Network request failed'),
@@ -268,10 +265,9 @@ describe('useRecipeIngredientMatching', () => {
       { operationMocks: [m.mock] },
     );
 
-    let success: boolean | undefined;
-    success = await drained(() => result.current.loadMatches(4));
+    const review = await drained(() => result.current.loadMatches(4));
 
-    expect(success).toBe(false);
+    expect(review).toBe('unavailable');
     expect(mockToastInfo).not.toHaveBeenCalled();
     expect(result.current.isSheetVisible).toBe(false);
   });
@@ -1175,7 +1171,7 @@ describe('useRecipeIngredientMatching — what a cook recorded', () => {
     });
   });
 
-  it('shows the meal as it stands when another cook already completed it', async () => {
+  it('ends the cook and shows the meal as it stands when another cook already completed it', async () => {
     const onMealChanged = jest.fn();
     const refused = recordMock(MarkRecipeAsCookedDocument, {
       data: {
@@ -1196,6 +1192,25 @@ describe('useRecipeIngredientMatching — what a cook recorded', () => {
     );
     expect(onMealChanged).toHaveBeenCalledTimes(1);
     expect(mockToastSuccess).not.toHaveBeenCalled();
+    // No retry can pass, so the review does not wait for one.
+    expect(result.current.isSheetVisible).toBe(false);
+  });
+
+  it('keeps the review open when the meal changed since it was read', async () => {
+    const refused = recordMock(MarkRecipeAsCookedDocument, {
+      data: {
+        markRecipeAsCooked: {
+          __typename: 'ConflictError',
+          code: ErrorCode.VersionConflict,
+        },
+      },
+    });
+
+    const { result } = await cookEggs([refused], {
+      plannedMeal: { id: 'mpi-1', version: 2 },
+      onMealChanged: jest.fn(),
+    });
+
     expect(result.current.isSheetVisible).toBe(true);
   });
 });

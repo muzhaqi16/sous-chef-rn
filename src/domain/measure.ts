@@ -1,9 +1,9 @@
-import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitSystem, UnitType } from '#graphql/generated/schemaTypes';
 import {
   formatQuantityWithUnit,
   resolveQuantityNotation,
   type QuantityNotation,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 
 /** A unit system an amount is shown in: SYSTEM resolved to one of these. */
 export type ReadingSystem =
@@ -68,7 +68,7 @@ export function readingNotation(
 ): QuantityNotation {
   return reading.type === UnitType.Count
     ? 'mixed'
-    : resolveQuantityNotation(null, reading.displayAsFraction);
+    : resolveQuantityNotation(reading.displayAsFraction);
 }
 
 /** "3 lb", "1 1/2 cup", "1 1/2 can": a measure in its unit's own notation. */

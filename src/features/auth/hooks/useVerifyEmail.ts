@@ -3,10 +3,10 @@ import {
   VerifyEmailDocument,
   ResendVerificationEmailDocument,
 } from '#operations/auth/auth.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { useTranslation } from '#/i18n';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { settleMutation } from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { useTranslation } from '#i18n';
 import { useUserId } from '#store/useAppStore';
 import { SignedInEmailVerificationDocument } from '#features/auth/hooks/useVerifyEmail.generated';
 
@@ -14,7 +14,7 @@ import { SignedInEmailVerificationDocument } from '#features/auth/hooks/useVerif
  * `refused`: the server ruled against this code or link, so the reader can act
  * on it. `failed`: it never ruled. `body` is localized copy in both. `userId`
  * is the account verified, which a link need not share with the signed-in one;
- * null when the server named none, and for a code's "already verified".
+ * null when the server named none.
  */
 export type VerifyEmailOutcome =
   | { status: 'verified'; userId: string | null }
@@ -23,12 +23,12 @@ export type VerifyEmailOutcome =
 
 export type ResendVerificationOutcome =
   | { status: 'sent' }
-  | { status: 'alreadyVerified' }
   | { status: 'failed'; body: string };
 
 /**
- * Spend a verification code, and ask for a fresh one. "Already verified" is a
- * success on either call, whichever channel the API reported it on.
+ * Spend a verification code, and ask for a fresh one. A spent code or link is
+ * refused like a wrong one, so a refusal while signed in re-reads whether the
+ * account is verified; resend always answers success.
  */
 export function useVerifyEmail() {
   const { t } = useTranslation();
@@ -39,17 +39,18 @@ export function useVerifyEmail() {
   const client = useApolloClient();
   const signedInUserId = useUserId();
 
-  // "Already verified" names no account, and a link can belong to another, so
-  // the signed-in account counts as verified only once the server says so.
+  // The signed-in account, when the server holds it verified now.
   const verifiedSignedInUserId = async (): Promise<string | null> => {
     if (!signedInUserId) return null;
+    // A failed read, resolved or thrown, cannot show the account verified.
     const read = await client
       .query({
         query: SignedInEmailVerificationDocument,
         fetchPolicy: 'network-only',
       })
-      .catch(() => null);
-    const me = read?.data?.me;
+      .catch((error: unknown) => ({ data: undefined, error }));
+    if (read.error) return null;
+    const me = read.data?.me;
     return me?.id === signedInUserId && me.emailVerified ? me.id : null;
   };
 
@@ -87,17 +88,14 @@ export function useVerifyEmail() {
         const verified = appliedPayload(settled.data);
         return { status: 'verified', userId: verified?.user.id ?? null };
       }
-      const { failure } = settled;
-      if (failure?.code === ErrorCode.EmailAlreadyVerified) {
-        // A code is spent against `email`'s account, so only a link re-reads.
-        const userId = email ? null : await verifiedSignedInUserId();
-        return { status: 'verified', userId };
-      }
-      const body = failure?.body ?? fallback;
+      const body = settled.failure?.body ?? fallback;
       // A refusal member in `data` is the server's ruling on this code.
-      return settled.data?.verifyEmail
-        ? { status: 'refused', body }
-        : { status: 'failed', body };
+      if (!settled.data?.verifyEmail) return { status: 'failed', body };
+      if (settled.failure?.code === ErrorCode.ValidationFailed) {
+        const userId = await verifiedSignedInUserId();
+        if (userId) return { status: 'verified', userId };
+      }
+      return { status: 'refused', body };
     },
     resendVerificationEmail: async (
       email: string,
@@ -111,9 +109,6 @@ export function useVerifyEmail() {
         },
       );
       if (!settled.failure) return { status: 'sent' };
-      if (settled.failure.code === ErrorCode.EmailAlreadyVerified) {
-        return { status: 'alreadyVerified' };
-      }
       return { status: 'failed', body: settled.failure.body };
     },
   };

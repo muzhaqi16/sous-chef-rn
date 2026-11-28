@@ -1,8 +1,8 @@
 import { requirePlatform } from '#platform/install';
 import { useStore } from '#store';
 import { useReviewPromptStore } from '#store/reviewPromptStore';
-import { lastTroubleAt, whenToastsQuiet } from '#/services/toastService';
-import { todayKey } from '#/utils/dateUtils';
+import { lastTroubleAt, whenToastsQuiet } from '#services/toastService';
+import { todayKey } from '#utils/dateUtils';
 
 /** Distinct days of use before the first request. */
 export const DAYS_BEFORE_ASKING = 3;

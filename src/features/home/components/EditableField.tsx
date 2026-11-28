@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { IconButton } from '#components/atoms/IconButton';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { OnPrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import { FormInput } from '#components/atoms/FormInput';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { localizedErrorMessage } from '#/services/errorService';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
+import { localizedErrorMessage } from '#services/errorService';
 import { Text } from '#components/atoms/Text';
 
 interface EditableFieldProps {
   label: string;
   value: string;
-  onSave: (value: string) => Promise<void>;
+  /** The reason the value was refused, shown on the field; null once saved. */
+  onSave: (value: string) => Promise<string | null>;
   placeholder?: string;
   validation?: (value: string) => string | null;
   readOnly?: boolean;
@@ -63,7 +64,11 @@ export const EditableField: React.FC<EditableFieldProps> = ({
 
     void executeWithLoadingState(
       async () => {
-        await onSave(editValue);
+        const refused = await onSave(editValue);
+        if (refused) {
+          setError(refused);
+          return;
+        }
         setEditing(false);
       },
       setSaving,
@@ -121,13 +126,13 @@ export const EditableField: React.FC<EditableFieldProps> = ({
         <Text role="heading">{value}</Text>
       </View>
       {!readOnly && (
-        <AppPressable
-          style={styles.editIconButton}
+        <IconButton
+          name="create-outline"
+          size="sm"
           onPress={handleStartEdit}
           accessibilityLabel={t('labels.edit')}
-        >
-          <Icon name="create-outline" size={20} />
-        </AppPressable>
+          style={styles.editIconButton}
+        />
       )}
     </View>
   );

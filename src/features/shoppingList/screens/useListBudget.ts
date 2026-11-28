@@ -1,9 +1,9 @@
 import { useFragment, useQuery } from '@apollo/client/react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useUser } from '#store/useAppStore';
 import { useDataState } from '#hooks/data/useDataState';
-import { toastService } from '#/services/toastService';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { toastService } from '#services/toastService';
+import { parseDecimalInput } from '#utils/parseDecimalInput';
 import { useUpdateShoppingList } from '#features/shoppingList/hooks/mutations/useUpdateShoppingList';
 import { useShoppingListBudget } from '#features/shoppingList/hooks/mutations/useShoppingListBudget';
 import { listOwnershipOf } from '#features/shoppingList/utils/ownershipHelpers';
@@ -20,6 +20,12 @@ export type BudgetSaveOutcome = 'saved' | 'unchanged' | 'invalid';
 /** A typed limit as the API takes it: empty clears it, a non-number is NaN. */
 const budgetOf = (input: string): number | null =>
   input.trim() === '' ? null : parseDecimalInput(input);
+
+/** A limit the list can take: empty, or a number from zero up. */
+export const isBudgetInput = (input: string): boolean => {
+  const amount = budgetOf(input);
+  return amount === null || (!Number.isNaN(amount) && amount >= 0);
+};
 
 /**
  * A list's money for Budget & prices, read from the cache so it shows offline,
@@ -64,10 +70,8 @@ export function useListBudget(listId: string) {
   };
 
   const saveBudget = (input: string): BudgetSaveOutcome => {
+    if (!isBudgetInput(input)) return 'invalid';
     const amount = budgetOf(input);
-    if (amount !== null && (Number.isNaN(amount) || amount < 0)) {
-      return 'invalid';
-    }
     if (!list || amount === list.budgetAmount) return 'unchanged';
     const planning = list.currency
       ? { budgetAmount: amount, currency: list.currency }

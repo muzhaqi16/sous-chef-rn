@@ -1,11 +1,11 @@
 'use no memo';
 import React from 'react';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   RecipeIngredientMatchKind,
   UnitSystem,
   UnitType,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { ReadingSystem } from '#domain/measure';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import {

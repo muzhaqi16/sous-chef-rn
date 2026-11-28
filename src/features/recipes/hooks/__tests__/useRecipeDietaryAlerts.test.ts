@@ -17,7 +17,7 @@ import {
   Intolerance,
   MembershipRole,
   RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import { RecipeDietaryAlertsDocument } from '../useRecipeDietaryAlerts.generated';
 import { useRecipeDietaryAlerts } from '../useRecipeDietaryAlerts';
 

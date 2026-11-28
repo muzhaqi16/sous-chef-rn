@@ -11,8 +11,9 @@ import { operationLog } from '#/test-utils/operationLog';
 import { screenShows } from '#/test-utils/cacheWaits';
 import type { ApolloClient } from '@apollo/client';
 import { useStore } from '#store';
+import { errorService } from '#services/errorService';
 import { resetSessionScopedStores } from '#store/sessionScopedStores';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import {
   RemoveRecipeFromFavoritesDocument,
   SavedRecipeFoldersDocument,
@@ -118,11 +119,12 @@ const page = (
     ...options,
   });
 
-const failingPage = (after: string, maxUsageCount?: number) =>
+/** A page that fails once released, so the test says when it lands. */
+const failingPage = (after: string) =>
   recordMock(MySavedRecipesDocument, {
     match: variables => variables.after === after,
     error: new Error('Network request failed'),
-    maxUsageCount,
+    held: true,
   });
 
 function openSaved({
@@ -327,32 +329,44 @@ describe('a search', () => {
   });
 
   describe('over a page that cannot be read', () => {
-    // `loadMore` records the failure in the continuations of the page's
-    // rejection, which can outlast `landed`'s `act`; every one of them has run
-    // by the next macrotask, whatever the worker's speed.
-    const pageFailureRecorded = () =>
-      act(
-        () =>
-          new Promise<void>(resolve => {
-            setImmediate(resolve);
-          }),
-      );
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
 
-    const withFailingPage = () =>
-      openSaved({
-        answers: [
-          page(undefined, [APPLE, BANANA], 'page-1'),
-          failingPage('page-1'),
-        ],
+    /**
+     * Lets the held page fail inside one `act`. `loadMore` reports a page it
+     * could not read and records the failure in the same turn, so once the
+     * report is in, what the failure records has rendered.
+     */
+    const failThePage = async (failing: ReturnType<typeof recordMock>) => {
+      const reported = new Promise<void>(resolve => {
+        jest
+          .spyOn(errorService, 'reportError')
+          .mockImplementation((_error, context) => {
+            if (context?.operation === 'Pagination.loadMore') resolve();
+          });
       });
+      await act(async () => {
+        failing.release();
+        await reported;
+      });
+    };
+
+    const withFailingPage = () => {
+      const failing = failingPage('page-1');
+      openSaved({
+        answers: [page(undefined, [APPLE, BANANA], 'page-1'), failing],
+      });
+      return failing;
+    };
 
     it('says the results may be incomplete, and reads the rest again on a retry', async () => {
-      withFailingPage();
+      const failing = withFailingPage();
       await log.landed(MySavedRecipesDocument);
 
       await search('carrot');
-      await log.landed(MySavedRecipesDocument, 2);
-      await pageFailureRecorded();
+      await log.requested(MySavedRecipesDocument, 2);
+      await failThePage(failing);
       expect(screen.getByText(t('recipes.searchIncompleteTitle'))).toBeTruthy();
       expect(
         screen.queryByText(t('empty.noResultsFor', { query: 'carrot' })),
@@ -364,12 +378,12 @@ describe('a search', () => {
     });
 
     it('flags the matches it shows, with a retry', async () => {
-      withFailingPage();
+      const failing = withFailingPage();
       await log.landed(MySavedRecipesDocument);
 
       await search('apple');
-      await log.landed(MySavedRecipesDocument, 2);
-      await pageFailureRecorded();
+      await log.requested(MySavedRecipesDocument, 2);
+      await failThePage(failing);
       expect(shown()).toEqual(['Apple pie']);
       expect(
         screen.getByTestId(recipesTestIDs.searchIncompleteNotice),
@@ -383,10 +397,11 @@ describe('a search', () => {
     });
 
     it('reads the rest again for a new search', async () => {
-      withFailingPage();
+      const failing = withFailingPage();
       await log.landed(MySavedRecipesDocument);
       await search('carrot');
-      await log.landed(MySavedRecipesDocument, 2);
+      await log.requested(MySavedRecipesDocument, 2);
+      await failThePage(failing);
 
       // Refined, never emptied: the search stays on throughout.
       await userEvent
@@ -412,9 +427,8 @@ describe('the folder filter', () => {
     await log.landed(MySavedRecipesDocument);
     await log.landed(SavedRecipeFoldersDocument);
     const user = userEvent.setup();
-    const clear = () =>
-      screen.getByTestId(recipesTestIDs.savedRecipesClearFilters);
-    expect(clear().props.accessibilityState).toEqual({ disabled: true });
+    expect(tab('all')).toBeSelected();
+    expect(tab('folder')).not.toBeSelected();
 
     await user.press(tab('folder'));
     await user.press(
@@ -424,7 +438,8 @@ describe('the folder filter', () => {
 
     expect(shown()).toEqual(['Apple pie', 'Carrot cake']);
     expect(within(tab('folder')).getByText('Weeknights')).toBeTruthy();
-    expect(clear().props.accessibilityState).toEqual({ disabled: false });
+    expect(tab('folder')).toBeSelected();
+    expect(tab('all')).not.toBeSelected();
 
     await user.press(tab('all'));
     expect(shown()).toEqual(['Apple pie', 'Banana bread', 'Carrot cake']);
@@ -458,9 +473,7 @@ describe('the folder filter', () => {
       within(screen.UNSAFE_getByType(FolderPicker)).getByText('Weeknights'),
     );
 
-    await user.press(
-      screen.getByTestId(recipesTestIDs.savedRecipesClearFilters),
-    );
+    await user.press(tab('all'));
 
     expect(
       screen.getByPlaceholderText(t('recipes.savedRecipesSearchPlaceholder'))

@@ -1,108 +1,46 @@
-'use no memo';
-
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { TextInput } from 'react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
+import { t } from '#i18n';
+import { Button } from '#components/molecules/Button';
+import type { RecipeFormState } from '#features/recipes/types';
+import { useRecipeForm } from '#features/recipes/screens/RecipeForm/useRecipeForm';
 import { RecipeBasicFields } from '../RecipeBasicFields';
-import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 
-jest.mock('#components/atoms/FormInput', () => ({
-  FormInput: ({
-    label,
-    value,
-    onChangeText,
-    placeholder,
-    testID,
-  }: React.ComponentProps<
-    typeof import('#components/atoms/FormInput').FormInput
-  >) => {
-    const { View, Text, TextInput } = require('react-native');
-    return (
-      <View>
-        <Text>{label}</Text>
-        <TextInput
-          testID={testID || `input-${label}`}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-        />
-      </View>
-    );
-  },
-}));
+const onValid = jest.fn<void, [RecipeFormState]>();
 
-jest.mock('#components/atoms/FormTextArea', () => ({
-  FormTextArea: ({
-    label,
-    value,
-    onChangeText,
-    placeholder,
-  }: React.ComponentProps<
-    typeof import('#components/atoms/FormTextArea').FormTextArea
-  >) => {
-    const { View, Text, TextInput } = require('react-native');
-    return (
-      <View>
-        <Text>{label}</Text>
-        <TextInput
-          testID={`textarea-${label}`}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-        />
-      </View>
-    );
-  },
-}));
+/** The real form, as the recipe screen holds it, with its save. */
+function Harness() {
+  const form = useRecipeForm();
+  return (
+    <>
+      <RecipeBasicFields control={form.control} />
+      <Button
+        title={t('labels.save')}
+        onPress={() => {
+          void form.handleSubmit(onValid)();
+        }}
+      />
+    </>
+  );
+}
 
-jest.mock('#components/molecules/EditableCounter', () => ({
-  EditableCounter: ({
-    label,
-    value,
-    onChangeText,
-  }: React.ComponentProps<
-    typeof import('#components/molecules/EditableCounter').EditableCounter
-  >) => {
-    const { View, Text, TextInput } = require('react-native');
-    return (
-      <View>
-        <Text>{label}</Text>
-        <TextInput
-          testID={`counter-${label}`}
-          value={value}
-          onChangeText={onChangeText}
-        />
-      </View>
-    );
-  },
-}));
+const save = () =>
+  userEvent
+    .setup()
+    .press(screen.getByRole('button', { name: t('labels.save') }));
 
-const mockUpdateField = jest.fn();
+const nameInput = () =>
+  screen.getByPlaceholderText(t('recipes.namePlaceholder'));
 
-const defaultState = {
-  name: '',
-  description: '',
-  imageUrl: '',
-  videoUrl: '',
-  servings: '4',
-  prepTimeMinutes: '',
-  cookTimeMinutes: '',
-  caloriesPerServing: '',
-  difficulty: null,
-  category: null,
-  cuisines: [],
-  status: RecipeStatus.Draft,
-  diets: [],
-  healthGoals: [],
-  intolerances: [],
-  ingredients: [],
-  steps: [],
-  notes: '',
-  tips: '',
-  originalAuthor: '',
-  capturedFrom: null,
-  tags: '',
-  version: null,
-  ingredientsUnread: false,
+// React Native's mock gives every TextInput one shared `focus`; the instance
+// it was called on names the input.
+const focusedPlaceholder = (): unknown => {
+  const focus = jest.mocked(TextInput.prototype.focus);
+  const [last] = focus.mock.contexts.slice(-1) as Array<
+    { props: { placeholder?: string } } | undefined
+  >;
+  return last?.props.placeholder;
 };
 
 beforeEach(() => {
@@ -110,85 +48,31 @@ beforeEach(() => {
 });
 
 describe('RecipeBasicFields', () => {
-  it('renders recipe name input', () => {
-    const { getByText } = render(
-      <RecipeBasicFields state={defaultState} updateField={mockUpdateField} />,
-    );
-    expect(getByText('Recipe Name')).toBeTruthy();
+  it('names its fields', () => {
+    render(<Harness />);
+    expect(nameInput()).toBeOnTheScreen();
+    expect(screen.getByText(t('labels.servings'))).toBeOnTheScreen();
+    expect(screen.getByText(t('recipes.prepTimeMin'))).toBeOnTheScreen();
+    expect(screen.getByText(t('recipes.cookTimeMin'))).toBeOnTheScreen();
   });
 
-  it('renders description textarea', () => {
-    const { getByText } = render(
-      <RecipeBasicFields state={defaultState} updateField={mockUpdateField} />,
-    );
-    expect(getByText('Description')).toBeTruthy();
+  it('says on the name that it is needed, and takes the cook to it', async () => {
+    render(<Harness />);
+
+    await save();
+
+    expect(screen.getByText(t('recipes.nameRequired'))).toBeOnTheScreen();
+    expect(focusedPlaceholder()).toBe(t('recipes.namePlaceholder'));
+    expect(onValid).not.toHaveBeenCalled();
   });
 
-  it('renders image URL input', () => {
-    const { getByText } = render(
-      <RecipeBasicFields state={defaultState} updateField={mockUpdateField} />,
-    );
-    expect(getByText('Image URL')).toBeTruthy();
-  });
+  it('clears the name message once a name is typed', async () => {
+    render(<Harness />);
+    await save();
 
-  it('renders servings counter', () => {
-    const { getByText } = render(
-      <RecipeBasicFields state={defaultState} updateField={mockUpdateField} />,
-    );
-    expect(getByText('Servings')).toBeTruthy();
-  });
+    await userEvent.setup().type(nameInput(), 'Pasta');
 
-  it('renders prep time and cook time counters', () => {
-    const { getByText } = render(
-      <RecipeBasicFields state={defaultState} updateField={mockUpdateField} />,
-    );
-    expect(getByText('Prep Time (min)')).toBeTruthy();
-    expect(getByText('Cook Time (min)')).toBeTruthy();
-  });
-
-  it('calls updateField when name changes', () => {
-    const { getByTestId } = render(
-      <RecipeBasicFields state={defaultState} updateField={mockUpdateField} />,
-    );
-
-    fireEvent.changeText(getByTestId('input-Recipe Name'), 'New Recipe');
-    expect(mockUpdateField).toHaveBeenCalledWith('name', 'New Recipe');
-  });
-
-  it('calls updateField when description changes', () => {
-    const { getByTestId } = render(
-      <RecipeBasicFields state={defaultState} updateField={mockUpdateField} />,
-    );
-
-    fireEvent.changeText(getByTestId('textarea-Description'), 'A description');
-    expect(mockUpdateField).toHaveBeenCalledWith(
-      'description',
-      'A description',
-    );
-  });
-
-  it('displays current state values', () => {
-    const stateWithValues = {
-      ...defaultState,
-      name: 'Pasta',
-      description: 'Italian dish',
-      servings: '6',
-    };
-
-    const { getByTestId } = render(
-      <RecipeBasicFields
-        state={stateWithValues}
-        updateField={mockUpdateField}
-      />,
-    );
-
-    expect(getByTestId('input-Recipe Name').props.value).toBe('Pasta');
-  });
-
-  it('renders calories per serving counter', () => {
-    const { getByText } = render(
-      <RecipeBasicFields state={defaultState} updateField={mockUpdateField} />,
-    );
-    expect(getByText('Calories/Serving')).toBeTruthy();
+    expect(nameInput()).toHaveDisplayValue('Pasta');
+    expect(screen.queryByText(t('recipes.nameRequired'))).toBeNull();
   });
 });

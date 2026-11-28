@@ -5,7 +5,7 @@ const PRELUDE = `import type {
   DeletionBlocker,
   LedgerPeriodData,
   ShoppingList,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 import type { UserEventsSubscription } from '#operations/auth/user.generated';
 import type { CanDeleteAccountQuery } from '#operations/auth/user.generated';

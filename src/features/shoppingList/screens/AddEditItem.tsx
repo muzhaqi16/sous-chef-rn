@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { alertService } from '#/services/alertService';
-import { useTranslation } from '#/i18n';
+import { alertService } from '#services/alertService';
+import { useTranslation } from '#i18n';
 import { useShoppingListItemWrites } from '#features/shoppingList/hooks/useShoppingListItemWrites';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
-import { CategoryType } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
+import { CategoryType } from '#graphql/generated/schemaTypes';
 import { FormScreen } from '#components/templates/FormScreen';
 import { SubScreen } from '#components/templates/SubScreen';
 import { DataStateView } from '#components/organisms/DataStateView';
@@ -25,18 +25,19 @@ import {
 } from '#features/shoppingList/utils/priority';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Controller } from 'react-hook-form';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import {
   normalizeNumericTextForApi,
   parseDecimalInput,
-} from '#/utils/parseDecimalInput';
-import { localizeNumericHint } from '#/utils/formatters/number';
+} from '#utils/parseDecimalInput';
+import { localizeNumericHint } from '#utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
-import { refByIdOrName, typedItemRef } from '#/utils/refInput';
-import { unitLabel } from '#/utils/formatQuantity';
+import { refByIdOrName, typedItemRef } from '#utils/refInput';
+import { unitLabel } from '#utils/formatQuantity';
+import { MAX_SHOPPING_NOTE_LENGTH } from '#utils/validation/entryLimits';
 
 type RouteParams = {
   listId: string;
@@ -277,9 +278,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       <Controller
         control={control}
         name="itemName"
-        render={({ field: { value, onChange } }) =>
+        render={({ field: { value, onChange, ref } }) =>
           isEdit ? (
             <FormInput
+              ref={ref}
               label={t('labels.itemName')}
               required
               error={errors.itemName?.message}
@@ -299,7 +301,6 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
               onSelectItem={handleItemSelect}
               placeholder={t('shoppingListScreens.itemNamePlaceholder')}
               required
-              autoFocus
               testID={formTestIDs.nameInput}
             />
           )
@@ -332,8 +333,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         <Controller
           control={control}
           name="quantityInput"
-          render={({ field: { value, onChange } }) => (
+          render={({ field: { value, onChange, ref } }) => (
             <EditableCounter
+              ref={ref}
               label={t('labels.quantity')}
               required
               error={errors.quantityInput?.message}
@@ -396,7 +398,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           placeholder={localizeNumericHint(
             t('shoppingListScreens.estimatedPricePlaceholder'),
           )}
-          keyboardType="numeric"
+          keyboardType="decimal-pad"
+          error={errors.estimatedPrice?.message}
         />
       ) : null}
 
@@ -428,6 +431,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         placeholder={t('shoppingListScreens.notesPlaceholder')}
         multiline
         numberOfLines={3}
+        maxLength={MAX_SHOPPING_NOTE_LENGTH}
+        error={errors.notes?.message}
       />
     </FormScreen>
   );

@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import type { DocumentNode } from 'graphql';
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import {
   EnableHomeJoinLinkDocument,
   UpdateHomeJoinCodeDocument,
@@ -10,18 +10,19 @@ import {
   RemoveMemberDocument,
   DeleteHomeInviteDocument,
   LeaveHomeDocument,
+  DeleteHomeDocument,
 } from '#operations/home/home.generated';
-import type { UpdateMembershipInput } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n';
-import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import type { UpdateMembershipInput } from '#graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { createRemoveFromParentConnectionUpdater } from '#apollo/utils/cacheUpdaters';
 import {
   settleMutation,
   type SettleStatus,
-} from '#/apollo/utils/settleMutation';
-import { chainVersionedWrite } from '#/apollo/utils/entityWriteChain';
-import { appliedPayload, isAlreadyGone } from '#/utils/errors/mutationPayload';
-import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
-import { forgetHome } from '#/domain/forgetHome';
+} from '#apollo/utils/settleMutation';
+import { chainVersionedWrite } from '#apollo/utils/entityWriteChain';
+import { appliedPayload, isAlreadyGone } from '#utils/errors/mutationPayload';
+import { useCrudOperations } from '#features/home/hooks/useCrudOperations';
+import { forgetHome } from '#domain/forgetHome';
 import { useMarkHomeAsDefault } from './useMarkHomeAsDefault';
 
 const removeFromMembers = createRemoveFromParentConnectionUpdater(
@@ -41,7 +42,7 @@ const removalLanded = <TData>(data: TData | null | undefined) =>
 
 /**
  * The writes on a home's membership: its join link, ownership, members,
- * invites and leaving it. Each settles through `settleMutation` and alerts a
+ * invites, leaving it, and its owner deleting it. Each settles through `settleMutation` and alerts a
  * refusal; each resolves whether it landed or queued. `onConflictRefresh`
  * re-reads the home when a member removal meets a newer version.
  */
@@ -86,6 +87,8 @@ export function useHomeMembership(
 
   const [leaveHomeMutation, { loading: leaving }] =
     useMutation(LeaveHomeDocument);
+  const [deleteHomeMutation, { loading: deleting }] =
+    useMutation(DeleteHomeDocument);
 
   /** Whether a write landed or queued; a refusal has been alerted. */
   const settleWrite = async (
@@ -117,11 +120,11 @@ export function useHomeMembership(
     );
 
   /**
-   * Takes the left home out of the cache and moves the selection on. Run for
-   * every leave that did not fail — a repeat the server answers as converged or
-   * as not found included, which carries no membership for an `update` to read.
+   * Takes the home out of the cache and moves the selection on. Run for every
+   * leave or delete that did not fail — a repeat the server answers as
+   * converged or as not found included, which carries no row for an `update`.
    */
-  const removeLeftHome = () => {
+  const removeGoneHome = () => {
     const nextHomeId = forgetHome(client.cache, homeId);
     // Background sync: a refusal is reported where it is written.
     if (nextHomeId) void markAsDefault(nextHomeId);
@@ -200,8 +203,29 @@ export function useHomeMembership(
           },
         ),
     );
-    if (left) removeLeftHome();
+    if (left) removeGoneHome();
     return left;
+  };
+
+  const deleteHome = async (homeName: string): Promise<boolean> => {
+    const deleted = await confirmRemoval(
+      t('confirmations.deleteHomeTitle'),
+      t('labels.areYouSureYouWantToDeleteThisCannotBeUndone', {
+        name: homeName,
+      }),
+      t('labels.delete'),
+      () =>
+        settleMutation(
+          () => deleteHomeMutation({ variables: { input: { id: homeId } } }),
+          {
+            document: DeleteHomeDocument,
+            fallback: t('errors.deleteHomeFailed'),
+            removal: true,
+          },
+        ),
+    );
+    if (deleted) removeGoneHome();
+    return deleted;
   };
 
   /** Mints a join code and its link server-side. */
@@ -236,6 +260,8 @@ export function useHomeMembership(
     revokeInvite,
     leaveHome,
     leaving,
+    deleteHome,
+    deleting,
     enableJoinLink,
     rotateJoinCode,
     rotatingJoinCode,

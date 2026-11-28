@@ -1,10 +1,10 @@
 import React from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
-import type { IconName, IconTone } from '#components/atoms/Icon';
+import type { IconName, IconTone, IconSizeName } from '#components/atoms/Icon';
 import { Icon } from '#components/atoms/Icon';
 import { Text, type TextTone } from '#components/atoms/Text';
 
@@ -34,7 +34,7 @@ export interface ErrorStateProps {
   };
 
   /** Icon size */
-  iconSize?: number;
+  iconSize?: IconSizeName;
 
   /** Error severity (affects colors) */
   severity?: 'error' | 'warning' | 'info';
@@ -57,7 +57,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   onRetry,
   retryLabel,
   secondaryAction,
-  iconSize = 48,
+  iconSize = 'xl',
   severity = 'error',
   alignment = 'flex-start',
   style,
@@ -85,7 +85,9 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       typeof icon === 'string' && icon.length <= 4 && !/^[a-z-]+$/.test(icon);
 
     if (isEmoji) {
-      return <Text style={[styles.emoji, { fontSize: iconSize }]}>{icon}</Text>;
+      return (
+        <Text style={[styles.emoji, styles.emojiSize(iconSize)]}>{icon}</Text>
+      );
     }
 
     return <Icon name={icon} size={iconSize} tone={severityTone} />;
@@ -159,6 +161,9 @@ const styles = StyleSheet.create(theme => ({
   emoji: {
     marginBottom: theme.spacing.xs,
   },
+  emojiSize: (size: IconSizeName) => ({
+    fontSize: theme.sizes.icon[size],
+  }),
 
   title: {
     marginBottom: theme.spacing.xs,

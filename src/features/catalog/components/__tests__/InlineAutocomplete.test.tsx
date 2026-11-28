@@ -4,7 +4,7 @@ import { Text } from '#components/atoms/Text';
 import { Pressable } from '#components/atoms/themedComponents';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import { InlineAutocomplete } from '#features/catalog/components/InlineAutocomplete';
-import { t } from '#/i18n';
+import { t } from '#i18n';
 import { useStore } from '#store';
 
 interface Row {

@@ -1,11 +1,11 @@
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   PantryItemConflict_PantryItemFragmentDoc,
   type PantryItemConflict_PantryItemFragment,
 } from '#features/pantry/offline/pantryItemConflict.generated';
-import { updateRow } from '#features/shoppingList/offline/localWrites';
+import { updateRow } from '#entities/shoppingList/localWrites';
 import { conflictOutcome } from '../conflictRead';
 import { pendingWritesOf } from '../pendingWrites';
 

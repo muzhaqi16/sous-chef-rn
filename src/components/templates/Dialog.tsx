@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
-import { BackHandler, ScrollView, View } from 'react-native';
+import { BackHandler, Modal, ScrollView, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { StyleSheet } from 'react-native-unistyles';
-import { Modal } from '#components/atoms/themedComponents';
 import {
   KEYBOARD_DISMISS_MODE,
   KEYBOARD_PERSIST_TAPS,
@@ -79,8 +78,6 @@ export const Dialog: React.FC<DialogProps> = ({
       transparent
       animationType="fade"
       onRequestClose={onRequestClose}
-      statusBarTranslucent
-      navigationBarTranslucent
     >
       {surface}
     </Modal>
@@ -117,8 +114,9 @@ const styles = StyleSheet.create((theme, rt) => ({
   fill: {
     flex: 1,
   },
-  // Full-screen either way (a `statusBarTranslucent` Modal, or the edge-to-edge
-  // root an in-tree host sits in), so it clears the safe area itself.
+  // Full-screen either way (a Modal, which edge-to-edge draws under the system
+  // bars, or the edge-to-edge root an in-tree host sits in), so it clears the
+  // safe area itself.
   centre: {
     flex: 1,
     justifyContent: 'center',

@@ -7,11 +7,11 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
-import { errorService } from '#/services/errorService';
+import { errorService } from '#services/errorService';
 import { useStore } from '#store';
 import { usePagination, type PaginationConfig } from '../usePagination';
 
-jest.mock('#/services/errorService');
+jest.mock('#services/errorService');
 
 /** A page as the list asks for it; its variables are what the hook sends. */
 const PAGE: TypedDocumentNode<

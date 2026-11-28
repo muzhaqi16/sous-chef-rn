@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import type { TranslationKey } from '#/i18n';
+import type { TranslationKey } from '#i18n';
 import {
   AcquisitionMethod,
   ItemCondition,
   StorageState,
-} from '#/graphql/generated/schemaTypes';
-import { errorService } from '#/services/errorService';
-import { executeWriteWithFinally } from '#/utils/finallyHelpers';
+} from '#graphql/generated/schemaTypes';
+import { errorService } from '#services/errorService';
+import { executeWriteWithFinally } from '#utils/finallyHelpers';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { usePantryItemSelection } from '#features/pantry/hooks/usePantryItemSelection';
 import { useRecordOnboardingProgress } from '#features/onboarding/store/onboardingProgressStore';

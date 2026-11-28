@@ -1,4 +1,4 @@
-import { Environment } from '#/utils/environment';
+import { Environment } from '#utils/environment';
 import { getHealthUrl } from '../apiHealthProbe';
 
 const mockedGetApiConfig = Environment.getApiConfig as jest.Mock;

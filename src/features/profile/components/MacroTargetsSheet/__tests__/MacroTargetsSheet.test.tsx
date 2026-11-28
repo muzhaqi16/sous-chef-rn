@@ -40,38 +40,6 @@ jest.mock('#components/atoms/FormInput', () => ({
   },
 }));
 
-jest.mock('#components/molecules/BottomSheetHeader', () => ({
-  BottomSheetHeader: ({
-    title,
-    onCancel,
-    onConfirm,
-    confirmLabel,
-  }: {
-    title: string;
-    onCancel: () => void;
-    onConfirm: () => void;
-    confirmLabel?: string;
-  }) => {
-    const RN = require('react-native');
-    const R = require('react');
-    return R.createElement(
-      RN.View,
-      { testID: 'header' },
-      R.createElement(RN.Text, null, title),
-      R.createElement(
-        RN.Pressable,
-        { onPress: onCancel, testID: 'cancel-btn' },
-        R.createElement(RN.Text, null, 'Cancel'),
-      ),
-      R.createElement(
-        RN.Pressable,
-        { onPress: onConfirm, testID: 'save-btn' },
-        R.createElement(RN.Text, null, confirmLabel),
-      ),
-    );
-  },
-}));
-
 jest.mock('#domain/dietary', () => ({
   DIETARY_LIMITS: {
     calories: { min: 500, max: 10000 },
@@ -166,7 +134,7 @@ describe('MacroTargetsSheet', () => {
 
   it('renders save button', () => {
     render(<MacroTargetsSheet {...defaultProps} />);
-    expect(screen.getByText('Save')).toBeTruthy();
+    expect(screen.getByLabelText('Save')).toBeTruthy();
   });
 
   it('renders without initial values', () => {
@@ -177,7 +145,7 @@ describe('MacroTargetsSheet', () => {
   it('calls onClose when cancel is pressed', async () => {
     const user = userEvent.setup();
     render(<MacroTargetsSheet {...defaultProps} />);
-    const cancelBtn = screen.getByTestId('cancel-btn');
+    const cancelBtn = screen.getByLabelText('Close');
     await user.press(cancelBtn);
     expect(defaultProps.onClose).toHaveBeenCalled();
   });

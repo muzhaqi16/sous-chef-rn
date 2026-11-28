@@ -3,7 +3,10 @@ import { Text } from '#components/atoms/Text';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { PantryActionModal } from '#features/pantry/components/modals/PantryActionModal';
+import {
+  PantryActionHeader,
+  PantryActionModal,
+} from '#features/pantry/components/modals/PantryActionModal';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import {
   recordMock,
@@ -12,9 +15,9 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
+import { UnitSystem, UnitType } from '#graphql/generated/schemaTypes';
 import { ConsumptionUnitsForPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryActionItemDocument } from '#features/pantry/components/modals/PantryActionModal.generated';
 import type { PantryActionSharedState } from '#features/pantry/types';
@@ -25,7 +28,7 @@ import {
   rankedUnit,
   type RankedActionUnit,
 } from '#/test-utils/fixtures/pantryActionFixtures';
-import { unitLabel } from '#/utils/formatQuantity';
+import { unitLabel } from '#utils/formatQuantity';
 
 const PANTRY_ITEM_ID = ACTION_ITEM_ID;
 const stockedCache = actionItemCache;
@@ -38,31 +41,43 @@ const unitsAnswer = (units: RankedActionUnit[]) =>
 
 let log = operationLog();
 
-/** What a consumer's fields last received. */
+/** What a consumer's form last received. */
 let lastShared: PantryActionSharedState | undefined;
 const shared = () => {
-  if (!lastShared) throw new Error('the action fields never rendered');
+  if (!lastShared) throw new Error('the action form never rendered');
   return lastShared;
-};
-const renderActionFields = (state: PantryActionSharedState) => {
-  lastShared = state;
-  return <Text>Action Fields</Text>;
 };
 
 const onClose = jest.fn();
-const onConfirm = jest.fn();
+const onConfirm = jest.fn<Promise<unknown>, [PantryActionSharedState]>(() =>
+  Promise.resolve(),
+);
 
 type Props = React.ComponentProps<typeof PantryActionModal>;
+
+/** An action's form: its bar, and its fields once the stack is read. */
+const renderForm: Props['renderForm'] = (state, pantryItem) => {
+  lastShared = state;
+  return (
+    <>
+      <PantryActionHeader
+        title="Use some"
+        confirmLabel="Use"
+        onClose={onClose}
+        onConfirm={pantryItem ? () => onConfirm(state) : null}
+      />
+      {pantryItem ? <Text>Action Fields</Text> : null}
+    </>
+  );
+};
+
 const modal = (over: Partial<Props> = {}) => (
   <PantryActionModal
     visible
     pantryItemId={PANTRY_ITEM_ID}
     onClose={onClose}
-    title="Use some"
-    confirmLabel="Use"
     operation={PantryOperation.Consume}
-    onConfirm={onConfirm}
-    renderActionFields={renderActionFields}
+    renderForm={renderForm}
     {...over}
   />
 );
@@ -201,10 +216,10 @@ describe('opening on a stack', () => {
 });
 
 describe('the header', () => {
-  it('closes on Cancel', () => {
+  it('closes on its close control', () => {
     renderModal();
 
-    fireEvent.press(screen.getByLabelText(t('labels.cancel')));
+    fireEvent.press(screen.getByLabelText(t('labels.close')));
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -238,6 +253,26 @@ describe('the header', () => {
     expect(onConfirm).toHaveBeenCalledTimes(2);
     alert.mockRestore();
   });
+
+  it('confirms once while the confirm is on its way, and says it is saving', async () => {
+    let settle: () => void = () => undefined;
+    const pending = new Promise<void>(resolve => {
+      settle = resolve;
+    });
+    onConfirm.mockReturnValueOnce(pending);
+    renderModal();
+
+    fireEvent.press(screen.getByLabelText('Use'));
+    expect(screen.getByLabelText('Use')).toBeDisabled();
+    fireEvent.press(screen.getByLabelText('Use'));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      settle();
+      await pending;
+    });
+    expect(screen.getByLabelText('Use')).toBeEnabled();
+  });
 });
 
 describe('a stack the device does not hold', () => {
@@ -248,6 +283,18 @@ describe('a stack the device does not hold', () => {
     });
 
     expect(screen.UNSAFE_getByType(ThemedActivityIndicator)).toBeTruthy();
+  });
+
+  it('offers to close while it waits, and nothing to confirm', () => {
+    renderModal({
+      cache: seedCache([]),
+      answers: [recordMock(GetPantryActionItemDocument, { held: true })],
+    });
+
+    expect(screen.getByText('Use some')).toBeTruthy();
+    expect(screen.getByLabelText(t('labels.close'))).toBeTruthy();
+    expect(screen.queryByLabelText('Use')).toBeNull();
+    expect(screen.queryByText('Action Fields')).toBeNull();
   });
 
   it('offers to read it again rather than opening empty', async () => {
@@ -266,19 +313,8 @@ describe('a stack the device does not hold', () => {
 });
 
 describe('each time it opens', () => {
-  it('starts with no notes', () => {
-    const view = renderModal();
-    act(() => shared().setNotes('half a bag'));
-
-    view.rerender(modal({ visible: false }));
-    view.rerender(modal());
-
-    expect(shared().notes).toBe('');
-  });
-
-  it('measures in the unit the server ranks first', async () => {
+  it('measures in the unit the server ranks first, whatever the last opening picked', async () => {
     const view = renderModal({
-      props: { visible: false },
       units: [
         ranked(
           { id: 'oz', symbol: 'oz', name: 'ounce', type: UnitType.Weight },
@@ -291,7 +327,10 @@ describe('each time it opens', () => {
       ],
     });
     await log.landed(ConsumptionUnitsForPantryItemDocument);
+    fireEvent.press(screen.getByRole('button', { name: 'oz' }));
+    expect(shared().activeUnitId).toBe('oz');
 
+    view.rerender(modal({ visible: false }));
     view.rerender(modal());
 
     expect(shared().activeUnitId).toBe('cup');

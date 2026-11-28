@@ -1,28 +1,28 @@
 import type { ApolloCache } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import type { DocumentNode } from 'graphql';
-import { invitationRefusalCopy } from '#/domain/invitationRefusal';
-import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { invitationRefusalCopy } from '#domain/invitationRefusal';
+import { createRemoveFromParentConnectionUpdater } from '#apollo/utils/cacheUpdaters';
 import {
   settleMutation,
   type SettledFailure,
   type SettleOptions,
-} from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { useTranslation } from '#/i18n';
+} from '#apollo/utils/settleMutation';
+import { appliedPayload } from '#utils/errors/mutationPayload';
+import { useTranslation } from '#i18n';
 import { useUserId } from '#store/useAppStore';
 import {
   ErrorCode,
   type AcceptShoppingListInviteInput,
   type DeclineShoppingListInviteInput,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   AcceptShoppingListInviteDocument,
   DeclineShoppingListInviteDocument,
   type AcceptShoppingListInviteMutation,
   type DeclineShoppingListInviteMutation,
 } from '#features/shoppingList/graphql/collaboration.generated';
-import { addShoppingListToQueryCache } from '#features/shoppingList/cache/list';
+import { addShoppingListToQueryCache } from '#entities/shoppingList/list';
 
 const removePendingInvite = createRemoveFromParentConnectionUpdater(
   'User',

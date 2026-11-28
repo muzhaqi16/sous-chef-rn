@@ -5,9 +5,9 @@ import {
   type CameraOptions,
   type ImagePickerResponse,
 } from 'react-native-image-picker';
-import { t as tGlobal, useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { errorService } from '#/services/errorService';
+import { t as tGlobal, useTranslation } from '#i18n';
+import { alertService } from '#services/alertService';
+import { errorService } from '#services/errorService';
 import {
   PermissionService,
   type PermissionStatus,
@@ -17,7 +17,7 @@ import {
   type ImageValidationError,
 } from '#utils/imageValidation';
 import { imageErrorMessage } from '#hooks/data/useImageUpload';
-import type { ImageFile } from '#/types/media';
+import type { ImageFile } from '#types/media';
 
 const CAPTURE_OPTIONS: CameraOptions = {
   mediaType: 'photo',

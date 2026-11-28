@@ -15,7 +15,7 @@ import {
   MoveToPantryModal_ShoppingListItemFragmentDoc,
   MoveToPantryPurchaseInfoDocument,
 } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
@@ -347,10 +347,10 @@ describe('MoveToPantryModal', () => {
     // fixable fields rendered `fieldState.error` — so a refused confirm was a
     // button that did nothing, with nothing on screen saying which field.
     it('names the field on the field rather than doing nothing', async () => {
-      renderSheet();
+      // Opened with no pantry picked, a bare confirm is refused on a field the
+      // user can fix.
+      renderSheet({ selectedPantryId: null });
 
-      // The form's own `pantryId` starts null whatever the screen preselected,
-      // so a bare confirm is refused on a field the user can fix.
       confirm();
 
       await drainTimers();

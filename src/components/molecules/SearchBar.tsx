@@ -8,17 +8,14 @@ import React, {
 } from 'react';
 import type { StyleProp, ViewStyle, TextInputProps } from 'react-native';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
-import type {
-  ThemedBottomSheetTextInputRef,
-  ThemedTextInputRef,
-} from '#components/atoms/themedComponents';
+import type { ThemedTextInputRef } from '#components/atoms/themedComponents';
 import { CountBadge } from '#components/atoms/CountBadge';
 import { Pressable } from '#components/atoms/themedComponents';
-import { hitSlop } from '#/theme/foundations/sizes';
-import { commonStyles } from '#/styles/commonStyles';
+import { gutterTargetGeometry } from '#components/molecules/BarActions';
+import { commonStyles } from '#styles/commonStyles';
 import { Icon, type IconName } from '#components/atoms/Icon';
 
 export interface SearchBarAction {
@@ -31,29 +28,29 @@ export interface SearchBarAction {
   testID?: string;
 }
 
-/**
- * Imperative surface for the DEBOUNCED mode, where the field is uncontrolled.
- */
+/** The field's handle: it reaches the input inside a sheet or out. */
 export interface SearchBarRef {
   clear: () => void;
   focus: () => void;
   blur: () => void;
+  /** What the field shows, which a debounce may not have reported yet. */
   getValue: () => string;
-  setValue: (value: string) => void;
 }
 
-type SearchBarProps = Omit<TextInputProps, 'style'> & {
+type SearchBarProps = Omit<
+  TextInputProps,
+  'style' | 'value' | 'defaultValue'
+> & {
   /**
-   * CONTROLLED mode; omit it when passing `debounceMs`, where the field owns its
-   * text: a controlled field re-renders per keystroke and its cursor jumps to
-   * the end while the debounce is in flight.
+   * The text to show: read when the field mounts, and again whenever it
+   * changes to something the field did not report, as a reset from outside.
+   * An echo of what was typed changes nothing.
    */
   value?: string;
+  /** What was typed, after `debounceMs` of quiet; a clear reports at once. */
   onChangeText: (text: string) => void;
-  /** Debounced (uncontrolled) mode: milliseconds to wait before reporting. */
+  /** Milliseconds of quiet before a change is reported; 0 reports each one. */
   debounceMs?: number;
-  /** Debounced mode: the text to seed and to re-seed on change. */
-  defaultValue?: string;
   /** Shows a spinner in the field while a search is in flight. */
   isLoading?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
@@ -76,7 +73,6 @@ type SearchBarProps = Omit<TextInputProps, 'style'> & {
 const SearchAccessory: FC<{ action: SearchBarAction }> = ({ action }) => (
   <Pressable
     onPress={action.onPress}
-    hitSlop={hitSlop.lg}
     accessibilityRole="button"
     accessibilityLabel={action.accessibilityLabel}
     testID={action.testID}
@@ -94,8 +90,7 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
     {
       value,
       onChangeText,
-      debounceMs,
-      defaultValue,
+      debounceMs = 0,
       isLoading = false,
       placeholder,
       containerStyle,
@@ -109,94 +104,71 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
     const { t } = useTranslation();
     const resolvedPlaceholder = placeholder ?? t('searchBar.placeholder');
 
-    const debounced = debounceMs !== undefined;
-    // `BaseInput` renders gorhom's input inside a sheet and the plain one
-    // outside, and routes a different ref to each. A debounced SearchBar is
-    // uncontrolled, so a handle reaching neither cannot change what is shown.
-    const sheetInputRef = useRef<ThemedBottomSheetTextInputRef>(null);
-    const plainInputRef = useRef<ThemedTextInputRef>(null);
-    const liveInput = () => sheetInputRef.current ?? plainInputRef.current;
-    const textRef = useRef('');
+    const inputRef = useRef<ThemedTextInputRef>(null);
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const [hasText, setHasText] = useState(false);
-
-    useImperativeHandle(searchRef, () => ({
-      clear: () => {
-        liveInput()?.clear();
-        textRef.current = '';
-        setHasText(false);
-        onChangeText('');
-        onClear?.();
-      },
-      focus: () => liveInput()?.focus(),
-      blur: () => liveInput()?.blur(),
-      getValue: () => textRef.current,
-      setValue: (next: string) => {
-        textRef.current = next;
-        liveInput()?.setNativeProps({ text: next });
-        setHasText(next.length > 0);
-      },
-    }));
-
-    const [prevDefault, setPrevDefault] = useState(defaultValue);
-    if (defaultValue !== prevDefault) {
-      setPrevDefault(defaultValue);
-      if (defaultValue !== undefined) setHasText(defaultValue.length > 0);
+    const [text, setText] = useState(value ?? '');
+    // What the caller was last told, so its echo is not read as a reset.
+    const [reported, setReported] = useState(value ?? '');
+    const [seenValue, setSeenValue] = useState(value);
+    if (value !== seenValue) {
+      setSeenValue(value);
+      if (value !== undefined && value !== reported) {
+        setText(value);
+        setReported(value);
+      }
     }
 
-    useEffect(() => {
-      if (defaultValue === undefined || defaultValue === textRef.current)
-        return;
-      textRef.current = defaultValue;
-      liveInput()?.setNativeProps({ text: defaultValue });
-      onChangeText(defaultValue);
-    }, [defaultValue, onChangeText]);
-
-    useEffect(
-      () => () => {
-        if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      },
-      [],
-    );
-
-    const handleChangeText = (text: string) => {
-      if (!debounced) {
-        onChangeText(text);
-        return;
-      }
-      textRef.current = text;
-      setHasText(text.length > 0);
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      debounceTimer.current = setTimeout(() => onChangeText(text), debounceMs);
+    const report = (next: string) => {
+      setReported(next);
+      onChangeText(next);
     };
 
-    const handleClear = () => {
-      if (debounced) {
-        liveInput()?.clear();
-        textRef.current = '';
-        setHasText(false);
-        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    const cancelPending = () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      debounceTimer.current = null;
+    };
+
+    useEffect(() => cancelPending, []);
+
+    const handleChangeText = (next: string) => {
+      setText(next);
+      cancelPending();
+      if (debounceMs <= 0) {
+        report(next);
+        return;
       }
-      onChangeText('');
+      debounceTimer.current = setTimeout(() => report(next), debounceMs);
+    };
+
+    // Empties the field and the filter it drives, at once.
+    const handleClear = () => {
+      cancelPending();
+      setText('');
+      report('');
       onClear?.();
     };
 
+    useImperativeHandle(searchRef, () => ({
+      clear: handleClear,
+      focus: () => inputRef.current?.focus(),
+      blur: () => inputRef.current?.blur(),
+      getValue: () => text,
+    }));
+
     return (
-      <View style={[styles.container, containerStyle]}>
+      <View style={[styles.container(!!accessory), containerStyle]}>
         <BaseInput
-          value={debounced ? undefined : value}
-          defaultValue={debounced ? defaultValue : undefined}
-          ref={debounced ? plainInputRef : undefined}
-          sheetRef={debounced ? sheetInputRef : undefined}
+          value={text}
+          ref={inputRef}
           onChangeText={handleChangeText}
           placeholder={resolvedPlaceholder}
           style={inputStyle}
           containerStyle={[styles.inputContainer, commonStyles.shadow]}
-          showClearIcon={debounced ? hasText : true}
+          showClearIcon={text.length > 0}
           isLoading={isLoading}
           onClear={handleClear}
           // Every search field shows it, so every one reads as the same field.
-          leftIcon={<Icon name="search" size={16} tone="textTertiary" />}
+          leftIcon={<Icon name="search" size="xs" tone="textTertiary" />}
           // A search names stores, brands and dishes no dictionary knows: iOS
           // turned "aldi" into "Adi". A caller may turn it back on.
           autoCorrect={false}
@@ -211,20 +183,27 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
 
 SearchBar.displayName = 'SearchBar';
 
-const styles = StyleSheet.create(theme => ({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  // The icon's own width, so it ends on the gutter; `hitSlop` makes the 44pt.
-  accessory: {
-    marginLeft: theme.spacing.sm,
-    minHeight: theme.sizes.touchTarget.md,
-    justifyContent: 'center',
-  },
-  inputContainer: {
-    flex: 1,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
-}));
+const styles = StyleSheet.create(theme => {
+  // The accessory is a whole target, its glyph on the gutter: the bar reaches
+  // into the gutter by the glyph's slack, so the target lies inside the bar.
+  const { box, pull } = gutterTargetGeometry(theme);
+  return {
+    container: (withAccessory: boolean) => ({
+      flexDirection: 'row',
+      alignItems: 'center',
+      ...(withAccessory && { marginRight: -pull }),
+    }),
+    accessory: {
+      marginLeft: theme.spacing.sm - pull,
+      minWidth: box,
+      minHeight: box,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    inputContainer: {
+      flex: 1,
+      borderRadius: theme.radii.md,
+      borderCurve: 'continuous',
+    },
+  };
+});

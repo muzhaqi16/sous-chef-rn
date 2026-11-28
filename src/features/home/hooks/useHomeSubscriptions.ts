@@ -13,23 +13,23 @@ import {
   HomeEventsDocument,
   type HomeEventsSubscription,
 } from '#operations/home/home.generated';
-import { HomeSubtype, SyncScopeKind } from '#/graphql/generated/schemaTypes';
-import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
-import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
+import { HomeSubtype, SyncScopeKind } from '#graphql/generated/schemaTypes';
+import { subscriptionService } from '#services/subscriptions/SubscriptionService';
+import { fetchEventEntity } from '#services/subscriptions/fetchEventEntity';
+import { isSelfEcho } from '#services/subscriptions/isSelfEcho';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
-} from '#/services/subscriptions/types';
-import { logger } from '#/utils/environment';
-import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+} from '#services/subscriptions/types';
+import { logger } from '#utils/environment';
+import { createRemoveFromParentConnectionUpdater } from '#apollo/utils/cacheUpdaters';
 import { useSubscriptionTransportRecovery } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
 import { useEntitySubscriptionSkip } from '#hooks/subscriptions/useEntitySubscriptionSkip';
 import {
   HomeInvitesForEventDocument,
   UseHomeSubscriptions_HomeFragmentDoc,
 } from './useHomeSubscriptions.generated';
-import { useFeedKeeps } from '#/hooks/subscriptions/useChangeFeed';
+import { useFeedKeeps } from '#hooks/subscriptions/useChangeFeed';
 
 type HomeEventsPayload = HomeEventsSubscription['homeEvents'];
 

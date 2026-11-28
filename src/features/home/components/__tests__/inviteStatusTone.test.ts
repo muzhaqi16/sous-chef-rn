@@ -1,4 +1,4 @@
-import { InviteStatus } from '#/graphql/generated/schemaTypes';
+import { InviteStatus } from '#graphql/generated/schemaTypes';
 import { INVITE_STATUS_TONE } from '../inviteStatusTone';
 
 describe('INVITE_STATUS_TONE', () => {

@@ -5,7 +5,7 @@ import {
 import { drainTimers } from '#/test-utils/drainTimers';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import { MealPlanType } from '#/graphql/generated/schemaTypes';
+import { MealPlanType } from '#graphql/generated/schemaTypes';
 import {
   EMPTY_MEAL_PLAN_FILTERS,
   type MealPlanFilterState,

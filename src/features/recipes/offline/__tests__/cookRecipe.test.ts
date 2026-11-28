@@ -1,13 +1,13 @@
 import { gql } from '@apollo/client';
-import { PendingWrites } from '#/apollo/pendingWrites/pendingWrites';
+import { PendingWrites } from '#apollo/pendingWrites/pendingWrites';
 import { seedCache } from '#/test-utils/apolloMockProvider';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType } from '#graphql/generated/schemaTypes';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   WriteHeldStock_InsideFragmentDoc,
   WriteHeldStock_PantryItemFragmentDoc,
-} from '#features/pantry/cache/stock.generated';
+} from '#entities/pantryItem/stock.generated';
 import { pantryTrackingExamples } from '#/test-utils/fixtures/pantryTrackingFixtures';
 import { cookRecipe, type CookRecipeInputs } from '../localWrites';
 

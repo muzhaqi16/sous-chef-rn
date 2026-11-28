@@ -10,7 +10,7 @@ import {
   UpdateShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UseUpdateShoppingList_ListFragmentDoc } from '../useUpdateShoppingList.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
 import { useUpdateShoppingList } from '../useUpdateShoppingList';
 import { useShoppingListBudget } from '../useShoppingListBudget';
 import { ApolloClient } from '@apollo/client';

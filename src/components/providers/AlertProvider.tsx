@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Platform, View } from 'react-native';
-import { Pressable, Modal } from '#components/atoms/themedComponents';
+import { Modal, Platform, View } from 'react-native';
+import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   useSharedValue,
@@ -10,12 +10,12 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import type { AlertButton, AlertEntry } from '#platform/presenters';
-import { ALERT } from '#/constants/animations';
+import { ALERT } from '#constants/animations';
 import { Text } from '#components/atoms/Text';
-import { zIndex } from '#/theme/foundations/zIndex';
-import { motion } from '#/theme/motion';
+import { zIndex } from '#theme/foundations/zIndex';
+import { motion } from '#theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 
 interface AlertCardProps {
@@ -60,7 +60,6 @@ const AlertCard: React.FC<AlertCardProps> = ({
         ALERT.EXIT_SCALE_TO,
         { duration: motion.timing.FAST },
         finished => {
-          'worklet';
           if (finished) {
             scheduleOnRN(handleDismissEntry);
           }
@@ -319,8 +318,6 @@ export const AlertProvider: React.FC<AlertProviderProps> = ({ children }) => {
       <Modal
         transparent
         visible={open}
-        statusBarTranslucent
-        navigationBarTranslucent
         presentationStyle="overFullScreen"
         onRequestClose={handleRequestClose}
         onDismiss={handleClosed}

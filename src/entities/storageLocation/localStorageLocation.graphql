@@ -1,0 +1,7 @@
+# What a row reads of a storage location a local edit names.
+fragment localStorageLocation_storageLocation on StorageLocation {
+  version
+  id
+  name
+  type
+}

@@ -1,18 +1,18 @@
-import { alertService } from '#/services/alertService';
+import { alertService } from '#services/alertService';
 import type { AlertButton } from '#platform/presenters';
-import { errorService } from '#/services/errorService';
-import { isTranslationKey, t } from '#/i18n';
+import { errorService } from '#services/errorService';
+import { isTranslationKey, t } from '#i18n';
 import {
   ErrorCode,
   PantryUnitChangeMethod,
   PantryUnitChangeResolution,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import {
   formatAmountWithUnit,
   formatQuantityWithUnit,
   resolveQuantityNotation,
   unitLabel,
-} from '#/utils/formatQuantity';
+} from '#utils/formatQuantity';
 import type {
   ChangeOutcome,
   PreviewOutcome,
@@ -81,7 +81,7 @@ type PreviewUnit = UnitChangePreview['toUnit'];
 
 const amountText = (quantity: number | null | undefined, unit: PreviewUnit) =>
   formatQuantityWithUnit(quantity, unit, {
-    notation: resolveQuantityNotation(null, unit.displayAsFraction),
+    notation: resolveQuantityNotation(unit.displayAsFraction),
   });
 
 /**

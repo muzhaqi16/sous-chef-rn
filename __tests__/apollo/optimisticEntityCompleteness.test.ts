@@ -41,11 +41,11 @@ import {
   MealType,
   UnitType,
   type CreateRecipeInput,
-} from '#/graphql/generated/schemaTypes';
-import { MealPlanReadersFragmentDoc } from '#/graphql/readers/mealPlanReaders.generated';
-import { MealPlanItemReadersFragmentDoc } from '#/graphql/readers/mealPlanItemReaders.generated';
-import { MealTemplateReadersFragmentDoc } from '#/graphql/readers/mealTemplateReaders.generated';
-import { MealTemplateItemReadersFragmentDoc } from '#/graphql/readers/mealTemplateItemReaders.generated';
+} from '#graphql/generated/schemaTypes';
+import { MealPlanReadersFragmentDoc } from '#graphql/readers/mealPlanReaders.generated';
+import { MealPlanItemReadersFragmentDoc } from '#graphql/readers/mealPlanItemReaders.generated';
+import { MealTemplateReadersFragmentDoc } from '#graphql/readers/mealTemplateReaders.generated';
+import { MealTemplateItemReadersFragmentDoc } from '#graphql/readers/mealTemplateItemReaders.generated';
 import { writeLocalMealPlan } from '#features/mealPlan/cache/mealPlan';
 import { showLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
 import { writeLocalMealTemplate } from '#features/mealPlan/cache/mealTemplate';
@@ -54,7 +54,7 @@ import {
   localTemplateItem,
 } from '#features/mealPlan/cache/mealTemplateItem';
 import { writeLocalFavorite } from '#features/recipes/cache/favorites';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   GetMealPlansDocument,
   MealPlanForEventDocument,
@@ -83,13 +83,13 @@ import { UseGenerateShoppingList_MealPlanFragmentDoc } from '#features/mealPlan/
 import { UseDuplicateMealPlan_MealPlanFragmentDoc } from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
-import * as cacheUpdaters from '#/apollo/utils/cacheUpdaters';
+import * as cacheUpdaters from '#apollo/utils/cacheUpdaters';
 import {
   GetPantryDocument,
-  GetPantryItemBatchesDocument,
   CreatePantryItemDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
+import { GetPantryItemBatchesDocument } from '#entities/pantryItem/batches.generated';
 import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
@@ -139,21 +139,21 @@ import { writeLocalRecipe } from '#features/recipes/utils/recipeCacheWriters';
 import {
   writeLocalPantryItem,
   type LocalPantryItem,
-} from '#features/pantry/cache/writeLocalPantryItem';
+} from '#entities/pantryItem/writeLocalPantryItem';
 import {
   addToPantryItemsCache,
   type PantryItemRef,
-} from '#features/pantry/cache/items';
+} from '#entities/pantryItem/items';
 import { writeLocalPantry } from '#features/pantry/cache/pantry';
 import { AddedShoppingListItemFieldsFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
+import { addNewItemToShoppingListCache } from '#entities/shoppingList/connections';
 import {
   addLocalShoppingListItem,
   createLocalShoppingListItem,
-} from '#features/shoppingList/cache/items';
-import { writeLocalShoppingList } from '#features/shoppingList/cache/list';
+} from '#entities/shoppingList/items';
+import { writeLocalShoppingList } from '#entities/shoppingList/list';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
-import { todayKey } from '#/utils/dateUtils';
+import { todayKey } from '#utils/dateUtils';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const NOW = '2026-10-30T10:00:00.000Z';
@@ -1688,13 +1688,13 @@ describe('optimistic entity completeness', () => {
    */
   describe('every connection-linking writer is accounted for', () => {
     const LINKING_MODULES: Record<string, string> = {
-      'src/features/pantry/cache/items.ts':
+      'src/entities/pantryItem/items.ts':
         'covered: the GetPantry cases above (optimistic, CreatePantryItem, MoveShoppingItemToPantry, CreateReceiptCheckIn, PantryItemsForEvents)',
       'src/features/pantry/hooks/usePantrySubscriptions.ts':
         'covered: the pantry event read-back case, and the fragment comparison below',
       'src/features/notifications/utils/notificationCacheWrites.ts':
         'covered: the notification event read-back case above',
-      'src/features/catalog/cache/storageLocations.ts':
+      'src/entities/storageLocation/storageLocations.ts':
         'covered: the GetStorageLocations reader is compared below',
       'src/features/home/hooks/useHomeInvitations.ts':
         'covered: InviteToHome is compared below',
@@ -1704,7 +1704,7 @@ describe('optimistic entity completeness', () => {
         'covered: the optimistic home create case above, and CreateHome is compared below',
       'src/features/notifications/hooks/useInvitationActions.ts':
         'covered: AcceptHomeInvite is compared below',
-      'src/features/shoppingList/cache/list.ts':
+      'src/entities/shoppingList/list.ts':
         'covered: the optimistic list create case above, and CreateShoppingList (and its recipe twin) is compared below against all three lite readers',
       'src/features/mealPlan/cache/mealPlan.ts':
         'covered: CreateMealPlan is compared below against GetMealPlans',

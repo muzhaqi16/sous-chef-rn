@@ -1,18 +1,18 @@
 import type { RootState } from './index';
 import { initialAppState } from './slices/appSlice';
 import { TRANSIENT_UI_STATE } from './slices/uiSlice';
-import { storage, zustandStorage } from '#/store/deviceStorage';
-import { STORAGE_KEY } from '#/store/persistedKeys';
+import { storage, zustandStorage } from '#store/deviceStorage';
+import { STORAGE_KEY } from '#store/persistedKeys';
 import { requirePlatform } from '#platform/install';
 import { runSessionTeardown } from './sessionTeardown';
 import { whileSessionEnds } from './sessionEnding';
 import { holdsSessionTokens } from './slices/authSlice';
 import { resetSessionScopedStores } from './sessionScopedStores';
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { getApolloResetBridge } from './apolloResetBridge';
-import { MIRRORED_SETTINGS } from '#/domain/serverSettings';
-import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
-import { isRecord } from '#/utils/isRecord';
+import { MIRRORED_SETTINGS } from '#domain/serverSettings';
+import { DEFAULT_CURRENCY } from '#utils/formatters/number';
+import { isRecord } from '#utils/isRecord';
 
 const secureStore = () => requirePlatform('secureStore');
 

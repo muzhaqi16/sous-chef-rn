@@ -1,4 +1,4 @@
-import { changeLanguage, getResolvedLanguage } from '#/i18n';
+import { changeLanguage, getResolvedLanguage } from '#i18n';
 import { useStore } from '#store';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { drainTimers } from '#/test-utils/drainTimers';

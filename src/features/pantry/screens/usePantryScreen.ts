@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useState } from 'react';
+import { useTranslation } from '#i18n';
 
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
@@ -15,12 +15,11 @@ import {
   filterByLocation,
 } from '#features/pantry/utils/pantryFilters';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { useDataState } from '#hooks/data/useDataState';
-import type { FilterTabConfig } from '#components/organisms/FilterTabs/types';
+import type { ChipOption } from '#components/molecules/ChipScrollRow';
+import { getDefaultPantryTabs } from '#features/pantry/components/pantryDisplay/constants';
 import type { PantryItemsFailure } from '#features/pantry/components/pantryDisplay/types';
-import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
-import { StorageType } from '#/graphql/generated/schemaTypes';
 import type {
   PantrySortOption,
   PantrySortDirection,
@@ -131,73 +130,40 @@ export function usePantryScreen() {
   const { createLocation, creating: creatingLocation } =
     useCreateStorageLocation(selectedHomeId ?? undefined, pantry?.id);
 
-  const tabIconSize = 16;
-  const defaultTabs: FilterTabConfig<LocationFilter>[] = [
-    { id: 'all', label: t('pantryScreen.tabAll') },
-    {
-      id: 'fridge',
-      label: t('storageState.REFRIGERATED'),
-      icon: 'thermometer-outline',
-      iconElement: React.createElement(StorageLocationIcon, {
-        type: StorageType.Refrigerator,
-        size: tabIconSize,
-      }),
-    },
-    {
-      id: 'freezer',
-      label: t('labels.storageFrozen'),
-      icon: 'snow-outline',
-      iconElement: React.createElement(StorageLocationIcon, {
-        type: StorageType.Freezer,
-        size: tabIconSize,
-      }),
-    },
-    {
-      id: 'pantry',
-      label: t('labels.storageAmbient'),
-      icon: 'cube-outline',
-      iconElement: React.createElement(StorageLocationIcon, {
-        type: StorageType.PantryShelf,
-        size: tabIconSize,
-      }),
-    },
-  ];
+  const defaultTabs = getDefaultPantryTabs(t);
 
-  const customTabs: FilterTabConfig<LocationFilter>[] =
-    pantryStorageLocations.map(
-      (location: (typeof pantryStorageLocations)[number]) => ({
-        id: location.id,
-        label: location.name,
-        ...(location.parentLocation?.name
-          ? { subLabel: location.parentLocation.name }
-          : undefined),
-        ...(location.color ? { activeColor: location.color } : undefined),
-        ...(location.icon
-          ? { icon: location.icon }
-          : {
-              iconElement: React.createElement(StorageLocationIcon, {
-                type: location.type,
-                size: tabIconSize,
-              }),
-            }),
-      }),
-    );
+  // One line each: a location names its parent only when another shares its name.
+  const sharedNames = new Set(
+    pantryStorageLocations
+      .map(location => location.name.trim().toLowerCase())
+      .filter((name, index, names) => names.indexOf(name) !== index),
+  );
+  const customTabs: ChipOption<LocationFilter>[] = pantryStorageLocations.map(
+    location => {
+      const parent = location.parentLocation?.name;
+      const shared = sharedNames.has(location.name.trim().toLowerCase());
+      return {
+        key: location.id,
+        label:
+          shared && parent
+            ? t('pantryScreen.locationInParent', {
+                parent,
+                name: location.name,
+              })
+            : location.name,
+      };
+    },
+  );
 
   // Only when something is in it. The API counts a DELIBERATE shelf-stable
   // choice as ambient, so an unassigned item has no other tab to appear
   // under — but most pantries have none, and an always-empty tab is noise.
-  const unassignedTabs: FilterTabConfig<LocationFilter>[] =
+  const unassignedTabs: ChipOption<LocationFilter>[] =
     locationCounts.unassigned > 0
-      ? [
-          {
-            id: 'unassigned',
-            label: t('pantryScreen.tabUnassigned'),
-            icon: 'help-circle-outline',
-          },
-        ]
+      ? [{ key: 'unassigned', label: t('pantryScreen.tabUnassigned') }]
       : [];
 
-  const combinedTabs: FilterTabConfig<LocationFilter>[] = [
+  const combinedTabs: ChipOption<LocationFilter>[] = [
     ...defaultTabs,
     ...unassignedTabs,
     ...customTabs,

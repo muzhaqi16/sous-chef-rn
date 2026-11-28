@@ -24,7 +24,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { RowReflowContext, useRowReflow } from '#hooks/animations/useRowReflow';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { resolveRowActions } from '#components/organisms/SwipeableItem/commonActions';
 import {
   ItemSwipeActionsProvider,

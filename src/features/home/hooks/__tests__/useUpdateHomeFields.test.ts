@@ -6,8 +6,8 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { UpdateHomeDocument } from '#operations/home/home.generated';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+import { ErrorCode } from '#graphql/generated/schemaTypes';
+import { alertService } from '#services/alertService';
 import { useUpdateHomeFields } from '../useUpdateHomeFields';
 
 const FALLBACK = 'Failed to update home';
@@ -106,16 +106,16 @@ describe('updating a home field', () => {
       },
     );
 
-    let persisted: boolean | undefined;
+    let failure: Awaited<ReturnType<typeof result.current.updateHomeFields>>;
     await act(async () => {
-      persisted = await result.current.updateHomeFields(
+      failure = await result.current.updateHomeFields(
         { name: 'New Name' },
         { ...readHome(cache), version: 3 },
         FALLBACK,
       );
     });
 
-    expect(persisted).toBe(false);
+    expect(failure).toBeDefined();
     expect(readHome(cache)?.name).toBe('Old Name');
     // Said once, and never in the server's own words.
     expect(alertService.alert).toHaveBeenCalledTimes(1);

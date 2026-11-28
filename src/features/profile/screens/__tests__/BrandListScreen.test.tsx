@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { t } from '#/i18n';
-import { alertService } from '#/services/alertService';
+import { t } from '#i18n';
+import { alertService } from '#services/alertService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { BrandListView } from '#features/profile/hooks/useBrandLists';
 import type { DataState } from '#hooks/data/useDataState';

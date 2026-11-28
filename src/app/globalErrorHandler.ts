@@ -5,8 +5,8 @@
  * so that crashes are reported to Telemetry / Loki.
  */
 
-import { Telemetry } from '#/services/telemetry';
-import { logger } from '#/utils/environment';
+import { Telemetry } from '#services/telemetry';
+import { logger } from '#utils/environment';
 
 /** Reports unhandled JS exceptions, then forwards to RN's own handler. */
 export function setupGlobalErrorHandler(): void {

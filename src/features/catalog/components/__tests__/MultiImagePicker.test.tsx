@@ -3,7 +3,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { MultiImagePicker } from '#features/catalog/components/MultiImagePicker';
 import type { SelectedImage } from '#features/catalog/types';
-import type { ImageFile } from '#/types/media';
+import type { ImageFile } from '#types/media';
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,

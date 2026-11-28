@@ -1,5 +1,5 @@
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { refByIdOrName } from '#/utils/refInput';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { refByIdOrName } from '#utils/refInput';
 
 /**
  * A shopping line's unit: the picked unit by id, else the typed name. The typed

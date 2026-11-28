@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
+import { AcquisitionMethod } from '#graphql/generated/schemaTypes';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { StockSettingsPage } from '../StockSettingsPage';
 

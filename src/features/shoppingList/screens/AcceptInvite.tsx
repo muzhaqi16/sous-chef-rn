@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { alertService } from '#/services/alertService';
-import { toastService } from '#/services/toastService';
+import { alertService } from '#services/alertService';
+import { toastService } from '#services/toastService';
 import { Badge } from '#components/atoms/Badge';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import { Divider } from '#components/atoms/Divider';
@@ -12,14 +12,14 @@ import { formatRoleDisplay } from '#features/shoppingList/utils/ownershipHelpers
 import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useInviteByToken } from '#features/shoppingList/screens/useInviteByToken';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Screen } from '#components/templates/Screen';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { personName } from '#/utils/formatters/memberFormatters';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { personName } from '#utils/formatters/memberFormatters';
+import { destructiveConfirm } from '#services/destructiveConfirm';
 
 export const AcceptInvite: React.FC = () => {
   const { t } = useTranslation();

@@ -1,7 +1,7 @@
 import { gql, type InMemoryCache } from '@apollo/client';
-import { makeCache } from '#/apollo/cache';
-import { PendingWrites } from '#/apollo/pendingWrites/pendingWrites';
-import type { PendingWrite } from '#/apollo/pendingWrites/types';
+import { makeCache } from '#apollo/cache';
+import { PendingWrites } from '#apollo/pendingWrites/pendingWrites';
+import type { PendingWrite } from '#apollo/pendingWrites/types';
 import {
   completeSeed,
   seedFragment,

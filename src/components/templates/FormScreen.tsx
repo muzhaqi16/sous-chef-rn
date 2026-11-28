@@ -2,9 +2,8 @@ import React from 'react';
 import { View } from 'react-native';
 import { usePreventRemove } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import { alertService } from '#/services/alertService';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
+import { useTranslation } from '#i18n';
+import { confirmDiscardChanges } from '#services/destructiveConfirm';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Screen } from './Screen';
 
@@ -29,16 +28,9 @@ interface FormScreenProps {
 
 /** Mounted only for a form that opts in: the hook needs a navigator's route. */
 const DiscardChangesGuard: React.FC<{ active: boolean }> = ({ active }) => {
-  const { t } = useTranslation();
   const { navigation } = useAppNavigation();
   usePreventRemove(active, ({ data }) => {
-    alertService.alert(
-      t('confirmations.discardChangesTitle'),
-      t('confirmations.discardChanges'),
-      destructiveConfirm(t('labels.discard'), () =>
-        navigation.dispatch(data.action),
-      ),
-    );
+    confirmDiscardChanges(() => navigation.dispatch(data.action));
   });
   return null;
 };

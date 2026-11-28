@@ -3,7 +3,7 @@ import {
   SearchBar,
   type SearchBarAction,
 } from '#components/molecules/SearchBar';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { MAX_RECIPE_QUERY_LENGTH } from '#domain/catalogRecipes';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 

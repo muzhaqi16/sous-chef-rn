@@ -1,21 +1,21 @@
-import React, { useRef, useState } from 'react';
-import { useTranslation } from '#/i18n';
+import React, { useRef } from 'react';
+import { useTranslation } from '#i18n';
 import type { ShoppingListSuggestionItem } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import {
   useShoppingListSuggestions,
   SHOPPING_SUGGESTIONS_LIMIT,
 } from '#features/shoppingList/hooks/useShoppingListSuggestions';
-import { toastService } from '#/services/toastService';
+import { toastService } from '#services/toastService';
 import { useAddToShoppingList } from '#features/shoppingList/hooks/useAddToShoppingList';
-import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
-import { SuggestionSurface } from '#/graphql/generated/schemaTypes';
+import type { ItemSuggestion } from '#graphql/generated/schemaTypes';
+import { SuggestionSurface } from '#graphql/generated/schemaTypes';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { useFirstShopTourContext } from '#features/shoppingList/context/FirstShopTourContext';
 import { InlineTourHint } from '#components/molecules/InlineTourHint';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';
-import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddItemSheetState';
+import { useDeferredSheetFetch } from '#features/catalog/ui/AddItemSheet/useDeferredSheetFetch';
 import { shoppingListSheetConfig } from '#features/shoppingList/components/AddToShoppingListSheet/shoppingListSheetConfig';
 import { ShoppingListDetailsStep } from './ShoppingListDetailsStep';
 
@@ -50,8 +50,8 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const guide = useFirstShopTourContext()?.guide;
 
   // Shared state management for sheet visibility and deferred data fetching
-  const state = useAddItemSheetState({
-    visible,
+  const shouldFetch = useDeferredSheetFetch({
+    open: visible && !!shoppingListId,
     contextId: shoppingListId,
     deferFetch: shoppingListSheetConfig.deferFetch,
   });
@@ -60,7 +60,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const suggestionsResult = useShoppingListSuggestions({
     shoppingListId,
     limit: SHOPPING_SUGGESTIONS_LIMIT,
-    skip: !visible || !state.shouldFetch,
+    skip: !visible || !shouldFetch,
   });
 
   // Dismiss a junk/unwanted suggestion from the SHOPPING surface.
@@ -81,13 +81,6 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   // focus effect re-presents the sheet on return. Calling onClose() here would
   // flip `visible` to false before the blur, so the sheet would stay closed on
   // return instead of restoring.
-  // Prefilled name for the in-place details step. The shared AddItemSheet morphs
-  // to the details form itself (see renderDetails); here we just seed the name.
-  const [prefilledItemName, setPrefilledItemName] = useState('');
-  const handleAddManually = (searchValue: string) => {
-    setPrefilledItemName(searchValue);
-  };
-
   // Item created from the details form — refresh suggestions and close the sheet.
   const handleAddDetailsSuccess = () => {
     suggestionsResult.refetch();
@@ -171,19 +164,16 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       onQuickAddSearchSuggestion={handleQuickAddSearchSuggestion}
       onQuickAddSuggestion={handleQuickAddSuggestion}
       onDismissSuggestion={handleDismissSuggestion}
-      onAddManually={handleAddManually}
       startStep={startStep}
-      shouldFetch={state.shouldFetch}
       initialSearchQuery={initialSearchQuery}
       showImages={showImages}
       tutorialHint={tutorialHintElement}
-      renderDetails={({ goBack, holdOpen }) => (
+      renderDetails={({ goBack, itemName }) => (
         <ShoppingListDetailsStep
           shoppingListId={shoppingListId}
-          prefilledItemName={prefilledItemName}
+          prefilledItemName={itemName}
           onClose={goBack}
           onSuccess={handleAddDetailsSuccess}
-          onHoldOpen={holdOpen}
         />
       )}
     />

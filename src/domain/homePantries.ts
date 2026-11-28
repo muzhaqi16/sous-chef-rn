@@ -1,4 +1,4 @@
-import { extractNodes } from '#/utils/connectionUtils';
+import { extractNodes } from '#utils/connectionUtils';
 
 interface PantryNode {
   id: string;

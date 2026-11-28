@@ -48,7 +48,7 @@ import {
 import {
   topInsetScreenLayout,
   topInsetWith,
-  noInsetScreenLayout,
+  navigatorScreenLayout,
 } from '#navigation/layouts/TopInsetLayout';
 import { PostLoginBiometricScreen } from '#features/auth/screens/PostLoginBiometricScreen';
 import { useDeepLinkRouter } from '#hooks/deepLink/useDeepLinkRouter';
@@ -63,7 +63,7 @@ import NavigationService, { navigationRef } from '#services/NavigationService';
 import { Telemetry } from '#services/telemetry';
 import { NativePerformanceService } from '#services/performance/NativePerformanceService';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
-import { motion } from '#/theme/motion';
+import { motion } from '#theme/motion';
 import { rootLinking } from './linking';
 
 function RootLayout({ children }: { children: React.ReactNode }) {
@@ -126,12 +126,12 @@ const RootStack = createNativeStackNavigator({
     },
     MainApp: {
       if: useIsMainApp,
-      // Nested navigators opt out with `noInsetScreenLayout`, or they double-inset.
+      // A nested navigator takes `navigatorScreenLayout`: its screens bring their own.
       screenLayout: topInsetScreenLayout,
       screens: {
         Home: createNativeStackScreen({
           screen: HomeTabs,
-          layout: noInsetScreenLayout,
+          layout: navigatorScreenLayout,
           // Keeps the tab subtree's effects alive under a pushed detail screen
           // instead of re-running every layout effect in one commit on pop. Only
           // bites from the second push down.
@@ -139,15 +139,15 @@ const RootStack = createNativeStackNavigator({
         }),
         Barcode: createNativeStackScreen({
           screen: BarcodeStack,
-          layout: noInsetScreenLayout,
+          layout: navigatorScreenLayout,
         }),
         Receipts: createNativeStackScreen({
           screen: ReceiptsStack,
-          layout: noInsetScreenLayout,
+          layout: navigatorScreenLayout,
         }),
         Notifications: createNativeStackScreen({
           screen: NotificationStack,
-          layout: noInsetScreenLayout,
+          layout: navigatorScreenLayout,
         }),
         // Siblings of `Home`, so a pushed detail screen covers the floating tab
         // bar. The object spread keeps `StaticParamList` inference, so `navigate`

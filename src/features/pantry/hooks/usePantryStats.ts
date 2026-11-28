@@ -1,4 +1,4 @@
-import { StorageState } from '#/graphql/generated/schemaTypes';
+import { StorageState } from '#graphql/generated/schemaTypes';
 import type { LocationCounts } from './pantryDataTypes';
 
 /** Minimal pantry-item shape this hook reads when counting client-side. */

@@ -6,7 +6,7 @@ import type {
 } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { openWebUrl } from '#native/externalUrl';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { hitSlop } from '#theme/foundations/sizes';
 import { Text, type TextRole, type TextTone } from './Text';
 
 /** `caption` is a small underlined credit, such as a data source's notice. */
@@ -63,7 +63,7 @@ export const Link: React.FC<LinkProps> = ({
       accessibilityState={{ disabled }}
       tone={LOOK[variant].tone}
       style={[
-        variant === 'caption' && styles.caption,
+        variant === 'caption' ? styles.caption : styles.target,
         disabled && styles.disabled,
         pressable && pressed && styles.pressed,
         style,
@@ -77,6 +77,14 @@ export const Link: React.FC<LinkProps> = ({
 const styles = StyleSheet.create(theme => ({
   // Text takes no `hitSlop`: the padding widens the touch area, and the
   // matching negative margin gives the layout back.
+  // A link on its own line is a whole target at the platform floor; inside a
+  // sentence it is nested text, whose padding React Native ignores.
+  target: {
+    paddingVertical: Math.max(
+      0,
+      (theme.sizes.touchTarget.min - theme.type.bodyStrong.lineHeight) / 2,
+    ),
+  },
   caption: {
     textDecorationLine: 'underline',
     padding: hitSlop.sm,

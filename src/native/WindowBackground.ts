@@ -1,19 +1,17 @@
+import { Appearance, Platform } from 'react-native';
 import { nativeMethod } from './nativeModule';
 
 const MODULE = 'WindowBackgroundModule';
 
 export const WindowBackground = {
   /**
-   * `theme` colours Android's navigation bar buttons. iOS has a `followSystem`
-   * instead while the app follows the OS: a style on its window hides the OS's
-   * changes from the app, and Unistyles reads it as the OS's colour scheme.
+   * iOS styles the window, so system UI matches the app; following the OS it
+   * clears the style, which would hide the OS's changes from Unistyles.
+   * Android colours its navigation bar's buttons.
    */
-  setTheme(theme: string, followsSystem: boolean) {
-    const followSystem = followsSystem
-      ? nativeMethod(MODULE, 'followSystem')
-      : null;
-    if (followSystem) {
-      followSystem();
+  setTheme(theme: 'light' | 'dark', followsSystem: boolean) {
+    if (Platform.OS === 'ios') {
+      Appearance.setColorScheme(followsSystem ? 'auto' : theme);
       return;
     }
     nativeMethod(MODULE, 'setTheme')?.(theme);

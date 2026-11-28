@@ -5,24 +5,24 @@ import { useRoute } from '@react-navigation/native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Icon } from '#components/atoms/Icon';
 import { PasswordInput } from '#components/molecules/PasswordInput';
 import { Button } from '#components/molecules/Button';
 import { Loading } from '#components/molecules/Loading';
 import { useStore } from '#store';
 import { holdsSessionTokens } from '#store/slices/authSlice';
-import { authService } from '#/services/authService';
+import { authService } from '#services/authService';
 import {
   useResetPassword,
   type ResetPasswordFn,
 } from '#features/auth/hooks/useResetPassword';
-import { logger } from '#/utils/environment';
-import { localizedErrorMessage } from '#/services/errorService';
-import { reportValidationErrors } from '#/utils/validation/common';
-import { resetPasswordSchema } from '#/utils/validation/auth';
+import { logger } from '#utils/environment';
+import { localizedErrorMessage } from '#services/errorService';
+import { reportValidationErrors } from '#utils/validation/common';
+import { resetPasswordSchema } from '#utils/validation/auth';
 import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
@@ -201,7 +201,7 @@ export const ResetPasswordScreen: React.FC = () => {
       >
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Icon name="checkmark-circle-outline" size={64} tone="success" />
+            <Icon name="checkmark-circle-outline" size="2xl" tone="success" />
           </View>
           <Text role="subheading" align="center" style={styles.title}>
             {t('auth.resetPasswordDoneTitle')}
@@ -237,7 +237,7 @@ export const ResetPasswordScreen: React.FC = () => {
       >
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Icon name="close-circle-outline" size={64} tone="error" />
+            <Icon name="close-circle-outline" size="2xl" tone="error" />
           </View>
           <Text role="subheading" align="center" style={styles.title}>
             {t('auth.invalidResetLinkTitle')}
@@ -286,7 +286,7 @@ export const ResetPasswordScreen: React.FC = () => {
     >
       <View style={styles.formContent}>
         <View style={styles.iconContainer}>
-          <Icon name="lock-closed-outline" size={64} tone="primary" />
+          <Icon name="lock-closed-outline" size="2xl" tone="primary" />
         </View>
 
         <Text role="subheading" align="center" style={styles.title}>
@@ -313,8 +313,8 @@ export const ResetPasswordScreen: React.FC = () => {
         )}
 
         {/* The inputs write through setValue rather than register/Controller,
-            so `shouldValidate` is what keeps formState.isValid — and with it
-            the submit button — in step with what the user has typed. */}
+            so `shouldValidate` is what keeps each field's error in step with
+            what the user has typed. */}
         <View style={styles.form}>
           <View style={styles.field}>
             <Text role="bodyStrong" style={styles.label}>
@@ -358,7 +358,6 @@ export const ResetPasswordScreen: React.FC = () => {
           <Button
             variant="primary"
             onPress={form.handleSubmit(onSubmit, reportValidationErrors)}
-            disabled={!form.formState.isValid}
             loading={isSubmitting}
             style={styles.buttonSpacing}
             testID={authTestIDs.resetPasswordSubmitButton}

@@ -3,10 +3,10 @@ import { useSubscription } from '@apollo/client/react';
 import {
   FeedPokesDocument,
   type FeedPokesSubscription,
-} from '#/apollo/feed/feed.generated';
-import { feedEngine } from '#/apollo/feed/feedEngine';
-import { positionOf } from '#/apollo/feed/feedPositions';
-import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
+} from '#apollo/feed/feed.generated';
+import { feedEngine } from '#apollo/feed/feedEngine';
+import { positionOf } from '#apollo/feed/feedPositions';
+import { SyncScopeKind } from '#graphql/generated/schemaTypes';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useSubscriptionTransportRecovery } from './useSubscriptionTransportRecovery';
 

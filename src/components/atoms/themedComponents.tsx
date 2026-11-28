@@ -1,29 +1,36 @@
 import {
   ActivityIndicator,
-  Modal as RNModal,
-  type ModalProps,
   Platform,
   Pressable as RNPressable,
   RefreshControl as RNRefreshControl,
   TextInput,
+  type TextInputInstance,
   type TextInputProps,
 } from 'react-native';
 // RNGH's, not RN's — see `ThemedRefreshControl` below.
 import { RefreshControl } from 'react-native-gesture-handler';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { useRef } from 'react';
+import {
+  ANIMATION_STATUS,
+  BottomSheetTextInput,
+  useBottomSheetInternal,
+} from '@gorhom/bottom-sheet';
+import { useAnimatedReaction, useSharedValue } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import { useInBottomSheet } from '#hooks/ui/useInBottomSheet';
+import { assignRef } from '#components/atoms/inputRef';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 
-import type { Theme } from '#/theme/themes';
+import type { Theme } from '#theme/themes';
 
 import { Icon } from '#components/atoms/Icon';
-import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
 
 // Shared withUnistyles wrappers for third-party components taking theme-derived
 // props. Module scope, so screens carry no useUnistyles re-render subscription.
 
 // RN's Pressable, which Unistyles binds to the ShadowTree; `withUnistyles` over
-// RNGH's drops proxy values in a `({pressed}) => [...]` style. For gesture
+// RNGH's replaces a `({pressed}) => [...]` style with `{}`. For gesture
 // composition, import RNGH's at the call site. A press target is a button to
 // VoiceOver and TalkBack unless the caller names another role.
 export const Pressable = ({
@@ -40,14 +47,6 @@ export const Pressable = ({
   />
 );
 
-// Import Modal from here. RN's mounts its children only while visible, so they
-// sit in `CurrentThemeScope`.
-export const Modal = ({ children, ...props }: ModalProps) => (
-  <RNModal {...props}>
-    <CurrentThemeScope>{children}</CurrentThemeScope>
-  </RNModal>
-);
-
 // A body-text placeholder tone renders an empty field as dark as a filled one.
 // `keyboardAppearance` reads `rt.themeName`: an explicit theme preference calls
 // `setAdaptiveThemes(false)`, so `rt.colorScheme` is the OS's, not the app's.
@@ -56,19 +55,29 @@ const inputProps = (
   themeName?: string,
 ): Pick<
   TextInputProps,
-  'placeholderTextColor' | 'keyboardAppearance' | 'cursorColor'
+  | 'placeholderTextColor'
+  | 'keyboardAppearance'
+  | 'cursorColor'
+  | 'maxFontSizeMultiplier'
 > => ({
   placeholderTextColor: theme.colors.inputPlaceholder,
   keyboardAppearance: themeName === 'dark' ? 'dark' : 'light',
   cursorColor: theme.colors.primaryText,
+  // The same ceiling `Text` takes: a field's text never outgrows its label.
+  maxFontSizeMultiplier: theme.maxFontScaleMultiplier,
 });
 
 const UniTextInput = withUnistyles(TextInput, (theme, rt) =>
   inputProps(theme, rt.themeName),
 );
-const UniBottomSheetTextInput = withUnistyles(
-  BottomSheetTextInput,
-  (theme, rt) => inputProps(theme, rt.themeName),
+// gorhom types its ref with RNGH's TextInput, which the strict React Native
+// types read as a component, not an instance. What it hands back is RN's
+// TextInput, so this is the one place the ref takes that type.
+const SheetTextInput = BottomSheetTextInput as React.FC<
+  TextInputProps & { ref?: React.Ref<TextInputInstance> }
+>;
+const UniBottomSheetTextInput = withUnistyles(SheetTextInput, (theme, rt) =>
+  inputProps(theme, rt.themeName),
 );
 
 // The color is a base STYLE, not a mapping prop: `withUnistyles` replaces its
@@ -78,34 +87,67 @@ const inputStyles = StyleSheet.create(theme => ({
   base: { color: theme.colors.inputText },
 }));
 
-export type ThemedTextInputRef = React.ComponentRef<typeof TextInput>;
-export type ThemedBottomSheetTextInputRef = React.ComponentRef<
-  typeof BottomSheetTextInput
->;
+export type ThemedTextInputRef = TextInputInstance;
 
 /** `withUnistyles` flattens once, so `[base, [a, b]]` leaves a, b unresolved. */
 const withFieldStyle = (
   style: React.ComponentProps<typeof UniTextInput>['style'],
-) =>
-  Array.isArray(style)
-    ? [inputStyles.base, ...style]
-    : [inputStyles.base, style];
+) => [inputStyles.base, style].flat();
 
-/** RN TextInput carrying the theme's field color, placeholder and keyboard. */
+/**
+ * gorhom's input. `autoFocus` waits for the sheet to stop moving: a field
+ * focused while the sheet slides in is measured below the keyboard, and the
+ * keyboard-aware scroll carries it out of view.
+ * Verified: #a-field-focused-while-its-sheet-opens-is-scrolled-out-of-view
+ */
+const SheetFieldInput = ({
+  autoFocus = false,
+  ref,
+  ...rest
+}: React.ComponentProps<typeof UniTextInput>) => {
+  const { animatedAnimationState, animatedIndex } = useBottomSheetInternal();
+  const input = useRef<TextInputInstance | null>(null);
+  const focused = useSharedValue(false);
+  const focus = () => input.current?.focus();
+
+  useAnimatedReaction(
+    () =>
+      autoFocus &&
+      animatedAnimationState.get().status === ANIMATION_STATUS.STOPPED &&
+      animatedIndex.get() >= 0,
+    arrived => {
+      if (!arrived || focused.get()) return;
+      focused.set(true);
+      scheduleOnRN(focus);
+    },
+  );
+
+  return (
+    <UniBottomSheetTextInput
+      {...rest}
+      ref={node => {
+        input.current = node;
+        assignRef(ref, node);
+      }}
+    />
+  );
+};
+
+/**
+ * A TextInput carrying the theme's field color, placeholder and keyboard. Inside
+ * a bottom sheet it is gorhom's, whose keyboard handling waits for its own
+ * input's focus; the sheet is read from gorhom, so no caller says where it is.
+ * Verified: #gorhom-keyboard-handling-requires-bottomsheettextinput
+ */
 export const ThemedTextInput = ({
   style,
   ...rest
-}: React.ComponentProps<typeof UniTextInput>) => (
-  <UniTextInput {...rest} style={withFieldStyle(style)} />
-);
-
-/** The same, for a TextInput inside a BottomSheet. */
-export const ThemedBottomSheetTextInput = ({
-  style,
-  ...rest
-}: React.ComponentProps<typeof UniBottomSheetTextInput>) => (
-  <UniBottomSheetTextInput {...rest} style={withFieldStyle(style)} />
-);
+}: React.ComponentProps<typeof UniTextInput>) =>
+  useInBottomSheet() ? (
+    <SheetFieldInput {...rest} style={withFieldStyle(style)} />
+  ) : (
+    <UniTextInput {...rest} style={withFieldStyle(style)} />
+  );
 
 /** Keyboard-aware scroller for full-screen forms; `bottomOffset` defaults to
  *  `theme.spacing.md` (the library's 0 lands an input flush against the

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
@@ -47,7 +47,7 @@ export const RatingBreakdown: React.FC<RatingBreakdownProps> = ({
             <Icon
               key={star}
               name={star <= Math.round(averageRating) ? 'star' : 'star-outline'}
-              size={14}
+              size="2xsPlus"
               tone="rating"
             />
           ))}

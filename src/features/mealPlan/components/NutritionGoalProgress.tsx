@@ -1,9 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation, type TranslationKey } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text, type TextTone } from '#components/atoms/Text';
-import { GoalStatus, type GoalProgress } from '#/graphql/generated/schemaTypes';
+import { GoalStatus, type GoalProgress } from '#graphql/generated/schemaTypes';
 import { ProgressBar } from '#components/atoms/ProgressBar';
 
 interface NutritionGoalProgressProps {

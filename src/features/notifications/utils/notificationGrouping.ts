@@ -1,7 +1,7 @@
 import type { DisplayNotification } from '#features/notifications/utils/toDisplayNotification';
-import { Priority } from '#/graphql/generated/schemaTypes';
+import { Priority } from '#graphql/generated/schemaTypes';
 import { safeParseDate } from '#utils/dateUtils';
-import type { Translate } from '#/i18n/types';
+import type { Translate } from '#i18n/types';
 
 export interface NotificationGroups {
   urgent: DisplayNotification[];

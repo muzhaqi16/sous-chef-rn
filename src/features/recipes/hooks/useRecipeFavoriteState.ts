@@ -1,18 +1,16 @@
 import { noteTipFact } from '#hooks/settings/useFeatureHint';
 import { useState } from 'react';
-import { errorService } from '#/services/errorService';
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { AddRecipeToFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
+import { errorService } from '#services/errorService';
 import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
-import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { generateEntityId } from '#/utils/generateEntityId';
-import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { executeWithLoadingState } from '#utils/finallyHelpers';
+import { firstNonBlank } from '#utils/firstNonBlank';
+import { generateEntityId } from '#utils/generateEntityId';
+import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import type { SaveToFavoritesOptions } from '#features/recipes/cache/favorites';
 import type { AddFavoriteInputs } from '#features/recipes/offline/localWrites';
-import { toastService } from '#/services/toastService';
-import { useTranslation } from '#/i18n';
+import { toastService } from '#services/toastService';
+import { useTranslation } from '#i18n';
+import { addRecipeToFavoritesWrite } from '#features/recipes/offline/localWrites';
 
 export interface UseRecipeFavoriteStateParams {
   backendRecipe: MaterializedRecipe | undefined;
@@ -39,11 +37,12 @@ export function useRecipeFavoriteState({
   onSaved,
 }: UseRecipeFavoriteStateParams): UseRecipeFavoriteStateResult {
   const { t } = useTranslation();
-  const client = useApolloClient();
   const [saving, setSaving] = useState(false);
 
-  const [favoriteRecipe] = useMutation(AddRecipeToFavoritesDocument, {
-    context: { localFirst: true },
+  const favoriteRecipe = useLocalWrite(addRecipeToFavoritesWrite, {
+    fallback: t('recipes.saveRecipeFailed'),
+    // Saving a recipe reports its outcome as a toast.
+    present: 'toast',
   });
 
   const favorite = async (
@@ -60,8 +59,7 @@ export function useRecipeFavoriteState({
       now: new Date().toISOString(),
     };
 
-    const settled = await pendingWritesOf(client.cache).send(
-      AddRecipeToFavoritesDocument,
+    const settled = await favoriteRecipe.send(
       {
         input: {
           id: savedRecipeId,
@@ -71,13 +69,6 @@ export function useRecipeFavoriteState({
           notes: saveOptions.notes,
         },
       },
-      write =>
-        settleMutation(() => favoriteRecipe(write), {
-          document: AddRecipeToFavoritesDocument,
-          fallback: t('recipes.saveRecipeFailed'),
-          // Saving a recipe reports its outcome as a toast.
-          present: 'toast',
-        }),
       inputs,
     );
 

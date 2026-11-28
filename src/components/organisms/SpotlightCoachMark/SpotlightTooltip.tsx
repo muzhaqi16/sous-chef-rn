@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import {
   AccessibilityInfo,
   View,
+  type ViewInstance,
   type LayoutChangeEvent,
   type StyleProp,
   type ViewStyle,
@@ -11,7 +12,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Button } from '#components/molecules/Button';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { Text } from '#components/atoms/Text';
 import { requirePlatform } from '#platform/install';
 import { ARROW_SIZE } from './spotlightConstants';
@@ -71,7 +72,7 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
       : null;
   const spoken = [progress, title, subtitle].filter(Boolean).join('. ');
 
-  const textRef = useRef<View>(null);
+  const textRef = useRef<ViewInstance>(null);
   useEffect(() => {
     const text = textRef.current;
     if (text) AccessibilityInfo.sendAccessibilityEvent(text, 'focus');

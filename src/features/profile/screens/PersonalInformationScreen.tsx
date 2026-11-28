@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import type { SettingItem } from '#components/organisms/SettingRow';
 import { SubScreen } from '#components/templates/SubScreen';
@@ -7,13 +7,14 @@ import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { useUser } from '#store/useAppStore';
 import {
   PERSONAL_INFO_CONFIG,
-  type SettingItemConfig,
+  type PersonalInfoItemConfig,
   type SettingOptionConfig,
-} from '#/config/settingsConfig';
+} from './settingsConfig';
+import { getValidationSchemaForField } from '#features/profile/components/profileFieldFormConfig';
 import { useUpdateProfile } from '#features/profile/hooks/useUpdateProfile';
-import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import { ProfileVisibility } from '#graphql/generated/schemaTypes';
 import { extractDateString } from '#utils/dateUtils';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeRefreshWithFinally } from '#utils/finallyHelpers';
 import { useDataState } from '#hooks/data/useDataState';
 import { DataStateView } from '#components/organisms/DataStateView';
 
@@ -49,99 +50,110 @@ export const PersonalInformationScreen: React.FC = () => {
   const translateOptions = (options?: SettingOptionConfig[]) =>
     options?.map(opt => ({ value: opt.value, label: t(opt.labelKey) }));
 
-  const createSettingItem = (config: SettingItemConfig): SettingItem => {
-    const baseItem: SettingItem = {
-      key: config.key,
-      label: t(config.labelKey),
-      type: config.type,
-      subtitle: config.subtitleKey ? t(config.subtitleKey) : undefined,
-      placeholder: config.placeholderKey ? t(config.placeholderKey) : undefined,
-    };
-
-    switch (config.key) {
+  /** What a field shows, and how an edit to it is saved. */
+  const bindingOf = (
+    key: string,
+  ): { value: string; onSave?: (value: string) => void } => {
+    switch (key) {
       case 'email':
-        return { ...baseItem, value: user?.email ?? '' };
-
+        return { value: user?.email ?? '' };
       case 'firstName':
         return {
-          ...baseItem,
           value: profile?.firstName ?? '',
-          onSave: (v: string) => {
+          onSave: v => {
             void updateProfile({ firstName: v });
           },
         };
-
       case 'lastName':
         return {
-          ...baseItem,
           value: profile?.lastName ?? '',
-          onSave: (v: string) => {
+          onSave: v => {
             void updateProfile({ lastName: v });
           },
         };
-
       case 'displayName':
         return {
-          ...baseItem,
           value: profile?.displayName ?? '',
-          onSave: (v: string) => {
+          onSave: v => {
             void updateProfile({ displayName: v });
           },
         };
-
       case 'bio':
         return {
-          ...baseItem,
           value: profile?.bio ?? '',
-          onSave: (v: string) => {
+          onSave: v => {
             void updateProfile({ bio: v });
           },
         };
-
       case 'phone':
         return {
-          ...baseItem,
           value: profile?.phone ?? '',
-          onSave: (v: string) => {
+          onSave: v => {
             void updateProfile({ phone: v });
           },
         };
-
       case 'dateOfBirth':
         return {
-          ...baseItem,
           value: extractDateString(profile?.dateOfBirth),
           // A calendar date, sent as the YYYY-MM-DD the field validates.
-          onSave: (v: string) => {
+          onSave: v => {
             void updateProfile({ dateOfBirth: v || null });
           },
         };
-
       case 'gender':
         return {
-          ...baseItem,
           value: profile?.gender ?? '',
-          options: translateOptions(config.options),
-          onSave: (v: string) => {
+          onSave: v => {
             void updateProfile({ gender: v });
           },
         };
-
       case 'profileVisibility':
         return {
-          ...baseItem,
           // What the server creates a profile with.
           value: profile?.profileVisibility ?? ProfileVisibility.Private,
-          options: translateOptions(config.options),
-          onSave: (v: string) => {
+          onSave: v => {
             if (isProfileVisibility(v)) {
               void updateProfile({ profileVisibility: v });
             }
           },
         };
+      default:
+        return { value: '' };
     }
+  };
 
-    return baseItem;
+  const createSettingItem = (config: PersonalInfoItemConfig): SettingItem => {
+    const base = {
+      key: config.key,
+      label: t(config.labelKey),
+      subtitle: config.subtitleKey ? t(config.subtitleKey) : undefined,
+    };
+    const { value, onSave } = bindingOf(config.key);
+    switch (config.type) {
+      case 'text':
+        return {
+          ...base,
+          type: 'text',
+          value,
+          placeholder: config.placeholderKey
+            ? t(config.placeholderKey)
+            : undefined,
+          validationSchema: getValidationSchemaForField(config.key),
+          multiline: config.multiline,
+          keyboardType: config.keyboardType,
+          onSave,
+        };
+      case 'modal':
+        return {
+          ...base,
+          type: 'modal',
+          value,
+          options: translateOptions(config.options),
+          onSave,
+        };
+      case 'info':
+        return { ...base, type: 'info', value };
+    }
   };
 
   const sections = (() => {

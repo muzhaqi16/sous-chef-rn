@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { FEATURE_LOCALES } from '#/i18n/featureLocales';
+import * as ts from 'typescript';
+import { parseSource } from '#/test-utils/sourceAst';
+import { FEATURE_LOCALES } from '#i18n/featureLocales';
 import { featureLocaleDirs } from '#/test-utils/mergedLocales';
 
 /**
@@ -26,6 +28,19 @@ const ROOT = path.join(__dirname, '..', '..');
 const FEATURES_DIR = path.join(ROOT, 'src', 'features');
 const LOCALES = ['en', 'es', 'it', 'sq'] as const;
 
+/** The features whose English copy a file imports, however the import is written. */
+const typedFeatures = (source: ts.SourceFile): string[] =>
+  source.statements
+    .filter(ts.isImportDeclaration)
+    .map(statement => statement.moduleSpecifier)
+    .filter(ts.isStringLiteral)
+    .map(
+      specifier =>
+        /^#features\/([^/]+)\/locales\/en\.json$/.exec(specifier.text)?.[1],
+    )
+    .filter((name): name is string => name !== undefined)
+    .sort();
+
 describe('feature locale registration', () => {
   const onDisk = featureLocaleDirs();
   const registered = Object.keys(FEATURE_LOCALES).sort();
@@ -49,18 +64,21 @@ describe('feature locale registration', () => {
 
   // `localeTypes.ts` is the TYPE the keys are checked against; a feature left
   // out of it has copy at runtime that no `t()` call can name.
-  it('every feature that ships copy is in the translation key type', () => {
-    const source = fs.readFileSync(
-      path.join(ROOT, 'src', 'i18n', 'localeTypes.ts'),
-      'utf8',
+  it('reads an import however it is quoted or typed', () => {
+    const planted = parseSource(
+      'planted.ts',
+      `import type pantry from "#features/pantry/locales/en.json";\nimport recipes from '#features/recipes/locales/en.json';`,
     );
-    const typed = [
-      ...source.matchAll(/from '#features\/([^/]+)\/locales\/en\.json'/g),
-    ]
-      .map(match => match[1])
-      .sort();
 
-    expect(typed).toEqual([...onDisk].sort());
+    expect(typedFeatures(planted)).toEqual(['pantry', 'recipes']);
+  });
+
+  it('every feature that ships copy is in the translation key type', () => {
+    expect(
+      typedFeatures(
+        parseSource(path.join(ROOT, 'src', 'i18n', 'localeTypes.ts')),
+      ),
+    ).toEqual([...onDisk].sort());
   });
 
   it.each(registered.map(name => [name]))(

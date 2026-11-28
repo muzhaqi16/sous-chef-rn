@@ -3,46 +3,31 @@ import { View } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { object, string, type ObjectSchema } from 'yup';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
-import { errorCopy } from '#/services/errorService';
+import { useTranslation } from '#i18n';
+import { errorCopy } from '#services/errorService';
 import { FormInput } from '#components/atoms/FormInput';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
-import { reportValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import type {
   CaptureRequest,
   CaptureStart,
 } from '#features/recipes/hooks/useRecipeCapture';
-import { httpUrl } from '#features/recipes/screens/RecipeForm/recipeFormConfig';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { CaptureFormFrame, CaptureSheetShell } from './CaptureSheetShell';
-
-export type CaptureSheetKind = 'link' | 'text';
+import {
+  captureFormDefaults,
+  captureFormSchema,
+  type CaptureFormContext,
+  type CaptureFormValues,
+  type CaptureSheetKind,
+} from './captureFormConfig';
+import { useSheetUnsavedInput } from '#components/templates/SheetCloseGuard';
 
 /** What the server reads at most from shared text (`RECIPE_CAPTURE_MAX_CHARS`). */
 export const MAX_CAPTURE_TEXT = 24_000;
-
-interface CaptureFormValues {
-  url: string;
-  text: string;
-  sourceUrl: string;
-}
-
-const captureFormDefaults: CaptureFormValues = {
-  url: '',
-  text: '',
-  sourceUrl: '',
-};
-
-// A blank field passes: the send button waits for the one the sheet shows.
-const captureFormSchema: ObjectSchema<CaptureFormValues> = object({
-  url: httpUrl('recipes.captureLinkInvalid'),
-  text: string().defined().trim(),
-  sourceUrl: httpUrl('recipes.captureLinkInvalid'),
-});
 
 /** The error type of a refusal the server made, as against a rule the form holds. */
 const REFUSED = 'refused';
@@ -70,13 +55,20 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
   const { t } = useTranslation();
   const [kind, setKind] = useState(initialKind);
   const [failure, setFailure] = useState<string | null>(null);
-  const { control, handleSubmit, getValues, setValue, setError } =
-    useForm<CaptureFormValues>({
-      resolver: yupResolver(captureFormSchema),
-      defaultValues: captureFormDefaults,
-    });
-  const [url, text] = useWatch({ control, name: ['url', 'text'] });
-  const canSend = (kind === 'link' ? url : text).trim() !== '';
+  const {
+    control,
+    handleSubmit,
+    getValues,
+    setValue,
+    setError,
+    formState: { isDirty },
+  } = useForm<CaptureFormValues, CaptureFormContext>({
+    resolver: yupResolver(captureFormSchema),
+    defaultValues: captureFormDefaults,
+    context: { kind },
+  });
+  useSheetUnsavedInput(isDirty);
+  const text = useWatch({ control, name: 'text' });
 
   const switchToText = () => {
     setKind('text');
@@ -146,7 +138,6 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
       onClose={onClose}
       failure={failure}
       sending={sending}
-      canSend={canSend}
       onSend={() => {
         setFailure(null);
         void send();
@@ -159,6 +150,7 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
           render={({ field, fieldState }) => (
             <>
               <FormInput
+                ref={field.ref}
                 label={t('recipes.captureLinkLabel')}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -169,7 +161,6 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
                 autoCorrect={false}
                 error={fieldState.error?.message}
                 editable={!sending}
-                useBottomSheetInput
                 testID={recipesTestIDs.captureUrlInput}
               />
               <View style={styles.actions}>
@@ -205,6 +196,7 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
             name="text"
             render={({ field, fieldState }) => (
               <FormTextArea
+                ref={field.ref}
                 label={t('recipes.captureTextLabel')}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -229,6 +221,7 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
             name="sourceUrl"
             render={({ field, fieldState }) => (
               <FormInput
+                ref={field.ref}
                 label={t('recipes.captureSourceLabel')}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -239,7 +232,6 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
                 autoCorrect={false}
                 error={fieldState.error?.message}
                 editable={!sending}
-                useBottomSheetInput
                 testID={recipesTestIDs.captureSourceInput}
               />
             )}

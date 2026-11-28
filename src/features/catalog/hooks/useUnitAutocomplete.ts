@@ -1,4 +1,4 @@
-import { logger } from '#/utils/environment';
+import { logger } from '#utils/environment';
 import { useEffect, useRef, useState } from 'react';
 import { skipToken, useApolloClient, useQuery } from '@apollo/client/react';
 import {
@@ -7,11 +7,11 @@ import {
 } from '#operations/item/unit.generated';
 import { useAppStore } from '#store/useAppStore';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { fromServer } from '#/apollo/utils/fromServer';
+import { fromServer } from '#apollo/utils/fromServer';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { filterByTerm, type Accessor } from '#hooks/search/useLocalSearch';
 import { selectUnitsFetchedAt, type CachedUnit } from '#store/slices/appSlice';
-import { scheduleIdle } from '#/utils/scheduleIdle';
+import { scheduleIdle } from '#utils/scheduleIdle';
 
 export type UnitItem = CachedUnit;
 

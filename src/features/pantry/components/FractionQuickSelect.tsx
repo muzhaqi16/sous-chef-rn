@@ -1,13 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import {
   formatQuantityAsFraction,
   unitLabel,
   type UnitLabelSource,
-} from '#/utils/formatQuantity';
-import { Text } from '#components/atoms/Text';
+} from '#utils/formatQuantity';
+import { Chip } from '#components/molecules/Chip';
 
 interface FractionQuickSelectProps {
   /** Numeric fraction values, e.g. [0.25, 0.5, 0.75] */
@@ -55,22 +54,12 @@ export const FractionQuickSelect: React.FC<FractionQuickSelectProps> = ({
           const chipLabel = unitText ? `${label} ${unitText}` : label;
 
           return (
-            <Pressable
+            <Chip
               key={value}
-              style={({ pressed }) => [
-                styles.chip,
-                isSelected && styles.chipSelected,
-                pressed && styles.chipPressed,
-              ]}
+              label={chipLabel}
+              selected={isSelected}
               onPress={() => onSelect(value)}
-            >
-              <Text
-                tone={isSelected ? 'accent' : 'secondary'}
-                role={isSelected ? 'label' : 'caption'}
-              >
-                {chipLabel}
-              </Text>
-            </Pressable>
+            />
           );
         })}
       </View>
@@ -87,23 +76,5 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.xs,
-  },
-  chip: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  chipSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surfaceVariant,
-  },
-  chipPressed: {
-    opacity: 0.7,
   },
 }));

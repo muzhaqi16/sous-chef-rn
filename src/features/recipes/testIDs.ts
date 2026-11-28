@@ -8,10 +8,13 @@ export const recipesTestIDs = {
   searchInput: 'recipe-main-search-input',
   searchModeTab: (mode: string) => `recipe-search-mode-${mode}`,
   ingredientPicker: 'recipe-ingredient-picker',
+  /** The search fields of the pantry-ingredient, tag and folder sheets. */
+  ingredientSearchInput: 'recipe-ingredient-search-input',
+  tagSearchInput: 'recipe-tag-search-input',
+  folderSearchInput: 'recipe-folder-search-input',
   activeFiltersSummary: 'active-filters-summary',
 
   myRecipesScreen: 'my-recipes-screen',
-  savedRecipesClearFilters: 'saved-recipes-clear-filters',
   /** `FilterTabs` builds each tab's id under this prefix. */
   savedRecipesFilterTabPrefix: 'saved-recipes-filter-tab',
   searchIncompleteNotice: 'recipes-search-incomplete-notice',
@@ -44,6 +47,8 @@ export const recipesTestIDs = {
   cookServings: 'recipe-cook-servings',
   cookConfirm: 'recipe-cook-confirm',
   cookReviewConfirm: 'recipe-cook-review-confirm',
+  /** Why the cook sheet stayed open with Smart Deduction turned off. */
+  cookReviewUnavailable: 'recipe-cook-review-unavailable',
   editButton: 'recipe-edit-button',
   publishButton: 'recipe-publish-button',
   forkButton: 'recipe-fork-button',

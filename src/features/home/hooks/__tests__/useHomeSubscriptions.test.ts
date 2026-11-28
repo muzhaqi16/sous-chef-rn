@@ -4,16 +4,16 @@ import { captureOnData } from '#/test-utils/subscriptionCapture';
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { useApolloClient, useQuery } from '@apollo/client/react';
-import { makeCache } from '#/apollo/cache';
+import { makeCache } from '#apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import type { SubscriptionConfig } from '#/services/subscriptions/types';
-import { clearPositions, holdPosition } from '#/apollo/feed/feedPositions';
-import { HomeSubtype, SyncScopeKind } from '#/graphql/generated/schemaTypes';
+import type { SubscriptionConfig } from '#services/subscriptions/types';
+import { clearPositions, holdPosition } from '#apollo/feed/feedPositions';
+import { HomeSubtype, SyncScopeKind } from '#graphql/generated/schemaTypes';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { GetMyPendingInvitesDocument } from '#features/onboarding/screens/useOnboardingInvites.generated';
@@ -23,7 +23,7 @@ import { useStore } from '#store/index';
 import { useHomeSubscriptions } from '../useHomeSubscriptions';
 
 const mockRegister = jest.fn().mockReturnValue({});
-jest.mock('#/services/subscriptions/SubscriptionService', () => ({
+jest.mock('#services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     register: (config: SubscriptionConfig) => mockRegister(config),
   },

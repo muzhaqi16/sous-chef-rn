@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation } from '#i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
@@ -8,7 +8,7 @@ import {
   Difficulty,
   RecipeStatus,
   type Cuisine,
-} from '#/graphql/generated/schemaTypes';
+} from '#graphql/generated/schemaTypes';
 import type { RecipeFormState } from '#features/recipes/types';
 import { CuisineChips } from '#features/recipes/ui/CuisineChips';
 

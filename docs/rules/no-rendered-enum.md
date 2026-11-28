@@ -37,4 +37,4 @@ An enum value is an API identifier (`SPECIAL_DIET`), not copy. Rendered raw it i
 - Non-copy props (`value`, `status`, `testID`, `key`) and template literals that are ids or keys.
 - Test files, `.graphql` documents and files without type information.
 
-Source: [`eslint/plugin/rules/no-rendered-enum.js`](../../eslint/plugin/rules/no-rendered-enum.js) · spec: [`__tests__/lint/rules/no-rendered-enum.test.ts`](../../__tests__/lint/rules/no-rendered-enum.test.ts)
+Source: [`eslint/plugin/rules/no-rendered-enum.js`](../../eslint/plugin/rules/no-rendered-enum.js) · spec: [`__tests__/lint/typedRules/no-rendered-enum.ts`](../../__tests__/lint/typedRules/no-rendered-enum.ts)

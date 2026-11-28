@@ -1,4 +1,5 @@
 import React from 'react';
+import { Keyboard, type KeyboardEvent } from 'react-native';
 import { renderHook, act } from '@testing-library/react-native';
 import { NavigationContext } from '@react-navigation/native';
 import type { ParamListBase, NavigationProp } from '@react-navigation/native';
@@ -70,14 +71,12 @@ describe('useStandardBottomSheet', () => {
     snapPoints: ['50%'],
   };
 
-  it('returns ref, modalProps, contentContainerStyle, insets, and dismiss', () => {
+  it('returns ref, modalProps and contentContainerStyle', () => {
     const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 
     expect(result.current.ref).toBeDefined();
     expect(result.current.modalProps).toBeDefined();
     expect(result.current.contentContainerStyle).toBeDefined();
-    expect(result.current.insets).toBeDefined();
-    expect(typeof result.current.dismiss).toBe('function');
   });
 
   it('includes snap points in modalProps', () => {
@@ -127,6 +126,25 @@ describe('useStandardBottomSheet', () => {
     // verify calling it invokes the original callback
     result.current.modalProps.onDismiss?.();
     expect(onDismiss).toHaveBeenCalled();
+  });
+
+  // gorhom renders the sheet through a portal a render behind and binds a
+  // close's callback as it starts, so it calls what an earlier render gave it.
+  it('runs the latest onDismiss from the one an earlier render handed gorhom', () => {
+    const before = jest.fn();
+    const latest = jest.fn();
+    const { result, rerender } = renderHook(
+      ({ onDismiss }: { onDismiss: () => void }) =>
+        useStandardBottomSheet({ ...defaultOptions, onDismiss }),
+      { initialProps: { onDismiss: before } },
+    );
+    const heldByGorhom = result.current.modalProps.onDismiss;
+
+    rerender({ onDismiss: latest });
+    act(() => heldByGorhom?.());
+
+    expect(latest).toHaveBeenCalledTimes(1);
+    expect(before).not.toHaveBeenCalled();
   });
 
   // Invariant for the whole gorhom-5214 lifecycle bug class: after ANY close
@@ -352,6 +370,40 @@ describe('useStandardBottomSheet', () => {
 
     result.current.modalProps.onAnimate?.(-1, 0, 1000, 0);
     expect(onAnimate).toHaveBeenCalledWith(-1, 0, 1000, 0);
+  });
+
+  // gorhom closes a presented modal its owner unmounts, with the content (and
+  // its unsaved input) still mounted, as a pantry sheet does after a save.
+  it('never asks for the close gorhom runs when the owner unmounts the sheet', () => {
+    const discardGuard = { holds: () => true, requestClose: jest.fn() };
+    const { result, unmount } = renderHook(() =>
+      useStandardBottomSheet({
+        ...defaultOptions,
+        visible: true,
+        discardGuard,
+      }),
+    );
+    const closing = result.current.modalProps.onAnimate;
+
+    unmount();
+    closing?.(0, -1, 0, 1000);
+
+    expect(discardGuard.requestClose).not.toHaveBeenCalled();
+  });
+
+  it('asks before a drag closes a sheet still mounted', () => {
+    const discardGuard = { holds: () => true, requestClose: jest.fn() };
+    const { result } = renderHook(() =>
+      useStandardBottomSheet({
+        ...defaultOptions,
+        visible: true,
+        discardGuard,
+      }),
+    );
+
+    act(() => result.current.modalProps.onAnimate?.(0, -1, 0, 1000));
+
+    expect(discardGuard.requestClose).toHaveBeenCalledTimes(1);
   });
 
   it('omits backdropComponent (global dim layer drives itself)', () => {
@@ -585,5 +637,80 @@ describe('useStandardBottomSheet', () => {
 
       expect(backHandlerEnabled()).toBe(false);
     });
+  });
+
+  // A touch as the keyboard leaves makes gorhom skip its restore and keep the
+  // lift: the sheet's own stop is restated once the keyboard has gone.
+  it('puts a sheet the keyboard lifted back on its stop once the keyboard hides', () => {
+    const hidden: KeyboardEvent = {
+      duration: 0,
+      easing: 'keyboard',
+      endCoordinates: { screenX: 0, screenY: 874, width: 402, height: 0 },
+    };
+    const onHide: Array<() => void> = [];
+    jest
+      .spyOn(Keyboard, 'addListener')
+      .mockImplementation((event, listener) => {
+        if (event === 'keyboardDidHide') onHide.push(() => listener(hidden));
+        return { remove: jest.fn() };
+      });
+    const snapToIndex = jest.fn();
+    const { result, rerender } = renderHook(
+      ({ visible }: { visible: boolean }) =>
+        useStandardBottomSheet({ ...defaultOptions, visible }),
+      { initialProps: { visible: false } },
+    );
+    (result.current.ref as React.RefObject<unknown>).current = {
+      present: mockPresent,
+      dismiss: mockDismiss,
+      snapToIndex,
+    };
+    rerender({ visible: true });
+
+    act(() => result.current.modalProps.onChange?.(0, 300, 0));
+    act(() => onHide.forEach(hide => hide()));
+
+    expect(snapToIndex).toHaveBeenCalledWith(0);
+  });
+
+  it('lets a drag close the sheet when the keyboard hides on the way down', () => {
+    const onHide: Array<() => void> = [];
+    jest
+      .spyOn(Keyboard, 'addListener')
+      .mockImplementation((event, listener) => {
+        if (event === 'keyboardDidHide') {
+          onHide.push(() =>
+            listener({
+              duration: 0,
+              easing: 'keyboard',
+              endCoordinates: {
+                screenX: 0,
+                screenY: 874,
+                width: 402,
+                height: 0,
+              },
+            }),
+          );
+        }
+        return { remove: jest.fn() };
+      });
+    const snapToIndex = jest.fn();
+    const { result, rerender } = renderHook(
+      ({ visible }: { visible: boolean }) =>
+        useStandardBottomSheet({ ...defaultOptions, visible }),
+      { initialProps: { visible: false } },
+    );
+    (result.current.ref as React.RefObject<unknown>).current = {
+      present: mockPresent,
+      dismiss: mockDismiss,
+      snapToIndex,
+    };
+    rerender({ visible: true });
+
+    act(() => result.current.modalProps.onChange?.(0, 300, 0));
+    act(() => result.current.modalProps.onAnimate?.(0, -1, 300, 1000));
+    act(() => onHide.forEach(hide => hide()));
+
+    expect(snapToIndex).not.toHaveBeenCalled();
   });
 });
