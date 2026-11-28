@@ -100,11 +100,11 @@ export const RecipeMetaRow: React.FC<RecipeMetaRowProps> = ({
 };
 
 const styles = StyleSheet.create(theme => {
-  const item: ViewStyle = {
+  const item = {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
-  };
+  } satisfies ViewStyle;
   return {
     row: {
       flexDirection: 'row',
