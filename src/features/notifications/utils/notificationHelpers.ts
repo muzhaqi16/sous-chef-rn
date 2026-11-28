@@ -8,6 +8,7 @@ import type { NotificationCopyData } from '#features/notifications/types';
 import type { Translate } from '#i18n/types';
 import {
   daysUntilExpiry as daysUntilExpiryOn,
+  expiryFromDays,
   expiryLabel,
 } from '#domain/expiry';
 import type { TranslationKey } from '#i18n';
@@ -153,7 +154,8 @@ const buildExpiryReminderMessage = (
   }
   return t('notifications.expiry.reminder', {
     name: buildExpiryName(fields, t),
-    status: expiryLabel(fields.daysUntilExpiry, t),
+    // A reminder names no kind, and the API reminds only of alerting dates.
+    status: expiryLabel(expiryFromDays(fields.daysUntilExpiry, null), t),
   });
 };
 

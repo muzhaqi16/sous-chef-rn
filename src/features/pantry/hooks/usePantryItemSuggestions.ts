@@ -12,7 +12,7 @@ import { errorService } from '#services/errorService';
 import { useToday } from '#hooks/app/useToday';
 import { useTranslation } from '#i18n';
 import type { Translate } from '#i18n/types';
-import { expiryLabel } from '#domain/expiry';
+import { expiryFromDays, expiryLabel } from '#domain/expiry';
 import { formatQuantityDisplay } from '#utils/formatQuantity';
 import type { SuggestionsHookResult } from '#features/catalog/types';
 
@@ -87,7 +87,7 @@ export function usePantryItemSuggestions({
         row,
         row.daysUntilExpiry === null
           ? null
-          : expiryLabel(row.daysUntilExpiry, t),
+          : expiryLabel(expiryFromDays(row.daysUntilExpiry, null), t),
       ),
     ),
     recentlyDeleted: (sections?.recentlyDeleted ?? []).map(row => toRow(row)),

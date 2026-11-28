@@ -5,6 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import type { PantryItemBatchFragment } from '#entities/pantryItem/batches.generated';
 import { BatchStatus } from '#graphql/generated/schemaTypes';
+import { compareExpiry } from '#domain/expiry';
 import { BatchListItem } from './BatchListItem';
 import { useOpenPantryItemBatch } from '#features/pantry/hooks/mutations/useOpenPantryItemBatch';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
@@ -47,12 +48,11 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   // Sort active batches by expiration (FIFO order) — earliest first
   const activeBatches = batches
     .filter(b => b.status === BatchStatus.Active)
-    .sort((a, b) => {
-      if (!a.expiresOn && !b.expiresOn) return a.batchNumber - b.batchNumber;
-      if (!a.expiresOn) return 1;
-      if (!b.expiresOn) return -1;
-      return a.expiresOn.localeCompare(b.expiresOn);
-    });
+    .sort(
+      (a, b) =>
+        compareExpiry(a.expiresOn, b.expiresOn) ||
+        a.batchNumber - b.batchNumber,
+    );
 
   const activeBatchCount = activeBatches.length;
   // Depleted and wasted batches are never pruned, so the full set is unbounded

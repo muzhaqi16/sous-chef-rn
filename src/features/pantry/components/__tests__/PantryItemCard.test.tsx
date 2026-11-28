@@ -35,6 +35,7 @@ import {
 } from '../PantryActionsContext';
 import {
   EntryImageSource,
+  ExpiryKind,
   StorageState,
   UnitSystem,
   UnitType,
@@ -94,6 +95,12 @@ const settingsRead = (client: ApolloClient, system: UnitSystem) =>
     seen => seen === system,
   );
 
+const inDays = (days: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return toDateKey(date);
+};
+
 interface BuildItemOverrides {
   id?: string;
   itemName?: string;
@@ -105,6 +112,7 @@ interface BuildItemOverrides {
   unitSymbol?: string;
   storageLocationName?: string | null;
   expiresOn?: string | null;
+  expiryKind?: ExpiryKind | null;
   imageUrl?: string | null;
   image?: PantryItemCard_PantryItemFragment['image'];
   packageBreakdown?: {
@@ -190,6 +198,7 @@ function buildItem(
       : null,
     remainingPortions: overrides.remainingPortions ?? null,
     expiresOn: overrides.expiresOn ?? null,
+    expiryKind: overrides.expiryKind ?? null,
     storageState: StorageState.Refrigerated,
     lastUsedAt: null,
     netWeight: null,
@@ -342,13 +351,8 @@ describe('PantryItemCard', () => {
   });
 
   it('renders expiration text when expiresOn is set', () => {
-    // Three days from "now" — getExpirationStatus returns a warning text
-    const expires = new Date();
-    expires.setDate(expires.getDate() + 3);
-    renderCard({ expiresOn: toDateKey(expires) });
-    // getExpirationStatus may emit "Expires in 3 days" or similar — assert on
-    // a stable substring so the test isn't tied to copy.
-    expect(screen.getAllByText(/day/i).length).toBeGreaterThan(0);
+    renderCard({ expiresOn: inDays(3) });
+    expect(screen.getByText('Expires in 3 days')).toBeTruthy();
   });
 
   // A compiled row re-runs a label helper only when one of its arguments
@@ -366,20 +370,14 @@ describe('PantryItemCard', () => {
     expect(inSpanish).toBeTruthy();
   });
 
-  it('hides expiration text for items expiring far in the future', () => {
-    // Well beyond the ~10-day display window — "113 days left" is noise on the
-    // list row and must not render.
-    const expires = new Date();
-    expires.setDate(expires.getDate() + 113);
-    renderCard({ expiresOn: toDateKey(expires) });
-    expect(screen.queryByText(/day/i)).toBeNull();
-  });
-
-  it('shows expiration text at the edge of the display window', () => {
-    const expires = new Date();
-    expires.setDate(expires.getDate() + 10);
-    renderCard({ expiresOn: toDateKey(expires) });
-    expect(screen.getAllByText(/day/i).length).toBeGreaterThan(0);
+  // The row shows a date the badge counts; past its window a date is noise.
+  it.each([
+    [7, 'Expires in 7 days'],
+    [8, null],
+    [113, null],
+  ])('a date %i days away reads %s', (days, shown) => {
+    renderCard({ expiresOn: inDays(days) });
+    expect(screen.queryByText(/day/i)?.props.children ?? null).toBe(shown);
   });
 
   it('leads with the item photo', () => {
@@ -530,21 +528,16 @@ describe('PantryItemCard', () => {
   });
 
   describe('row status', () => {
-    const inDays = (days: number) => {
-      const date = new Date();
-      date.setDate(date.getDate() + days);
-      return toDateKey(date);
-    };
     // The status line is the row's only status signal.
     const statusTone = () => screen.UNSAFE_queryByType(StatusLine)?.props.tone;
 
     // The header badge counts today through seven days on; a row it counts
-    // must be marked, or the badge names items the list does not show.
+    // must be marked, and one it does not count shows no date.
     it.each([
       [0, 'warning'],
       [5, 'warning'],
       [7, 'warning'],
-      [8, 'neutral'],
+      [8, undefined],
       [-1, 'error'],
     ])('an item expiring in %s days reads in the %s tone', (days, tone) => {
       renderCard({ expiresOn: inDays(days) });
@@ -566,6 +559,48 @@ describe('PantryItemCard', () => {
       renderCard({ isLowStock: true, expiresOn: inDays(2) });
       expect(statusTone()).toBe('warning');
       expect(screen.queryByText('Running low')).toBeNull();
+    });
+
+    it('asks for a check, never "expired", on flour past its long-life estimate', () => {
+      renderCard({
+        expiresOn: inDays(-21),
+        expiryKind: ExpiryKind.LongLifeEstimate,
+      });
+      expect(screen.getByText(t('labels.expiryDueCheck'))).toBeTruthy();
+      expect(screen.queryByText(/expired/i)).toBeNull();
+      expect(statusTone()).toBe('neutral');
+    });
+
+    it('shows nothing for flour nearing its long-life estimate', () => {
+      renderCard({
+        expiresOn: inDays(5),
+        expiryKind: ExpiryKind.LongLifeEstimate,
+      });
+      expect(screen.queryByText(/day/i)).toBeNull();
+    });
+
+    it('warns of chicken on its perishable estimate, as an estimate', () => {
+      renderCard({
+        expiresOn: inDays(0),
+        expiryKind: ExpiryKind.PerishableEstimate,
+      });
+      expect(screen.getByText('≈ Expires today')).toBeTruthy();
+      expect(statusTone()).toBe('warning');
+    });
+
+    it('reads yogurt past its label date as expired', () => {
+      renderCard({ expiresOn: inDays(-1), expiryKind: ExpiryKind.Label });
+      expect(screen.getByText('Expired 1 day ago')).toBeTruthy();
+      expect(statusTone()).toBe('error');
+    });
+
+    it('says running low over a check, never over an alerting date', () => {
+      renderCard({
+        isLowStock: true,
+        expiresOn: inDays(-21),
+        expiryKind: ExpiryKind.LongLifeEstimate,
+      });
+      expect(screen.getByText('Running low')).toBeTruthy();
     });
 
     it('reads an empty stack as low stock whatever its date', () => {

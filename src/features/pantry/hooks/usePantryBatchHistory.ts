@@ -7,6 +7,7 @@ import {
   type PantryItemBatchFragment,
 } from '#entities/pantryItem/batches.generated';
 import { BatchStatus } from '#graphql/generated/schemaTypes';
+import { compareExpiry } from '#domain/expiry';
 import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#services/errorService';
 
@@ -21,10 +22,9 @@ const byActiveThenExpiry = (
   const bActive = b.status === BatchStatus.Active ? 0 : 1;
   if (aActive !== bActive) return aActive - bActive;
   if (aActive === 1) return a.batchNumber - b.batchNumber;
-  if (!a.expiresOn && !b.expiresOn) return a.batchNumber - b.batchNumber;
-  if (!a.expiresOn) return 1;
-  if (!b.expiresOn) return -1;
-  return a.expiresOn.localeCompare(b.expiresOn);
+  return (
+    compareExpiry(a.expiresOn, b.expiresOn) || a.batchNumber - b.batchNumber
+  );
 };
 
 /** A pantry item's batch ledger, each batch read live from the cache. */

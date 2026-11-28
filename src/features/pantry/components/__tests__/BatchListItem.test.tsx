@@ -97,9 +97,23 @@ describe('BatchListItem', () => {
       { cache: stackCache({}) },
     );
 
-    expect(
-      screen.queryByText(t('pantryItemDetail.expiryEstimated')) !== null,
-    ).toBe(estimated);
+    expect(screen.queryByText(/^≈ /) !== null).toBe(estimated);
+  });
+
+  it('asks for a check, never "expired", on a passed long-life estimate', () => {
+    renderWithApollo(
+      <BatchListItem
+        batch={{
+          ...batch(1),
+          expiresOn: '2020-01-10',
+          expiryKind: ExpiryKind.LongLifeEstimate,
+        }}
+      />,
+      { cache: stackCache({}) },
+    );
+
+    expect(screen.getByText(t('labels.expiryDueCheck'))).toBeTruthy();
+    expect(screen.queryByText(/expired/i)).toBeNull();
   });
 
   it('renders a fractional batch quantity as a cooking fraction', () => {

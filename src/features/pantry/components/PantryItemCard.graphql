@@ -38,6 +38,7 @@ fragment PantryItemCard_pantryItem on PantryItem {
     }
   }
   expiresOn
+  expiryKind
   storageState
   lastUsedAt
   netWeight

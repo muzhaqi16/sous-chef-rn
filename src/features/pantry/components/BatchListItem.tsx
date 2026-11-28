@@ -2,8 +2,7 @@ import React from 'react';
 import { IconButton } from '#components/atoms/IconButton';
 import { useMoney } from '#domain/money';
 import { useTranslation } from '#i18n';
-import type { Translate } from '#i18n/types';
-import { daysUntilExpiry, expiryLabel, isExpiryEstimate } from '#domain/expiry';
+import { expiryAlert, expiryLabel, readExpiry } from '#domain/expiry';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import { StyleSheet } from 'react-native-unistyles';
@@ -37,20 +36,6 @@ interface BatchListItemProps {
   /** Offered where a package can hold something: a weighed or counted stack. */
   onCorrectSize?: (batchId: string) => void;
 }
-
-/**
- * Takes the hook's `t` rather than the module-level helper, which does not
- * re-render on a language change.
- */
-const getExpiryText = (
-  expiresOn: string | null | undefined,
-  today: string,
-  t: Translate,
-) => {
-  if (!expiresOn) return null;
-  const diffDays = daysUntilExpiry(expiresOn, today);
-  return { text: expiryLabel(diffDays, t), isExpired: diffDays < 0 };
-};
 
 /**
  * `undefined` as the locale makes Intl use the device's own, so the date reads
@@ -113,7 +98,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
     ? formatQuantityWithUnit(batch.netWeight, netWeightUnit)
     : null;
 
-  const expiryInfo = getExpiryText(batch.expiresOn, today, t);
+  const expiry = readExpiry(batch.expiresOn, batch.expiryKind, today);
   const isActive = batch.status === BatchStatus.Active;
 
   return (
@@ -148,22 +133,14 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
           </Text>
         )}
 
-        {expiryInfo ? (
+        {expiry ? (
           <View style={styles.expiryRow}>
-            <Text
-              role="caption"
-              tone={expiryInfo.isExpired ? 'danger' : 'warning'}
-            >
-              {expiryInfo.text}
+            <Text role="caption" tone={expiryAlert(expiry) ?? 'tertiary'}>
+              {expiryLabel(expiry, t)}
             </Text>
             {!!batch.expiresAtIsManual && (
               <Icon name="lock-closed-outline" size="2xs" tone="textTertiary" />
             )}
-            {isExpiryEstimate(batch.expiryKind) ? (
-              <Text role="caption" tone="tertiary">
-                {t('pantryItemDetail.expiryEstimated')}
-              </Text>
-            ) : null}
           </View>
         ) : null}
 

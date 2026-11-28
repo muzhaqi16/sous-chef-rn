@@ -6,7 +6,7 @@
 import React from 'react';
 import { useTranslation, type TranslationKey } from '#i18n';
 import type { Translate } from '#i18n/types';
-import { daysUntilExpiry, expiryLabel } from '#domain/expiry';
+import { expiryLabel, readExpiry } from '#domain/expiry';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Sheet } from '#components/templates/Sheet';
@@ -69,8 +69,9 @@ const getExpirySubtitle = (
   today: string,
   t: Translate,
 ): string => {
-  if (!expiresOn) return t('expirationAction.expiringSoon');
-  return expiryLabel(daysUntilExpiry(expiresOn, today), t);
+  // A reminder names no kind, and the API reminds only of alerting dates.
+  const expiry = readExpiry(expiresOn, null, today);
+  return expiry ? expiryLabel(expiry, t) : t('expirationAction.expiringSoon');
 };
 
 function OptionRow({

@@ -47,7 +47,8 @@ import {
   useFilteredItemsActions,
 } from '#features/pantry/context/FilteredItemsActionsContext';
 import type { Translate } from '#i18n/types';
-import { daysUntilExpiry, EXPIRING_SOON_DAYS } from '#domain/expiry';
+import { compareExpiry, readExpiry } from '#domain/expiry';
+import type { ExpiryKind } from '#graphql/generated/schemaTypes';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
@@ -73,6 +74,7 @@ interface FilteredItem {
   unit: { id: string; symbol: string } | null;
   isLowStock: boolean;
   expiresOn: string | null;
+  expiryKind: ExpiryKind | null;
 }
 
 interface ModeConfig {
@@ -90,12 +92,8 @@ interface ModeConfig {
   tutorialSteps: TutorialStep[];
 }
 
-/** Soonest first; YYYY-MM-DD orders as text, and an undated item goes last. */
-const byExpiry = (a: FilteredItem, b: FilteredItem): number => {
-  if (!a.expiresOn || !b.expiresOn)
-    return a.expiresOn ? -1 : b.expiresOn ? 1 : 0;
-  return a.expiresOn.localeCompare(b.expiresOn);
-};
+const byExpiry = (a: FilteredItem, b: FilteredItem): number =>
+  compareExpiry(a.expiresOn, b.expiresOn);
 
 function buildModeConfig(
   t: Translate,
@@ -136,11 +134,10 @@ function buildModeConfig(
       // is always a 7-day window, so widening it here would list items the badge
       // never counted.
       serverFilters: { expiringSoon: true, today },
-      // Mirrors `PantryStats.expiringCount`.
+      // Mirrors `PantryStats.expiringCount`: an alerting date today or soon.
       filter: item => {
-        if (!item.expiresOn || item.quantity <= 0) return false;
-        const days = daysUntilExpiry(item.expiresOn, today);
-        return days >= 0 && days <= EXPIRING_SOON_DAYS;
+        const state = readExpiry(item.expiresOn, item.expiryKind, today)?.state;
+        return item.quantity > 0 && (state === 'today' || state === 'soon');
       },
       sort: byExpiry,
       tutorialSteps: [],
@@ -151,11 +148,10 @@ function buildModeConfig(
       emptyIcon: 'alert-circle-outline',
       // Same unbounded superset as `expiring`; the predicate keeps the past-dated.
       serverFilters: { expiringSoon: true, today },
-      // Mirrors `PantryStats.expiredCount`: dated before today, quantity > 0.
+      // Mirrors `PantryStats.expiredCount`: an alerting date passed, quantity > 0.
       filter: item =>
-        !!item.expiresOn &&
         item.quantity > 0 &&
-        daysUntilExpiry(item.expiresOn, today) < 0,
+        readExpiry(item.expiresOn, item.expiryKind, today)?.state === 'passed',
       // Longest-expired first.
       sort: byExpiry,
       tutorialSteps: [],

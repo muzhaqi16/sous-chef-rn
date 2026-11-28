@@ -46,6 +46,7 @@ fragment pantryItem_listed on PantryItem {
     }
   }
   expiresOn
+  expiryKind
   storageState
   lastUsedAt
   netWeight

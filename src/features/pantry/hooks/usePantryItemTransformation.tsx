@@ -9,11 +9,6 @@ import {
 } from '#features/pantry/utils/itemEnumLabels';
 import { isTranslationKey } from '#i18n';
 import type { Translate } from '#i18n/types';
-import {
-  daysUntilExpiry,
-  EXPIRING_SOON_DAYS,
-  expiryLabel,
-} from '#domain/expiry';
 import type { FormatCurrency } from '#domain/money';
 import { formatMonthDayYear } from '#utils/formatters/date';
 import {
@@ -33,18 +28,6 @@ import {
 // Location type for filtering
 export type PantryLocation = 'fridge' | 'freezer' | 'pantry';
 
-// Expiration status type for styling
-export type ExpirationStatusType =
-  | 'expired'
-  | 'critical'
-  | 'warning'
-  | 'normal';
-
-export interface ExpirationStatus {
-  text: string;
-  type: ExpirationStatusType;
-}
-
 // Every helper here takes the caller's `t`. A compiled component re-runs a
 // helper only when an argument changes, so one that reached for the module's
 // own `t` would keep the language the row first rendered in.
@@ -61,21 +44,6 @@ export const formatStorageState = (
   // `string`: the wire can carry a member the generated enum predates.
   const key: string = `storageStateShort.${state}`;
   return isTranslationKey(key) ? translate(key) : translate('labels.unknown');
-};
-
-// Helper to get expiration status
-export const getExpirationStatus = (
-  expiresIn: number | null,
-  translate: Translate,
-): ExpirationStatus => {
-  if (expiresIn === null) {
-    return { text: translate('expiration.noExpiryDate'), type: 'normal' };
-  }
-  const text = expiryLabel(expiresIn, translate);
-  if (expiresIn < 0) return { text, type: 'expired' };
-  if (expiresIn === 0) return { text, type: 'critical' };
-  if (expiresIn <= EXPIRING_SOON_DAYS) return { text, type: 'warning' };
-  return { text, type: 'normal' };
 };
 
 type BreakdownMeasure = MeasureShape & { value: number; unitId: string };
@@ -175,21 +143,6 @@ export const formatPackageBreakdownFull = (
     });
   }
   return short;
-};
-
-// Helper function to calculate expiry info for detail views
-export const getExpiryInfo = (
-  expiresOn: string | null | undefined,
-  today: string,
-  translate: Translate,
-) => {
-  if (!expiresOn) return null;
-  const diffDays = daysUntilExpiry(expiresOn, today);
-  return {
-    text: expiryLabel(diffDays, translate),
-    isExpired: diffDays < 0,
-    isUrgent: diffDays <= EXPIRING_SOON_DAYS,
-  };
 };
 
 // Format date for display

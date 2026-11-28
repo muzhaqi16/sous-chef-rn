@@ -27,11 +27,8 @@ import {
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 import { usePendingUses } from '#features/pantry/hooks/usePendingUses';
-import {
-  formatAmountLeft,
-  getExpirationStatus,
-} from '#features/pantry/hooks/usePantryItemTransformation';
-import { daysUntilExpiry } from '#domain/expiry';
+import { formatAmountLeft } from '#features/pantry/hooks/usePantryItemTransformation';
+import { expiryAlert, expiryLabel, readExpiry } from '#domain/expiry';
 import { useToday } from '#hooks/app/useToday';
 import { accessibilityLabelOf } from '#utils/accessibilityLabel';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
@@ -39,33 +36,6 @@ import { motion } from '#theme/motion';
 
 // Slide animation distance only; no reactive updates needed.
 const SCREEN_WIDTH = Dimensions.get('window').width;
-
-// Far-out dates are noise on the main list; the "expiring" filter covers the
-// full horizon.
-const EXPIRATION_DISPLAY_THRESHOLD_DAYS = 10;
-
-export type ItemVariant = 'normal' | 'warning' | 'expired';
-
-export type ExpirationVariant = 'normal' | 'warning' | 'critical' | 'expired';
-
-type ExpiryStatus = 'expired' | 'warning' | 'normal';
-
-/**
- * The one place `getExpirationStatus`'s scale becomes a visual state. `critical`
- * is "expires today" — not expired — so it reads as a warning, and the
- * status and its tone cannot disagree about where that boundary sits.
- */
-const toItemVariant = (type: ExpirationVariant): ItemVariant => {
-  if (type === 'expired') return 'expired';
-  if (type === 'critical' || type === 'warning') return 'warning';
-  return 'normal';
-};
-
-const EXPIRY_TONE: Record<ExpiryStatus, StatusTone> = {
-  expired: 'error',
-  warning: 'warning',
-  normal: 'neutral',
-};
 
 // Delete slide-out. Always renders <Animated.View> so the tree shape never
 // changes — a View → Animated.View swap flickers the image.
@@ -176,18 +146,17 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const imageUrl = resolveImageUrl(pantryItem);
 
   const isOutOfStock = pantryItem.heldQuantity <= 0;
-  const expiresOn = pantryItem.expiresOn;
-  const expiresIn = expiresOn ? daysUntilExpiry(expiresOn, today) : null;
-  const expStatus = getExpirationStatus(expiresIn, t);
-  const showExpiration =
-    expiresIn !== null && expiresIn <= EXPIRATION_DISPLAY_THRESHOLD_DAYS;
-
-  // ONE ladder for the status and its tone, so they cannot split
-  // `getExpirationStatus`'s four levels at different boundaries. An item
-  // expiring TODAY is `critical`, not expired, and reads as a warning.
-  const variant: ItemVariant = toItemVariant(expStatus.type);
-  const expirationText = showExpiration ? expStatus.text : null;
-  const expiryStatusKey: ExpiryStatus = showExpiration ? variant : 'normal';
+  const expiry = readExpiry(pantryItem.expiresOn, pantryItem.expiryKind, today);
+  const alert = expiryAlert(expiry);
+  // A date the badge and the lists count shows, and a passed long-life
+  // estimate asks for a check; any other date is noise on the list.
+  const expiryStatus: { tone: StatusTone; text: string } | null =
+    expiry && (alert || expiry.state === 'check')
+      ? {
+          tone: alert === 'danger' ? 'error' : alert ?? 'neutral',
+          text: expiryLabel(expiry, t),
+        }
+      : null;
 
   const quantity = formatAmountLeft(pantryItem, readingSystem);
   // Custom names only; the default locations are the filter tabs.
@@ -208,9 +177,8 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 
   // ONE status per row, shown by its status line alone. An empty stack has
   // nothing left to expire, so it reads as low stock whatever its date;
-  // otherwise expiry outranks stock.
-  const isStockStatus =
-    isOutOfStock || (variant === 'normal' && pantryItem.isLowStock);
+  // otherwise an alerting date outranks stock, and stock outranks a check.
+  const isStockStatus = isOutOfStock || (!alert && pantryItem.isLowStock);
 
   const leftElement = <CardLeftSlot imageUrl={imageUrl} />;
 
@@ -227,9 +195,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
       }
     : isStockStatus
     ? { tone: 'info', text: stockText }
-    : expirationText
-    ? { tone: EXPIRY_TONE[expiryStatusKey], text: expirationText }
-    : null;
+    : expiryStatus;
 
   // Shared card content — used with or without slide animation wrapper
   const renderCard = (onDelete?: () => void) => {

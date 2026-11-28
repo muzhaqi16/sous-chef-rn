@@ -5,7 +5,7 @@ import {
   PantrySortDirection,
   PREFERENCE_DEFAULTS,
 } from '#store/slices/preferenceTypes';
-import { fromDateKey } from '#utils/dateUtils';
+import { compareExpiry } from '#domain/expiry';
 
 interface SortableItem {
   id: string;
@@ -37,15 +37,9 @@ function cachedSort<T extends SortableItem>(
   }
 
   // Pre-computed O(n) instead of wrapping each item.
-  const expiryMap = new Map<string, number>();
   const createdMap = new Map<string, number>();
   for (const item of items) {
-    if (option === PantrySortOption.EXPIRY) {
-      expiryMap.set(
-        item.id,
-        item.expiresOn ? fromDateKey(item.expiresOn).getTime() : Infinity,
-      );
-    } else if (option === PantrySortOption.RECENT) {
+    if (option === PantrySortOption.RECENT) {
       createdMap.set(
         item.id,
         item.createdAt ? new Date(item.createdAt).getTime() : 0,
@@ -61,8 +55,7 @@ function cachedSort<T extends SortableItem>(
         comparison = (a.itemName ?? '').localeCompare(b.itemName ?? '');
         break;
       case PantrySortOption.EXPIRY:
-        comparison =
-          (expiryMap.get(a.id) ?? Infinity) - (expiryMap.get(b.id) ?? Infinity);
+        comparison = compareExpiry(a.expiresOn, b.expiresOn);
         break;
       case PantrySortOption.QUANTITY:
         comparison = a.quantity - b.quantity;

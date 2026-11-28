@@ -3,9 +3,6 @@
     "inLocation": " in {{location}}",
     "inThePantry": "Nella dispensa",
     "expiring": "Scadenza",
-    "expiryDaysAgo_one": "{{count}} giorno fa",
-    "expiryDaysAgo_other": "{{count}} giorni fa",
-    "expiryApprox": "≈ {{when}}",
     "noExpiry": "Nessuna scadenza",
     "amount": "Quantità",
     "nutrition": "Nutrizione",
@@ -59,8 +56,7 @@
     "removedTitle": "Questo articolo non è più nella tua dispensa",
     "removedBody": "È stato rimosso, forse da un altro dispositivo.",
     "hiddenTitle": "Questo articolo non ti viene mostrato",
-    "hiddenBody": "Si trova in una dispensa che non puoi vedere. Chi gestisce la casa può permetterti di vederla.",
-    "expiryEstimated": "Data stimata"
+    "hiddenBody": "Si trova in una dispensa che non puoi vedere. Chi gestisce la casa può permetterti di vederla."
   },
   "pantrySettings": {
     "createTitle": "Crea nuova dispensa",

@@ -307,9 +307,19 @@ describe('what the stack is', () => {
         },
       });
       expect(screen.getByText('≈ 5 days')).toBeTruthy();
-      expect(
-        screen.queryByText(t('pantryItemDetail.expiryEstimated')),
-      ).toBeNull();
+    });
+
+    it('asks for a check, never "expired", on a passed long-life estimate', async () => {
+      await openDetail({
+        item: {
+          ...milk,
+          expiresOn: inDays(-21),
+          expiryKind: ExpiryKind.LongLifeEstimate,
+        },
+      });
+      expect(screen.getByText(t('labels.expiryDueCheck'))).toBeTruthy();
+      expect(screen.getByText('≈ 21 days ago')).toBeTruthy();
+      expect(screen.queryByText(t('labels.expired'))).toBeNull();
     });
 
     it('says how long ago under an Expired header', async () => {

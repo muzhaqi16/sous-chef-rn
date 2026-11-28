@@ -6,12 +6,16 @@ import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
-import { daysUntilExpiry, isExpiryEstimate } from '#domain/expiry';
+import {
+  expiryAlert,
+  expiryWhen,
+  readExpiry,
+  type ExpiryReading,
+} from '#domain/expiry';
 import {
   formatDaysInPantry,
   formatStorageState,
   getDaysInPantry,
-  getExpiryInfo,
 } from '#features/pantry/hooks/usePantryItemTransformation';
 import type { PantryItemDetailItem } from '#features/pantry/screens/usePantryItemDetailData';
 import { pantryTestIDs } from '#features/pantry/testIDs';
@@ -19,33 +23,25 @@ import { useToday } from '#hooks/app/useToday';
 
 /**
  * The summary's expiry, on one line like its neighbours: the header names the
- * state, so the value is only when. A shelf-life guess is marked "≈", quietly.
+ * state, so the value is only when.
  */
 function expiryColumnOf(
-  expiresOn: string | null | undefined,
-  today: string,
-  estimated: boolean,
+  expiry: ExpiryReading | null,
   t: TranslateFn,
 ): { header: string; value: string } {
-  if (!expiresOn) {
+  if (!expiry) {
     return {
       header: t('pantryItemDetail.expiring'),
       value: t('pantryItemDetail.noExpiry'),
     };
   }
-  const days = daysUntilExpiry(expiresOn, today);
-  const when =
-    days < 0
-      ? t('pantryItemDetail.expiryDaysAgo', { count: -days })
-      : days === 0
-      ? t('labels.today')
-      : days === 1
-      ? t('labels.tomorrow')
-      : t('labels.durationDays', { count: days });
-  return {
-    header: t(days < 0 ? 'labels.expired' : 'pantryItemDetail.expiring'),
-    value: estimated ? t('pantryItemDetail.expiryApprox', { when }) : when,
-  };
+  const header =
+    expiry.state === 'passed'
+      ? t('labels.expired')
+      : expiry.state === 'check'
+      ? t('labels.expiryDueCheck')
+      : t('pantryItemDetail.expiring');
+  return { header, value: expiryWhen(expiry, t) };
 }
 
 interface PantryItemQuantitySectionProps {
@@ -59,13 +55,8 @@ export const PantryItemQuantitySection: React.FC<
 > = ({ item, quantityText }) => {
   const { t } = useTranslation();
   const today = useToday();
-  const expiryInfo = getExpiryInfo(item.expiresOn, today, t);
-  const expiry = expiryColumnOf(
-    item.expiresOn,
-    today,
-    isExpiryEstimate(item.expiryKind),
-    t,
-  );
+  const reading = readExpiry(item.expiresOn, item.expiryKind, today);
+  const expiry = expiryColumnOf(reading, t);
   const storageState = formatStorageState(item.storageState, t);
   const categoryName = item.item.categories[0]?.category.name ?? null;
 
@@ -113,13 +104,7 @@ export const PantryItemQuantitySection: React.FC<
             </Text>
             <Text
               role="label"
-              tone={
-                expiryInfo?.isExpired
-                  ? 'danger'
-                  : expiryInfo?.isUrgent
-                  ? 'warning'
-                  : 'primary'
-              }
+              tone={expiryAlert(reading) ?? 'primary'}
               align="center"
             >
               {expiry.value}

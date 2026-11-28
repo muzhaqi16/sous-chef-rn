@@ -14,8 +14,8 @@ import type { PantryItem_ListedFragment } from '#features/pantry/cache/pantryIte
 import {
   formatAmountLeft,
   formatStorageState,
-  getExpiryInfo,
 } from '#features/pantry/hooks/usePantryItemTransformation';
+import { expiryLabel, readExpiry } from '#domain/expiry';
 import { pantryTestIDs } from '#features/pantry/testIDs';
 
 interface PantryItemHeldDetailProps {
@@ -39,6 +39,7 @@ export const PantryItemHeldDetail: React.FC<PantryItemHeldDetailProps> = ({
 
   const location =
     item.storageLocation?.name ?? formatStorageState(item.storageState, t);
+  const expiry = readExpiry(item.expiresOn, item.expiryKind, today);
   const actions: HeaderAction[] = onEdit
     ? [
         {
@@ -81,8 +82,7 @@ export const PantryItemHeldDetail: React.FC<PantryItemHeldDetailProps> = ({
         <InfoRow
           label={t('pantryItemDetail.expiring')}
           value={
-            getExpiryInfo(item.expiresOn, today, t)?.text ??
-            t('pantryItemDetail.noExpiry')
+            expiry ? expiryLabel(expiry, t) : t('pantryItemDetail.noExpiry')
           }
           icon="time-outline"
           showColon={false}
