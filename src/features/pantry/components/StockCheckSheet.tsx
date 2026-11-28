@@ -148,15 +148,19 @@ const StockCheckForm: React.FC<StockCheckFormProps> = ({
       return;
     }
     // A refused row keeps its answer and says why, to be looked at again;
-    // counted again, it goes against the version the row shows by then.
-    reset({
-      rows: Object.fromEntries(
-        refused.map(({ pantryItemId }) => [
-          pantryItemId,
-          { ...values.rows[pantryItemId], seen: undefined },
-        ]),
-      ),
-    });
+    // counted again, it goes against the version the row shows by then. The
+    // empty defaults stay, so the kept answers still guard the close.
+    reset(
+      {
+        rows: Object.fromEntries(
+          refused.map(({ pantryItemId }) => [
+            pantryItemId,
+            { ...values.rows[pantryItemId], seen: undefined },
+          ]),
+        ),
+      },
+      { keepDefaultValues: true },
+    );
     for (const { pantryItemId, message, field } of refused) {
       const counted =
         values.rows[pantryItemId]?.answer === StockCheckAnswer.SomeLeft;
