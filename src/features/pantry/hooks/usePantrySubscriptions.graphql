@@ -65,6 +65,7 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
   updatedAt
   storageState
   expiresOn
+  expiryKind
   lowStockAlert
   isLowStock
   minQuantity
