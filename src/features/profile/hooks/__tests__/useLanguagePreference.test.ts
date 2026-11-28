@@ -85,6 +85,17 @@ describe('useLanguagePreference', () => {
     expect(alertService.alert).toHaveBeenCalledTimes(1);
   });
 
+  it('goes back to following the device when a first pick is refused', async () => {
+    useStore.setState({ language: undefined });
+    const result = render(refused());
+
+    await act(async () => {
+      await result.current.selectLanguage('fr');
+    });
+
+    expect(useStore.getState().language).toBeUndefined();
+  });
+
   it('leaves a later pick standing when an earlier one is refused', async () => {
     const first = refused({ once: true });
     const result = render(first, queued());

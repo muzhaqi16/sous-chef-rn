@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import { changeLanguage } from '#i18n';
+import { changeLanguage, deviceAppLanguage } from '#i18n';
 import { requirePlatform } from '#platform/install';
 import { PREFERENCE_DEFAULTS, type ThemePreference } from './preferenceTypes';
 import type {
@@ -40,7 +40,8 @@ export interface PreferencesState extends MirroredSettings {
 
   // Language
   language?: string;
-  setLanguage: (language: string) => void;
+  /** `undefined` follows the device's language again. */
+  setLanguage: (language: string | undefined) => void;
 
   // Remember Me (keep here as it's a preference)
 
@@ -122,7 +123,7 @@ export const createPreferencesSlice: StateCreator<
     set({ theme });
   },
   setLanguage: language => {
-    void changeLanguage(language);
+    void changeLanguage(language ?? deviceAppLanguage());
     set({ language });
   },
   setHapticFeedbackEnabled: enabled => set({ hapticFeedbackEnabled: enabled }),
