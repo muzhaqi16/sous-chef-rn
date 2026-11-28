@@ -76,6 +76,8 @@ export interface QueuedMutation {
   replayInputs?: ReplayInputs;
   /** The pending write it carries, for an operation with a local write. */
   pendingWrite?: { id: string; inputs: LocalInputs };
+  /** What the person calls what it changes, named when it was made. */
+  name?: string;
   /**
    * The stored scopes whose rows that write's layer reads, captured when
    * queued. Absent when unknown, so a launch restores every stored scope.

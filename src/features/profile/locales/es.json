@@ -335,6 +335,7 @@
     "intro": "Estos cambios no se guardaron. Cada uno indica por qué y qué puedes hacer.",
     "aChange": "Un cambio",
     "reasonConflict": "Otra persona cambió lo mismo antes.",
+    "reasonForbidden": "Ya no tienes acceso a esto, así que solo se puede descartar.",
     "reasonGone": "Esto ya no existe, así que solo se puede descartar.",
     "reasonExpired": "Este cambio es demasiado antiguo para enviarlo con seguridad, así que solo se puede descartar.",
     "reasonRefused": "El servidor no aceptó este cambio.",

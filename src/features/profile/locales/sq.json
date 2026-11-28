@@ -335,6 +335,7 @@
     "intro": "Këto ndryshime nuk u ruajtën. Secili tregon arsyen dhe çfarë mund të bëni.",
     "aChange": "Një ndryshim",
     "reasonConflict": "Dikush tjetër ndryshoi të njëjtën gjë më parë.",
+    "reasonForbidden": "Nuk keni më qasje te kjo, prandaj mund vetëm ta hidhni.",
     "reasonGone": "Kjo nuk ekziston më, prandaj mund vetëm ta hidhni.",
     "reasonExpired": "Ky ndryshim është shumë i vjetër për t'u dërguar në mënyrë të sigurt, prandaj mund vetëm ta hidhni.",
     "reasonRefused": "Serveri nuk e pranoi këtë ndryshim.",

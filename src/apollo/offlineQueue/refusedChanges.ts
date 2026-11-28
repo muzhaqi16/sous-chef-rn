@@ -10,6 +10,11 @@ export const namesNoRow = (error: QueueError | undefined): boolean =>
   error?.code === 'NotFoundError' ||
   error?.code === TopLevelErrorCode.ResourceNotFound;
 
+/** The person may not make this change, so a retry could never land either. */
+export const deniesAccess = (error: QueueError | undefined): boolean =>
+  error?.code === 'ForbiddenError' ||
+  error?.code === TopLevelErrorCode.Forbidden;
+
 /**
  * Shows the change again at once, and resolves when the queue has sent it
  * against the row as it stands, or could not.

@@ -19,6 +19,7 @@ import { profileTestIDs } from '#features/profile/testIDs';
 const REASON_KEYS = {
   conflict: 'changesNotSaved.reasonConflict',
   expired: 'changesNotSaved.reasonExpired',
+  forbidden: 'changesNotSaved.reasonForbidden',
   gone: 'changesNotSaved.reasonGone',
   refused: 'changesNotSaved.reasonRefused',
 } satisfies Record<NotSavedReason, TranslationKey>;

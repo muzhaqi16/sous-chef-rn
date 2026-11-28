@@ -11,7 +11,8 @@ import { shouldTreatAsOffline } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
 import { queueManager } from './queueManager';
 import { captureReplayInputs, hasReplayPreparation } from './prepareReplay';
-import { dependencyIdsOf, holdsBack } from './queuedSubject';
+import { dependencyIdsOf, holdsBack, queuedSubject } from './queuedSubject';
+import { nameOfChange, nameOfRows } from './changeName';
 import { OfflineRejectedError } from './OfflineRejectedError';
 import { QUEUE_FULL_CODE, QueueCapacityError } from './types';
 import type { QueuedMutation } from './types';
@@ -220,6 +221,13 @@ function entryFor(
     const orderedBy = orderOf(operation);
     if (orderedBy) queuedMutation.orderedBy = orderedBy;
   }
+  const name =
+    nameOfChange(queuedMutation) ??
+    nameOfRows(
+      operation.client.cache,
+      queuedSubject(queuedMutation).subjectIds,
+    );
+  if (name) queuedMutation.name = name;
   return queuedMutation;
 }
 

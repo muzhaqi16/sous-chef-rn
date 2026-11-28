@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { isPastSyncWindow, queueStore } from '#apollo/offlineQueue/queueStore';
 import {
+  deniesAccess,
   discardRefusedChange,
   namesNoRow,
   retryRefusedChange,
@@ -11,7 +12,12 @@ import { isTranslationKey, useTranslation } from '#i18n';
 import { formatQuantity } from '#utils/formatQuantity';
 import { isRecord } from '#utils/isRecord';
 
-export type NotSavedReason = 'conflict' | 'expired' | 'gone' | 'refused';
+export type NotSavedReason =
+  | 'conflict'
+  | 'expired'
+  | 'forbidden'
+  | 'gone'
+  | 'refused';
 
 export interface ChangeNotSaved {
   id: string;
@@ -60,6 +66,7 @@ function enteredIn(fields: unknown): string[] {
 
 function reasonOf(entry: QueuedMutation): NotSavedReason {
   if (namesNoRow(entry.lastError)) return 'gone';
+  if (deniesAccess(entry.lastError)) return 'forbidden';
   if (isPastSyncWindow(entry)) return 'expired';
   return entry.lastError?.type === 'conflict' ? 'conflict' : 'refused';
 }

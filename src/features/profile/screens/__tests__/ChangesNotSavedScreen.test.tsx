@@ -84,6 +84,27 @@ describe('ChangesNotSavedScreen', () => {
     expect(screen.getByText(t('errors.resourceNames.PantryItem'))).toBeTruthy();
   });
 
+  it('names a change by the name it was given when made', () => {
+    keep({ pendingWrite: undefined, variables: {}, name: 'Heavy Cream' });
+
+    render(<ChangesNotSavedScreen />);
+
+    expect(screen.getByText('Heavy Cream')).toBeTruthy();
+  });
+
+  it('leaves only discard for a change the person may no longer make', () => {
+    keep({
+      lastError: { ...CONFLICT, type: 'unknown', code: 'ForbiddenError' },
+    });
+
+    render(<ChangesNotSavedScreen />);
+
+    expect(screen.getByText(t('changesNotSaved.reasonForbidden'))).toBeTruthy();
+    expect(
+      screen.queryByTestId(profileTestIDs.changeNotSavedRetry('change')),
+    ).toBeNull();
+  });
+
   it('sends a retry to the queue', () => {
     keep();
     render(<ChangesNotSavedScreen />);

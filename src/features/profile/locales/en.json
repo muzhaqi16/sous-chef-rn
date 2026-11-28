@@ -335,6 +335,7 @@
     "intro": "These changes weren't saved. Each one says why, and what you can do.",
     "aChange": "A change",
     "reasonConflict": "Someone else changed the same thing first.",
+    "reasonForbidden": "You no longer have access to this, so it can only be discarded.",
     "reasonGone": "This no longer exists, so it can only be discarded.",
     "reasonExpired": "This change is too old to send safely, so it can only be discarded.",
     "reasonRefused": "The server wouldn't accept this change.",

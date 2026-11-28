@@ -335,6 +335,7 @@
     "intro": "Queste modifiche non sono state salvate. Ognuna indica il motivo e cosa puoi fare.",
     "aChange": "Una modifica",
     "reasonConflict": "Qualcun altro ha cambiato la stessa cosa prima.",
+    "reasonForbidden": "Non hai più accesso a questo, quindi si può solo scartare.",
     "reasonGone": "Non esiste più, quindi si può solo scartare.",
     "reasonExpired": "Questa modifica è troppo vecchia per inviarla in sicurezza, quindi si può solo scartare.",
     "reasonRefused": "Il server non ha accettato questa modifica.",
