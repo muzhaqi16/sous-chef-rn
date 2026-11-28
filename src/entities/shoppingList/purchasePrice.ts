@@ -42,15 +42,17 @@ export const shownUnitPrice = (
     ? unitPriceFromTotal(total, quantity)
     : null;
 
-/** What a line still to buy costs at its suggestion, which is per one unit. */
+/**
+ * What a line still to buy costs at its suggestion, which is per one unit;
+ * none when it rounds to nothing in its currency, as nothing is free.
+ */
 export const suggestedLineCost = (
   suggestion: DeepPartial<PriceSuggestion> | null | undefined,
   quantity: number,
-): string | null =>
-  suggestion?.amount != null && suggestion.currency?.code
-    ? formatCurrency(
-        lineTotal(suggestion.amount, quantity),
-        suggestion.currency.code,
-        suggestion.currency.decimalPlaces,
-      )
-    : null;
+): string | null => {
+  if (suggestion?.amount == null || !suggestion.currency?.code) return null;
+  const { code, decimalPlaces } = suggestion.currency;
+  const total = lineTotal(suggestion.amount, quantity);
+  if (Math.round(total * 10 ** (decimalPlaces ?? 2)) === 0) return null;
+  return formatCurrency(total, code, decimalPlaces);
+};
