@@ -329,7 +329,7 @@ see.
 """
 input AddTemplateItemInput {
   """
-  The day the meal falls on, counting from 0 for the template's first day: 0 up to durationDays minus 1
+  The day the meal falls on, counting from 0 for the template's first day: 0 to 365. A day past the template's last grows the template to cover it
   """
   dayOffset: Int!
   """
@@ -1994,7 +1994,9 @@ input CreateMealTemplateInput {
   defaultServings: Int
   """Free text, at most 2000 characters after trimming"""
   description: String
-  """Days the template covers, a positive integer; 7 when omitted or null"""
+  """
+  Days the template covers, 1 to 366; 7 when omitted or null, and grown to cover the furthest item's day
+  """
   durationDays: Int
   """
   Optional: Link template to a home for shared access.
@@ -7189,7 +7191,7 @@ type MealTemplateItemEdge implements Edge {
 """One meal in a template being created."""
 input MealTemplateItemInput {
   """
-  The day the meal falls on, counting from 0 for the template's first day; a plan made from the template dates it this many days after the plan's start
+  The day the meal falls on, counting from 0 for the template's first day, up to 365; a plan made from the template dates it this many days after the plan's start
   """
   dayOffset: Int!
   """
@@ -16896,7 +16898,7 @@ input UpdateMealTemplateInput {
   defaultServings: Int
   """Free text, at most 2000 characters after trimming; null clears it"""
   description: String
-  """Days the template covers, a positive integer"""
+  """Days the template covers, 1 to 366"""
   durationDays: Int
   """The template to update"""
   id: ID!
@@ -17418,7 +17420,7 @@ recipe the meal names must be one the caller can see.
 """
 input UpdateTemplateItemInput {
   """
-  The day the meal falls on, counting from 0 for the template's first day: a non-negative integer. Null is refused
+  The day the meal falls on, counting from 0 for the template's first day: 0 to 365, growing the template to cover it. Null is refused
   """
   dayOffset: Int
   id: ID!
