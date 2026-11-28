@@ -356,6 +356,19 @@ describe('QuantityEditSheet', () => {
       expect(defaultProps.onClose).toHaveBeenCalled();
     });
 
+    it('closes without saving when its unit is shown in another case', async () => {
+      const user = userEvent.setup();
+      renderWithInit({
+        ...defaultProps,
+        item: makeItem({ unitName: 'Bag', unitId: null }),
+      });
+
+      await user.press(screen.getByTestId('header-action-0'));
+
+      expect(defaultProps.onSave).not.toHaveBeenCalled();
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+
     it('becomes saveable once the user changes it, and sends what they typed', async () => {
       const user = userEvent.setup();
       renderWithInit({

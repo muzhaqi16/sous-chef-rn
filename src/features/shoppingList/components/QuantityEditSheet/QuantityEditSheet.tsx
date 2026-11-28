@@ -182,7 +182,7 @@ const QuantityEditContent: React.FC<QuantityEditContentProps> = ({
   };
 
   const hasChanges =
-    quantityInput !== seedText(item) || unitName !== item.unitName;
+    quantityInput !== seedText(item) || unitName !== seedUnit(item).name;
   useSheetUnsavedInput(hasChanges);
 
   // The server parses this string itself and rejects anything it can't read,
