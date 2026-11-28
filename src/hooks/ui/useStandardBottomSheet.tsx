@@ -296,6 +296,9 @@ export function useStandardBottomSheet({
       guard.requestClose(dismissNow);
       return;
     }
+    // gorhom refuses a snap only during a forced close, so a keyboard leaving
+    // mid-drag-close would snap the sheet back open.
+    if (toIndex === -1) stopRef.current = -1;
     handleBackdropAnimate(fromIndex, toIndex);
     userOnAnimateRef.current?.(fromIndex, toIndex, fromPosition, toPosition);
   };

@@ -672,4 +672,45 @@ describe('useStandardBottomSheet', () => {
 
     expect(snapToIndex).toHaveBeenCalledWith(0);
   });
+
+  it('lets a drag close the sheet when the keyboard hides on the way down', () => {
+    const onHide: Array<() => void> = [];
+    jest
+      .spyOn(Keyboard, 'addListener')
+      .mockImplementation((event, listener) => {
+        if (event === 'keyboardDidHide') {
+          onHide.push(() =>
+            listener({
+              duration: 0,
+              easing: 'keyboard',
+              endCoordinates: {
+                screenX: 0,
+                screenY: 874,
+                width: 402,
+                height: 0,
+              },
+            }),
+          );
+        }
+        return { remove: jest.fn() };
+      });
+    const snapToIndex = jest.fn();
+    const { result, rerender } = renderHook(
+      ({ visible }: { visible: boolean }) =>
+        useStandardBottomSheet({ ...defaultOptions, visible }),
+      { initialProps: { visible: false } },
+    );
+    (result.current.ref as React.RefObject<unknown>).current = {
+      present: mockPresent,
+      dismiss: mockDismiss,
+      snapToIndex,
+    };
+    rerender({ visible: true });
+
+    act(() => result.current.modalProps.onChange?.(0, 300, 0));
+    act(() => result.current.modalProps.onAnimate?.(0, -1, 300, 1000));
+    act(() => onHide.forEach(hide => hide()));
+
+    expect(snapToIndex).not.toHaveBeenCalled();
+  });
 });
