@@ -167,16 +167,22 @@ export function useAddToPantry({
    * Does this pantry already stock the item in the unit the add would create,
    * as far as the cache knows? An unknown unit is the server's to resolve.
    */
+  /**
+   * The held stack a one-tap restocks: the one in the unit it would be added
+   * in, else the item's oldest in any unit. The restock counts the package in
+   * that stack's own unit, so a weighed stack takes it at its size.
+   */
   const findCachedDuplicate = (
     itemId: string,
     unitId: string | null | undefined,
   ) =>
-    pantryId && unitId
+    (unitId
       ? findCachedPantryItemDuplicate(client.cache, pantryId, {
           itemId,
           unitId,
         })
-      : null;
+      : null) ??
+    findCachedPantryItemDuplicate(client.cache, pantryId, { itemId });
 
   /** Restock the row by one of the product, as its stack counts it. */
   const restockItem = (

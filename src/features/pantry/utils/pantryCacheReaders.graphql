@@ -9,6 +9,7 @@ fragment findCachedPantryItemDuplicate_pantry on Pantry {
         id
         itemName
         quantity
+        createdAt
         item {
           id
         }

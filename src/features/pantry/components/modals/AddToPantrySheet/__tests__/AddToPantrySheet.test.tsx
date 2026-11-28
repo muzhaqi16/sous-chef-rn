@@ -105,6 +105,16 @@ function stockedPantry(unitType = UnitType.Count, totalItems?: number) {
   seedPantry(cache, { id: PANTRY_ID }, data);
   return cache;
 }
+/** A pantry of `totalItems` stacks, none of them loaded on the device. */
+function unloadedPantry(totalItems: number) {
+  const cache = makeCache();
+  seedPantry(
+    cache,
+    { id: PANTRY_ID },
+    pantryData({ id: PANTRY_ID, totalItems }),
+  );
+  return cache;
+}
 const STOCKED_ITEM = 'item-pi-1';
 const STOCKED_UNIT = 'unit-piece';
 
@@ -659,20 +669,43 @@ describe('a search result', () => {
   it.each([
     ['held in another unit', 'unit-ml'],
     ['whose unit it cannot know', null],
-  ])('leaves an item %s to the server', async (_case, unitId) => {
+  ])('restocks an item %s on the stack it holds', async (_case, unitId) => {
     const create = created();
+    const restock = restocked('pi-1');
     await openSheet({
       cache: stockedPantry(),
-      answers: [create, restocked('pi-1')],
+      answers: [create, restock],
       searchFinds: [found(STOCKED_ITEM, 'Milk', unitId)],
     });
     await search('Mi');
 
     fireEvent.press(result('Milk'));
-    await log.requested(CreatePantryItemDocument);
-    await log.landed(CreatePantryItemDocument);
+    await log.requested(RestockPantryItemDocument);
+    await log.landed(RestockPantryItemDocument);
 
-    expect(create.fired).toHaveLength(1);
+    expect(restock.fired[0]).toMatchObject({ input: { id: 'pi-1' } });
+    expect(create.fired).toEqual([]);
+  });
+
+  // Feta held as 1 g, added by the tub: the tub joins the weighed stack at its
+  // size, never as a second stack beside it.
+  it('restocks a weighed stack by one package of the unit it would be added in', async () => {
+    const create = created();
+    const restock = restocked('pi-1', { held: true });
+    await openSheet({
+      cache: stockedPantry(UnitType.Weight),
+      answers: [create, restock],
+      searchFinds: [found(STOCKED_ITEM, 'Milk', 'unit-tub')],
+    });
+    await search('Mi');
+
+    fireEvent.press(result('Milk'));
+    await log.requested(RestockPantryItemDocument);
+
+    expect(restock.fired[0]).toMatchObject({
+      input: { id: 'pi-1', amount: { packages: { count: 1 } } },
+    });
+    expect(create.fired).toEqual([]);
   });
 
   it('puts back the suggestion a refused add took, and says so', async () => {
@@ -697,8 +730,9 @@ describe('a search result', () => {
     expect(onItemAdded).not.toHaveBeenCalled();
   });
 
-  // The add is forced, so the server joins a held product to its stack and
-  // answers with that stack's id: the header count must not stay one up.
+  // A stack the device cannot see (past the loaded window, or a collaborator's
+  // add) is joined by the server, which answers with that stack's id: the
+  // header count must not stay one up.
   it('leaves the pantry count where it was when the server joins it to a stack', async () => {
     const joined = recordMock(CreatePantryItemDocument, {
       data: {
@@ -716,7 +750,7 @@ describe('a search result', () => {
       held: true,
     });
     const { cache, client } = await openSheet({
-      cache: stockedPantry(UnitType.Count, 70),
+      cache: unloadedPantry(70),
       answers: [joined],
       searchFinds: [found(STOCKED_ITEM, 'Milk', null)],
     });

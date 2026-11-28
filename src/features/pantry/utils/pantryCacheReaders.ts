@@ -41,6 +41,7 @@ type CachedNode = {
   id: string;
   itemName: string | null;
   quantity: number | null;
+  createdAt: string | null;
   item: { id: string } | null;
   unit: { id: string } | null;
 };
@@ -82,6 +83,7 @@ function scanCachedPantryItems(
         id: node.id as string,
         itemName: (node.itemName as string | null) ?? null,
         quantity: (node.quantity as number | null) ?? null,
+        createdAt: (node.createdAt as string | null) ?? null,
         item: refId(node.item),
         unit: refId(node.unit),
       });
@@ -90,10 +92,18 @@ function scanCachedPantryItems(
   return nodes;
 }
 
+/** Oldest first, a row with no creation time last; ISO times order as text. */
+const byOldest = (a: CachedNode, b: CachedNode): number => {
+  if (a.createdAt === b.createdAt) return 0;
+  if (a.createdAt === null) return 1;
+  if (b.createdAt === null) return -1;
+  return a.createdAt < b.createdAt ? -1 : 1;
+};
+
 /**
  * The server's key is `(pantryId, itemId, unitId)` among active rows;
  * `itemName` stands in for the details form, which has no catalog id, and only
- * drives a prompt. No `unitId` matches any unit.
+ * drives a prompt. No `unitId` matches any unit, the oldest stack first.
  */
 export function findCachedPantryItemDuplicate(
   cache: ApolloCache,
@@ -109,7 +119,7 @@ export function findCachedPantryItemDuplicate(
   const itemName = normalizeName(match.itemName);
   if (!itemId && !itemName) return null;
 
-  for (const node of cachedPantryItems(cache, pantryId)) {
+  for (const node of cachedPantryItems(cache, pantryId).sort(byOldest)) {
     // An id match is authoritative; the name match only runs when the caller
     // has no catalog id to offer.
     const matched = itemId
