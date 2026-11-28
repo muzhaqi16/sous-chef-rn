@@ -73,4 +73,19 @@ describe('suggestedLineCost', () => {
     expect(suggestedLineCost(null, 3)).toBeNull();
     expect(suggestedLineCost({ amount: 4.99 }, 3)).toBeNull();
   });
+
+  it('shows no estimate that rounds to nothing in its currency', () => {
+    expect(
+      suggestedLineCost(
+        { amount: 0.004, currency: { code: 'USD', decimalPlaces: 2 } },
+        1,
+      ),
+    ).toBeNull();
+    expect(
+      suggestedLineCost(
+        { amount: 0.4, currency: { code: 'JPY', decimalPlaces: 0 } },
+        1,
+      ),
+    ).toBeNull();
+  });
 });
