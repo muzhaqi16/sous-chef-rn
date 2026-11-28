@@ -372,6 +372,40 @@ describe('useStandardBottomSheet', () => {
     expect(onAnimate).toHaveBeenCalledWith(-1, 0, 1000, 0);
   });
 
+  // gorhom closes a presented modal its owner unmounts, with the content (and
+  // its unsaved input) still mounted, as a pantry sheet does after a save.
+  it('never asks for the close gorhom runs when the owner unmounts the sheet', () => {
+    const discardGuard = { holds: () => true, requestClose: jest.fn() };
+    const { result, unmount } = renderHook(() =>
+      useStandardBottomSheet({
+        ...defaultOptions,
+        visible: true,
+        discardGuard,
+      }),
+    );
+    const closing = result.current.modalProps.onAnimate;
+
+    unmount();
+    closing?.(0, -1, 0, 1000);
+
+    expect(discardGuard.requestClose).not.toHaveBeenCalled();
+  });
+
+  it('asks before a drag closes a sheet still mounted', () => {
+    const discardGuard = { holds: () => true, requestClose: jest.fn() };
+    const { result } = renderHook(() =>
+      useStandardBottomSheet({
+        ...defaultOptions,
+        visible: true,
+        discardGuard,
+      }),
+    );
+
+    act(() => result.current.modalProps.onAnimate?.(0, -1, 0, 1000));
+
+    expect(discardGuard.requestClose).toHaveBeenCalledTimes(1);
+  });
+
   it('omits backdropComponent (global dim layer drives itself)', () => {
     const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 

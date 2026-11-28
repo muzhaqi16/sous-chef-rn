@@ -253,6 +253,27 @@ grep -n "handleOnUpdateRef.current?.()" node_modules/@gorhom/portal/src/componen
 grep -n "_providedOnDismiss()" node_modules/@gorhom/bottom-sheet/src/components/bottomSheetModal/BottomSheetModal.tsx
 ```
 
+### gorhom closes a modal its owner unmounts, with its content mounted
+
+**Claim:** when the component rendering a presented `BottomSheetModal` unmounts
+it, the portal's `handlePortalOnUnmount` runs an animated `close()` instead of
+removing the sheet, so the content stays mounted through the close and gorhom
+reports it in `onAnimate(from, -1)` as it would a drag. `useStandardBottomSheet`
+marks an unmount as the owner's close, so the close guard does not ask.
+
+**Verified 2026-11-27 against `@gorhom/bottom-sheet@5.2.14`** on the iPhone 17
+simulator: the pantry's consume sheet, rendered only while its modal is open,
+asked "Discard changes?" after every confirmed use with a typed amount. A
+stack logged in `SheetCloseGuard.requestClose` read `handleOnAnimate` →
+`handleAnimate` with the content still holding its input. With the unmount
+marked, a confirmed use closes without asking.
+
+Re-check:
+
+```
+grep -n -A32 "function handlePortalOnUnmount" node_modules/@gorhom/bottom-sheet/src/components/bottomSheetModal/BottomSheetModal.tsx | grep -n "close()"
+```
+
 ### gorhom keeps a keyboard lift when a touch lands as the keyboard leaves
 
 **Claim:** gorhom's `interactive` keyboard behaviour lifts a sheet as a

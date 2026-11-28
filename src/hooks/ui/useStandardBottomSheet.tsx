@@ -135,6 +135,15 @@ export function useStandardBottomSheet({
   const animationConfigs = useSharedBottomSheetConfigs();
   // A close this sheet's owner made, or one the person agreed to: never asked.
   const closingRef = useRef(false);
+  // An owner that unmounts the sheet closes it: gorhom then animates the close
+  // with the content still mounted, which would read as a drag.
+  // Verified: #gorhom-closes-a-modal-its-owner-unmounts-with-its-content-mounted
+  useEffect(
+    () => () => {
+      closingRef.current = true;
+    },
+    [],
+  );
   const discardGuardRef = useRef(discardGuard);
   useEffect(() => {
     discardGuardRef.current = discardGuard;
