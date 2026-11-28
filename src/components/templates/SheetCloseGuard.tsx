@@ -5,23 +5,29 @@ import { confirmDiscardChanges } from '#services/destructiveConfirm';
 
 /** One sheet's guard: whether its content holds input a close would drop. */
 interface SheetCloseGuard extends SheetDiscardGuard {
-  setHolds: (holds: boolean) => void;
+  /** Marks input a close would drop, until the returned release runs. */
+  hold: () => () => void;
 }
 
 function createSheetCloseGuard(): SheetCloseGuard {
-  let holding = false;
+  // One entry per reporter holding input: a sheet can stack a form on another.
+  const holders = new Set<symbol>();
   return {
-    holds: () => holding,
-    setHolds: next => {
-      holding = next;
+    holds: () => holders.size > 0,
+    hold: () => {
+      const holder = Symbol('unsaved input');
+      holders.add(holder);
+      return () => {
+        holders.delete(holder);
+      };
     },
     requestClose: close => {
-      if (!holding) {
+      if (holders.size === 0) {
         close();
         return;
       }
       confirmDiscardChanges(() => {
-        holding = false;
+        holders.clear();
         close();
       });
     },
@@ -50,12 +56,7 @@ export const useEnclosingSheetCloseGuard = CloseGuardContext.useOptionalValue;
 export function useSheetUnsavedInput(unsaved: boolean): void {
   const guard = CloseGuardContext.useOptionalValue();
   useEffect(() => {
-    guard?.setHolds(unsaved);
+    if (!unsaved || !guard) return;
+    return guard.hold();
   }, [guard, unsaved]);
-  useEffect(
-    () => () => {
-      guard?.setHolds(false);
-    },
-    [guard],
-  );
 }

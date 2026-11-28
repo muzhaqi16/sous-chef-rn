@@ -211,6 +211,26 @@ describe('Sheet', () => {
       expect(onDismiss).toHaveBeenCalledTimes(1);
     });
 
+    it('still asks for a form once one stacked over it has gone', () => {
+      const Stacked = ({ stacked }: { stacked: boolean }) => (
+        <Sheet
+          visible
+          onDismiss={() => undefined}
+          snapPoints={['50%']}
+          header={<SheetHeader title="Edit" onClose={() => undefined} />}
+        >
+          <HeldInput unsaved />
+          {stacked ? <HeldInput unsaved={false} /> : null}
+        </Sheet>
+      );
+      const { rerender } = render(<Stacked stacked />);
+      rerender(<Stacked stacked={false} />);
+
+      fireEvent.press(screen.getByTestId('header-close-button'));
+
+      expect(alert).toHaveBeenCalledTimes(1);
+    });
+
     it('never asks for a close its owner makes, as after a save', () => {
       const onDismiss = jest.fn();
       const { rerender } = render(<FormSheet unsaved onDismiss={onDismiss} />);
