@@ -141,6 +141,7 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
     updatedAt: '2026-01-01',
     storageState: StorageState.Ambient,
     expiresOn: null,
+    expiryKind: null,
     isLowStock: false,
     lastUsedAt: null,
     netWeight: null,
