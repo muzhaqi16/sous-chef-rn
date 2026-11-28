@@ -8800,6 +8800,10 @@ enum NotificationOrderBy {
 """A pantry item a notification names, as it was named when sent."""
 type NotificationPantryItem {
   """
+  The expiry date an expiry reminder named it for; null outside expiry reminders and on reminders sent before dates were recorded.
+  """
+  expiresOn: LocalDate
+  """
   The kind of expiry date an expiry reminder named it for: LABEL is a stated
   date, PERISHABLE_ESTIMATE a guess shown as one. Null outside expiry
   reminders, and on a reminder sent before kinds were recorded.
@@ -8807,6 +8811,10 @@ type NotificationPantryItem {
   expiryKind: ExpiryKind
   """Its name when the notification was sent."""
   name: String!
+  """
+  The pantry stack an expiry reminder named; null outside expiry reminders.
+  """
+  pantryItemId: ID
 }
 
 """A planned meal a notification names, as it was when sent."""
