@@ -790,6 +790,7 @@
     "mealUpdateFailed": "Impossibile aggiornare il pasto",
     "mealCompletedDeducted": "Pasto completato! Articoli scalati dalla dispensa.",
     "mealCompleted": "Pasto completato!",
+    "mealCompletedQueued": "Pasto completato. La tua dispensa si aggiornerà alla sincronizzazione.",
     "addedToMealPlan": "Aggiunto al piano pasti",
     "mealPlanDuplicated": "Piano pasti duplicato!",
     "itemToggleFailed": "Impossibile aggiornare l'articolo",

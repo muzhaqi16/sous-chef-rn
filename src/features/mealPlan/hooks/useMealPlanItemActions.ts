@@ -11,12 +11,18 @@ import type { RemovePlanItemInputs } from '#features/mealPlan/offline/localWrite
 import { useLocalWrite } from '#apollo/pendingWrites/useLocalWrite';
 import { subscriptionService } from '#services/subscriptions/SubscriptionService';
 import { generateEntityId } from '#utils/generateEntityId';
-import { useTranslation } from '#i18n';
+import { useTranslation, type TranslationKey } from '#i18n';
 import { keepDayInsidePlan } from '#utils/dateUtils';
 import {
   deleteMealPlanItemWrite,
   updateMealPlanItemWrite,
 } from '#features/mealPlan/offline/localWrites';
+
+/** The server draws the pantry: queued, nothing is deducted yet. */
+function completionToast(deducts: boolean, queued: boolean): TranslationKey {
+  if (!deducts) return 'toasts.mealCompleted';
+  return queued ? 'toasts.mealCompletedQueued' : 'toasts.mealCompletedDeducted';
+}
 
 export function useMealPlanItemActions(mealPlanId: string | null) {
   const client = useApolloClient();
@@ -112,9 +118,10 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     if (markingComplete) {
       toastService.success(
         t(
-          hasRecipe && deductFromPantry
-            ? 'toasts.mealCompletedDeducted'
-            : 'toasts.mealCompleted',
+          completionToast(
+            hasRecipe && !!deductFromPantry,
+            settled.status === 'queued',
+          ),
         ),
       );
     }

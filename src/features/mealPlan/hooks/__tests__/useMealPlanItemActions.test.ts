@@ -443,6 +443,26 @@ describe('useMealPlanItemActions', () => {
       );
     });
 
+    // The server draws the pantry, so a queued completion has drawn nothing yet.
+    it('says the pantry updates once it syncs while the completion is queued', async () => {
+      const queued = recordMock(UpdateMealPlanItemDocument, {
+        data: { updateMealPlanItem: null },
+      });
+      const cache = seedPlan([fullItem()]);
+      const { result } = renderActions([queued.mock], cache);
+
+      await settledInAct(() =>
+        result.current.toggleCompleted('mpi-1', { deductFromPantry: true }),
+      );
+
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Meal completed. Your pantry updates when it syncs.',
+      );
+      expect(mockToastSuccess).not.toHaveBeenCalledWith(
+        'Meal completed! Pantry items deducted.',
+      );
+    });
+
     it('un-completes at the cached version, without a toast', async () => {
       const update = completedAs(8, false);
       const cache = seedPlan([

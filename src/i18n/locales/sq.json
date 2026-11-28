@@ -790,6 +790,7 @@
     "mealUpdateFailed": "Përditësimi i vaktit dështoi",
     "mealCompletedDeducted": "Vakti u përfundua! Artikujt u zbritën nga qilari.",
     "mealCompleted": "Vakti u përfundua!",
+    "mealCompletedQueued": "Vakti u përfundua. Qilari yt do të përditësohet kur të sinkronizohet.",
     "addedToMealPlan": "U shtua në planin e vakteve",
     "mealPlanDuplicated": "Plani i vakteve u dyfishua!",
     "itemToggleFailed": "Ndryshimi i artikullit dështoi",

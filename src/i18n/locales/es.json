@@ -790,6 +790,7 @@
     "mealUpdateFailed": "No se pudo actualizar la comida",
     "mealCompletedDeducted": "¡Comida completada! Artículos descontados de la despensa.",
     "mealCompleted": "¡Comida completada!",
+    "mealCompletedQueued": "Comida completada. Tu despensa se actualizará al sincronizar.",
     "addedToMealPlan": "Añadido al plan de comidas",
     "mealPlanDuplicated": "¡Plan de comidas duplicado!",
     "itemToggleFailed": "No se pudo cambiar el artículo",

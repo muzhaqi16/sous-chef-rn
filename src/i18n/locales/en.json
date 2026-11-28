@@ -790,6 +790,7 @@
     "mealUpdateFailed": "Failed to update meal",
     "mealCompletedDeducted": "Meal completed! Pantry items deducted.",
     "mealCompleted": "Meal completed!",
+    "mealCompletedQueued": "Meal completed. Your pantry updates when it syncs.",
     "addedToMealPlan": "Added to meal plan",
     "mealPlanDuplicated": "Meal plan duplicated!",
     "itemToggleFailed": "Failed to toggle item",
